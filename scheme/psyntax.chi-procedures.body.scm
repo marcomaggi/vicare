@@ -1122,11 +1122,7 @@
   (define-module-who define/std)
 
   (define (chi-define/std input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
-    (case-define %synner
-      ((message)
-       (syntax-violation __module_who__ message input-form.stx))
-      ((message subform)
-       (syntax-violation __module_who__ message input-form.stx subform)))
+    (define-synner %synner __module_who__ input-form.stx)
     (receive (lhs.id lhs.ots qdef lexenv.run)
 	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
 	;;the lexical variable's syntactic binding's identifier; LHS.OTS, an instance
@@ -1209,11 +1205,7 @@
   (define-constant __module_who__ 'case-define/std)
 
   (define* (chi-case-define/std input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
-    (case-define %synner
-      ((message)
-       (syntax-violation __module_who__ message input-form.stx))
-      ((message subform)
-       (syntax-violation __module_who__ message input-form.stx subform)))
+    (define-synner %synner __module_who__ input-form.stx)
     (receive (lhs.id lhs.ots qdef lexenv.run)
 	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
 	;;the lexical variable's syntactic binding's identifier; LHS.OTS, an instance
@@ -1301,11 +1293,7 @@
   (define-module-who define/typed)
 
   (define (chi-define/typed input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
-    (case-define %synner
-      ((message)
-       (syntax-violation __module_who__ message input-form.stx))
-      ((message subform)
-       (syntax-violation __module_who__ message input-form.stx subform)))
+    (define-synner %synner __module_who__ input-form.stx)
     (receive (lhs.id lhs.ots qdef lexenv.run)
 	;;From parsing the  syntactic form, we receive the  following values:
 	;;
@@ -1469,11 +1457,7 @@
     ;;
     ;;2. A possibly updated LEXENV.RUN.
     ;;
-    (case-define %synner
-      ((message)
-       (syntax-violation __module_who__ message input-form.stx))
-      ((message subform)
-       (syntax-violation __module_who__ message input-form.stx subform)))
+    (define-synner %synner __module_who__ input-form.stx)
     (syntax-match input-form.stx (brace)
       ((_ ((brace ?lhs . ?rv-types) . ?formals) ?body0 ?body* ...)
        (receive (standard-formals.stx argvals.sig)
@@ -1489,7 +1473,7 @@
 
       ((_ (brace ?lhs ?type))
        (%process-typed-variable-definition-with-init-expr input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-							  ?lhs (bless '(void)) ?type %synner))
+							  ?lhs #f ?type %synner))
 
       ((_ (?lhs . ?formals) ?body0 ?body* ...)
        (receive (standard-formals.stx argvals.sig)
@@ -1520,8 +1504,10 @@
     ;;syntactic binding; QDEF is the qualified RHS object to be expanded later.
     (let* ((lhs.ots	(type-annotation->object-type-spec lhs.type-ann lexenv.run))
 	   (qdef	(make-qdef-checked-defvar input-form.stx lhs.id
-						  (bless
-						   `(assert-signature-and-return (,lhs.type-ann) ,rhs.stx))))
+						  (if rhs.stx
+						      (bless
+						       `(assert-signature-and-return (,lhs.type-ann) ,rhs.stx))
+						    (bless '(void)))))
 	   (lhs.lab	(generate-label-gensym lhs.id))
 	   (lhs.descr	(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
 	   (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.descr lexenv.run)))
@@ -1604,11 +1590,7 @@
   (define-constant __module_who__ 'case-define/typed)
 
   (define* (chi-case-define/typed input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
-    (case-define %synner
-      ((message)
-       (syntax-violation __module_who__ message input-form.stx))
-      ((message subform)
-       (syntax-violation __module_who__ message input-form.stx subform)))
+    (define-synner %synner __module_who__ input-form.stx)
     (receive (lhs.id lhs.ots qdef lexenv.run)
 	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
 	;;the lexical variable's syntactic  binding's identifier; LHS.OTS an instance
@@ -1677,11 +1659,7 @@
   (define-constant __module_who__ 'case-define/checked)
 
   (define* (chi-case-define/checked input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
-    (case-define %synner
-      ((message)
-       (syntax-violation __module_who__ message input-form.stx))
-      ((message subform)
-       (syntax-violation __module_who__ message input-form.stx subform)))
+    (define-synner %synner __module_who__ input-form.stx)
     (syntax-match input-form.stx ()
       ((?kwd ?who ?cl-clause ?cl-clause* ...)
        (begin

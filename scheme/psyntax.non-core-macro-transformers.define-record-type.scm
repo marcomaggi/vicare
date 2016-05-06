@@ -27,11 +27,7 @@
   (define-constant __module_who__ 'define-record-type)
 
   (define (define-record-type-macro input-form.stx)
-    (case-define synner
-      ((message)
-       (synner message #f))
-      ((message subform)
-       (syntax-violation __module_who__ message input-form.stx subform)))
+    (define-synner synner __module_who__ input-form.stx)
     (syntax-match input-form.stx ()
       ((_ ?namespec ?clause* ...)
        (begin

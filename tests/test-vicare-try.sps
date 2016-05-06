@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,8 +25,10 @@
 
 
 #!vicare
-(import (vicare)
-  (vicare checks))
+(program (test-vicare-try)
+  (options typed-language)
+  (import (vicare)
+    (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare: try ... catch ... finally syntax\n")
@@ -257,7 +259,7 @@
 
   (check	;normal exit
       (with-result
-	(receive-and-return (flag)
+	(receive-and-return ({flag <boolean>})
 	    #f
 	  (try
 	      (add-result 'body)
@@ -759,7 +761,7 @@
 
   (check	;return in body
       (with-result
-	(receive-and-return (flag)
+	(receive-and-return ({flag <boolean>})
 	    #f
 	  (returnable
 	    (try
@@ -777,7 +779,7 @@
 
   (check	;return in body, documentation example
       (internal-body
-	(define y #f)
+	(define {y <boolean>} #f)
 	(define x
 	  (returnable
 	    (try
@@ -797,7 +799,7 @@
 
   (check	;break in body
       (with-result
-	(receive-and-return (flag)
+	(receive-and-return ({flag <boolean>})
 	    #f
 	  (while #t
 	    (try
@@ -815,9 +817,9 @@
 
   (check	;continue in body
       (with-result
-	(receive-and-return (flag)
+	(receive-and-return ({flag <fixnum>})
 	    0
-	  (let ((i 3))
+	  (let (({i <fixnum>} 3))
 	    (while (positive? i)
 	      (try
 		  (begin
@@ -835,8 +837,8 @@
 
   (check	;break in body, simple example for documentation
       (internal-body
-	(define x 3)
-	(define y #f)
+	(define {x <fixnum>} 3)
+	(define {y <boolean>} #f)
 	(while (positive? x)
 	  (try
 	      (begin
@@ -853,8 +855,8 @@
 
   (check	;continue in body, simple example for documentation
       (internal-body
-	(define x 3)
-	(define y 0)
+	(define {x <fixnum>} 3)
+	(define {y <fixnum>} 0)
 	(while (positive? x)
 	  (try
 	      (begin
@@ -876,9 +878,9 @@
 
   (check	;break in body
       (with-result
-	(receive-and-return (flag)
+	(receive-and-return ({flag <fixnum>})
 	    0
-	  (let ((i 3))
+	  (let (({i <fixnum>} 3))
 	    (until (zero? i)
 	      (try
 		  (begin
@@ -896,9 +898,9 @@
 
   (check	;continue in body
       (with-result
-	(receive-and-return (flag)
+	(receive-and-return ({flag <fixnum>})
 	    0
-	  (let ((i 3))
+	  (let (({i <fixnum>} 3))
 	    (until (zero? i)
 	      (try
 		  (begin
@@ -916,8 +918,8 @@
 
   (check	;break in body, simple example for documentation
       (internal-body
-	(define x 3)
-	(define y #f)
+	(define {x <fixnum>} 3)
+	(define {y <boolean>} #f)
 	(until (zero? x)
 	  (try
 	      (begin
@@ -934,8 +936,8 @@
 
   (check	;continue in body, simple example for documentation
       (internal-body
-	(define x 3)
-	(define y 0)
+	(define {x <fixnum>} 3)
+	(define {y <fixnum>} 0)
 	(until (zero? x)
 	  (try
 	      (begin
@@ -957,9 +959,9 @@
 
   (check	;break in body
       (with-result
-	(receive-and-return (flag)
+	(receive-and-return ({flag <boolean>})
 	    #f
-	  (for ((define i 3) (positive? i) (-- i))
+	  (for ((define {i <fixnum>} 3) (positive? i) (-- i))
 	    (try
 		(begin
 		  (add-result 'thunk-in)
@@ -975,9 +977,9 @@
 
   (check	;continue in body
       (with-result
-  	(receive-and-return (flag)
+  	(receive-and-return ({flag <fixnum>})
   	    0
-  	  (for ((define i 3) (positive? i) (-- i))
+  	  (for ((define {i <fixnum>} 3) (positive? i) (-- i))
   	    (try
 		(begin
 		  (add-result 'thunk-in)
@@ -993,8 +995,8 @@
 
   (check	;break in body, simple example for documentation
       (internal-body
-  	(define y #f)
-  	(define x 3)
+  	(define {y <boolean>} #f)
+  	(define {x <fixnum>} 3)
   	(for ((void) (positive? x) (-- x))
   	  (try
 	      (begin
@@ -1010,8 +1012,8 @@
 
   (check	;continue in body, simple example for documentation
       (internal-body
-  	(define x 3)
-  	(define y 0)
+  	(define {x <fixnum>} 3)
+  	(define {y <fixnum>} 0)
   	(for ((void) (positive? x) (-- x))
   	  (try
 	      (begin
@@ -1032,8 +1034,8 @@
 
   (check	;break in body
       (with-result
-	(define x 3)
-	(define y #f)
+	(define {x <fixnum>} 3)
+	(define {y <boolean>} #f)
 	(do
 	    (try
 		(begin
@@ -1052,8 +1054,8 @@
 
   (check	;continue in body
       (with-result
-	(define x 3)
-	(define y 0)
+	(define {x <fixnum>} 3)
+	(define {y <fixnum>} 0)
 	(do
 	    (try
 		(begin
@@ -1078,8 +1080,8 @@
 
   (check	;break in body
       (with-result
-	(define x 3)
-	(define y #f)
+	(define {x <fixnum>} 3)
+	(define {y <boolean>} #f)
 	(do
 	    (try
 		(begin
@@ -1098,8 +1100,8 @@
 
   (check	;continue in body
       (with-result
-	(define x 3)
-	(define y 0)
+	(define {x <fixnum>} 3)
+	(define {y <fixnum>} 0)
 	(do
 	    (try
 		(begin
@@ -1124,9 +1126,9 @@
 
   (check 	;break in body
       (with-result
-	(define y #f)
-	(define x
-	  (do ((x 3 (-- x)))
+	(define {y <boolean>} #f)
+	(define {x <fixnum>}
+	  (do (({x <fixnum>} 3 (-- x)))
 	      ((zero? x)
 	       (add-result 'do-exit)
 	       (values x y))
@@ -1147,8 +1149,8 @@
 
   (check	;continue in body
       (with-result
-	(do ((x 3 (-- x))
-	     (y 0))
+	(do (({x <fixnum>} 3 (-- x))
+	     ({y <fixnum>} 0))
 	    ((zero? x)
 	     (values x y))
 	  (try
@@ -1196,7 +1198,7 @@
 
   (check	;documentation example
       (internal-body
-	(define order '())
+	(define {order <list>} '())
 	(define (add obj)
 	  (set-cons! order obj))
 
@@ -1237,7 +1239,7 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((a #f) (b #f) (c #f))
+      (let (({a <top>} #f) ({b <top>} #f) ({c <top>} #f))
 	(concurrently
 	  (lambda ()
 	    (try
@@ -1953,7 +1955,7 @@
 	      (add-result 'inner/outer-out-guard))))
 
       (define (middle)
-	(define counter 0)
+	(define {counter <fixnum>} 0)
 	(dynamic-wind
 	    (lambda ()
 	      (add-result 'middle/outer-in-guard))
@@ -2035,6 +2037,8 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;; Local Variables:

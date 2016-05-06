@@ -47,28 +47,6 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-;;;;copyright notice for the original code of RECEIVE
-;;;
-;;;Copyright (C) John David Stone (1999). All Rights Reserved.
-;;;
-;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
-;;;this software and associated documentation files  (the "Software"), to deal in the
-;;;Software  without restriction,  including without  limitation the  rights to  use,
-;;;copy, modify,  merge, publish, distribute,  sublicense, and/or sell copies  of the
-;;;Software,  and to  permit persons  to whom  the Software  is furnished  to do  so,
-;;;subject to the following conditions:
-;;;
-;;;The above  copyright notice and  this permission notice  shall be included  in all
-;;;copies or substantial portions of the Software.
-;;;
-;;;THE  SOFTWARE IS  PROVIDED  "AS IS",  WITHOUT  WARRANTY OF  ANY  KIND, EXPRESS  OR
-;;;IMPLIED, INCLUDING BUT  NOT LIMITED TO THE WARRANTIES  OF MERCHANTABILITY, FITNESS
-;;;FOR A  PARTICULAR PURPOSE AND  NONINFRINGEMENT. IN NO  EVENT SHALL THE  AUTHORS OR
-;;;COPYRIGHT HOLDERS BE LIABLE FOR ANY  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
-;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
-;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-
 (library (psyntax.non-core-macro-transformers)
   (export non-core-macro-transformer)
   (import (except (rnrs)
@@ -116,11 +94,7 @@
 	 (sys::syntax
 	  (define (WHO ?input-form.stx)
 	    (with-who ?who
-	      (case-define synner
-		((message)
-		 (synner message #f))
-		((message subform)
-		 (syntax-violation (quote ?who) message ?input-form.stx subform)))
+	      (define-synner synner (quote ?who) ?input-form.stx)
 	      (fluid-let-syntax
 		  ((__synner__ (identifier-syntax synner)))
 		?body0 ?body ...)))))))
@@ -183,9 +157,9 @@
     ((define-constant)			define-constant-macro)
     ((define-inline-constant)		define-inline-constant-macro)
     ((define-values)			define-values-macro)
+    ((define-values/std)		define-values/std-macro)
+    ((define-values/checked)		define-values/checked-macro)
     ((define-constant-values)		define-constant-values-macro)
-    ((receive)				receive-macro)
-    ((receive-and-return)		receive-and-return-macro)
     ((xor)				xor-macro)
     ((define-syntax-rule)		define-syntax-rule-macro)
     ((define-auxiliary-syntaxes)	define-auxiliary-syntaxes-macro)
@@ -3081,7 +3055,7 @@
 	  (bless
 	   `(unwinding-call/cc
 		(lambda/std (,escape)
-		  (letrec/std ((,loop (lambda/std ,?var*
+		  (letrec/std ((,loop (lambda ,?var*
 					(if (unwinding-call/cc
 						(lambda/std (,next-iteration)
 						  (if ,?test
@@ -3142,7 +3116,7 @@
        (bless
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
-	       (let*/std ,init-binding*
+	       (let* ,init-binding*
 		 (letrec/std ((,loop (lambda/std ()
 				       (if (unwinding-call/cc
 					       (lambda/std (,next-iteration)
@@ -3176,10 +3150,10 @@
        (bless
 	`(let/std ,loop ((,ell ,?list-form))
 		  (if (pair? ,ell)
-		      (let/std ((,?var (car ,ell)))
+		      (let ((,?var (car ,ell)))
 			,?body0 ,@?body*
 			(,loop (cdr ,ell)))
-		    (let/std ((,?var '()))
+		    (let ((,?var '()))
 		      ,?result-form))))))
     ))
 
@@ -3405,7 +3379,7 @@
     ((_ ?exception-retvals-maker ?thunk)
      (bless
       `(call/cc
-	   (lambda/std (reinstate-with-blocked-exceptions-continuation)
+	   (lambda/typed ({reinstate-with-blocked-exceptions-continuation <procedure>})
 	     (with-exception-handler
 		 (lambda/std (E)
 		   (call-with-values
@@ -3416,7 +3390,7 @@
     ((_ ?thunk)
      (bless
       `(call/cc
-	   (lambda/std (reinstate-with-blocked-exceptions-continuation)
+	   (lambda/typed ({reinstate-with-blocked-exceptions-continuation <procedure>})
 	     (with-exception-handler
 		 reinstate-with-blocked-exceptions-continuation
 	       ,?thunk)))))
@@ -3431,13 +3405,13 @@
     ((_ ?exception-retvals-maker ?thunk)
      (bless
       `(call/cc
-	   (lambda/std (return-thunk-with-packed-environment)
+	   (lambda/typed ({return-thunk-with-packed-environment <procedure>})
 	     ((call/cc
-		  (lambda/std (reinstate-target-environment-continuation)
+		  (lambda/typed ({reinstate-target-environment-continuation <procedure>})
 		    (return-thunk-with-packed-environment
 		     (lambda/std ()
 		       (call/cc
-			   (lambda/std (reinstate-thunk-call-continuation)
+			   (lambda/typed ({reinstate-thunk-call-continuation <procedure>})
 			     (reinstate-target-environment-continuation
 			      (lambda/std ()
 				(call-with-values
@@ -4108,171 +4082,176 @@
 
 ;;;; non-core macro: DEFINE-VALUES
 
-(module (define-values-macro)
+(define-macro-transformer (define-values input-form.stx)
+  ;;Transformer  function  used to  expand  Vicare's  DEFINE-VALUES macros  from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
+  ;;
+  (if (options::typed-language?)
+      (define-values/checked-macro input-form.stx)
+    (define-values/std-macro input-form.stx)))
 
-  (define-macro-transformer (define-values input-form.stx)
-    ;;Transformer  function used  to expand  Vicare's DEFINE-VALUES  macros from  the
-    ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return
-    ;;a syntax object that must be further expanded.
-    ;;
-    (syntax-match input-form.stx ()
-      ((_ ?formals ?body0 ?body* ...)
-       (if (options::typed-language?)
-	   (define-values/checked-macro input-form.stx ?formals (cons ?body0 ?body*))
-	 (define-values/std-macro input-form.stx ?formals (cons ?body0 ?body*))))
-      ))
-
-  (define (define-values/std-macro input-form.stx input-formals.stx body*.stx)
-    (receive (standard-formals.stx formals.sig)
-	(syntax-object.parse-standard-formals input-formals.stx)
-      (syntax-match standard-formals.stx ()
-	((?id* ... ?id0)
-	 ;;We want this expansion:
-	 ;;
-	 ;;  (define/std ?id)
-	 ;;  ...
-	 ;;  (define/std ?id0
-	 ;;    (call-with-values
-	 ;;        (lambda/std () ?body0 . ?body*)
-	 ;;      (lambda/std (TMP ... TMP0)
-	 ;;        (set! ?id TMP)
-	 ;;        ...
-	 ;;        TMP0)))
-	 ;;
-	 (bless
-	  (let ((TMP* (generate-temporaries ?id*)))
-	    `(begin
-	       ,@(map (lambda (var)
-			`(define/std ,var))
-		   ?id*)
-	       (define/std ,?id0
-		 (call-with-values
-		     (lambda/std () . ,body*.stx)
-		   (lambda/std (,@TMP* TMP0)
-		     ,@(map (lambda (var TMP)
-			      `(set! ,var ,TMP))
-			 ?id* TMP*)
-		     TMP0)))))))
-
-	((?id* ... . ?rest-id)
-	 ;;We want this expansion:
-	 ;;
-	 ;;  (define/std ?id)
-	 ;;  ...
-	 ;;  (define/std ?rest-id
-	 ;;    (call-with-values
-	 ;;        (lambda/std () ?body0 . ?body*)
-	 ;;      (lambda/std (TMP ... . TMP-REST)
-	 ;;        (set! ?id TMP)
-	 ;;        ...
-	 ;;        TMP-REST)))
-	 ;;
-	 (bless
-	  (let ((TMP*		(generate-temporaries ?id*))
-		(rest.sym	(make-syntactic-identifier-for-temporary-variable "rest")))
-	    `(begin
-	       ,@(map (lambda (var)
-			`(define/std ,var))
-		   ?id*)
-	       (define/std ,?rest-id
-		 (call-with-values
-		     (lambda/std () . ,body*.stx)
-		   (lambda/std (,@TMP* . ,rest.sym)
-		     ,@(map (lambda (var TMP)
-			      `(set! ,var ,TMP))
-			 ?id* TMP*)
-		     ,rest.sym)))))))
-
-	(?args
-	 (identifier? ?args)
-	 (bless
-	  (let ((args.sym (make-syntactic-identifier-for-temporary-variable "args")))
-	    `(define/std ,?args
-	       (call-with-values
-		   (lambda/std () . ,body*.stx)
-		 (lambda/std ,args.sym ,args.sym))))))
-	)))
-
-  (define (define-values/checked-macro input-form.stx input-formals.stx body*.stx)
-    (receive (standard-formals.stx formals.sig)
-	(syntax-object.parse-typed-formals input-formals.stx)
-      (syntax-match standard-formals.stx ()
-	((?id* ... ?id0)
-	 ;;We want this expansion:
-	 ;;
-	 ;;  (define/checked {?id ?type})
-	 ;;  ...
-	 ;;  (define/checked {?id0 ?type0}
-	 ;;    (call-with-values
-	 ;;        (lambda/std () ?body0 . ?body*)
-	 ;;      (lambda/typed ({_ ?type0} TMP ... TMP0)
-	 ;;        (set! ?id TMP)
-	 ;;        ...
-	 ;;        TMP0))))
-	 ;;
-	 (receive (type* type0)
-	     (proper-list->head-and-last (type-signature.syntax-object formals.sig))
+(define-macro-transformer (define-values/std input-form.stx)
+  ;;Transformer function  used to expand  Vicare's DEFINE-VALUES/STD macros  from the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?formals ?body0 ?body* ...)
+     (receive (standard-formals.stx formals.sig)
+	 (syntax-object.parse-standard-formals ?formals)
+       (syntax-match standard-formals.stx ()
+	 ((?id* ... ?id0)
+	  ;;We want this expansion:
+	  ;;
+	  ;;  (define/std ?id)
+	  ;;  ...
+	  ;;  (define/std ?id0
+	  ;;    (call-with-values
+	  ;;        (lambda/std () ?body0 . ?body*)
+	  ;;      (lambda/std (TMP ... TMP0)
+	  ;;        (set! ?id TMP)
+	  ;;        ...
+	  ;;        TMP0)))
+	  ;;
+	  (bless
 	   (let ((TMP* (generate-temporaries ?id*)))
-	     (bless
-	      `(begin
-		 ,@(map (lambda (var type)
-			  `(define/checked {,var ,type}))
-		     ?id* type*)
-		 (define/checked {,?id0 ,type0}
-		   (call-with-values
-		       (lambda/std () . ,body*.stx)
-		     (lambda/typed ({_ ,type0} ,@TMP* TMP0)
-		       ;;These set forms do the type validation.
-		       ,@(map (lambda (var TMP)
-				`(set! ,var ,TMP))
-			   ?id* TMP*)
-		       TMP0))))))))
+	     `(begin
+		,@(map (lambda (var)
+			 `(define/std ,var))
+		    ?id*)
+		(define/std ,?id0
+		  (call-with-values
+		      (lambda/std () ,?body0 . ,?body*)
+		    (lambda/std (,@TMP* TMP0)
+		      ,@(map (lambda (var TMP)
+			       `(set! ,var ,TMP))
+			  ?id* TMP*)
+		      TMP0)))))))
 
-	((?id* ... . ?rest-id)
-	 ;;We want this expansion:
-	 ;;
-	 ;;  (define/checked {?id ?type})
-	 ;;  ...
-	 ;;  (define/checked {?rest-id ?rest-type}
-	 ;;    (call-with-values
-	 ;;        (lambda/std () ?body0 . ?body*)
-	 ;;      (lambda/typed ({_ ?rest-type} TMP ... . TMP-REST)
-	 ;;        (set! ?id TMP)
-	 ;;        ...
-	 ;;        TMP-REST))))
-	 ;;
-	 (receive (type* rest-type)
-	     (improper-list->list-and-rest (type-signature.syntax-object formals.sig))
+	 ((?id* ... . ?rest-id)
+	  ;;We want this expansion:
+	  ;;
+	  ;;  (define/std ?id)
+	  ;;  ...
+	  ;;  (define/std ?rest-id
+	  ;;    (call-with-values
+	  ;;        (lambda/std () ?body0 . ?body*)
+	  ;;      (lambda/std (TMP ... . TMP-REST)
+	  ;;        (set! ?id TMP)
+	  ;;        ...
+	  ;;        TMP-REST)))
+	  ;;
+	  (bless
 	   (let ((TMP*		(generate-temporaries ?id*))
 		 (rest.sym	(make-syntactic-identifier-for-temporary-variable "rest")))
-	     (bless
-	      `(begin
-		 ,@(map (lambda (var type)
-			  `(define/checked {,var ,type}))
-		     ?id* type*)
-		 (define/checked {,?rest-id ,rest-type}
-		   (call-with-values
-		       (lambda/std () . ,body*.stx)
-		     (lambda/typed ({_ ,rest-type} ,@TMP* . ,rest.sym)
-		       ;;These set forms do the type validation.
-		       ,@(map (lambda (var TMP)
-				`(set! ,var ,TMP))
-			   ?id* TMP*)
-		       ,rest.sym))))))))
+	     `(begin
+		,@(map (lambda (var)
+			 `(define/std ,var))
+		    ?id*)
+		(define/std ,?rest-id
+		  (call-with-values
+		      (lambda/std () ,?body0 . ,?body*)
+		    (lambda/std (,@TMP* . ,rest.sym)
+		      ,@(map (lambda (var TMP)
+			       `(set! ,var ,TMP))
+			  ?id* TMP*)
+		      ,rest.sym)))))))
 
-	(?args
-	 (identifier? ?args)
-	 (let ((args.sym	(make-syntactic-identifier-for-temporary-variable "args"))
-	       (args.type	(type-signature.syntax-object formals.sig)))
-	   (bless
-	    `(define/checked {,?args ,args.type}
-	       (call-with-values
-		   (lambda/std () . ,body*.stx)
-		 (lambda/typed {,args.sym ,args.type}
-		   ,args.sym))))))
-	)))
+	 (?args
+	  (identifier? ?args)
+	  (bless
+	   (let ((args.sym (make-syntactic-identifier-for-temporary-variable "args")))
+	     `(define/std ,?args
+		(call-with-values
+		    (lambda/std () ,?body0 . ,?body*)
+		  (lambda/std ,args.sym ,args.sym))))))
+	 )))))
 
-  #| end of module: DEFINE-VALUES-MACRO |# )
+(define-macro-transformer (define-values/checked input-form.stx)
+  ;;Transformer function  used to  expand Vicare's DEFINE-VALUES/CHECKED  macros from
+  ;;the  top-level built  in  environment.  Expand  the  contents of  INPUT-FORM.STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?formals ?body0 ?body* ...)
+     (receive (standard-formals.stx formals.sig)
+	 (syntax-object.parse-typed-formals ?formals)
+       (syntax-match standard-formals.stx ()
+	 ((?id* ... ?id0)
+	  ;;We want this expansion:
+	  ;;
+	  ;;  (define/checked {?id ?type})
+	  ;;  ...
+	  ;;  (define/checked {?id0 ?type0}
+	  ;;    (call-with-values
+	  ;;        (lambda/std () ?body0 . ?body*)
+	  ;;      (lambda/typed ({_ ?type0} TMP ... TMP0)
+	  ;;        (set! ?id TMP)
+	  ;;        ...
+	  ;;        TMP0))))
+	  ;;
+	  (receive (type* type0)
+	      (proper-list->head-and-last (type-signature.syntax-object formals.sig))
+	    (let ((TMP* (generate-temporaries ?id*)))
+	      (bless
+	       `(begin
+		  ,@(map (lambda (var type)
+			   `(define/checked {,var ,type}))
+		      ?id* type*)
+		  (define/checked {,?id0 ,type0}
+		    (call-with-values
+			(lambda/std () ,?body0 . ,?body*)
+		      (lambda/typed ({_ ,type0} ,@TMP* TMP0)
+			;;These set forms do the type validation.
+			,@(map (lambda (var TMP)
+				 `(set! ,var ,TMP))
+			    ?id* TMP*)
+			TMP0))))))))
+
+	 ((?id* ... . ?rest-id)
+	  ;;We want this expansion:
+	  ;;
+	  ;;  (define/checked {?id ?type})
+	  ;;  ...
+	  ;;  (define/checked {?rest-id ?rest-type}
+	  ;;    (call-with-values
+	  ;;        (lambda/std () ?body0 . ?body*)
+	  ;;      (lambda/typed ({_ ?rest-type} TMP ... . TMP-REST)
+	  ;;        (set! ?id TMP)
+	  ;;        ...
+	  ;;        TMP-REST))))
+	  ;;
+	  (receive (type* rest-type)
+	      (improper-list->list-and-rest (type-signature.syntax-object formals.sig))
+	    (let ((TMP*		(generate-temporaries ?id*))
+		  (rest.sym	(make-syntactic-identifier-for-temporary-variable "rest")))
+	      (bless
+	       `(begin
+		  ,@(map (lambda (var type)
+			   `(define/checked {,var ,type}))
+		      ?id* type*)
+		  (define/checked {,?rest-id ,rest-type}
+		    (call-with-values
+			(lambda/std () ,?body0 . ,?body*)
+		      (lambda/typed ({_ ,rest-type} ,@TMP* . ,rest.sym)
+			;;These set forms do the type validation.
+			,@(map (lambda (var TMP)
+				 `(set! ,var ,TMP))
+			    ?id* TMP*)
+			,rest.sym))))))))
+
+	 (?args
+	  (identifier? ?args)
+	  (let ((args.sym	(make-syntactic-identifier-for-temporary-variable "args"))
+		(args.type	(type-signature.syntax-object formals.sig)))
+	    (bless
+	     `(define/checked {,?args ,args.type}
+		(call-with-values
+		    (lambda/std () ,?body0 . ,?body*)
+		  (lambda/typed {,args.sym ,args.type}
+		    ,args.sym))))))
+	 )))))
 
 
 ;;;; non-core macro: DEFINE-CONSTANT-VALUES
@@ -4421,61 +4400,7 @@
   #| end of module: DEFINE-CONSTANT-VALUES-MACRO |# )
 
 
-;;;; non-core macro: RECEIVE, RECEIVE-AND-RETURN, XOR
-
-(define-macro-transformer (receive input-form.stx)
-  ;;Transformer function  used to expand  Vicare's RECEIVE macros from  the top-level
-  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
-  ;;object that must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?formals ?producer-expression ?body0 ?body* ...)
-     (receive (standard-formals.stx formals.sig)
-	 (if (options::typed-language?)
-	     (syntax-object.parse-typed-formals ?formals)
-	   (syntax-object.parse-standard-formals ?formals))
-       (cond ((list-of-single-item? standard-formals.stx)
-	      ;;We expect a single return value from the producer.
-	      (bless
-	       `((lambda/checked ,?formals ,?body0 ,@?body*) ,?producer-expression)))
-	     (else
-	      (bless
-	       `(call-with-values
-		    (lambda/checked () ,?producer-expression)
-		  (lambda/checked ,?formals ,?body0 ,@?body*)))))))
-    ))
-
-(define-macro-transformer (receive-and-return input-form.stx)
-  ;;Transformer function used  to expand Vicare's RECEIVE-AND-RETURN  macros from the
-  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
-  ;;syntax object that must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?formals ?producer-expression ?body0 ?body* ...)
-     (receive (standard-formals.stx formals.sig)
-	 (if (options::typed-language?)
-	     (syntax-object.parse-typed-formals ?formals)
-	   (syntax-object.parse-standard-formals ?formals))
-       (receive (rv-form single-return-value?)
-	   (cond ((list? standard-formals.stx)
-		  (if (= 1 (length standard-formals.stx))
-		      (values (car standard-formals.stx) #t)
-		    (values `(values . ,standard-formals.stx) #f)))
-		 ((pair? standard-formals.stx)
-		  (receive (rv* rv-rest)
-		      (improper-list->list-and-rest standard-formals.stx)
-		    (values `(values ,@rv* ,rv-rest) #f)))
-		 (else
-		  ;;It's a standalone identifier.
-		  (values standard-formals.stx #f)))
-	 (if single-return-value?
-	     (bless
-	      `((lambda/checked ,?formals ,?body0 ,@?body* ,rv-form) ,?producer-expression))
-	   (bless
-	    `(call-with-values
-		 (lambda/checked () ,?producer-expression)
-	       (lambda/checked ,?formals ,?body0 ,@?body* ,rv-form)))))))
-    ))
+;;;; non-core macro: XOR
 
 (define-macro-transformer (xor input-form.stx)
   ;;Transformer function used to expand Vicare's  XOR macros from the top-level built

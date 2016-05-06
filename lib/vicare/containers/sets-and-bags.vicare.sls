@@ -571,12 +571,12 @@
   ;;associations in the hashtable, but if it's a bag, we have to add up the counts.
   ;;
   (if (sob-multi? sob)
-      (receive-and-return (result)
+      (receive-and-return ({result <exact-integer>})
 	  0
 	(hashtable-for-each-entry (lambda (elem count)
-			      (set! result (+ count result)))
+				    (set! result (+ count result)))
 	  (sob-hash-table sob)))
-    (hashtable-size (sob-hash-table sob))))
+	  (hashtable-size (sob-hash-table sob))))
 
 (define* (set-size {set set?})
   (sob-size set))
@@ -591,18 +591,19 @@
   ;;which element you will  get, so this is not as useful as  finding an element in a
   ;;list or other ordered container.  If it's not there, tail-call the FAILURE thunk.
   ;;
-  (or (hashtable-find-key pred (sob-hash-table sob))
-      (failure)))
+  (cond ((hashtable-find-key pred (sob-hash-table sob)))
+	(else
+	 (failure))))
 
 (case-define* set-find
   (({pred procedure?} {set set?})
-   (sob-find pred set void))
+   (sob-find pred set sentinel))
   (({pred procedure?} {set set?} {failure procedure?})
    (sob-find pred set failure)))
 
 (case-define* bag-find
   (({pred procedure?} {bag bag?})
-   (sob-find pred bag void))
+   (sob-find pred bag sentinel))
   (({pred procedure?} {bag bag?} {failure procedure?})
    (sob-find pred bag failure)))
 

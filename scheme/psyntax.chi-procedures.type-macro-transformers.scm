@@ -886,6 +886,8 @@
       (_
        (__synner__ "invalid syntax in macro use"))))
 
+  (define-synner synner (quote case-type) input-form.stx)
+
   (define (%build-output-form input-form.stx lexenv.run lexenv.expand
 			      expr.stx case-clause*.stx)
     (let* ((expr.psi     (chi-expr expr.stx lexenv.run lexenv.expand))
@@ -924,12 +926,6 @@
 		     (synner "invalid clause syntax" case-clause.stx)))
 		  (recur (cdr case-clause*.stx))))
 	'())))
-
-  (case-define synner
-    ((message)
-     (synner message #f))
-    ((message subform)
-     (syntax-violation 'case-type message input-form.stx subform)))
 
   (main))
 

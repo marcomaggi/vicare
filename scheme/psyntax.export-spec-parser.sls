@@ -31,6 +31,7 @@
 	  PSYNTAX-SYNTAX-MATCH))
 
 (import PSYNTAX-SYNTAX-MATCH)
+(include "psyntax.helpers.scm" #t)
 
 
 (define* (parse-export-spec* export-spec*)
@@ -62,11 +63,7 @@
   ;;     == (suffix   (?internal-identifier ...) the-suffix)
   ;;     == (desuffix (?internal-identifier ...) the-suffix)
   ;;
-  (case-define %synner
-    ((message)
-     (syntax-violation (quote parse-export-spec*) message export-spec*))
-    ((message subform)
-     (syntax-violation (quote parse-export-spec*) message export-spec* subform)))
+  (define-synner %synner (quote parse-export-spec*) export-spec*)
   (let loop ((export-spec*          export-spec*)
 	     (internal-identifier*  '())
 	     (external-identifier*  '()))

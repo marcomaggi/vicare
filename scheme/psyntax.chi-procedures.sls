@@ -1225,9 +1225,9 @@
 			 (validator.psi (chi-expr validator.stx lexenv.run lexenv.expand)))
 		    (build-application no-source
 			(psi.core-expr validator.psi)
-		      (list (psi.core-expr rhs.psi)	     ;value
-			    (build-data no-source 1)	     ;value-index
-			    (build-data no-source 'set!))))) ;caller-who
+		      (list (psi.core-expr rhs.psi)  ;value
+			    (build-data no-source 1) ;value-index
+			    (build-data no-source (syntax->datum lhs.id)))))) ;caller-who
 		 (else
 		  (raise
 		   (condition (make-expand-time-type-signature-violation)

@@ -331,11 +331,7 @@
       (values standard-formals.stx (make-type-signature formals.ots))))
 
   (define* (%parse-standard-formals input-formals.stx)
-    (case-define %synner
-      ((message)
-       (%synner message #f))
-      ((message subform)
-       (syntax-violation __module_who__ message input-formals.stx subform)))
+    (define-synner %synner __module_who__ input-formals.stx)
     (syntax-match input-formals.stx (brace)
       (?args-id
        (identifier? ?args-id)
@@ -345,16 +341,16 @@
        (values '() '()))
 
       ((?arg0 ?arg* ...)
-       (let ((arg*.stx		(cons ?arg0 ?arg*)))
-	 (%validate-standard-formals arg*.stx %synner)
-	 (values arg*.stx (%one-untyped-for-each arg*.stx))))
+       (let ((standard-formals.stx	(cons ?arg0 ?arg*)))
+	 (%validate-standard-formals standard-formals.stx %synner)
+	 (values standard-formals.stx (%one-untyped-for-each standard-formals.stx))))
 
       ((?arg0 ?arg* ... . ?rest-id)
-       (let* ((arg*.stx		(cons ?arg0 ?arg*))
-	      (formals.stx	(append arg*.stx ?rest-id)))
-	 (%validate-standard-formals formals.stx %synner)
+       (let* ((arg*.stx			(cons ?arg0 ?arg*))
+	      (standard-formals.stx	(append arg*.stx ?rest-id)))
+	 (%validate-standard-formals standard-formals.stx %synner)
 	 ;;This APPEND application returns an improper list.
-	 (values formals.stx (append (%one-untyped-for-each arg*.stx) (<list>-ots)))))
+	 (values standard-formals.stx (append (%one-untyped-for-each arg*.stx) (<list>-ots)))))
 
       (_
        (%synner "invalid standard formals syntax"))))
@@ -391,24 +387,21 @@
   ;;
   ;;When successful return the following values:
   ;;
-  ;;1. A proper or improper list of identifiers representing the standard formals.
+  ;;1. A  proper or improper list  of identifiers representing the  standard formals.
+  ;;This list is fully unwrapped.
   ;;
   ;;2. An instance of "<type-signature>" representing the types of the formals.
   ;;
   (define-module-who syntax-object.parse-typed-formals)
 
-  (define (syntax-object.parse-typed-formals formals.stx)
+  (define (syntax-object.parse-typed-formals input-formals.stx)
     (receive (standard-formals.stx formals.ots)
-	(%parse-typed-formals formals.stx)
+	(%parse-typed-formals input-formals.stx)
       (values standard-formals.stx (make-type-signature formals.ots))))
 
-  (define (%parse-typed-formals formals.stx)
-    (case-define %synner
-      ((message)
-       (%synner message #f))
-      ((message subform)
-       (syntax-violation __module_who__ message formals.stx subform)))
-    (syntax-match formals.stx (brace)
+  (define (%parse-typed-formals input-formals.stx)
+    (define-synner %synner __module_who__ input-formals.stx)
+    (syntax-match input-formals.stx (brace)
 
       ;;Non-standard formals: typed args, as in: (lambda (brace args <list>) ---)
       ((brace ?args-id ?args-type)
@@ -444,7 +437,8 @@
        (and (for-all identifier? ?arg*)
 	    (identifier? ?rest-id))
        (receive-and-return (standard-formals.stx formals.ots)
-	   (values formals.stx (append (%one-untyped-for-each ?arg*) (<list>-ots)))
+	   (values (append ?arg* ?rest-id)
+		   (append (%one-untyped-for-each ?arg*) (<list>-ots)))
 	 (%validate-standard-formals standard-formals.stx %synner)))
 
       ;;Non-standard formals: possibly typed identifiers with UNtyped rest argument.

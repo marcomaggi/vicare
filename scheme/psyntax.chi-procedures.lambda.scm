@@ -21,7 +21,9 @@
 
 (module (chi-lambda/std
 	 chi-lambda/typed
+	 chi-lambda/typed/parsed-formals
 	 chi-lambda/checked
+	 chi-lambda/checked/parsed-formals
 	 chi-named-lambda/std
 	 chi-named-lambda/typed
 	 chi-named-lambda/checked
@@ -407,7 +409,10 @@
 
 ;;;; typed LAMBDA expansion
 
-(module (chi-lambda/typed chi-lambda/checked)
+(module (chi-lambda/typed
+	 chi-lambda/typed/parsed-formals
+	 chi-lambda/checked
+	 chi-lambda/checked/parsed-formals)
 
   (define* (chi-lambda/typed input-form.stx lexenv.run lexenv.expand
 			     input-formals.stx body*.stx)
@@ -418,7 +423,24 @@
     ;;formals  of the  LAMBDA syntax.   The argument  BODY*.STX is  a list  of syntax
     ;;objects representing the body expressions.
     ;;
-    (%chi-lambda input-form.stx lexenv.run lexenv.expand 'typed   input-formals.stx body*.stx))
+    (%chi-lambda input-form.stx lexenv.run lexenv.expand 'typed input-formals.stx body*.stx))
+
+  (define* (chi-lambda/typed/parsed-formals input-form.stx lexenv.run lexenv.expand
+					    standard-formals.stx clause-signature
+					    body*.stx)
+    ;;Expand the contents of a LAMBDA/TYPED syntax use and return a psi object.
+    ;;
+    ;;The argument INPUT-FORM.STX is a syntax object representing the original LAMBDA
+    ;;expression.  The argument STANDARD-FORMALS.STX  is a syntax object representing
+    ;;the  standard formals  of the  closure.   The argument  CLAUSE-SIGNATURE is  an
+    ;;instance of "<clambda-clause-signature>" representing the type signature of the
+    ;;closure.  The argument  BODY*.STX is a list of syntax  objects representing the
+    ;;body expressions.
+    ;;
+    (%chi-lambda/parsed-formals input-form.stx lexenv.run lexenv.expand 'typed
+				standard-formals.stx clause-signature body*.stx))
+
+;;; --------------------------------------------------------------------
 
   (define* (chi-lambda/checked input-form.stx lexenv.run lexenv.expand
 			       input-formals.stx body*.stx)
@@ -431,6 +453,21 @@
     ;;
     (%chi-lambda input-form.stx lexenv.run lexenv.expand 'checked input-formals.stx body*.stx))
 
+  (define* (chi-lambda/checked/parsed-formals input-form.stx lexenv.run lexenv.expand
+					      standard-formals.stx clause-signature
+					      body*.stx)
+    ;;Expand the contents of a LAMBDA/CHECKED syntax use and return a psi object.
+    ;;
+    ;;The argument INPUT-FORM.STX is a syntax object representing the original LAMBDA
+    ;;expression.  The argument STANDARD-FORMALS.STX  is a syntax object representing
+    ;;the  standard formals  of the  closure.   The argument  CLAUSE-SIGNATURE is  an
+    ;;instance of "<clambda-clause-signature>" representing the type signature of the
+    ;;closure.  The argument  BODY*.STX is a list of syntax  objects representing the
+    ;;body expressions.
+    ;;
+    (%chi-lambda/parsed-formals input-form.stx lexenv.run lexenv.expand 'checked
+				standard-formals.stx clause-signature body*.stx))
+
 ;;; --------------------------------------------------------------------
 
   (define (%chi-lambda input-form.stx lexenv.run lexenv.expand type input-formals.stx body*.stx)
@@ -440,24 +477,31 @@
 	;;of  "<clambda-clause-signature>"  representing  the types  of  formals  and
 	;;retvals.
 	(syntax-object.parse-typed-clambda-clause-formals input-formals.stx)
-      (receive (standard-formals.lex body.psi)
-	  (case type
-	    ((typed)
-	     (chi-lambda-clause/typed   input-form.stx lexenv.run lexenv.expand
-					standard-formals.stx clause-signature body*.stx))
-	    ((checked)
-	     (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
-					standard-formals.stx clause-signature body*.stx)))
-	;;If no type signature was specified for  the clause: we use the signature of
-	;;the last form in the body, performing type propagation.
-	(when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
-	  (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi)))
-	(make-psi input-form.stx
-	  (build-lambda (syntax-annotation input-form.stx)
-	      standard-formals.lex
-	    (psi.core-expr body.psi))
-	  (make-type-signature/single-value
-	   (make-closure-type-spec (make-clambda-signature (list clause-signature))))))))
+      (%chi-lambda/parsed-formals input-form.stx lexenv.run lexenv.expand type
+				  standard-formals.stx clause-signature body*.stx)))
+
+  (define* (%chi-lambda/parsed-formals input-form.stx lexenv.run lexenv.expand type
+				       standard-formals.stx clause-signature body*.stx)
+    (receive (standard-formals.lex body.psi)
+	(case type
+	  ((typed)
+	   (chi-lambda-clause/typed   input-form.stx lexenv.run lexenv.expand
+				      standard-formals.stx clause-signature body*.stx))
+	  ((checked)
+	   (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
+				      standard-formals.stx clause-signature body*.stx))
+	  (else
+	   (error __who__ "internal error, unknown type" type)))
+      ;;If no type  signature was specified for  the clause: we use  the signature of
+      ;;the last form in the body, performing type propagation.
+      (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
+	(clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi)))
+      (make-psi input-form.stx
+	(build-lambda (syntax-annotation input-form.stx)
+	    standard-formals.lex
+	  (psi.core-expr body.psi))
+	(make-type-signature/single-value
+	 (make-closure-type-spec (make-clambda-signature (list clause-signature)))))))
 
   #| end of module |# )
 

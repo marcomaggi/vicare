@@ -603,7 +603,7 @@ satisfies @var{predicate}, or the result of invoking @var{failure} with
 no arguments if there is none.
 
 As @value{PRJNAME} extension: when @var{failure} is missing, it defaults
-to @func{void}.
+to @func{sentinel}.
 @end defun
 
 

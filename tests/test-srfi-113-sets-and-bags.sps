@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) John Cowan 2013.  All Rights Reserved.
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -29,11 +29,13 @@
 ;;;
 
 
-#!r6rs
-(import (vicare)
-  (vicare checks)
-  (srfi :113)
-  (srfi :114))
+#!vicare
+(program (test-srfi-113-sets-and-bags)
+  (options typed-language)
+  (import (vicare)
+    (vicare checks)
+    (srfi :113)
+    (srfi :114))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare libraries: SRFI 113, sets and bags\n")
@@ -94,7 +96,7 @@
   (define syms2 (set-copy syms))
   ;; syms2 is now {a, b, c, d}
   (define esyms (set eq-comparator))
-  (define total 0)
+  (define {total <fixnum>} 0)
 
   ;; esyms is now {}
   (test-assert (set-empty? esyms))
@@ -341,7 +343,7 @@
   (define syms2 (bag-copy syms))
   ;; syms2 is now {a, b, c, d}
   (define esyms (bag eq-comparator))
-  (define total 0)
+  (define {total <fixnum>} 0)
   ;; esyms is now {}
   (test-assert (bag-empty? esyms))
   (test-assert (bag? nums))
@@ -463,7 +465,7 @@
   (test-assert (bag<=? two two))
   (test-assert (bag>=? two two))
   (test '((10 . 2))
-	(let ((result '()))
+	(let (({result <list>} '()))
 	  (bag-for-each-unique
 	   (lambda (x y) (set! result (cons (cons x y) result)))
 	   two)
@@ -968,7 +970,7 @@
 	(bag-find (lambda (elm)
 		    (= elm num1))
 		  B^
-		  void))
+		  sentinel))
     => 2.0)
 
   (check
@@ -1000,7 +1002,7 @@
 		(set-find (lambda (elm)
 			    (eq? elm str2))
 			  S^)))
-    => (void) "a")
+    => (sentinel) "a")
 
   (check
       (internal-body
@@ -1035,7 +1037,7 @@
 		(bag-find (lambda (elm)
 			    (eq? elm str2))
 			  B^)))
-    => (void) "a")
+    => (sentinel) "a")
 
   (check
       (internal-body
@@ -1577,14 +1579,14 @@
       (internal-body
 	(define S
 	  (set fixnum-comparator))
-	(set-find fxzero? S void))
-    => (void))
+	(set-find fxzero? S sentinel))
+    => (sentinel))
 
   (check
       (internal-body
 	(define S
 	  (set fixnum-comparator 1 0 3))
-	(set-find fxzero? S void))
+	(set-find fxzero? S sentinel))
     => 0)
 
 ;;; --------------------------------------------------------------------
@@ -1594,21 +1596,21 @@
       (internal-body
 	(define B
 	  (bag fixnum-comparator))
-	(bag-find fxzero? B void))
-    => (void))
+	(bag-find fxzero? B sentinel))
+    => (sentinel))
 
   (check
       (internal-body
 	(define B
 	  (bag fixnum-comparator 1 0 3))
-	(bag-find fxzero? B void))
+	(bag-find fxzero? B sentinel))
     => 0)
 
   (check
       (internal-body
 	(define B
 	  (bag real-comparator 1 0 0.0 3))
-	(bag-find zero? B void))
+	(bag-find zero? B sentinel))
     => 0)
 
 ;;; --------------------------------------------------------------------
@@ -1792,7 +1794,7 @@
 ;;; set-for-each
 
   (check
-      (list-sort < (receive-and-return (rv)
+      (list-sort < (receive-and-return ({rv <list>})
 		       '()
 		     (set-for-each (lambda (elm)
 				     (set-cons! rv elm))
@@ -1803,7 +1805,7 @@
 ;;; bag-for-each
 
   (check
-      (list-sort < (receive-and-return (rv)
+      (list-sort < (receive-and-return ({rv <list>})
 		       '()
 		     (bag-for-each (lambda (elm)
 				     (set-cons! rv elm))
@@ -3324,6 +3326,8 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;; Local Variables:

@@ -28,6 +28,8 @@
   (options typed-language)
   (import (vicare)
     (prefix (vicare expander) expander::)
+    (only (vicare expander)
+	  &expand-time-type-signature-violation)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -43,6 +45,53 @@
 	 (.syntax-object (type-of ?expr))
        (=> syntax=?)
        (syntax ?expected)))
+    ))
+
+(define-syntax doit-result
+  (syntax-rules (=>)
+    ((_ ?expr => ?expected)
+     (check
+	 (with-result
+	   (.syntax-object (type-of ?expr)))
+       (=> syntax=?)
+       (syntax ?expected)))
+    ))
+
+(define-constant THE-ENVIRONMENT
+  (environment '(vicare)))
+
+(define (%eval expr)
+  (with-exception-handler
+      (lambda (E)
+	(unless (warning? E)
+	  (raise E)))
+    (lambda ()
+      (eval expr THE-ENVIRONMENT))))
+
+(define-syntax type-signature-violation-for-message
+  (syntax-rules (=>)
+    ((_ ?expr => ?message)
+     (check
+	 (try
+	     (%eval (quote ?expr))
+	   (catch E
+	     ((&expand-time-type-signature-violation)
+	      (condition-message E))
+	     (else E)))
+       => ?message))
+    ))
+
+(define-syntax assertion-violation-for-message
+  (syntax-rules (=>)
+    ((_ ?expr => ?message)
+     (check
+	 (try
+	     ?expr
+	   (catch E
+	     ((&assertion)
+	      (condition-message E))
+	     (else E)))
+       => ?message))
     ))
 
 
@@ -519,84 +568,6 @@
   (void))
 
 
-(parametrise ((check-test-name	'receive))
-
-  (doit (receive (a)
-	    1
-	  123)
-	=> (<positive-fixnum>))
-
-  (doit (receive (a b)
-	    (values 1 2)
-	  (values 123 "ciao"))
-	=> (<positive-fixnum> <string>))
-
-;;; --------------------------------------------------------------------
-
-  (doit (receive ({a <fixnum>})
-	    1
-	  a)
-	=> (<fixnum>))
-
-  (doit (receive ({a <positive-fixnum>} {b <string>})
-	    (values 123 "ciao")
-	  (values a b))
-	=> (<positive-fixnum> <string>))
-
-;;; --------------------------------------------------------------------
-
-  (doit (receive (a)
-	    1
-	  a)
-	=> (<top>))
-
-  (doit (receive (a b)
-	    (values 123 "ciao")
-	  (values a b))
-	=> (<top> <top>))
-
-  (void))
-
-
-(parametrise ((check-test-name	'receive-and-return))
-
-  (doit (receive-and-return (a)
-	    1
-	  (list a))
-	=> (<top>))
-
-  (doit (receive-and-return (a b)
-	    (values 1 2)
-	  (list a b))
-	=> (<top> <top>))
-
-;;; --------------------------------------------------------------------
-
-  (doit (receive-and-return ({a <fixnum>})
-	    1
-	  (void))
-	=> (<fixnum>))
-
-  (doit (receive-and-return ({a <positive-fixnum>} {b <string>})
-	    (values 123 "ciao")
-	  (list a b))
-	=> (<positive-fixnum> <string>))
-
-;;; --------------------------------------------------------------------
-
-  (doit (receive-and-return (a)
-	    1
-	  (void))
-	=> (<top>))
-
-  (doit (receive-and-return (a b)
-	    (values 123 "ciao")
-	  (list a b))
-	=> (<top> <top>))
-
-  (void))
-
-
 (parametrise ((check-test-name	'begin0))
 
   (doit (begin0 1 "ciao")
@@ -640,6 +611,1121 @@
 	=> (list-of <fixnum>))
 
   #| end of PARAMETRISE |# )
+
+
+#;(parametrise ((check-test-name	'receive))
+
+;;; no return values
+
+  (doit (receive ()
+	    (values)
+	  123)
+	=> (<positive-fixnum>))
+  (check
+      (receive ()
+	  (values)
+	123)
+    => 123)
+
+;;; special cases
+
+  ;;Producer not returning.
+  ;;
+  (doit (receive ()
+	    (error #f "wrong")
+	  123)
+	=> <no-return>)
+  (check
+      (try
+	  (receive ()
+	      (error #f "wrong")
+	    123)
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  ;;Producer returns values.
+  ;;
+  (type-signature-violation-for-message
+   (receive ()
+       (values 1)
+     123)
+   => "zero return values are expected from the producer expression")
+
+;;; --------------------------------------------------------------------
+;;; single return value
+
+  ;;Typed single argument, expand-time validation.
+  ;;
+  (doit (receive ({a <fixnum>})
+	    1
+	  a)
+	=> (<fixnum>))
+  (check
+      (receive ({a <fixnum>})
+	  1
+	a)
+    => 1)
+
+  ;;Typed single argument, run-time validation.
+  ;;
+  (doit (receive ({a <fixnum>})
+	    (cast-signature (<top>) 1)
+	  a)
+	=> (<fixnum>))
+  (check
+      (receive ({a <fixnum>})
+	  (cast-signature (<top>) 1)
+	a)
+    => 1)
+
+  ;;UNtyped single value ignored in body.  Type propagation.
+  ;;
+  (doit (receive (a)
+	    1
+	  123)
+	=> (<positive-fixnum>))
+  (check
+      (receive (a)
+	  1
+	123)
+    => 123)
+
+  ;;UNtyped single value used in body.  Type propagation.
+  ;;
+  (doit (receive (a)
+	    1
+	  a)
+	=> (<positive-fixnum>))
+  (check
+      (receive (a)
+	  1
+	a)
+    => 1)
+
+  ;;UNtyped single value used in body.  Type propagation.  More body forms
+  ;;
+  (doit (receive (a)
+	    1
+	  (+ 1 2)
+	  (list a))
+	=> ((list <positive-fixnum>)))
+  (check
+      (receive (a)
+	  1
+	(+ 1 2)
+	(list a))
+    => '(1))
+
+  ;;Producer returns a LIST-OF.  Untyped syntactic binding.
+  ;;
+  (doit (receive (a)
+	    (cast-signature (list-of <fixnum>) 1)
+	  a)
+	=> (<fixnum>))
+  (check
+      (receive (a)
+	  (cast-signature (list-of <fixnum>) 1)
+	a)
+    => 1)
+
+  ;;Producer returns a LIST-OF.  Typed syntactic binding.
+  ;;
+  (doit (receive ({a <fixnum>})
+	    (cast-signature (list-of <fixnum>) 1)
+	  a)
+	=> (<fixnum>))
+  (check
+      (receive ({a <fixnum>})
+	  (cast-signature (list-of <fixnum>) 1)
+	a)
+    => 1)
+
+  ;;Producer returns a LIST-OF with multiple values.
+  ;;
+  (assertion-violation-for-message
+   (receive ({a <fixnum>})
+       (cast-signature <list> (values 1 2 3))
+     a)
+   => "incorrect number of values returned to single value context")
+
+  ;;Producer returns a "<list>".  Untyped syntactic binding.
+  ;;
+  (doit (receive (a)
+	    (cast-signature <list> 1)
+	  a)
+	=> (<top>))
+  (check
+      (receive (a)
+	  (cast-signature <list> 1)
+	a)
+    => 1)
+
+  ;;Producer returns a "<list>".  Typed syntactic binding.
+  ;;
+  (doit (receive ({a <fixnum>})
+	    (cast-signature <list> 1)
+	  a)
+	=> (<fixnum>))
+  (check
+      (receive ({a <fixnum>})
+	  (cast-signature <list> 1)
+	a)
+    => 1)
+
+  ;;Producer returns a "<list>" with multiple values.
+  ;;
+  (check
+      (try
+	  (receive ({a <fixnum>})
+	      (cast-signature <list> (values 1 2 3))
+	    a)
+	(catch E
+	  ((&assertion)
+	   (condition-message E))
+	  (else E)))
+    => "incorrect number of values returned to single value context")
+
+;;; special cases
+
+  ;;Producer not returning.
+  ;;
+  (doit (receive (a)
+	    (error #f "wrong")
+	  a)
+	=> <no-return>)
+  (check
+      (try
+	  (receive (a)
+	      (error #f "wrong")
+	    123)
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  ;;Producer returns zero values.
+  ;;
+  (type-signature-violation-for-message
+   (receive (a)
+       (values)
+     a)
+   => "one value is expected but the producer expression is typed as returning zero, two or more values")
+
+  ;;Producer returns multiple values.
+  ;;
+  (type-signature-violation-for-message
+   (receive (a)
+       (values 1 2 3)
+     a)
+   => "one value is expected but the producer expression is typed as returning zero, two or more values")
+
+  ;;Producer returning void.
+  ;;
+  (type-signature-violation-for-message
+   (receive (a)
+       (void)
+     a)
+   => "the producer expression is typed as returning void")
+
+;;; --------------------------------------------------------------------
+;;; fixed number of two or more mandatory arguments
+
+  ;;Two values, typed syntactic bindings.
+  ;;
+  (doit (receive ({a <positive-fixnum>} {b <string>})
+	    (values 123 "ciao")
+	  (values a b))
+	=> (<positive-fixnum> <string>))
+  (check
+      (receive ({a <positive-fixnum>} {b <string>})
+	  (values 123 "ciao")
+	(values a b))
+    => 123 "ciao")
+
+  ;;Two values, typed syntactic bindings.  Run-time validation.
+  ;;
+  (doit (receive ({a <fixnum>} {b <flonum>})
+	    (values (cast-signature (<top>) 1)
+		    (cast-signature (<top>) 2.3))
+	  (values a b))
+	=> (<fixnum> <flonum>))
+  (check
+      (receive ({a <fixnum>} {b <flonum>})
+	  (values (cast-signature (<top>) 1)
+		  (cast-signature (<top>) 2.3))
+	(values a b))
+    => 1 2.3)
+
+  ;;Two values, UNtyped syntactic bindings.  Unused bindings.  Type propagation.
+  ;;
+  (doit (receive (a b)
+	    (values 1 2)
+	  (values "hello" "world"))
+	=> (<string> <string>))
+  (check
+      (receive (a b)
+	  (values 1 2)
+	(values "hello" "world"))
+    => "hello" "world")
+
+  ;;Two values, UNtyped syntactic bindings.  Type propagation.
+  ;;
+  (doit (receive (a b)
+	    (values 1 2.3)
+	  (values a b))
+	=> (<positive-fixnum> <positive-flonum>))
+  (check
+      (receive (a b)
+	  (values 1 2.3)
+	(values a b))
+    => 1 2.3)
+
+;;; special cases
+
+  ;;Producer not returning.
+  ;;
+  (doit (receive (a b)
+	    (error #f "wrong")
+	  (values a b))
+	=> <no-return>)
+  (check
+      (try
+	  (receive (a b)
+	      (error #f "wrong")
+	    (values a b))
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  ;;Producer returns zero values.
+  ;;
+  (type-signature-violation-for-message
+   (receive (a b)
+       (values)
+     (list a b))
+   => "two or more values are expected from the producer expression, but it returns zero values")
+
+  ;;Producer returns one value.
+  ;;
+  (type-signature-violation-for-message
+   (receive (a b)
+       (values 1)
+     (list a b))
+   => "two or more values are expected from the producer expression, but it returns one value")
+
+  ;;Two Untyped bindings.  Producer returns an UNtyped list of two values.
+  ;;
+  (doit (receive (a b)
+	    (cast-signature <list> (values 1 2.3))
+	  (values a b))
+	=> (<top> <top>))
+  (check
+      (receive (a b)
+	  (cast-signature <list> (values 1 2.3))
+	(values a b))
+    => 1 2.3)
+
+  ;;Two typed  bindings.  Producer returns an  UNtyped list of two  values.  Run-time
+  ;;validation.
+  ;;
+  (doit (receive ({a <fixnum>} {b <flonum>})
+	    (cast-signature <list> (values 1 2.3))
+	  (values a b))
+	=> (<fixnum> <flonum>))
+  (check
+      (receive ({a <fixnum>} {b <flonum>})
+	  (cast-signature <list> (values 1 2.3))
+	(values a b))
+    => 1 2.3)
+
+  ;;Two Untyped bindings.  Producer returns a typed list of two values.
+  ;;
+  (doit (receive (a b)
+	    (cast-signature (list-of <number>) (values 1 2.3))
+	  (values a b))
+	=> (<number> <number>))
+  (check
+      (receive (a b)
+	  (cast-signature (list-of <number>) (values 1 2.3))
+	(values a b))
+    => 1 2.3)
+
+  ;;Two  typed bindings.   Producer returns  a typed  list of  two values.   Run-time
+  ;;validation.
+  ;;
+  (doit (receive ({a <fixnum>} {b <flonum>})
+	    (cast-signature (list-of <number>) (values 1 2.3))
+	  (values a b))
+	=> (<fixnum> <flonum>))
+  (check
+      (receive ({a <fixnum>} {b <flonum>})
+	  (cast-signature (list-of <number>) (values 1 2.3))
+	(values a b))
+    => 1 2.3)
+
+;;; -------------------------------------------------------------------- ;
+;;; unspecified number of values
+
+  ;;Typed catch-all syntactic binding.
+  ;;
+  (doit (receive {vals (list-of <fixnum>)}
+	    (values 1 2 3)
+	  vals)
+	=> ((list-of <fixnum>)))
+  (check
+      (receive {vals (list-of <fixnum>)}
+	  (values 1 2 3)
+	vals)
+    => '(1 2 3))
+
+  ;;Untyped catch-all syntactic binding.
+  ;;
+  (doit (receive vals
+	    (values 1 2 3)
+	  vals)
+	=> (<list>))
+  (check
+      (receive vals
+	  (values 1 2 3)
+	vals)
+    => '(1 2 3))
+
+  ;;Untyped catch-all syntactic bindings.  The producer returns a single value.
+  ;;
+  (doit (receive vals
+	    1
+	  vals)
+	=> (<list>))
+  (check
+      (receive vals
+	  1
+	vals)
+    => '(1))
+
+  ;;Untyped catch-all syntactic binding.  Special case of type propagation.
+  ;;
+  (doit (receive vals
+	    (cast-signature (list-of <fixnum>) (values 1 2 3))
+	  vals)
+	=> ((list-of <fixnum>)))
+  (check
+      (receive vals
+	  (cast-signature (list-of <fixnum>) (values 1 2 3))
+	vals)
+    => '(1 2 3))
+
+  ;;Untyped catch-all syntactic binding.  The  producer returns an unspecified number
+  ;;of unspecified values.
+  ;;
+  (doit (receive vals
+	    (cast-signature <list> (values 1 2 3))
+	  vals)
+	=> (<list>))
+  (check
+      (receive vals
+	  (cast-signature <list> (values 1 2 3))
+	vals)
+    => '(1 2 3))
+
+  ;;Untyped syntactic bindings with rest.  The producer returns an unspecified number
+  ;;of unspecified values.
+  ;;
+  (doit (receive (a b . vals)
+	    (cast-signature <list> (values 1 2 3))
+	  (values a b vals))
+	=> (<top> <top> <list>))
+  (check
+      (receive (a b . vals)
+	  (cast-signature <list> (values 1 2 3))
+	(values a b vals))
+    => 1 2 '(3))
+
+  ;;Typed syntactic bindings with rest.
+  ;;
+  (doit (receive ({a <fixnum>} {b <flonum>} . {vals (list-of <string>)})
+	    (values 1 2.3 "C" "D")
+	  (values a b vals))
+	=> (<fixnum> <flonum> (list-of <string>)))
+  (check
+      (receive ({a <fixnum>} {b <flonum>} . {vals (list-of <string>)})
+	  (values 1 2.3 "C" "D")
+	(values a b vals))
+    => 1 2.3 '("C" "D"))
+
+  ;;Untyped syntactic bindings with rest.
+  ;;
+  (doit (receive (a b . vals)
+	    (values 1 2.3 "C" "D")
+	  (values a b vals))
+	=> (<positive-fixnum> <positive-flonum> <list>))
+  (check
+      (receive (a b . vals)
+	  (values 1 2.3 "C" "D")
+	(values a b vals))
+    => 1 2.3 '("C" "D"))
+
+  ;;Untyped syntactic bindings with rest.  Special case of type propagation.
+  ;;
+  (doit (receive (a b . vals)
+	    (cast-signature (<fixnum> <flonum> . (list-of <string>))
+			    (values 1 2.3 "C" "D"))
+	  (values a b vals))
+	=> (<fixnum> <flonum> (list-of <string>)))
+  (check
+      (receive (a b . vals)
+	  (cast-signature (<fixnum> <flonum> . (list-of <string>))
+			  (values 1 2.3 "C" "D"))
+	(values a b vals))
+    => 1 2.3 '("C" "D"))
+
+  ;;Untyped syntactic bindings with rest.  The producer returns a single value.
+  ;;
+  (doit (receive (a . vals)
+	    1
+	  (values a vals))
+	=> (<positive-fixnum> <list>))
+  (check
+      (receive (a . vals)
+	  1
+	(values a vals))
+    => 1 '())
+
+  ;;Producer not returning.
+  ;;
+  (doit (receive (a b . rest)
+	    (error #f "wrong")
+	  (values a b rest))
+	=> <no-return>)
+  (check
+      (try
+	  (receive (a b . rest)
+	      (error #f "wrong")
+	    (values a b . rest))
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  (void))
+
+
+(parametrise ((check-test-name	'receive-and-return))
+
+  (define (one)
+    (add-result 'one))
+
+  (case-define two
+    (()
+     (add-result 'two))
+    (args
+     (add-result (cons 'two args))))
+
+;;; --------------------------------------------------------------------
+;;; no return values
+
+  (doit (receive-and-return ()
+	    (values)
+	  (one))
+	=> ())
+  (check
+      (with-result
+	(call-with-values
+	    (lambda ()
+	      (receive-and-return ()
+		  (values)
+		(one)))
+	  (lambda args
+	    (two)
+	    args)))
+    => '(() (one two)))
+
+;;; special cases
+
+  ;;Producer not returning.
+  ;;
+  (doit (receive-and-return ()
+	    (error #f "wrong")
+	  (one)
+	  (two))
+	=> <no-return>)
+  (check
+      (try
+	  (receive-and-return ()
+	      (error #f "wrong")
+	    (one)
+	    (two))
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  ;;Producer returns values.
+  ;;
+  (type-signature-violation-for-message
+   (receive-and-return ()
+       1
+     (one)
+     (two))
+   => "zero return values are expected from the producer expression")
+
+;;; --------------------------------------------------------------------
+;;; single return value
+
+  ;;Typed single argument, expand-time validation.
+  ;;
+  (doit (receive-and-return ({a <fixnum>})
+	    1
+	  (one)
+	  (two a))
+	=> (<fixnum>))
+  (check
+      (with-result
+	(receive-and-return ({a <fixnum>})
+	    1
+	  (one)
+	  (two a)))
+    => '(1 (one (two 1))))
+
+  ;;Typed single argument, run-time validation.
+  ;;
+  (doit (receive-and-return ({a <fixnum>})
+	    (cast-signature (<top>) 1)
+	  (one)
+	  (two a))
+	=> (<fixnum>))
+  (check
+      (with-result
+	(receive-and-return ({a <fixnum>})
+	    (cast-signature (<top>) 1)
+	  (one)
+	  (two a)))
+    => '(1 (one (two 1))))
+
+  ;;UNtyped single value ignored in body.  Type propagation.
+  ;;
+  (doit (receive-and-return (a)
+	    1
+	  (one)
+	  (two a))
+	=> (<positive-fixnum>))
+  (check
+      (with-result
+	(receive-and-return (a)
+	    1
+	  (one)
+	  (two a)))
+    => '(1 (one (two 1))))
+
+  ;;UNtyped single value used in body.  Type propagation.
+  ;;
+  (doit (receive-and-return (a)
+	    1
+	  (two a))
+	=> (<positive-fixnum>))
+  (check
+      (with-result
+	(receive-and-return (a)
+	    1
+	  (two a)))
+    => '(1 ((two 1))))
+
+  ;;UNtyped single value used in body.  Type propagation.  More body forms
+  ;;
+  (doit (receive-and-return (a)
+	    1
+	  (one)
+	  (two a))
+	=> (<positive-fixnum>))
+  (check
+      (with-result
+	(receive-and-return (a)
+	    1
+	  (one)
+	  (two a)))
+    => '(1 (one (two 1))))
+
+  ;;Producer returns a LIST-OF.  Untyped syntactic binding.
+  ;;
+  (doit (receive-and-return (a)
+	    (cast-signature (list-of <fixnum>) 1)
+	  (one)
+	  (two a))
+	=> (<fixnum>))
+  (check
+      (with-result
+	(receive-and-return (a)
+	    (cast-signature (list-of <fixnum>) 1)
+	  (one)
+	  (two a)))
+    => '(1 (one (two 1))))
+
+  ;;Producer returns a LIST-OF.  Typed syntactic binding.
+  ;;
+  (doit (receive-and-return ({a <fixnum>})
+	    (cast-signature (list-of <fixnum>) 1)
+	  (one)
+	  (two a))
+	=> (<fixnum>))
+  (check
+      (with-result
+	(receive-and-return ({a <fixnum>})
+	    (cast-signature (list-of <fixnum>) 1)
+	  (one)
+	  (two a)))
+    => '(1 (one (two 1))))
+
+  ;;Producer returns a LIST-OF with multiple values.
+  ;;
+  (assertion-violation-for-message
+   (receive-and-return ({a <fixnum>})
+       (cast-signature <list> (values 1 2 3))
+     (one)
+     (two a))
+   => "incorrect number of values returned to single value context")
+
+  ;;Producer returns a "<list>".  Untyped syntactic binding.
+  ;;
+  (doit (receive-and-return (a)
+	    (cast-signature <list> 1)
+	  (one)
+	  (two a))
+	=> (<top>))
+  (check
+      (with-result
+	(receive-and-return (a)
+	    (cast-signature <list> 1)
+	  (one)
+	  (two a)))
+    => '(1 (one (two 1))))
+
+  ;;Producer returns a "<list>".  Typed syntactic binding.
+  ;;
+  (doit (receive-and-return ({a <fixnum>})
+	    (cast-signature <list> 1)
+	  (one)
+	  (two a))
+	=> (<fixnum>))
+  (check
+      (with-result
+	(receive-and-return ({a <fixnum>})
+	    (cast-signature <list> 1)
+	  (one)
+	  (two a)))
+    => '(1 (one (two 1))))
+
+  ;;Producer returns a "<list>" with multiple values.
+  ;;
+  (check
+      (try
+	  (receive-and-return ({a <fixnum>})
+	      (cast-signature <list> (values 1 2 3))
+	    (one)
+	    (two a))
+	(catch E
+	  ((&assertion)
+	   (condition-message E))
+	  (else E)))
+    => "incorrect number of values returned to single value context")
+
+;;; special cases
+
+  ;;Producer not returning.
+  ;;
+  (doit (receive-and-return (a)
+	    (error #f "wrong")
+	  (one)
+	  (two a))
+	=> <no-return>)
+  (check
+      (try
+	  (receive-and-return (a)
+	      (error #f "wrong")
+	    (one)
+	    (two a))
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  ;;Producer returns zero values.
+  ;;
+  (type-signature-violation-for-message
+   (receive-and-return (a)
+       (values)
+     (one)
+     (two a))
+   => "one value is expected but the producer expression is typed as returning zero, two or more values")
+
+  ;;Producer returns multiple values.
+  ;;
+  (type-signature-violation-for-message
+   (receive-and-return (a)
+       (values 1 2 3)
+     (one)
+     (two a))
+   => "one value is expected but the producer expression is typed as returning zero, two or more values")
+
+  ;;Producer returning void.
+  ;;
+  (type-signature-violation-for-message
+   (receive-and-return (a)
+       (void)
+     (one)
+     (two a))
+   => "the producer expression is typed as returning void")
+
+;;; --------------------------------------------------------------------
+;;; fixed number of two or more mandatory arguments
+
+  ;;Two values, typed syntactic bindings.
+  ;;
+  (doit (receive-and-return ({a <positive-fixnum>} {b <string>})
+	    (values 123 "ciao")
+	  (one)
+	  (two a b))
+	=> (<positive-fixnum> <string>))
+  (check
+      (with-result
+	(receive-and-return ({a <positive-fixnum>} {b <string>})
+	    (values 123 "ciao")
+	  (one)
+	  (two a b)))
+    => '(123 "ciao" (one (two 123 "ciao"))))
+
+  ;;Two values, typed syntactic bindings.  Run-time validation.
+  ;;
+  (doit (receive-and-return ({a <fixnum>} {b <flonum>})
+	    (values (cast-signature (<top>) 1)
+		    (cast-signature (<top>) 2.3))
+	  (one)
+	  (two a b))
+	=> (<fixnum> <flonum>))
+  (check
+      (with-result
+	(receive-and-return ({a <fixnum>} {b <flonum>})
+	    (values (cast-signature (<top>) 1)
+		    (cast-signature (<top>) 2.3))
+	  (one)
+	  (two a b)))
+    => '(1 2.3 (one (two 1 2.3))))
+
+  ;;Two values, UNtyped syntactic bindings.  Unused bindings.  Type propagation.
+  ;;
+  (doit (receive-and-return (a b)
+	    (values 1 2)
+	  (one)
+	  (two "hello" "world"))
+	=> (<string> <string>))
+  (check
+      (with-result
+	(receive-and-return (a b)
+	    (values 1 2)
+	  (one)
+	  (two "hello" "world")))
+    => '(1 2 (one (two "hello" "world"))))
+
+  ;;Two values, UNtyped syntactic bindings.  Type propagation.
+  ;;
+  (doit (receive-and-return (a b)
+	    (values 1 2.3)
+	  (one)
+	  (two a b))
+	=> (<positive-fixnum> <positive-flonum>))
+  (check
+      (with-result
+	(receive-and-return (a b)
+	    (values 1 2.3)
+	  (one)
+	  (two a b)))
+    => '(1 2.3 (one (two 1 2.3))))
+
+;;; special cases
+
+  ;;Producer not returning.
+  ;;
+  (doit (receive-and-return (a b)
+	    (error #f "wrong")
+	  (one)
+	  (two a b))
+	=> <no-return>)
+  (check
+      (try
+	  (receive-and-return (a b)
+	      (error #f "wrong")
+	    (one)
+	    (two a b))
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  ;;Producer returns zero values.
+  ;;
+  (type-signature-violation-for-message
+   (receive-and-return (a b)
+       (values)
+     (one)
+     (two a b))
+   => "two or more values are expected from the producer expression, but it returns zero values")
+
+  ;;Producer returns one value.
+  ;;
+  (type-signature-violation-for-message
+   (receive-and-return (a b)
+       (values 1)
+     (one)
+     (two a b))
+   => "two or more values are expected from the producer expression, but it returns one value")
+
+  ;;Two Untyped bindings.  Producer returns an UNtyped list of two values.
+  ;;
+  (doit (receive-and-return (a b)
+	    (cast-signature <list> (values 1 2.3))
+	  (one)
+	  (two a b))
+	=> (<top> <top>))
+  (check
+      (with-result
+	(receive-and-return (a b)
+	    (cast-signature <list> (values 1 2.3))
+	  (one)
+	  (two a b)))
+    => '(1 2.3 (one (two 1 2.3))))
+
+  ;;Two typed  bindings.  Producer returns an  UNtyped list of two  values.  Run-time
+  ;;validation.
+  ;;
+  (doit (receive-and-return ({a <fixnum>} {b <flonum>})
+	    (cast-signature <list> (values 1 2.3))
+	  (one)
+	  (two a b))
+	=> (<fixnum> <flonum>))
+  (check
+      (with-result
+	(receive-and-return ({a <fixnum>} {b <flonum>})
+	    (cast-signature <list> (values 1 2.3))
+	  (one)
+	  (two a b)))
+    => '(1 2.3 (one (two 1 2.3))))
+
+  ;;Two Untyped bindings.  Producer returns a typed list of two values.
+  ;;
+  (doit (receive-and-return (a b)
+	    (cast-signature (list-of <number>) (values 1 2.3))
+	  (one)
+	  (two a b))
+	=> (<number> <number>))
+  (check
+      (with-result
+	(receive-and-return (a b)
+	    (cast-signature (list-of <number>) (values 1 2.3))
+	  (one)
+	  (two a b)))
+    => '(1 2.3 (one (two 1 2.3))))
+
+  ;;Two  typed bindings.   Producer returns  a typed  list of  two values.   Run-time
+  ;;validation.
+  ;;
+  (doit (receive-and-return ({a <fixnum>} {b <flonum>})
+	    (cast-signature (list-of <number>) (values 1 2.3))
+	  (one)
+	  (two a b))
+	=> (<fixnum> <flonum>))
+  (check
+      (with-result
+	(receive-and-return ({a <fixnum>} {b <flonum>})
+	    (cast-signature (list-of <number>) (values 1 2.3))
+	  (one)
+	  (two a b)))
+    => '(1 2.3 (one (two 1 2.3))))
+
+;;; -------------------------------------------------------------------- ;
+;;; unspecified number of values
+
+  ;;Typed catch-all syntactic binding.
+  ;;
+  (doit (receive-and-return {vals (list-of <fixnum>)}
+	    (values 1 2 3)
+	  (one)
+	  (two))
+	=> (list-of <fixnum>))
+  (check
+      (with-result
+	(receive-and-return {vals (list-of <fixnum>)}
+	    (values 1 2 3)
+	  (one)
+	  (two vals)))
+    => '(1 2 3 (one (two (1 2 3)))))
+
+  ;;Untyped catch-all syntactic binding.
+  ;;
+  (doit (receive-and-return vals
+	    (values 1 2 3)
+	  (one)
+	  (two))
+	=> <list>)
+  (check
+      (with-result
+	(receive-and-return vals
+	    (values 1 2 3)
+	  (one)
+	  (two vals)))
+    => '(1 2 3 (one (two (1 2 3)))))
+
+  ;;Untyped catch-all syntactic bindings.  The producer returns a single value.
+  ;;
+  (doit (receive-and-return vals
+	    1
+	  (one)
+	  (two))
+	=> <list>)
+  (check
+      (with-result
+	(receive-and-return vals
+	    1
+	  (one)
+	  (two vals)))
+    => '(1 (one (two (1)))))
+
+  ;;Untyped catch-all syntactic binding.  Special case of type propagation.
+  ;;
+  (doit (receive-and-return vals
+	    (cast-signature (list-of <fixnum>) (values 1 2 3))
+	  (one)
+	  (two))
+	=> (list-of <fixnum>))
+  (check
+      (with-result
+	(receive-and-return vals
+	    (cast-signature (list-of <fixnum>) (values 1 2 3))
+	  (one)
+	  (two vals)))
+    => '(1 2 3 (one (two (1 2 3)))))
+
+  ;;Untyped catch-all syntactic binding.  The  producer returns an unspecified number
+  ;;of unspecified values.
+  ;;
+  (doit (receive-and-return vals
+	    (cast-signature <list> (values 1 2 3))
+	  (one)
+	  (two))
+	=> <list>)
+  (check
+      (with-result
+	(receive-and-return vals
+	    (cast-signature <list> (values 1 2 3))
+	  (one)
+	  (two vals)))
+    => '(1 2 3 (one (two (1 2 3)))))
+
+  ;;Untyped syntactic bindings with rest.  The producer returns an unspecified number
+  ;;of unspecified values.
+  ;;
+  (doit (receive-and-return (a b . vals)
+	    (cast-signature <list> (values 1 2 3))
+	  (one)
+	  (two a b vals))
+	=> (<top> <top> . <list>))
+  (check
+      (with-result
+	(receive-and-return (a b . vals)
+	    (cast-signature <list> (values 1 2 3))
+	  (one)
+	  (two a b vals)))
+    => '(1 2 3 (one (two 1 2 (3)))))
+
+  ;;Typed syntactic bindings with rest.
+  ;;
+  (doit (receive-and-return ({a <fixnum>} {b <flonum>} . {vals (list-of <string>)})
+	    (values 1 2.3 "C" "D")
+	  (one)
+	  (two))
+	=> (<fixnum> <flonum> . (list-of <string>)))
+  (check
+      (with-result
+	(receive-and-return ({a <fixnum>} {b <flonum>} . {vals (list-of <string>)})
+	    (values 1 2.3 "C" "D")
+	  (one)
+	  (two a b vals)))
+    => '(1 2.3 "C" "D" (one (two 1 2.3 ("C" "D")))))
+
+  ;;Untyped syntactic bindings with rest.
+  ;;
+  (doit (receive-and-return (a b . vals)
+	    (values 1 2.3 "C" "D")
+	  (one)
+	  (two a b vals))
+	=> (<positive-fixnum> <positive-flonum> . <list>))
+  (check
+      (with-result
+	(receive-and-return (a b . vals)
+	    (values 1 2.3 "C" "D")
+	  (one)
+	  (two a b vals)))
+    => '(1 2.3 "C" "D" (one (two 1 2.3 ("C" "D")))))
+
+  ;;Untyped syntactic bindings with rest.  Special case of type propagation.
+  ;;
+  (doit (receive-and-return (a b . vals)
+	    (cast-signature (<fixnum> <flonum> . (list-of <string>))
+			    (values 1 2.3 "C" "D"))
+	  (one)
+	  (two a b vals))
+	=> (<fixnum> <flonum> . (list-of <string>)))
+  (check
+      (with-result
+	(receive-and-return (a b . vals)
+	    (cast-signature (<fixnum> <flonum> . (list-of <string>))
+			    (values 1 2.3 "C" "D"))
+	  (one)
+	  (two a b vals)))
+    => '(1 2.3 "C" "D" (one (two 1 2.3 ("C" "D")))))
+
+  ;;Untyped syntactic bindings with rest.  The producer returns a single value.
+  ;;
+  (doit (receive-and-return (a . vals)
+	    1
+	  (one)
+	  (two a vals))
+	=> (<positive-fixnum> . <list>))
+  (check
+      (with-result
+	(receive-and-return (a . vals)
+	    1
+	  (one)
+	  (two a vals)))
+    => '(1 (one (two 1 ()))))
+
+  ;;Producer not returning.
+  ;;
+  (doit (receive-and-return (a b . rest)
+	    (error #f "wrong")
+	  (one)
+	  (two a b rest))
+	=> <no-return>)
+  (check
+      (try
+	  (receive-and-return (a b . rest)
+	      (error #f "wrong")
+	    (one)
+	    (two a b rest))
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  (void))
 
 
 (parametrise ((check-test-name	'cond))
@@ -939,7 +2025,7 @@
 
 (parametrise ((check-test-name	'doc-examples))
 
-  (debug-print
+  #;(debug-print
    (type-of (let ((A 1))
 	      (let* ((B A)
 		     (C B))
@@ -964,7 +2050,7 @@
 ;;; --------------------------------------------------------------------
 
   (begin
-    (debug-print
+    #;(debug-print
      (type-of (let ((A 1))
 		(let* ((B A)
 		       (C B))

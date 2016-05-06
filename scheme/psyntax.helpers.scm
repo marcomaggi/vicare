@@ -47,6 +47,16 @@
 (define-syntax no-source
   (lambda (x) #f))
 
+(define-syntax define-synner
+  (syntax-rules ()
+    ((_ ?synner ?who ?input-form.stx)
+     (case-define ?synner
+       ((message)
+	(?synner message #f))
+       ((message subform)
+	(syntax-violation ?who message ?input-form.stx subform))))
+    ))
+
 (define-syntax-rule (reverse-and-append ?item**)
   (reverse-and-append-with-tail ?item** '()))
 
