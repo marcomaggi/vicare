@@ -487,6 +487,16 @@
   (signatures
    ((<top>)		=> (<true>))))
 
+(declare-core-primitive <untyped>-constructor
+    (safe)
+  (signatures
+   (<list>		=> <no-return>)))
+
+(declare-core-primitive <untyped>-type-predicate
+    (safe)
+  (signatures
+   (<list>		=> <no-return>)))
+
 /section)
 
 

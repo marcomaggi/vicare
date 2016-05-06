@@ -34,12 +34,13 @@
      clambda-clause-signature.retvals-set!
      clambda-clause-signature.argvals			clambda-clause-signature.argvals.specs
      clambda-clause-signature.fully-untyped?		clambda-clause-signature.untyped?
-     clambda-signature.min-and-max-argvals
+     clambda-clause-signature.untyped-to-top
 
      <clambda-signature>
      make-clambda-signature				clambda-signature?
      clambda-signature=?
      clambda-signature.retvals				clambda-signature.clause-signature*
+     clambda-signature.min-and-max-argvals
 
      #| end of exports |# )
 
@@ -142,10 +143,16 @@
 
 (define* (clambda-clause-signature.untyped? {clause-signature clambda-clause-signature?})
   ;;A  clambda  clause has  "untyped"  signature  if  both  its argvals  and  retvals
-  ;;signatures only use "<top>" and "<list>" as type identifiers.
+  ;;signatures only use "<untyped>" and "<list>" as type identifiers.
   ;;
   (and (type-signature.untyped? (clambda-clause-signature.argvals clause-signature))
        (type-signature.untyped? (clambda-clause-signature.retvals clause-signature))))
+
+;;; --------------------------------------------------------------------
+
+(define* (clambda-clause-signature.untyped-to-top {clause-signature clambda-clause-signature?})
+  (make-clambda-clause-signature (type-signature.untyped-to-top (clambda-clause-signature.retvals clause-signature))
+				 (type-signature.untyped-to-top (clambda-clause-signature.argvals clause-signature))))
 
 
 ;;;; type definition: CLAMBDA signature

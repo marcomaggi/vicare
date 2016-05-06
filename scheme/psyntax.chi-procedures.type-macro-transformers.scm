@@ -569,6 +569,8 @@
 	 (case-signature-specs expr.sig
 	   ((<top>)
 	    (%error-unknown-type))
+	   ((<untyped>)
+	    (%error-unknown-type))
 	   ((single-value)
 	    => (lambda (type.ots)
 		 (%expand-to-object-accessor-application-post input-form.stx lexenv.run lexenv.expand
@@ -668,6 +670,8 @@
 	 (case-signature-specs expr.sig
 	   ((<top>)
 	    (%error-unknown-type))
+	   ((<untyped>)
+	    (%error-unknown-type))
 	   ((single-value)
 	    => (lambda (type.ots)
 		 (%expand-to-object-mutator-application-post input-form.stx lexenv.run lexenv.expand
@@ -758,6 +762,8 @@
 		       (make-irritants-condition (list subject-expr.sig)))))
 	 (case-signature-specs subject-expr.sig
 	   ((<top>)
+	    (%late-binding))
+	   ((<untyped>)
 	    (%late-binding))
 
 	   ((single-value)
@@ -977,6 +983,7 @@
 			       asrt.stx expr.stx return-values? cast-signature?)
     (let* ((asrt.stx	(syntax-unwrap asrt.stx))
 	   (asrt.sig	(make-type-signature asrt.stx))
+	   (asrt.sig	(type-signature.untyped-to-top asrt.sig))
 	   (expr.psi	(chi-expr expr.stx lexenv.run lexenv.expand))
 	   (expr.sig	(psi.retvals-signature expr.psi)))
       (define (%error-mismatching-signatures)
@@ -1067,6 +1074,7 @@
 	  (cond ((pair? asrt.specs)
 		 (let ((asrt.ots (car asrt.specs)))
 		   (if (or (<top>-ots?       asrt.ots)
+			   (<untyped>-ots?   asrt.ots)
 			   (<no-return>-ots? asrt.ots))
 		       ;;No validation.
 		       (let ((validators (recur (cdr asrt.specs) (cdr consumer-formals.sexp) (fxadd1 operand-index))))
@@ -1198,6 +1206,7 @@
        (unless (syntax-object.type-signature? ?target-signature lexenv.run)
 	 (syntax-violation __who__ "invalid type signature" input-form.stx ?target-signature))
        (let* ((target.sig	(make-type-signature ?target-signature))
+	      (target.sig	(type-signature.untyped-to-top target.sig))
 	      (expr.psi		(chi-expr ?expr lexenv.run lexenv.expand))
 	      (expr.core	(psi.core-expr expr.psi))
 	      (expr.sig		(psi.retvals-signature expr.psi)))

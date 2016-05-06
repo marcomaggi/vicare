@@ -587,7 +587,8 @@
 	  ;;Here we process the  RHS type signature to make sure  it returns a single
 	  ;;value.
 	  (define rhs.ots (%process-rhs-signature caller-who input-form.stx rhs.psi))
-	  (if lhs.source-ots
+	  (if (and lhs.source-ots
+		   (not (<untyped>-ots? lhs.source-ots)))
 	      ;;The LHS  has a  specified type in  the source code:  here we  want to
 	      ;;validate RHS as returning a single value of correct type.
 	      (values lhs.source-ots
@@ -2179,7 +2180,7 @@
 	   ;;STANDARD-FORMALS.STX  is   a  syntax  object  representing   the  formal
 	   ;;arguments of  the lambda clause as  required by R6RS.  FORMALS.SIG  is a
 	   ;;"<type-signature>" representing the types of formals and retvals.
-	   (syntax-object.parse-typed-formals ?formals))
+	   (syntax-object.parse-typed-formals ?formals (<untyped>-ots)))
 	 (cond ((null? standard-formals.stx)
 		(%the-consumer-expects-no-values input-form.stx lexenv.run lexenv.expand
 						 caller-who return-values? ?producer consumer*.stx))
@@ -2354,7 +2355,8 @@
 							      standard-formals.stx formals.sig
 							      producer.stx consumer*.stx)
     (let* ((producer.psi	(chi-expr producer.stx lexenv.run lexenv.expand))
-	   (producer.sig	(psi.retvals-signature producer.psi)))
+	   (producer.sig	(psi.retvals-signature producer.psi))
+	   (cleared-formals.sig	(type-signature.untyped-to-top formals.sig)))
       (define (%error-mismatch message)
 	(raise
 	 (condition (make-expand-time-type-signature-violation)
@@ -2380,7 +2382,8 @@
 	 ;;this code even if we discard it. (Marco Maggi; Tue May 3, 2016)
 	 (chi-lambda/checked/parsed-formals input-form.stx lexenv.run lexenv.expand
 					    standard-formals.stx
-					    (make-clambda-clause-signature (make-type-signature/fully-untyped) formals.sig)
+					    (make-clambda-clause-signature (make-type-signature/fully-untyped)
+									   cleared-formals.sig)
 					    consumer*.stx)
 	 producer.psi)
 
@@ -2418,7 +2421,7 @@
 		      formals.specs)
 		    (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 						      caller-who return-values?
-						      standard-formals.stx formals.sig
+						      standard-formals.stx cleared-formals.sig
 						      producer.psi consumer*.stx
 						      (if (eq? state 'exact-match)
 							  chi-lambda/typed/parsed-formals
@@ -2429,7 +2432,7 @@
 	 ;;unspecified type.  PRODUCER.SIG holds a standalone "<list>".
 	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 					   caller-who return-values?
-					   standard-formals.stx formals.sig
+					   standard-formals.stx cleared-formals.sig
 					   producer.psi consumer*.stx))
 
 	(else
@@ -2447,16 +2450,16 @@
 					       caller-who return-values?
 					       standard-formals.stx producer.sig
 					       producer.psi consumer*.stx chi-lambda/typed/parsed-formals)
-	   (case (type-signature.match-arguments-against-operands formals.sig producer.sig)
+	   (case (type-signature.match-arguments-against-operands cleared-formals.sig producer.sig)
 	     ((exact-match)
 	      (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 						caller-who return-values?
-						standard-formals.stx formals.sig
+						standard-formals.stx cleared-formals.sig
 						producer.psi consumer*.stx chi-lambda/typed/parsed-formals))
 	     ((possible-match)
 	      (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 						caller-who return-values?
-						standard-formals.stx formals.sig
+						standard-formals.stx cleared-formals.sig
 						producer.psi consumer*.stx))
 	     (else
 	      (%error-mismatch "type mismatch between expected and returned values"))))))))
@@ -2468,7 +2471,8 @@
 					     standard-formals.stx formals.sig
 					     producer.stx consumer*.stx)
     (let* ((producer.psi	(chi-expr producer.stx lexenv.run lexenv.expand))
-	   (producer.sig	(psi.retvals-signature producer.psi)))
+	   (producer.sig	(psi.retvals-signature producer.psi))
+	   (cleared-formals.sig	(type-signature.untyped-to-top formals.sig)))
       (define (%error-mismatch message)
 	(raise
 	 (condition (make-expand-time-type-signature-violation)
@@ -2494,7 +2498,8 @@
 	 ;;this code even if we discard it. (Marco Maggi; Tue May 3, 2016)
 	 (chi-lambda/checked/parsed-formals input-form.stx lexenv.run lexenv.expand
 					    standard-formals.stx
-					    (make-clambda-clause-signature (make-type-signature/fully-untyped) formals.sig)
+					    (make-clambda-clause-signature (make-type-signature/fully-untyped)
+									   cleared-formals.sig)
 					    consumer*.stx)
 	 producer.psi)
 
@@ -2508,7 +2513,7 @@
 	 ;;run-time the actual number of arguments.
 	 (%process-some-values input-form.stx lexenv.run lexenv.expand
 			       caller-who return-values?
-			       standard-formals.stx formals.sig
+			       standard-formals.stx formals.sig cleared-formals.sig
 			       producer.psi producer.sig consumer*.stx
 			       %error-mismatch))
 
@@ -2519,14 +2524,14 @@
 		 (type-signature.min-count producer.sig))
 	     (%process-some-values input-form.stx lexenv.run lexenv.expand
 				   caller-who return-values?
-				   standard-formals.stx formals.sig
+				   standard-formals.stx formals.sig cleared-formals.sig
 				   producer.psi producer.sig consumer*.stx
 				   %error-mismatch)
 	   (%error-mismatch "mismatching number of arguments in type signatures"))))))
 
   (define (%process-some-values input-form.stx lexenv.run lexenv.expand
 				caller-who return-values?
-				standard-formals.stx formals.sig
+				standard-formals.stx formals.sig cleared-formals.sig
 				producer.psi producer.sig consumer*.stx
 				%error-mismatch)
     ;;If  we are  here  the number  of  produced values  matches  the number  of
@@ -2544,12 +2549,12 @@
 	((exact-match)
 	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 					   caller-who return-values?
-					   standard-formals.stx formals.sig
+					   standard-formals.stx cleared-formals.sig
 					   producer.psi consumer*.stx chi-lambda/typed/parsed-formals))
 	((possible-match)
 	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 					   caller-who return-values?
-					   standard-formals.stx formals.sig
+					   standard-formals.stx cleared-formals.sig
 					   producer.psi consumer*.stx))
 	(else
 	 (%error-mismatch "type mismatch between expected and returned values")))))
@@ -2673,15 +2678,15 @@
     (case-define* %build-unspecified-values-output
       ((input-form.stx lexenv.run lexenv.expand
 		       caller-who return-values?
-		       standard-formals.stx formals.sig producer.psi consumer*.stx)
+		       standard-formals.stx cleared-formals.sig producer.psi consumer*.stx)
        (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 					 caller-who return-values?
-					 standard-formals.stx formals.sig producer.psi consumer*.stx
+					 standard-formals.stx cleared-formals.sig producer.psi consumer*.stx
 					 chi-lambda/checked/parsed-formals))
 
       ((input-form.stx lexenv.run lexenv.expand
 		       caller-who return-values?
-		       standard-formals.stx formals.sig producer.psi consumer*.stx the-chi-lambda)
+		       standard-formals.stx cleared-formals.sig producer.psi consumer*.stx the-chi-lambda)
        ;;When not returning values, we build the equivalent of:
        ;;
        ;;   (call-with-values
@@ -2700,19 +2705,20 @@
 				    '()
 				  (psi.core-expr producer.psi)))
 	      (consumer.psi	(let ((clause-signature		(make-clambda-clause-signature
-								 (make-type-signature/fully-untyped) formals.sig))
+								 (make-type-signature/fully-untyped)
+								 cleared-formals.sig))
 				      (consumer-body*.stx	(%compose-consumer-body
 								 return-values? standard-formals.stx consumer*.stx)))
 				  (the-chi-lambda input-form.stx lexenv.run lexenv.expand
 						  standard-formals.stx clause-signature
 						  consumer-body*.stx)))
 	      (consumer.core	(psi.core-expr consumer.psi))
-	      (output.sig		(if return-values?
-					    formals.sig
-					  (callable-signature.retvals
-					   (closure-type-spec.signature
-					    (car (type-signature.object-type-specs
-						  (psi.retvals-signature consumer.psi))))))))
+	      (output.sig	(if return-values?
+				    cleared-formals.sig
+				  (callable-signature.retvals
+				   (closure-type-spec.signature
+				    (car (type-signature.object-type-specs
+					  (psi.retvals-signature consumer.psi))))))))
 	 (make-psi input-form.stx
 	   (build-application no-source
 	       (build-primref no-source 'call-with-values)

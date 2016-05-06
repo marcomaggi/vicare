@@ -116,7 +116,7 @@
   ;;If  STX  is a  typed  or  untyped identifier,  return  2  values: the  identifier
   ;;representing  the syntactic  binding name  and the  "<object-type-spec>" instance
   ;;representing the  type; otherwise raise an  exception.  When no type  is present:
-  ;;the type defaults to "<top>".
+  ;;the type defaults to "<untyped>".
   ;;
   ((stx)
    (syntax-object.parse-typed-argument stx (current-inferior-lexenv)))
@@ -126,7 +126,7 @@
       (values ?id (type-annotation->object-type-spec ?type lexenv)))
      (?id
       (identifier? ?id)
-      (values ?id (<top>-ots))))))
+      (values ?id (<untyped>-ots))))))
 
 
 ;;;; standard binding parsing: proper lists of bindings left-hand sides
@@ -202,7 +202,7 @@
 
 (case-define* syntax-object.parse-typed-list-of-bindings
   ((lhs*)
-   (syntax-object.parse-typed-list-of-bindings lhs* (<top>-ots)))
+   (syntax-object.parse-typed-list-of-bindings lhs* (<untyped>-ots)))
   ((lhs* unspecified.ots)
    ;;Parser function  for lists  of typed  syntactic bindings.  It  is used  to parse
    ;;bindings from  LET, DO and  similar syntaxes.   For example, when  expanding the
@@ -219,7 +219,7 @@
    ;;
    ;;and the return values are:
    ;;
-   ;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
+   ;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<untyped>)
    ;;
    ;;Assume LHS*  is a  syntax object  representing a proper  list of  possibly typed
    ;;binding identifiers.  Parse the list and return the following values:
@@ -239,7 +239,7 @@
 
 (case-define* syntax-object.parse-typed-list-of-bindings/let-star
   ((lhs*)
-   (syntax-object.parse-typed-list-of-bindings/let-star lhs* (<top>-ots)))
+   (syntax-object.parse-typed-list-of-bindings/let-star lhs* (<untyped>-ots)))
   ((lhs* unspecified.ots)
    ;;Parser function  for lists  of typed  syntactic bindings.  It  is used  to parse
    ;;bindings from LET* and similar syntaxes; remember that LET* allows for duplicate
@@ -256,7 +256,7 @@
    ;;
    ;;and the return values are:
    ;;
-   ;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
+   ;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<untyped>)
    ;;
    ;;Assume LHS*  is a  syntax object  representing a proper  list of  possibly typed
    ;;binding identifiers.  Parse the list and return the following values:
@@ -372,6 +372,9 @@
 		(synner "duplicate identifiers in formals syntax" duplicate-id)))))
 
   (define (%one-untyped-for-each item*)
+    ;;Here we use "<top>" for the  untyped syntactic binding, because this subject of
+    ;;the parsing is a formals syntax object: we do not want "<untyped>" OTSs lurking
+    ;;in there.
     (map (lambda (x) (<top>-ots)) item*))
 
   #| end of module: SYNTAX-OBJECT.PARSE-STANDARD-FORMALS |# )
@@ -394,12 +397,18 @@
   ;;
   (define-module-who syntax-object.parse-typed-formals)
 
-  (define (syntax-object.parse-typed-formals input-formals.stx)
-    (receive (standard-formals.stx formals.ots)
-	(%parse-typed-formals input-formals.stx)
-      (values standard-formals.stx (make-type-signature formals.ots))))
+  (case-define syntax-object.parse-typed-formals
+    ((input-formals.stx)
+     ;;By default  we use  "<top>" for  the untyped  syntactic binding,  because this
+     ;;subject of the parsing is a formals  syntax object: we do not want "<untyped>"
+     ;;OTSs lurking in there.
+     (syntax-object.parse-typed-formals input-formals.stx (<top>-ots)))
+    ((input-formals.stx untyped.ots)
+     (receive (standard-formals.stx formals.ots)
+	 (%parse-typed-formals input-formals.stx untyped.ots)
+       (values standard-formals.stx (make-type-signature formals.ots)))))
 
-  (define (%parse-typed-formals input-formals.stx)
+  (define (%parse-typed-formals input-formals.stx untyped.ots)
     (define-synner %synner __module_who__ input-formals.stx)
     (syntax-match input-formals.stx (brace)
 
@@ -429,7 +438,7 @@
       ((?arg* ...)
        (for-all identifier? ?arg*)
        (receive-and-return (standard-formals.stx formals.ots)
-	   (values ?arg* (%one-untyped-for-each ?arg*))
+	   (values ?arg* (%one-untyped-for-each ?arg* untyped.ots))
 	 (%validate-standard-formals standard-formals.stx %synner)))
 
       ;;Standard formals: UNtyped identifiers with UNtyped rest argument.
@@ -438,7 +447,7 @@
 	    (identifier? ?rest-id))
        (receive-and-return (standard-formals.stx formals.ots)
 	   (values (append ?arg* ?rest-id)
-		   (append (%one-untyped-for-each ?arg*) (<list>-ots)))
+		   (append (%one-untyped-for-each ?arg* untyped.ots) (<list>-ots)))
 	 (%validate-standard-formals standard-formals.stx %synner)))
 
       ;;Non-standard formals: possibly typed identifiers with UNtyped rest argument.
@@ -475,7 +484,7 @@
 	  ;;Untyped argument.
 	  (?id
 	   (identifier? ?id)
-	   (values (cons ?id standard-formals.stx) (cons (<top>-ots) formals.ots)))
+	   (values (cons ?id standard-formals.stx) (cons (<untyped>-ots) formals.ots)))
 	  ;;Typed argument.
 	  ((brace ?id ?type)
 	   (identifier? ?id)
@@ -490,8 +499,8 @@
 	   => (lambda (duplicate-id)
 		(synner "duplicate identifiers in formals syntax" duplicate-id)))))
 
-  (define (%one-untyped-for-each item*)
-    (map (lambda (x) (<top>-ots)) item*))
+  (define (%one-untyped-for-each item* untyped.ots)
+    (map (lambda (x) untyped.ots) item*))
 
   #| end of module: SYNTAX-OBJECT.PARSE-TYPED-FORMALS |# )
 

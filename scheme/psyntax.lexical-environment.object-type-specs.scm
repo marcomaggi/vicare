@@ -558,6 +558,10 @@
   ;; 	       (object-type-spec.name sub.ots))
   (cond ((eq? super.ots sub.ots))
 
+	((<untyped>-ots? super.ots)
+	 (not (or (<void>-ots?            sub.ots)
+		  (<no-return>-ots?       sub.ots))))
+
 	((<top>-ots? super.ots)
 	 ;;Fast track: "<top>" is the super-type of all the types.
 	 (not (or (<void>-ots?            sub.ots)
@@ -566,9 +570,11 @@
 
 	;;NOTE We do *not* insert here a branch like:
 	;;
-	;;   ((<top>-ots? sub.ots) . ?body)
+	;;   ((<top>-ots?     sub.ots) . ?body)
+	;;   ((<untyped>-ots? sub.ots) . ?body)
 	;;
-	;;because "<top>" as sub-type may match or not, we cannot establish it here.
+	;;because "<top>"  or "<untyped>"  as sub-type  may match  or not,  we cannot
+	;;establish it here.
 
 	((and (or (scheme-type-spec? super.ots) (record-type-spec? super.ots) (struct-type-spec? super.ots))
 	      (or (scheme-type-spec?   sub.ots) (record-type-spec?   sub.ots) (struct-type-spec?   sub.ots)))
@@ -1218,6 +1224,10 @@
 	(object-type-spec.compatible-super-and-sub? super.ots sub.ots)))
   (cond
 
+   ((<untyped>-ots? sub.ots)
+    ;;Untyped is compatible with everything.
+    #t)
+
 ;;; lists
 
    ((and (list-of-type-spec? super.ots)
@@ -1340,10 +1350,12 @@
   (cond ((object-type-spec=? ots1 ots2)
 	 ots1)
 
-	((<top>-ots? ots1)
+	((or (<top>-ots?     ots1)
+	     (<untyped>-ots? ots1))
 	 ots1)
 
-	((<top>-ots? ots2)
+	((or (<top>-ots?     ots2)
+	     (<untyped>-ots? ots2))
 	 ots2)
 
 	((<no-return>-ots? ots1)

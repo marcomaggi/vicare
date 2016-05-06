@@ -289,7 +289,12 @@
   (make-syntactic-binding-descriptor lexical-typed (cons lts lts.core-expr)))
 
 (define* (make-syntactic-binding-descriptor/lexical-typed-var/from-data {variable.ots object-type-spec?} {lex gensym?})
-  (let* ((lts			(make-lexical-typed-variable-spec variable.ots lex))
+  ;;The OTS  "<untyped>" is for  internal use, so  we do not  want to create  a typed
+  ;;variable with "<untyped>" OTS: so we normalise it to "<top>".
+  (let* ((variable.ots		(if (<untyped>-ots? variable.ots)
+				    (<top>-ots)
+				  variable.ots))
+	 (lts			(make-lexical-typed-variable-spec variable.ots lex))
 	 (lts-maker.core-expr	(build-application no-source
 				  (build-primref no-source 'make-lexical-typed-variable-spec)
 				  (list (build-data no-source (object-type-spec.name variable.ots))

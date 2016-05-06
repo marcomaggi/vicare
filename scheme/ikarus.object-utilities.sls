@@ -42,6 +42,7 @@
 
     ;; built-in object-type specification utilities, for internal use
     <top>-constructor			<top>-type-predicate
+    <untyped>-constructor		<untyped>-type-predicate
     <boolean>-constructor
     <nelist>-constructor		<nelist>-type-predicate
     <symbol>-value			<string>-for-each
@@ -413,6 +414,15 @@
 
 (define* (<top>-constructor {obj (not void-object?)})
   obj)
+
+
+;;;; object type helpers: <untyped>
+
+(define* (<untyped>-type-predicate obj)
+  (assertion-violation __who__ "attempt to use the type predicate of <untyped>" obj))
+
+(define* (<untyped>-constructor args)
+  (assertion-violation __who__ "attempt to use the type constructor of <untyped>" args))
 
 
 ;;;; object type helpers: <boolean>

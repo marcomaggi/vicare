@@ -613,7 +613,7 @@
   #| end of PARAMETRISE |# )
 
 
-#;(parametrise ((check-test-name	'receive))
+(parametrise ((check-test-name	'receive))
 
 ;;; no return values
 
@@ -1106,7 +1106,7 @@
       (try
 	  (receive (a b . rest)
 	      (error #f "wrong")
-	    (values a b . rest))
+	    (values a b rest))
 	(catch E
 	  ((&error)
 	   (condition-message E))
@@ -1424,7 +1424,7 @@
 	    (values 1 2)
 	  (one)
 	  (two "hello" "world"))
-	=> (<string> <string>))
+	=> (<positive-fixnum> <positive-fixnum>))
   (check
       (with-result
 	(receive-and-return (a b)

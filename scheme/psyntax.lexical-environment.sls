@@ -332,6 +332,8 @@
     ;; core object-type identifiers
     <no-return>-type-id			<no-return>-type-id?
     <void>-type-id			<void>-type-id?
+    <top>-type-id			<top>-type-id?
+    <untyped>-type-id			<untyped>-type-id?
     <procedure>-type-id			<procedure>-type-id?
     <pair>-type-id			<pair>-type-id?
     <list>-type-id			<list>-type-id?
@@ -345,7 +347,6 @@
     <empty-string>-type-id		<empty-string>-type-id?
     <stx>-type-id			<stx>-type-id?
     <syntactic-identifier>-type-id	<syntactic-identifier>-type-id?
-    <top>-type-id			<top>-type-id?
     <boolean>-type-id
     <true>-type-id			<false>-type-id
     <struct>-type-id
@@ -357,6 +358,8 @@
     ;; core object-type specifications
     <no-return>-ots			<no-return>-ots?
     <void>-ots				<void>-ots?
+    <untyped>-ots			<untyped>-ots?
+    <top>-ots				<top>-ots?
     <procedure>-ots			<procedure>-ots?
     <pair>-ots				<pair>-ots?
     <null>-ots				<null>-ots?
@@ -371,7 +374,6 @@
     <hashtable>-ots			<hashtable>-ots?
     <stx>-ots				<stx>-ots?
     <syntactic-identifier>-ots		<syntactic-identifier>-ots?
-    <top>-ots				<top>-ots?
     <boolean>-ots			<boolean>-ots?
     <true>-ots				<true>-ots?
     <false>-ots				<false>-ots?
@@ -2830,6 +2832,7 @@
 		  (set! memoized-id id))))))))
   (define-type-id-retriever <no-return>-type-id			<no-return>)
   (define-type-id-retriever <void>-type-id			<void>)
+  (define-type-id-retriever <untyped>-type-id			<untyped>)
   (define-type-id-retriever <top>-type-id			<top>)
   (define-type-id-retriever <procedure>-type-id			<procedure>)
   (define-type-id-retriever <boolean>-type-id			<boolean>)
@@ -2866,6 +2869,7 @@
 		  (set! memoized-ots ots))))))))
   (define-type-spec-retriever <no-return>-ots			<no-return>)
   (define-type-spec-retriever <void>-ots			<void>)
+  (define-type-spec-retriever <untyped>-ots			<untyped>)
   (define-type-spec-retriever <top>-ots				<top>)
   (define-type-spec-retriever <procedure>-ots			<procedure>)
   (define-type-spec-retriever <boolean>-ots			<boolean>)
@@ -2901,6 +2905,7 @@
 	     (~free-identifier=? obj (?tag-retriever))))))
   (define-type-id-predicate <no-return>-type-id?		<no-return>-type-id)
   (define-type-id-predicate <void>-type-id?			<void>-type-id)
+  (define-type-id-predicate <untyped>-type-id?			<untyped>-type-id)
   (define-type-id-predicate <top>-type-id?			<top>-type-id)
   (define-type-id-predicate <boolean>-type-id?			<boolean>-type-id)
   (define-type-id-predicate <true>-type-id?			<true>-type-id)
@@ -2955,6 +2960,7 @@
 			 (~free-identifier=? (object-type-spec.name obj) src-name))))))))))
   (define-type-spec-predicate <no-return>-ots?			<no-return>-ots)
   (define-type-spec-predicate <void>-ots?			<void>-ots)
+  (define-type-spec-predicate <untyped>-ots?			<untyped>-ots)
   (define-type-spec-predicate <top>-ots?			<top>-ots)
   (define-type-spec-predicate <boolean>-ots?			<boolean>-ots)
   (define-type-spec-predicate <true>-ots?			<true>-ots)

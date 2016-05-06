@@ -3673,9 +3673,10 @@
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme object types
 
+    (<untyped>)
     (<no-return>				v $language)
-    (<top>					v $language)
     (<void>					v $language)
+    (<top>					v $language)
     (<eof>					v $language)
     (<would-block>				v $language)
     (<boolean>					v $language)
@@ -3913,6 +3914,7 @@
     (<textual-input/output-port>-type-descriptor)
     (<textual-output-port>-type-descriptor)
     (<time>-type-descriptor)
+    (<untyped>-type-descriptor)
     (<top>-type-descriptor)
     (<transcoder>-type-descriptor)
     (<true>-type-descriptor)
@@ -3958,6 +3960,8 @@
     (<empty-string>-constructor)
     (<empty-string>-type-predicate)
     (<string>-for-each)
+    (<untyped>-constructor)
+    (<untyped>-type-predicate)
 
 ;;; --------------------------------------------------------------------
 ;;; keywords

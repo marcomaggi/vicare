@@ -12,6 +12,13 @@
   (equality-predicate equal?)
   (hash-function object-hash))
 
+(define-scheme-type <untyped>
+    #f
+  (constructor <untyped>-constructor)
+  (predicate <untyped>-type-predicate)
+  (equality-predicate equal?)
+  (hash-function object-hash))
+
 (define-scheme-type <no-return>
     #f
   (predicate always-false)

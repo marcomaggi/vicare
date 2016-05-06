@@ -29,7 +29,8 @@
    type-signature.object-type-specs			type-signature.syntax-object
 
 ;;; special constructors
-   make-type-signature/single-top			make-type-signature/single-void
+   make-type-signature/single-void			make-type-signature/single-untyped
+   make-type-signature/single-top
    make-type-signature/single-null			make-type-signature/single-list
    make-type-signature/single-boolean
    make-type-signature/single-true			make-type-signature/single-false
@@ -55,6 +56,7 @@
 ;;; accessors
    type-signature.min-count				type-signature.max-count
    type-signature.min-and-max-counts
+   type-signature.untyped-to-top
 
    type-signature.common-ancestor			type-signature.union
    type-signature.union-same-number-of-operands
@@ -144,6 +146,7 @@
 			    )))
 	      (declare signature.single-void?		<void>-ots?)
 	      (declare signature.single-top?		<top>-ots?)
+	      (declare signature.single-untyped?	<untyped>-ots?)
 	      (declare signature.single-procedure?	<procedure>-ots?)
 	      (declare signature.single-closure?	closure-type-spec?)
 	      #| end of LET-SYNTAX |# )
@@ -187,7 +190,8 @@
 
   (define (%parse-single-clause clause.stx)
     (sys::syntax-case clause.stx (=> single-value unspecified-values
-				     <top> <closure> <procedure> <no-return> <void> <list> <list-of>)
+				     <top> <untyped> <closure> <procedure>
+				     <no-return> <void> <list> <list-of>)
       ((() ?body0 ?body ...)
        (sys::syntax ((signature.empty?)			?body0 ?body ...)))
 
@@ -195,6 +199,9 @@
 
       (((<void>) ?body0 ?body ...)
        (sys::syntax ((signature.single-void?)		?body0 ?body ...)))
+
+      (((<untyped>) ?body0 ?body ...)
+       (sys::syntax ((signature.single-untyped?)	?body0 ?body ...)))
 
       (((<top>) ?body0 ?body ...)
        (sys::syntax ((signature.single-top?)		?body0 ?body ...)))
@@ -412,8 +419,9 @@
        (syntax-rules ()
 	 ((_ ?who ?type-id-maker)
 	  (define-cached-signature-maker ?who (list (?type-id-maker)))))))
-  (define-single-type-signature-maker make-type-signature/single-top			<top>-ots)
   (define-single-type-signature-maker make-type-signature/single-void			<void>-ots)
+  (define-single-type-signature-maker make-type-signature/single-untyped		<untyped>-ots)
+  (define-single-type-signature-maker make-type-signature/single-top			<top>-ots)
   (define-single-type-signature-maker make-type-signature/single-null			<null>-ots)
   (define-single-type-signature-maker make-type-signature/single-list			<list>-ots)
   (define-single-type-signature-maker make-type-signature/single-boolean		<boolean>-ots)
@@ -456,34 +464,41 @@
    (<list>-ots? (type-signature.object-type-specs signature))))
 
 (define* (type-signature.partially-untyped? {signature type-signature?})
-  ;;Return true if the  type signature has at least one  untyped item, either "<top>"
-  ;;or "<list>"; otherwise return false.
+  ;;Return  true  if  the type  signature  has  at  least  one untyped  item,  either
+  ;;"<untyped>" or "<list>"; otherwise return false.
   ;;
   (%type-signature-memoised-body
    signature type-signature.memoised-partially-untyped? type-signature.memoised-partially-untyped?-set!
-   (let loop ((specs (type-signature.object-type-specs signature))
-	      (rv    #f))
+   (let loop ((specs (type-signature.object-type-specs signature)))
      (cond ((pair? specs)
-	    (loop (cdr specs) (<top>-ots? (car specs))))
-	   ((<list>-ots? specs)
-	    ;;End of IMproper list.
-	    #t)
-	   (else
+	    (or (<untyped>-ots? (car specs))
+		(loop (cdr specs))))
+	   ((null? specs)
 	    ;;End of proper list.
-	    rv)))))
+	    #f)
+	   (else
+	    ;;End of IMproper list.
+	    #t)))))
 
 (define* (type-signature.untyped? {signature type-signature?})
-  ;;Return  true if  the type  signature has  only untyped  items, either  "<top>" or
+  ;;Return true if  the type signature has only untyped  items, either "<untyped>" or
   ;;"<list>"; otherwise return false.
   ;;
   (%type-signature-memoised-body
    signature type-signature.memoised-untyped? type-signature.memoised-untyped?-set!
    (let loop ((specs (type-signature.object-type-specs signature)))
      (cond ((pair? specs)
-	    (and (<top>-ots? (car specs))
-		 (loop (cdr specs))))
-	   ((<list>-ots? specs))
-	   (else #f)))))
+	    (or (<untyped>-ots? (car specs))
+		(loop (cdr specs))))
+	   ((null? specs)
+	    ;;End of proper list.
+	    #f)
+	   ((<list>-ots? specs)
+	    ;;End of improper list with an UNtyped OTS.
+	    #t)
+	   (else
+	    ;;End of improper list with a typed OTS.
+	    #f)))))
 
 (define* (type-signature.single-type? {signature type-signature?})
   ;;Return true if SIGNATURE represents a single value; otherwise return false.
@@ -563,6 +578,20 @@
 	       (values min +inf.0))))
     (type-signature.memoised-min-count-set! signature min-count)
     (type-signature.memoised-max-count-set! signature max-count)))
+
+(define* (type-signature.untyped-to-top {sig type-signature?})
+  (make-type-signature
+   (let recur ((specs (type-signature.object-type-specs sig)))
+     (cond ((pair? specs)
+	    (cons (if (<untyped>-ots? (car specs))
+		      (<top>-ots)
+		    (car specs))
+		  (recur (cdr specs))))
+	   ((null? specs)
+	    '())
+	   (else
+	    #;(assert (or (<list>-ots? specs) (list-of-type-spec? specs)))
+	    specs)))))
 
 
 ;;;; matching: signatures exact matching

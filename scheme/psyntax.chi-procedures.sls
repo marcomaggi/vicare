@@ -1558,14 +1558,14 @@
 					     typed-var*.lex untyped-var*.id untyped-var*.lex
 					     lhs*.lex)
     ;;Partition the  syntactic bindings into typed  and untyped.  Those having  #f or
-    ;;"<top>" as tag are untyped.
+    ;;"<untyped>" as tag are untyped.
     ;;
     (if (pair? lhs*.id)
 	(let* ((lhs.id  (car lhs*.id))
 	       (lhs.ots (car lhs*.ots))
 	       (lhs.lex (generate-lexical-gensym lhs.id)))
 	  (if (and lhs.ots
-		   (not (<top>-ots? lhs.ots)))
+		   (not (<untyped>-ots? lhs.ots)))
 	      ;;Add a typed lexical variable.
 	      (%partition-typed-and-untyped-lhs* (cdr lhs*.id)
 						 (cdr lhs*.ots)
