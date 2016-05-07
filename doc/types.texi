@@ -943,6 +943,7 @@ Scheme source code reader in @code{#!vicare} mode.
 
 @menu
 * types syntaxes type-of::      Determining the type of expressions.
+* types syntaxes defining::     Defining type annotations.
 * types syntaxes descriptors::  Retrieving type descriptors.
 * types syntaxes new-and-del::  Constructors and destructors.
 * types syntaxes predicates::   Predicate syntaxes.
@@ -996,6 +997,38 @@ Examples:
                     (make-message-condition "ciao")))
 @result{} #[signature ((condition &who &message))]
 @end example
+@end deffn
+
+@c page
+@node types syntaxes defining
+@subsection Defining type annotations
+
+
+@deffn Syntax make-type-annotation @meta{annotation}
+Build a new type annotation description object; expand to the quoted
+type annotation object.  This syntax allows us to define type
+annotations as follows:
+
+@lisp
+(let*-syntax ((<string1> (make-type-annotation <string>))
+              (<string2> (make-type-annotation <string1>)))
+  (is-a? "string" <string2>)    @result{} #t
+  (is-a? 123      <string2>))   @result{} #f
+@end lisp
+@end deffn
+
+
+@deffn Syntax define-type @meta{name} @meta{annotation}
+Define a new type annotation bound to @meta{name}.  The argument
+@meta{name} must be a syntactic identifier.  The argument
+@meta{annotation} must be a type annotation syntax.
+
+It is equivalent to:
+
+@lisp
+(define-syntax @meta{name}
+  (make-type-annotation @meta{annotation}))
+@end lisp
 @end deffn
 
 @c page

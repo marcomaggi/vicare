@@ -106,6 +106,7 @@
   ;;
   (case x
     ((define-type)			define-type-macro)
+    ((make-type-annotation)		make-type-annotation-macro)
     ((define-struct)			define-struct-macro)
     ((define-record-type)		define-record-type-macro)
     ((record-type-and-record?)		record-type-and-record?-macro)
@@ -275,7 +276,7 @@
 (include "psyntax.non-core-macro-transformers.infix-macro.scm"		#t)
 
 
-;;;; non-core macro: DEFINE-TYPE
+;;;; non-core macro: DEFINE-TYPE, MAKE-TYPE-ANNOTATION
 
 (define-macro-transformer (define-type input-form.stx)
   ;;Transformer  function  used  to  expand  Vicare's  DEFINE-TYPE  macros  from  the
@@ -292,6 +293,18 @@
        (let ((ots (type-annotation->object-type-spec ?type-annotation (current-inferior-lexenv) ?type-name)))
 	 (bless
 	  `(define-syntax ,?type-name (quote ,ots))))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
+
+(define-macro-transformer (make-type-annotation input-form.stx)
+  ;;Transformer function used to expand Vicare's MAKE-TYPE-ANNOTATION macros from the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?type-annotation)
+     (list (core-prim-id 'quote)
+	   (type-annotation->object-type-spec ?type-annotation (current-inferior-lexenv))))
     (_
      (__synner__ "invalid syntax in macro use"))))
 
