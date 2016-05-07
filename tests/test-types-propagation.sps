@@ -1728,6 +1728,710 @@
   (void))
 
 
+(parametrise ((check-test-name	'let-values-std))
+
+  (define (one)
+    (add-result 'one))
+
+  (case-define two
+    (()
+     (add-result 'two))
+    (args
+     (add-result (cons 'two args))))
+
+;;; --------------------------------------------------------------------
+;;; no bindings, no return values
+
+  (doit (let-values/std ()
+	  (one)
+	  (two)
+	  (values))
+	=> ())
+  (check
+      (with-result
+	(let-values/std ()
+	  (one)
+	  (two)
+	  (values)))
+    => '((one two)))
+
+;;; --------------------------------------------------------------------
+;;; empty formals
+
+  (doit (let-values/std ((() (values)))
+	  (one)
+	  (two)
+	  (values))
+	=> ())
+  (check
+      (with-result
+	(let-values/std ((() (values)))
+	  (one)
+	  (two)
+	  (values)))
+    => '((one two)))
+
+;;; --------------------------------------------------------------------
+;;; single clause, untyped syntactic bindings combinations
+
+  (doit (let-values/std (((a) (values 1)))
+	  (one)
+	  (values a))
+	=> (<top>))
+  (check
+      (with-result
+	(let-values/std (((a) (values 1)))
+	  (one)
+	  (values a)))
+    => '(1 (one)))
+
+  (doit (let-values/std (((a b) (values 1 2.3)))
+	  (one)
+	  (values a b))
+	=> <list>)
+  (check
+      (with-result
+	(let-values/std (((a b) (values 1 2.3)))
+	  (one)
+	  (values a b)))
+    => '(1 2.3 (one)))
+
+  (doit (let-values/std (((a b c) (values 1 2.3 "ciao")))
+	  (one)
+	  (values a b c))
+	=> <list>)
+  (check
+      (with-result
+	(let-values/std (((a b c) (values 1 2.3 "ciao")))
+	  (one)
+	  (values a b c)))
+    => '(1 2.3 "ciao" (one)))
+
+  (doit (let-values/std (((a b . rest) (values 1 2.3 "C" "D")))
+	  (one)
+	  (values a b rest))
+	=> <list>)
+  (check
+      (with-result
+	(let-values/std (((a b . rest) (values 1 2.3 "C" "D")))
+	  (one)
+	  (values a b rest)))
+    => '(1 2.3 ("C" "D") (one)))
+
+;;; --------------------------------------------------------------------
+;;; multiple clauses, untyped syntactic bindings combinations
+
+  (doit (let-values/std (((a) (values 1))
+			 ((b) (values 2.3)))
+	  (one)
+	  (values a b))
+	=> (<top> <top>))
+  (check
+      (with-result
+	(let-values/std (((a) (values 1))
+			 ((b) (values 2.3)))
+	  (one)
+	  (values a b)))
+    => '(1 2.3 (one)))
+
+  (doit (let-values/std (((a b) (values 1 2.3))
+			 ((c d) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d))
+	=> <list>)
+  (check
+      (with-result
+	(let-values/std (((a b) (values 1 2.3))
+			 ((c d) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d)))
+    => '(1 2.3 1+i 2/3(one)))
+
+  (doit (let-values/std (((a b c) (values 1 2.3 "ciao"))
+			 ((d e) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d e))
+	=> <list>)
+  (check
+      (with-result
+	(let-values/std (((a b c) (values 1 2.3 "ciao"))
+			 ((d e) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d e)))
+    => '(1 2.3 "ciao" 1+i 2/3 (one)))
+
+  (doit (let-values/std (((a b . rest) (values 1 2.3 "C" "D"))
+			 ((c . stuff) (values 1+i 'x 'y)))
+	  (one)
+	  (values a b rest c stuff))
+	=> <list>)
+  (check
+      (with-result
+	(let-values/std (((a b . rest) (values 1 2.3 "C" "D"))
+			 ((c . stuff) (values 1+i 'x 'y)))
+	  (one)
+	  (values a b rest c stuff)))
+    => '(1 2.3 ("C" "D") 1+i (x y) (one)))
+
+  #| end of PARAMETRISE |# )
+
+
+(parametrise ((check-test-name	'let-values-checked))
+
+  (define (one)
+    (add-result 'one))
+
+  (case-define two
+    (()
+     (add-result 'two))
+    (args
+     (add-result (cons 'two args))))
+
+;;; --------------------------------------------------------------------
+;;; no bindings, no return values
+
+  (doit (let-values ()
+	  (one)
+	  (two)
+	  (values))
+	=> ())
+  (check
+      (with-result
+	(let-values ()
+	  (one)
+	  (two)
+	  (values)))
+    => '((one two)))
+
+;;; --------------------------------------------------------------------
+;;; empty formals
+
+  (doit (let-values ((() (values)))
+	  (one)
+	  (two)
+	  (values))
+	=> ())
+  (check
+      (with-result
+	(let-values ((() (values)))
+	  (one)
+	  (two)
+	  (values)))
+    => '((one two)))
+
+;;; --------------------------------------------------------------------
+;;; single clause, typed syntactic bindings combinations
+
+  (doit (let-values ((({a <fixnum>}) (values 1)))
+	  (one)
+	  (values a))
+	=> (<fixnum>))
+  (check
+      (with-result
+	(let-values ((({a <fixnum>}) (values 1)))
+	  (one)
+	  (values a)))
+    => '(1 (one)))
+
+  (doit (let-values ((({a <fixnum>} {b <flonum>}) (values 1 2.3)))
+	  (one)
+	  (values a b))
+	=> (<fixnum> <flonum>))
+  (check
+      (with-result
+	(let-values ((({a <fixnum>} {b <flonum>}) (values 1 2.3)))
+	  (one)
+	  (values a b)))
+    => '(1 2.3 (one)))
+
+  (doit (let-values ((({a <fixnum>} {b <flonum>} {c <string>}) (values 1 2.3 "ciao")))
+	  (one)
+	  (values a b c))
+	=> (<fixnum> <flonum> <string>))
+  (check
+      (with-result
+	(let-values ((({a <fixnum>} {b <flonum>} {c <string>}) (values 1 2.3 "ciao")))
+	  (one)
+	  (values a b c)))
+    => '(1 2.3 "ciao" (one)))
+
+  (doit (let-values ((({a <fixnum>} {b <flonum>} . {rest (list-of <string>)}) (values 1 2.3 "C" "D")))
+	  (one)
+	  (values a b rest))
+	=> (<fixnum> <flonum> (list-of <string>)))
+
+  (check
+      (with-result
+	(let-values ((({a <fixnum>} {b <flonum>} . {rest (list-of <string>)}) (values 1 2.3 "C" "D")))
+	  (one)
+	  (values a b rest)))
+    => '(1 2.3 ("C" "D") (one)))
+
+;;; --------------------------------------------------------------------
+;;; single clause, untyped syntactic bindings combinations
+
+  (doit (let-values (((a) (values 1)))
+	  (one)
+	  (values a))
+	=> (<positive-fixnum>))
+  (check
+      (with-result
+	(let-values (((a) (values 1)))
+	  (one)
+	  (values a)))
+    => '(1 (one)))
+
+  (doit (let-values (((a b) (values 1 2.3)))
+	  (one)
+	  (values a b))
+	=> (<positive-fixnum> <positive-flonum>))
+  (check
+      (with-result
+	(let-values (((a b) (values 1 2.3)))
+	  (one)
+	  (values a b)))
+    => '(1 2.3 (one)))
+
+  (doit (let-values (((a b c) (values 1 2.3 "ciao")))
+	  (one)
+	  (values a b c))
+	=> (<positive-fixnum> <positive-flonum> <string>))
+  (check
+      (with-result
+	(let-values (((a b c) (values 1 2.3 "ciao")))
+	  (one)
+	  (values a b c)))
+    => '(1 2.3 "ciao" (one)))
+
+  (doit (let-values (((a b . rest) (values 1 2.3 "C" "D")))
+	  (one)
+	  (values a b rest))
+	=> (<positive-fixnum> <positive-flonum> <list>))
+  (check
+      (with-result
+	(let-values (((a b . rest) (values 1 2.3 "C" "D")))
+	  (one)
+	  (values a b rest)))
+    => '(1 2.3 ("C" "D") (one)))
+
+;;; --------------------------------------------------------------------
+;;; multiple clauses, untyped syntactic bindings combinations
+
+  (doit (let-values (((a) (values 1))
+		     ((b) (values 2.3)))
+	  (one)
+	  (values a b))
+	=> (<positive-fixnum> <positive-flonum>))
+  (check
+      (with-result
+	(let-values (((a) (values 1))
+		     ((b) (values 2.3)))
+	  (one)
+	  (values a b)))
+    => '(1 2.3 (one)))
+
+  (doit (let-values (((a b) (values 1 2.3))
+		     ((c d) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d))
+	=> (<positive-fixnum> <positive-flonum> <exact-compnum> <positive-ratnum>))
+  (check
+      (with-result
+	(let-values (((a b) (values 1 2.3))
+		     ((c d) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d)))
+    => '(1 2.3 1+i 2/3(one)))
+
+  (doit (let-values (((a b c) (values 1 2.3 "ciao"))
+		     ((d e) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d e))
+	=> (<positive-fixnum> <positive-flonum> <string> <exact-compnum> <positive-ratnum>))
+  (check
+      (with-result
+	(let-values (((a b c) (values 1 2.3 "ciao"))
+		     ((d e) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d e)))
+    => '(1 2.3 "ciao" 1+i 2/3 (one)))
+
+  (doit (let-values (((a b . rest) (values 1 2.3 "C" "D"))
+		     ((c . stuff) (values 1+i 'x 'y)))
+	  (one)
+	  (values a b rest c stuff))
+	=> (<positive-fixnum> <positive-flonum> <list> <exact-compnum> <list>))
+  (check
+      (with-result
+	(let-values (((a b . rest) (values 1 2.3 "C" "D"))
+		     ((c . stuff) (values 1+i 'x 'y)))
+	  (one)
+	  (values a b rest c stuff)))
+    => '(1 2.3 ("C" "D") 1+i (x y) (one)))
+
+  #| end of PARAMETRISE |# )
+
+
+(parametrise ((check-test-name	'let*-values-std))
+
+  (define (one)
+    (add-result 'one))
+
+  (case-define two
+    (()
+     (add-result 'two))
+    (args
+     (add-result (cons 'two args))))
+
+;;; --------------------------------------------------------------------
+;;; no bindings, no return values
+
+  (doit (let*-values/std ()
+	  (one)
+	  (two)
+	  (values))
+	=> ())
+  (check
+      (with-result
+	(let*-values/std ()
+	  (one)
+	  (two)
+	  (values)))
+    => '((one two)))
+
+;;; --------------------------------------------------------------------
+;;; empty formals
+
+  (doit (let*-values/std ((() (values)))
+	  (one)
+	  (two)
+	  (values))
+	=> ())
+  (check
+      (with-result
+	(let*-values/std ((() (values)))
+	  (one)
+	  (two)
+	  (values)))
+    => '((one two)))
+
+;;; --------------------------------------------------------------------
+;;; single clause, untyped syntactic bindings combinations
+
+  (doit (let*-values/std (((a) (values 1)))
+	  (one)
+	  (values a))
+	=> (<top>))
+  (check
+      (with-result
+	(let*-values/std (((a) (values 1)))
+	  (one)
+	  (values a)))
+    => '(1 (one)))
+
+  (doit (let*-values/std (((a b) (values 1 2.3)))
+	  (one)
+	  (values a b))
+	=> <list>)
+  (check
+      (with-result
+	(let*-values/std (((a b) (values 1 2.3)))
+	  (one)
+	  (values a b)))
+    => '(1 2.3 (one)))
+
+  (doit (let*-values/std (((a b c) (values 1 2.3 "ciao")))
+	  (one)
+	  (values a b c))
+	=> <list>)
+  (check
+      (with-result
+	(let*-values/std (((a b c) (values 1 2.3 "ciao")))
+	  (one)
+	  (values a b c)))
+    => '(1 2.3 "ciao" (one)))
+
+  (doit (let*-values/std (((a b . rest) (values 1 2.3 "C" "D")))
+	  (one)
+	  (values a b rest))
+	=> <list>)
+  (check
+      (with-result
+	(let*-values/std (((a b . rest) (values 1 2.3 "C" "D")))
+	  (one)
+	  (values a b rest)))
+    => '(1 2.3 ("C" "D") (one)))
+
+;;; --------------------------------------------------------------------
+;;; multiple clauses, untyped syntactic bindings combinations
+
+  (doit (let*-values/std (((a) (values 1))
+			  ((b) (values 2.3)))
+	  (one)
+	  (values a b))
+	=> (<top> <top>))
+  (check
+      (with-result
+	(let*-values/std (((a) (values 1))
+			  ((b) (values 2.3)))
+	  (one)
+	  (values a b)))
+    => '(1 2.3 (one)))
+
+  (doit (let*-values/std (((a b) (values 1 2.3))
+			  ((c d) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d))
+	=> <list>)
+  (check
+      (with-result
+	(let*-values/std (((a b) (values 1 2.3))
+			  ((c d) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d)))
+    => '(1 2.3 1+i 2/3(one)))
+
+  (doit (let*-values/std (((a b c) (values 1 2.3 "ciao"))
+			  ((d e) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d e))
+	=> <list>)
+  (check
+      (with-result
+	(let*-values/std (((a b c) (values 1 2.3 "ciao"))
+			  ((d e) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d e)))
+    => '(1 2.3 "ciao" 1+i 2/3 (one)))
+
+  (doit (let*-values/std (((a b . rest) (values 1 2.3 "C" "D"))
+			  ((c . stuff) (values 1+i 'x 'y)))
+	  (one)
+	  (values a b rest c stuff))
+	=> <list>)
+  (check
+      (with-result
+	(let*-values/std (((a b . rest) (values 1 2.3 "C" "D"))
+			  ((c . stuff) (values 1+i 'x 'y)))
+	  (one)
+	  (values a b rest c stuff)))
+    => '(1 2.3 ("C" "D") 1+i (x y) (one)))
+
+  #| end of PARAMETRISE |# )
+
+
+(parametrise ((check-test-name	'let*-values-checked))
+
+  (define (one)
+    (add-result 'one))
+
+  (case-define two
+    (()
+     (add-result 'two))
+    (args
+     (add-result (cons 'two args))))
+
+;;; --------------------------------------------------------------------
+;;; no bindings, no return values
+
+  (doit (let*-values ()
+	  (one)
+	  (two)
+	  (values))
+	=> ())
+  (check
+      (with-result
+	(let*-values ()
+	  (one)
+	  (two)
+	  (values)))
+    => '((one two)))
+
+;;; --------------------------------------------------------------------
+;;; empty formals
+
+  (doit (let*-values ((() (values)))
+	  (one)
+	  (two)
+	  (values))
+	=> ())
+  (check
+      (with-result
+	(let*-values ((() (values)))
+	  (one)
+	  (two)
+	  (values)))
+    => '((one two)))
+
+;;; --------------------------------------------------------------------
+;;; single clause, typed syntactic bindings combinations
+
+  (doit (let*-values ((({a <fixnum>}) (values 1)))
+	  (one)
+	  (values a))
+	=> (<fixnum>))
+  (check
+      (with-result
+	(let*-values ((({a <fixnum>}) (values 1)))
+	  (one)
+	  (values a)))
+    => '(1 (one)))
+
+  (doit (let*-values ((({a <fixnum>} {b <flonum>}) (values 1 2.3)))
+	  (one)
+	  (values a b))
+	=> (<fixnum> <flonum>))
+  (check
+      (with-result
+	(let*-values ((({a <fixnum>} {b <flonum>}) (values 1 2.3)))
+	  (one)
+	  (values a b)))
+    => '(1 2.3 (one)))
+
+  (doit (let*-values ((({a <fixnum>} {b <flonum>} {c <string>}) (values 1 2.3 "ciao")))
+	  (one)
+	  (values a b c))
+	=> (<fixnum> <flonum> <string>))
+  (check
+      (with-result
+	(let*-values ((({a <fixnum>} {b <flonum>} {c <string>}) (values 1 2.3 "ciao")))
+	  (one)
+	  (values a b c)))
+    => '(1 2.3 "ciao" (one)))
+
+  (doit (let*-values ((({a <fixnum>} {b <flonum>} . {rest (list-of <string>)}) (values 1 2.3 "C" "D")))
+	  (one)
+	  (values a b rest))
+	=> (<fixnum> <flonum> (list-of <string>)))
+
+  (check
+      (with-result
+	(let*-values ((({a <fixnum>} {b <flonum>} . {rest (list-of <string>)}) (values 1 2.3 "C" "D")))
+	  (one)
+	  (values a b rest)))
+    => '(1 2.3 ("C" "D") (one)))
+
+;;; --------------------------------------------------------------------
+;;; single clause, untyped syntactic bindings combinations
+
+  (doit (let*-values (((a) (values 1)))
+	  (one)
+	  (values a))
+	=> (<positive-fixnum>))
+  (check
+      (with-result
+	(let*-values (((a) (values 1)))
+	  (one)
+	  (values a)))
+    => '(1 (one)))
+
+  (doit (let*-values (((a b) (values 1 2.3)))
+	  (one)
+	  (values a b))
+	=> (<positive-fixnum> <positive-flonum>))
+  (check
+      (with-result
+	(let*-values (((a b) (values 1 2.3)))
+	  (one)
+	  (values a b)))
+    => '(1 2.3 (one)))
+
+  (doit (let*-values (((a b c) (values 1 2.3 "ciao")))
+	  (one)
+	  (values a b c))
+	=> (<positive-fixnum> <positive-flonum> <string>))
+  (check
+      (with-result
+	(let*-values (((a b c) (values 1 2.3 "ciao")))
+	  (one)
+	  (values a b c)))
+    => '(1 2.3 "ciao" (one)))
+
+  (doit (let*-values (((a b . rest) (values 1 2.3 "C" "D")))
+	  (one)
+	  (values a b rest))
+	=> (<positive-fixnum> <positive-flonum> <list>))
+  (check
+      (with-result
+	(let*-values (((a b . rest) (values 1 2.3 "C" "D")))
+	  (one)
+	  (values a b rest)))
+    => '(1 2.3 ("C" "D") (one)))
+
+;;; --------------------------------------------------------------------
+;;; multiple clauses, untyped syntactic bindings combinations
+
+  (doit (let*-values (((a) (values 1))
+		      ((b) (values 2.3)))
+	  (one)
+	  (values a b))
+	=> (<positive-fixnum> <positive-flonum>))
+  (check
+      (with-result
+	(let*-values (((a) (values 1))
+		      ((b) (values 2.3)))
+	  (one)
+	  (values a b)))
+    => '(1 2.3 (one)))
+
+  (doit (let*-values (((a b) (values 1 2.3))
+		      ((c d) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d))
+	=> (<positive-fixnum> <positive-flonum> <exact-compnum> <positive-ratnum>))
+  (check
+      (with-result
+	(let*-values (((a b) (values 1 2.3))
+		      ((c d) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d)))
+    => '(1 2.3 1+i 2/3(one)))
+
+  (doit (let*-values (((a b c) (values 1 2.3 "ciao"))
+		      ((d e) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d e))
+	=> (<positive-fixnum> <positive-flonum> <string> <exact-compnum> <positive-ratnum>))
+  (check
+      (with-result
+	(let*-values (((a b c) (values 1 2.3 "ciao"))
+		      ((d e) (values 1+i 2/3)))
+	  (one)
+	  (values a b c d e)))
+    => '(1 2.3 "ciao" 1+i 2/3 (one)))
+
+  (doit (let*-values (((a b . rest) (values 1 2.3 "C" "D"))
+		      ((c . stuff) (values 1+i 'x 'y)))
+	  (one)
+	  (values a b rest c stuff))
+	=> (<positive-fixnum> <positive-flonum> <list> <exact-compnum> <list>))
+  (check
+      (with-result
+	(let*-values (((a b . rest) (values 1 2.3 "C" "D"))
+		      ((c . stuff) (values 1+i 'x 'y)))
+	  (one)
+	  (values a b rest c stuff)))
+    => '(1 2.3 ("C" "D") 1+i (x y) (one)))
+
+;;; --------------------------------------------------------------------
+;;; variables references
+
+  (doit (let*-values (((a b) (values 1 2.3))
+		      ((a b) (values a b)))
+	  (one)
+	  (values a b))
+	=> (<positive-fixnum> <positive-flonum>))
+  (check
+      (with-result
+	(let*-values (((a b) (values 1 2.3))
+		      ((a b) (values a b)))
+	  (one)
+	  (values a b)))
+    => '(1 2.3 (one)))
+
+  #| end of PARAMETRISE |# )
+
+
 (parametrise ((check-test-name	'cond))
 
   (doit (cond ((read)	1)

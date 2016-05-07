@@ -116,7 +116,11 @@
     ((dolist)				dolist-macro)
     ((dotimes)				dotimes-macro)
     ((let-values)			let-values-macro)
+    ((let-values/std)			let-values/std-macro)
+    ((let-values/checked)		let-values/checked-macro)
     ((let*-values)			let*-values-macro)
+    ((let*-values/std)			let*-values/std-macro)
+    ((let*-values/checked)		let*-values/checked-macro)
     ((values->list)			values->list-macro)
     ((syntax-rules)			syntax-rules-macro)
     ((quasiquote)			quasiquote-macro)
@@ -1437,13 +1441,9 @@
     ))
 
 
-;;;; non-core macro: LET-VALUES
+;;;; non-core macro: LET-VALUES, LET-VALUES/STD, LET-VALUES/CHECKED
 
-(module (let-values-macro)
-  ;;Transformer function  used to  expand R6RS LET-VALUES  macros from  the top-level
-  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
-  ;;object that must be further expanded.
-  ;;
+(module (let-values-macro let-values/std-macro let-values/checked-macro)
   ;;A LET-VALUES syntax like:
   ;;
   ;;   (let-values (((a b c) rhs0)
@@ -1465,85 +1465,249 @@
   (define-module-who let-values)
 
   (define-macro-transformer (let-values input-form.stx)
-    (syntax-match input-form.stx ()
-      ((_ () ?body ?body* ...)
-       (cons* (bless 'let/std) '() ?body ?body*))
+    ;;Transformer function used  to expand R6RS LET-VALUES macros  from the top-level
+    ;;built in environment.   Expand the contents of INPUT-FORM.STX;  return a syntax
+    ;;object that must be further expanded.
+    ;;
+    (if (options::typed-language?)
+	(let-values/checked-macro input-form.stx)
+      (let-values/std-macro input-form.stx)))
 
-      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       (receive (lhs*.standard lhs*.signature)
-	   (let loop ((lhs*           ?lhs*)
-		      (lhs*.standard  '())
-		      (lhs*.signature '()))
-	     (if (null? lhs*)
-		 (values (reverse lhs*.standard)
-			 (reverse lhs*.signature))
-	       ;;LHS.SIGNATURE is an instance of "<type-signature>".
-	       (receive (lhs.standard lhs.signature)
-		   (if (options::typed-language?)
-		       (syntax-object.parse-typed-formals (car lhs*))
-		     (syntax-object.parse-standard-formals (car lhs*)))
-		 (loop (cdr lhs*)
-		       (cons lhs.standard  lhs*.standard)
-		       (cons lhs.signature lhs*.signature)))))
-	 (bless
-	  (let recur ((lhs*.standard  lhs*.standard)
-		      (lhs*.signature lhs*.signature)
-		      (lhs*.tagged    (syntax-unwrap ?lhs*))
-		      (rhs*           ?rhs*)
-		      (standard-old*  '())
-		      (tagged-old*    '())
-		      (new*           '()))
-	    (if (null? lhs*.standard)
-		`(let ,(map list tagged-old* new*)
-		   ,?body . ,?body*)
-	      (syntax-match (car lhs*.standard) ()
-		((?standard-formal* ...)
-		 (receive (y* standard-old* tagged-old* new*)
-		     (%rename* ?standard-formal* (car lhs*.tagged) standard-old* tagged-old* new* input-form.stx)
-		   `(call-with-values
-			(lambda/std ()
-			  (assert-signature-and-return ,(type-signature.syntax-object (car lhs*.signature)) ,(car rhs*)))
-		      (lambda/std ,y*
-			,(recur (cdr lhs*.standard) (cdr lhs*.signature) (cdr lhs*.tagged)
-				(cdr rhs*) standard-old* tagged-old* new*)))))
+;;; --------------------------------------------------------------------
 
-		((?standard-formal* ... . ?standard-rest-formal)
-		 (receive (tagged-formal* tagged-rest-formal)
-		     (improper-list->list-and-rest (car lhs*.tagged))
-		   (let*-values
-		       (((y  standard-old* tagged-old* new*)
-			 (%rename  ?standard-rest-formal tagged-rest-formal standard-old* tagged-old* new* input-form.stx))
-			((y* standard-old* tagged-old* new*)
-			 (%rename* ?standard-formal*     tagged-formal*     standard-old* tagged-old* new* input-form.stx)))
-		     `(call-with-values
-			  (lambda/std () ,(car rhs*))
-			(lambda/std ,(append y* y)
-			  ,(recur (cdr lhs*.standard) (cdr lhs*.signature) (cdr lhs*.tagged)
-				  (cdr rhs*) standard-old* tagged-old* new*))))))
-		(?others
-		 (syntax-violation __module_who__ "malformed bindings" input-form.stx ?others))))))))
-      ))
+  (module (let-values/std-macro)
 
-  (define (%rename standard-formal tagged-formal standard-old* tagged-old* new* input-form.stx)
-    (when (bound-id-member? standard-formal standard-old*)
-      (syntax-violation __module_who__ "duplicate binding" input-form.stx standard-formal))
-    (let ((y (make-syntactic-identifier-for-temporary-variable (syntax->datum standard-formal))))
-      (values y (cons standard-formal standard-old*) (cons tagged-formal tagged-old*) (cons y new*))))
+    (define-macro-transformer (let-values/std input-form.stx)
+      ;;Transformer function used  to expand Vicare's LET-VALUES/STD  macros from the
+      ;;top-level  built  in environment.   Expand  the  contents of  INPUT-FORM.STX;
+      ;;return a syntax object that must be further expanded.
+      ;;
+      (syntax-match input-form.stx ()
+	((_ () ?body ?body* ...)
+	 (cons* (core-prim-id 'internal-body) ?body ?body*))
 
-  (define (%rename* standard-formal* tagged-formal* standard-old* tagged-old* new* input-form.stx)
-    (if (null? standard-formal*)
-	(values '() standard-old* tagged-old* new*)
-      (let*-values
-	  (((y  standard-old* tagged-old* new*)
-	    (%rename  (car standard-formal*) (car tagged-formal*) standard-old* tagged-old* new* input-form.stx))
-	   ((y* standard-old* tagged-old* new*)
-	    (%rename* (cdr standard-formal*) (cdr tagged-formal*) standard-old* tagged-old* new* input-form.stx)))
-	(values (cons y y*) standard-old* tagged-old* new*))))
+	((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+	 (receive (standard-formals*.stx formals*.sig)
+	     (%parse-lhs* ?lhs*)
+	   (bless
+	    (let recur ((standard-formals*.stx		standard-formals*.stx)
+			(formals*.sig			formals*.sig)
+			(input-formals*.stx		(syntax-unwrap ?lhs*))
+			(rhs*.stx			?rhs*)
+			(all-formal*.standard-id	'())
+			(all-formal*.input-stx		'())
+			(all-formal*.tmp-id		'()))
+	      (if (null? standard-formals*.stx)
+		  `(let/std ,(map list all-formal*.input-stx all-formal*.tmp-id)
+		     ,?body . ,?body*)
+		(syntax-match (car standard-formals*.stx) ()
+		  ((?standard-formal* ...)
+		   (receive (this-clause-formal*.tmp-id all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id)
+		       (%rename* ?standard-formal* (car input-formals*.stx)
+				 all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id
+				 __synner__)
+		     `(receive/std ,this-clause-formal*.tmp-id
+			  (assert-signature-and-return ,(type-signature.syntax-object (car formals*.sig)) ,(car rhs*.stx))
+			,(recur (cdr standard-formals*.stx) (cdr formals*.sig) (cdr input-formals*.stx)
+				(cdr rhs*.stx) all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id))))
 
-  #| end of module: LET-VALUES-MACRO |# )
+		  ((?standard-formal* ... . ?standard-rest-formal)
+		   (receive (arg-formal*.input-stx rest-formal.input-stx)
+		       (improper-list->list-and-rest (car input-formals*.stx))
+		     (receive (this-clause-formal.rest-tmp-id all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id)
+			 (%rename  ?standard-rest-formal rest-formal.input-stx
+				   all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id
+				   __synner__)
+		       (receive (this-clause-formal*.tmp-id all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id)
+			   (%rename* ?standard-formal* arg-formal*.input-stx
+				     all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id
+				     __synner__)
+			 `(receive/std ,(append this-clause-formal*.tmp-id this-clause-formal.rest-tmp-id)
+			      ,(car rhs*.stx)
+			    ,(recur (cdr standard-formals*.stx) (cdr formals*.sig) (cdr input-formals*.stx) (cdr rhs*.stx)
+				    all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id))))))
+
+		  (?others
+		   (__synner__ "malformed syntactic bindings specification" ?others))))))))
+
+	(_
+	 (__synner__ "invalid syntax in macro use"))))
+
+    (case-define %parse-lhs*
+      ((input-formals*.stx)
+       (%parse-lhs* input-formals*.stx '() '()))
+      ((input-formals*.stx rev-standard-formals*.stx rev-formals*.sig)
+       ;;Recursive function.  Parse the input formals.
+       ;;
+       ;;The argument INPUT-FORMALS*.STX is a  proper list of input syntactic binding
+       ;;specifications; each item in the list may be a proper or improper list.
+       ;;
+       ;;The argument REV-STANDARD-FORMALS*.STX  is a proper list  of fully unwrapped
+       ;;syntax objects  representing the standard syntactic  binding specifications;
+       ;;each item  in the  list may  be a proper  or improper  list.  This  value is
+       ;;accumulated at each recursive call.
+       ;;
+       ;;The  argument  REV-FORMALS*.SIG  is  a  proper  list  of  "<type-signature>"
+       ;;instances representing  the type signatures  of the formals.  This  value is
+       ;;accumulated at each recursive call.
+       ;;
+       (if (pair? input-formals*.stx)
+	   ;;STANDARD-FORMALS.STX is a fully unwrapped syntax object representing the
+	   ;;standard  formals in  a single  clause.  FORMALS.SIG  is an  instance of
+	   ;;"<type-signature>".
+	   (receive (standard-formals.stx formals.sig)
+	       (syntax-object.parse-standard-formals (car input-formals*.stx))
+	     (%parse-lhs* (cdr input-formals*.stx)
+			  (cons standard-formals.stx	rev-standard-formals*.stx)
+			  (cons formals.sig		rev-formals*.sig)))
+	 (values (reverse rev-standard-formals*.stx)
+		 (reverse rev-formals*.sig)))))
+
+    #| end of module: LET-VALUES/STD-MACRO |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (let-values/checked-macro)
+
+    (define-macro-transformer (let-values/checked input-form.stx)
+      ;;Transformer function  used to expand Vicare's  LET-VALUES/CHECKED macros from
+      ;;the top-level built  in environment.  Expand the  contents of INPUT-FORM.STX;
+      ;;return a syntax object that must be further expanded.
+      ;;
+      (syntax-match input-form.stx ()
+	((_ () ?body ?body* ...)
+	 (cons* (core-prim-id 'internal-body) ?body ?body*))
+
+	((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+	 (receive (standard-formals*.stx formals*.sig)
+	     (%parse-lhs* ?lhs*)
+	   (bless
+	    (let recur ((standard-formals*.stx		standard-formals*.stx)
+			(formals*.sig			formals*.sig)
+			(input-formals*.stx		(syntax-unwrap ?lhs*))
+			(rhs*.stx			?rhs*)
+			(all-formal*.standard-id	'())
+			(all-formal*.input-stx		'())
+			(all-formal*.tmp-id		'()))
+	      (if (null? standard-formals*.stx)
+		  `(let/checked ,(map list all-formal*.input-stx all-formal*.tmp-id)
+		     ,?body . ,?body*)
+		(syntax-match (car standard-formals*.stx) ()
+		  ((?standard-formal* ...)
+		   (receive (this-clause-formal*.tmp-id all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id)
+		       (%rename* ?standard-formal* (car input-formals*.stx)
+				 all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id
+				 __synner__)
+		     `(receive/checked ,this-clause-formal*.tmp-id
+			  (assert-signature-and-return ,(type-signature.syntax-object (car formals*.sig)) ,(car rhs*.stx))
+			,(recur (cdr standard-formals*.stx) (cdr formals*.sig) (cdr input-formals*.stx) (cdr rhs*.stx)
+				all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id))))
+
+		  ((?standard-formal* ... . ?standard-rest-formal)
+		   (receive (arg-formal*.input-stx rest-formal.input-stx)
+		       (input-formals->arg*-and-rest (car input-formals*.stx))
+		     (receive (this-clause-formal.rest-tmp-id all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id)
+			 (%rename  ?standard-rest-formal rest-formal.input-stx
+				   all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id
+				   __synner__)
+		       (receive (this-clause-formal*.tmp-id all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id)
+			   (%rename* ?standard-formal* arg-formal*.input-stx
+				     all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id
+				     __synner__)
+			 `(receive/checked ,(append this-clause-formal*.tmp-id this-clause-formal.rest-tmp-id)
+			      ,(car rhs*.stx)
+			    ,(recur (cdr standard-formals*.stx) (cdr formals*.sig) (cdr input-formals*.stx) (cdr rhs*.stx)
+				    all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id))))))
+
+		  (?others
+		   (__synner__ "malformed syntactic bindings specification" ?others))))))))
+
+	(_
+	 (__synner__ "invalid syntax in macro use"))))
+
+    (case-define %parse-lhs*
+      ((input-formals*.stx)
+       (%parse-lhs* input-formals*.stx '() '()))
+      ((input-formals*.stx rev-standard-formals*.stx rev-formals*.sig)
+       ;;Recursive function.  Parse the input formals.
+       ;;
+       ;;The argument INPUT-FORMALS*.STX is a  proper list of input syntactic binding
+       ;;specifications; each item in the list may be a proper or improper list.
+       ;;
+       ;;The argument REV-STANDARD-FORMALS*.STX  is a proper list  of fully unwrapped
+       ;;syntax objects  representing the standard syntactic  binding specifications;
+       ;;each item  in the  list may  be a proper  or improper  list.  This  value is
+       ;;accumulated at each recursive call.
+       ;;
+       ;;The  argument  REV-FORMALS*.SIG  is  a  proper  list  of  "<type-signature>"
+       ;;instances representing  the type signatures  of the formals.  This  value is
+       ;;accumulated at each recursive call.
+       ;;
+       (if (pair? input-formals*.stx)
+	   ;;STANDARD-FORMALS.STX is a fully unwrapped syntax object representing the
+	   ;;standard  formals in  a single  clause.  FORMALS.SIG  is an  instance of
+	   ;;"<type-signature>".
+	   (receive (standard-formals.stx formals.sig)
+	       (syntax-object.parse-typed-formals (car input-formals*.stx))
+	     (%parse-lhs* (cdr input-formals*.stx)
+			  (cons standard-formals.stx	rev-standard-formals*.stx)
+			  (cons formals.sig		rev-formals*.sig)))
+	 (values (reverse rev-standard-formals*.stx)
+		 (reverse rev-formals*.sig)))))
+
+    (define* (input-formals->arg*-and-rest input-formals.stx)
+      (let loop ((formals.stx		input-formals.stx)
+		 (rev-arg*.stx		'()))
+	(syntax-match formals.stx (brace)
+	  ((brace ?id ?type)
+	   (values (reverse rev-arg*.stx) formals.stx))
+	  (?id
+	   (identifier? ?id)
+	   (values (reverse rev-arg*.stx) formals.stx))
+	  (()
+	   (assertion-violation __who__ "internal error: expected improper input formals" input-formals.stx))
+	  ((?arg . ?rest)
+	   (loop ?rest (cons ?arg rev-arg*.stx))))))
+
+    #| end of module: LET-VALUES/CHECKED |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%rename formal.standard-id formal.input-stx
+		   all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id
+		   synner)
+    ;;This function operates on a single syntactic binding specification.
+    ;;
+    (when (bound-id-member? formal.standard-id all-formal*.standard-id)
+      (synner "duplicate name for syntactic binding" formal.standard-id))
+    (let ((this-clause-formal.tmp-id (make-syntactic-identifier-for-temporary-variable (syntax->datum formal.standard-id))))
+      (values this-clause-formal.tmp-id
+	      (cons formal.standard-id		all-formal*.standard-id)
+	      (cons formal.input-stx		all-formal*.input-stx)
+	      (cons this-clause-formal.tmp-id	all-formal*.tmp-id))))
+
+  (define (%rename* arg-formal*.standard-id arg-formal*.input-stx
+		    all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id
+		    synner)
+    ;;This function operates on proper lists of syntactic binding specifications.
+    ;;
+    (if (pair? arg-formal*.standard-id)
+	(receive (this-clause-formal.tmp-id all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id)
+	    (%rename (car arg-formal*.standard-id) (car arg-formal*.input-stx)
+		     all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id
+		     synner)
+	  (receive (this-clause-formal*.tmp-id all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id)
+	      (%rename* (cdr arg-formal*.standard-id) (cdr arg-formal*.input-stx)
+			all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id
+			synner)
+	    (values (cons this-clause-formal.tmp-id this-clause-formal*.tmp-id)
+		    all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id)))
+      (values '() all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id)))
+
+  #| end of module |# )
 
 
-;;;; non-core macro: LET*-VALUES
+;;;; non-core macro: LET*-VALUES, LET*-VALUES/STD, LET*-VALUES/CHECKED
 
 (define-macro-transformer (let*-values input-form.stx)
   ;;Transformer function  used to expand  R6RS LET*-VALUES macros from  the top-level
@@ -1566,20 +1730,59 @@
   ;;         (lambda (d e f)
   ;;           (begin ?body0 ?body)))))
   ;;
+  (if (options::typed-language?)
+      (let*-values/checked-macro input-form.stx)
+    (let*-values/std-macro input-form.stx)))
+
+(define-macro-transformer (let*-values/std input-form.stx)
+  ;;Transformer  function used  to expand  Vicare's LET*-VALUES/STD  macros from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
+  ;;
   (syntax-match input-form.stx ()
     ((_ () ?body ?body* ...)
-     (cons* (bless 'let) '() ?body ?body*))
+     (cons* (core-prim-id 'internal-body) ?body ?body*))
 
     ((_ ((?lhs ?rhs)) ?body ?body* ...)
      (bless
-      `(let-values ((,?lhs ,?rhs)) ,?body . ,?body*)))
+      `(receive/std ,?lhs
+	   ,?rhs
+	 ,?body . ,?body*)))
 
     ((_ ((?lhs0 ?rhs0) (?lhs* ?rhs*) ...) ?body ?body* ...)
      (bless
-      `(let-values ((,?lhs0 ,?rhs0))
-	 (let*-values ,(map list ?lhs* ?rhs*)
+      `(receive/std ,?lhs0
+	   ,?rhs0
+	 (let*-values/std ,(map list ?lhs* ?rhs*)
 	   ,?body . ,?body*))))
-    ))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
+
+(define-macro-transformer (let*-values/checked input-form.stx)
+  ;;Transformer function used to expand  Vicare's LET*-VALUES/CHECKED macros from the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ () ?body ?body* ...)
+     (cons* (core-prim-id 'internal-body) ?body ?body*))
+
+    ((_ ((?lhs ?rhs)) ?body ?body* ...)
+     (bless
+      `(receive/checked ,?lhs
+	   ,?rhs
+	 ,?body . ,?body*)))
+
+    ((_ ((?lhs0 ?rhs0) (?lhs* ?rhs*) ...) ?body ?body* ...)
+     (bless
+      `(receive/checked ,?lhs0
+	   ,?rhs0
+	 (let*-values/checked ,(map list ?lhs* ?rhs*)
+	   ,?body . ,?body*))))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: VALUES->LIST-MACRO

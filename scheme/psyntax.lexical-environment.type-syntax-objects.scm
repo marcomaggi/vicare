@@ -269,34 +269,35 @@
    (define lexenv
      (current-inferior-lexenv))
    (let recur ((stx lhs*))
-     (syntax-match stx (brace)
-       (()
-	(values '() '()))
-       (((brace ?id ?type) . ?other-lhs*)
-	(receive (lhs*.id lhs*.ots)
-	    (recur ?other-lhs*)
-	  (values (cons (if (identifier? ?id)
-			    ?id
-			  (syntax-violation __who__
-			    "expected identifier as syntactic binding name" ?id))
-			lhs*.id)
-		  (cons (with-exception-handler
-			    (lambda (E)
-			      (raise (condition (make-who-condition __who__)
-						(make-message-condition "invalid typed binding")
-						E)))
-			  (lambda ()
-			    (type-annotation->object-type-spec ?type lexenv ?type)))
-			lhs*.ots))))
-       ((?id . ?other-lhs*)
-	(identifier? ?id)
-	(receive (lhs*.id lhs*.ots)
-	    (recur ?other-lhs*)
-	  (values (cons ?id lhs*.id)
-		  (cons unspecified.ots lhs*.ots))))
-       (?thing
-	(syntax-violation __who__
-	  "expected optionally typed identifier as syntactic binding name" ?thing))))))
+     (with-who syntax-object.parse-typed-list-of-bindings/let-star
+       (syntax-match stx (brace)
+	 (()
+	  (values '() '()))
+	 (((brace ?id ?type) . ?other-lhs*)
+	  (receive (lhs*.id lhs*.ots)
+	      (recur ?other-lhs*)
+	    (values (cons (if (identifier? ?id)
+			      ?id
+			    (syntax-violation __who__
+			      "expected identifier as syntactic binding name" ?id))
+			  lhs*.id)
+		    (cons (with-exception-handler
+			      (lambda (E)
+				(raise (condition (make-who-condition __who__)
+						  (make-message-condition "invalid typed binding")
+						  E)))
+			    (lambda ()
+			      (type-annotation->object-type-spec ?type lexenv ?type)))
+			  lhs*.ots))))
+	 ((?id . ?other-lhs*)
+	  (identifier? ?id)
+	  (receive (lhs*.id lhs*.ots)
+	      (recur ?other-lhs*)
+	    (values (cons ?id lhs*.id)
+		    (cons unspecified.ots lhs*.ots))))
+	 (?thing
+	  (syntax-violation __who__
+	    "expected optionally typed identifier as syntactic binding name" ?thing)))))))
 
 
 ;;;; standard binding parsing: standard LAMBDA formals
