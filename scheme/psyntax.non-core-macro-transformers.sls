@@ -48,7 +48,7 @@
 
 
 (library (psyntax.non-core-macro-transformers)
-  (export non-core-macro-transformer)
+  (export)
   (import (except (rnrs)
 		  eval
 		  environment		environment?
@@ -81,192 +81,160 @@
   #;(lambda (stx)
     (syntax-violation '__synner__ "unset fluid syntax" stx)))
 
-(define-syntax (define-macro-transformer stx)
-  (sys::syntax-case stx ()
-    ((_ (?who ?input-form.stx) ?body0 ?body ...)
-     (and (sys::identifier? (sys::syntax ?who))
-	  (sys::identifier? (sys::syntax ?input-form.stx)))
-     (let* ((who.sym (sys::syntax->datum (sys::syntax ?who)))
-	    (who.str (symbol->string who.sym))
-	    (who.out (string->symbol (string-append who.str "-macro"))))
-       (sys::with-syntax
-	   ((WHO (sys::datum->syntax (sys::syntax ?who) who.out)))
-	 (sys::syntax
-	  (define (WHO ?input-form.stx)
-	    (with-who ?who
-	      (define-synner synner (quote ?who) ?input-form.stx)
-	      (fluid-let-syntax
-		  ((__synner__ (identifier-syntax synner)))
-		?body0 ?body ...)))))))
-    ))
+(define-syntax define-macro-transformer
+  ;;We expect the table to be a proper list  and the entries in the table to have the
+  ;;format:
+  ;;
+  ;;   (let-values (macro  . #{let-values . ?key}))
+  ;;   (__file__   (macro! . #{__file__   . ?key}))
+  ;;
+  ;;where ?KEY is a gensym.
+  ;;
+  (let ((non-core-macro-table (with-input-from-file "non-core-macros-table.scm" read)))
+    (lambda (stx)
+      (sys::syntax-case stx ()
+	((_ (?who ?input-form.stx) ?body0 ?body ...)
+	 (and (sys::identifier? (sys::syntax ?who))
+	      (sys::identifier? (sys::syntax ?input-form.stx)))
+	 (let* ((who.sym	(sys::syntax->datum (sys::syntax ?who)))
+		(key		(cdadr (assq who.sym non-core-macro-table)))
+		(pretty-key	(symbol->string key))
+		(funcname.sym	(string->symbol (string-append pretty-key "-macro"))))
+	   (sys::with-syntax
+	       ((FUNCNAME	(sys::datum->syntax (sys::syntax ?who) funcname.sym))
+		(KEY		(sys::datum->syntax (sys::syntax ?who) key)))
+	     (sys::syntax
+	      (module (FUNCNAME)
+		(define (FUNCNAME ?input-form.stx)
+		  (with-who ?who
+		    (define-synner synner (quote ?who) ?input-form.stx)
+		    (fluid-let-syntax
+			((__synner__ (identifier-syntax synner)))
+		      ?body0 ?body ...)))
+		($set-symbol-value! (quote KEY) FUNCNAME)
+		#| end of module |# )))))
+	))))
+
+(define-syntax define-auxiliary-syntax-transformer
+  ;;We expect the table to be a proper list  and the entries in the table to have the
+  ;;format:
+  ;;
+  ;;   (let-values (macro  . #{let-values . ?key}))
+  ;;   (__file__   (macro! . #{__file__   . ?key}))
+  ;;
+  ;;where ?KEY is a gensym.
+  ;;
+  (let ((non-core-macro-table (with-input-from-file "non-core-macros-table.scm" read)))
+    (lambda (stx)
+      (sys::syntax-case stx ()
+	((_ (?who ?input-form.stx) ?body0 ?body ...)
+	 (and (sys::identifier? (sys::syntax ?who))
+	      (sys::identifier? (sys::syntax ?input-form.stx)))
+	 (begin
+	   ;; (let ((who.sym (sys::syntax->datum (sys::syntax ?who))))
+	   ;;   (debug-print who.sym (assq who.sym non-core-macro-table))
+	   ;;   (debug-print (cdadr (assq who.sym non-core-macro-table))))
+	   (let* ((who.sym	(sys::syntax->datum (sys::syntax ?who)))
+		  (key		(cdadr (assq who.sym non-core-macro-table)))
+		  (pretty-key	(symbol->string key))
+		  (funcname.sym	(string->symbol (string-append pretty-key "-macro"))))
+	     (sys::with-syntax
+		 ((FUNCNAME	(sys::datum->syntax (sys::syntax ?who) funcname.sym))
+		  (KEY		(sys::datum->syntax (sys::syntax ?who) key)))
+	       (sys::syntax
+		(module (FUNCNAME)
+		  (define (FUNCNAME ?input-form.stx) ?body0 ?body ...)
+		  (set-symbol-value! (quote KEY) FUNCNAME)
+		  #| end of module |# ))))))
+	))))
 
 
-(define* (non-core-macro-transformer {x symbol?})
-  ;;Map symbols representing non-core macros to their macro transformers.
-  ;;
-  (case x
-    ((define-type)			define-type-macro)
-    ((type-annotation)			type-annotation-macro)
-    ((define-struct)			define-struct-macro)
-    ((define-record-type)		define-record-type-macro)
-    ((record-type-and-record?)		record-type-and-record?-macro)
-    ((define-condition-type)		define-condition-type-macro)
-    ((cond)				cond-macro)
-    ((do)				do-macro)
-    ((do*)				do*-macro)
-    ((dolist)				dolist-macro)
-    ((dotimes)				dotimes-macro)
-    ((let-values)			let-values-macro)
-    ((let-values/std)			let-values/std-macro)
-    ((let-values/checked)		let-values/checked-macro)
-    ((let*-values)			let*-values-macro)
-    ((let*-values/std)			let*-values/std-macro)
-    ((let*-values/checked)		let*-values/checked-macro)
-    ((values->list)			values->list-macro)
-    ((syntax-rules)			syntax-rules-macro)
-    ((quasiquote)			quasiquote-macro)
-    ((quasisyntax)			quasisyntax-macro)
-    ((with-syntax)			with-syntax-macro)
-    ((when)				when-macro)
-    ((unless)				unless-macro)
-    ((case)				case-macro)
-    ((case-identifiers)			case-identifiers-macro)
-    ((identifier-syntax)		identifier-syntax-macro)
-    ((time)				time-macro)
-    ((delay)				delay-macro)
-    ((assert)				assert-macro)
-    ((guard)				guard-macro)
-    ((define-enumeration)		define-enumeration-macro)
-    ((let*-syntax)			let*-syntax-macro)
-    ((let-constants)			let-constants-macro)
-    ((let*-constants)			let*-constants-macro)
-    ((letrec-constants)			letrec-constants-macro)
-    ((letrec*-constants)		letrec*-constants-macro)
-    ;;
-    ((define)				define-macro)
-    ((case-define)			case-define-macro)
-    ;;
-    ((define*)				define*-macro)
-    ((case-define*)			case-define*-macro)
-    ((lambda*)				lambda*-macro)
-    ((case-lambda*)			case-lambda*-macro)
-    ((named-lambda*)			named-lambda*-macro)
-    ((named-case-lambda*)		named-case-lambda*-macro)
+;;;; miscellaneous macros
 
-    ((define-syntax-parameter)		define-syntax-parameter-macro)
-    ((syntax-parametrise)		syntax-parametrise-macro)
+(define-macro-transformer (eol-style input-form.stx)
+  (%allowed-symbol-macro input-form.stx '(none lf cr crlf nel crnel ls)))
 
-    ((include)				include-macro)
-    ((define-integrable)		define-integrable-macro)
-    ((define-inline)			define-inline-macro)
-    ((define-constant)			define-constant-macro)
-    ((define-inline-constant)		define-inline-constant-macro)
-    ((define-values)			define-values-macro)
-    ((define-values/std)		define-values/std-macro)
-    ((define-values/checked)		define-values/checked-macro)
-    ((define-constant-values)		define-constant-values-macro)
-    ((xor)				xor-macro)
-    ((define-syntax-rule)		define-syntax-rule-macro)
-    ((define-auxiliary-syntaxes)	define-auxiliary-syntaxes-macro)
-    ((define-syntax*)			define-syntax*-macro)
-    ((with-implicits)			with-implicits-macro)
-    ((set-cons!)			set-cons!-macro)
+(define-macro-transformer (error-handling-mode input-form.stx)
+  (%allowed-symbol-macro input-form.stx '(ignore raise replace)))
 
-    ((with-unwind-protection)		with-unwind-protection-macro)
-    ((unwind-protect)			unwind-protect-macro)
-    ((with-blocked-exceptions)		with-blocked-exceptions-macro)
-    ((with-current-dynamic-environment)	with-current-dynamic-environment-macro)
+(define-macro-transformer (buffer-mode input-form.stx)
+  (%allowed-symbol-macro input-form.stx '(none line block)))
 
-    ((shift)				shift-macro)
-    ((reset)				reset-macro)
-    ((inner-reset)			inner-reset-macro)
+(define-macro-transformer (__file__ input-form.stx)
+  (let ((expr (stx-expr input-form.stx)))
+    (if (reader-annotation? expr)
+	(let ((pos (reader-annotation-textual-position expr)))
+	  (if (source-position-condition? pos)
+	      (bless
+	       `(quote ,(source-position-port-id pos)))
+	    (bless
+	     `(quote ,(source-code-location)))))
+      (bless
+       `(quote ,(source-code-location))))))
 
-    ;; non-Scheme style syntaxes
-    ((while)				while-macro)
-    ((until)				until-macro)
-    ((for)				for-macro)
-    ((returnable)			returnable-macro)
-    ((try)				try-macro)
+(define-macro-transformer (__line__ input-form.stx)
+  (let ((expr (stx-expr input-form.stx)))
+    (if (reader-annotation? expr)
+	(let ((pos (reader-annotation-textual-position expr)))
+	  (if (source-position-condition? pos)
+	      (bless
+	       `(quote ,(source-position-line pos)))
+	    (bless '(quote #f))))
+      (bless '(quote #f)))))
 
-    ((parameterize)			parameterize-macro)
-    ((parametrise)			parameterize-macro)
+(define-macro-transformer (stdin input-form.stx)
+  (bless '(console-input-port)))
 
-    ;; compensations
-    ((with-compensations)		with-compensations-macro)
-    ((with-compensations/on-error)	with-compensations/on-error-macro)
-    ((with-compensation-handler)	with-compensation-handler-macro)
-    ((compensate)			compensate-macro)
-    ((push-compensation)		push-compensation-macro)
+(define-macro-transformer (stdout input-form.stx)
+  (bless '(console-output-port)))
 
-    ;; coroutines
-    ((concurrently)			concurrently-macro)
-    ((monitor)				monitor-macro)
+(define-macro-transformer (stderr input-form.stx)
+  (bless '(console-error-port)))
 
-    ((pre-incr)				pre-incr-macro)
-    ((pre-decr)				pre-decr-macro)
-    ((post-incr)			post-incr-macro)
-    ((post-decr)			post-decr-macro)
-    ((infix)				infix-macro)
-
-    ((eol-style)
-     (lambda (x)
-       (%allowed-symbol-macro x '(none lf cr crlf nel crnel ls))))
-
-    ((error-handling-mode)
-     (lambda (x)
-       (%allowed-symbol-macro x '(ignore raise replace))))
-
-    ((buffer-mode)
-     (lambda (x)
-       (%allowed-symbol-macro x '(none line block))))
-
-    ((endianness)			endianness-macro)
-    ((file-options)			file-options-macro)
-    ((expander-options)			expander-options-macro)
-    ((compiler-options)			compiler-options-macro)
-
-    ((... => _
-	  else unquote unquote-splicing
-	  unsyntax unsyntax-splicing
-	  fields mutable immutable parent protocol
-	  sealed opaque nongenerative parent-rtd
-	  constructor destructor
-	  super-protocol destructor-protocol custom-printer method case-method define-type-descriptors
-	  type-predicate catch finally
-	  pair pair-of list-of nelist-of vector-of hashtable alist parent-of ancestor-of enumeration)
-     (lambda (expr-stx)
-       (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
-
-    ((__file__)
-     (lambda (stx)
-       (let ((expr (stx-expr stx)))
-	 (if (reader-annotation? expr)
-	     (let ((pos (reader-annotation-textual-position expr)))
-	       (if (source-position-condition? pos)
-		   (bless
-		    `(quote ,(source-position-port-id pos)))
-		 (bless
-		  `(quote ,(source-code-location)))))
-	   (bless
-	    `(quote ,(source-code-location)))))))
-
-    ((__line__)
-     (lambda (stx)
-       (let ((expr (stx-expr stx)))
-	 (if (reader-annotation? expr)
-	     (let ((pos (reader-annotation-textual-position expr)))
-	       (if (source-position-condition? pos)
-		   (bless
-		    `(quote ,(source-position-line pos)))
-		 (bless '(quote #f))))
-	   (bless '(quote #f))))))
-
-    ((stdin)	(lambda (stx) (bless '(console-input-port))))
-    ((stdout)	(lambda (stx) (bless '(console-output-port))))
-    ((stderr)	(lambda (stx) (bless '(console-error-port))))
-
-    (else
-     (assertion-violation/internal-error __who__ "unknown non-core macro name" x))))
+(let-syntax ((declare (syntax-rules ()
+			((_ ?who)
+			 (define-auxiliary-syntax-transformer (?who input-form.stx)
+			   (syntax-violation (quote ?who)
+			     "incorrect usage of auxiliary keyword" input-form.stx))))))
+  (declare ...)
+  (declare =>)
+  (declare _)
+  (declare else)
+  (declare unquote)
+  (declare unquote-splicing)
+  (declare unsyntax)
+  (declare unsyntax-splicing)
+  (declare fields)
+  (declare mutable)
+  (declare immutable)
+  (declare parent)
+  (declare protocol)
+  (declare sealed)
+  (declare opaque)
+  (declare nongenerative)
+  (declare parent-rtd)
+  (declare constructor)
+  (declare destructor)
+  (declare super-protocol)
+  (declare destructor-protocol)
+  (declare custom-printer)
+  (declare method)
+  (declare case-method)
+  (declare define-type-descriptors)
+  (declare type-predicate)
+  (declare catch)
+  (declare finally)
+  (declare pair)
+  (declare pair-of)
+  (declare list-of)
+  (declare nelist-of)
+  (declare vector-of)
+  (declare hashtable)
+  (declare alist)
+  (declare parent-of)
+  (declare ancestor-of)
+  (declare enumeration)
+  #| end of LET-SYNTAX |# )
 
 
 ;;;; external modules
@@ -4836,7 +4804,7 @@
 
 ;;;; non-core macro: PRE-INCR!, PRE-DECR!, POST-INCR!, POST-DECR!
 
-(define-macro-transformer (pre-incr input-form.stx)
+(define-macro-transformer (pre-incr! input-form.stx)
   ;;Transformer function used to expand  Vicare's PRE-INCR! macros from the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -4863,7 +4831,7 @@
     (_
      (__synner__ "invalid pre-increment operation"))))
 
-(define-macro-transformer (pre-decr input-form.stx)
+(define-macro-transformer (pre-decr! input-form.stx)
   ;;Transformer function used to expand  Vicare's PRE-DECR! macros from the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -4892,7 +4860,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-macro-transformer (post-incr input-form.stx)
+(define-macro-transformer (post-incr! input-form.stx)
   ;;Transformer function used to expand Vicare's POST-INCR! macros from the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -4919,7 +4887,7 @@
     (_
      (__synner__ "invalid post-increment operation"))))
 
-(define-macro-transformer (post-decr input-form.stx)
+(define-macro-transformer (post-decr! input-form.stx)
   ;;Transformer function used to expand Vicare's POST-DECR! macros from the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.

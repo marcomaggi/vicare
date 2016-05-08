@@ -19,7 +19,7 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(module (define-struct-macro)
+(module ()
   ;;Transformer  function  used to  expand  Vicare's  DEFINE-STRUCT macros  from  the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
@@ -50,7 +50,7 @@
 		field-name*.sym operator*.id)))
 
 
-(define (define-struct-macro input-form.stx)
+(define-macro-transformer (define-struct input-form.stx)
   (syntax-match input-form.stx (nongenerative)
     ((_ (?name ?maker ?predicate) (?field* ...))
      (%build-output-form input-form.stx ?name ?maker ?predicate ?field* #f))
@@ -65,7 +65,9 @@
     ((_ ?name (?field* ...) (nongenerative ?uid))
      (identifier? ?uid)
      (%build-output-form input-form.stx ?name #f     #f         ?field* ?uid))
-    ))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 (define (%build-output-form input-form.stx type.id maker.id predicate.id field*.stx uid)

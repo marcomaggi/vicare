@@ -41,7 +41,7 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(module (core-macro-transformer)
+(module ()
 
 (import PSYNTAX-TYPE-SYNTAX-OBJECTS)
 
@@ -53,22 +53,37 @@
   #;(lambda (stx)
     (syntax-violation '__synner__ "unset fluid syntax" stx)))
 
-(define-syntax (define-core-transformer stx)
-  (sys::syntax-case stx ()
-    ((_ (?who ?input-form.stx ?lexenv.run ?lexenv.expand) ?body0 ?body ...)
-     (let* ((who.sym (sys::syntax->datum (sys::syntax ?who)))
-	    (who.str (symbol->string who.sym))
-	    (who.out (string->symbol (string-append who.str "-transformer"))))
-       (sys::with-syntax
-	   ((WHO (sys::datum->syntax (sys::syntax ?who) who.out)))
-	 (sys::syntax
-	  (define* (WHO ?input-form.stx ?lexenv.run ?lexenv.expand)
-	    (with-who ?who
-	      (define-synner synner (quote ?who) ?input-form.stx)
-	      (fluid-let-syntax
-		  ((__synner__ (identifier-syntax synner)))
-		?body0 ?body ...)))))))
-    ))
+(define-syntax define-core-transformer
+  ;;We expect the table to be a proper list  and the entries in the table to have the
+  ;;format:
+  ;;
+  ;;   (let-values (macro  . #{let-values . ?key}))
+  ;;   (__file__   (macro! . #{__file__   . ?key}))
+  ;;
+  ;;where ?KEY is a gensym.
+  ;;
+  (let ((core-macro-table (with-input-from-file "core-macros-table.scm" read)))
+    (lambda (stx)
+      (sys::syntax-case stx ()
+	((_ (?who ?input-form.stx ?lexenv.run ?lexenv.expand) ?body0 ?body ...)
+	 (let* ((who.sym (sys::syntax->datum (sys::syntax ?who)))
+		(key		(cdadr (assq who.sym core-macro-table)))
+		(pretty-key		(symbol->string key))
+		(funcname.sym	(string->symbol (string-append pretty-key "-transformer"))))
+	   (sys::with-syntax
+	       ((FUNCNAME	(sys::datum->syntax (sys::syntax ?who) funcname.sym))
+		(KEY		(sys::datum->syntax (sys::syntax ?who) key)))
+	     (sys::syntax
+	      (module (FUNCNAME)
+		(define (FUNCNAME ?input-form.stx ?lexenv.run ?lexenv.expand)
+		  (with-who ?who
+		    (define-synner synner (quote ?who) ?input-form.stx)
+		    (fluid-let-syntax
+			((__synner__ (identifier-syntax synner)))
+		      ?body0 ?body ...)))
+		($set-symbol-value! (quote KEY) FUNCNAME)
+		#| end of module |# )))))
+	))))
 
 (module ($map-in-order
 	 $map-in-order1)
@@ -137,115 +152,6 @@
   (if (options::debug-mode-enabled?)
       (stx-push-annotated-expr input-form.stx (bless `(,syntax.sym ,(map cons formals*.stx body**.stx))))
     input-form.stx))
-
-
-;;The function CORE-MACRO-TRANSFORMER maps symbols  representing core macros to their
-;;macro transformers.
-;;
-;;We distinguish between "non-core macros" and "core macros".
-;;
-;;NOTE This  module is very long,  so it is  split into multiple code  pages.  (Marco
-;;Maggi; Sat Apr 27, 2013)
-;;
-(define* (core-macro-transformer name)
-  (case name
-    ((lambda)					lambda-transformer)
-    ((lambda/std)				lambda/std-transformer)
-    ((lambda/typed)				lambda/typed-transformer)
-    ((lambda/checked)				lambda/checked-transformer)
-    ((case-lambda)				case-lambda-transformer)
-    ((case-lambda/std)				case-lambda/std-transformer)
-    ((case-lambda/typed)			case-lambda/typed-transformer)
-    ((case-lambda/checked)			case-lambda/checked-transformer)
-    ((named-lambda)				named-lambda-transformer)
-    ((named-lambda/std)				named-lambda/std-transformer)
-    ((named-lambda/typed)			named-lambda/typed-transformer)
-    ((named-lambda/checked)			named-lambda/checked-transformer)
-    ((named-case-lambda)			named-case-lambda-transformer)
-    ((named-case-lambda/std)			named-case-lambda/std-transformer)
-    ((named-case-lambda/typed)			named-case-lambda/typed-transformer)
-    ((named-case-lambda/checked)		named-case-lambda/checked-transformer)
-    ;;
-    ((quote)					quote-transformer)
-    ((if)					if-transformer)
-    ((let)					let-transformer)
-    ((let/checked)				let/checked-transformer)
-    ((let/std)					let/std-transformer)
-    ((let*)					let*-transformer)
-    ((let*/checked)				let*/checked-transformer)
-    ((let*/std)					let*/std-transformer)
-    ((letrec)					letrec-transformer)
-    ((letrec/checked)				letrec/checked-transformer)
-    ((letrec/std)				letrec/std-transformer)
-    ((letrec*)					letrec*-transformer)
-    ((letrec*/checked)				letrec*/checked-transformer)
-    ((letrec*/std)				letrec*/std-transformer)
-    ((and)					and-transformer)
-    ((or)					or-transformer)
-    ;;
-    ((begin0)					begin0-transformer)
-    ((receive)					receive-transformer)
-    ((receive/std)				receive/std-transformer)
-    ((receive/checked)				receive/checked-transformer)
-    ((receive-and-return)			receive-and-return-transformer)
-    ((receive-and-return/std)			receive-and-return/std-transformer)
-    ((receive-and-return/checked)		receive-and-return/checked-transformer)
-    ;;
-    ((foreign-call)				foreign-call-transformer)
-    ((syntax-case)				syntax-case-transformer)
-    ((syntax)					syntax-transformer)
-    ((fluid-let-syntax)				fluid-let-syntax-transformer)
-    ((splice-first-expand)			splice-first-expand-transformer)
-    ((internal-body)				internal-body-transformer)
-
-    ((struct-type-descriptor)			struct-type-descriptor-transformer)
-
-    ((record-type-descriptor)			record-type-descriptor-transformer)
-    ((record-constructor-descriptor)		record-constructor-descriptor-transformer)
-
-    ((type-descriptor)				type-descriptor-transformer)
-    ((new)					new-transformer)
-    ((delete)					delete-transformer)
-    ((is-a?)					is-a?-transformer)
-    ((slot-ref)					slot-ref-transformer)
-    ((slot-set!)				slot-set!-transformer)
-    ((method-call)				method-call-transformer)
-    ((case-type)				case-type-transformer)
-
-    ((assert-signature)				assert-signature-transformer)
-    ((assert-signature-and-return)		assert-signature-and-return-transformer)
-    ((cast-signature)				cast-signature-transformer)
-    ((unsafe-cast-signature)			unsafe-cast-signature-transformer)
-
-    ((type-of)					type-of-transformer)
-    ((type-annotation=?)			type-annotation=?-transformer)
-    ((type-annotation-super-and-sub?)		type-annotation-super-and-sub?-transformer)
-    ((type-annotation-common-ancestor)		type-annotation-common-ancestor-transformer)
-    ((type-annotation-ancestors)		type-annotation-ancestors-transformer)
-    ((type-annotation-syntax)			type-annotation-syntax-transformer)
-    ((type-annotation-matching)			type-annotation-matching-transformer)
-
-    ((type-signature-super-and-sub?)		type-signature-super-and-sub?-transformer)
-    ((type-signature-common-ancestor)		type-signature-common-ancestor-transformer)
-    ((type-signature-matching)			type-signature-matching-transformer)
-    ((type-signature-union)			type-signature-union-transformer)
-
-    ((hash-function)				hash-function-transformer)
-    ((equality-predicate)			equality-predicate-transformer)
-    ((comparison-procedure)			comparison-procedure-transformer)
-
-    ((expansion-of)				expansion-of-transformer)
-    ((expansion-of*)				expansion-of*-transformer)
-    ((visit-code-of)				visit-code-of-transformer)
-    ((optimisation-of)				optimisation-of-transformer)
-    ((further-optimisation-of)			further-optimisation-of-transformer)
-    ((optimisation-of*)				optimisation-of*-transformer)
-    ((further-optimisation-of*)			further-optimisation-of*-transformer)
-    ((assembly-of)				assembly-of-transformer)
-
-    (else
-     (assertion-violation/internal-error __who__
-       "cannot find transformer" name))))
 
 
 ;;;; external modules

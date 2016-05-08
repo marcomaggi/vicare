@@ -146,7 +146,8 @@
     $fx= $fx< $fx> $fx<= $fx>= $fxadd1 $fxsub1
     $fxzero? $fxpositive? $fxnonnegative?
     $vector-length $vector-empty? $vector-ref $vector-set!
-    $putprop $getprop $remprop $property-list)
+    $putprop $getprop $remprop $property-list
+    $symbol-value $set-symbol-value!)
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Wed Sep 30, 2015)
@@ -241,7 +242,8 @@
     ;;when possible, rather that using external libraries of macros.
     (only (vicare system $symbols)
 	  $unintern-gensym
-	  $putprop $getprop $remprop $property-list)
+	  $putprop $getprop $remprop $property-list
+	  $symbol-value $set-symbol-value!)
     (only (vicare system $fx)
 	  $fx= $fx< $fx> $fx<= $fx>= $fxadd1 $fxsub1
 	  $fxzero? $fxpositive? $fxnonnegative?)

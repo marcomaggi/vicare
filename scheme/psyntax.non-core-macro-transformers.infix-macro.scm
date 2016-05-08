@@ -32,14 +32,14 @@
 
 
 #!vicare
-(module (infix-macro)
+(module ()
 
   (define-module-who infix)
 
   (define (synner-internal-error message subform)
     (assertion-violation/internal-error __module_who__ message subform))
 
-  (define (infix-macro input-form.stx)
+  (define-macro-transformer (infix input-form.stx)
     ;;Transformer function  used to expand  Vicare's INFIX macros from  the top-level
     ;;built in environment.   Expand the contents of INPUT-FORM.STX;  return a syntax
     ;;object that must be further expanded.
@@ -60,7 +60,8 @@
 	      (expr   (parse lexer synner MINIMUM-BINDING-POWER
 			     immediate-end-of-input-handler)))
 	 expr))
-      ))
+      (_
+       (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; helpers

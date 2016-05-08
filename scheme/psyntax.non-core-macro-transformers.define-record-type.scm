@@ -19,24 +19,24 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(module (define-record-type-macro)
+(module ()
   ;;Transformer function  used to  expand R6RS's  DEFINE-RECORD-TYPE macros  from the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
   ;;
   (define-constant __module_who__ 'define-record-type)
 
-  (define (define-record-type-macro input-form.stx)
-    (define-synner synner __module_who__ input-form.stx)
+  (define-macro-transformer (define-record-type input-form.stx)
     (syntax-match input-form.stx ()
       ((_ ?namespec ?clause* ...)
        (begin
-	 (%validate-definition-clauses ?clause* synner)
+	 (%validate-definition-clauses ?clause* __synner__)
 	 ;; (receive-and-return (out)
-	 ;;     (%do-define-record input-form.stx ?namespec ?clause* synner)
+	 ;;     (%do-define-record input-form.stx ?namespec ?clause* __synner__)
 	 ;;   (debug-print out))
-	 (%do-define-record input-form.stx ?namespec ?clause* synner)))
-      ))
+	 (%do-define-record input-form.stx ?namespec ?clause* __synner__)))
+      (_
+       (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; helpers

@@ -541,7 +541,7 @@
     ;;
     ;;RIB is false or a struct of type "rib".
     ;;
-    (do-macro-call (non-core-macro-transformer procname)
+    (do-macro-call ($symbol-value procname)
 		   input-form.stx lexenv.run rib))
 
   (define* (chi-local-macro bind-val input-form.stx lexenv.run {rib false-or-rib?})
@@ -700,7 +700,7 @@
        ;;annotated expressions of  the output form, to trace  the transformations the
        ;;form undergoes.  For  non-core macros: the function  ADD-NEW-MARK pushes the
        ;;input-form syntax object on the stack of the output-form syntax object.
-       (let* ((transformer	(core-macro-transformer (syntactic-binding-descriptor.value descr)))
+       (let* ((transformer	($symbol-value (syntactic-binding-descriptor.value descr)))
 	      (input-form.stx	(if (options::debug-mode-enabled?)
 				    (stx-push-annotated-expr expr.stx expr.stx)
 				  expr.stx)))
