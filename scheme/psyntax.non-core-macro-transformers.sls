@@ -106,7 +106,7 @@
   ;;
   (case x
     ((define-type)			define-type-macro)
-    ((make-type-annotation)		make-type-annotation-macro)
+    ((type-annotation)			type-annotation-macro)
     ((define-struct)			define-struct-macro)
     ((define-record-type)		define-record-type-macro)
     ((record-type-and-record?)		record-type-and-record?-macro)
@@ -276,7 +276,7 @@
 (include "psyntax.non-core-macro-transformers.infix-macro.scm"		#t)
 
 
-;;;; non-core macro: DEFINE-TYPE, MAKE-TYPE-ANNOTATION
+;;;; non-core macro: DEFINE-TYPE, TYPE-ANNOTATION
 
 (define-macro-transformer (define-type input-form.stx)
   ;;Transformer  function  used  to  expand  Vicare's  DEFINE-TYPE  macros  from  the
@@ -296,8 +296,8 @@
     (_
      (__synner__ "invalid syntax in macro use"))))
 
-(define-macro-transformer (make-type-annotation input-form.stx)
-  ;;Transformer function used to expand Vicare's MAKE-TYPE-ANNOTATION macros from the
+(define-macro-transformer (type-annotation input-form.stx)
+  ;;Transformer  function used  to expand  Vicare's TYPE-ANNOTATION  macros from  the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
   ;;

@@ -1004,14 +1004,34 @@ Examples:
 @subsection Defining type annotations
 
 
-@deffn Syntax make-type-annotation @meta{annotation}
+@defun make-type-annotation @var{annotation}
+Build and return a new type annotation description object; expand to the
+quoted type annotation object.  @var{annotation} must be a syntax object
+representing the type annotation.
+
+This function is exported by @library{vicare expander} and it allows us
+to define type annotations as follows:
+
+@lisp
+(import (only (psyntax expander)
+              make-type-annotation))
+
+(let*-syntax ((<string1> (make-type-annotation #'<string>))
+              (<string2> (make-type-annotation #'<string1>)))
+  (is-a? "string" <string2>)    @result{} #t
+  (is-a? 123      <string2>))   @result{} #f
+@end lisp
+@end defun
+
+
+@deffn Syntax type-annotation @meta{annotation}
 Build a new type annotation description object; expand to the quoted
 type annotation object.  This syntax allows us to define type
 annotations as follows:
 
 @lisp
-(let*-syntax ((<string1> (make-type-annotation <string>))
-              (<string2> (make-type-annotation <string1>)))
+(let*-syntax ((<string1> (type-annotation <string>))
+              (<string2> (type-annotation <string1>)))
   (is-a? "string" <string2>)    @result{} #t
   (is-a? 123      <string2>))   @result{} #f
 @end lisp
@@ -1027,7 +1047,7 @@ It is equivalent to:
 
 @lisp
 (define-syntax @meta{name}
-  (make-type-annotation @meta{annotation}))
+  (type-annotation @meta{annotation}))
 @end lisp
 @end deffn
 

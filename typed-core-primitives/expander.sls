@@ -236,6 +236,13 @@
   (attributes
    ((_)			effect-free)))
 
+(declare-core-primitive make-type-annotation
+    (safe)
+  (signatures
+   ((<syntax-object>)	=> (<object-type-spec>)))
+  (attributes
+   ((_)			effect-free result-true)))
+
 /section)
 
 

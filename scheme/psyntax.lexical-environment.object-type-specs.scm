@@ -242,6 +242,7 @@
 
 	 ;;;
 
+	 make-type-annotation
 	 syntax-object.type-annotation?
 	 type-annotation->object-type-spec		tail-type-annotation->object-type-spec
 	 expression-expander-for-type-annotations
@@ -3788,6 +3789,9 @@
   (make-parameter (lambda (stx)
 		    (assertion-violation 'expression-expander-for-type-annotations
 		      "parameter not initialised"))))
+
+(define (make-type-annotation annotation.stx)
+  (type-annotation->object-type-spec annotation.stx (current-inferior-lexenv) annotation.stx))
 
 (case-define* type-annotation->object-type-spec
   ((annotation.stx)

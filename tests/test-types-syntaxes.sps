@@ -203,18 +203,35 @@
 
 (parametrise ((check-test-name	'make-type-annotation))
 
-  (let-syntax ((<my-string> (make-type-annotation <string>)))
+  (let-syntax ((<my-string> (expander::make-type-annotation #'<string>)))
     (check-for-true	(is-a? "string" <my-string>))
     (check-for-false	(is-a? 123      <my-string>)))
 
-  (let*-syntax ((<string1> (make-type-annotation <string>))
-		(<string2> (make-type-annotation <string1>)))
+  (let*-syntax ((<string1> (expander::make-type-annotation #'<string>))
+		(<string2> (expander::make-type-annotation #'<string1>)))
     (check-for-true	(is-a? "string" <string2>))
     (check-for-false	(is-a? 123      <string2>)))
 
   (internal-body
-    (define-syntax <string1> (make-type-annotation <string>))
-    (define-syntax <string2> (make-type-annotation <string1>))
+    (define-syntax <string1> (expander::make-type-annotation #'<string>))
+    (define-syntax <string2> (expander::make-type-annotation #'<string1>))
+    (check-for-true	(is-a? "string" <string2>))
+    (check-for-false	(is-a? 123      <string2>)))
+
+;;; --------------------------------------------------------------------
+
+  (let-syntax ((<my-string> (type-annotation <string>)))
+    (check-for-true	(is-a? "string" <my-string>))
+    (check-for-false	(is-a? 123      <my-string>)))
+
+  (let*-syntax ((<string1> (type-annotation <string>))
+		(<string2> (type-annotation <string1>)))
+    (check-for-true	(is-a? "string" <string2>))
+    (check-for-false	(is-a? 123      <string2>)))
+
+  (internal-body
+    (define-syntax <string1> (type-annotation <string>))
+    (define-syntax <string2> (type-annotation <string1>))
     (check-for-true	(is-a? "string" <string2>))
     (check-for-false	(is-a? 123      <string2>)))
 

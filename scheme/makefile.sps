@@ -767,7 +767,7 @@
     (define-enumeration				(macro . define-enumeration))
     (define-condition-type			(macro . define-condition-type))
     (define-type				(macro . define-type))
-    (make-type-annotation			(macro . make-type-annotation))
+    (type-annotation				(macro . type-annotation))
 ;;;
     (pair					(macro . pair))
     (pair-of					(macro . pair-of))
@@ -1988,7 +1988,7 @@
     (case-define/typed				v $language)
     (case-define/checked 			v $language)
     (define-type				v $language)
-    (make-type-annotation			v $language)
+    (type-annotation				v $language)
 ;;;
     (lambda*					v $language)
     (case-lambda*				v $language)
@@ -4603,6 +4603,8 @@
     ;;These are only for internal use by the psyntax.
     (make-lexical-typed-variable-spec)
     (make-global-typed-variable-spec)
+
+    (make-type-annotation				$expander)
 
     ;;These are only for internal use by the dynamic libraries loader.
     (global-typed-variable-spec?)
