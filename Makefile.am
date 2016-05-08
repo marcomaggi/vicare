@@ -502,6 +502,8 @@ EXTRA_DIST += \
 #page
 #### compiling the boot image: build rules
 
+EXTRA_DIST		+= scheme/ikarus.config.scm.in
+
 VICARE_NEW_BOOT		= vicare.boot
 
 # The  "exec" portion  of the  Makefile variable  names will  instruct
@@ -521,7 +523,7 @@ VICARE_BOOT_ENV		= \
 VICARE_BOOT_FLAGS	= $(AX_BOOT_VFLAGS) $(BOOT_VFLAGS)				\
 			  --no-rcfile --library-locator source --r6rs-script
 
-CLEANFILES		+= $(VICARE_NEW_BOOT)
+CLEANFILES		+= $(VICARE_NEW_BOOT) $(builddir)/scheme/ikarus.config.scm
 
 VICARE_BOOT_PREREQUISITES	= \
 	vicare						\
@@ -559,6 +561,7 @@ vicare_sed_edit = sed \
 	-e 's|@VICARE_BUILT_WITH_LINUX_ENABLED[@]|$(VICARE_BUILT_WITH_LINUX_ENABLED)|g'
 
 scheme/ikarus.config.scm: scheme/ikarus.config.scm.in Makefile
+	$(MKDIR_P) $(builddir)/scheme
 	$(vicare_sed_edit) $(srcdir)/scheme/ikarus.config.scm.in >$(builddir)/scheme/ikarus.config.scm
 
 ## --------------------------------------------------------------------
