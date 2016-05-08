@@ -515,6 +515,8 @@ EXTRA_DIST += \
 #page
 #### compiling the boot image: build rules
 
+EXTRA_DIST		+= scheme/ikarus.config.scm.in
+
 VICARE_NEW_BOOT		= vicare.boot
 VICARE_BOOT_MAKEFILES	= \
 	scheme/makefile.sps					\
@@ -588,7 +590,10 @@ VICARE_BOOT_ENV		= \
 VICARE_BOOT_FLAGS	= $(AX_BOOT_VFLAGS) $(BOOT_VFLAGS)				\
 			  --no-rcfile --library-locator source --r6rs-script
 
-CLEANFILES		+= $(VICARE_NEW_BOOT) typed-core-primitives-specs.scm
+CLEANFILES		+= $(VICARE_NEW_BOOT) \
+	typed-core-primitives-specs.scm			\
+	core-macros-table.scm				\
+	non-core-macros-table.scm
 
 VICARE_BOOT_PREREQUISITES	= \
 	vicare						\
