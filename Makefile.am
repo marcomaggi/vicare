@@ -536,6 +536,31 @@ VICARE_BOOT_PREREQUISITES	= \
 	lib/vicare/unsafe/capi.vicare.sls		\
 	lib/vicare/unsafe/operations.vicare.sls
 
+vicare_sed_edit = sed \
+	-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'		\
+	-e 's|@PACKAGE[@]|$(PACKAGE)|g'				\
+	-e 's|@libdir[@]|$(libdir)|g'				\
+	-e 's|@target[@]|$(target)|g'				\
+	\
+	-e 's|@VICARE_TARGET_OS_UID[@]|$(VICARE_TARGET_OS_UID)|g'			      \
+	-e 's|@VICARE_PLATFORM_ENDIANNESS[@]|$(VICARE_PLATFORM_ENDIANNESS)|g'		      \
+	-e 's|@VICARE_ARGUMENTS_VALIDATION[@]|$(VICARE_ARGUMENTS_VALIDATION)|g'		      \
+	-e 's|@BOOT_IMAGE_MAJOR_VERSION[@]|$(BOOT_IMAGE_MAJOR_VERSION)|g'		      \
+	-e 's|@BOOT_IMAGE_MINOR_VERSION[@]|$(BOOT_IMAGE_MINOR_VERSION)|g'		      \
+	-e 's|@BOOT_IMAGE_YEAR_VERSION[@]|$(BOOT_IMAGE_YEAR_VERSION)|g'			      \
+	-e 's|@BOOT_IMAGE_MONTH_VERSION[@]|$(BOOT_IMAGE_MONTH_VERSION)|g'		      \
+	-e 's|@BOOT_IMAGE_DAY_VERSION[@]|$(BOOT_IMAGE_DAY_VERSION)|g'			      \
+	-e 's|@VICARE_BUILT_WITH_SRFI_ENABLED[@]|$(VICARE_BUILT_WITH_SRFI_ENABLED)|g'	      \
+	-e 's|@VICARE_BUILT_WITH_ICONV_ENABLED[@]|$(VICARE_BUILT_WITH_ICONV_ENABLED)|g'	      \
+	-e 's|@VICARE_BUILT_WITH_FFI_ENABLED[@]|$(VICARE_BUILT_WITH_FFI_ENABLED)|g'	      \
+	-e 's|@VICARE_BUILT_WITH_NAUSICAA_ENABLED[@]|$(VICARE_BUILT_WITH_NAUSICAA_ENABLED)|g' \
+	-e 's|@VICARE_BUILT_WITH_POSIX_ENABLED[@]|$(VICARE_BUILT_WITH_POSIX_ENABLED)|g'	      \
+	-e 's|@VICARE_BUILT_WITH_GLIBC_ENABLED[@]|$(VICARE_BUILT_WITH_GLIBC_ENABLED)|g'	      \
+	-e 's|@VICARE_BUILT_WITH_LINUX_ENABLED[@]|$(VICARE_BUILT_WITH_LINUX_ENABLED)|g'
+
+scheme/ikarus.config.scm: scheme/ikarus.config.scm.in Makefile
+	$(vicare_sed_edit) $(srcdir)/scheme/ikarus.config.scm.in >$(builddir)/scheme/ikarus.config.scm
+
 ## --------------------------------------------------------------------
 
 # To  create the  new boot  image we  use a  prebuilt boot  image; the

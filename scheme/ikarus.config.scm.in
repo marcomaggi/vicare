@@ -4,7 +4,6 @@
 
 (define vicare-version "@PACKAGE_VERSION@")
 (define vicare-lib-dir "@libdir@/@PACKAGE@")
-(define scheme-lib-dir "@libdir@/scheme/r6rs")
 (define (host-info) "@target@")
 (define target-os-uid (quote @VICARE_TARGET_OS_UID@))
 (module (wordsize)
