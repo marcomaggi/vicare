@@ -75,6 +75,7 @@
     zero-compnum?			zero-cflonum?
     procedure-arguments-consistency-violation
     last-pair				enum-set?
+    list-of-nestrings?
 
     list-of-symbols?			list-of-symbols.delete-duplicates
     list-of-symbols.union		list-of-symbols.intersection
@@ -126,7 +127,13 @@
     print-library-debug-message
 
     ;; system stuff
-    file-modification-time
+    posix::getenv
+    posix::file-string-pathname?
+    posix::list-of-string-pathnames?
+    posix::file-modification-time
+    posix::real-pathname
+    posix::split-search-path-string
+    directory-exists?
 
     ;; special definitions
     define-list-of-type-predicate
@@ -210,10 +217,21 @@
 		  $record-type-printer-set!
 		  record-printer)
 	    records::)
-    (only (vicare language-extensions posix) #;(ikarus.posix)
-	  ;;This is  used by INCLUDE to  register the modification time  of the files
-	  ;;included at expand-time.  Such time is used in a STALE-WHEN test.
-	  file-modification-time)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sun May 8,
+    ;;2016)
+    (only (ikarus strings)
+	  list-of-nestrings?)
+    (prefix (only (vicare language-extensions posix)
+		  getenv
+		  file-string-pathname?
+		  list-of-string-pathnames?
+		  real-pathname
+		  split-search-path-string
+		  ;;This is used by INCLUDE to  register the modification time of the
+		  ;;files included at expand-time.  Such time is used in a STALE-WHEN
+		  ;;test.
+		  file-modification-time)
+	    posix::)
     (prefix (only (vicare.foreign-libraries)
 		  dynamically-load-shared-object-from-identifier)
 	    foreign::)

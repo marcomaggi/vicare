@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -110,13 +110,20 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (string-empty? "")
-    => #t)
+  (check-for-true	(string-empty? ""))
+  (check-for-false	(string-empty? "123"))
 
-  (check
-      (string-empty? "123")
-    => #f)
+;;; --------------------------------------------------------------------
+
+  (check-for-false	(empty-string? 123))
+  (check-for-true	(empty-string? ""))
+  (check-for-false	(empty-string? "123"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false	(nestring? 123))
+  (check-for-false	(nestring? ""))
+  (check-for-true	(nestring? "123"))
 
   #t)
 

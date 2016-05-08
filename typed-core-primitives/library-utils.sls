@@ -211,7 +211,7 @@
   (declare library-guard-code)
   (declare library-guard-lib*			(list-of <library>))
   (declare library-visible?			<boolean>)
-  (declare library-source-file-name		(or <false> <string>))
+  (declare library-source-file-name		(or <false> <nestring>))
   (declare library-option*			<list>)
   (declare library-loaded-from-source-file?	<boolean>)
   (declare library-loaded-from-binary-file?	<boolean>)
@@ -244,30 +244,35 @@
 (declare-parameter compile-time-library-locator)
 (declare-parameter source-library-locator)
 
+(declare-parameter library-source-search-path		(list-of <nestring>))
+(declare-parameter library-binary-search-path		(list-of <nestring>))
+(declare-parameter compiled-libraries-build-directory	(or <false> <nestring>))
+(declare-parameter library-extensions			(list-of <nestring>))
+
 (declare-parameter current-library-source-search-path-scanner)
 (declare-parameter current-library-binary-search-path-scanner)
 
 (declare-core-primitive default-library-source-search-path-scanner
     (safe)
   (signatures
-   ((<library-reference>)	=> ((or <false> <string>) (or <false> <procedure>)))))
+   ((<library-reference>)	=> ((or <false> <nestring>) (or <false> <procedure>)))))
 
 (declare-core-primitive default-library-binary-search-path-scanner
     (safe)
   (signatures
-   ((<library-reference>)	=> ((or <false> <string>) (or <false> <procedure>)))))
+   ((<library-reference>)	=> ((or <false> <nestring>) (or <false> <procedure>)))))
 
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive directory+library-stem->library-source-pathname
     (safe)
   (signatures
-   ((<string> <string>)		=> (<string>))))
+   ((<nestring> <nestring>)		=> (<nestring>))))
 
 (declare-core-primitive directory+library-stem->library-binary-pathname
     (safe)
   (signatures
-   ((<string> <string>)		=> (<string>))))
+   ((<nestring> <nestring>)		=> (<nestring>))))
 
 ;;; --------------------------------------------------------------------
 

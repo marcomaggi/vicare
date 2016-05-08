@@ -34,7 +34,8 @@
     string-reverse-and-concatenate
     uuid
 
-    list-of-strings?
+    empty-string?		nestring?
+    list-of-strings?		list-of-nestrings?
 
     ;; Vicare specific
     string-hex->bytevector	bytevector->string-hex
@@ -100,7 +101,8 @@
 		  string-reverse-and-concatenate
 		  uuid
 
-		  list-of-strings?
+		  empty-string?			nestring?
+		  list-of-strings?		list-of-nestrings?
 
 		  ;; Vicare specific
 		  bytevector->hex		hex->bytevector
@@ -263,7 +265,12 @@
 
 ;;;; predicates
 
-(define-list-of-type-predicate list-of-strings? string?)
+(define-list-of-type-predicate list-of-strings?		string?)
+(define-list-of-type-predicate list-of-nestrings?	nestring?)
+
+(define (nestring? obj)
+  (and (string? obj)
+       (not ($string-empty? obj))))
 
 
 (define* (string-length {str string?})
@@ -931,6 +938,13 @@
       (error __who__ "cannot obtain unique id"))))
 
 
+(define (empty-string? obj)
+  ;;Defined by  Vicare.  Return true if  OBJ is a  string and it is  empty, otherwise
+  ;;return false.
+  ;;
+  (and (string? obj)
+       ($string-empty? obj)))
+
 (define* (string-empty? {str string?})
   ;;Defined by Vicare.  Return true if STR is empty, otherwise return false.
   ;;

@@ -4756,11 +4756,12 @@
       ;;We expect CONTENTS to be null or a list of annotated datums.
       (bless
        `(stale-when (internal-body
-		      (import (only (vicare language-extensions posix)
-				    file-modification-time))
+		      (import (prefix (only (vicare language-extensions posix)
+					    file-modification-time)
+				      posix::))
 		      (or (not (file-exists? ,pathname))
-			  (> (file-modification-time ,pathname)
-			     ,(file-modification-time pathname))))
+			  (> (posix::file-modification-time ,pathname)
+			     ,(posix::file-modification-time pathname))))
 	  . ,(map (lambda (item)
 		    (datum->syntax context-id item))
 	       contents)))))

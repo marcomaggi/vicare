@@ -77,28 +77,23 @@
     print-library-info-message)
   (import (rnrs)
     (psyntax.compat)
-    (prefix (ikarus.posix) posix::)
     (vicare language-extensions simple-match))
 
 
 ;;;; helpers
 
-(define (%list-of-strings? obj)
-  (and (list? obj)
-       (for-all string? obj)))
-
 (define (%get-existent-directory-real-pathname-from-env system-environment-variable)
   (let ((X (posix::getenv system-environment-variable)))
     (if (and X
 	     (posix::file-string-pathname? X)
-	     (posix::directory-exists?     X))
+	     (directory-exists?     X))
 	(posix::real-pathname X)
       #f)))
 
 (define (%get-directory-real-pathname-from-env system-environment-variable)
   (let ((X (posix::getenv system-environment-variable)))
     (if (and X (posix::file-string-pathname? X))
-	(if (posix::directory-exists? X)
+	(if (directory-exists? X)
 	    (posix::real-pathname X)
 	  X)
       #f)))
@@ -175,7 +170,7 @@
   ;;Hold a list of strings representing file name extensions, leading dot included.
   ;;
   (make-parameter '()
-    (lambda* ({obj %list-of-strings?})
+    (lambda* ({obj list-of-nestrings?})
       obj)))
 
 
@@ -915,7 +910,7 @@
     ;;A  pathname was  selected from  the command  line.  BUILD-DIRECTORY  must be  a
     ;;string representing the pathname of an existent directory.
     (if (posix::file-string-pathname? build-directory)
-	(compiled-libraries-build-directory (if (posix::directory-exists? build-directory)
+	(compiled-libraries-build-directory (if (directory-exists? build-directory)
 						(posix::real-pathname build-directory)
 					      build-directory))
       (raise

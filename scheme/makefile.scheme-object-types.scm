@@ -442,14 +442,14 @@
 (define-scheme-type <empty-string>
     <string>
   (constructor <empty-string>-constructor)
-  (predicate <empty-string>-type-predicate)
+  (predicate empty-string?)
   (equality-predicate string=?)
   (comparison-procedure compar-string))
 
 (define-scheme-type <nestring>
     <string>
   (constructor <nestring>-constructor)
-  (predicate <nestring>-type-predicate)
+  (predicate nestring?)
   (equality-predicate string=?)
   (comparison-procedure compar-string)
   (methods

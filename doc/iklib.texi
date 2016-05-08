@@ -13549,9 +13549,21 @@ otherwise return @false{}.
 @end defun
 
 
+@defun list-of-nestrings? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of non--empty
+strings; otherwise return @false{}.
+@end defun
+
+
 @defun string-empty? @var{str}
 Return @true{} if the string @var{str} is empty, otherwise return
 @false{}.
+@end defun
+
+
+@defun empty-string? @var{obj}
+Return @true{} if the @var{obj} is a string and it is non--empty,
+otherwise return @false{}.
 @end defun
 
 @c page

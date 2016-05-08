@@ -37,9 +37,9 @@
 
 ;;; predicates
 
-(declare-type-predicate string? <string>)
-(declare-type-predicate <nestring>-type-predicate	<nestring>)
-
+(declare-type-predicate string?				<string>)
+(declare-type-predicate nestring?			<nestring>)
+(declare-type-predicate empty-string?			<empty-string>)
 
 (declare-string-predicate string-empty?			(replacements $string-empty?))
 (declare-string-predicate ascii-encoded-string?		(replacements $ascii-encoded-string?))
@@ -49,6 +49,7 @@
 (declare-string-predicate percent-encoded-string?	(replacements $percent-encoded-string?))
 
 (declare-list-of-type-predicate list-of-strings?	<string>)
+(declare-list-of-type-predicate list-of-nestrings?	<nestring>)
 
 ;;; --------------------------------------------------------------------
 ;;; constructors

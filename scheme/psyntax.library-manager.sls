@@ -68,7 +68,9 @@
     (psyntax.compat)
     (only (psyntax.config)
 	  initialise-expander)
-    (psyntax.library-utils))
+    (psyntax.library-utils)
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate))
 
   (include "psyntax.helpers.scm" #t)
 
@@ -78,7 +80,7 @@
 (define-record-type (<library> make-library library?)
   (nongenerative vicare:expander:library)
   (fields
-   (immutable uid library-uid)
+    (immutable uid library-uid)
 		;A  gensym  uniquely  identifying  this  interned  library;  it  also
 		;identifies the corresponding serialised library.
 		;
@@ -91,7 +93,7 @@
 		;binary file is compared to this field: if they are EQ?  the compiled
 		;versions  are  in sync,  otherwise  the  importing library  must  be
 		;recompiled.
-   (immutable name	library-name)
+    (immutable name	library-name)
 		;A library name as defined by R6RS; it is the symbolic expression:
 		;
 		;   (?identifier0 ?identifier ...)
@@ -99,50 +101,50 @@
 		;
 		;where  the  ?IDENTIFIERs are  symbols  and  ?VERSION  is a  list  of
 		;non-negative fixnums representing the version numbers.
-   (immutable imp-lib*	library-imp-lib*)
+    (immutable imp-lib*	library-imp-lib*)
 		;The list of LIBRARY objects selected by the IMPORT syntax.
-   (immutable vis-lib*	library-vis-lib*)
+    (immutable vis-lib*	library-vis-lib*)
 		;The list of LIBRARY objects  selecting libraries needed by the visit
 		;code.
-   (immutable inv-lib*	library-inv-lib*)
+    (immutable inv-lib*	library-inv-lib*)
 		;The list of LIBRARY objects selecting libraries needed by the invoke
 		;code.
-   (immutable export-subst	library-export-subst)
+    (immutable export-subst	library-export-subst)
 		;A subst selecting the exported bindings from the GLOBAL-ENV.
-   (immutable global-env	library-global-env)
+    (immutable global-env	library-global-env)
 		;The GLOBAL-ENV  representing the  top-level bindings defined  by the
 		;library body.
-   (immutable typed-locs	library-typed-locs)
+    (immutable typed-locs	library-typed-locs)
 		;Alist   mapping  label   gensyms  of   whose  descriptor   has  type
 		;"global-typed" or  "global-typed-mutable" to the loc  gensyms of the
 		;actual variables.
-   (mutable visit-state	library-visit-state library.visit-state-set!)
+    (mutable visit-state	library-visit-state library.visit-state-set!)
 		;When set  to a  procedure: it is  the thunk to  call to  compile and
 		;evaluate the visit  code.  When set to something  else: this library
 		;has been already visited.
-   (mutable invoke-state library-invoke-state library.invoke-state-set!)
+    (mutable invoke-state library-invoke-state library.invoke-state-set!)
 		;When set  to a  procedure: it is  the thunk to  call to  compile and
 		;evaluate the invoke code.  When  set to something else: this library
 		;has been already invoked.
-   (immutable visit-code	library-visit-code)
+    (immutable visit-code	library-visit-code)
 		;When this object  is created from source code: this  field is a core
 		;language symbolic expression representing the visit code.  When this
 		;object  is created  from a  binary file:  this field  is a  thunk to
 		;evaluate to visit the library.
-   (immutable invoke-code	library-invoke-code)
+    (immutable invoke-code	library-invoke-code)
 		;When this object  is created from source code: this  field is a core
 		;language  symbolic expression  representing the  invoke code.   When
 		;this object is created from a binary  file: this field is a thunk to
 		;evaluate to invoke the library.
-   (immutable guard-code	library-guard-code)
+    (immutable guard-code	library-guard-code)
 		;When this object  is created from source code: this  field is a core
 		;language symbolic expression representing the guard code.  When this
 		;object  is created  from a  binary file:  this field  is a  thunk to
 		;evaluate to run the STALE-WHEN composite test expression.
-   (immutable guard-lib*	library-guard-lib*)
+    (immutable guard-lib*	library-guard-lib*)
 		;The  list  of LIBRARY  objects  selecting  libraries needed  by  the
 		;STALE-WHEN composite test expression.
-   (immutable visible?	library-visible?)
+    (immutable visible?	library-visible?)
 		;A boolean determining if the  library is visible.  This attribute is
 		;used  by  INTERNED-LIBRARIES  to   select  libraries  to  report  as
 		;interned.
@@ -150,16 +152,34 @@
 		;A library should be marked as visible  if it is meant to be imported
 		;by client  code in "normal"  use; unsafe libraries in  the hierarchy
 		;"(vicare system ---)" should *not* be visible.
-   (immutable source-file-name	library-source-file-name)
+    (immutable source-file-name	library-source-file-name)
 		;False or a  string representing the pathname of the  file from which
 		;the source code of the library was read.
-   (immutable option*	library-option*)
+    (immutable option*	library-option*)
 		;A sexp holding library options.
-   (immutable foreign-library*	library-foreign-library*)
+    (immutable foreign-library*	library-foreign-library*)
 		;A list of strings representing  identifiers of shared libraries that
 		;must be  loaded before  this library is  invoked.  For  example: for
 		;"libvicare-curl.so", the string identifier is "vicare-curl".
-   #| end of FIELDS |# ))
+    #| end of FIELDS |# )
+
+  (protocol
+    (lambda (make-record)
+      (define* (make-library {uid gensym?} {name library-name?}
+			     {imp-lib* list-of-libraries?} {vis-lib* list-of-libraries?} {inv-lib* list-of-libraries?}
+			     {export-subst list?} {global-env list?} {typed-locs list?}
+			     visit-state invoke-state visit-code invoke-code guard-code
+			     {guard-lib* list-of-libraries?} visible?
+			     {source-file-name (or not posix::file-string-pathname?)}
+			     option* {foreign-library* list-of-nestrings?})
+	(make-record uid name
+		     imp-lib* vis-lib* inv-lib*
+		     export-subst global-env typed-locs
+		     visit-state invoke-state visit-code invoke-code guard-code
+		     guard-lib* (and visible? #t)
+		     source-file-name option* foreign-library*))
+      make-library))
+  #| end of DEFINE-RECORD-TYPE |# )
 
   ;; (lambda (S port sub-printer)
   ;;   (define-syntax-rule (%display thing)
@@ -173,6 +193,8 @@
 
 (define <library>-rtd (record-type-descriptor <library>))
 (define <library>-rcd (record-constructor-descriptor <library>))
+
+(define-list-of-type-predicate list-of-libraries? library?)
 
 ;;; --------------------------------------------------------------------
 

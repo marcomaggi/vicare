@@ -47,8 +47,7 @@
     <nelist>-constructor		<nelist>-type-predicate
     <symbol>-value			<string>-for-each
 
-    <nestring>-constructor		<nestring>-type-predicate
-    <empty-string>-constructor		<empty-string>-type-predicate
+    <nestring>-constructor		<empty-string>-constructor
 
     <nevector>-constructor		<nevector>-type-predicate
     <empty-vector>-constructor		<empty-vector>-type-predicate
@@ -75,6 +74,7 @@
 
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Tue Dec 15, 2015)
+		  empty-string?				nestring?
 		  true?					false?
 		  zero-fixnum?
 		  positive-bignum?			negative-bignum?
@@ -209,6 +209,11 @@
     ;;2016)
     (only (ikarus codecs)
 	  transcoder=?)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sun May 8,
+    ;;2016)
+    (only (ikarus strings)
+	  empty-string?
+	  nestring?)
     (prefix (only (psyntax system $all)
 		  internal-applicable-record-destructor
 		  ;;FIXME To be uncommented at  the next boot image rotation.  (Marco
@@ -457,18 +462,10 @@
   ;;
   (string))
 
-(define (<empty-string>-type-predicate obj)
-  (and (string? obj)
-       (string-empty? obj)))
-
 ;;; --------------------------------------------------------------------
 
 (define (<nestring>-constructor obj . obj*)
   (apply string obj obj*))
-
-(define (<nestring>-type-predicate obj)
-  (and (string? obj)
-       (not (string-empty? obj))))
 
 ;;; --------------------------------------------------------------------
 
