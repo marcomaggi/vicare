@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;Implementation of BITWISE-REVERSE-BIT-FIELD from:
@@ -5102,7 +5102,7 @@
 
 (define* (factorial {N %non-negative-integer?})
   (let recur ((N N)
-	      (R 1))
+	      (R (if (exact? N) 1 1.0)))
     (if (zero? N)
 	R
       (recur (sub1 N) (* N R)))))

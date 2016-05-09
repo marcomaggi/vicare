@@ -741,6 +741,15 @@
   (attributes
    ((_ _)				effect-free)))
 
+(declare-core-primitive factorial
+    (safe)
+  (signatures
+   ((<zero-fixnum>)			=> (<positive-fixnum>)) ;it is 1
+   ((<zero-flonum>)			=> (<positive-flonum>)) ;it is 1.0
+   ((<positive-fixnum>)			=> (<positive-exact-integer>))
+   ((<positive-bignum>)			=> (<positive-bignum>))
+   ((<non-negative-exact-integer>)	=> (<positive-exact-integer>))))
+
 ;;;
 
 (declare-core-primitive gcd

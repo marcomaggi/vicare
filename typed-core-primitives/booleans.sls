@@ -65,12 +65,12 @@
 
 (section
 
-(declare-boolean-unary/multi-comparison $boolean=?	unsafe)
-(declare-boolean-unary/multi-comparison $boolean!=?	unsafe)
-(declare-boolean-unary/multi-comparison $boolean<=?	unsafe)
-(declare-boolean-unary/multi-comparison $boolean<?	unsafe)
-(declare-boolean-unary/multi-comparison $boolean>=?	unsafe)
-(declare-boolean-unary/multi-comparison $boolean>?	unsafe)
+(declare-boolean-unary/multi-comparison $boolean=	unsafe)
+(declare-boolean-unary/multi-comparison $boolean!=	unsafe)
+(declare-boolean-unary/multi-comparison $boolean<=	unsafe)
+(declare-boolean-unary/multi-comparison $boolean<	unsafe)
+(declare-boolean-unary/multi-comparison $boolean>=	unsafe)
+(declare-boolean-unary/multi-comparison $boolean>	unsafe)
 
 (declare-core-primitive $boolean-max
     (unsafe)

@@ -201,6 +201,18 @@
   #t)
 
 
+(parametrise ((check-test-name	'factorial))
+
+  (check (factorial 0)		=> 1)
+  (check (factorial +0.0)	=> +1.0)
+  (check (factorial -0.0)	=> +1.0)
+
+  (check (factorial 3)		=> 6)
+  (check (factorial 3.0)	=> 6.0)
+
+  #| end of PARAMETRISE |# )
+
+
 ;;;; done
 
 (check-report)
