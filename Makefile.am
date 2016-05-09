@@ -561,7 +561,7 @@ vicare_sed_edit = sed \
 	-e 's|@VICARE_BUILT_WITH_LINUX_ENABLED[@]|$(VICARE_BUILT_WITH_LINUX_ENABLED)|g'
 
 scheme/ikarus.config.scm: scheme/ikarus.config.scm.in Makefile
-	$(MKDIR_P) $(builddir)/scheme
+	test -d $(builddir)/scheme || $(MKDIR_P) $(builddir)/scheme
 	$(vicare_sed_edit) $(srcdir)/scheme/ikarus.config.scm.in >$(builddir)/scheme/ikarus.config.scm
 
 ## --------------------------------------------------------------------
