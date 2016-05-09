@@ -88,15 +88,15 @@
   (()
    (eq? 'typed (expander-language)))
   ((obj)
-   (when obj
-     (expander-language 'typed))))
+   (expander-language (if obj 'typed 'default))
+   (eq? 'typed (expander-language))))
 
 (case-define strict-r6rs-enabled?
   (()
    (eq? 'strict-r6rs (expander-language)))
   ((obj)
-   (when obj
-     (expander-language 'strict-r6rs))))
+   (expander-language (if obj 'strict-r6rs 'default))
+   (eq? 'strict-r6rs (expander-language))))
 
 
 ;;;; options: warnings

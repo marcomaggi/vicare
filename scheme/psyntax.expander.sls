@@ -178,9 +178,7 @@
        ;;Here we use the expander and compiler options from the libraries.
        (for-each libman::invoke-library invoke-req*)
        (parametrise
-	   ((compiler::options::strict-r6rs	(or (and compiler-option*
-							 (memq 'strict-r6rs compiler-option*))
-						    (compiler::options::strict-r6rs))))
+	   ((compiler::options::strict-r6rs (memq 'strict-r6rs compiler-option*)))
 	 (compiler::eval-core (expanded->core x))))))
 
   (module (%parse-eval-options)
@@ -1012,9 +1010,9 @@
 					     ((memq 'strict-r6rs option*)
 					      'strict-r6rs)
 					     (else
-					      ;;No  options from  the source
-					      ;;code, so leave it unchanged.
-					      (options::expander-language)))))
+					      ;;No options  from the source  code, so
+					      ;;select the default language.
+					      'default))))
 	(verbose-messages-thunk)
 	(let ((body-stx*	(map wrap-source-expression-with-top-rib body-sexp*))
 	      (rtc		(make-collector))

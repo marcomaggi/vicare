@@ -237,13 +237,8 @@ For programs:
 we usually want to import the library @library{vicare} to use the
 extended syntaxes that recognise type definitions and declarations.
 
-
-@defun enable-typed-language
-@defunx disable-typed-language
-Enable or disable typed language support.  These functions are meant to
-be used at the @repl{}; they do @strong{not} modify support for typed
-language for programs and libraries.
-@end defun
+We can use the function @func{typed-language-enabled?} to enable the
+typed language at the @repl{}.
 
 @c page
 @node types intro type ids

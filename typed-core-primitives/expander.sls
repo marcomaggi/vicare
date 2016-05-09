@@ -43,6 +43,18 @@
 (declare-parameter generate-descriptive-gensyms?)
 (declare-parameter generate-descriptive-marks?)
 
+(declare-core-primitive typed-language-enabled?
+    (safe)
+  (signatures
+   (()				=> (<boolean>))
+   ((<top>)			=> (<boolean>))))
+
+(declare-core-primitive strict-r6rs-enabled?
+    (safe)
+  (signatures
+   (()				=> (<boolean>))
+   ((<top>)			=> (<boolean>))))
+
 
 ;;;; main operations
 

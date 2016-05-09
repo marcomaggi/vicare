@@ -7571,6 +7571,7 @@ of the datum and embedding the datum itself.
 
 
 @menu
+* iklib expander language::         Language selection.
 * iklib expander transformers::     Syntax transformers facilities.
 * iklib expander export specs::     Additional export specifications.
 * iklib expander import specs::     Additional import specifications.
@@ -7583,6 +7584,50 @@ of the datum and embedding the datum itself.
 * iklib expander parameters::       Expand-time parameters.
 * iklib expander synonym::          Synonym transformers.
 @end menu
+
+@c page
+@node iklib expander language
+@subsection Language selection
+
+
+@defun typed-language-enabled?
+@defunx typed-language-enabled? @var{obj}
+Enable or disable typed language support.  This function is meant to be
+called at the @repl{}, it @strong{does not} modify the expander's
+behaviour when expanding programs, libraries and standalone @func{eval}
+expressions.
+
+@itemize
+@item
+When called with no arguments: do nothing.  Return a boolean value:
+@true{} if typed language support is enabled; @false{} otherwise.
+
+@item
+When called with one argument: if @var{obj} is non--false, enable typed
+language support; otherwise disable it.  Return a boolean value: @true{}
+if typed language support is enabled after the call; @false{} otherwise.
+@end itemize
+@end defun
+
+
+@defun strict-r6rs-enabled?
+@defunx strict-r6rs-enabled? @var{obj}
+Enable or disable strict @rnrs{6} support.  This function is meant to be
+called at the @repl{}, it @strong{does not} modify the expander's
+behaviour when expanding programs, libraries and standalone @func{eval}
+expressions.
+
+@itemize
+@item
+When called with no arguments: do nothing.  Return a boolean value:
+@true{} if strict @rnrs{6} support is enabled; @false{} otherwise.
+
+@item
+When called with one argument: if @var{obj} is non--false, enable strict
+@rnrs{6} support; otherwise disable it.  Return a boolean value: @true{}
+if typed language support is enabled after the call; @false{} otherwise.
+@end itemize
+@end defun
 
 @c page
 @node iklib expander transformers
