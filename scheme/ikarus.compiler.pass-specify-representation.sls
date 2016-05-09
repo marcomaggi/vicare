@@ -1835,7 +1835,7 @@
 	  (F rator.expr #f))
 	 ((no)
 	  (let ((rator.sexp (unparse-recordized-code/sexp rator)))
-	    (if (option.strict-r6rs)
+	    (if (options::strict-r6rs)
 		(begin
 		  (print-compiler-warning-message
 		   "operator of FUNCALL is known not to be a procedure: ~a"

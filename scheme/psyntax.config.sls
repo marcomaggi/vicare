@@ -29,6 +29,9 @@
     expander-initialisation/initialise-label-gensyms-and-interned-libraries
 
     ;; options
+    expander-language
+    typed-language-enabled?
+    strict-r6rs-enabled?
     enable-all-warnings
     disable-all-warnings
     warn-about-logic-constants
@@ -38,6 +41,20 @@
     #| end of EXPORT |# )
   (import (rnrs)
     (psyntax.compat))
+
+
+;;;; helpers
+
+(define-syntax define-parameter-boolean-option
+  (syntax-rules ()
+    ((_ ?who)
+     (define-parameter-boolean-option ?who #f))
+    ((_ ?who ?default)
+     (define ?who
+       (make-parameter ?default
+	 (lambda (value)
+	   (and value #t)))))
+    ))
 
 
 ;;;; initialiseation
@@ -55,7 +72,34 @@
 	(set! expander-initialised? #t)))))
 
 
-;;;; options
+;;;; options: behaviour
+
+(define expander-language
+  (make-parameter 'default
+    (lambda (obj)
+      (case obj
+	((strict-r6rs typed default) obj)
+	(else
+	 (assertion-violation 'expander-language
+	   "wrong parameter value, expected one among: strict-r6rs, typed, default"
+	   obj))))))
+
+(case-define typed-language-enabled?
+  (()
+   (eq? 'typed (expander-language)))
+  ((obj)
+   (when obj
+     (expander-language 'typed))))
+
+(case-define strict-r6rs-enabled?
+  (()
+   (eq? 'strict-r6rs (expander-language)))
+  ((obj)
+   (when obj
+     (expander-language 'strict-r6rs))))
+
+
+;;;; options: warnings
 
 (define warn-about-logic-constants
   ;;When set to true:  raise a "&warning" when an operand in  a logic expression (if,

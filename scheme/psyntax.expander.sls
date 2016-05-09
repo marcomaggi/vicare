@@ -98,6 +98,11 @@
     (prefix (only (psyntax.config)
 		  initialise-expander)
 	    config::)
+    (prefix (only (psyntax.config)
+		  expander-language
+		  typed-language-enabled?
+		  strict-r6rs-enabled?)
+	    options::)
     (psyntax.setup)
     (psyntax.builders)
     (psyntax.special-transformers)
@@ -139,33 +144,99 @@
     (typed-language-support #f))
 
   (define (typed-language-support enable?)
-    (options::typed-language? enable?))
+    (options::typed-language-enabled? enable?))
 
   #| end of module |# )
 
 
-(case-define* eval
-  ((x {env environment?})
-   ;;This  is  R6RS's eval.   Take  an  expression  and  an environment:  expand  the
-   ;;expression, invoke its invoke-required libraries  and evaluate its expanded core
-   ;;form.  Return the result of the expansion.
-   ;;
-   (eval x env #f #f))
-  ((x {env environment?} expander-options compiler-options)
-   ;;This is the Vicare extension.
-   ;;
-   (receive (x invoke-req*)
+(module (eval)
+  (define-constant __module_who__ 'eval)
+
+  (case-define* eval
+    ((x {env environment?})
+     ;;This  is R6RS's  eval.   Take an  expression and  an  environment: expand  the
+     ;;expression,  invoke its  invoke-required libraries  and evaluate  its expanded
+     ;;core form.  Return the result of the expansion.
+     ;;
+     (eval x env '() '()))
+    ((x {env environment?} {expander-options list-of-symbols?} {compiler-options list-of-symbols?})
+     ;;This is the Vicare extension.
+     ;;
+     (define expander-option* (%parse-eval-options expander-options))
+     (define compiler-option* (%parse-eval-options compiler-options))
+     (receive (x invoke-req*)
+	 (parametrise
+	     ((options::expander-language (cond ((memq 'typed-language expander-option*)
+						 'typed)
+						((memq 'strict-r6rs    expander-option*)
+						 'strict-r6rs)
+						(else
+						 ;;No options  from the  source code,
+						 ;;so leave it unchanged.
+						 (options::expander-language)))))
+	   (expand-form-to-core-language x env))
+       ;;Here we use the expander and compiler options from the libraries.
+       (for-each libman::invoke-library invoke-req*)
        (parametrise
-	   ;;Here we  want to override  the value  of the parameters  STRICT-R6RS and
-	   ;;TYPED-LANGUAGE?.
-	   ((options::strict-r6rs      (and expander-options (enum-set-member? 'strict-r6rs    expander-options)))
-	    (options::typed-language?  (and expander-options (enum-set-member? 'typed-language expander-options))))
-	 (expand-form-to-core-language x env))
-     ;;Here we use the expander and compiler options from the libraries.
-     (for-each libman::invoke-library invoke-req*)
-     (parametrise ((options::strict-r6rs (and compiler-options
-					    (enum-set-member? 'strict-r6rs compiler-options))))
-       (compiler::eval-core (expanded->core x))))))
+	   ((compiler::options::strict-r6rs	(or (and compiler-option*
+							 (memq 'strict-r6rs compiler-option*))
+						    (compiler::options::strict-r6rs))))
+	 (compiler::eval-core (expanded->core x))))))
+
+  (module (%parse-eval-options)
+
+    (define (%parse-eval-options input-options)
+      (let* ((option*.sym (%parse-input input-options))
+	     (option*.sym (list-of-symbols.delete-first-duplicates option*.sym))
+	     (option*.sym (%clean-language-selection option*.sym)))
+	option*.sym))
+
+    (define (%parse-input input-options)
+      (let recur ((opts input-options))
+	(cond ((null? opts)
+	       '())
+	      ((pair? opts)
+	       (let ((sym (car opts)))
+		 (case sym
+		   ((typed-language)
+		    (cons sym (recur (cdr opts))))
+		   ((strict-r6rs)
+		    (cons sym (recur (cdr opts))))
+		   (else
+		    (assertion-violation __module_who__ "unknown EVAL option" sym)))))
+	      (else
+	       (syntax-violation __module_who__
+		 "invalid syntax in EVAL options, expected list of symbols" input-options)))))
+
+    (define (%clean-language-selection option*.sym)
+      (let* ((option*.sym (cond ((memq 'strict-r6rs option*.sym)
+				 => (lambda (ell)
+				      (cond ((memq 'typed-language ell)
+					     ;;Both  STRICT-R6RS  and  TYPED-LANGUAGE
+					     ;;are  present.    TYPED-LANGUAGE  comes
+					     ;;after    STRICT-R6RS:   TYPED-LANGUAGE
+					     ;;wins.
+					     (remq 'strict-r6rs option*.sym))
+					    (else
+					     option*.sym))))
+				(else
+				 option*.sym)))
+	     (option*.sym (cond ((memq 'typed-language option*.sym)
+				 => (lambda (ell)
+				      (cond ((memq 'strict-r6rs ell)
+					     ;;Both  STRICT-R6RS  and  TYPED-LANGUAGE
+					     ;;are present.   STRICT-R6RS comes after
+					     ;;TYPED-LANGUAGE: STRICT-R6RS wins.
+					     (remq 'typed-language option*.sym))
+					    (else
+					     option*.sym))))
+				(else
+				 option*.sym))))
+	option*.sym))
+
+    #| end of module: %PARSE-EVAL-OPTIONS |# )
+
+  #| end of module: EVAL |# )
 
 (define (environment . import-spec*)
   ;;This  is  R6RS's  environment.   It  parses  the  import  specs  and
@@ -380,9 +451,9 @@
 	  (values invoke-lib* invoke-code visit-env export-subst global-env typed-locs option* foreign-library*)))))
 
   (define (%verbose-messages-thunk)
-    (when (options::typed-language?)
+    (when (options::typed-language-enabled?)
       (print-expander-warning-message "enabling typed language support for program"))
-    (when (options::strict-r6rs)
+    (when (options::strict-r6rs-enabled?)
       (print-expander-warning-message "enabling expander's strict R6RS support for program")))
 
   (define (%parse-top-level-program program-form*)
@@ -431,25 +502,62 @@
       (_
        (assertion-violation __module_who__ "invalid syntax of top-level program"))))
 
-  (define (%parse-program-options option*)
-    (syntax-match option* ()
-      (() '())
-      ((?opt . ?other*)
-       (symbol? (syntax->datum ?opt))
-       (let ((sym (syntax->datum ?opt)))
-	 (case sym
-	   ((typed-language)
-	    (cons sym (%parse-program-options ?other*)))
-	   ;;"tagged-language"  is  kept  for  backwards  compatibility,  but  it  is
-	   ;;deprecated.  We should use "typed-language".
-	   ((tagged-language)
-	    (cons 'typed-language (%parse-program-options ?other*)))
-	   ((strict-r6rs)
-	    (cons sym (%parse-program-options ?other*)))
-	   (else
-	    (syntax-violation __module_who__
-	      "invalid program option" ?opt)))))
-      ))
+  (module (%parse-program-options)
+
+    (define (%parse-program-options options.stx)
+      (let* ((option*.sym (%parse-syntax options.stx))
+	     (option*.sym (list-of-symbols.delete-first-duplicates option*.sym))
+	     (option*.sym (%clean-language-selection option*.sym)))
+	option*.sym))
+
+    (define (%parse-syntax options.stx)
+      (let recur ((opts.stx options.stx))
+	(syntax-match opts.stx ()
+	  (() '())
+	  ((?opt . ?other*)
+	   (symbol? (syntax->datum ?opt))
+	   (let ((sym (syntax->datum ?opt)))
+	     (case sym
+	       ((typed-language)
+		(cons sym (recur ?other*)))
+	       ;;"tagged-language"  is  kept  for  backwards  compatibility,  but  it  is
+	       ;;deprecated.  We should use "typed-language".
+	       ((tagged-language)
+		(cons 'typed-language (recur ?other*)))
+	       ((strict-r6rs)
+		(cons sym (recur ?other*)))
+	       (else
+		(syntax-violation __module_who__ "invalid program option" ?opt)))))
+	  (?thing
+	   (syntax-violation __module_who__ "invalid syntax in program options" options.stx ?thing)))))
+
+    (define (%clean-language-selection option*.sym)
+      (let* ((option*.sym (cond ((memq 'strict-r6rs option*.sym)
+				 => (lambda (ell)
+				      (cond ((memq 'typed-language ell)
+					     ;;Both  STRICT-R6RS  and  TYPED-LANGUAGE
+					     ;;are  present.    TYPED-LANGUAGE  comes
+					     ;;after    STRICT-R6RS:   TYPED-LANGUAGE
+					     ;;wins.
+					     (remq 'strict-r6rs option*.sym))
+					    (else
+					     option*.sym))))
+				(else
+				 option*.sym)))
+	     (option*.sym (cond ((memq 'typed-language option*.sym)
+				 => (lambda (ell)
+				      (cond ((memq 'strict-r6rs ell)
+					     ;;Both  STRICT-R6RS  and  TYPED-LANGUAGE
+					     ;;are present.   STRICT-R6RS comes after
+					     ;;TYPED-LANGUAGE: STRICT-R6RS wins.
+					     (remq 'typed-language option*.sym))
+					    (else
+					     option*.sym))))
+				(else
+				 option*.sym))))
+	option*.sym))
+
+    #| end of module: %PARSE-PROGRAM-OPTIONS |# )
 
   (define (%parse-foreign-library* foreign-library*)
     (receive-and-return (id*)
@@ -603,9 +711,9 @@
 
   (define (%make-verbose-messages-thunk libname.sexp)
     (lambda ()
-      (when (options::typed-language?)
+      (when (options::typed-language-enabled?)
 	(print-expander-warning-message "enabling typed language support for library: ~a" libname.sexp))
-      (when (options::strict-r6rs)
+      (when (options::strict-r6rs-enabled?)
 	(print-expander-warning-message "enabling expander's strict R6RS support for library: ~a" libname.sexp))))
 
   (define (%parse-library library-sexp)
@@ -688,24 +796,62 @@
     (verify-libname (syntax->datum libname))
     (void))
 
-  (define (%parse-library-options libopt*)
-    (syntax-match libopt* ()
-      (() '())
-      ((?opt . ?other*)
-       (symbol? (syntax->datum ?opt))
-       (let ((sym (syntax->datum ?opt)))
-	 (case sym
-	   ((typed-language)
-	    (cons sym (%parse-library-options ?other*)))
-	   ;;"tagged-language"  is  kept  for  backwards  compatibility,  but  it  is
-	   ;;deprecated.  We should use "typed-language".
-	   ((tagged-language)
-	    (cons 'typed-language (%parse-library-options ?other*)))
-	   ((strict-r6rs)
-	    (cons sym (%parse-library-options ?other*)))
-	   (else
-	    (syntax-violation __module_who__ "invalid library option" ?opt)))))
-      ))
+  (module (%parse-library-options)
+
+    (define (%parse-library-options options.stx)
+      (let* ((option*.sym (%parse-syntax options.stx))
+	     (option*.sym (list-of-symbols.delete-first-duplicates option*.sym))
+	     (option*.sym (%clean-language-selection option*.sym)))
+	option*.sym))
+
+    (define (%parse-syntax options.stx)
+      (let recur ((opts.stx options.stx))
+	(syntax-match opts.stx ()
+	  (() '())
+	  ((?opt . ?other*)
+	   (symbol? (syntax->datum ?opt))
+	   (let ((sym (syntax->datum ?opt)))
+	     (case sym
+	       ((typed-language)
+		(cons sym (recur ?other*)))
+	       ;;"tagged-language"  is  kept  for  backwards  compatibility,  but  it  is
+	       ;;deprecated.  We should use "typed-language".
+	       ((tagged-language)
+		(cons 'typed-language (recur ?other*)))
+	       ((strict-r6rs)
+		(cons sym (recur ?other*)))
+	       (else
+		(syntax-violation __module_who__ "invalid library option" ?opt)))))
+	  (?thing
+	   (syntax-violation __module_who__ "invalid syntax in library options" options.stx ?thing)))))
+
+    (define (%clean-language-selection option*.sym)
+      (let* ((option*.sym (cond ((memq 'strict-r6rs option*.sym)
+				 => (lambda (ell)
+				      (cond ((memq 'typed-language ell)
+					     ;;Both  STRICT-R6RS  and  TYPED-LANGUAGE
+					     ;;are  present.    TYPED-LANGUAGE  comes
+					     ;;after    STRICT-R6RS:   TYPED-LANGUAGE
+					     ;;wins.
+					     (remq 'strict-r6rs option*.sym))
+					    (else
+					     option*.sym))))
+				(else
+				 option*.sym)))
+	     (option*.sym (cond ((memq 'typed-language option*.sym)
+				 => (lambda (ell)
+				      (cond ((memq 'strict-r6rs ell)
+					     ;;Both  STRICT-R6RS  and  TYPED-LANGUAGE
+					     ;;are present.   STRICT-R6RS comes after
+					     ;;TYPED-LANGUAGE: STRICT-R6RS wins.
+					     (remq 'typed-language option*.sym))
+					    (else
+					     option*.sym))))
+				(else
+				 option*.sym))))
+	option*.sym))
+
+    #| end of module: %PARSE-LIBRARY-OPTIONS |# )
 
   (define (%parse-foreign-library* foreign-library*)
     (receive-and-return (id*)
@@ -860,8 +1006,15 @@
 	(%process-import-specs-build-top-level-rib import-spec*))
       (define (wrap-source-expression-with-top-rib expr)
 	(wrap-source-expression expr rib))
-      (parametrise ((options::typed-language? (memq 'typed-language option*))
-		    (options::strict-r6rs     (or (memq 'strict-r6rs    option*) (options::strict-r6rs))))
+      (parametrise
+	  ((options::expander-language (cond ((memq 'typed-language option*)
+					      'typed)
+					     ((memq 'strict-r6rs option*)
+					      'strict-r6rs)
+					     (else
+					      ;;No  options from  the source
+					      ;;code, so leave it unchanged.
+					      (options::expander-language)))))
 	(verbose-messages-thunk)
 	(let ((body-stx*	(map wrap-source-expression-with-top-rib body-sexp*))
 	      (rtc		(make-collector))

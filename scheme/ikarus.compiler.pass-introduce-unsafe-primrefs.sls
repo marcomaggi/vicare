@@ -147,7 +147,7 @@
 	   (or (%find-core-primitive-replacement prim-name rand* rand*.vec)
 	       (%no-replacement)))
 	  ((no)
-	   (cond ((option.strict-r6rs)
+	   (cond ((options::strict-r6rs)
 		  ;;The  operands do  not  match the  expected  arguments: resort  to
 		  ;;run-time error as mandated by R6RS.
 		  (print-compiler-warning-message "operands of invalid core type in call to core primitive: ~a"
@@ -158,7 +158,7 @@
 		    "operands of invalid core type in call to core primitive"
 		    (unparse-recordized-code/sexp (%no-replacement))))))
 	  ((wrong-num-args)
-	   (cond ((option.strict-r6rs)
+	   (cond ((options::strict-r6rs)
 		  ;;The operands  are in  wrong number: resort  to run-time  error as
 		  ;;mandated by R6RS.
 		  (print-compiler-warning-message "wrong number of operands in call to core primitive: ~a"

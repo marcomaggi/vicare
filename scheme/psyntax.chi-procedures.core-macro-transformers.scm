@@ -223,7 +223,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?formals ?body ?body* ...)
-     (if (options::typed-language?)
+     (if (options::typed-language-enabled?)
 	 (chi-lambda/checked (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
 			       'lambda/checked ?formals ?body ?body*)
 			     lexenv.run lexenv.expand
@@ -295,7 +295,7 @@
   (syntax-match input-form.stx ()
     ((_ ?who ?formals ?body ?body* ...)
      (identifier? ?who)
-     (if (options::typed-language?)
+     (if (options::typed-language-enabled?)
 	 (chi-named-lambda/checked (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
 				     'named-lambda/checked ?formals ?body ?body*)
 				   lexenv.run lexenv.expand
@@ -372,7 +372,7 @@
   (syntax-match input-form.stx ()
     ((_ (?formals* ?body* ?body** ...) ...)
      (let ((body**.stx (map cons ?body* ?body**)))
-       (if (options::typed-language?)
+       (if (options::typed-language-enabled?)
 	   (chi-case-lambda/checked (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
 				      'case-lambda/checked ?formals* body**.stx)
 				    lexenv.run lexenv.expand
@@ -444,7 +444,7 @@
     ((_ ?who (?formals* ?body* ?body** ...) ...)
      (identifier? ?who)
      (let ((body**.stx (map cons ?body* ?body**)))
-       (if (options::typed-language?)
+       (if (options::typed-language-enabled?)
 	   (chi-named-case-lambda/checked (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
 					    'named-case-lambda/checked ?formals* body**.stx)
 					  lexenv.run lexenv.expand
@@ -614,7 +614,7 @@
     ;;environment.  Expand  the syntax  object INPUT-FORM.STX in  the context  of the
     ;;given LEXENV; return a PSI object.
     ;;
-    (if (options::typed-language?)
+    (if (options::typed-language-enabled?)
 	(let/checked-transformer input-form.stx lexenv.run lexenv.expand)
       (let/std-transformer input-form.stx lexenv.run lexenv.expand)))
 
@@ -623,7 +623,7 @@
     ;;environment.  Expand  the syntax  object INPUT-FORM.STX in  the context  of the
     ;;given LEXENV; return a PSI object.
     ;;
-    (if (options::typed-language?)
+    (if (options::typed-language-enabled?)
 	(let*/checked-transformer input-form.stx lexenv.run lexenv.expand)
       (let*/std-transformer input-form.stx lexenv.run lexenv.expand)))
 
@@ -882,7 +882,7 @@
     ;;environment.  Expand  the syntax  object INPUT-FORM.STX in  the context  of the
     ;;given LEXENV; return a PSI object.
     ;;
-    (if (options::typed-language?)
+    (if (options::typed-language-enabled?)
 	(letrec/checked-transformer input-form.stx lexenv.run lexenv.expand)
       (letrec/std-transformer input-form.stx lexenv.run lexenv.expand)))
 
@@ -908,7 +908,7 @@
     ;;in environment.  Expand the syntax object  INPUT-FORM.STX in the context of the
     ;;given LEXENV; return a PSI object.
     ;;
-    (if (options::typed-language?)
+    (if (options::typed-language-enabled?)
 	(letrec*/checked-transformer input-form.stx lexenv.run lexenv.expand)
       (letrec*/std-transformer input-form.stx lexenv.run lexenv.expand)))
 
@@ -1658,7 +1658,7 @@
   ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
   ;;the given LEXENV; return a PSI object.
   ;;
-  (if (options::typed-language?)
+  (if (options::typed-language-enabled?)
       (receive/checked-transformer input-form.stx lexenv.run lexenv.expand)
     (receive/std-transformer input-form.stx lexenv.run lexenv.expand)))
 
@@ -1667,7 +1667,7 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI object.
   ;;
-  (if (options::typed-language?)
+  (if (options::typed-language-enabled?)
       (receive-and-return/checked-transformer input-form.stx lexenv.run lexenv.expand)
     (receive-and-return/std-transformer input-form.stx lexenv.run lexenv.expand)))
 

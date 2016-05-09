@@ -48,6 +48,7 @@
     check-compiler-pass-preconditions
     enabled-function-application-integration?
     generate-descriptive-labels?
+    (rename (options::strict-r6rs strict-r6rs))
 
     ;; middle pass inspection
     assembler-output
@@ -170,7 +171,7 @@
     ;;This is *the* commpiler function.  Transform a symbolic expression representing
     ;;a Scheme program in core language; return a code object.
     ;;
-    (define print? (option.print-debug-messages?))
+    (define print? (options::print-debug-messages?))
     (define-syntax-rule (do-pass (?pass . ?args))
       (begin
 	(when print?
@@ -260,9 +261,9 @@
 	     (eq? 'with-compilation-options (car core-language-sexp)))
 	(let ((option* (cadr  core-language-sexp))
 	      (body    (caddr core-language-sexp)))
-	  (parametrise ((option.strict-r6rs (or (memq 'strict-r6rs option*)
-						(option.strict-r6rs))))
-	    (when (option.strict-r6rs)
+	  (parametrise ((options::strict-r6rs (or (memq 'strict-r6rs option*)
+						  (options::strict-r6rs))))
+	    (when (options::strict-r6rs)
 	      (print-compiler-warning-message "enabling compiler's strict R6RS support"))
 	    (kont body)))
       (kont core-language-sexp)))

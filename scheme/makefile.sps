@@ -3366,8 +3366,6 @@
     ($transcoder->data				$transc)
     ($data->transcoder				$transc)
     (make-file-options				v $language)
-    (make-expander-options			v $language)
-    (make-compiler-options			v $language)
     (sentinel					v $language)
     (sentinel?					v $language)
 

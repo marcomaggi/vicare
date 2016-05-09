@@ -165,8 +165,8 @@
 	  ((else
 	    (assertion-violation 'case-expander-language
 	      "internal error: invalid language selection"
-	      (options::typed-language?)
-	      (options::strict-r6rs))))))
+	      (options::typed-language-enabled?)
+	      (options::strict-r6rs-enabled?))))))
 	(((else . ?else-body))
 	 (sys::syntax
 	  ((else . ?else-body))))
@@ -178,14 +178,14 @@
     (define (%parse-single-clause clause.stx)
       (sys::syntax-case clause.stx (typed strict-r6rs default)
 	(((typed) . ?typed-body)
-	 (sys::syntax ((options::typed-language?) . ?typed-body)))
+	 (sys::syntax ((options::typed-language-enabled?) . ?typed-body)))
 
 	(((strict-r6rs) . ?strict-r6rs-body)
-	 (sys::syntax ((options::strict-r6rs) . ?strict-r6rs-body)))
+	 (sys::syntax ((options::strict-r6rs-enabled?) . ?strict-r6rs-body)))
 
 	(((default) . ?default-body)
-	 (sys::syntax ((and (not (options::typed-language?))
-			    (not (options::strict-r6rs)))
+	 (sys::syntax ((and (not (options::typed-language-enabled?))
+			    (not (options::strict-r6rs-enabled?)))
 		       . ?default-body)))
 	))
 

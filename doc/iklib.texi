@@ -9575,14 +9575,14 @@ The following bindings are exported by the library @library{vicare}.
 @defun eval @var{sexp} @var{environment}
 @defunx eval @var{sexp} @var{environment} @var{expander-options} @var{compiler-options}
 Extension of @func{eval} as defined by @rnrs{6}.  The arguments
-@var{expander-options} and @var{compiler-options} must be @false{} or
-enumeration sets as returned by @func{expander-options} and
+@var{expander-options} and @var{compiler-options} must be proper lists
+of symbols as returned by @func{expander-options} and
 @func{compiler-options}.
 @end defun
 
 
 @deffn Syntax expander-options @meta{symbol} @dots{}
-Return an enumeration set to be used as argument to @func{eval}.
+Expand to a list of symbols to be used as argument to @func{eval}.
 Supported @meta{symbol} options are:
 
 @table @code
@@ -9598,7 +9598,7 @@ language}).
 
 
 @deffn Syntax compiler-options @meta{symbol} @dots{}
-Return an enumeration set to be used as argument to @func{eval}.
+Expand to a list of symbols to be used as argument to @func{eval}.
 Supported @meta{symbol} options are:
 
 @table @code
@@ -9607,16 +9607,6 @@ Adhere more strictly to the behaviour defined by @rnrs{6}.  For example:
 report errors at run--time, rather than at compile--time.
 @end table
 @end deffn
-
-
-@defun make-expander-options @var{list-of-symbols}
-Return an enumeration set as defined by @func{expander-options}.
-@end defun
-
-
-@defun make-compiler-options @var{list-of-symbols}
-Return an enumeration set as defined by @func{compiler-options}.
-@end defun
 
 @c page
 @node iklib cafe

@@ -77,20 +77,20 @@
     last-pair				enum-set?
     list-of-nestrings?
 
-    list-of-symbols?			list-of-symbols.delete-duplicates
-    list-of-symbols.union		list-of-symbols.intersection
-    list-of-symbols.subset?
+    list-of-symbols?			list-of-symbols.union
+    list-of-symbols.intersection	list-of-symbols.subset?
+    list-of-symbols.delete-duplicates
+    list-of-symbols.delete-first-duplicates
 
     ;; compiler related operations
     compiler::eval-core			compiler::core-expr->optimized-code
     compiler::core-expr->optimisation-and-core-type-inference-code
     compiler::core-expr->assembly-code	compiler::compile-core-expr-to-thunk
+    compiler::options::strict-r6rs
 
     ;; runtime options
     options::debug-mode-enabled?
     options::drop-assertions?
-    options::typed-language?
-    options::strict-r6rs
     options::enable-arguments-validation?
     options::print-loaded-libraries?
     options::print-debug-messages?
@@ -170,15 +170,16 @@
 		  core-expr->assembly-code
 		  optimize-level)
 	    compiler::)
+    (prefix (only (ikarus.compiler)
+		  strict-r6rs)
+	    compiler::options::)
     (prefix (rename (only (ikarus.options)
 			  debug-mode-enabled?
 			  drop-assertions?
-			  strict-r6rs
 			  print-loaded-libraries?
 			  print-verbose-messages?
 			  print-debug-messages?
 			  print-library-debug-messages?
-			  typed-language?
 			  vicare-built-with-arguments-validation-enabled)
 		    (vicare-built-with-arguments-validation-enabled
 		     enable-arguments-validation?))
@@ -336,10 +337,19 @@
 ;;;; lists of symbols
 
 (define (list-of-symbols.delete-duplicates sym*)
+  ;;Deletes duplicates  in the list  of symbols SYM*.   The first occurrence  of each
+  ;;symbol is preserved in its position.
+  ;;
   (if (pair? sym*)
       (let ((head (car sym*)))
 	(cons head (list-of-symbols.delete-duplicates (remq head (cdr sym*)))))
     '()))
+
+(define (list-of-symbols.delete-first-duplicates sym*)
+  ;;Deletes duplicates  in the  list of  symbols SYM*.  The  last occurrence  of each
+  ;;symbol is preserved in its position.
+  ;;
+  (reverse (list-of-symbols.delete-duplicates (reverse sym*))))
 
 (define (list-of-symbols.union sym1* sym2*)
   (list-of-symbols.delete-duplicates (append sym1* sym2*)))

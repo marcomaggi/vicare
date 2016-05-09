@@ -258,7 +258,7 @@
 		 '())
 	     ;;We  want to  create the  syntactic  bindings of  unsafe accessors  and
 	     ;;mutators only when STRICT-R6RS mode is DISabled.
-	     ,@(if (options::strict-r6rs)
+	     ,@(if (options::strict-r6rs-enabled?)
 		   '()
 		 (append unsafe-field-accessor* (%filter-out-falses unsafe-field-mutator*))))
       ,@parent-rtd-definition
@@ -445,7 +445,7 @@
 	       (field-spec**  '()))
       (syntax-match clause* (fields)
 	(()
-	 (if (options::strict-r6rs)
+	 (if (options::strict-r6rs-enabled?)
 	     (if (pair? field-spec**)
 		 ;;If there is only one list of field specs, fine; otherwise raise an
 		 ;;error.

@@ -900,7 +900,7 @@
 	      ,guard-expr)
 	    ctxt)))
       (else
-       (if (option.strict-r6rs)
+       (if (options::strict-r6rs)
 	   (begin
 	     (print-compiler-warning-message
 	      "invalid number of operands to core language function integration: ~a"

@@ -35,8 +35,6 @@
     debug-mode-enabled?
     drop-assertions?
     strict-r6rs
-    ;; tagged language parameter options
-    typed-language?
     ;; vicare configuration options
     vicare-built-with-arguments-validation-enabled
     vicare-built-with-srfi-enabled
@@ -93,9 +91,6 @@
 
 (define-parameter-boolean-option strict-r6rs #f)
 
-;;Turn on typed language extensions.
-;;
-(define-parameter-boolean-option typed-language?)
 
 ;;When  set to  true: expand  every ASSERT  macro into  its expression,  dropping the
 ;;assertions.  Specifically:

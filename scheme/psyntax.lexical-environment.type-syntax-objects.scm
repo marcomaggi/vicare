@@ -318,7 +318,7 @@
   ;;function equal to  the one of SYNTAX-OBJECT.PARSE-TYPED-FORMALS, so  that the two
   ;;can be used as:
   ;;
-  ;;   (if (options::typed-language?)
+  ;;   (if (options::typed-language-enabled?)
   ;;       (syntax-object.parse-typed-formals formals.stx)
   ;;     (syntax-object.parse-standard-formals formals.stx))
   ;;

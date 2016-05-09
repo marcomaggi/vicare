@@ -60,6 +60,10 @@
 		  syntax-violation	make-variable-transformer)
     (psyntax.compat)
     (prefix (rnrs syntax-case) sys::)
+    (prefix (only (psyntax.config)
+		  typed-language-enabled?
+		  strict-r6rs-enabled?)
+	    options::)
     (psyntax.lexical-environment)
     (only (psyntax.library-manager)
 	  current-include-loader
@@ -517,7 +521,7 @@
 					       ?datum*)))))
 	     (syntax-match ?closure (lambda lambda/checked)
 	       ((lambda (?arg) . ?body*)
-		(and (options::typed-language?)
+		(and (options::typed-language-enabled?)
 		     (identifier? ?arg))
 		(bless
 		 `(lambda ((brace ,?arg ,(%make-annotation))) . ,?body*)))
@@ -855,7 +859,7 @@
   (define (%parse-field-spec field-spec.stx)
     (syntax-match field-spec.stx (brace)
       ((brace ?field-name ?field-type)
-       (options::typed-language?)
+       (options::typed-language-enabled?)
        (begin
 	 (unless (identifier? ?field-name)
 	   (__synner__ "expected identifier as condition type field name" ?field-name))
@@ -868,7 +872,7 @@
        (values ?field-name (<top>-type-id)))
 
       (_
-       (__synner__ (if (options::typed-language?)
+       (__synner__ (if (options::typed-language-enabled?)
 		       "expected identifier or typed identifier as condition type field specification"
 		     "expected identifier as condition type field name")
 		   field-spec.stx))))
@@ -1450,7 +1454,7 @@
     ;;built in environment.   Expand the contents of INPUT-FORM.STX;  return a syntax
     ;;object that must be further expanded.
     ;;
-    (if (options::typed-language?)
+    (if (options::typed-language-enabled?)
 	(let-values/checked-macro input-form.stx)
       (let-values/std-macro input-form.stx)))
 
@@ -1711,7 +1715,7 @@
   ;;         (lambda (d e f)
   ;;           (begin ?body0 ?body)))))
   ;;
-  (if (options::typed-language?)
+  (if (options::typed-language-enabled?)
       (let*-values/checked-macro input-form.stx)
     (let*-values/std-macro input-form.stx)))
 
@@ -1914,7 +1918,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ . ?stuff)
-     (cons (if (options::typed-language?)
+     (cons (if (options::typed-language-enabled?)
 	       (core-prim-id 'define/checked)
 	     (core-prim-id 'define/std))
 	   ?stuff))
@@ -1927,7 +1931,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ . ?stuff)
-     (cons (if (options::typed-language?)
+     (cons (if (options::typed-language-enabled?)
 	       (core-prim-id 'case-define/checked)
 	     (core-prim-id 'case-define/std))
 	   ?stuff))
@@ -4271,7 +4275,7 @@
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
   ;;
-  (if (options::typed-language?)
+  (if (options::typed-language-enabled?)
       (define-values/checked-macro input-form.stx)
     (define-values/std-macro input-form.stx)))
 
@@ -4449,7 +4453,7 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?formals ?body0 ?body* ...)
-       (if (options::typed-language?)
+       (if (options::typed-language-enabled?)
 	   (define-constant-values/checked-macro input-form.stx ?formals (cons ?body0 ?body*))
 	 (define-constant-values/std-macro input-form.stx ?formals (cons ?body0 ?body*))))
       ))
@@ -4682,7 +4686,7 @@
 				      ((symbol? rest.datum)
 				       ;;If the  rest argument is untagged,  we tag
 				       ;;it by default with "<list>".
-				       (if (options::typed-language?)
+				       (if (options::typed-language-enabled?)
 					   `(((brace ,?rest <list>) (list . ,REST)))
 					 `((,?rest (list . ,REST)))))
 				      (else
@@ -4983,9 +4987,8 @@
       `(make-file-options ',?opt*)))))
 
 (define-macro-transformer (expander-options input-form.stx)
-  ;;Transformer  for   the  EXPANDER-OPTIONS   macro.   File  options   selection  is
-  ;;implemented  as an  enumeration type  whose constructor  is MAKE-EXPANDER-OPTIONS
-  ;;from the boot environment.
+  ;;Transformer  for the  EXPANDER-OPTIONS  macro.  Expander  options selection  that
+  ;;expands to a quoted list of symbols.
   ;;
   (define (valid-option? opt-stx)
     (and (identifier? opt-stx)
@@ -4996,13 +4999,13 @@
   (syntax-match input-form.stx ()
     ((_ ?opt* ...)
      (for-all valid-option? ?opt*)
-     (bless
-      `(make-expander-options ',?opt*)))))
+     (list (core-prim-id 'quote) ?opt*))
+    (_
+     (__synner__ "invalid options"))))
 
 (define-macro-transformer (compiler-options input-form.stx)
-  ;;Transformer  for   the  COMPILER-OPTIONS   macro.   File  options   selection  is
-  ;;implemented  as an  enumeration type  whose constructor  is MAKE-COMPILER-OPTIONS
-  ;;from the boot environment.
+  ;;Transformer  for the  COMPILER-OPTIONS  macro.  Compiler  options selection  that
+  ;;expands to a quoted list of symbols.
   ;;
   (define (valid-option? opt-stx)
     (and (identifier? opt-stx)
@@ -5010,8 +5013,9 @@
   (syntax-match input-form.stx ()
     ((_ ?opt* ...)
      (for-all valid-option? ?opt*)
-     (bless
-      `(make-compiler-options ',?opt*)))))
+     (list (core-prim-id 'quote) ?opt*))
+    (_
+     (__synner__ "invalid options"))))
 
 (define-macro-transformer (endianness input-form.stx)
   ;;Transformer  of ENDIANNESS.   Support  the symbols:  "big", "little",  "network",

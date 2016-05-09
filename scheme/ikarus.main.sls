@@ -45,8 +45,7 @@
 		  drop-assertions?
 		  print-loaded-libraries?
 		  print-debug-messages?
-		  print-library-debug-messages?
-		  strict-r6rs)
+		  print-library-debug-messages?)
 	    options::)
     (ikarus.printing-messages)
     (prefix (only (ikarus.compiler)
@@ -59,8 +58,9 @@
 		  current-letrec-pass
 		  generate-descriptive-labels?
 		  perform-core-type-inference?
-		  perform-unsafe-primrefs-introduction?)
-	    compiler::)
+		  perform-unsafe-primrefs-introduction?
+		  strict-r6rs)
+	    compiler::options::)
     (prefix (only (ikarus.debugger)
 		  guarded-start)
 	    debugger::)
@@ -68,7 +68,8 @@
 		  enable-all-warnings
 		  disable-all-warnings
 		  warn-about-logic-constants
-		  warn-about-not-returning-expressions)
+		  warn-about-not-returning-expressions
+		  expander-language)
 	    psyntax::)
     (prefix (only (psyntax.library-utils)
 		  init-search-paths-and-directories)
@@ -507,7 +508,7 @@
 
 	  ((%option= "-d" "-g")
 	   (options::debug-mode-enabled? #t)
-	   (compiler::generate-debug-calls #t)
+	   (compiler::options::generate-debug-calls #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-greetings")
@@ -647,15 +648,17 @@
 
 		 (("debug")
 		  (options::debug-mode-enabled?    #t)
-		  (compiler::generate-debug-calls #t))
+		  (compiler::options::generate-debug-calls #t))
 		 (("no-debug")
 		  (options::debug-mode-enabled?    #f)
-		  (compiler::generate-debug-calls #f))
+		  (compiler::options::generate-debug-calls #f))
 
 		 (("strict-r6rs")
-		  (options::strict-r6rs #t))
+		  (compiler::options::strict-r6rs #t)
+		  (psyntax::expander-language 'strict-r6rs))
 		 (("no-strict-r6rs")
-		  (options::strict-r6rs #f))
+		  (compiler::options::strict-r6rs #f)
+		  (psyntax::expander-language 'default))
 
 		 (("drop-assertions")
 		  (options::drop-assertions? #t))
@@ -663,9 +666,9 @@
 		  (options::drop-assertions? #f))
 
 		 (("check-compiler-pass-preconditions")
-		  (compiler::check-compiler-pass-preconditions #t))
+		  (compiler::options::check-compiler-pass-preconditions #t))
 		 (("no-check-compiler-pass-preconditions")
-		  (compiler::check-compiler-pass-preconditions #f))
+		  (compiler::options::check-compiler-pass-preconditions #f))
 
 		 (("gc-integrity-checks")
 		  (foreign-call "ikrt_enable_gc_integrity_checks"))
@@ -673,9 +676,9 @@
 		  (foreign-call "ikrt_disable_gc_integrity_checks"))
 
 		 (("print-assembly")
-		  (compiler::assembler-output #t))
+		  (compiler::options::assembler-output #t))
 		 (("print-optimizer" "print-optimiser")
-		  (compiler::optimizer-output #t))
+		  (compiler::options::optimizer-output #t))
 
 		 (("print-loaded-libraries")
 		  (options::print-loaded-libraries? #t))
@@ -704,17 +707,17 @@
 		  (psyntax::generate-descriptive-marks? #t))
 
 		 (("compiler-descriptive-labels")
-		  (compiler::generate-descriptive-labels? #t))
+		  (compiler::options::generate-descriptive-labels? #t))
 
 		 (("compiler-core-type-inference")
-		  (compiler::perform-core-type-inference? #t))
+		  (compiler::options::perform-core-type-inference? #t))
 		 (("no-compiler-core-type-inference")
-		  (compiler::perform-core-type-inference? #f))
+		  (compiler::options::perform-core-type-inference? #f))
 
 		 (("compiler-introduce-primrefs")
-		  (compiler::perform-unsafe-primrefs-introduction? #t))
+		  (compiler::options::perform-unsafe-primrefs-introduction? #t))
 		 (("no-compiler-introduce-primrefs")
-		  (compiler::perform-unsafe-primrefs-introduction? #f))
+		  (compiler::options::perform-unsafe-primrefs-introduction? #f))
 
 		 (("enable-automatic-gc")
 		  (automatic-garbage-collection #t))
@@ -722,11 +725,11 @@
 		  (automatic-garbage-collection #f))
 
 		 (("basic-letrec-pass")
-		  (compiler::current-letrec-pass 'basic))
+		  (compiler::options::current-letrec-pass 'basic))
 		 (("waddell-letrec-pass")
-		  (compiler::current-letrec-pass 'waddell))
+		  (compiler::options::current-letrec-pass 'waddell))
 		 (("scc-letrec-pass")
-		  (compiler::current-letrec-pass 'scc))
+		  (compiler::options::current-letrec-pass 'scc))
 
 		 (else
 		  (%error-and-exit "invalid --option argument: ~a" (cadr args))))
@@ -740,7 +743,7 @@
 	       (%error-and-exit "--optimizer-passes-count requires a number argument")
 	     (begin
 	       (try
-		   (compiler::source-optimizer-passes-count (string->number (cadr args)))
+		   (compiler::options::source-optimizer-passes-count (string->number (cadr args)))
 		 (catch E
 		   (else
 		    (%error-and-exit "invalid argument to --optimizer-passes-count"))))
@@ -750,19 +753,19 @@
 ;;; compiler options without argument
 
 	  ((%option= "-O3")
-	   (compiler::optimize-level 3)
+	   (compiler::options::optimize-level 3)
 	   (next-option (cdr args) k))
 
 	  ((%option= "-O2")
-	   (compiler::optimize-level 2)
+	   (compiler::options::optimize-level 2)
 	   (next-option (cdr args) k))
 
 	  ((%option= "-O1")
-	   (compiler::optimize-level 1)
+	   (compiler::options::optimize-level 1)
 	   (next-option (cdr args) k))
 
 	  ((%option= "-O0")
-	   (compiler::optimize-level 0)
+	   (compiler::options::optimize-level 0)
 	   (next-option (cdr args) k))
 
 ;;; --------------------------------------------------------------------
@@ -1110,7 +1113,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
      (start (lambda () ?body0 ?body ...)))))
 
 (define (start proc)
-  (if (compiler::generate-debug-calls)
+  (if (compiler::options::generate-debug-calls)
       (debugger::guarded-start proc)
     (proc)))
 

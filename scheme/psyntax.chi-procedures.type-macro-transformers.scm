@@ -389,7 +389,7 @@
 			  (make-who-condition __module_who__)
 			  (make-message-condition "subject expression typed as not returning")
 			  (make-syntax-violation input-form.stx expr.stx))))
-	     (if (options::typed-language?)
+	     (if (options::typed-language-enabled?)
 		 (raise (condition (make-expand-time-type-signature-violation) common))
 	       (begin
 		 (raise-continuable (condition (make-expand-time-type-signature-warning) common))
@@ -410,7 +410,7 @@
 			  (make-who-condition __module_who__)
 			  (make-message-condition "subject expression returns multiple values")
 			  (make-syntax-violation input-form.stx expr.stx))))
-	     (if (options::typed-language?)
+	     (if (options::typed-language-enabled?)
 		 (raise (condition (make-expand-time-type-signature-violation) common))
 	       (begin
 		 (raise-continuable (condition (make-expand-time-type-signature-warning) common))
@@ -779,7 +779,7 @@
 			   (make-message-condition "subject expression of method call defined to never return")
 			   (make-syntax-violation input-form.stx ?subject-expr)
 			   (make-irritants-condition (list subject-expr.sig)))))
-	      (if (options::typed-language?)
+	      (if (options::typed-language-enabled?)
 		  (raise (condition (make-expand-time-type-signature-violation) common))
 		(begin
 		  (raise-continuable (condition (make-expand-time-type-signature-warning) common))

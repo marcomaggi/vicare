@@ -244,7 +244,7 @@
 		   (make-jmpcall label prelex-rator (%prepare-rand* (cdr fml*) rand*))
 		 (%recur-to-next-clause)))))
 	;;No matching clause found.
-	(if (option.strict-r6rs)
+	(if (options::strict-r6rs)
 	    ;;Just call the closure as always.  A "wrong num args" exception will
 	    ;;be raised at run-time as mandated by R6RS.
 	    (begin

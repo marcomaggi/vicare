@@ -360,11 +360,11 @@
 ;;;; helper functions
 
 (define (print-compiler-warning-message template . args)
-  (when (option.print-verbose-messages?)
+  (when (options::print-verbose-messages?)
     (print-stderr-message "compiler warning: " template args)))
 
 (define (print-compiler-debug-message template . args)
-  (when (option.print-debug-messages?)
+  (when (options::print-debug-messages?)
     (print-stderr-message "compiler: " template args)))
 
 (define (print-compiler-debug-message/unchecked template . args)

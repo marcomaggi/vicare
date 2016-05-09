@@ -2,17 +2,16 @@
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #!vicare
@@ -574,7 +573,7 @@
 	((yes)
 	 (nop))
 	((no)
-	 (if (option.strict-r6rs)
+	 (if (options::strict-r6rs)
 	     (interrupt)
 	   (%compile-time-error)))
 	(else
@@ -582,7 +581,7 @@
      ((constant x.const)
       (cond ((pair? x.const)
 	     (nop))
-	    ((option.strict-r6rs)
+	    ((options::strict-r6rs)
 	     (interrupt))
 	    (else
 	     (%compile-time-error))))
@@ -962,7 +961,7 @@
  (define-core-primitive-operation car safe
    ((V x)
     (define (%error-wrong-operand)
-      (if (option.strict-r6rs)
+      (if (options::strict-r6rs)
 	  (interrupt)
 	(compile-time-operand-core-type-error __module_who__ __who__
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
@@ -995,7 +994,7 @@
  (define-core-primitive-operation cdr safe
    ((V x)
     (define (%error-wrong-operand)
-      (if (option.strict-r6rs)
+      (if (options::strict-r6rs)
 	  (interrupt)
 	(compile-time-operand-core-type-error __module_who__ __who__
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
@@ -1028,7 +1027,7 @@
  (define-core-primitive-operation set-car! safe
    ((E x v)
     (define (%error-wrong-operand)
-      (if (option.strict-r6rs)
+      (if (options::strict-r6rs)
 	  (interrupt)
 	(compile-time-operand-core-type-error __module_who__ __who__
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
@@ -1043,7 +1042,7 @@
 	  (cogen-value-set-car! x.expr))))
       ((constant x.const)
        (if (pair? x.const)
-	   (if (option.strict-r6rs)
+	   (if (options::strict-r6rs)
 	       (cogen-value-$set-car! x)
 	     (compile-time-error __module_who__ __who__
 	       "invalid mutation of pair datum" (unparse-recordized-code/sexp x)))
@@ -1057,7 +1056,7 @@
  (define-core-primitive-operation set-cdr! safe
    ((E x v)
     (define (%error-wrong-operand)
-      (if (option.strict-r6rs)
+      (if (options::strict-r6rs)
 	  (interrupt)
 	(compile-time-operand-core-type-error __module_who__ __who__
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
@@ -1072,7 +1071,7 @@
 	  (cogen-value-set-cdr! x.expr))))
       ((constant x.const)
        (if (pair? x.const)
-	   (if (option.strict-r6rs)
+	   (if (options::strict-r6rs)
 	       (cogen-value-$set-cdr! x)
 	     (compile-time-error __module_who__ __who__
 	       "invalid mutation of pair datum" (unparse-recordized-code/sexp x)))
@@ -1555,7 +1554,7 @@
        ;;at compile-time.
        (cond ((vector? vec.const)
 	      (cogen-value-$vector-length vec))
-	     ((option.strict-r6rs)
+	     ((options::strict-r6rs)
 	      (interrupt))
 	     (else
 	      (compile-time-operand-core-type-error __module_who__ __who__
@@ -1582,7 +1581,7 @@
        ;;at compile-time.
        (cond ((vector? vec.const)
 	      (nop))
-	     ((option.strict-r6rs)
+	     ((options::strict-r6rs)
 	      (interrupt))
 	     (else
 	      (compile-time-operand-core-type-error __module_who__ __who__
@@ -1816,7 +1815,7 @@
 		(interrupt-when
 		 (cogen-pred-$unbound-object? val))
 		val))
-	     ((option.strict-r6rs)
+	     ((options::strict-r6rs)
 	      ;;Report error at run-time.
 	      (interrupt))
 	     (else
@@ -1850,7 +1849,7 @@
 	      (with-tmp ((val (cogen-value-$symbol-value sym)))
 		(interrupt-when
 		 (cogen-pred-$unbound-object? val))))
-	     ((option.strict-r6rs)
+	     ((options::strict-r6rs)
 	      ;;Report error at run-time.
 	      (interrupt))
 	     (else
@@ -4989,7 +4988,7 @@
 	 ((yes)
 	  (cogen-value-$string-length str.expr))
 	 ((no)
-	  (if (option.strict-r6rs)
+	  (if (options::strict-r6rs)
 	      (interrupt)
 	    (compile-time-operand-core-type-error __module_who__ __who__
 	      "expected string as operand" (unparse-recordized-code str))))
@@ -5000,7 +4999,7 @@
        ;;at compile-time.
        (cond ((string? str.const)
 	      (cogen-value-$string-length str))
-	     ((option.strict-r6rs)
+	     ((options::strict-r6rs)
 	      (interrupt))
 	     (else
 	      (compile-time-operand-core-type-error __module_who__ __who__
@@ -5018,7 +5017,7 @@
 	 ((yes)
 	  (nop))
 	 ((no)
-	  (if (option.strict-r6rs)
+	  (if (options::strict-r6rs)
 	      (interrupt)
 	    (compile-time-operand-core-type-error __module_who__ __who__
 	      "expected string as operand" (unparse-recordized-code str))))
@@ -5029,7 +5028,7 @@
        ;;at compile-time.
        (cond ((string? str.const)
 	      (nop))
-	     ((option.strict-r6rs)
+	     ((options::strict-r6rs)
 	      (interrupt))
 	     (else
 	      (compile-time-operand-core-type-error __module_who__ __who__

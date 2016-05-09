@@ -28,74 +28,72 @@
     enabled-function-application-integration?
     check-compiler-pass-preconditions
     ;;
-    option.strict-r6rs
-    option.print-verbose-messages?
-    option.print-debug-messages?)
+    (rename (strict-r6rs options::strict-r6rs))
+    options::print-verbose-messages?
+    options::print-debug-messages?)
   (import (rnrs)
     (ikarus.compiler.compat)
     (prefix (only (ikarus.options)
-		  strict-r6rs
 		  print-verbose-messages?
 		  print-debug-messages?)
-	    option.))
+	    options::))
+
+
+;;;; helpers
+
+(define-syntax define-parameter-boolean-option
+  (syntax-rules ()
+    ((_ ?who)
+     (define-parameter-boolean-option ?who #f))
+    ((_ ?who ?default)
+     (define ?who
+       (make-parameter ?default
+	 (lambda (value)
+	   (and value #t)))))
+    ))
 
 
 ;;;; configuration parameters
 
+(define-parameter-boolean-option strict-r6rs)
+(define-parameter-boolean-option generate-descriptive-labels?)
+
 (define compiler-initialisation/storage-location-gensyms-associations-func
   (make-parameter #f))
 
-(define generate-descriptive-labels?
-  (make-parameter #f))
+;;Set to true when the option "--debug" is used on the command line of the executable
+;;"vicare"; else set to #f.
+;;
+(define-parameter-boolean-option generate-debug-calls)
 
-(define generate-debug-calls
-  ;;Set  to true  when  the option  "--debug"  is used  on the  command  line of  the
-  ;;executable "vicare"; else set to #f.
-  ;;
-  (make-parameter #f))
+;;When  true: while  processing  the core  language  form ANNOTATED-CASE-LAMBDA,  the
+;;annotation about the  source code location of the expression  is removed; otherwise
+;;it is left in to be used by  the debugger.  We should strip source annotations when
+;;building the boot image.
+;;
+(define-parameter-boolean-option strip-source-info)
 
-(define strip-source-info
-  ;;When true:  while processing  the core  language form  ANNOTATED-CASE-LAMBDA, the
-  ;;annotation about the source code location of the expression is removed; otherwise
-  ;;it is left in to be used by the debugger.
-  ;;
-  ;;We should strip source annotations when building the boot image.
-  ;;
-  (make-parameter #f))
+(define-parameter-boolean-option optimizer-output)
+(define-parameter-boolean-option assembler-output)
 
-(define optimizer-output
-  (make-parameter #f))
+;;When true: the pass CORE-TYPE-INFERENCE is performed, else it is skipped.
+;;
+(define-parameter-boolean-option perform-core-type-inference? #t)
 
-(define perform-core-type-inference?
-  ;;When true: the pass CORE-TYPE-INFERENCE is performed, else it is skipped.
-  ;;
-  (make-parameter #t))
+;;When true: the pass INTRODUCE-UNSAFE-PRIMREFS is performed, else it is skipped.  It
+;;makes sense to perform such compiler pass  only if we have first performed the core
+;;type inference.
+;;
+(define-parameter-boolean-option perform-unsafe-primrefs-introduction? #t)
 
-(define perform-unsafe-primrefs-introduction?
-  ;;When true: the pass INTRODUCE-UNSAFE-PRIMREFS  is performed, else it is skipped.
-  ;;It makes sense to perform such compiler  pass only if we have first performed the
-  ;;core type inference.
-  ;;
-  (make-parameter #t))
+;;When true: the source optimiser will attempt integration of function applications.
+;;
+(define-parameter-boolean-option enabled-function-application-integration? #t)
 
-(define assembler-output
-  (make-parameter #f))
-
-(define enabled-function-application-integration?
-  ;;When  true:   the  source   optimiser  will   attempt  integration   of  function
-  ;;applications.
-  ;;
-  (make-parameter #t
-    (lambda (obj)
-      (and obj #t))))
-
-(define check-compiler-pass-preconditions
-  ;;When true:  perform additional  compiler code-validation  passes to  validate the
-  ;;recordised code between true compiler passes.
-  ;;
-  (make-parameter #f
-    (lambda (obj)
-      (and obj #t))))
+;;When  true: perform  additional  compiler code-validation  passes  to validate  the
+;;recordised code between true compiler passes.
+;;
+(define-parameter-boolean-option check-compiler-pass-preconditions)
 
 
 ;;;; done
