@@ -591,6 +591,7 @@ VICARE_BOOT_FLAGS	= $(AX_BOOT_VFLAGS) $(BOOT_VFLAGS)				\
 			  --no-rcfile --library-locator source --r6rs-script
 
 CLEANFILES		+= $(VICARE_NEW_BOOT) \
+	$(builddir)/scheme/ikarus.config.scm		\
 	typed-core-primitives-specs.scm			\
 	core-macros-table.scm				\
 	non-core-macros-table.scm
@@ -632,6 +633,7 @@ vicare_sed_edit = sed \
 	-e 's|@VICARE_BUILT_WITH_LINUX_ENABLED[@]|$(VICARE_BUILT_WITH_LINUX_ENABLED)|g'
 
 scheme/ikarus.config.scm: scheme/ikarus.config.scm.in Makefile
+	test -d $(builddir)/scheme || $(MKDIR_P) $(builddir)/scheme
 	$(vicare_sed_edit) $(srcdir)/scheme/ikarus.config.scm.in >$(builddir)/scheme/ikarus.config.scm
 
 ## --------------------------------------------------------------------
