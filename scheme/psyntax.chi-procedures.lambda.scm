@@ -158,44 +158,47 @@
 
   (define* (%chi-defun type qdef lexenv.run lexenv.expand)
     (define-constant input-form.stx (qdef.input-form qdef))
-    (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-      (receive (standard-formals.lex body.psi)
-	  (case type
-	    ((standard)
-	     (chi-lambda-clause/std input-form.stx lexenv.run lexenv.expand
-				    (qdef-defun.standard-formals qdef)
-				    (car (qdef-closure.clause-signature* qdef))
-				    (qdef-defun.body* qdef)))
-	    ((typed)
-	     (receive (lexenv.run lexenv.expand)
-		 ;;We establish the syntactic binding for "__who__" before processing
-		 ;;the body.  So the formals may shadow this binding.
-		 (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qdef.var-id qdef))
-	       (chi-lambda-clause/typed input-form.stx lexenv.run lexenv.expand
-					(qdef-defun.standard-formals qdef)
-					(car (qdef-closure.clause-signature* qdef))
-					(qdef-defun.body* qdef))))
-	    ((checked)
-	     (receive (lexenv.run lexenv.expand)
-		 ;;We establish the syntactic binding for "__who__" before processing
-		 ;;the body.  So the formals may shadow this binding.
-		 (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qdef.var-id qdef))
-	       (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
+    (let ((clause-signature (car (qdef-closure.clause-signature* qdef))))
+      (clambda-clause-signature.untyped-to-top! clause-signature)
+      (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+	(receive (standard-formals.lex body.psi)
+	    (case type
+	      ((standard)
+	       (chi-lambda-clause/std input-form.stx lexenv.run lexenv.expand
+				      (qdef-defun.standard-formals qdef)
+				      clause-signature
+				      (qdef-defun.body* qdef)))
+	      ((typed)
+	       (receive (lexenv.run lexenv.expand)
+		   ;;We  establish   the  syntactic  binding  for   "__who__"  before
+		   ;;processing the body.  So the formals may shadow this binding.
+		   (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qdef.var-id qdef))
+		 (chi-lambda-clause/typed input-form.stx lexenv.run lexenv.expand
 					  (qdef-defun.standard-formals qdef)
-					  (car (qdef-closure.clause-signature* qdef))
-					  (qdef-defun.body* qdef)))))
-	(when (or (eq? type 'checked)
-		  (eq? type 'typed))
-	  (let ((clause-signature (car (qdef-closure.clause-signature* qdef))))
-	    ;;If no type signature was specified for the clause: we use the signature
+					  clause-signature
+					  (qdef-defun.body* qdef))))
+	      ((checked)
+	       (receive (lexenv.run lexenv.expand)
+		   ;;We establish the syntactic binding for "__who__" before processing
+		   ;;the body.  So the formals may shadow this binding.
+		   (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qdef.var-id qdef))
+		 (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
+					    (qdef-defun.standard-formals qdef)
+					    clause-signature
+					    (qdef-defun.body* qdef))))
+	      (else
+	       (assertion-violation __who__ "internal error, invalid defun type" type)))
+	  (when (or (eq? type 'checked)
+		    (eq? type 'typed))
+	    ;;If no type  signature was specified for the clause:  we use the signature
 	    ;;of the last form in the body, performing type propagation.
 	    (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
-	      (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi)))))
-	(make-psi input-form.stx
-	  (build-lambda (identifier->symbol (qdef.var-id qdef))
-	      standard-formals.lex
-	    (psi.core-expr body.psi))
-	  (make-type-signature/single-value (qdef-closure.ots qdef))))))
+	      (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi))))
+	  (make-psi input-form.stx
+	    (build-lambda (identifier->symbol (qdef.var-id qdef))
+		standard-formals.lex
+	      (psi.core-expr body.psi))
+	    (make-type-signature/single-value (qdef-closure.ots qdef)))))))
 
   #| end of module |# )
 
@@ -268,6 +271,7 @@
 	;;We  establish the  syntactic binding  for "__who__"  before processing  the
 	;;body.  So the formals may shadow this binding.
 	(fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qdef.var-id qdef))
+      (for-each clambda-clause-signature.untyped-to-top! clause-signature*)
       (parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	(receive (formals*.lex body*.psi)
 	    (case type
@@ -279,7 +283,9 @@
 						standard-formals*.stx clause-signature* body**.stx))
 	      ((checked)
 	       (chi-case-lambda-clause*/checked input-form.stx lexenv.run lexenv.expand
-						standard-formals*.stx clause-signature* body**.stx)))
+						standard-formals*.stx clause-signature* body**.stx))
+	      (else
+	       (assertion-violation __who__ "internal error, invalid case-defun type" type)))
 	  (when (or (eq? type 'checked)
 		    (eq? type 'typed))
 	    (let ((clause-signature* (qdef-closure.clause-signature* qdef)))
@@ -313,6 +319,7 @@
   (receive (standard-formals.stx clause-signature)
       (syntax-object.parse-standard-clambda-clause-formals input-formals.stx)
     ;;CLAUSE-SIGNATURE is an instance of "<clambda-clause-signature>".
+    (clambda-clause-signature.untyped-to-top! clause-signature)
     (receive (standard-formals.lex body.psi)
 	(chi-lambda-clause/std input-form.stx lexenv.run lexenv.expand
 			       standard-formals.stx clause-signature body*.stx)
@@ -387,6 +394,7 @@
   (define (%chi-clambda input-form.stx lexenv.run lexenv.expand input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
 	(syntax-object.parse-standard-clambda-multi-clauses-formals input-formals*.stx)
+      (map clambda-clause-signature.untyped-to-top! clause-signature*)
       ;;We do  the validation  on the standard  formals, so that  the "_"  element is
       ;;excluded.
       (cond ((%sublists-of-same-length standard-formals*.stx)
@@ -475,13 +483,15 @@
 	;;STANDARD-FORMALS.STX is  a syntax object representing  the formal arguments
 	;;of the lambda clause as required  by R6RS.  CLAUSE-SIGNATURE is an instance
 	;;of  "<clambda-clause-signature>"  representing  the types  of  formals  and
-	;;retvals.
+	;;retvals.   This call  will use  "<top>" as  type for  formals without  type
+	;;annotation.
 	(syntax-object.parse-typed-clambda-clause-formals input-formals.stx)
       (%chi-lambda/parsed-formals input-form.stx lexenv.run lexenv.expand type
 				  standard-formals.stx clause-signature body*.stx)))
 
   (define* (%chi-lambda/parsed-formals input-form.stx lexenv.run lexenv.expand type
 				       standard-formals.stx clause-signature body*.stx)
+    (clambda-clause-signature.untyped-to-top! clause-signature)
     (receive (standard-formals.lex body.psi)
 	(case type
 	  ((typed)
@@ -491,9 +501,9 @@
 	   (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
 				      standard-formals.stx clause-signature body*.stx))
 	  (else
-	   (error __who__ "internal error, unknown type" type)))
-      ;;If no type  signature was specified for  the clause: we use  the signature of
-      ;;the last form in the body, performing type propagation.
+	   (assertion-violation __who__ "internal error, invalid lambda type" type)))
+      ;;If no type signature was specified for the clause's return values: we use the
+      ;;signature of the last form in the body, performing type propagation.
       (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
 	(clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi)))
       (make-psi input-form.stx
@@ -531,12 +541,14 @@
 	;;STANDARD-FORMALS.STX is  a syntax object representing  the formal arguments
 	;;of the lambda clause as required  by R6RS.  CLAUSE-SIGNATURE is an instance
 	;;of  "<clambda-clause-signature>"  representing  the types  of  formals  and
-	;;retvals.
+	;;retvals.   This call  will use  "<top>" as  type for  formals without  type
+	;;annotation.
 	(syntax-object.parse-typed-clambda-clause-formals input-formals.stx)
       (receive (lexenv.run lexenv.expand)
 	  ;;We establish  the syntactic binding  for "__who__" before  processing the
 	  ;;formals and the body.  So the formals may shadow this binding.
 	  (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ who.id)
+	(clambda-clause-signature.untyped-to-top! clause-signature)
 	(receive (standard-formals.lex body.psi)
 	    (case type
 	      ((typed)
@@ -544,8 +556,10 @@
 					  standard-formals.stx clause-signature body*.stx))
 	      ((checked)
 	       (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
-					  standard-formals.stx clause-signature body*.stx)))
-	  ;;If no type  signature was specified for the clause:  we use the signature
+					  standard-formals.stx clause-signature body*.stx))
+	      (else
+	       (assertion-violation __who__ "internal error, invalid named-lambda type" type)))
+	  ;;If no type signature was specified for the clause: we use the signature
 	  ;;of the last form in the body, performing type propagation.
 	  (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
 	    (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi)))
@@ -621,8 +635,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%chi-clambda input-form.stx lexenv.run lexenv.expand type input-formals*.stx body**.stx)
+  (define* (%chi-clambda input-form.stx lexenv.run lexenv.expand type input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
+	;;This call will use "<top>" as type for formals without type annotation.
 	(syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx)
       ;;We do  the validation  on the standard  formals, so that  the "_"  element is
       ;;excluded.
@@ -631,6 +646,7 @@
 		  (syntax-violation #f
 		    "invalid CASE-LAMBDA clause formals with the same length"
 		    input-form.stx same-length-formals*.stx))))
+      (for-each clambda-clause-signature.untyped-to-top! clause-signature*)
       (receive (formals*.lex body*.psi)
 	  (case type
 	    ((typed)
@@ -638,7 +654,9 @@
 					      standard-formals*.stx clause-signature* body**.stx))
 	    ((checked)
 	     (chi-case-lambda-clause*/checked input-form.stx lexenv.run lexenv.expand
-					      standard-formals*.stx clause-signature* body**.stx)))
+					      standard-formals*.stx clause-signature* body**.stx))
+	    (else
+	     (assertion-violation __who__ "internal error, invalid case-lambda type" type)))
 	;;If no type signature was specified for  the clause: we use the signature of
 	;;the last form in the body, performing type propagation.
 	(for-each (lambda (clause-signature body.psi)
@@ -679,6 +697,7 @@
 
   (define* (%chi-clambda input-form.stx lexenv.run lexenv.expand type who.id input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
+	;;This call will use "<top>" as type for formals without type annotation.
 	(syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx)
       ;;We do  the validation  on the standard  formals, so that  the "_"  element is
       ;;excluded.
@@ -691,14 +710,17 @@
 	  ;;We establish  the syntactic binding  for "__who__" before  processing the
 	  ;;formals and the body.  So the formals may shadow this binding.
 	  (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ who.id)
+	(for-each clambda-clause-signature.untyped-to-top! clause-signature*)
 	(receive (formals*.lex body*.psi)
 	    (case type
 	      ((typed)
 	       (chi-case-lambda-clause*/typed   input-form.stx lexenv.run lexenv.expand
-					        standard-formals*.stx clause-signature* body**.stx))
+						standard-formals*.stx clause-signature* body**.stx))
 	      ((checked)
 	       (chi-case-lambda-clause*/checked input-form.stx lexenv.run lexenv.expand
-						standard-formals*.stx clause-signature* body**.stx)))
+						standard-formals*.stx clause-signature* body**.stx))
+	      (else
+	       (assertion-violation __who__ "internal error, invalid named-case-lambda type" type)))
 	  ;;If no type  signature was specified for the clause:  we use the signature
 	  ;;of the last form in the body, performing type propagation.
 	  (for-each (lambda (clause-signature body.psi)

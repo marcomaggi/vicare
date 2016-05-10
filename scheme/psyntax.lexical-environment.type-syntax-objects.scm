@@ -115,12 +115,17 @@
 (case-define* syntax-object.parse-typed-argument
   ;;If  STX  is a  typed  or  untyped identifier,  return  2  values: the  identifier
   ;;representing  the syntactic  binding name  and the  "<object-type-spec>" instance
-  ;;representing the  type; otherwise raise an  exception.  When no type  is present:
-  ;;the type defaults to "<untyped>".
+  ;;representing the type; otherwise raise an exception.
+  ;;
+  ;;When no type annotation  is present in STX: the type  defaults to UNTYPED.OTS, or
+  ;;"<top>" when  UNTYPED.OTS is  not used.   We use  "<untyped>" only  if explicitly
+  ;;requested by the caller.
   ;;
   ((stx)
-   (syntax-object.parse-typed-argument stx (current-inferior-lexenv)))
+   (syntax-object.parse-typed-argument stx (current-inferior-lexenv) (<top>-ots)))
   ((stx lexenv)
+   (syntax-object.parse-typed-argument stx lexenv                    (<top>-ots)))
+  ((stx lexenv untyped.ots)
    (syntax-match stx (brace)
      ((brace ?id ?type)
       (values ?id (type-annotation->object-type-spec ?type lexenv)))
@@ -202,8 +207,10 @@
 
 (case-define* syntax-object.parse-typed-list-of-bindings
   ((lhs*)
-   (syntax-object.parse-typed-list-of-bindings lhs* (<untyped>-ots)))
-  ((lhs* unspecified.ots)
+   ;;By default we use "<top>" for the untyped syntactic binding.  We use "<untyped>"
+   ;;only if explicitly requested by the caller.
+   (syntax-object.parse-typed-list-of-bindings lhs* (<top>-ots)))
+  ((lhs* untyped.ots)
    ;;Parser function  for lists  of typed  syntactic bindings.  It  is used  to parse
    ;;bindings from  LET, DO and  similar syntaxes.   For example, when  expanding the
    ;;syntax:
@@ -227,10 +234,10 @@
    ;;1. A list of syntactic identifiers representing the syntactic binding names.
    ;;
    ;;2. A list  of instances of type "<object-type-spec>"  representing the syntactic
-   ;;   bindings' types.  UNSPECIFIED.OTS is used when the binding is untyped.
+   ;;   bindings' types.  UNTYPED.OTS is used when the binding is untyped.
    ;;
    (receive-and-return (lhs*.id lhs*.ots)
-       (syntax-object.parse-typed-list-of-bindings/let-star lhs* unspecified.ots)
+       (syntax-object.parse-typed-list-of-bindings/let-star lhs* untyped.ots)
      (cond ((duplicate-bound-formals? lhs*.id)
 	    => (lambda (duplicate-id)
 		 (syntax-violation __who__
@@ -239,8 +246,10 @@
 
 (case-define* syntax-object.parse-typed-list-of-bindings/let-star
   ((lhs*)
-   (syntax-object.parse-typed-list-of-bindings/let-star lhs* (<untyped>-ots)))
-  ((lhs* unspecified.ots)
+   ;;By default we use "<top>" for the untyped syntactic binding.  We use "<untyped>"
+   ;;only if explicitly requested by the caller.
+   (syntax-object.parse-typed-list-of-bindings/let-star lhs* (<top>-ots)))
+  ((lhs* untyped.ots)
    ;;Parser function  for lists  of typed  syntactic bindings.  It  is used  to parse
    ;;bindings from LET* and similar syntaxes; remember that LET* allows for duplicate
    ;;identifiers.  For example, when expanding the syntax:
@@ -264,7 +273,7 @@
    ;;1. A list of syntactic identifiers representing the syntactic binding names.
    ;;
    ;;2. A list  of instances of type "<object-type-spec>"  representing the syntactic
-   ;;   bindings' types.  UNSPECIFIED.OTS is used when the binding is untyped.
+   ;;   bindings' types.  UNTYPED.OTS is used when the binding is untyped.
    ;;
    (define lexenv
      (current-inferior-lexenv))
@@ -294,7 +303,7 @@
 	  (receive (lhs*.id lhs*.ots)
 	      (recur ?other-lhs*)
 	    (values (cons ?id lhs*.id)
-		    (cons unspecified.ots lhs*.ots))))
+		    (cons untyped.ots lhs*.ots))))
 	 (?thing
 	  (syntax-violation __who__
 	    "expected optionally typed identifier as syntactic binding name" ?thing)))))))
@@ -400,9 +409,8 @@
 
   (case-define syntax-object.parse-typed-formals
     ((input-formals.stx)
-     ;;By default  we use  "<top>" for  the untyped  syntactic binding,  because this
-     ;;subject of the parsing is a formals  syntax object: we do not want "<untyped>"
-     ;;OTSs lurking in there.
+     ;;By  default  we  use  "<top>"  for the  untyped  syntactic  binding.   We  use
+     ;;"<untyped>" only if explicitly requested by the caller.
      (syntax-object.parse-typed-formals input-formals.stx (<top>-ots)))
     ((input-formals.stx untyped.ots)
      (receive (standard-formals.stx formals.ots)
@@ -428,7 +436,7 @@
        (receive-and-return (standard-formals.stx formals.ots)
 	   (let process-next-arg ((?arg* ?arg*))
 	     (cond ((pair? ?arg*)
-		    (%process-arg* ?arg* process-next-arg %synner))
+		    (%process-arg* ?arg* untyped.ots process-next-arg %synner))
 		   ((identifier? ?rest-id)
 		    (values ?rest-id (tail-type-annotation->object-type-spec ?rest-type (current-inferior-lexenv) ?rest-type)))
 		   (else
@@ -457,7 +465,7 @@
        (receive-and-return (standard-formals.stx formals.ots)
 	   (let process-next-arg ((?arg* ?arg*))
 	     (cond ((pair? ?arg*)
-		    (%process-arg* ?arg* process-next-arg %synner))
+		    (%process-arg* ?arg* untyped.ots process-next-arg %synner))
 		   ((identifier? ?rest-id)
 		    (values ?rest-id (<list>-ots)))
 		   (else
@@ -470,14 +478,14 @@
        (receive-and-return (standard-formals.stx formals.ots)
 	   (let process-next-arg ((?arg* ?arg*))
 	     (if (pair? ?arg*)
-		 (%process-arg* ?arg* process-next-arg %synner)
+		 (%process-arg* ?arg* untyped.ots process-next-arg %synner)
 	       (values '() '())))
 	 (%validate-standard-formals standard-formals.stx %synner)))
 
       (_
        (%synner "invalid formals syntax"))))
 
-  (define (%process-arg* arg*.stx process-next-arg synner)
+  (define (%process-arg* arg*.stx untyped.ots process-next-arg synner)
     (receive (standard-formals.stx formals.ots)
 	(process-next-arg (cdr arg*.stx))
       (let ((arg.stx (car arg*.stx)))
@@ -485,7 +493,7 @@
 	  ;;Untyped argument.
 	  (?id
 	   (identifier? ?id)
-	   (values (cons ?id standard-formals.stx) (cons (<untyped>-ots) formals.ots)))
+	   (values (cons ?id standard-formals.stx) (cons untyped.ots formals.ots)))
 	  ;;Typed argument.
 	  ((brace ?id ?type)
 	   (identifier? ?id)
@@ -567,68 +575,78 @@
 
 ;;;; type syntax objects: tagged binding parsing, callable signature
 
-(define (syntax-object.parse-typed-clambda-clause-formals callable-signature.stx)
-  ;;Given a  syntax object  representing a  typed callable  spec: split  the standard
-  ;;formals  from the  type  signature; do  test for  duplicate  bindings.  Return  2
-  ;;values:
-  ;;
-  ;;1. A proper or improper list of identifiers representing the standard formals.
-  ;;
-  ;;2. An instance of "<clambda-clause-signature>".
-  ;;
-  ;;This function *does*  enforce the constraint: the identifiers  in type identifier
-  ;;positions must  actually be type  identifiers (with syntactic  binding descriptor
-  ;;already added to the LEXENV).
-  ;;
-  ;;As usage example, when the syntax use:
-  ;;
-  ;;   (lambda/typed ?formals . ?body)
-  ;;
-  ;;is parsed, this function is called as:
-  ;;
-  ;;   (syntax-object.parse-typed-clambda-clause-formals #'?formals)
-  ;;
-  (syntax-match callable-signature.stx (brace)
-    ;;With return values tagging.
-    (((brace ?who . ?rv-types) . ?formals)
-     (underscore-id? ?who)
-     (receive (standard-formals.stx argvals.sig)
-	 (syntax-object.parse-typed-formals ?formals)
-       (values standard-formals.stx
-	       (make-clambda-clause-signature (make-type-signature ?rv-types) argvals.sig))))
-    ;;Without return values tagging.
-    (?formals
-     (receive (standard-formals.stx argvals.sig)
-	 (syntax-object.parse-typed-formals ?formals)
-       (values standard-formals.stx
-	       (make-clambda-clause-signature (make-type-signature/fully-untyped)
-					      argvals.sig))))))
+(case-define* syntax-object.parse-typed-clambda-clause-formals
+  ((input-formals.stx)
+   ;;By default we use "<top>" for the untyped syntactic binding.  We use "<untyped>"
+   ;;only if explicitly requested by the caller.
+   (syntax-object.parse-typed-clambda-clause-formals input-formals.stx (<top>-ots)))
+  ((input-formals.stx untyped.ots)
+   ;;Given a  syntax object representing  a typed  callable spec: split  the standard
+   ;;formals  from the  type signature;  do test  for duplicate  bindings.  Return  2
+   ;;values:
+   ;;
+   ;;1. A proper or improper list of identifiers representing the standard formals.
+   ;;
+   ;;2. An instance of "<clambda-clause-signature>".
+   ;;
+   ;;This function *does* enforce the  constraint: the identifiers in type identifier
+   ;;positions must actually  be type identifiers (with  syntactic binding descriptor
+   ;;already added to the LEXENV).
+   ;;
+   ;;As usage example, when the syntax use:
+   ;;
+   ;;   (lambda/typed ?formals . ?body)
+   ;;
+   ;;is parsed, this function is called as:
+   ;;
+   ;;   (syntax-object.parse-typed-clambda-clause-formals #'?formals)
+   ;;
+   (syntax-match input-formals.stx (brace)
+     ;;With return values tagging.
+     (((brace ?who . ?rv-types) . ?arg-formals)
+      (underscore-id? ?who)
+      (receive (standard-formals.stx argvals.sig)
+	  (syntax-object.parse-typed-formals ?arg-formals untyped.ots)
+	(values standard-formals.stx
+		(make-clambda-clause-signature (make-type-signature ?rv-types) argvals.sig))))
+     ;;Without return values tagging.
+     (?arg-formals
+      (receive (standard-formals.stx argvals.sig)
+	  (syntax-object.parse-typed-formals ?arg-formals untyped.ots)
+	(values standard-formals.stx
+		(make-clambda-clause-signature (make-type-signature/fully-untyped)
+					       argvals.sig)))))))
 
-(define (syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx)
-  ;;Given a list of syntax objects  INPUT-FORMALS*.STX: parse them as clambda clauses
-  ;;typed formals; do test for duplicate bindings.  Return the following values:
-  ;;
-  ;;1. A list of syntax objects representing the standard formals of each clause.
-  ;;
-  ;;2. A list of "<clambda-clause-signature>" instances.
-  ;;
-  ;;As usage example, when the syntax use:
-  ;;
-  ;;   (case-lambda/typed (?formals . ?body) ...)
-  ;;
-  ;;is parsed, this function is called as:
-  ;;
-  ;;   (syntax-object.parse-typed-clambda-multi-clauses-formals (#'?formals ...))
-  ;;
-  (let recur ((input-formals*.stx input-formals*.stx))
-    (if (pair? input-formals*.stx)
-	(receive (standard-formals.stx clause-signature)
-	    (syntax-object.parse-typed-clambda-clause-formals (car input-formals*.stx))
-	  (receive (standard-formals*.stx clause-signature*)
-	      (recur (cdr input-formals*.stx))
-	    (values (cons standard-formals.stx standard-formals*.stx)
-		    (cons clause-signature     clause-signature*))))
-      (values '() '()))))
+(case-define* syntax-object.parse-typed-clambda-multi-clauses-formals
+  ((input-formals*.stx)
+   ;;By default we use "<top>" for the untyped syntactic binding.  We use "<untyped>"
+   ;;only if explicitly requested by the caller.
+   (syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx (<top>-ots)))
+  ((input-formals*.stx untyped.ots)
+   ;;Given a list of syntax objects INPUT-FORMALS*.STX: parse them as clambda clauses
+   ;;typed formals; do test for duplicate bindings.  Return the following values:
+   ;;
+   ;;1. A list of syntax objects representing the standard formals of each clause.
+   ;;
+   ;;2. A list of "<clambda-clause-signature>" instances.
+   ;;
+   ;;As usage example, when the syntax use:
+   ;;
+   ;;   (case-lambda/typed (?formals . ?body) ...)
+   ;;
+   ;;is parsed, this function is called as:
+   ;;
+   ;;   (syntax-object.parse-typed-clambda-multi-clauses-formals (#'?formals ...))
+   ;;
+   (let recur ((input-formals*.stx input-formals*.stx))
+     (if (pair? input-formals*.stx)
+	 (receive (standard-formals.stx clause-signature)
+	     (syntax-object.parse-typed-clambda-clause-formals (car input-formals*.stx) untyped.ots)
+	   (receive (standard-formals*.stx clause-signature*)
+	       (recur (cdr input-formals*.stx))
+	     (values (cons standard-formals.stx standard-formals*.stx)
+		     (cons clause-signature     clause-signature*))))
+       (values '() '())))))
 
 (define* (syntax-object.typed-clambda-clause-formals? input-formals.stx)
   ;;Return true  if INPUT-FORMALS.STX  is a syntax  object representing  valid tagged

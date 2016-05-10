@@ -26,7 +26,8 @@
    <type-signature>
    <type-signature>-rtd					<type-signature>-rcd
    make-type-signature					type-signature?
-   type-signature.object-type-specs			type-signature.syntax-object
+   type-signature.object-type-specs			type-signature.object-type-specs-set!
+   type-signature.syntax-object
 
 ;;; special constructors
    make-type-signature/single-void			make-type-signature/single-untyped
@@ -44,19 +45,20 @@
    type-signature=?
 
 ;;; predicates
-   list-of-type-signatures?
+   list-of-type-signatures?				type-signature.empty?
    type-signature.fully-untyped?			type-signature.partially-untyped?
-   type-signature.untyped?				type-signature.empty?
    type-signature.super-and-sub?			type-signature.compatible-super-and-sub?
    type-signature.single-type?				type-signature.single-top-tag?
    type-signature.single-type-or-fully-untyped?		type-signature.no-return?
+   type-signature.only-<untyped>-and-<list>?
+   type-signature.only-<untyped>-and-<top>-and-<list>?
 
    type-signature.match-arguments-against-operands
 
 ;;; accessors
    type-signature.min-count				type-signature.max-count
    type-signature.min-and-max-counts
-   type-signature.untyped-to-top
+   type-signature.untyped-to-top			type-signature.untyped-to-top!
 
    type-signature.common-ancestor			type-signature.union
    type-signature.union-same-number-of-operands
@@ -248,9 +250,11 @@
 ;;;; type signature: type definition
 
 (define-record-type (<type-signature> make-type-signature type-signature?)
-  (nongenerative vicare:expander:<type-signature>)
+  (nongenerative *0*vicare:expander:<type-signature>)
   (fields
-    (immutable specs	type-signature.object-type-specs)
+    (mutable specs
+	     type-signature.object-type-specs
+	     type-signature.object-type-specs-set!)
 		;A  proper   or  improper  list  of   "<object-type-spec>"  instances
 		;representing the types of values matching this signature.
     (mutable memoised-tags			type-signature.memoised-tags		      type-signature.memoised-tags-set!)
@@ -480,7 +484,7 @@
 	    ;;End of IMproper list.
 	    #t)))))
 
-(define* (type-signature.untyped? {signature type-signature?})
+(define* (type-signature.only-<untyped>-and-<list>? {signature type-signature?})
   ;;Return true if  the type signature has only untyped  items, either "<untyped>" or
   ;;"<list>"; otherwise return false.
   ;;
@@ -488,17 +492,37 @@
    signature type-signature.memoised-untyped? type-signature.memoised-untyped?-set!
    (let loop ((specs (type-signature.object-type-specs signature)))
      (cond ((pair? specs)
-	    (or (<untyped>-ots? (car specs))
-		(loop (cdr specs))))
+	    (and (<untyped>-ots? (car specs))
+		 (loop (cdr specs))))
 	   ((null? specs)
 	    ;;End of proper list.
-	    #f)
+	    #t)
 	   ((<list>-ots? specs)
 	    ;;End of improper list with an UNtyped OTS.
 	    #t)
 	   (else
 	    ;;End of improper list with a typed OTS.
 	    #f)))))
+
+(define* (type-signature.only-<untyped>-and-<top>-and-<list>? {signature type-signature?})
+  ;;Return true  if the type  signature has  only: "<untyped>", "<top>"  and "<list>"
+  ;;items; otherwise return false.
+  ;;
+  (let loop ((specs (type-signature.object-type-specs signature)))
+    (cond ((pair? specs)
+	   (and (let ((ots (car specs)))
+		  (or (<top>-ots?     ots)
+		      (<untyped>-ots? ots)))
+		(loop (cdr specs))))
+	  ((null? specs)
+	   ;;End of proper list.
+	   #t)
+	  ((<list>-ots? specs)
+	   ;;End of improper list with an UNtyped OTS.
+	   #t)
+	  (else
+	   ;;End of improper list with a typed OTS.
+	   #f))))
 
 (define* (type-signature.single-type? {signature type-signature?})
   ;;Return true if SIGNATURE represents a single value; otherwise return false.
@@ -592,6 +616,20 @@
 	   (else
 	    #;(assert (or (<list>-ots? specs) (list-of-type-spec? specs)))
 	    specs)))))
+
+(define* (type-signature.untyped-to-top! {sig type-signature?})
+  (type-signature.object-type-specs-set!
+   sig (let recur ((specs (type-signature.object-type-specs sig)))
+	 (cond ((pair? specs)
+		(cons (if (<untyped>-ots? (car specs))
+			  (<top>-ots)
+			(car specs))
+		      (recur (cdr specs))))
+	       ((null? specs)
+		'())
+	       (else
+		#;(assert (or (<list>-ots? specs) (list-of-type-spec? specs)))
+		specs)))))
 
 
 ;;;; matching: signatures exact matching

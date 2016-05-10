@@ -482,8 +482,8 @@
   (define (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
 						caller-who lhs*.source-ots rhs*.psi)
     ;;In  a  LET, LET*,  LETREC  or  LETREC*  syntax,  the syntactic  bindings  have:
-    ;;LHS*.SOURCE-OTS has types  specified in the source code, false  is used when no
-    ;;type was  specified; RHS.PSI as  expanded right-hand side expression.
+    ;;LHS*.SOURCE-OTS has  types specified  in the source  code, "<untyped>"  is used
+    ;;when no type was specified; RHS.PSI as expanded right-hand side expression.
     ;;
     ;;Here  we  take  care  of   performing  right-hand  side  type  propagation  and
     ;;validation.
@@ -493,17 +493,16 @@
 	  ;;Here we process the  RHS type signature to make sure  it returns a single
 	  ;;value.
 	  (define rhs.ots (%process-rhs-signature caller-who input-form.stx rhs.psi))
-	  (if (and lhs.source-ots
-		   (not (<untyped>-ots? lhs.source-ots)))
-	      ;;The LHS  has a  specified type in  the source code:  here we  want to
-	      ;;validate RHS as returning a single value of correct type.
-	      (values lhs.source-ots
-		      (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
-					  caller-who lhs.source-ots rhs.psi rhs.ots))
-	    ;;The LHS has  no specified type in  the source code: here we  want to do
-	    ;;right-hand side  type propagation.   There is no  need to  validate the
-	    ;;RHS.
-	    (values rhs.ots (psi.core-expr rhs.psi))))
+	  (if (<untyped>-ots? lhs.source-ots)
+	      ;;The LHS has no specified type in  the source code: here we want to do
+	      ;;right-hand side type  propagation.  There is no need  to validate the
+	      ;;RHS.
+	      (values rhs.ots (psi.core-expr rhs.psi))
+	    ;;The  LHS has  a specified  type in  the source  code: here  we want  to
+	    ;;validate RHS as returning a single value of correct type.
+	    (values lhs.source-ots
+		    (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
+					caller-who lhs.source-ots rhs.psi rhs.ots))))
       lhs*.source-ots rhs*.psi))
 
 ;;; --------------------------------------------------------------------
@@ -662,6 +661,13 @@
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (identifier? ?recur)
        (chi-expr (bless
+		  `(letrec/std ((,?recur (lambda/std ,?lhs* ,?body . ,?body*)))
+		     (,?recur . ,?rhs*)))
+		 lexenv.run lexenv.expand))
+
+      #;((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       (identifier? ?recur)
+       (chi-expr (bless
 		  `(internal-body
 		     ;;Here  we use  DEFINE/CHECKED so  that we  can easily  define a
 		     ;;typed function.   Using LETREC would be  more descriptive, but
@@ -749,7 +755,7 @@
        ;;* False if the source code left the syntactic binding's type unspecified.
        ;;
        (receive (lhs*.id lhs*.ots)
-	   (syntax-object.parse-typed-list-of-bindings ?lhs* #f)
+	   (syntax-object.parse-typed-list-of-bindings ?lhs* (<untyped>-ots))
 	 (let ((rhs*.psi (chi-expr* ?rhs* lexenv.run lexenv.expand)))
 	   (receive (lhs*.out-ots rhs*.core)
 	       ;;Here we take care of performing right-hand side type propagation and
@@ -763,6 +769,13 @@
 				 build-let))))))
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       (identifier? ?recur)
+       (chi-expr (bless
+		  `(letrec/checked ((,?recur (lambda/checked ,?lhs* ,?body . ,?body*)))
+		     (,?recur . ,?rhs*)))
+		 lexenv.run lexenv.expand))
+
+      #;((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (identifier? ?recur)
        (chi-expr (bless
 		  `(internal-body
@@ -813,7 +826,7 @@
 	     ;;unspecified.
 	     ;;
 	     (receive (this-lhs*.id this-lhs*.ots)
-		 (syntax-object.parse-typed-list-of-bindings/let-star (list (car lhs*.stx)) #f)
+		 (syntax-object.parse-typed-list-of-bindings/let-star (list (car lhs*.stx)) (<untyped>-ots))
 	       (let ((rhs.psi (chi-expr (car rhs*.stx) lexenv.run lexenv.expand)))
 		 (receive (this-lhs*.out-ots this-rhs*.core)
 		     ;;Here  we   take  care  of  performing   right-hand  side  type
@@ -943,7 +956,7 @@
 	   ;;syntactic binding; false if the source code left the syntactic binding's
 	   ;;type unspecified.
 	   (((lhs*.id lhs*.ots)
-	     (syntax-object.parse-typed-list-of-bindings ?lhs* #f))
+	     (syntax-object.parse-typed-list-of-bindings ?lhs* (<untyped>-ots)))
 	    ((rib lexenv.run lhs*.out-lex)
 	     (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv.run)))
 	 (let loop ((lhs*.id	lhs*.id)
@@ -2307,7 +2320,7 @@
 	 => (lambda (producer.ots)
 	      (let ((producer-item.ots	(list-of-type-spec.item-ots producer.ots))
 		    (formals.specs	(type-signature.object-type-specs formals.sig)))
-		(if (type-signature.untyped? formals.sig)
+		(if (type-signature.only-<untyped>-and-<list>? formals.sig)
 		    ;;We  perform type  propagation by  replacing FORMALS.SIG  with a
 		    ;;signature having PRODUCER-ITEM.OTS as types.
 		    (let ((propagated.sig (make-type-signature (map (lambda (formal.ots) producer-item.ots) formals.specs))))
@@ -2348,10 +2361,9 @@
 	   (%error-mismatch "mismatching number of arguments in type signatures"))
 	 ;;If  we are  here  the number  of  produced values  matches  the number  of
 	 ;;expected values.
-	 (if (type-signature.untyped? formals.sig)
-	     ;;The expected type signature has only  untyped items: all the types are
-	     ;;"<top>".  We  perform type  propagation by replacing  FORMALS.SIG with
-	     ;;PRODUCER.SIG.
+	 (if (type-signature.only-<untyped>-and-<list>? formals.sig)
+	     ;;The expected type  signature has only untyped items.   We perform type
+	     ;;propagation by replacing FORMALS.SIG with PRODUCER.SIG.
 	     (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 					       caller-who return-values?
 					       standard-formals.stx producer.sig
@@ -2442,7 +2454,7 @@
 				%error-mismatch)
     ;;If  we are  here  the number  of  produced values  matches  the number  of
     ;;expected values.
-    (if (type-signature.untyped? formals.sig)
+    (if (type-signature.only-<untyped>-and-<list>? formals.sig)
 	;;The expected type  signature has only untyped items.   We perform type
 	;;propagation   as  much   as   possible   replacing  FORMALS.SIG   with
 	;;PROPAGATED.SIG.

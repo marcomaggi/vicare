@@ -99,7 +99,7 @@
     type-signature.syntax-object			type-signature.object-type-specs
     type-signature=?
     type-signature.fully-untyped?			type-signature.partially-untyped?
-    type-signature.untyped?				type-signature.empty?
+    type-signature.only-<untyped>-and-<list>?		type-signature.empty?
     type-signature.super-and-sub?			type-signature.compatible-super-and-sub?
     type-signature.single-type?				type-signature.single-top-tag?
     type-signature.single-type-or-fully-untyped?	type-signature.no-return?

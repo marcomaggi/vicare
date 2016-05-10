@@ -1492,7 +1492,7 @@
 				 all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id
 				 __synner__)
 		     `(receive/std ,this-clause-formal*.tmp-id
-			  (assert-signature-and-return ,(type-signature.syntax-object (car formals*.sig)) ,(car rhs*.stx))
+			  ,(car rhs*.stx)
 			,(recur (cdr standard-formals*.stx) (cdr formals*.sig) (cdr input-formals*.stx)
 				(cdr rhs*.stx) all-formal*.standard-id all-formal*.input-stx all-formal*.tmp-id))))
 
@@ -1633,7 +1633,9 @@
 	   ;;standard  formals in  a single  clause.  FORMALS.SIG  is an  instance of
 	   ;;"<type-signature>".
 	   (receive (standard-formals.stx formals.sig)
-	       (syntax-object.parse-typed-formals (car input-formals*.stx))
+	       ;;Here  we  use  "<untyped>"  for  syntactic  bindings  with  no  type
+	       ;;annotation, because we want to perform RHS type propagation.
+	       (syntax-object.parse-typed-formals (car input-formals*.stx) (<untyped>-ots))
 	     (%parse-lhs* (cdr input-formals*.stx)
 			  (cons standard-formals.stx	rev-standard-formals*.stx)
 			  (cons formals.sig		rev-formals*.sig)))
@@ -4364,6 +4366,7 @@
   (syntax-match input-form.stx ()
     ((_ ?formals ?body0 ?body* ...)
      (receive (standard-formals.stx formals.sig)
+	 ;;This call will use "<top>" for formals without type annotation.
 	 (syntax-object.parse-typed-formals ?formals)
        (syntax-match standard-formals.stx ()
 	 ((?id* ... ?id0)
@@ -4519,6 +4522,7 @@
 
   (define (define-constant-values/checked-macro input-form.stx formals.stx body*.stx)
     (receive (standard-formals.stx formals.sig)
+	;;This call will use "<top>" for arguments without type annotation.
 	(syntax-object.parse-typed-formals formals.stx)
       (syntax-match standard-formals.stx ()
 	((?id* ... ?id0)

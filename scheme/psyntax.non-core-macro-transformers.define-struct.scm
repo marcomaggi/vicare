@@ -72,7 +72,9 @@
 
 (define (%build-output-form input-form.stx type.id maker.id predicate.id field*.stx uid)
   (define-values (field*.id field*.ots)
-    (syntax-object.parse-typed-list-of-bindings field*.stx (<top>-ots)))
+    ;;This  call  will  use  "<top>"  as   type  annotation  for  the  untyped  field
+    ;;specifications.
+    (syntax-object.parse-typed-list-of-bindings field*.stx))
   (unless (all-identifiers? field*.id)
     (syntax-violation __module_who__
       "expected list of identifiers as fields speciication"

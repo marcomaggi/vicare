@@ -1001,6 +1001,14 @@
 	     ;;expression.
 	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
 
+	    ((type-signature.no-return? asrt.sig)
+	     (syntax-violation caller-who
+	       "internal error, invalid <no-return> assertion signature"
+	       input-form.stx asrt.stx))
+
+	    ((type-signature.no-return? expr.sig)
+	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
+
 	    ((type-signature.fully-untyped? asrt.sig)
 	     ;;The assertion's signature always matches expression's signature.
 	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
@@ -1011,9 +1019,6 @@
 	     (%run-time-validation input-form.stx lexenv.run lexenv.expand
 				   caller-who asrt.stx asrt.sig expr.psi
 				   return-values? cast-signature?))
-
-	    ((type-signature.no-return? expr.sig)
-	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
 
 	    ((type-signature.super-and-sub? asrt.sig expr.sig)
 	     ;;Good.   Everything  is  all  right at  expand-time.   We  replace  the
@@ -1101,7 +1106,9 @@
 		   `(,validator.stx ,consumer-formals.sexp ,operand-index __who__)))
 
 		(else
-		 (assertion-violation caller-who "internal error, invalid assertion signature" asrt.stx)))))
+		 (assertion-violation caller-who
+		   "internal error, invalid assertion signature"
+		   input-form.stx asrt.stx asrt.sig)))))
       (case number-of-validation-forms
 	((0)
 	 ;;No  validation forms,  so  just  evaluate the  expression.   To check  the
