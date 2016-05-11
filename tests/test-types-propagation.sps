@@ -2747,6 +2747,102 @@
 	  c)
 	=> (<positive-fixnum>))
 
+;;; --------------------------------------------------------------------
+;;; standard variables
+
+  (doit (internal-body
+	  (define/std a 1)
+	  a)
+	=> (<top>))
+
+  (doit (internal-body
+	  (define/std a)
+	  a)
+	=> (<top>))
+
+;;; --------------------------------------------------------------------
+;;; typed variables
+
+  (doit (internal-body
+	  (define/typed {a <fixnum>} 1)
+	  a)
+	=> (<fixnum>))
+
+  (doit (internal-body
+	  (define/typed a)
+	  a)
+	=> (<void>))
+
+  (doit (internal-body
+	  (define/typed a 1)
+	  a)
+	=> (<positive-fixnum>))
+
+  (doit (internal-body
+	  (define/typed a (cast-signature <list> 1))
+	  a)
+	=> (<top>))
+
+  (doit (internal-body
+	  (define/typed a (cast-signature (list-of <fixnum>) 1))
+	  a)
+	=> (<fixnum>))
+
+;;; --------------------------------------------------------------------
+;;; checked variables
+
+  (doit (internal-body
+	  (define/checked {a <fixnum>} 1)
+	  a)
+	=> (<fixnum>))
+
+  (doit (internal-body
+	  (define/checked a)
+	  a)
+	=> (<void>))
+
+  (doit (internal-body
+	  (define/checked a 1)
+	  a)
+	=> (<positive-fixnum>))
+
+  (doit (internal-body
+	  (define/checked a (cast-signature <list> 1))
+	  a)
+	=> (<top>))
+
+  (doit (internal-body
+	  (define/checked a (cast-signature (list-of <fixnum>) 1))
+	  a)
+	=> (<fixnum>))
+
+;;;
+
+  (doit (internal-body
+	  (define {a <fixnum>} 1)
+	  a)
+	=> (<fixnum>))
+
+  (doit (internal-body
+	  (define a)
+	  a)
+	=> (<void>))
+
+  (doit (internal-body
+	  (define a 1)
+	  a)
+	=> (<positive-fixnum>))
+
+  (doit (internal-body
+	  (define a (cast-signature <list> 1))
+	  a)
+	=> (<top>))
+
+  (doit (internal-body
+	  (define a (cast-signature (list-of <fixnum>) 1))
+	  a)
+	=> (<fixnum>))
+
   #| end of PARAMETRISE |# )
 
 
