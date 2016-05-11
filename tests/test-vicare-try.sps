@@ -1131,7 +1131,7 @@
 	  (do (({x <fixnum>} 3 (-- x)))
 	      ((zero? x)
 	       (add-result 'do-exit)
-	       (values x y))
+	       x)
 	    (try
 		(begin
 		  (add-result 'thunk-in)

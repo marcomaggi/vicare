@@ -2727,6 +2727,29 @@
   (void))
 
 
+(parametrise ((check-test-name	'define-in-body))
+
+  (doit (internal-body
+	  (define a 1)
+	  a)
+	=> (<positive-fixnum>))
+
+  (doit (internal-body
+	  (define a 1)
+	  (define b a)
+	  b)
+	=> (<positive-fixnum>))
+
+  (doit (internal-body
+	  (define a 1)
+	  (define b a)
+	  (define c b)
+	  c)
+	=> (<positive-fixnum>))
+
+  #| end of PARAMETRISE |# )
+
+
 (parametrise ((check-test-name	'doc-examples))
 
   #;(debug-print

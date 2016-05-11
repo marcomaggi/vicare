@@ -529,7 +529,14 @@
 
 	(<no-return>
 	 ;;The expression is marked as not-returning.
-	 (%handle-error common "expression used as right-hand side in LET syntactic binding is typed as not returning"))
+	 (when (options::warn-about-not-returning-expressions)
+	   (raise-continuable
+	    (condition
+	      (make-who-condition caller-who)
+	      (make-message-condition "expression used as right-hand side in LET syntactic binding is typed as not returning")
+	      (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
+	      (make-type-signature-condition (psi.retvals-signature rhs.psi)))))
+	 (<top>-ots))
 
 	((<void>)
 	 ;;The expression is marked as returning void.
@@ -537,7 +544,7 @@
 
 	((unspecified-values)
 	 ;;The expression returns an unspecified  number of values.  Let's simulate a
-	 ;;"<top>" syntactic binding  are delegate the run-time code  to validate the
+	 ;;"<top>" syntactic binding  and delegate the run-time code  to validate the
 	 ;;number of arguments.
 	 (<top>-ots))
 

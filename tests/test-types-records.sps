@@ -1321,10 +1321,10 @@
   (check
       (internal-body
 	(define-record-type alpha
-	  (fields {a <fixnum>}))
+	  (fields {a <non-negative-fixnum>}))
 	(define-record-type beta
 	  (parent alpha)
-	  (fields {b <fixnum>})
+	  (fields {b <non-negative-fixnum>})
 	  (hash-function
 	    (lambda (alpha-hash)
 	      (assert (not alpha-hash))
@@ -1338,16 +1338,16 @@
   (check
       (internal-body
 	(define-record-type alpha
-	  (fields {a <fixnum>})
+	  (fields {a <non-negative-fixnum>})
 	  (hash-function
 	    (lambda ()
 	      (lambda ({O alpha})
 		(.a O)))))
 	(define-record-type beta
 	  (parent alpha)
-	  (fields {b <fixnum>})
+	  (fields {b <non-negative-fixnum>})
 	  (hash-function
-	    (lambda (alpha-hash)
+	    (lambda ({alpha-hash <hash-function>})
 	      (lambda ({O beta})
 		(fx+ (alpha-hash O) (.b O))))))
 	(.hash (new beta 1 2)))
@@ -1358,16 +1358,16 @@
   (check
       (internal-body
 	(define-record-type alpha
-	  (fields {a <fixnum>})
+	  (fields {a <non-negative-fixnum>})
 	  (hash-function
 	    (lambda ()
 	      (lambda ({O alpha})
 		(.a O)))))
 	(define-record-type beta
 	  (parent alpha)
-	  (fields {b <fixnum>})
+	  (fields {b <non-negative-fixnum>})
 	  (hash-function
-	    (lambda (alpha-hash)
+	    (lambda ({alpha-hash (hash-function alpha)})
 	      (lambda ({O beta})
 		(let (({A alpha} O))
 		  (fx+ (.hash A) (.b O)))))))

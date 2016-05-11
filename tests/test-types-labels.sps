@@ -413,8 +413,8 @@
       (lambda (parent-func)
 	fx=?))
     (comparison-procedure
-      (lambda (parent-func)
-	(lambda (a b)
+      (lambda ({parent-func (comparison-procedure <fixnum>)})
+	(lambda ({a <my-fixnum>} {b <my-fixnum>})
 	  (cond ((fx=? a b)	 0)
 		((fx<=? a b)	-1)
 		(else		+1)))))

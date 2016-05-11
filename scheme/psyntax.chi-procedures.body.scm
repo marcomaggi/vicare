@@ -1158,20 +1158,20 @@
       ;;
       (syntax-match input-form.stx ()
 	((_ (?lhs . ?formals) ?body0 ?body* ...)
-	 (%process-standard-function-definition input-form.stx lexenv.run
-						?lhs ?formals `(,?body0 . ,?body*) synner))
+	 (%process-function-definition input-form.stx lexenv.run
+				       ?lhs ?formals `(,?body0 . ,?body*) synner))
 
 	((_ ?lhs ?rhs)
-	 (%process-standard-variable-definition-with-init-expr	input-form.stx lexenv.run ?lhs ?rhs synner))
+	 (%process-variable-definition input-form.stx lexenv.run ?lhs #t ?rhs synner))
 
 	((_ ?lhs)
-	 (%process-standard-variable-definition-with-init-expr	input-form.stx lexenv.run ?lhs (bless '(void)) synner))
+	 (%process-variable-definition input-form.stx lexenv.run ?lhs #f #f synner))
 
 	(_
 	 (synner "invalid syntax"))))
 
-    (define (%process-standard-function-definition input-form.stx lexenv.run
-						   lhs.id input-formals.stx body*.stx synner)
+    (define (%process-function-definition input-form.stx lexenv.run
+					  lhs.id input-formals.stx body*.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as function name" lhs.id))
       ;;From parsing the standard formals we get  2 values: a proper or improper list
@@ -1187,11 +1187,12 @@
 	       (qdef	(make-qdef-standard-defun input-form.stx lhs.id standard-formals.stx body*.stx lhs.ots)))
 	  (values lhs.id lhs.ots qdef lexenv.run))))
 
-    (define (%process-standard-variable-definition-with-init-expr input-form.stx lexenv.run lhs.id rhs.stx synner)
+    (define (%process-variable-definition input-form.stx lexenv.run lhs.id init-expr? rhs.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
-      (let ((qdef (make-qdef-standard-defvar input-form.stx lhs.id rhs.stx)))
-	(values lhs.id (<top>-ots) qdef lexenv.run)))
+      (let ((lhs.ots	(<top>-ots))
+	    (qdef	(make-qdef-standard-defvar input-form.stx lhs.id init-expr? rhs.stx)))
+	(values lhs.id lhs.ots qdef lexenv.run)))
 
     #| end of module: %PARSE-MACRO-USE |# )
 
@@ -1278,12 +1279,12 @@
   ;;The  BODY-FORM.STX  parsed  by  CHI-BODY*  is  a  syntax  object  representing  a
   ;;DEFINE/TYPED core macro use; for example, one among:
   ;;
-  ;;   (define/typed ?lhs)
-  ;;   (define/typed ?lhs ?rhs)
-  ;;   (define/typed (?lhs . ?formals) . ?body)
-  ;;   (define/typed (brace ?lhs ?lhs.type)
-  ;;   (define/typed (brace ?lhs ?lhs.type) ?rhs)
-  ;;   (define/typed ((brace ?lhs ?lhs.type) . ?formals) . ?body)
+  ;;   (define/typed ?lhs.id)
+  ;;   (define/typed ?lhs.id ?rhs)
+  ;;   (define/typed (?lhs.id . ?formals) . ?body)
+  ;;   (define/typed (brace ?lhs.id ?lhs.type)
+  ;;   (define/typed (brace ?lhs.id ?lhs.type) ?rhs)
+  ;;   (define/typed ((brace ?lhs.id ?lhs.type) . ?formals) . ?body)
   ;;
   ;;we parse  the form and  generate a qualified  right-hand side (QDEF)  object that
   ;;will be expanded later.  Here we establish a new syntactic binding representing a
@@ -1310,9 +1311,7 @@
 	       ;;It  is important,  here, to  generate an  untyped lexical  variable;
 	       ;;later we will try to convert it into a typed lexical variable by RHS
 	       ;;type propagation.
-	       (descr		(if lhs.ots
-				    (make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef))
-				  (make-syntactic-binding-descriptor/lexical-var (qdef.lex qdef))))
+	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
 	       (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
 	  ;;This rib extension will raise an exception if it represents an attempt to
 	  ;;illegally redefine a binding.
@@ -1338,32 +1337,35 @@
       ;;4. A possibly updated LEXENV.RUN.
       ;;
       (syntax-match input-form.stx (brace)
-	((_ ((brace ?lhs ?rv-type* ... . ?rv-rest-type) . ?formals) ?body0 ?body* ...)
-	 (%process-typed-function-definition input-form.stx lexenv.run
-					     ?lhs (bless `((brace _ ,@?rv-type* . ,?rv-rest-type) . ,?formals))
-					     `(,?body0 . ,?body*) synner))
+	((_ ((brace ?lhs . ?rv-types) . ?formals) ?body0 ?body* ...)
+	 (begin
+	   (when (null? (syntax->datum ?rv-types))
+	     (synner "invalid syntax for function return values" `(,(brace-id) ,?lhs . ,?rv-types)))
+	   (%process-function-definition input-form.stx lexenv.run
+					 ?lhs `((,(brace-id) ,(underscore-id) . ,?rv-types) . ,?formals)
+					 `(,?body0 . ,?body*) synner)))
 
 	((_ (brace ?lhs ?type) ?rhs)
-	 (%process-typed-variable-definition-with-init-expr	input-form.stx lexenv.run ?lhs ?rhs ?type synner))
+	 (%process-variable-definition input-form.stx lexenv.run ?lhs ?type #t ?rhs synner))
 
 	((_ (brace ?lhs ?type))
-	 (%process-typed-variable-definition-with-init-expr	input-form.stx lexenv.run ?lhs (bless '(void)) ?type synner))
+	 (%process-variable-definition input-form.stx lexenv.run ?lhs ?type #f #f synner))
 
 	((_ (?lhs . ?formals) ?body0 ?body* ...)
-	 (%process-typed-function-definition input-form.stx lexenv.run
-					     ?lhs ?formals `(,?body0 . ,?body*) synner))
+	 (%process-function-definition input-form.stx lexenv.run
+				       ?lhs ?formals `(,?body0 . ,?body*) synner))
 
 	((_ ?lhs ?rhs)
-	 (%process-standard-variable-definition-with-init-expr	input-form.stx lexenv.run ?lhs ?rhs synner))
+	 (%process-variable-definition input-form.stx lexenv.run ?lhs #f #t ?rhs synner))
 
 	((_ ?lhs)
-	 (%process-standard-variable-definition-with-init-expr	input-form.stx lexenv.run ?lhs (bless '(void)) synner))
+	 (%process-variable-definition input-form.stx lexenv.run ?lhs #f #f #f synner))
 
 	(_
 	 (synner "invalid DEFINE/TYPED syntax use"))))
 
-    (define (%process-typed-function-definition input-form.stx lexenv.run
-						lhs.id input-formals.stx body*.stx synner)
+    (define (%process-function-definition input-form.stx lexenv.run
+					  lhs.id input-formals.stx body*.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
       ;;From parsing the typed formals we get  2 values: a proper or improper list of
@@ -1377,20 +1379,15 @@
 	       (qdef			(make-qdef-typed-defun input-form.stx lhs.id standard-formals.stx body*.stx lhs.ots)))
 	  (values lhs.id lhs.ots qdef lexenv.run))))
 
-    (define (%process-typed-variable-definition-with-init-expr input-form.stx lexenv.run
-							       lhs.id rhs.stx lhs.type-ann synner)
+    (define (%process-variable-definition input-form.stx lexenv.run
+					  lhs.id lhs.type-ann init-expr? rhs.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
-      (let* ((lhs.ots	(type-annotation->object-type-spec lhs.type-ann lexenv.run))
-	     (qdef	(make-qdef-typed-defvar input-form.stx lhs.id rhs.stx)))
+      (let* ((lhs.ots	(if lhs.type-ann
+			    (type-annotation->object-type-spec lhs.type-ann lexenv.run)
+			  (<untyped>-ots)))
+	     (qdef	(make-qdef-typed-defvar input-form.stx lhs.id lhs.ots init-expr? rhs.stx)))
 	(values lhs.id lhs.ots qdef lexenv.run)))
-
-    (define (%process-standard-variable-definition-with-init-expr input-form.stx lexenv.run
-								  lhs.id rhs.stx synner)
-      (unless (identifier? lhs.id)
-	(synner "expected identifier as variable name" lhs.id))
-      (let ((qdef (make-qdef-standard-defvar input-form.stx lhs.id rhs.stx #t)))
-	(values lhs.id #f qdef lexenv.run)))
 
     #| end of module: %PARSE-MACRO-USE |# )
 
@@ -1403,12 +1400,12 @@
   ;;The  BODY-FORM.STX  parsed  by  CHI-BODY*  is  a  syntax  object  representing  a
   ;;DEFINE/CHECKED core macro use; for example, one among:
   ;;
-  ;;   (define/checked ?lhs)
-  ;;   (define/checked ?lhs ?rhs)
-  ;;   (define/checked (?lhs . ?formals) . ?body)
-  ;;   (define/checked (brace ?lhs ?lhs.type)
-  ;;   (define/checked (brace ?lhs ?lhs.type) ?rhs)
-  ;;   (define/checked ((brace ?lhs ?lhs.type) . ?formals) . ?body)
+  ;;   (define/checked ?lhs.id)
+  ;;   (define/checked ?lhs.id ?rhs)
+  ;;   (define/checked (?lhs.id . ?formals) . ?body)
+  ;;   (define/checked (brace ?lhs.id ?lhs.type)
+  ;;   (define/checked (brace ?lhs.id ?lhs.type) ?rhs)
+  ;;   (define/checked ((brace ?lhs.id ?lhs.type) . ?formals) . ?body)
   ;;
   ;;we parse  the form and  generate a qualified  right-hand side (QDEF)  object that
   ;;will be expanded later.  Here we establish a new syntactic binding representing a
@@ -1461,85 +1458,69 @@
     (define-synner %synner __module_who__ input-form.stx)
     (syntax-match input-form.stx (brace)
       ((_ (brace ?lhs ?type) ?rhs)
-       (%process-typed-variable-definition-with-init-expr input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-							  ?lhs ?rhs ?type %synner))
+       (%process-variable-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+				     ?lhs ?type #t ?rhs %synner))
 
       ((_ (brace ?lhs ?type))
-       (%process-typed-variable-definition-with-init-expr input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-							  ?lhs #f ?type %synner))
+       (%process-variable-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+				     ?lhs ?type #f #f %synner))
 
       ((_ ((brace ?lhs . ?rv-types) . ?formals) ?body0 ?body* ...)
-       (receive (standard-formals.stx argvals.sig)
-	   ;;This call will use "<top>" for untyped arguments.
-	   (syntax-object.parse-typed-formals ?formals)
-	 (let ((clause-signature (make-clambda-clause-signature (make-type-signature ?rv-types) argvals.sig)))
-	   (%process-typed-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-					       ?lhs `(,(brace-id) ,?lhs . ,?rv-types) standard-formals.stx clause-signature
-					       `(,?body0 . ,?body*) %synner))))
+       (begin
+	 (when (null? (syntax->datum ?rv-types))
+	   (%synner "invalid syntax for function return values" `(,(brace-id) ,?lhs . ,?rv-types)))
+	 (receive (standard-formals.stx argvals.sig)
+	     ;;This call will use "<top>" for untyped arguments.
+	     (syntax-object.parse-typed-formals ?formals)
+	   (let ((clause-signature (make-clambda-clause-signature (make-type-signature ?rv-types) argvals.sig)))
+	     (%process-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+					   ?lhs `(,(brace-id) ,?lhs . ,?rv-types) standard-formals.stx clause-signature
+					   `(,?body0 . ,?body*) %synner)))))
 
       ((_ (?lhs . ?formals) ?body0 ?body* ...)
        (receive (standard-formals.stx argvals.sig)
 	   ;;This call will use "<top>" for untyped arguments.
 	   (syntax-object.parse-typed-formals ?formals)
 	 (let ((clause-signature (make-clambda-clause-signature (make-type-signature/fully-untyped) argvals.sig)))
-	   (%process-typed-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-					       ?lhs ?lhs standard-formals.stx clause-signature
-					       `(,?body0 . ,?body*) %synner))))
+	   (%process-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+					 ?lhs ?lhs standard-formals.stx clause-signature
+					 `(,?body0 . ,?body*) %synner))))
 
       ((_ ?lhs ?rhs)
-       (%process-standard-variable-definition-with-init-expr input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-							     ?lhs ?rhs %synner))
+       (%process-variable-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+				     ?lhs #f #t ?rhs %synner))
 
       ((_ ?lhs)
-       (%process-standard-variable-definition-with-init-expr input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-							     ?lhs (bless '(void)) %synner))
+       (%process-variable-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+				     ?lhs #f #f #f %synner))
 
       (_
        (%synner "invalid DEFINE/CHECKED syntax use"))))
 
-  (define (%process-typed-variable-definition-with-init-expr input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-							     lhs.id rhs.stx lhs.type-ann synner)
+  (define (%process-variable-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+					lhs.id lhs.type-ann init-expr? rhs.stx synner)
     (unless (identifier? lhs.id)
       (synner "expected identifier as variable name" lhs.id))
     (when (bound-id-member? lhs.id kwd*)
       (synner "cannot redefine keyword"))
-    ;;LHS.OTS is  an instance of  "<object-type-spec>" representing the type  of this
-    ;;syntactic binding; QDEF is the qualified RHS object to be expanded later.
-    (let* ((lhs.ots	(type-annotation->object-type-spec lhs.type-ann lexenv.run))
-	   (qdef	(make-qdef-checked-defvar input-form.stx lhs.id
-						  (if rhs.stx
-						      (bless
-						       `(assert-signature-and-return (,lhs.type-ann) ,rhs.stx))
-						    (bless '(void)))))
+    (let* ((lhs.ots	(if lhs.type-ann
+			    (type-annotation->object-type-spec lhs.type-ann lexenv.run)
+			  (<untyped>-ots)))
+	   (qdef	(make-qdef-checked-defvar input-form.stx lhs.id lhs.ots init-expr? rhs.stx))
 	   (lhs.lab	(generate-label-gensym lhs.id))
 	   (lhs.descr	(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
-	   (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.descr lexenv.run)))
-      ;;This rib extension  will raise an exception if it  represents an attempt to
-      ;;illegally redefine a binding.
-      (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
-      (values (list qdef) lexenv.run)))
-
-  (define (%process-standard-variable-definition-with-init-expr input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-								lhs.id rhs.stx synner)
-    (unless (identifier? lhs.id)
-      (synner "expected identifier as variable name" lhs.id))
-    (when (bound-id-member? lhs.id kwd*)
-      (synner "cannot redefine keyword"))
-    (let* ((qdef	(make-qdef-standard-defvar input-form.stx lhs.id rhs.stx #t))
-	   (lhs.lab	(generate-label-gensym lhs.id))
-	   (lhs.descr	(make-syntactic-binding-descriptor/lexical-var (qdef.lex qdef)))
 	   (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.descr lexenv.run)))
       ;;This rib  extension will raise  an exception if  it represents an  attempt to
       ;;illegally redefine a binding.
       (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
       (values (list qdef) lexenv.run)))
 
-  (module (%process-typed-function-definition)
+  (module (%process-function-definition)
     (import DEFINE/CHECKED-HELPERS)
 
-    (define (%process-typed-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-						lhs.id safe-who.stx standard-formals.stx clause-signature
-						body*.stx synner)
+    (define (%process-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+					  lhs.id safe-who.stx standard-formals.stx clause-signature
+					  body*.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
       (when (bound-id-member? lhs.id kwd*)
@@ -1582,7 +1563,7 @@
 	(extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
 	(values qdef lexenv.run)))
 
-    #| end of module: %PROCESS-TYPED-FUNCTION-DEFINITION |# )
+    #| end of module: %PROCESS-FUNCTION-DEFINITION |# )
 
   #| end of module: CHI-DEFINE/CHECKED |# )
 

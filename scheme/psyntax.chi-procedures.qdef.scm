@@ -99,6 +99,9 @@
 (define (qdef-generate-loc qdef)
   (generate-storage-location-gensym (qdef.var-id qdef)))
 
+(define* (qdef.var-sym {qdef qdef-defvar?})
+  (syntax->datum (qdef.var-id qdef)))
+
 
 ;;;; type definitions: qualified RHS general closure definition
 
@@ -272,15 +275,47 @@
 (define-record-type (<qdef-defvar> make-qdef-defvar qdef-defvar?)
   (parent <qdef>)
   (fields
+    (mutable lhs.ots		qdef-defvar.lhs-ots qdef-defvar.lhs-ots-set!)
+		;An  instance of  "<object-type-spec>" representing  the type  of the
+		;variable.  It is "<untyped>" if no type annotation is present.  This
+		;field is used to perform expand-time type validation.  This field is
+		;mutated when RHS type propagation is performed.
+    (immutable init-expr?	qdef-typed-defvar.init-expr?)
+		;Boolean, true if this definition has an initialisation expression in
+		;the RHS field; false otherwise.
     (immutable rhs		qdef-defvar.rhs)
 		;A syntax  object representing  the right-hand  side expression  of a
-		;variable definition.
+		;variable definition.  When no  initialisation expression was present
+		;in the variable definition: this field defaults to "(void)".
     #| end of FIELDS |# )
   (protocol
     (lambda (make-qdef)
-      (define* (make-qdef-defvar input-form.stx {lhs.var-id identifier?} rhs.stx)
-	((make-qdef input-form.stx lhs.var-id) rhs.stx))
+      (define* (make-qdef-defvar input-form.stx
+				 {lhs.var-id identifier?} {lhs.ots object-type-spec?}
+				 init-expr? rhs.stx)
+	(let* ((init-expr?	(and init-expr? #t))
+	       (rhs.stx		(if init-expr? rhs.stx `(,(void-id)))))
+	  ((make-qdef input-form.stx lhs.var-id) lhs.ots init-expr? rhs.stx)))
       make-qdef-defvar)))
+
+(define* (qdef-defvar.untyped? {qdef qdef-defvar?})
+  ;;Return true if QDEF has an untyped LHS; otherwise return false.
+  ;;
+  (<untyped>-ots? (qdef-defvar.lhs-ots qdef)))
+
+(define (qdef-defvar.type-propagation qdef lhs.new-ots lexenv.run)
+  ;;Mutate the syntactic binding's descriptor of  LHS.ID to represent a typed lexical
+  ;;variable having type LHS.NEW-OTS.  Return unspecified values.
+  ;;
+  ;;NOTE This is very dirty...  but I  thrive in dirt.  Fuck Yeah!  (Marco Maggi; Mon
+  ;;May 2, 2016)
+  ;;
+  (let* ((lhs.id	(qdef.var-id qdef))
+	 (lhs.lab	(id->label lhs.id))
+	 (lhs.descr	(label->syntactic-binding-descriptor lhs.lab lexenv.run)))
+    (let ((descr (make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.new-ots (qdef.lex qdef))))
+      (syntactic-binding-descriptor.type-set!  lhs.descr (syntactic-binding-descriptor.type  descr))
+      (syntactic-binding-descriptor.value-set! lhs.descr (syntactic-binding-descriptor.value descr)))))
 
 ;;; --------------------------------------------------------------------
 ;;; standard variable definition
@@ -289,20 +324,14 @@
   ;;This type  is used to  represent standard  R6RS variable definitions  from syntax
   ;;uses like:
   ;;
-  ;;   (define/std var val)
+  ;;   (define/std ?var ?expr)
+  ;;   (define/std ?var)
   ;;
   (parent <qdef-defvar>)
-  (fields
-    (immutable typed-syntax?	qdef-defvar.typed-syntax?)
-		;Boolean.  True when the syntax that generated this QDEF is typed.
-    #| end of FIELDS |# )
   (protocol
     (lambda (make-qdef-defvar)
-      (case-define* make-qdef-standard-defvar
-	((input-form.stx {lhs.var-id identifier?} rhs.stx)
-	 ((make-qdef-defvar input-form.stx lhs.var-id rhs.stx) #f))
-	((input-form.stx {lhs.var-id identifier?} rhs.stx typed-syntax?)
-	 ((make-qdef-defvar input-form.stx lhs.var-id rhs.stx) (if typed-syntax? #t #f))))
+      (define* (make-qdef-standard-defvar input-form.stx {lhs.var-id identifier?} init-expr? rhs.stx)
+	((make-qdef-defvar input-form.stx lhs.var-id (<top>-ots) init-expr? rhs.stx)))
       make-qdef-standard-defvar)))
 
 ;;; --------------------------------------------------------------------
@@ -311,26 +340,32 @@
 (define-record-type (<qdef-typed-defvar> make-qdef-typed-defvar qdef-typed-defvar?)
   ;;This type is used to represent typed variable definitions from syntax uses like:
   ;;
-  ;;   (define/typed (brace var <fixnum>) val)
+  ;;   (define/typed   (brace ?var ?type) ?expr)
+  ;;   (define/typed   (brace ?var ?type))
   ;;
   (parent <qdef-defvar>)
   (protocol
     (lambda (make-qdef-defvar)
-      (define* (make-qdef-typed-defvar input-form.stx {lhs.var-id identifier?} rhs.stx)
-	((make-qdef-defvar input-form.stx lhs.var-id rhs.stx)))
+      (define* (make-qdef-typed-defvar input-form.stx
+				       {lhs.var-id identifier?} {lhs.ots object-type-spec?}
+				       init-expr? rhs.stx)
+	((make-qdef-defvar input-form.stx lhs.var-id lhs.ots init-expr? rhs.stx)))
       make-qdef-typed-defvar)))
 
 (define-record-type (<qdef-checked-defvar> make-qdef-checked-defvar qdef-checked-defvar?)
   ;;This type  is used  to represent  checked variable  definitions from  syntax uses
   ;;like:
   ;;
-  ;;   (define/checked (brace var <fixnum>) val)
+  ;;   (define/checked (brace ?var ?type) ?expr)
+  ;;   (define/checked (brace ?var ?type))
   ;;
   (parent <qdef-defvar>)
   (protocol
     (lambda (make-qdef-defvar)
-      (define* (make-qdef-checked-defvar input-form.stx {lhs.var-id identifier?} rhs.stx)
-	((make-qdef-defvar input-form.stx lhs.var-id rhs.stx)))
+      (define* (make-qdef-checked-defvar input-form.stx
+					 {lhs.var-id identifier?} {lhs.ots object-type-spec?}
+					 init-expr? rhs.stx)
+	((make-qdef-defvar input-form.stx lhs.var-id lhs.ots init-expr? rhs.stx)))
       make-qdef-checked-defvar)))
 
 
@@ -407,70 +442,304 @@
 
 ;;;; chi procedures: standard and typed variable definition
 
-(define* (chi-defvar/std qdef lexenv.run lexenv.expand)
-  ;;Expand the  right-hand side expression  of a standard variable  definition; build
-  ;;and return a  PSI object.  The generated core language  expression represents the
-  ;;standalone right-hand side expression; the  code representing the handling of the
-  ;;resulting value is generated somewhere else.
-  ;;
-  (let* ((rhs.stx (qdef-defvar.rhs qdef))
-	 (rhs.psi (chi-expr rhs.stx lexenv.run lexenv.expand))
-	 (rhs.sig (psi.retvals-signature rhs.psi)))
-    ;;All right, we  have expanded the RHS expression.  Now  let's do some validation
-    ;;on the type of the expression.
-    (case-signature-specs rhs.sig
-      ((single-value)
-       => (lambda (rhs.ots)
-	    ;;A single return value.  Good.
-	    (when (qdef-defvar.typed-syntax? qdef)
-	      ;;This is a  QDEF representing a standard untyped variable,  but it was
-	      ;;generated  by  a  syntax  supporting   types:  we  perform  RHS  type
-	      ;;propagation.
-	      ;;
-	      ;;Here  we  mutate the  syntactic  binding's  descriptor of  LHS.ID  to
-	      ;;represent a typed lexical variable having type RHS.OTS.  This is very
-	      ;;dirty...  but I thrive in dirt.  Fuck Yeah!  (Marco Maggi; Mon May 2,
-	      ;;2016)
-	      (let* ((lhs.id	(qdef.var-id qdef))
-		     (lhs.lab	(id->label lhs.id))
-		     (lhs.descr	(label->syntactic-binding-descriptor lhs.lab lexenv.run)))
-		(let ((descr (make-syntactic-binding-descriptor/lexical-typed-var/from-data rhs.ots (qdef.lex qdef))))
-		  (syntactic-binding-descriptor.type-set!  lhs.descr (syntactic-binding-descriptor.type  descr))
-		  (syntactic-binding-descriptor.value-set! lhs.descr (syntactic-binding-descriptor.value descr)))))
-	    rhs.psi))
-      ((unspecified-values)
-       ;;Fully  unspecified return  values: we  accept it  here and  delegate further
-       ;;checks at run-time.
-       rhs.psi)
-      (<no-return>
-       ;;The right-hand side expression will not return.  Weird but good.
-       rhs.psi)
-      (else
-       ;;Damn!!!   We have  determined  at expand-time  that  the expression  returns
-       ;;multiple return values: syntax violation.
-       (raise
+(module (chi-defvar/std chi-defvar/typed chi-defvar/checked)
+
+  (define* (chi-defvar/std qdef lexenv.run lexenv.expand)
+    ;;Expand the right-hand side expression  of a standard variable definition; build
+    ;;and return a PSI object.  The generated core language expression represents the
+    ;;standalone right-hand  side expression; the  code representing the  handling of
+    ;;the resulting value is generated somewhere else.
+    ;;
+    (let* ((rhs.stx (qdef-defvar.rhs qdef))
+	   (rhs.psi (chi-expr rhs.stx lexenv.run lexenv.expand))
+	   (rhs.sig (psi.retvals-signature rhs.psi)))
+      (define (common message)
 	(condition
-	 (make-expand-time-type-signature-violation)
-	 (make-who-condition __who__)
-	 (make-message-condition "expression used as right-hand side in standard variable definition returns multiple values")
-	 (make-syntax-violation rhs.stx #f)
-	 (make-application-operand-signature-condition rhs.sig)))))))
+	  (make-who-condition 'chi-defvar/std)
+	  (make-message-condition message)
+	  (make-syntax-violation (qdef.input-form qdef) rhs.stx)
+	  (make-type-signature-condition rhs.sig)))
+      (case-signature-specs rhs.sig
+	(<no-return>
+	 ;;The expression is marked as not-returning.
+	 (when (options::warn-about-not-returning-expressions)
+	   (raise-continuable
+	    (common "expression used as right-hand side in typed variable definition is typed as not returning")))
+	 rhs.psi)
 
-(define (chi-defvar/typed qdef lexenv.run lexenv.expand)
-  ;;Expand the right-hand  side expression of a typed variable  definition; build and
-  ;;return  a PSI  object.  The  generated  core language  expression represents  the
-  ;;standalone right-hand side expression; the  code representing the handling of the
-  ;;resulting value is generated somewhere else.
-  ;;
-  (chi-expr (qdef-defvar.rhs qdef) lexenv.run lexenv.expand))
+	((<void>)
+	 ;;The expression is marked as returning void.
+	 #;(assert (<top>-ots? (qdef-defvar.lhs-ots qdef)))
+	 (if (qdef-typed-defvar.init-expr? qdef)
+	     ;;This definition has an  initialisation expression returning void: this
+	     ;;is wrong.
+	     (%handle-error rhs.psi common "expression used as right-hand side in standard variable definition is typed as returning void")
+	   ;;This definition has no initialisation  expression, so it is obvious that
+	   ;;the RHS returns void.
+	   rhs.psi))
 
-(define (chi-defvar/checked qdef lexenv.run lexenv.expand)
-  ;;Expand the right-hand side expression of a checked variable definition; build and
-  ;;return  a PSI  object.  The  generated  core language  expression represents  the
-  ;;standalone right-hand side expression; the  code representing the handling of the
-  ;;resulting value is generated somewhere else.
-  ;;
-  (chi-expr (qdef-defvar.rhs qdef) lexenv.run lexenv.expand))
+	((single-value)
+	 ;;A single return value.  Good.
+	 ;;
+	 ;;NOTE We could be tempted to perform RHS type propagation for this variable
+	 ;;definition, even though  it is standard and so without  type.  But we have
+	 ;;to remember that a  typed variable must obey rules if  it is later mutated
+	 ;;with SET!; we  do not want to  enforce such rules on  a standard variable.
+	 ;;(Marco Maggi; Wed May 11, 2016)
+	 #;(assert (<top>-ots? (qdef-defvar.lhs-ots qdef)))
+	 rhs.psi)
+
+	((unspecified-values)
+	 ;;Fully unspecified  return values: we  accept it here and  delegate further
+	 ;;checks at run-time.
+	 rhs.psi)
+
+	(else
+	 ;;Damn!!!  We  have determined  at expand-time  that the  expression returns
+	 ;;multiple return values: syntax violation.
+	 (%handle-error rhs.psi common
+			"expression used as right-hand side in typed variable definition is typed as returning zero, two or more values")))))
+
+;;; --------------------------------------------------------------------
+
+  (module (chi-defvar/typed)
+
+    (define* (chi-defvar/typed qdef lexenv.run lexenv.expand)
+      ;;Expand the right-hand  side expression of a typed  variable definition; build
+      ;;and return a  PSI object.  The generated core  language expression represents
+      ;;the standalone right-hand side expression; the code representing the handling
+      ;;of the resulting value is generated somewhere else.
+      ;;
+      (let* ((rhs.stx (qdef-defvar.rhs qdef))
+	     (rhs.psi (chi-expr rhs.stx lexenv.run lexenv.expand))
+	     (rhs.sig (psi.retvals-signature rhs.psi))
+	     (lhs.ots (qdef-defvar.lhs-ots qdef)))
+	(define (common message)
+	  (condition
+	    (make-who-condition 'chi-defvar/typed)
+	    (make-message-condition message)
+	    (make-syntax-violation (qdef.input-form qdef) rhs.stx)
+	    (make-type-signature-condition rhs.sig)))
+	(case-signature-specs (psi.retvals-signature rhs.psi)
+	  (<no-return>
+	   ;;The expression is marked as not-returning.
+	   (when (options::warn-about-not-returning-expressions)
+	     (raise-continuable
+	      (common "expression used as right-hand side in typed variable definition is typed as not returning")))
+	   (when (qdef-defvar.untyped? qdef)
+	     (qdef-defvar.type-propagation qdef (<top>-ots) lexenv.run))
+	   rhs.psi)
+
+	  ((<void>)
+	   ;;The expression is marked as returning void.
+	   (if (qdef-typed-defvar.init-expr? qdef)
+	       ;;This  definition has  an initialisation  expression returning  void:
+	       ;;this is wrong.
+	       (begin
+		 (when (<untyped>-ots? lhs.ots)
+		   (qdef-defvar.type-propagation qdef (<top>-ots) lexenv.run))
+		 (%handle-error rhs.psi common "expression used as right-hand side in typed variable definition is typed as returning void"))
+	     ;;This definition  has no  initialisation expression,  so it  is obvious
+	     ;;that the RHS returns void.  We  propagate the type to "<void>" so that
+	     ;;it is an error to use this variable without setting to some value.
+	     (begin
+	       (when (<untyped>-ots? lhs.ots)
+		 (qdef-defvar.type-propagation qdef (<void>-ots) lexenv.run))
+	       rhs.psi)))
+
+	  ((single-value)
+	   ;;The RHS expression returns a single value.  Good.
+	   => (lambda (rhs.ots)
+		(%process-single-value-case qdef lexenv.run lexenv.expand lhs.ots rhs.ots rhs.psi common)))
+
+	  (<list-of>
+	   ;;The RHS  expression returns  an unspecified number  of values,  of known
+	   ;;type.  RHS.OTS holds a "<list-of-type-spec>" OTS.
+	   => (lambda (rhs.ots)
+		;;We delegate  to the run-time code  the validation of the  number of
+		;;returned values.
+		(%process-single-value-case qdef lexenv.run lexenv.expand lhs.ots (list-of-type-spec.item-ots rhs.ots) rhs.psi common)))
+
+	  (<list>
+	   ;;The  RHS  expression  returns  an   unspecified  number  of  values,  of
+	   ;;unspecified type; RHS.OTS  holds a "<list>" OTS.  This  is a non-checked
+	   ;;typed variable,  so we do  not introduce  code to perform  run-time type
+	   ;;validation.  Let's just accept it and  delegate to the run-time code the
+	   ;;validation of the number of returned values.
+	   (when (<untyped>-ots? lhs.ots)
+	     ;;No type annotation  was present in the DEFINE/TYPED syntax  use, so we
+	     ;;cast the value to "<top>".
+	     (qdef-defvar.type-propagation qdef (<top>-ots) lexenv.run))
+	   rhs.psi)
+
+	  (else
+	   ;;The expression returns zero, two or more values.
+	   (%handle-error rhs.psi common
+			  "expression used as right-hand side in typed variable definition is typed as returning zero, two or more values")))))
+
+    (define (%process-single-value-case qdef lexenv.run lexenv.expand lhs.ots rhs.ots rhs.psi common)
+      (if (<untyped>-ots? lhs.ots)
+	  ;;No type  annotation was  present in  the DEFINE/TYPED  syntax use,  so we
+	  ;;perform RHS type propagation.
+	  (begin
+	    (qdef-defvar.type-propagation qdef rhs.ots lexenv.run)
+	    rhs.psi)
+	;;A  type annotation  was  present  in the  DEFINE/TYPED  syntax  use, so  we
+	;;validate RHS.OTS against it.
+	(cond ((object-type-spec.matching-super-and-sub? lhs.ots rhs.ots)
+	       ;;Types do match.  Good.
+	       rhs.psi)
+	      ((object-type-spec.compatible-super-and-sub? lhs.ots rhs.ots)
+	       ;;Types  do not  match,  but they  are compatible.   Since  this is  a
+	       ;;non-checked syntax: we  do not insert code to  perform run-time type
+	       ;;validation.
+	       rhs.psi)
+	      (else
+	       ;;Types do not match and are not compatible.  Bad.
+	       (%error-mismatching-type 'chi-defvar/typed qdef lhs.ots rhs.psi)))))
+
+    #| end of module: CHI-DEFVAR/TYPED |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (chi-defvar/checked)
+
+    (define (chi-defvar/checked qdef lexenv.run lexenv.expand)
+      ;;Expand the right-hand side expression of a checked variable definition; build
+      ;;and return a  PSI object.  The generated core  language expression represents
+      ;;the standalone right-hand side expression; the code representing the handling
+      ;;of the resulting value is generated somewhere else.
+      ;;
+      (let* ((rhs.stx (qdef-defvar.rhs qdef))
+	     (rhs.psi (chi-expr rhs.stx lexenv.run lexenv.expand))
+	     (rhs.sig (psi.retvals-signature rhs.psi))
+	     (lhs.ots (qdef-defvar.lhs-ots qdef)))
+	(define (common message)
+	  (condition
+	    (make-who-condition 'chi-defvar/checked)
+	    (make-message-condition message)
+	    (make-syntax-violation (qdef.input-form qdef) rhs.stx)
+	    (make-type-signature-condition rhs.sig)))
+	(case-signature-specs (psi.retvals-signature rhs.psi)
+	  (<no-return>
+	   ;;The expression is marked as not-returning.
+	   (when (options::warn-about-not-returning-expressions)
+	     (raise-continuable
+	      (common "expression used as right-hand side in typed variable definition is typed as not returning")))
+	   (when (qdef-defvar.untyped? qdef)
+	     (qdef-defvar.type-propagation qdef (<top>-ots) lexenv.run))
+	   rhs.psi)
+
+	  ((<void>)
+	   ;;The expression is marked as returning void.
+	   (if (qdef-typed-defvar.init-expr? qdef)
+	       ;;This  definition has  an initialisation  expression returning  void:
+	       ;;this is wrong.
+	       (begin
+		 (when (<untyped>-ots? lhs.ots)
+		   (qdef-defvar.type-propagation qdef (<top>-ots) lexenv.run))
+		 (%handle-error rhs.psi common "expression used as right-hand side in typed variable definition is typed as returning void"))
+	     ;;This definition  has no  initialisation expression,  so it  is obvious
+	     ;;that the RHS returns void.  We  propagate the type to "<void>" so that
+	     ;;it is an error to use this variable without setting to some value.
+	     (begin
+	       (when (<untyped>-ots? lhs.ots)
+		 (qdef-defvar.type-propagation qdef (<void>-ots) lexenv.run))
+	       rhs.psi)))
+
+	  ((single-value)
+	   ;;The RHS expression returns a single value.  Good.
+	   => (lambda (rhs.ots)
+		(%process-single-value-case qdef lexenv.run lexenv.expand
+					    lhs.ots rhs.ots rhs.psi common)))
+
+	  (<list-of>
+	   ;;The RHS  expression returns  an unspecified number  of values,  of known
+	   ;;type.  RHS.OTS holds a "<list-of-type-spec>" OTS.
+	   => (lambda (rhs.ots)
+		;;We delegate  to the run-time code  the validation of the  number of
+		;;returned values.
+		(%process-single-value-case qdef lexenv.run lexenv.expand
+					    lhs.ots (list-of-type-spec.item-ots rhs.ots) rhs.psi common)))
+
+	  (<list>
+	   ;;The  RHS  expression  returns  an   unspecified  number  of  values,  of
+	   ;;unspecified type; RHS.OTS holds a "<list>" OTS.
+	   (if (<untyped>-ots? lhs.ots)
+	       ;;No type annotation was present  in the DEFINE/CHECKED syntax use, so
+	       ;;we cast the value to "<top>".
+	       (begin
+		 (qdef-defvar.type-propagation qdef (<top>-ots) lexenv.run)
+		 rhs.psi)
+	     ;;A type annotation  was present in the DEFINE/CHECKED  syntax use; this
+	     ;;is  a checked  typed  variable, so  we do  introduce  code to  perform
+	     ;;run-time type validation.
+	     (%insert-single-value-validator qdef lexenv.run lexenv.expand rhs.psi lhs.ots)))
+
+	  (else
+	   ;;The expression returns zero, two or more values.
+	   (%handle-error rhs.psi common
+			  "expression used as right-hand side in typed variable definition is typed as returning zero, two or more values")))))
+
+    (define* (%process-single-value-case qdef lexenv.run lexenv.expand
+					 lhs.ots rhs.ots rhs.psi common)
+      (if (<untyped>-ots? lhs.ots)
+	  ;;No type  annotation was  present in  the DEFINE/CHECKED  syntax use,  so we
+	  ;;perform RHS type propagation.
+	  (begin
+	    (qdef-defvar.type-propagation qdef rhs.ots lexenv.run)
+	    rhs.psi)
+	;;A  type annotation  was present  in the  DEFINE/CHECKED syntax  use, so  we
+	;;validate RHS.OTS against it.
+	(cond ((object-type-spec.matching-super-and-sub? lhs.ots rhs.ots)
+	       ;;Types do match.  Good.
+	       rhs.psi)
+	      ((object-type-spec.compatible-super-and-sub? lhs.ots rhs.ots)
+	       ;;Types  do not  match,  but they  are compatible.   Since  this is  a
+	       ;;checked  syntax:  we  do  insert   code  to  perform  run-time  type
+	       ;;validation.
+	       (%insert-single-value-validator qdef lexenv.run lexenv.expand rhs.psi lhs.ots))
+	      (else
+	       ;;Types do not match and are not compatible.  Bad.
+	       (%error-mismatching-type 'chi-defvar/checked qdef lhs.ots rhs.psi)))))
+
+    (define (%insert-single-value-validator qdef lexenv.run lexenv.expand rhs.psi lhs.ots)
+      (make-psi (psi.input-form rhs.psi)
+	(let* ((validator.stx (object-type-spec.single-value-validator-lambda-stx lhs.ots #t))
+	       (validator.psi (chi-expr validator.stx lexenv.run lexenv.expand)))
+	  (build-application no-source
+	      (psi.core-expr validator.psi)
+	    (list (psi.core-expr rhs.psi)		     ;value
+		  (build-data no-source 1)		     ;value-index
+		  (build-data no-source (qdef.var-sym qdef)) ;caller-who
+		  )))
+	(psi.retvals-signature rhs.psi)))
+
+    #| end of module: CHI-DEFVAR/CHECKED |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%handle-error rv common message)
+    (case-expander-language
+      ((typed)
+       (raise			(condition (make-expand-time-type-signature-violation)	(common message))))
+      ((default)
+       (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common message)))
+       rv)
+      ((strict-r6rs)
+       rv)))
+
+  (define (%error-mismatching-type caller-who qdef lhs.ots rhs.psi)
+    (raise
+     (condition (make-expand-time-type-signature-violation)
+		(make-who-condition caller-who)
+		(make-message-condition
+		 "expression used as right-hand side in typed variable definition has non-matching type")
+		(make-syntax-violation (qdef.input-form qdef) (psi.input-form rhs.psi))
+		(make-expected-type-signature-condition (make-type-signature/single-value lhs.ots))
+		(make-returned-type-signature-condition (psi.retvals-signature rhs.psi)))))
+
+  #| end of module |# )
 
 
 ;;;; chi procedures: top-level expression to be handled as dummy definition

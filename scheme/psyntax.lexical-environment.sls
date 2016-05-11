@@ -303,7 +303,7 @@
     bless
     trace-bless
     scheme-stx
-    core-prim-id
+    core-prim-id			void-id
     underscore-id			underscore-id?
     ellipsis-id				ellipsis-id?
     place-holder-id			place-holder-id?
@@ -2533,6 +2533,7 @@
   (define-core-prim-id-retriever underscore-id		_)
   (define-core-prim-id-retriever ellipsis-id		...)
   (define-core-prim-id-retriever place-holder-id	<>)
+  (define-core-prim-id-retriever void-id		void)
   (define-core-prim-id-retriever procedure-pred-id	procedure?)
   (define-core-prim-id-retriever method-id		method)
   (define-core-prim-id-retriever case-method-id		case-method)

@@ -300,9 +300,9 @@
 			       (declare-core-primitive ?who
 				   (safe)
 				 (signatures
-				  ((?obj-tag)				=> (<fixnum>))
-				  ((?obj-tag <non-negative-fixnum>)	=> (<fixnum>))
-				  ((?obj-tag <boolean>)			=> (<fixnum>)))
+				  ((?obj-tag)				=> (<non-negative-fixnum>))
+				  ((?obj-tag <non-negative-fixnum>)	=> (<non-negative-fixnum>))
+				  ((?obj-tag <boolean>)			=> (<non-negative-fixnum>)))
 				 (attributes
 				  ((_)			foldable effect-free result-true)
 				  ((_ _)		foldable effect-free result-true))
@@ -319,7 +319,7 @@
 			       (declare-core-primitive ?who
 				   (safe)
 				 (signatures
-				  ((?obj-tag)		=> (<fixnum>)))
+				  ((?obj-tag)		=> (<non-negative-fixnum>)))
 				 (attributes
 				  ((_)			foldable effect-free result-true))
 				 . ?replacements))
