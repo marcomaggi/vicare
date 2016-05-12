@@ -39,6 +39,21 @@
 
 (declare-type-predicate hashtable? <hashtable>)
 
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((<hashtable>)			=> (<boolean>))
+		    (((ancestor-of <hashtable>))	=> (<boolean>))
+		    (((not <hashtable>))		=> (<false>)))))
+		)))
+  (declare hashtable-eq?)
+  (declare hashtable-eqv?)
+  (declare hashtable-equiv?)
+  #| end of LET-SYNTAX |# )
+
 ;;; --------------------------------------------------------------------
 ;;; constructors
 
@@ -100,7 +115,7 @@
 (declare-core-primitive hashtable-delete!
     (safe)
   (signatures
-   ((<hashtable> <top>)		=> (<void>)))
+   ((<hashtable> <top>)		=> (<top> <top>)))
   (attributes
    ((_ _) 				result-true)))
 

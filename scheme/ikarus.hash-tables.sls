@@ -570,7 +570,7 @@
 		  ;;Don't forget to update the number of entries.
 		  (set-hasht-size! H (fxsub1 (hasht-size H))))))
 	  (else
-	   (values (void) (void)))))
+	   (values #f #f))))
 
   (define (unlink! H B)
     (let ((vec  (hasht-buckets-vector H))
