@@ -108,7 +108,8 @@
     (only (vicare system $fx)
 	  $fxadd1)
     (only (vicare system $structs)
-	  $struct-rtd)
+	  $struct-rtd
+	  $set-std-printer!)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Apr 12,
     ;;2016)
     (only (ikarus booleans)
@@ -717,6 +718,15 @@
 
 
 ;;;; done
+
+($set-std-printer! (type-descriptor scheme-type-descriptor)
+		   (lambda (stru port sub-printer)
+		     (define-syntax-rule (%display ?obj)
+		       (display ?obj port))
+		     (%display "#[scheme-type ")
+		     (%display (scheme-type-descriptor-name stru))
+		     (%display "]")))
+
 
 ;; #!vicare
 ;; (define dummy
