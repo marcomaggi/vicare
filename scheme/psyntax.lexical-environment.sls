@@ -293,6 +293,7 @@
     id->object-type-spec			id->record-type-spec
     id->struct-type-spec			type-annotation->object-type-spec
     make-type-annotation			syntax-object.type-annotation?
+    improper-object-type-specs->list-and-rest
     expression-expander-for-type-annotations
     case-identifier-syntactic-binding-descriptor
     case-identifier-syntactic-binding-descriptor/no-indirection
@@ -301,7 +302,7 @@
     ;; identifiers from the built-in environment
     system-id-gensym			system-id
     bless
-    trace-bless
+    trace-bless				debug-bless
     scheme-stx
     core-prim-id			void-id
     underscore-id			underscore-id?
@@ -2467,10 +2468,15 @@
 	 input-form.stx)))
 
 (define (trace-bless input-form.stx)
-  (receive-and-return (output-stx)
+  (receive-and-return (output-form.stx)
       (bless input-form.stx)
     (debug-print 'bless-input  (syntax->datum input-form.stx)
-		 'bless-output (syntax->datum output-stx))))
+		 'bless-output (syntax->datum output-form.stx))))
+
+(define (debug-bless input-form.stx)
+  (receive-and-return (output-form.stx)
+      (bless input-form.stx)
+    (debug-print 'bless-output (syntax->datum output-form.stx))))
 
 ;;; --------------------------------------------------------------------
 

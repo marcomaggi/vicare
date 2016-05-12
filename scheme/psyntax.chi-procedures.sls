@@ -282,7 +282,7 @@
 		       define-syntax define-alias
 		       define-fluid-syntax
 		       let-syntax letrec-syntax begin-for-syntax
-		       begin set! stale-when
+		       begin set! set!/initialise stale-when
 		       local-etv global-etv
 		       global-macro global-macro! local-macro local-macro! macro
 		       import export library module
@@ -891,9 +891,14 @@
        ;;
        ;;   (set! ?lhs ?rhs)
        ;;
-       (internal-body
-	 (import CHI-SET)
-	 (chi-set! expr.stx lexenv.run lexenv.expand)))
+       (chi-set! expr.stx lexenv.run lexenv.expand))
+
+      ((set!/initialise)
+       ;;Macro use of SET!/INITIALISE; it means EXPR.STX has the format:
+       ;;
+       ;;   (set!/initialise ?lhs ?rhs)
+       ;;
+       (chi-set!/initialise expr.stx lexenv.run lexenv.expand))
 
       ((begin)
        ;;R6RS BEGIN core macro use.  First we check with SYNTAX-MATCH that the syntax
@@ -1159,12 +1164,9 @@
 
 ;;;; chi procedures: SET! syntax
 
-(module CHI-SET
-  (chi-set!)
+(module (chi-set! chi-set!/initialise)
 
-  (define-module-who set!)
-
-  (define (chi-set! input-form.stx lexenv.run lexenv.expand)
+  (define* (chi-set! input-form.stx lexenv.run lexenv.expand)
     (while-not-expanding-application-first-subform
      (syntax-match input-form.stx (method-call)
        ((_ (method-call ?field-name ?expr) ?new-value)
@@ -1176,14 +1178,36 @@
        ((_ ?lhs ?rhs)
 	(identifier? ?lhs)
 	(%chi-set-identifier input-form.stx lexenv.run lexenv.expand
-			     ?lhs ?rhs))
+			     __who__ ?lhs ?rhs #f))
 
        (_
-	(syntax-violation __module_who__ "invalid setter syntax" input-form.stx)))))
+	(syntax-violation __who__ "invalid setter syntax" input-form.stx)))))
 
-  (define (%chi-set-identifier input-form.stx lexenv.run lexenv.expand lhs.id rhs.stx)
+  (define* (chi-set!/initialise input-form.stx lexenv.run lexenv.expand)
+    ;;This  is  meant only  for  internal  use.  When  the  LHS  is a  typed  lexical
+    ;;identifier with type  "<void>": override its type  with the one of  the RHS, if
+    ;;possible.
+    ;;
+    (while-not-expanding-application-first-subform
+     (syntax-match input-form.stx (method-call)
+       ((_ (method-call ?field-name ?expr) ?new-value)
+	(identifier? ?field-name)
+	(chi-expr (bless
+		   `(slot-set! ,?expr ,?field-name ,?new-value))
+		  lexenv.run lexenv.expand))
+
+       ((_ ?lhs ?rhs)
+	(identifier? ?lhs)
+	(%chi-set-identifier input-form.stx lexenv.run lexenv.expand
+			     __who__ ?lhs ?rhs #t))
+
+       (_
+	(syntax-violation __who__ "invalid setter syntax" input-form.stx)))))
+
+  (define (%chi-set-identifier input-form.stx lexenv.run lexenv.expand
+			       caller-who lhs.id rhs.stx initialise-and-override-void?)
     (define-values (type descr kwd)
-      (syntactic-form-type __module_who__ lhs.id lexenv.run))
+      (syntactic-form-type caller-who lhs.id lexenv.run))
     (case type
       ((lexical)
        ;;A  lexical binding  used  as LHS  of  SET! is  mutable  and so  unexportable
@@ -1209,7 +1233,6 @@
 		     (make-type-signature/single-void)))))
 
       ((lexical-typed)
-       ;;A typed lexical binding used as LHS of SET!  is mutable and so unexportable.
        ;;The syntactic binding's descriptor has format:
        ;;
        ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
@@ -1218,62 +1241,35 @@
 	      (variable.lex	(lexical-typed-variable-spec.lex lts))
 	      (lts.ots		(typed-variable-spec.ots lts))
 	      (rhs.psi		(chi-expr (bless rhs.stx) lexenv.run lexenv.expand))
-	      (rhs.ots		(%process-rhs-signature rhs.stx rhs.psi)))
+	      (rhs.ots		(%rhs-signature->rhs-object-type-spec caller-who rhs.stx rhs.psi)))
 	 (define rhs.code
-	   (cond ((object-type-spec.matching-super-and-sub? lts.ots rhs.ots)
-		  (psi.core-expr rhs.psi))
-		 ((object-type-spec.compatible-super-and-sub? lts.ots rhs.ots)
-		  (let* ((validator.stx (object-type-spec.single-value-validator-lambda-stx lts.ots #t))
-			 (validator.psi (chi-expr validator.stx lexenv.run lexenv.expand)))
-		    (build-application no-source
-			(psi.core-expr validator.psi)
-		      (list (psi.core-expr rhs.psi)  ;value
-			    (build-data no-source 1) ;value-index
-			    (build-data no-source (syntax->datum lhs.id)))))) ;caller-who
-		 (else
-		  (raise
-		   (condition (make-expand-time-type-signature-violation)
-			      (make-who-condition 'set!)
-			      (make-message-condition
-			       "expression used as right-hand side for SET! has type not matching the variable type")
-			      (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
-			      (make-expected-type-signature-condition (make-type-signature/single-value lts.ots))
-			      (make-returned-type-signature-condition (psi.retvals-signature rhs.psi)))))))
-	 (lexical-typed-variable-spec.assigned?-set! lts #t)
+	   (if (and initialise-and-override-void? (<void>-ots? lts.ots))
+	       (begin
+		 ;;Override "<void>" with the type of the RHS.
+		 (typed-variable-spec.ots-set! lts rhs.ots)
+		 ;;A typed  lexical binding used as  LHS of SET!  is  assigned and so
+		 ;;unexportable, but this is a special  case.  We use this variant of
+		 ;;the SET!  syntax  only to initialise syntactic bindings,  so we do
+		 ;;*not* mark this variable as assigned.
+		 #;(lexical-typed-variable-spec.assigned?-set! lts #f)
+		 (psi.core-expr rhs.psi))
+	     (begin
+	       ;;A  typed lexical  binding used  as LHS  of SET!   is mutable  and so
+	       ;;unexportable.
+	       (lexical-typed-variable-spec.assigned?-set! lts #t)
+	       (%generate-rhs-core-expr input-form.stx lexenv.run lexenv.expand
+					caller-who lts.ots rhs.ots lhs.id rhs.psi))))
 	 (make-psi input-form.stx
 	   (build-lexical-assignment no-source
 	       variable.lex
 	     rhs.code)
 	   (make-type-signature/single-void))))
 
-      ;;NOTE The clause  below for LEXICAL-TYPED variables does not  perform RHS type
-      ;;propagation and  validates the RHS type  with ASSERT-SIGNATURE-AND-RETURN.  I
-      ;;keep it here as reference.  (Marco Maggi; Thu Apr 28, 2016)
-      ;;
-      ;; ((lexical-typed)
-      ;;  ;;A typed lexical binding used as LHS of SET!  is mutable and so unexportable.
-      ;;  ;;The syntactic binding's descriptor has format:
-      ;;  ;;
-      ;;  ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
-      ;;  ;;
-      ;;  (let* ((lts              (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr))
-      ;;         (variable.lex     (lexical-typed-variable-spec.lex lts))
-      ;;         (variable.type-id (object-type-spec.name (typed-variable-spec.ots lts)))
-      ;;         (rhs.psi          (chi-expr (bless
-      ;;                                      `(assert-signature-and-return (,variable.type-id) ,rhs.stx))
-      ;;                                     lexenv.run lexenv.expand)))
-      ;;    (lexical-typed-variable-spec.assigned?-set! lts #t)
-      ;;    (make-psi input-form.stx
-      ;;      (build-lexical-assignment no-source
-      ;;          variable.lex
-      ;;        (psi.core-expr rhs.psi))
-      ;;      (make-type-signature/single-void))))
-
       ((core-prim core-prim-typed)
-       (syntax-violation __module_who__ "cannot modify imported core primitive" input-form.stx lhs.id))
+       (syntax-violation caller-who "cannot modify imported core primitive" input-form.stx lhs.id))
 
       ((global global-typed)
-       (syntax-violation __module_who__ "attempt to assign a variable that is imported from a library" input-form.stx lhs.id))
+       (syntax-violation caller-who "attempt to assign a variable that is imported from a library" input-form.stx lhs.id))
 
       ((global-macro!)
        ;;The syntactic binding's descriptor DESCR has format:
@@ -1317,7 +1313,7 @@
        ;;
        ;;we  are attempting  to mutate  an  unexportable binding  in another  lexical
        ;;context.  This is forbidden by R6RS.
-       (syntax-violation __module_who__
+       (syntax-violation caller-who
 	 "attempt to assign a variable that is imported from a library"
 	 input-form.stx lhs.id))
 
@@ -1329,45 +1325,77 @@
        ;;syntactic form was expanded at  the top-level of an interaction environment.
        ;;I nuked this feature.  (Marco Maggi; Fri Apr 24, 2015)
        ;;
-       (error-unbound-identifier __module_who__ lhs.id))
+       (error-unbound-identifier caller-who lhs.id))
 
       ((displaced-lexical)
-       (syntax-violation __module_who__
+       (syntax-violation caller-who
 	 "identifier out of context in assignment syntax" input-form.stx lhs.id))
 
       (else
-       (syntax-violation __module_who__
+       (syntax-violation caller-who
 	 "invalid left-hand side in assignment syntax" input-form.stx lhs.id))))
 
 ;;; --------------------------------------------------------------------
 
-  (module (%process-rhs-signature)
+  (define (%generate-rhs-core-expr input-form.stx lexenv.run lexenv.expand
+				   caller-who lts.ots rhs.ots lhs.id rhs.psi)
+    (cond ((object-type-spec.matching-super-and-sub? lts.ots rhs.ots)
+	   (psi.core-expr rhs.psi))
+	  ((object-type-spec.compatible-super-and-sub? lts.ots rhs.ots)
+	   (let* ((validator.stx (object-type-spec.single-value-validator-lambda-stx lts.ots #t))
+		  (validator.psi (chi-expr validator.stx lexenv.run lexenv.expand)))
+	     (build-application no-source
+		 (psi.core-expr validator.psi)
+	       (list (psi.core-expr rhs.psi)			       ;value
+		     (build-data no-source 1)			       ;value-index
+		     (build-data no-source (syntax->datum lhs.id)))))) ;caller-who
+	  (else
+	   (raise
+	    (condition (make-expand-time-type-signature-violation)
+		       (make-who-condition caller-who)
+		       (make-message-condition
+			"expression used as right-hand side for SET! has type not matching the variable type")
+		       (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
+		       (make-expected-type-signature-condition (make-type-signature/single-value lts.ots))
+		       (make-returned-type-signature-condition (psi.retvals-signature rhs.psi)))))))
 
-    (define (%process-rhs-signature input-form.stx rhs.psi)
+;;; --------------------------------------------------------------------
+
+  (module (%rhs-signature->rhs-object-type-spec)
+
+    (define (%rhs-signature->rhs-object-type-spec caller-who input-form.stx rhs.psi)
       (define (common message)
 	(condition
-	  (make-who-condition 'set!)
+	  (make-who-condition caller-who)
 	  (make-message-condition message)
 	  (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
 	  (make-type-signature-condition (psi.retvals-signature rhs.psi))))
       (case-signature-specs (psi.retvals-signature rhs.psi)
-	((single-value)
-	 ;;The expression returns a single value.  Good this OTS will become the type
-	 ;;of the syntactic binding.
-	 => (lambda (rhs.ots) rhs.ots))
-
 	(<no-return>
 	 ;;The expression is marked as not-returning.
-	 (%handle-error common "expression used as right-hand side in SET! is typed as not returning"))
+	 (when (options::warn-about-not-returning-expressions)
+	   (%handle-error common "expression used as right-hand side in SET! is typed as not returning")))
 
 	((<void>)
 	 ;;The expression is marked as returning void.
 	 (%handle-error common "expression used as right-hand side in SET! is typed as returning void"))
 
-	((unspecified-values)
-	 ;;The expression returns an unspecified  number of values.  Let's simulate a
-	 ;;"<top>" syntactic binding  are delegate the run-time code  to validate the
-	 ;;number of arguments.
+	((single-value)
+	 ;;The expression returns a single value.  Good this OTS will become the type
+	 ;;of the syntactic binding.
+	 => (lambda (rhs.ots) rhs.ots))
+
+	(<list-of>
+	 ;;The RHS expression returns an unspecified number of values, of known type.
+	 ;;RHS.OTS holds a "<list-of-type-spec>" OTS.
+	 => (lambda (rhs.ots)
+	      ;;We delegate  to the  run-time code  the validation  of the  number of
+	      ;;returned values.
+	      (list-of-type-spec.item-ots rhs.ots)))
+
+	(<list>
+	 ;;The RHS expression returns an unspecified number of values, of unspecified
+	 ;;type; RHS.OTS holds a "<list>" OTS.
 	 (<top>-ots))
 
 	(else
@@ -1384,7 +1412,7 @@
 	((strict-r6rs)
 	 (<top>-ots))))
 
-    #| end of module: %PROCESS-RHS-SIGNATURE |# )
+    #| end of module: %RHS-SIGNATURE->RHS-OBJECT-TYPE-SPEC |# )
 
   #| end of module: CHI-SET |# )
 

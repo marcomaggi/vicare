@@ -729,10 +729,10 @@
   (let loop ((ell   ell)
 	     (item* '()))
     (syntax-match ell ()
-      ((?car . ?cdr)
-       (loop ?cdr (cons ?car item*)))
       (()
        (values (reverse item*) '()))
+      ((?car . ?cdr)
+       (loop ?cdr (cons ?car item*)))
       (_
        (values (reverse item*) ell)))
     ))

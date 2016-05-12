@@ -576,7 +576,7 @@
 (define-constant VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS-DEFAULTS '())
 
 
-;;;; core syntactic binding descriptors: built-in syntaxes
+;;;; core syntactic binding descriptors: built-in syntaxes helpers
 
 (define (generate-macro-table filename spec*)
   ;;The argument SPEC* is an alist with entries like:
@@ -631,7 +631,8 @@
 (define (process-core-macros spec*)
   (generate-macro-table "core-macros-table.scm" spec*))
 
-;;; --------------------------------------------------------------------
+
+;;;; core syntactic binding descriptors: built-in syntaxes
 
 (define-constant VICARE-CORE-BUILT-IN-SYNTAXES-SYNTACTIC-BINDING-DESCRIPTORS
   `( ;;;Core macros that can appear only in a body.
@@ -650,6 +651,7 @@
     (import					(import))
     (export					(export))
     (set!					(set!))
+    (set!/initialise				(set!/initialise))
     (let-syntax					(let-syntax))
     (letrec-syntax				(letrec-syntax))
     (stale-when					(stale-when))
@@ -5759,6 +5761,7 @@
     (record-type-method-retriever-set!)
     (object-type-spec-override-predicate)
     (make-closure-type-spec)
+    (set!/initialise)
 
     ))
 

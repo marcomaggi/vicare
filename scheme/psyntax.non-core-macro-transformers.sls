@@ -4319,7 +4319,7 @@
 			  ?id* TMP*)
 		      TMP0)))))))
 
-	 ((?id* ... . ?rest-id)
+	 ((?id ?id* ... . ?rest-id)
 	  ;;We want this expansion:
 	  ;;
 	  ;;  (define/std ?id)
@@ -4333,19 +4333,20 @@
 	  ;;        TMP-REST)))
 	  ;;
 	  (bless
-	   (let ((TMP*		(generate-temporaries ?id*))
-		 (rest.sym	(make-syntactic-identifier-for-temporary-variable "rest")))
+	   (let* ((id*.stx	(cons ?id ?id*))
+		  (TMP*		(generate-temporaries id*.stx))
+		  (rest.sym	(make-syntactic-identifier-for-temporary-variable "rest")))
 	     `(begin
 		,@(map (lambda (var)
 			 `(define/std ,var))
-		    ?id*)
+		    id*.stx)
 		(define/std ,?rest-id
 		  (call-with-values
 		      (lambda/std () ,?body0 . ,?body*)
 		    (lambda/std (,@TMP* . ,rest.sym)
 		      ,@(map (lambda (var TMP)
 			       `(set! ,var ,TMP))
-			  ?id* TMP*)
+			  id*.stx TMP*)
 		      ,rest.sym)))))))
 
 	 (?args
@@ -4366,8 +4367,9 @@
   (syntax-match input-form.stx ()
     ((_ ?formals ?body0 ?body* ...)
      (receive (standard-formals.stx formals.sig)
-	 ;;This call will use "<top>" for formals without type annotation.
-	 (syntax-object.parse-typed-formals ?formals)
+	 ;;This call will use "<void>" for formals without type annotation.
+	 (syntax-object.parse-typed-formals ?formals (<void>-ots))
+       #;(debug-print __who__ standard-formals.stx formals.sig)
        (syntax-match standard-formals.stx ()
 	 ((?id* ... ?id0)
 	  ;;We want this expansion:
@@ -4384,23 +4386,28 @@
 	  ;;
 	  (receive (type* type0)
 	      (proper-list->head-and-last (type-signature.syntax-object formals.sig))
-	    (let ((TMP* (generate-temporaries ?id*)))
+	    (let ((TMP0 (make-syntactic-identifier-for-temporary-variable (syntax->datum ?id0)))
+		  (TMP* (generate-temporaries ?id*)))
 	      (bless
 	       `(begin
 		  ,@(map (lambda (var type)
-			   `(define/checked {,var ,type}))
+			   (if (<void>-type-id? type)
+			       `(define/typed {,var ,type})
+			     `(define/checked {,var ,type})))
 		      ?id* type*)
-		  (define/checked {,?id0 ,type0}
-		    (call-with-values
-			(lambda/std () ,?body0 . ,?body*)
-		      (lambda/typed ({_ ,type0} ,@TMP* TMP0)
-			;;These set forms do the type validation.
-			,@(map (lambda (var TMP)
-				 `(set! ,var ,TMP))
-			    ?id* TMP*)
-			TMP0))))))))
+		  (define/checked ,(if (<void>-type-id? type0)
+				       ?id0
+				     `{,?id0 ,type0})
 
-	 ((?id* ... . ?rest-id)
+		    (receive/checked (,@TMP* ,TMP0)
+			(begin ,?body0 . ,?body*)
+		      ,@(map (lambda (var TMP)
+			       `(set!/initialise ,var ,TMP))
+			  ?id* TMP*)
+		      ,TMP0)
+		    ))))))
+
+	 ((?id ?id* ... . ?rest-id)
 	  ;;We want this expansion:
 	  ;;
 	  ;;  (define/checked {?id ?type})
@@ -4414,34 +4421,36 @@
 	  ;;        TMP-REST))))
 	  ;;
 	  (receive (type* rest-type)
-	      (improper-list->list-and-rest (type-signature.syntax-object formals.sig))
-	    (let ((TMP*		(generate-temporaries ?id*))
-		  (rest.sym	(make-syntactic-identifier-for-temporary-variable "rest")))
+	      (improper-object-type-specs->list-and-rest (type-signature.syntax-object formals.sig))
+	    (let* ((id*.stx	(cons ?id ?id*))
+		   (TMP*	(generate-temporaries id*.stx))
+		   (rest.sym	(make-syntactic-identifier-for-temporary-variable (syntax->datum ?rest-id))))
 	      (bless
 	       `(begin
 		  ,@(map (lambda (var type)
-			   `(define/checked {,var ,type}))
-		      ?id* type*)
+			   (if (<void>-type-id? type)
+			       `(define/typed ,var)
+			     `(define/checked {,var ,type})))
+		      id*.stx type*)
 		  (define/checked {,?rest-id ,rest-type}
-		    (call-with-values
-			(lambda/std () ,?body0 . ,?body*)
-		      (lambda/typed ({_ ,rest-type} ,@TMP* . ,rest.sym)
-			;;These set forms do the type validation.
-			,@(map (lambda (var TMP)
-				 `(set! ,var ,TMP))
-			    ?id* TMP*)
-			,rest.sym))))))))
+		    (receive/checked (,@TMP* . ,rest.sym)
+			(begin ,?body0 . ,?body*)
+		      ,@(map (lambda (var TMP)
+			       `(set!/initialise ,var ,TMP))
+			  id*.stx TMP*)
+		      ,rest.sym)
+		    ))))))
 
 	 (?args
 	  (identifier? ?args)
-	  (let ((args.sym	(make-syntactic-identifier-for-temporary-variable "args"))
+	  (let ((ARGS		(make-syntactic-identifier-for-temporary-variable (syntax->datum ?args)))
 		(args.type	(type-signature.syntax-object formals.sig)))
 	    (bless
 	     `(define/checked {,?args ,args.type}
-		(call-with-values
-		    (lambda/std () ,?body0 . ,?body*)
-		  (lambda/typed {,args.sym ,args.type}
-		    ,args.sym))))))
+		(receive/checked {,ARGS ,args.type}
+		    (begin ,?body0 . ,?body*)
+		  ,ARGS)
+		))))
 	 )))))
 
 

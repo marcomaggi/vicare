@@ -419,12 +419,13 @@
 
   (define (%parse-typed-formals input-formals.stx untyped.ots)
     (define-synner %synner __module_who__ input-formals.stx)
+    (define lexenv (current-inferior-lexenv))
     (syntax-match input-formals.stx (brace)
 
       ;;Non-standard formals: typed args, as in: (lambda (brace args <list>) ---)
       ((brace ?args-id ?args-type)
        (identifier? ?args-id)
-       (values ?args-id (tail-type-annotation->object-type-spec ?args-type (current-inferior-lexenv) ?args-type)))
+       (values ?args-id (tail-type-annotation->object-type-spec ?args-type lexenv ?args-type)))
 
       ;;Standard formals, UNtyped args as in: (lambda args ---)
       (?args-id
@@ -432,13 +433,13 @@
        (values ?args-id (<list>-ots)))
 
       ;;Non-standard formals: possibly typed arguments with typed rest argument.
-      ((?arg* ... . (brace ?rest-id ?rest-type))
+      ((?arg0 ?arg* ... . (brace ?rest-id ?rest-type))
        (receive-and-return (standard-formals.stx formals.ots)
-	   (let process-next-arg ((?arg* ?arg*))
-	     (cond ((pair? ?arg*)
-		    (%process-arg* ?arg* untyped.ots process-next-arg %synner))
+	   (let process-next-arg ((arg*.stx (cons ?arg0 ?arg*)))
+	     (cond ((pair? arg*.stx)
+		    (%process-arg* arg*.stx untyped.ots lexenv process-next-arg %synner))
 		   ((identifier? ?rest-id)
-		    (values ?rest-id (tail-type-annotation->object-type-spec ?rest-type (current-inferior-lexenv) ?rest-type)))
+		    (values ?rest-id (tail-type-annotation->object-type-spec ?rest-type lexenv ?rest-type)))
 		   (else
 		    (%synner "invalid rest argument syntax" (list (brace-id) ?rest-id ?rest-type)))))
 	 (%validate-standard-formals standard-formals.stx %synner)))
@@ -451,21 +452,22 @@
 	 (%validate-standard-formals standard-formals.stx %synner)))
 
       ;;Standard formals: UNtyped identifiers with UNtyped rest argument.
-      ((?arg* ... . ?rest-id)
-       (and (for-all identifier? ?arg*)
+      ((?arg0 ?arg* ... . ?rest-id)
+       (and (for-all identifier? (cons ?arg0 ?arg*))
 	    (identifier? ?rest-id))
-       (receive-and-return (standard-formals.stx formals.ots)
-	   (values (append ?arg* ?rest-id)
-		   (append (%one-untyped-for-each ?arg* untyped.ots) (<list>-ots)))
-	 (%validate-standard-formals standard-formals.stx %synner)))
+       (let ((arg*.stx (cons ?arg0 ?arg*)))
+	 (receive-and-return (standard-formals.stx formals.ots)
+	     (values (append arg*.stx ?rest-id)
+		     (append (%one-untyped-for-each arg*.stx untyped.ots) (<list>-ots)))
+	   (%validate-standard-formals standard-formals.stx %synner))))
 
       ;;Non-standard formals: possibly typed identifiers with UNtyped rest argument.
-      ((?arg* ... . ?rest-id)
+      ((?arg0 ?arg* ... . ?rest-id)
        (identifier? ?rest-id)
        (receive-and-return (standard-formals.stx formals.ots)
-	   (let process-next-arg ((?arg* ?arg*))
-	     (cond ((pair? ?arg*)
-		    (%process-arg* ?arg* untyped.ots process-next-arg %synner))
+	   (let process-next-arg ((arg*.stx (cons ?arg0 ?arg*)))
+	     (cond ((pair? arg*.stx)
+		    (%process-arg* arg*.stx untyped.ots lexenv process-next-arg %synner))
 		   ((identifier? ?rest-id)
 		    (values ?rest-id (<list>-ots)))
 		   (else
@@ -476,16 +478,16 @@
       ;;
       ((?arg* ...)
        (receive-and-return (standard-formals.stx formals.ots)
-	   (let process-next-arg ((?arg* ?arg*))
-	     (if (pair? ?arg*)
-		 (%process-arg* ?arg* untyped.ots process-next-arg %synner)
+	   (let process-next-arg ((arg*.stx ?arg*))
+	     (if (pair? arg*.stx)
+		 (%process-arg* arg*.stx untyped.ots lexenv process-next-arg %synner)
 	       (values '() '())))
 	 (%validate-standard-formals standard-formals.stx %synner)))
 
       (_
        (%synner "invalid formals syntax"))))
 
-  (define (%process-arg* arg*.stx untyped.ots process-next-arg synner)
+  (define (%process-arg* arg*.stx untyped.ots lexenv process-next-arg synner)
     (receive (standard-formals.stx formals.ots)
 	(process-next-arg (cdr arg*.stx))
       (let ((arg.stx (car arg*.stx)))
@@ -498,7 +500,7 @@
 	  ((brace ?id ?type)
 	   (identifier? ?id)
 	   (values (cons ?id standard-formals.stx)
-		   (cons (type-annotation->object-type-spec ?type (current-inferior-lexenv))
+		   (cons (type-annotation->object-type-spec ?type lexenv)
 			 formals.ots)))
 	  (else
 	   (synner "invalid argument in formals syntax" arg.stx))))))

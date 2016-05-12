@@ -595,7 +595,7 @@
 			       define-syntax define-alias
 			       define-fluid-syntax
 			       let-syntax letrec-syntax begin-for-syntax
-			       module begin set! stale-when
+			       module begin set! set!/initialise stale-when
 			       core-macro macro macro!
 			       $core-rtd $core-rcd $core-scheme-type-descriptor
 			       $core-record-type-name $core-condition-object-type-name

@@ -246,6 +246,7 @@
 	 syntax-object.type-annotation?
 	 type-annotation->object-type-spec		tail-type-annotation->object-type-spec
 	 expression-expander-for-type-annotations
+	 improper-object-type-specs->list-and-rest
 
 	 #| end of export list |# )
 
@@ -4028,6 +4029,22 @@
 
      (else
       (%error)))))
+
+(define* (improper-object-type-specs->list-and-rest specs)
+  (let loop ((ell	specs)
+	     (item*	'()))
+    (syntax-match ell (<list> list-of)
+      (()
+       (values (reverse item*) '()))
+      (<list>
+       (values (reverse item*) ell))
+      ((list-of ?type)
+       (values (reverse item*) ell))
+      ((?car . ?cdr)
+       (loop ?cdr (cons ?car item*)))
+      (_
+       (assertion-violation __who__
+	 "list of object type specifications" specs)))))
 
 
 ;;;; done

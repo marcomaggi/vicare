@@ -2846,6 +2846,167 @@
   #| end of PARAMETRISE |# )
 
 
+(parametrise ((check-test-name	'define-values-in-body))
+
+;;; standard
+
+  (doit (internal-body
+	  (define-values/std (a)
+	    1)
+	  a)
+	=> (<top>))
+
+  (doit (internal-body
+	  (define-values/std (a b)
+	    (values 1 2.3))
+	  (values a b))
+	=> (<top> <top>))
+
+  (doit (internal-body
+	  (define-values/std (a b . rest)
+	    (values 1 2.3 'X 'Y))
+	  (values a b rest))
+	=> (<top> <top> <top>))
+
+  (doit (internal-body
+	  (define-values/std args
+	    (values 'X 'Y))
+	  args)
+	=> (<top>))
+
+;;; --------------------------------------------------------------------
+;;; checked
+
+  (doit (internal-body
+	  (define-values/checked (a)
+	    1)
+	  a)
+	=> (<positive-fixnum>))
+  (check
+      (internal-body
+	(define-values/checked (a)
+	  1)
+	a)
+    => 1)
+  ;; (debug-print
+  ;;  (expansion-of
+  ;;   (internal-body
+  ;;     (define-values/checked (a)
+  ;; 	1)
+  ;;     a)))
+
+  (doit (internal-body
+	  (define-values/checked (a b)
+	    (values 1 2.3))
+	  (values a b))
+	=> (<positive-fixnum> <positive-flonum>))
+
+  (doit (internal-body
+	  (define-values/checked ({a <fixnum>} {b <flonum>})
+	    (values 1 2.3))
+	  (values a b))
+	=> (<fixnum> <flonum>))
+
+  (doit (internal-body
+	  (define-values/checked ({a <fixnum>} b)
+	    (values 1 2.3))
+	  (values a b))
+	=> (<fixnum> <positive-flonum>))
+
+  (doit (internal-body
+	  (define-values/checked (a {b <flonum>})
+	    (values 1 2.3))
+	  (values a b))
+	=> (<positive-fixnum> <flonum>))
+
+  (doit (internal-body
+	  (define-values/checked ({a <fixnum>} {b <flonum>} . rest)
+	    (values 1 2.3 'X 'Y))
+	  (values a b rest))
+	=> (<fixnum> <flonum> <list>))
+
+  (doit (internal-body
+	  (define-values/checked ({a <fixnum>} {b <flonum>} . {rest (list-of (enumeration X Y))})
+	    (values 1 2.3 'X 'Y))
+	  (values a b rest))
+	=> (<fixnum> <flonum> (list-of (enumeration X Y))))
+
+  (doit (internal-body
+	  (define-values/checked args
+	    (values 'X 'Y))
+	  args)
+	=> (<list>))
+  (doit (internal-body
+	  (define-values/checked {args (list-of (enumeration X Y))}
+	    (values 'X 'Y))
+	  args)
+	=> ((list-of (enumeration X Y))))
+
+;;;
+
+  (doit (internal-body
+	  (define-values (a)
+	    1)
+	  a)
+	=> (<positive-fixnum>))
+
+  (doit (internal-body
+	  (define-values (a b)
+	    (values 1 2.3))
+	  (values a b))
+	=> (<positive-fixnum> <positive-flonum>))
+
+  (doit (internal-body
+	  (define-values ({a <fixnum>} {b <flonum>})
+	    (values 1 2.3))
+	  (values a b))
+	=> (<fixnum> <flonum>))
+
+  (doit (internal-body
+	  (define-values ({a <fixnum>} b)
+	    (values 1 2.3))
+	  (values a b))
+	=> (<fixnum> <positive-flonum>))
+
+  (doit (internal-body
+	  (define-values (a {b <flonum>})
+	    (values 1 2.3))
+	  (values a b))
+	=> (<positive-fixnum> <flonum>))
+
+  (doit (internal-body
+	  (define-values ({a <fixnum>} {b <flonum>} . rest)
+	    (values 1 2.3 'X 'Y))
+	  (values a b rest))
+	=> (<fixnum> <flonum> <list>))
+
+  (doit (internal-body
+	  (define-values ({a <fixnum>} {b <flonum>} . {rest (list-of (enumeration X Y))})
+	    (values 1 2.3 'X 'Y))
+	  (values a b rest))
+	=> (<fixnum> <flonum> (list-of (enumeration X Y))))
+  (check
+      (internal-body
+	(define-values ({a <fixnum>} {b <flonum>} . {rest (list-of (enumeration X Y))})
+	  (values 1 2.3 'X 'Y))
+	(values a b rest))
+    => 1 2.3 '(X Y))
+
+  (doit (internal-body
+	  (define-values args
+	    (values 'X 'Y))
+	  args)
+	=> (<list>))
+
+  (doit (internal-body
+	  (define-values {args (list-of (enumeration X Y))}
+	    (values 'X 'Y))
+	  args)
+	=> ((list-of (enumeration X Y))))
+
+  #| end of PARAMETRISE |# )
+
+
 (parametrise ((check-test-name	'doc-examples))
 
   #;(debug-print
