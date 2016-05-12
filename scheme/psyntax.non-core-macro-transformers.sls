@@ -153,53 +153,13 @@
 	))))
 
 
-;;;; miscellaneous macros
-
-(define-macro-transformer (eol-style input-form.stx)
-  (%allowed-symbol-macro input-form.stx '(none lf cr crlf nel crnel ls)))
-
-(define-macro-transformer (error-handling-mode input-form.stx)
-  (%allowed-symbol-macro input-form.stx '(ignore raise replace)))
-
-(define-macro-transformer (buffer-mode input-form.stx)
-  (%allowed-symbol-macro input-form.stx '(none line block)))
-
-(define-macro-transformer (__file__ input-form.stx)
-  (let ((expr (stx-expr input-form.stx)))
-    (if (reader-annotation? expr)
-	(let ((pos (reader-annotation-textual-position expr)))
-	  (if (source-position-condition? pos)
-	      (bless
-	       `(quote ,(source-position-port-id pos)))
-	    (bless
-	     `(quote ,(source-code-location)))))
-      (bless
-       `(quote ,(source-code-location))))))
-
-(define-macro-transformer (__line__ input-form.stx)
-  (let ((expr (stx-expr input-form.stx)))
-    (if (reader-annotation? expr)
-	(let ((pos (reader-annotation-textual-position expr)))
-	  (if (source-position-condition? pos)
-	      (bless
-	       `(quote ,(source-position-line pos)))
-	    (bless '(quote #f))))
-      (bless '(quote #f)))))
-
-(define-macro-transformer (stdin input-form.stx)
-  (bless '(console-input-port)))
-
-(define-macro-transformer (stdout input-form.stx)
-  (bless '(console-output-port)))
-
-(define-macro-transformer (stderr input-form.stx)
-  (bless '(console-error-port)))
+;;;; auxiliary syntaxes
 
 (let-syntax ((declare (syntax-rules ()
 			((_ ?who)
 			 (define-auxiliary-syntax-transformer (?who input-form.stx)
 			   (syntax-violation (quote ?who)
-			     "incorrect usage of auxiliary keyword" input-form.stx))))))
+			     "incorrect use of auxiliary syntactic keyword" input-form.stx))))))
   (declare ...)
   (declare =>)
   (declare _)
@@ -295,10 +255,17 @@
     ((_ ?id* ...)
      (for-all identifier? ?id*)
      (bless
-      `(begin
-	 ,@(map (lambda (id)
-		  `(define-syntax ,id (syntax-rules ())))
-	     ?id*))))))
+      (let ((STX (make-syntactic-identifier-for-temporary-variable "stx")))
+	`(begin
+	   ,@(map (lambda (id)
+		    `(define-syntax ,id
+		       (lambda/std (,STX)
+			 (syntax-violation (quote ,id)
+			   "incorrect use of auxiliary syntactic keyword"
+			   ,STX (quote ,id)))))
+	       ?id*)))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: control structures macros
@@ -306,12 +273,16 @@
 (define-macro-transformer (when input-form.stx)
   (syntax-match input-form.stx ()
     ((_ ?test ?expr ?expr* ...)
-     (bless `(if ,?test (begin ,?expr . ,?expr*))))))
+     (bless `(if ,?test (begin ,?expr . ,?expr*))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (unless input-form.stx)
   (syntax-match input-form.stx ()
     ((_ ?test ?expr ?expr* ...)
-     (bless `(if (not ,?test) (begin ,?expr . ,?expr*))))))
+     (bless `(if (not ,?test) (begin ,?expr . ,?expr*))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: CASE
@@ -726,7 +697,8 @@
 	 (syntax-violation 'record-type-and-record? "expected identifier as first argument" input-form.stx ?type-name))
        (bless
 	`(record-and-rtd? ,?record (record-type-descriptor ,?type-name)))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: DEFINE-CONDITION-TYPE
@@ -939,7 +911,9 @@
 		  (lambda/std () ,?body . ,?body*)
 		  ,swap)))
 	  ,@(append ?lhs* ?rhs*)))))
-    ))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: WITH-UNWIND-PROTECTION, UNWIND-PROTECT
@@ -951,22 +925,26 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?unwind-handler ?thunk)
-     (let ((terminated?  (make-syntactic-identifier-for-temporary-variable))
-	   (normal-exit? (make-syntactic-identifier-for-temporary-variable))
-	   (why          (make-syntactic-identifier-for-temporary-variable))
-	   (escape       (make-syntactic-identifier-for-temporary-variable)))
+     (let ((terminated?  (make-syntactic-identifier-for-temporary-variable "terminated?"))
+	   (normal-exit? (make-syntactic-identifier-for-temporary-variable "normal-exit?"))
+	   (why          (make-syntactic-identifier-for-temporary-variable "why"))
+	   (escape       (make-syntactic-identifier-for-temporary-variable "escape")))
        (bless
-	`(let/std ( ;;True if the dynamic extent of the call to THUNK is terminated.
-		   (,terminated?   #f)
-		   ;;True  if the  dynamic extent  of the  call to  ?THUNK was  exited by
-		   ;;performing a normal return.
-		   (,normal-exit?  #f))
+	;;Here we use LET/CHECKED to propagate the type of the last body form.
+	`(let/checked
+	     (({,terminated?  <boolean>}	#f)
+		;True if the dynamic extent of the call to THUNK is terminated.
+	      ({,normal-exit? <boolean>}	#f))
+		;True  if the  dynamic extent  of the  call to  ?THUNK was  exited by
+		;performing a normal return.
 	   (dynamic-wind
 	       (lambda/std ()
 		 (when ,terminated?
 		   (non-reinstatable-violation 'with-unwind-protection
 		     "attempt to reenter thunk with terminated dynamic extent")))
-	       (lambda/std ()
+	       ;;Here we  use LAMBDA/CHECKED to propagate  the type of the  last body
+	       ;;form.
+	       (lambda/checked ()
 		 (begin0
 		     (,?thunk)
 		   (set! ,normal-exit? #t)))
@@ -988,14 +966,17 @@
 			    (run-unwind-protection-cleanup-upon-exit?))
 			  => (lambda/std (,why)
 			       (set! ,terminated? #t)
-			       ;;We want to discard any exception raised by the cleanup thunk.
+			       ;;We  want  to discard  any  exception  raised by  the
+			       ;;cleanup thunk.
 			       (call/cc
 				   (lambda/std (,escape)
 				     (with-exception-handler
 					 ,escape
 				       (lambda/std ()
 					 (,?unwind-handler ,why)))))))))))))))
-    ))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (unwind-protect input-form.stx)
   ;;Transformer  function used  to  expand Vicare's  UNWIND-PROTECT  macros from  the
@@ -1014,8 +995,10 @@
        (bless
 	`(with-unwind-protection
 	     (lambda/std (,why) ,?cleanup0 . ,?cleanup*)
-	   (lambda/std () ,?body)))))
-    ))
+	   ;;Here we use LAMBDA/CHECKED to propagate the type of the last body form.
+	   (lambda/checked () ,?body)))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: WITH-IMPLICITS
@@ -1078,7 +1061,9 @@
      (let ((BINDINGS (%make-bindings ?ctx (cons ?symbol0 ?symbol*))))
        (bless
 	`(with-syntax ,BINDINGS (with-implicits ,?other-clauses ,?body0 . ,?body*)))))
-    ))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: SET-CONS!
@@ -1092,7 +1077,9 @@
     ((_ ?id ?obj)
      (identifier? ?id)
      (bless `(set! ,?id (cons ,?obj ,?id))))
-    ))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: compensations
@@ -1110,15 +1097,19 @@
        (let ((store (make-syntactic-identifier-for-temporary-variable))
 	     (why   (make-syntactic-identifier-for-temporary-variable)))
 	 (bless
-	  `(let/std ,(%make-store-binding store)
+	  ;;Here we use LET/CHECKED to propagate the type of the last body form.
+	  `(let/checked ,(%make-store-binding store)
 	     (parametrise ((compensations ,store))
 	       (with-unwind-protection
 		   (lambda/std (,why)
 		     (when (eq? ,why 'exception)
 		       (run-compensations-store ,store)))
-		 (lambda/std ()
+		 ;;Here we use LAMBDA/CHECKED to propagate the type of the last body
+		 ;;form.
+		 (lambda/checked ()
 		   ,?body0 . ,?body*)))))))
-      ))
+      (_
+       (__synner__ "invalid syntax in macro use"))))
 
   (define-macro-transformer (with-compensations input-form.stx)
     ;;Transformer function used to expand Vicare's WITH-COMPENSATIONS macros from the
@@ -1130,14 +1121,18 @@
        (let ((store (make-syntactic-identifier-for-temporary-variable))
 	     (why   (make-syntactic-identifier-for-temporary-variable)))
 	 (bless
-	  `(let/std ,(%make-store-binding store)
+	  ;;Here we use LET/CHECKED to propagate the type of the last body form.
+	  `(let/checked ,(%make-store-binding store)
 	     (parametrise ((compensations ,store))
 	       (with-unwind-protection
 		   (lambda/std (,why)
 		     (run-compensations-store ,store))
-		 (lambda/std ()
+		 ;;Here we use LAMBDA/CHECKED to propagate  the type of the last body
+		 ;;form.
+		 (lambda/checked ()
 		   ,?body0 . ,?body*)))))))
-      ))
+      (_
+       (__synner__ "invalid syntax in macro use"))))
 
   (define (%make-store-binding store)
     (let ((stack        (make-syntactic-identifier-for-temporary-variable))
@@ -1162,7 +1157,8 @@
     ((_ ?release0 ?release* ...)
      (bless
       `(push-compensation-thunk (lambda/std () ,?release0 ,@?release*))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (with-compensation-handler input-form.stx)
   ;;Transformer  function used  to expand  Vicare's WITH-COMPENSATION-HANDLER  macros
@@ -1175,7 +1171,8 @@
       `(begin
 	 (push-compensation-thunk ,?release-thunk)
 	 (,?alloc-thunk))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (compensate input-form.stx)
   ;;Transformer function used to expand Vicare's COMPENSATE macros from the top-level
@@ -1211,7 +1208,8 @@
        ;; (bless
        ;;   `(begin0 (begin ,?alloc0 . ,alloc*) ,free))
        ))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: CONCURRENTLY, MONITOR
@@ -1236,7 +1234,8 @@
 	       ?thunk*)
 	   (finish-coroutines (lambda/std ()
 				(zero? ,counter)))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (monitor input-form.stx)
   ;;Transformer function  used to expand  Vicare's MONITOR macros from  the top-level
@@ -1250,7 +1249,8 @@
      (let ((KEY (make-syntactic-identifier-for-temporary-variable)))
        (bless
 	`(do-monitor (quote ,KEY) ,?concurrent-coroutines-maximum ,?thunk))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: SYNTAX-RULES, DEFINE-SYNTAX-RULE
@@ -1276,7 +1276,9 @@
 			   (syntax ,template)))
 			(_
 			 (syntax-violation #f "invalid syntax-rules pattern" input-form.stx pattern))))
-		 ?pattern* ?template*))))))))
+		 ?pattern* ?template*))))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (define-syntax-rule input-form.stx)
   ;;Transformer function used  to expand Vicare's DEFINE-SYNTAX-RULE  macros from the
@@ -1291,7 +1293,8 @@
 	 (syntax-rules ()
 	   ((_ ,@?arg* . ,?rest)
 	    (begin ,?body0 ,@?body*))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: DEFINE-SYNTAX*
@@ -1328,7 +1331,8 @@
 			     ((message subform)
 			      (syntax-violation __who__ message ,?stx subform)))))
 	       ,?body0 ,@?body*))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: WITH-SYNTAX
@@ -1381,7 +1385,8 @@
 		      (assertion-violation 'with-syntax
 			"pattern does not match value"
 			',(car pat*) ,(car t*)))))))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: IDENTIFIER-SYNTAX
@@ -1423,7 +1428,8 @@
 	    ((??id . ??expr*)
 	     (identifier? (syntax ??id))
 	     (syntax (,?expr1 . ??expr*))))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: LET-VALUES, LET-VALUES/STD, LET-VALUES/CHECKED
@@ -1782,9 +1788,12 @@
   (syntax-match input-form.stx ()
     ((_ ?expr)
      (bless
-      `(call-with-values
-	   (lambda/std () ,?expr)
-	 list)))))
+      (let ((ARGS (make-syntactic-identifier-for-temporary-variable "args")))
+	`(receive ,ARGS
+	     ,?expr
+	   ,ARGS))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: LET*-SYNTAX
@@ -1810,7 +1819,8 @@
       `(let-syntax ((,?lhs ,?rhs))
 	 (let*-syntax ,(map list ?lhs* ?rhs*)
 	   ,?body . ,?body*))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: LET-CONSTANTS, LET*-CONSTANTS, LETREC-CONSTANTS, LETREC*-CONSTANTS
@@ -1834,7 +1844,8 @@
 			       `(,lhs (identifier-syntax ,shadow)))
 			  (cons ?lhs ?lhs*) SHADOW*)
 	     ,?body . ,?body*)))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (let*-constants input-form.stx)
   ;;Transformer  function used  to  expand Vicare's  LET*-CONSTANTS  macros from  the
@@ -1852,7 +1863,8 @@
       `(let-constants ((,?lhs ,?rhs))
 	 (let*-constants ,(map list ?lhs* ?rhs*)
 	   ,?body . ,?body*))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (letrec-constants input-form.stx)
   ;;Transformer function  used to  expand Vicare's  LETREC-CONSTANTS macros  from the
@@ -1880,7 +1892,9 @@
 			`(set! ,var ,tmp))
 		   VAR* TMP*)
 	       (internal-body ,?body0 . ,?body*)))))))
-    ))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (letrec*-constants input-form.stx)
   ;;Transformer function  used to expand  Vicare's LETREC*-CONSTANTS macros  from the
@@ -1908,7 +1922,9 @@
 			`(set! ,var ,tmp))
 		   VAR* TMP*)
 	       (internal-body ,?body0 . ,?body*)))))))
-    ))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: DEFINE, CASE-DEFINE
@@ -1924,7 +1940,8 @@
 	       (core-prim-id 'define/checked)
 	     (core-prim-id 'define/std))
 	   ?stuff))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (case-define input-form.stx)
   ;;Transformer  function  used  to  expand  Vicare's  CASE-DEFINE  macros  from  the
@@ -1937,7 +1954,8 @@
 	       (core-prim-id 'case-define/checked)
 	     (core-prim-id 'case-define/std))
 	   ?stuff))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: DEFINE*, LAMBDA*, NAMED-LAMBDA*, CASE-DEFINE*, CASE-LAMBDA*, NAMED-CASE-LAMBDA*
@@ -2003,7 +2021,8 @@
 	  (identifier? ?who)
 	  `(define/std ,?who))
 
-	 )))
+	 (_
+	  (__synner__ "invalid syntax in macro use")))))
 
     (define (%generate-define-output-form/without-ret-pred who.id predicate-formals.stx body*.stx synner)
       ;;Build and return a symbolic expression, to be BLESSed later, representing the
@@ -2074,7 +2093,8 @@
 	     ,@(map (lambda (clause.stx)
 		      (%generate-case-define-form ?who clause.stx __synner__))
 		 (cons ?clause0 ?clause*)))))
-	))
+	(_
+	 (__synner__ "invalid syntax in macro use"))))
 
     (define (%generate-case-define-form who.id clause.stx synner)
       (syntax-match clause.stx (brace)
@@ -2162,7 +2182,8 @@
 	 ((_ ?formals ?body0 ?body* ...)
 	  (%generate-lambda-output-form/without-ret-pred who.id ?formals (cons ?body0 ?body*) __synner__))
 
-	 )))
+	 (_
+	  (__synner__ "invalid syntax in macro use")))))
 
     (define-macro-transformer (named-lambda* expr.stx)
       ;;Transformer function  used to expand  Vicare's NAMED-LAMBDA* macros  from the
@@ -2182,7 +2203,8 @@
 	  (identifier? ?who)
 	  (%generate-lambda-output-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) __synner__))
 
-	 )))
+	 (_
+	  (__synner__ "invalid syntax in macro use")))))
 
     (define (%generate-lambda-output-form/without-ret-pred who.id predicate-formals.stx body*.stx synner)
       ;;Build and return a symbolic expression, to be BLESSed later, representing the
@@ -2250,7 +2272,8 @@
 	    ,@(map (lambda (clause.stx)
 		     (%generate-case-lambda-form (quote _) clause.stx __synner__))
 		(cons ?clause0 ?clause*)))))
-	))
+	(_
+	 (__synner__ "invalid syntax in macro use"))))
 
     (define-macro-transformer (named-case-lambda* expr.stx)
       ;;Transformer function  used to expand Vicare's  NAMED-CASE-LAMBDA* macros from
@@ -2265,7 +2288,8 @@
 	    ,@(map (lambda (clause.stx)
 		     (%generate-case-lambda-form ?who clause.stx __synner__))
 		(cons ?clause0 ?clause*)))))
-	))
+	(_
+	 (__synner__ "invalid syntax in macro use"))))
 
     (define (%generate-case-lambda-form who.id clause.stx synner)
       (syntax-match clause.stx (brace)
@@ -2813,8 +2837,10 @@
 	     (raised-obj-id                    (make-syntactic-identifier-for-temporary-variable "raised-obj")))
 	 (bless
 	  `((call/cc
-		(lambda/std (,reinstate-guard-continuation-id)
-		  (lambda/std ()
+		(lambda/checked ({,reinstate-guard-continuation-id <procedure>})
+		  ;;Here we use LAMBDA/CHECKED to propagate the type of the last body
+		  ;;form.
+		  (lambda/checked ()
 		    (with-exception-handler
 			(lambda/std (,raised-obj-id)
 			  ;;If we  raise an exception from  a DYNAMIC-WIND's in-guard
@@ -2823,9 +2849,12 @@
 			  (run-unwind-protection-cleanup-upon-exit? #f)
 			  (let/std ((,?variable ,raised-obj-id))
 			    ,(gen-clauses raised-obj-id reinstate-guard-continuation-id ?clause*)))
-		      (lambda/std ()
+		      ;;Here we use LAMBDA/CHECKED to  propagate the type of the last
+		      ;;body form.
+		      (lambda/checked ()
 			,?body . ,?body*)))))))))
-      ))
+      (_
+       (__synner__ "invalid syntax in macro use"))))
 
   (module (gen-clauses)
 
@@ -3067,7 +3096,8 @@
        (unless (identifier? ?maker)
 	 (__synner__ "expected identifier as enumeration constructor syntax name" ?maker))
        (let ((symbol*		(list-of-symbols.delete-duplicates (syntax->datum ?id*)))
-	     (the-constructor	(make-syntactic-identifier-for-temporary-variable (string->symbol (string-append "make-" (symbol->string (syntax->datum ?name)))))))
+	     (the-constructor	(make-syntactic-identifier-for-temporary-variable
+				 (string->symbol (string-append "make-" (symbol->string (syntax->datum ?name)))))))
 	 (bless
 	  `(begin
 	     (define/typed {,the-constructor (lambda ((list-of <symbol>)) => (<enum-set>))}
@@ -3141,7 +3171,8 @@
 
 			))))))
 	     )))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: DO, DO*, DOLIST, DOTIMES, WHILE, UNTIL, FOR
@@ -3257,7 +3288,9 @@
 					     `(begin . ,?expr*))))))
 		    (,loop . ,?init*)))))))
        ))
-    ))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3320,7 +3353,8 @@
 					      '(void)
 					    `(begin . ,?expr*))))))
 		   (,loop))))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3345,7 +3379,8 @@
 			(,loop (cdr ,ell)))
 		    (let ((,?var '()))
 		      ,?result-form))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3358,19 +3393,20 @@
     ((_ (?var ?count-form)              ?body0 ?body* ...)
      (let ((max-var (make-syntactic-identifier-for-temporary-variable)))
        (bless
-	`(let/std ((,max-var ,?count-form))
+	`(let/checked (({,max-var <top>} ,?count-form))
 	   (do ((,?var 0 (add1 ,?var)))
 	       ((>= ,?var ,max-var))
 	     ,?body0 . ,?body*)))))
     ((_ (?var ?count-form ?result-form) ?body0 ?body* ...)
      (let ((max-var (make-syntactic-identifier-for-temporary-variable)))
        (bless
-	`(let/std ((,max-var ,?count-form))
+	`(let/checked (({,max-var <top>} ,?count-form))
 	   (do ((,?var 0 (add1 ,?var)))
 	       ((>= ,?var ,max-var)
 		,?result-form)
 	     ,?body0 . ,?body*)))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3397,7 +3433,8 @@
 				 ,(with-escape-fluids escape next-iteration `(,@?body* #t))
 			       #f)))
 		   (,loop))))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (until input-form.stx)
   ;;Transformer  function used  to expand  Vicare's UNTIL  macros from  the top-level
@@ -3422,7 +3459,8 @@
 				 #f
 			       ,(with-escape-fluids escape next-iteration `(,@?body* #t)))))
 		   (,loop))))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (for input-form.stx)
   ;;Transformer function used to expand Vicare's  FOR macros from the top-level built
@@ -3451,7 +3489,8 @@
 			       #f)))
 		   ,?incr
 		   (,loop))))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 #| end of module |# )
 
@@ -3473,7 +3512,8 @@
 					    ((_ . ?args)
 					     (,escape . ?args)))))
 		 ,?body0 . ,?body*))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: TRY
@@ -3497,7 +3537,7 @@
 	    `(with-unwind-protection
 		 (lambda/std (,why)
 		   ,?finally-body0 . ,?finally-body*)
-	       (lambda/std ()
+	       (lambda/checked ()
 		 (guard (,?var . ,GUARD-CLAUSE*)
 		   ,?body)))))))
 
@@ -3515,9 +3555,10 @@
 	  `(with-unwind-protection
 	       (lambda/std (,why)
 		 ,?finally-body0 . ,?finally-body*)
-	     (lambda/std ()
+	     (lambda/checked ()
 	       ,?body)))))
-      ))
+      (_
+       (__synner__ "invalid syntax in macro use"))))
 
   (define (parse-multiple-catch-clauses var-id clauses-stx synner)
     (syntax-match clauses-stx (else)
@@ -3584,7 +3625,8 @@
 	     (with-exception-handler
 		 reinstate-with-blocked-exceptions-continuation
 	       ,?thunk)))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (with-current-dynamic-environment input-form.stx)
   ;;Transformer  function used  to  expand Vicare's  WITH-CURRENT-DYNAMIC-ENVIRONMENT
@@ -3610,7 +3652,8 @@
 					  ,?exception-retvals-maker
 					,?thunk))
 				  reinstate-thunk-call-continuation))))))))))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: SHIFT, RESET
@@ -3635,7 +3678,8 @@
 								  (,escape.sym ,value.sym))))
 		   (let/std ((,result.sym ,?body))
 		     ((private-shift-meta-continuation) ,result.sym)))))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (shift input-form.stx)
   ;;Transformer  function used  to expand  Vicare's SHIFT  macros from  the top-level
@@ -3655,7 +3699,8 @@
 							 (inner-reset (,escape.sym ,value.sym)))))
 					,?body)))
 		 ((private-shift-meta-continuation) ,result.sym)))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (inner-reset input-form.stx)
   ;;Transformer  function  used  to  expand  Vicare's  INNER-RESET  macros  from  the
@@ -3680,7 +3725,8 @@
 						    (,escape.sym ,value.sym)))
 		 (let/std ((,result.sym ,?body))
 		   ((private-shift-meta-continuation) ,result.sym))))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: COND
@@ -3741,7 +3787,8 @@
 
 	    (_
 	     (__synner__ "invalid last clause" cls)))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: QUASIQUOTE
@@ -3789,7 +3836,10 @@
       ;;
       ((_ ?expr)
        (bless
-	`(quote ,?expr)))))
+	`(quote ,?expr)))
+
+      (_
+       (__synner__ "invalid syntax in macro use"))))
 
   (define (%quasi stx nesting-level)
     (syntax-match stx (unquote unquote-splicing quasiquote)
@@ -4192,7 +4242,8 @@
 	  `(syntax-case (list ,@rhs*) ()
 	     (,lhs*
 	      (syntax ,v))))))
-      ))
+      (_
+       (__synner__ "invalid syntax in macro use"))))
 
   (define-module-who quasisyntax)
 
@@ -4357,7 +4408,9 @@
 		(call-with-values
 		    (lambda/std () ,?body0 . ,?body*)
 		  (lambda/std ,args.sym ,args.sym))))))
-	 )))))
+
+	 (_
+	  (__synner__ "invalid syntax in macro use")))))))
 
 (define-macro-transformer (define-values/checked input-form.stx)
   ;;Transformer function  used to  expand Vicare's DEFINE-VALUES/CHECKED  macros from
@@ -4451,7 +4504,9 @@
 		    (begin ,?body0 . ,?body*)
 		  ,ARGS)
 		))))
-	 )))))
+
+	 (_
+	  (__synner__ "invalid syntax in macro use")))))))
 
 
 ;;;; non-core macro: DEFINE-CONSTANT-VALUES
@@ -4468,7 +4523,8 @@
        (if (options::typed-language-enabled?)
 	   (define-constant-values/checked-macro input-form.stx ?formals (cons ?body0 ?body*))
 	 (define-constant-values/std-macro input-form.stx ?formals (cons ?body0 ?body*))))
-      ))
+      (_
+       (__synner__ "invalid syntax in macro use"))))
 
   (define (define-constant-values/std-macro input-form.stx formals.stx body*.stx)
     (receive (standard-formals.stx formals.sig)
@@ -4656,7 +4712,8 @@
 	   (define ,ghost ,?expr)
 	   (define-syntax ,?name
 	     (identifier-syntax ,ghost))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (define-inline-constant input-form.stx)
   ;;Transformer function  used to expand Vicare's  DEFINE-INLINE-CONSTANT macros from
@@ -4678,7 +4735,8 @@
 		 #`(quote #,(datum->syntax stx const))
 	       (syntax-violation (quote ?name)
 		 "invalid use of identifier syntax" stx (syntax ?name))))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (define-inline input-form.stx)
   ;;Transformer  function  used to  expand  Vicare's  DEFINE-INLINE macros  from  the
@@ -4713,7 +4771,8 @@
 			     (syntax-violation (quote ,?name) "cannot recursively expand inline expression" ,STX)))
 		   (__who__  (identifier-syntax (quote ,?name))))
 		(let/std ,BINDING* ,?body0 . ,?body*))))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: INCLUDE
@@ -4729,7 +4788,8 @@
        (%include-file ?filename ?context #f))
       ((?context ?filename #t)
        (%include-file ?filename ?context #t))
-      ))
+      (_
+       (__synner__ "invalid syntax in macro use"))))
 
   (define (%include-file filename-stx context-id verbose?)
     (define filename.str
@@ -4767,25 +4827,27 @@
   (syntax-match input-form.stx (lambda)
     ((_ (?name . ?formals) ?form0 ?form* ...)
      (identifier? ?name)
-     (bless
-      `(begin
-	 (define-fluid-syntax ,?name
-	   (lambda/std (x)
-	     (syntax-case x ()
-	       (_
-		(identifier? x)
-		#'xname)
+     (let ((XNAME (make-syntactic-identifier-for-temporary-variable (syntax->datum ?name))))
+       (bless
+	`(begin
+	   (define-fluid-syntax ,?name
+	     (lambda/std (x)
+	       (syntax-case x ()
+		 (_
+		  (identifier? x)
+		  #',XNAME)
 
-	       ((_ arg ...)
-		#'((fluid-let-syntax
-		       ((,?name (identifier-syntax xname)))
-		     (lambda/std ,?formals ,?form0 ,@?form*))
-		   arg ...)))))
-	 (define xname
-	   (fluid-let-syntax ((,?name (identifier-syntax xname)))
-	     (lambda/std ,?formals ,?form0 ,@?form*)))
-	 )))
-    ))
+		 ((_ arg ...)
+		  #'((fluid-let-syntax
+			 ((,?name (identifier-syntax ,XNAME)))
+		       (lambda/std ,?formals ,?form0 ,@?form*))
+		     arg ...)))))
+	   (define ,XNAME
+	     (fluid-let-syntax ((,?name (identifier-syntax ,XNAME)))
+	       (lambda/std ,?formals ,?form0 ,@?form*)))
+	   ))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: DEFINE-SYNTAX-PARAMETER, SYNTAX-PARAMETRISE
@@ -4801,7 +4863,8 @@
      (bless
       `(define-fluid-syntax ,?param-id
 	 (make-expand-time-value ,?param-expr))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (syntax-parametrise input-form.stx)
   ;;Transformer function used to expand Vicare's SYNTAX-PARAMETRISE-MACRO macros from
@@ -4816,7 +4879,8 @@
 				 (list lhs `(make-expand-time-value ,rhs)))
 			    ?lhs* ?rhs*)
 	 ,?body0 . ,?body*)))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: PRE-INCR!, PRE-DECR!, POST-INCR!, POST-DECR!
@@ -4946,7 +5010,9 @@
 		  (write (syntax->datum ?expr) port)
 		  (getter))))
        (bless
-	`(time-it ,str (lambda/std () ,?expr)))))))
+	`(time-it ,str (lambda/std () ,?expr)))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (delay input-form.stx)
   ;;Transformer function used to expand R6RS DELAY macros from the top-level built in
@@ -4956,7 +5022,9 @@
   (syntax-match input-form.stx ()
     ((_ ?expr)
      (bless
-      `(make-promise (lambda/std () ,?expr))))))
+      `(make-promise (lambda/std () ,?expr))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (assert input-form.stx)
   ;;Defined  by R6RS.   An ASSERT  form  is evaluated  by evaluating  EXPR.  If  EXPR
@@ -4983,7 +5051,71 @@
 		    ,(source-position-line pos) ,(source-position-column    pos)))
 	    `(or ,?expr
 		 (assertion-error ',?expr "unknown source" #f #f #f #f)))))))
-    ))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
+
+;;; --------------------------------------------------------------------
+
+(define-macro-transformer (__file__ input-form.stx)
+  (let ((expr (stx-expr input-form.stx)))
+    (if (reader-annotation? expr)
+	(let ((pos (reader-annotation-textual-position expr)))
+	  (if (source-position-condition? pos)
+	      (bless
+	       `(quote ,(source-position-port-id pos)))
+	    (bless
+	     `(quote ,(source-code-location)))))
+      (bless
+       `(quote ,(source-code-location))))))
+
+(define-macro-transformer (__line__ input-form.stx)
+  (let ((expr (stx-expr input-form.stx)))
+    (if (reader-annotation? expr)
+	(let ((pos (reader-annotation-textual-position expr)))
+	  (if (source-position-condition? pos)
+	      (bless
+	       `(quote ,(source-position-line pos)))
+	    (bless '(quote #f))))
+      (bless '(quote #f)))))
+
+;;; --------------------------------------------------------------------
+
+(define-macro-transformer (stdin input-form.stx)
+  (bless '(console-input-port)))
+
+(define-macro-transformer (stdout input-form.stx)
+  (bless '(console-output-port)))
+
+(define-macro-transformer (stderr input-form.stx)
+  (bless '(console-error-port)))
+
+
+;;;; symbol enumeration syntaxes
+
+(define (%allowed-symbol-macro input-form.stx allowed-symbol-set)
+  ;;Helper   function    used   to   implement   the    transformer   of:   EOL-STYLE
+  ;;ERROR-HANDLING-MODE, BUFFER-MODE, ENDIANNESS.  All  of these macros should expand
+  ;;to a quoted symbol among a list of allowed ones.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?name)
+     (and (identifier? ?name)
+	  (memq (identifier->symbol ?name) allowed-symbol-set))
+     (bless
+      `(quote ,?name)))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
+
+;;; --------------------------------------------------------------------
+
+(define-macro-transformer (eol-style input-form.stx)
+  (%allowed-symbol-macro input-form.stx '(none lf cr crlf nel crnel ls)))
+
+(define-macro-transformer (error-handling-mode input-form.stx)
+  (%allowed-symbol-macro input-form.stx '(ignore raise replace)))
+
+(define-macro-transformer (buffer-mode input-form.stx)
+  (%allowed-symbol-macro input-form.stx '(none line block)))
 
 (define-macro-transformer (file-options input-form.stx)
   ;;Transformer for the FILE-OPTIONS macro.  File options selection is implemented as
@@ -4997,7 +5129,9 @@
     ((_ ?opt* ...)
      (for-all valid-option? ?opt*)
      (bless
-      `(make-file-options ',?opt*)))))
+      `(make-file-options ',?opt*)))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (expander-options input-form.stx)
   ;;Transformer  for the  EXPANDER-OPTIONS  macro.  Expander  options selection  that
@@ -5044,19 +5178,9 @@
        ((native)
 	(bless '(native-endianness)))
        ((big little)
-	(bless `(quote ,?name)))))))
-
-(define (%allowed-symbol-macro input-form.stx allowed-symbol-set)
-  ;;Helper   function    used   to   implement   the    transformer   of:   EOL-STYLE
-  ;;ERROR-HANDLING-MODE, BUFFER-MODE, ENDIANNESS.  All  of these macros should expand
-  ;;to a quoted symbol among a list of allowed ones.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?name)
-     (and (identifier? ?name)
-	  (memq (identifier->symbol ?name) allowed-symbol-set))
-     (bless
-      `(quote ,?name)))))
+	(bless `(quote ,?name)))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; done

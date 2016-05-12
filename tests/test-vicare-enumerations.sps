@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -102,7 +102,7 @@
 
   (check-syntax-violation ;invalid list of symbols
    (define-enumeration enum-woppa 123 woppa)
-   => '("invalid syntax, no clause matches the input form" #f))
+   => '("invalid syntax in macro use" #f))
 ;;;   => '("expected list of symbols as enumeration elements" 123))
 
   (check-syntax-violation ;invalid list of symbols

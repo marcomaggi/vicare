@@ -1310,7 +1310,7 @@
 		 ((1 2 3)	=> (lambda (N) (vector N)))
 		 (else		=> 'else))
 	      (environment '(vicare))))
-    => "incorrect usage of auxiliary keyword")
+    => "incorrect use of auxiliary syntactic keyword")
 
   (check	;receiver form does not evaluate to function
       (try
@@ -1405,7 +1405,7 @@
   		 ((one two three)	=> (lambda (N) (vector N)))
   		 (else			=> 'else))
   	      (environment '(vicare))))
-    => "incorrect usage of auxiliary keyword")
+    => "incorrect use of auxiliary syntactic keyword")
 
   (check	;receiver form does not evaluate to function
       (try
