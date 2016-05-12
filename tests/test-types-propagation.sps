@@ -3028,7 +3028,11 @@
 			(F E))
 		(define (G)
 		  F)
-		((lambda () (G)))))))
+		(define (H)
+		  2.3)
+		(define-values (I J)
+		  (values (G) (H)))
+		((lambda () I))))))
 	=> (<positive-fixnum>))
 
 ;;; --------------------------------------------------------------------
