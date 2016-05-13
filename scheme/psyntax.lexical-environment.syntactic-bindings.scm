@@ -37,10 +37,19 @@
      syntactic-binding-descriptor/lexical-typed-var?
      syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec
 
+     make-syntactic-binding-descriptor/lexical-closure-var
+     make-syntactic-binding-descriptor/lexical-closure-var/from-data
+     syntactic-binding-descriptor/lexical-closure-var?
+     syntactic-binding-descriptor/lexical-closure-var.typed-variable-spec
+
 ;;; global lexical variables, typed variant
      make-global-typed-variable-spec-and-maker-core-expr
      syntactic-binding-descriptor/global-typed-var?
      syntactic-binding-descriptor/global-typed-var.typed-variable-spec
+
+     make-global-closure-variable-spec-and-maker-core-expr
+     syntactic-binding-descriptor/global-closure-var?
+     syntactic-binding-descriptor/global-closure-var.typed-variable-spec
 
 ;;; local macro with non-variable transformer bindings
      make-syntactic-binding-descriptor/local-macro/non-variable-transformer
@@ -315,6 +324,64 @@
   (cadr ?descriptor))
 
 
+;;;; syntactic binding descriptor: typed lexical variables holding closure objects
+;;
+;;A syntactic binding representing a typed  lexical variable holding a closure object
+;;has descriptor with format:
+;;
+;;   (lexical-typed . (#<lexical-closure-variable-spec> . ?expanded-expr))
+;;
+;;where ?EXPANDED-EXPR is  a core language expression which,  when evaluated, returns
+;;rebuilds the record of type "<lexical-closure-variable-spec>".
+;;
+
+(define* (make-syntactic-binding-descriptor/lexical-closure-var {lts lexical-closure-variable-spec?} lts.core-expr)
+  ;;Build  and return  a syntactic  binding descriptor  representing a  typed lexical
+  ;;variable.  LTS is  the specification of the variable's  type.  LTS.CORE-EXPR must
+  ;;be  a core  language  expression  which, evaluated  at  expand-time, returns  LTS
+  ;;itself.
+  ;;
+  ;;The returned descriptor has format:
+  ;;
+  ;;   (lexical-typed . (#<lexical-closure-variable-spec> . ?expanded-expr))
+  ;;
+  ;;and it is similar to the one of a local macro.  Indeed syntactic bindings of this
+  ;;type are similar to identifier macros.
+  ;;
+  (make-syntactic-binding-descriptor lexical-typed (cons lts lts.core-expr)))
+
+(define* (make-syntactic-binding-descriptor/lexical-closure-var/from-data {variable.ots object-type-spec?} {lex gensym?}
+									  {replacements (or not vector?)})
+  ;;The OTS  "<untyped>" is for  internal use, so  we do not  want to create  a typed
+  ;;variable with "<untyped>" OTS: so we normalise it to "<top>".
+  (let* ((variable.ots		(if (<untyped>-ots? variable.ots)
+				    (<top>-ots)
+				  variable.ots))
+	 (lts			(make-lexical-closure-variable-spec variable.ots lex replacements))
+	 (lts-maker.core-expr	(build-application no-source
+				    (build-primref no-source 'make-lexical-closure-variable-spec)
+				  (list (build-data no-source (object-type-spec.name variable.ots))
+					(build-data no-source lex)
+					(build-data no-source replacements)))))
+    (make-syntactic-binding-descriptor/lexical-closure-var lts lts-maker.core-expr)))
+
+;;; --------------------------------------------------------------------
+
+(define (syntactic-binding-descriptor/lexical-closure-var? obj)
+  (and (pair? obj)
+       (eq? (syntactic-binding-descriptor.type obj)
+	    (quote lexical-typed))
+       (lexical-closure-variable-spec? (car (syntactic-binding-descriptor.value obj)))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax-rule (syntactic-binding-descriptor/lexical-closure-var.typed-variable-spec ?descriptor)
+  ;;Extract the  record of  type "<typed-variable-spec>"  from a  syntactic binding's
+  ;;descriptor of type "lexical-typed".
+  ;;
+  (cadr ?descriptor))
+
+
 ;;;; syntactic binding descriptor: global typed lexical variables
 ;;
 ;;A syntactic binding  representing a global typed lexical  variable has descriptor
@@ -342,6 +409,45 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax-rule (syntactic-binding-descriptor/global-typed-var.typed-variable-spec ?descriptor)
+  ;;Extract the  record of  type "<typed-variable-spec>"  from a  syntactic binding's
+  ;;descriptor of type "global-typed" or "global-typed-mutable".
+  ;;
+  (symbol-value (cddr ?descriptor)))
+
+
+;;;; syntactic binding descriptor: global typed lexical variables holding a closure object
+;;
+;;A syntactic binding representing a global  typed lexical variable holding a closure
+;;object has descriptor with format:
+;;
+;;   (global-typed         . (#<library> . ?loc))
+;;   (global-typed-mutable . (#<library> . ?loc))
+;;
+;;where ?LOC is a loc gensym holding an instance of "<global-closure-variable-spec>".
+;;
+
+(define* (make-global-closure-variable-spec-and-maker-core-expr {variable.ots object-type-spec?} variable.loc
+								{replacements (or not vector?)})
+  (let* ((variable.gts	(make-global-closure-variable-spec variable.ots variable.loc replacements))
+	 (core-expr	(build-application no-source
+			    (build-primref no-source 'make-global-closure-variable-spec)
+			  (list (build-data no-source variable.ots)
+				(build-data no-source variable.loc)
+				(build-data no-source replacements)))))
+    (values variable.gts core-expr)))
+
+;;; --------------------------------------------------------------------
+
+(define (syntactic-binding-descriptor/global-closure-var? obj)
+  (and (pair? obj)
+       (let ((type (syntactic-binding-descriptor.type obj)))
+	 (or (eq? type (quote global-typed))
+	     (eq? type (quote global-typed-mutable))))
+       (global-closure-variable-spec? (car (syntactic-binding-descriptor.value obj)))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax-rule (syntactic-binding-descriptor/global-closure-var.typed-variable-spec ?descriptor)
   ;;Extract the  record of  type "<typed-variable-spec>"  from a  syntactic binding's
   ;;descriptor of type "global-typed" or "global-typed-mutable".
   ;;

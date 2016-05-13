@@ -4664,7 +4664,9 @@
 
     ;;These are only for internal use by the psyntax.
     (make-lexical-typed-variable-spec)
+    (make-lexical-closure-variable-spec)
     (make-global-typed-variable-spec)
+    (make-global-closure-variable-spec)
 
     (make-type-annotation				$expander)
 

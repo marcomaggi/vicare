@@ -2036,7 +2036,7 @@
 	   ;;There is a clause that exactly  matches the operands.  When we are here:
 	   ;;we know that SELECTED-CLAUSE-SIGNATURE* holds a single item.
 	   (%chi-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
-							 rator.psi rand*.psi
+							 rator.psi rand*.psi rands.sig
 							 (lambda-signature.retvals (car selected-clause-signature*))))
 	  ((possible-match)
 	   ;;There is at least one clause with  a possible match.  It is not possible
@@ -2084,8 +2084,9 @@
 
   (module (%chi-application-with-matching-signature)
 
-    (define (%chi-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
-						      rator.psi rand*.psi application-retvals.sig)
+    (define* (%chi-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
+						       rator.psi rand*.psi
+						       rands.sig {application-retvals.sig type-signature?})
       ;;We are applying an operator RATOR.PSI  to a tuple of operands RAND*.PSI.  The
       ;;operator is  a closure object.  One  of the closure's clauses  has arguments'
       ;;type  signatures  matching  the   operands'  type  signature.   The  matching
@@ -2095,19 +2096,19 @@
       (let ((rator.stx (psi.input-form rator.psi)))
 	(cond ((identifier? rator.stx)
 	       (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
-						     rator.psi rand*.psi application-retvals.sig
-						     rator.stx))
+						     rator.psi rand*.psi rator.stx
+						     rands.sig application-retvals.sig))
 	      (else
 	       ;;If we are here the rator  is a non-identifier expression returning a
 	       ;;closure object with known signature.
 	       (%build-core-expression input-form.stx rator.psi rand*.psi application-retvals.sig)))))
 
     (define* (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
-						   rator.psi rand*.psi application-retvals.sig
-						   rator.stx)
+						   rator.psi rand*.psi rator.id
+						   rands.sig {application-retvals.sig type-signature?})
       (define (%build-default-application)
 	(%build-core-expression input-form.stx rator.psi rand*.psi application-retvals.sig))
-      (cond ((id->label rator.stx)
+      (cond ((id->label rator.id)
 	     => (lambda (rator.label)
 		  (let ((rator.descr (label->syntactic-binding-descriptor rator.label lexenv.run)))
 		    (cond ((syntactic-binding-descriptor/core-prim-typed? rator.descr)
@@ -2115,12 +2116,10 @@
 			   ;;
 			   ;;   (fx+ 1 2)
 			   ;;
-			   (cond (#f
-				  #f)
-				 (else
+			   (cond (else
 				  (%build-default-application))))
 
-			  ((syntactic-binding-descriptor/lexical-typed-var? rator.descr)
+			  ((syntactic-binding-descriptor/lexical-closure-var? rator.descr)
 			   ;;The rator is a typed lexical variable.  For example:
 			   ;;
 			   ;;   (define/checked (fun {m <flonum>} {x <flonum>} {q <flonum>})
@@ -2128,32 +2127,67 @@
 			   ;;
 			   ;;   (fun 1. 2. 3.)
 			   ;;
-			   (%build-default-application)
-			   #;(%build-typed-variable-application
-			    (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec rator.descr)))
+			   (cond ((lexical-closure-variable-spec.replacements
+				   (syntactic-binding-descriptor/lexical-closure-var.typed-variable-spec rator.descr))
+				  => (lambda (replacements)
+				       (%select-application-replacement input-form.stx lexenv.run lexenv.expand
+									rator.psi rand*.psi
+									rands.sig application-retvals.sig
+									replacements)))
+				 (else
+				  (%build-default-application))))
 
-			  ((syntactic-binding-descriptor/global-typed-var? rator.descr)
-			   (%build-default-application)
-			   #;(%build-typed-variable-application
-			    (syntactic-binding-descriptor/global-typed-var.typed-variable-spec rator.descr)))
+			  ((syntactic-binding-descriptor/global-closure-var? rator.descr)
+			   (cond ((global-closure-variable-spec.replacements
+				   (syntactic-binding-descriptor/global-closure-var.typed-variable-spec rator.descr))
+				  => (lambda (replacements)
+				       (%select-application-replacement input-form.stx lexenv.run lexenv.expand
+									rator.psi rand*.psi
+									rands.sig application-retvals.sig
+									replacements)))
+				 (else
+				  (%build-default-application))))
+
+			  ;; ((syntactic-binding-descriptor/lexical-typed-var? rator.descr)
+			  ;;  (%build-default-application))
+
+			  ;; ((syntactic-binding-descriptor/global-typed-var? rator.descr)
+			  ;;  (%build-default-application))
 
 			  (else
 			   (%build-default-application))))))
 	    (else
-	     (error-unbound-identifier __module_who__ rator.stx))))
+	     (error-unbound-identifier __module_who__ rator.id))))
 
-    ;; (define (%build-unsafe-variant-application unsafe-rator.sexp)
-    ;;   ;; (let* ((unsafe-rator.stx (bless unsafe-rator.sexp))
-    ;;   ;;        (unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
-    ;;   ;;   (%build-core-expression input-form.stx unsafe-rator.psi rand*.psi application-retvals.sig))
-    ;;   (%build-default-application))
-
-    ;; (define* (%build-typed-variable-application {rator.spec typed-variable-spec?})
-    ;;   ;; (cond ((typed-variable-spec.unsafe-variant-sexp rator.spec)
-    ;;   ;;        => %build-unsafe-variant-application)
-    ;;   ;;       (else
-    ;;   ;;        (%build-default-application)))
-    ;;   (%build-default-application))
+    (define* (%select-application-replacement input-form.stx lexenv.run lexenv.expand
+					      rator.psi rand*.psi
+					      rands.sig {application-retvals.sig type-signature?}
+					      replacements)
+      ;;If a syntactic identifier in REPLACEMENTS is bound to a closure object with a
+      ;;closure  that  exactly  matches  the   operands:  use  such  closure  in  the
+      ;;application; otherwise use the original RATOR.PSI.  Return a psi object.
+      ;;
+      (let loop ((idx 0)
+		 (len (vector-length replacements)))
+	(if (fx=? idx len)
+	    ;;No matching replacement.
+	    (%build-core-expression input-form.stx rator.psi rand*.psi application-retvals.sig)
+	  (let* ((repl.psi		(let ((repl.id (vector-ref replacements idx)))
+					  (chi-expr repl.id lexenv.run lexenv.expand)))
+		 (repl.clambda-sig	(let* ((repl.sig (psi.retvals-signature repl.psi))
+					       (repl.ots (car (type-signature.object-type-specs repl.sig))))
+					  (closure-type-spec.signature repl.ots))))
+	    (cond ((exists (lambda (clause-signature)
+			     (let ((args.sig (lambda-signature.argvals clause-signature)))
+			       (if (eq? 'exact-match (type-signature.match-arguments-against-operands args.sig rands.sig))
+				   (lambda-signature.retvals clause-signature)
+				 #f)))
+		     (case-lambda-signature.clause-signature* repl.clambda-sig))
+		   => (lambda (repl-application-retvals.sig)
+			;;Found replacement.
+			(%build-core-expression input-form.stx repl.psi rand*.psi repl-application-retvals.sig)))
+		  (else
+		   (loop (fxadd1 idx) len)))))))
 
     #| end of module: %CHI-APPLICATION-WITH-MATCHING-SIGNATURE |# )
 

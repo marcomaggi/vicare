@@ -1532,7 +1532,7 @@
 	      (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 				  make-qdef-checked-defun
 				  lhs.id standard-formals.stx clause-signature
-				  body*.stx synner)
+				  body*.stx #f synner)
 	    (values (list qdef) lexenv.run))
 	;;Type arguments are present.  Generate two functions: the safe (which checks
 	;;the  arguments  also at  run-time)  and  the  unsafe (which  validates  the
@@ -1543,20 +1543,22 @@
 	      (((qdef-safe   lexenv.run)	(%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 								    make-qdef-checked-defun
 								    lhs.id standard-formals.stx clause-signature
-								    safe-body*.stx synner))
+								    safe-body*.stx (vector unsafe-name.id) synner))
 	       ((qdef-unsafe lexenv.run)	(%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 								    make-qdef-typed-defun
 								    unsafe-name.id standard-formals.stx clause-signature
-								    body*.stx synner)))
+								    body*.stx #f synner)))
 	    (values (list qdef-safe qdef-unsafe) lexenv.run)))))
 
-    (define (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-				qdef-maker
-				lhs.id standard-formals.stx clause-signature body*.stx synner)
+    (define* (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+				 qdef-maker
+				 lhs.id standard-formals.stx clause-signature body*.stx
+				 {replacements (or not vector?)} synner)
       (let* ((lhs.ots		(make-closure-type-spec (make-case-lambda-signature (list clause-signature))))
 	     (qdef		(qdef-maker input-form.stx lhs.id standard-formals.stx body*.stx lhs.ots))
 	     (lhs.lab		(generate-label-gensym lhs.id))
-	     (lhs.descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
+	     (lhs.descr		(make-syntactic-binding-descriptor/lexical-closure-var/from-data
+				 lhs.ots (qdef.lex qdef) replacements))
 	     (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.descr lexenv.run)))
 	;;This rib extension  will raise an exception if it  represents an attempt to
 	;;illegally redefine a binding.
@@ -1662,35 +1664,39 @@
 		 (receive (qdef lexenv.run)
 		     (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 					 make-qdef-checked-case-defun
-					 ?who lhs.ots standard-formals*.stx body**.stx %synner)
+					 ?who lhs.ots standard-formals*.stx body**.stx
+					 #f %synner)
 		   (values (list qdef) lexenv.run)))
 	     ;;Type arguments are  present.  Generate two functions:  the safe (which
 	     ;;checks the arguments also at run-time) and the unsafe (which validates
 	     ;;the arguments only at expand-time).
 	     (let* ((lhs.ots		(make-closure-type-spec (make-case-lambda-signature clause-signature*)))
-		    (unsafe-who		(%make-unsafe-name ?kwd ?who %synner))
+		    (unsafe-name.id		(%make-unsafe-name ?kwd ?who %synner))
 		    (safe-body**.stx	(map (lambda (standard-formals.stx)
-					       (list (%make-unsafe-application-stx unsafe-who standard-formals.stx)))
+					       (list (%make-unsafe-application-stx unsafe-name.id standard-formals.stx)))
 					  standard-formals*.stx)))
 	       (let*-values
 		   (((safe-qdef lexenv.run)
 		     (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 					 make-qdef-checked-case-defun
-					 ?who       lhs.ots standard-formals*.stx safe-body**.stx %synner))
+					 ?who       lhs.ots standard-formals*.stx safe-body**.stx
+					 (vector unsafe-name.id) %synner))
 		    ((unsafe-qdef lexenv.run)
 		     (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 					 make-qdef-typed-case-defun
-					 unsafe-who lhs.ots standard-formals*.stx body**.stx      %synner)))
+					 unsafe-name.id lhs.ots standard-formals*.stx body**.stx
+					 #f %synner)))
 		 (values (list safe-qdef unsafe-qdef) lexenv.run)))))))
       ))
 
   (define (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings? qdef-maker
-			      lhs.id lhs.ots standard-formals*.stx body**.stx %synner)
+			      lhs.id lhs.ots standard-formals*.stx body**.stx replacements %synner)
     (if (bound-id-member? lhs.id kwd*)
 	(%synner "cannot redefine keyword")
       (let* ((qdef		(qdef-maker input-form.stx lhs.id standard-formals*.stx body**.stx lhs.ots))
 	     (lhs.lab		(generate-label-gensym lhs.id))
-	     (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
+	     (descr		(make-syntactic-binding-descriptor/lexical-closure-var/from-data
+				 lhs.ots (qdef.lex qdef) replacements))
 	     (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
 	;;This rib extension  will raise an exception if it  represents an attempt to
 	;;illegally redefine a binding.

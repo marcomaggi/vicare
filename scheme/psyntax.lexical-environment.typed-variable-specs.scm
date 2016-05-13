@@ -30,9 +30,17 @@
 	 lexical-typed-variable-spec.lex
 	 lexical-typed-variable-spec.assigned?		lexical-typed-variable-spec.assigned?-set!
 
+	 <lexical-closure-variable-spec>
+	 make-lexical-closure-variable-spec		lexical-closure-variable-spec?
+	 lexical-closure-variable-spec.replacements
+
 	 <global-typed-variable-spec>
 	 make-global-typed-variable-spec		global-typed-variable-spec?
 	 global-typed-variable-spec.variable-loc
+
+	 <global-closure-variable-spec>
+	 make-global-closure-variable-spec		global-closure-variable-spec?
+	 global-closure-variable-spec.replacements
 
 	 <core-prim-type-spec>
 	 make-core-prim-type-spec			core-prim-type-spec?
@@ -73,6 +81,24 @@
       make-lexical-typed-variable-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 
+(define-record-type (<lexical-closure-variable-spec> make-lexical-closure-variable-spec lexical-closure-variable-spec?)
+  (nongenerative *0*vicare:expander:<lexical-closure-variable-spec>)
+  (parent <lexical-typed-variable-spec>)
+  (fields
+    (immutable replacements	lexical-closure-variable-spec.replacements)
+		;False or  a vector  of syntactic identifiers  bound to  the possible
+		;replacements for this closure object.
+    #| end of fields |# )
+  (protocol
+    (lambda (make-lexical-typed-variable-spec)
+      (case-define* make-lexical-closure-variable-spec
+	(({ots object-type-spec?} {lex gensym?})
+	 ((make-lexical-typed-variable-spec ots lex) #f))
+	(({ots object-type-spec?} {lex gensym?} {replacements (or not vector?)})
+	 ((make-lexical-typed-variable-spec ots lex) replacements)))
+      make-lexical-closure-variable-spec))
+  #| end of DEFINE-RECORD-TYPE |# )
+
 
 ;;;; global lexical variable specification
 
@@ -96,6 +122,24 @@
       (define* (make-global-typed-variable-spec {ots object-type-spec?} {variable.loc gensym?})
 	((make-typed-variable-spec ots) variable.loc))
       make-global-typed-variable-spec))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define-record-type (<global-closure-variable-spec> make-global-closure-variable-spec global-closure-variable-spec?)
+  (nongenerative *0*vicare:expander:<global-closure-variable-spec>)
+  (parent <global-typed-variable-spec>)
+  (fields
+    (immutable replacements	global-closure-variable-spec.replacements)
+		;False or  a vector  of syntactic identifiers  bound to  the possible
+		;replacements for this closure object.
+    #| end of fields |# )
+  (protocol
+    (lambda (make-global-typed-variable-spec)
+      (case-define* make-global-closure-variable-spec
+	(({ots object-type-spec?} {variable.loc gensym?})
+	 ((make-global-typed-variable-spec ots variable.loc) #f))
+	(({ots object-type-spec?} {variable.loc gensym?} {replacements (or not vector?)})
+	 ((make-global-typed-variable-spec ots variable.loc) replacements)))
+      make-global-closure-variable-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 
 

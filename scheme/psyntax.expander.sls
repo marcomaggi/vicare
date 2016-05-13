@@ -1301,7 +1301,10 @@
 		 ;;core  language  expression  which, compiled  and  evaluated,  will
 		 ;;return a copy of GLOBVAR.GTS; this code belongs in the visit code.
 		 (receive (globvar.gts gts-maker-core-expr)
-		     (make-global-typed-variable-spec-and-maker-core-expr lexvar.ots globvar.value-loc)
+		     (if (lexical-closure-variable-spec? lexvar.lts)
+			 (make-global-closure-variable-spec-and-maker-core-expr
+			  lexvar.ots globvar.value-loc (lexical-closure-variable-spec.replacements lexvar.lts))
+		       (make-global-typed-variable-spec-and-maker-core-expr lexvar.ots globvar.value-loc))
 		   (loop (cdr lexenv.run)
 			 (cons (make-global-env-entry label globvar.type globvar.type-loc) global-env)
 			 (cons (make-visit-env-entry globvar.type-loc globvar.gts gts-maker-core-expr) visit-env)

@@ -235,10 +235,18 @@
     lexical-typed-variable-spec.lex
     lexical-typed-variable-spec.assigned?		lexical-typed-variable-spec.assigned?-set!
 
+    <lexical-closure-variable-spec>
+    make-lexical-closure-variable-spec			lexical-closure-variable-spec?
+    lexical-closure-variable-spec.replacements
+
     ;; typed global variable specification
     <global-typed-variable-spec>
     make-global-typed-variable-spec			global-typed-variable-spec?
     global-typed-variable-spec.variable-loc
+
+    <global-closure-variable-spec>
+    make-global-closure-variable-spec			global-closure-variable-spec?
+    global-closure-variable-spec.replacements
 
     ;; typed core primitive specification
     <core-prim-type-spec>
