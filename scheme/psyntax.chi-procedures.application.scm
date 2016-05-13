@@ -2035,7 +2035,7 @@
 	  ((exact-match)
 	   ;;There is a clause that exactly  matches the operands.  When we are here:
 	   ;;we know that SELECTED-CLAUSE-SIGNATURE* holds a single item.
-	   (%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
+	   (%chi-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
 							 rator.psi rand*.psi
 							 (lambda-signature.retvals (car selected-clause-signature*))))
 	  ((possible-match)
@@ -2082,58 +2082,80 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
-							rator.psi rand*.psi application-retvals.sig)
-    ;;We are  applying an operator RATOR.PSI  to a tuple of  operands RAND*.PSI.  The
-    ;;operator is a closure object.  One of the closure's clauses has arguments' type
-    ;;signatures  matching  the operands'  type  signature.   The matching  closure's
-    ;;clause has return values with type signature APPLICATION-RETVALS.SIG.
-    ;;
-    (define (%build-default-application)
-      (%build-core-expression input-form.stx rator.psi rand*.psi application-retvals.sig))
-    (define (%build-unsafe-variant-application unsafe-rator.sexp)
-      ;; (let* ((unsafe-rator.stx (bless unsafe-rator.sexp))
-      ;;        (unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
-      ;;   (%build-core-expression input-form.stx unsafe-rator.psi rand*.psi application-retvals.sig))
-      (%build-default-application))
-    (define* (%build-typed-variable-application {rator.spec typed-variable-spec?})
-      ;; (cond ((typed-variable-spec.unsafe-variant-sexp rator.spec)
-      ;;        => %build-unsafe-variant-application)
-      ;;       (else
-      ;;        (%build-default-application)))
-      (%build-default-application))
-    (define rator.stx (psi.input-form rator.psi))
-    (cond ((identifier? rator.stx)
-	   ;;Here we do not want to raise an error if the identifier RATOR.STX is not
-	   ;;a typed lexical variable (it might be an identifier expression returning
-	   ;;a closure object).
-	   (cond ((id->label rator.stx)
-		  => (lambda (rator.label)
-		       (let ((rator.descr (label->syntactic-binding-descriptor rator.label lexenv.run)))
-			 (cond ((syntactic-binding-descriptor/core-prim-typed? rator.descr)
-				;;FIXME  Unsafe  variants   for  core  primitives  is
-				;;temporarily disabled  until the table  of primitive
-				;;properties  declaration is  rewritten  in a  format
-				;;that allows  correct selection of  the replacement.
-				;;(Marco Maggi; Sun Jan 10, 2016)
-				(cond (#f
-				       => %build-unsafe-variant-application)
-				      (else
-				       (%build-default-application))))
-			       ((syntactic-binding-descriptor/lexical-typed-var? rator.descr)
-				(%build-typed-variable-application
-				 (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec rator.descr)))
-			       ((syntactic-binding-descriptor/global-typed-var? rator.descr)
-				(%build-typed-variable-application
-				 (syntactic-binding-descriptor/global-typed-var.typed-variable-spec rator.descr)))
-			       (else
-				(%build-default-application))))))
-		 (else
-		  (error-unbound-identifier __module_who__ rator.stx))))
-	  (else
-	   ;;If we  are here  the rator  is a  non-identifier expression  returning a
-	   ;;closure object with known signature.
-	   (%build-default-application))))
+  (module (%chi-application-with-matching-signature)
+
+    (define (%chi-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
+						      rator.psi rand*.psi application-retvals.sig)
+      ;;We are applying an operator RATOR.PSI  to a tuple of operands RAND*.PSI.  The
+      ;;operator is  a closure object.  One  of the closure's clauses  has arguments'
+      ;;type  signatures  matching  the   operands'  type  signature.   The  matching
+      ;;closure's    clause     has    return    values    with     type    signature
+      ;;APPLICATION-RETVALS.SIG.
+      ;;
+      (let ((rator.stx (psi.input-form rator.psi)))
+	(cond ((identifier? rator.stx)
+	       (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
+						     rator.psi rand*.psi application-retvals.sig
+						     rator.stx))
+	      (else
+	       ;;If we are here the rator  is a non-identifier expression returning a
+	       ;;closure object with known signature.
+	       (%build-core-expression input-form.stx rator.psi rand*.psi application-retvals.sig)))))
+
+    (define* (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
+						   rator.psi rand*.psi application-retvals.sig
+						   rator.stx)
+      (define (%build-default-application)
+	(%build-core-expression input-form.stx rator.psi rand*.psi application-retvals.sig))
+      (cond ((id->label rator.stx)
+	     => (lambda (rator.label)
+		  (let ((rator.descr (label->syntactic-binding-descriptor rator.label lexenv.run)))
+		    (cond ((syntactic-binding-descriptor/core-prim-typed? rator.descr)
+			   ;;The rator is a typed core primitive.  For example:
+			   ;;
+			   ;;   (fx+ 1 2)
+			   ;;
+			   (cond (#f
+				  #f)
+				 (else
+				  (%build-default-application))))
+
+			  ((syntactic-binding-descriptor/lexical-typed-var? rator.descr)
+			   ;;The rator is a typed lexical variable.  For example:
+			   ;;
+			   ;;   (define/checked (fun {m <flonum>} {x <flonum>} {q <flonum>})
+			   ;;     (fl+ q (fl* m x)))
+			   ;;
+			   ;;   (fun 1. 2. 3.)
+			   ;;
+			   (%build-default-application)
+			   #;(%build-typed-variable-application
+			    (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec rator.descr)))
+
+			  ((syntactic-binding-descriptor/global-typed-var? rator.descr)
+			   (%build-default-application)
+			   #;(%build-typed-variable-application
+			    (syntactic-binding-descriptor/global-typed-var.typed-variable-spec rator.descr)))
+
+			  (else
+			   (%build-default-application))))))
+	    (else
+	     (error-unbound-identifier __module_who__ rator.stx))))
+
+    ;; (define (%build-unsafe-variant-application unsafe-rator.sexp)
+    ;;   ;; (let* ((unsafe-rator.stx (bless unsafe-rator.sexp))
+    ;;   ;;        (unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
+    ;;   ;;   (%build-core-expression input-form.stx unsafe-rator.psi rand*.psi application-retvals.sig))
+    ;;   (%build-default-application))
+
+    ;; (define* (%build-typed-variable-application {rator.spec typed-variable-spec?})
+    ;;   ;; (cond ((typed-variable-spec.unsafe-variant-sexp rator.spec)
+    ;;   ;;        => %build-unsafe-variant-application)
+    ;;   ;;       (else
+    ;;   ;;        (%build-default-application)))
+    ;;   (%build-default-application))
+
+    #| end of module: %CHI-APPLICATION-WITH-MATCHING-SIGNATURE |# )
 
 ;;; --------------------------------------------------------------------
 
