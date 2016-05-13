@@ -1176,14 +1176,14 @@
 	(synner "expected identifier as function name" lhs.id))
       ;;From parsing the standard formals we get  2 values: a proper or improper list
       ;;of   identifiers  representing   the   standard  formals;   an  instance   of
-      ;;"<clambda-clause-signature>".   An exception  is  raised if  an error  occurs
+      ;;"<lambda-signature>".   An exception  is  raised if  an error  occurs
       ;;while parsing.
       (receive (standard-formals.stx clause-signature)
 	  (syntax-object.parse-standard-clambda-clause-formals input-formals.stx)
 	;;This is a standard variable syntactic  binding, so the arguments and return
 	;;values are untyped.   However, we still want to generate  a typed syntactic
 	;;binding so that we can validate the number of operands and return values.
-	(let* ((lhs.ots	(make-closure-type-spec (make-clambda-signature (list clause-signature))))
+	(let* ((lhs.ots	(make-closure-type-spec (make-case-lambda-signature (list clause-signature))))
 	       (qdef	(make-qdef-standard-defun input-form.stx lhs.id standard-formals.stx body*.stx lhs.ots)))
 	  (values lhs.id lhs.ots qdef lexenv.run))))
 
@@ -1237,7 +1237,7 @@
 	     ;;return values are untyped.  However, we still want to generate a typed
 	     ;;syntactic binding so  that we can validate the number  of operands and
 	     ;;return values.
-	     (let* ((lhs.ots	(make-closure-type-spec (make-clambda-signature clause-signature*)))
+	     (let* ((lhs.ots	(make-closure-type-spec (make-case-lambda-signature clause-signature*)))
 		    (qdef	(make-qdef-standard-case-defun input-form.stx ?who standard-formals*.stx body**.stx lhs.ots)))
 	       (values ?who lhs.ots qdef lexenv.run)))))
 	))
@@ -1261,7 +1261,7 @@
 	((?formals ?body ?body* ...)
 	 ;;From parsing  the standard formals we  get 2 values: a  proper or improper
 	 ;;list  of identifiers  representing the  standard formals;  an instance  of
-	 ;;"<clambda-clause-signature>".  An  exception is raised if  an error occurs
+	 ;;"<lambda-signature>".  An  exception is raised if  an error occurs
 	 ;;while parsing.
 	 (receive (standard-formals.stx clause-signature)
 	     (syntax-object.parse-standard-clambda-clause-formals ?formals)
@@ -1370,12 +1370,12 @@
 	(synner "expected identifier as variable name" lhs.id))
       ;;From parsing the typed formals we get  2 values: a proper or improper list of
       ;;identifiers   representing    the   standard   formals;   an    instance   of
-      ;;"<clambda-clause-signature>".   An exception  is  raised if  an error  occurs
+      ;;"<lambda-signature>".   An exception  is  raised if  an error  occurs
       ;;while parsing.
       (receive (standard-formals.stx clause-signature)
 	  ;;This call will use "<top>" for formals without type annotation.
 	  (syntax-object.parse-typed-clambda-clause-formals input-formals.stx)
-	(let* ((lhs.ots			(make-closure-type-spec (make-clambda-signature (list clause-signature))))
+	(let* ((lhs.ots			(make-closure-type-spec (make-case-lambda-signature (list clause-signature))))
 	       (qdef			(make-qdef-typed-defun input-form.stx lhs.id standard-formals.stx body*.stx lhs.ots)))
 	  (values lhs.id lhs.ots qdef lexenv.run))))
 
@@ -1472,7 +1472,7 @@
 	 (receive (standard-formals.stx argvals.sig)
 	     ;;This call will use "<top>" for untyped arguments.
 	     (syntax-object.parse-typed-formals ?formals)
-	   (let ((clause-signature (make-clambda-clause-signature (make-type-signature ?rv-types) argvals.sig)))
+	   (let ((clause-signature (make-lambda-signature (make-type-signature ?rv-types) argvals.sig)))
 	     (%process-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 					   ?lhs `(,(brace-id) ,?lhs . ,?rv-types) standard-formals.stx clause-signature
 					   `(,?body0 . ,?body*) %synner)))))
@@ -1481,7 +1481,7 @@
        (receive (standard-formals.stx argvals.sig)
 	   ;;This call will use "<top>" for untyped arguments.
 	   (syntax-object.parse-typed-formals ?formals)
-	 (let ((clause-signature (make-clambda-clause-signature (make-type-signature/fully-untyped) argvals.sig)))
+	 (let ((clause-signature (make-lambda-signature (make-type-signature/fully-untyped) argvals.sig)))
 	   (%process-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 					 ?lhs ?lhs standard-formals.stx clause-signature
 					 `(,?body0 . ,?body*) %synner))))
@@ -1525,7 +1525,7 @@
 	(synner "expected identifier as variable name" lhs.id))
       (when (bound-id-member? lhs.id kwd*)
 	(synner "cannot redefine keyword"))
-      (if (type-signature.only-<untyped>-and-<top>-and-<list>? (clambda-clause-signature.argvals clause-signature))
+      (if (type-signature.only-<untyped>-and-<top>-and-<list>? (lambda-signature.argvals clause-signature))
 	  ;;Only generic type annotations: there is no need to validate the operands,
 	  ;;so generate a single checked function.
 	  (receive (qdef lexenv.run)
@@ -1553,7 +1553,7 @@
     (define (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 				qdef-maker
 				lhs.id standard-formals.stx clause-signature body*.stx synner)
-      (let* ((lhs.ots		(make-closure-type-spec (make-clambda-signature (list clause-signature))))
+      (let* ((lhs.ots		(make-closure-type-spec (make-case-lambda-signature (list clause-signature))))
 	     (qdef		(qdef-maker input-form.stx lhs.id standard-formals.stx body*.stx lhs.ots))
 	     (lhs.lab		(generate-label-gensym lhs.id))
 	     (lhs.descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
@@ -1602,7 +1602,7 @@
 	     (synner "expected identifier as function name" ?who))
 	   (receive (standard-formals*.stx clause-signature* body**.stx)
 	       (%parse-clauses (cons ?cl-clause ?cl-clause*) '() '() '())
-	     (let* ((lhs.ots	(make-closure-type-spec (make-clambda-signature clause-signature*)))
+	     (let* ((lhs.ots	(make-closure-type-spec (make-case-lambda-signature clause-signature*)))
 		    (qdef-safe	(make-qdef-typed-case-defun input-form.stx ?who standard-formals*.stx body**.stx lhs.ots)))
 		 (values ?who lhs.ots qdef-safe lexenv.run)))))
 	))
@@ -1625,7 +1625,7 @@
 	((?formals ?body ?body* ...)
 	 ;;From parsing  the standard formals we  get 2 values: a  proper or improper
 	 ;;list  of identifiers  representing the  standard formals;  an instance  of
-	 ;;"<clambda-clause-signature>".  An  exception is raised if  an error occurs
+	 ;;"<lambda-signature>".  An  exception is raised if  an error occurs
 	 ;;while parsing.
 	 (receive (standard-formals.stx clause-signature)
 	     ;;This call will use "<top>" for formals without type annotation.
@@ -1654,11 +1654,11 @@
 	 (receive (standard-formals*.stx clause-signature* body**.stx)
 	     (%parse-clauses input-form.stx (cons ?cl-clause ?cl-clause*) '() '() '())
 	   (if (for-all (lambda (clause-signature)
-			  (type-signature.only-<untyped>-and-<top>-and-<list>? (clambda-clause-signature.argvals clause-signature)))
+			  (type-signature.only-<untyped>-and-<top>-and-<list>? (lambda-signature.argvals clause-signature)))
 		 clause-signature*)
 	       ;;Only generic type annotations:  no operands validation is necessary,
 	       ;;so generate a single checked function.
-	       (let ((lhs.ots (make-closure-type-spec (make-clambda-signature clause-signature*))))
+	       (let ((lhs.ots (make-closure-type-spec (make-case-lambda-signature clause-signature*))))
 		 (receive (qdef lexenv.run)
 		     (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 					 make-qdef-checked-case-defun
@@ -1667,7 +1667,7 @@
 	     ;;Type arguments are  present.  Generate two functions:  the safe (which
 	     ;;checks the arguments also at run-time) and the unsafe (which validates
 	     ;;the arguments only at expand-time).
-	     (let* ((lhs.ots		(make-closure-type-spec (make-clambda-signature clause-signature*)))
+	     (let* ((lhs.ots		(make-closure-type-spec (make-case-lambda-signature clause-signature*)))
 		    (unsafe-who		(%make-unsafe-name ?kwd ?who %synner))
 		    (safe-body**.stx	(map (lambda (standard-formals.stx)
 					       (list (%make-unsafe-application-stx unsafe-who standard-formals.stx)))
@@ -1716,8 +1716,8 @@
       ((?formals ?body ?body* ...)
        ;;From parsing the standard formals we get 2 values: a proper or improper list
        ;;of   identifiers  representing   the  standard   formals;  an   instance  of
-       ;;"<clambda-clause-signature>".   An exception  is raised  if an  error occurs
-       ;;while parsing.
+       ;;"<lambda-signature>".   An exception  is  raised if  an  error occurs  while
+       ;;parsing.
        (receive (standard-formals.stx clause-signature)
 	   ;;This call will use "<top>" for formals without type annotation.
 	   (syntax-object.parse-typed-clambda-clause-formals ?formals)

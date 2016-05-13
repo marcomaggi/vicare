@@ -137,7 +137,8 @@
 	 <closure-type-spec>
 	 <closure-type-spec>-rtd			<closure-type-spec>-rcd
 	 make-closure-type-spec				closure-type-spec?
-	 closure-type-spec.signature			closure-type-spec.thunk?
+	 closure-type-spec.signature			closure-type-spec.set-new-retvals-when-untyped!
+	 closure-type-spec.thunk?
 
 	 <struct-type-spec>
 	 <struct-type-spec>-rtd				<struct-type-spec>-rcd
@@ -264,7 +265,7 @@
 ;;maker of "<object-type-spec>" is not exported by the module.
 ;;
 (define-record-type (<object-type-spec> make-object-type-spec object-type-spec?)
-  (nongenerative *2*vicare:expander:<object-type-spec>)
+  (nongenerative *3*vicare:expander:<object-type-spec>)
   (fields
     (mutable name-or-maker)
 		;A  procedure that,  applied to  this  OTS, returns  a syntax  object
@@ -1080,12 +1081,12 @@
 		;;signatures.
 		(for-all (lambda (super.clause-signature)
 			   (exists (lambda (sub.clause-signature)
-				     (and (type-signature.super-and-sub? (clambda-clause-signature.argvals super.clause-signature)
-									 (clambda-clause-signature.argvals sub.clause-signature))
-					  (type-signature.super-and-sub? (clambda-clause-signature.retvals super.clause-signature)
-									 (clambda-clause-signature.retvals sub.clause-signature))))
-			     (clambda-signature.clause-signature* (closure-type-spec.signature sub.ots))))
-		  (clambda-signature.clause-signature* (closure-type-spec.signature super.ots))))
+				     (and (type-signature.super-and-sub? (lambda-signature.argvals super.clause-signature)
+									 (lambda-signature.argvals sub.clause-signature))
+					  (type-signature.super-and-sub? (lambda-signature.retvals super.clause-signature)
+									 (lambda-signature.retvals sub.clause-signature))))
+			     (case-lambda-signature.clause-signature* (closure-type-spec.signature sub.ots))))
+		  (case-lambda-signature.clause-signature* (closure-type-spec.signature super.ots))))
 	       (else #f)))
 
 	((closure-type-spec? sub.ots)
@@ -1614,7 +1615,7 @@
   ($closure-type-spec=? ots1 ots2))
 
 (define ($closure-type-spec=? ots1 ots2)
-  (clambda-signature=? (closure-type-spec.signature ots1)
+  (case-lambda-signature=? (closure-type-spec.signature ots1)
 		       (closure-type-spec.signature ots2)))
 
 ;;; --------------------------------------------------------------------
@@ -1791,7 +1792,7 @@
 ;;object-type specifications for: <fixnum>, <flonum>, <string>, <list>, ...
 ;;
 (define-record-type (<scheme-type-spec> make-scheme-type-spec scheme-type-spec?)
-  (nongenerative *2*vicare:expander:<scheme-type-spec>)
+  (nongenerative *3*vicare:expander:<scheme-type-spec>)
   (parent <object-type-spec>)
   (fields
     (immutable type-descriptor-id	scheme-type-spec.type-descriptor-id)
@@ -1842,7 +1843,7 @@
 ;;"Struct-Type Spec") or STRUCT-OTS.
 ;;
 (define-record-type (<struct-type-spec> make-struct-type-spec struct-type-spec?)
-  (nongenerative *2*vicare:expander:<struct-type-spec>)
+  (nongenerative *3*vicare:expander:<struct-type-spec>)
   (parent <object-type-spec>)
   (fields
     (immutable std			struct-type-spec.std)
@@ -1892,7 +1893,7 @@
 ;;called RTS (as in "Record-Type Spec") or RECORD-OTS.
 ;;
 (define-record-type (<record-type-spec> make-record-type-spec record-type-spec?)
-  (nongenerative *2*vicare:expander:<record-type-spec>)
+  (nongenerative *3*vicare:expander:<record-type-spec>)
   (parent <object-type-spec>)
   (fields
     (immutable rtd-id			record-type-spec.rtd-id)
@@ -1999,7 +2000,7 @@
 ;;"<compound-condition>" representing compound condition objects of a known type.
 ;;
 (define-record-type (<compound-condition-type-spec> make-compound-condition-type-spec compound-condition-type-spec?)
-  (nongenerative *2*vicare:expander:<compound-condition-type-spec>)
+  (nongenerative *3*vicare:expander:<compound-condition-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2083,7 +2084,7 @@
 ;;types.
 ;;
 (define-record-type (<union-type-spec> make-union-type-spec union-type-spec?)
-  (nongenerative *2*vicare:expander:<union-type-spec>)
+  (nongenerative *3*vicare:expander:<union-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2351,7 +2352,7 @@
 ;;types.
 ;;
 (define-record-type (<intersection-type-spec> make-intersection-type-spec intersection-type-spec?)
-  (nongenerative *2*vicare:expander:<intersection-type-spec>)
+  (nongenerative *3*vicare:expander:<intersection-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2517,7 +2518,7 @@
 ;;types.
 ;;
 (define-record-type (<complement-type-spec> make-complement-type-spec complement-type-spec?)
-  (nongenerative *2*vicare:expander:<complement-type-spec>)
+  (nongenerative *3*vicare:expander:<complement-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2589,7 +2590,7 @@
 ;;types.
 ;;
 (define-record-type (<ancestor-of-type-spec> make-ancestor-of-type-spec ancestor-of-type-spec?)
-  (nongenerative *2*vicare:expander:<ancestor-of-type-spec>)
+  (nongenerative *3*vicare:expander:<ancestor-of-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2676,20 +2677,21 @@
 ;;the signature of a closure object.
 ;;
 (define-record-type (<closure-type-spec> make-closure-type-spec closure-type-spec?)
-  (nongenerative *2*vicare:expander:<closure-type-spec>)
+  (nongenerative *3*vicare:expander:<closure-type-spec>)
   (parent <object-type-spec>)
 
   (fields
-    (immutable signature		closure-type-spec.signature)
-		;An instance of "<callable-signature>".
+    (mutable signature		closure-type-spec.signature closure-type-spec.signature-set!)
+		;An instance  of "<case-lambda-signature>".   It is mutable  to allow
+		;expand-time type propagation.
     #| end of FIELDS |# )
 
   (protocol
     (lambda (make-object-type-spec)
       (case-define* make-closure-type-spec
-	(({signature callable-signature?})
+	(({signature case-lambda-signature?})
 	 ($make-closure-type-spec signature closure-type-spec.type-annotation-maker))
-	(({signature callable-signature?} name.stx)
+	(({signature case-lambda-signature?} name.stx)
 	 ($make-closure-type-spec signature name.stx)))
 
       (define ($make-closure-type-spec signature name)
@@ -2730,10 +2732,10 @@
 (define (closure-type-spec.type-annotation-maker ots)
   (let* ((signature	(closure-type-spec.signature ots))
 	 (clause*	(map (lambda (clause-signature)
-			       (list (type-signature.syntax-object (clambda-clause-signature.argvals clause-signature))
+			       (list (type-signature.syntax-object (lambda-signature.argvals clause-signature))
 				     (core-prim-id '=>)
-				     (type-signature.syntax-object (clambda-clause-signature.retvals clause-signature))))
-			  (clambda-signature.clause-signature* signature))))
+				     (type-signature.syntax-object (lambda-signature.retvals clause-signature))))
+			  (case-lambda-signature.clause-signature* signature))))
     (if (list-of-single-item? clause*)
 	(cons (core-prim-id 'lambda) (car clause*))
       (cons (core-prim-id 'case-lambda) clause*))))
@@ -2745,11 +2747,26 @@
   ;;otherwise return false.
   ;;
   (exists (lambda (csig)
-	    (let ((specs (clambda-clause-signature.argvals.specs csig)))
+	    (let ((specs (lambda-signature.argvals.specs csig)))
 	      (or (null? specs)
 		  (<list>-ots? specs)
 		  (list-of-type-spec? specs))))
-    (clambda-signature.clause-signature* (closure-type-spec.signature ots))))
+    (case-lambda-signature.clause-signature* (closure-type-spec.signature ots))))
+
+;;; --------------------------------------------------------------------
+
+(define* (closure-type-spec.set-new-retvals-when-untyped! {closure.ots closure-type-spec?} retvals*.new-sig)
+  (closure-type-spec.signature-set! closure.ots
+    (make-case-lambda-signature
+     (map (lambda (clause-signature retvals.new-sig)
+	    ;;If no type signature was  specified for the clause: we use
+	    ;;RETVALS.NEW-SIG.
+	    (if (type-signature.fully-untyped? (lambda-signature.retvals clause-signature))
+		(make-lambda-signature retvals.new-sig
+				       (lambda-signature.argvals clause-signature))
+	      clause-signature))
+       (case-lambda-signature.clause-signature* (closure-type-spec.signature closure.ots))
+       retvals*.new-sig))))
 
 
 ;;;; heterogeneous pair object spec
@@ -2758,7 +2775,7 @@
 ;;"<pair>" representing pair of objects holding items of a known type.
 ;;
 (define-record-type (<pair-type-spec> make-pair-type-spec pair-type-spec?)
-  (nongenerative *2*vicare:expander:<pair-type-spec>)
+  (nongenerative *3*vicare:expander:<pair-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2865,7 +2882,7 @@
 ;;"<pair>" representing pair of objects holding items of the same type.
 ;;
 (define-record-type (<pair-of-type-spec> make-pair-of-type-spec pair-of-type-spec?)
-  (nongenerative *2*vicare:expander:<pair-of-type-spec>)
+  (nongenerative *3*vicare:expander:<pair-of-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2953,7 +2970,7 @@
 ;;heterogeneous type.
 ;;
 (define-record-type (<list-type-spec> make-list-type-spec list-type-spec?)
-  (nongenerative *2*vicare:expander:<list-type-spec>)
+  (nongenerative *3*vicare:expander:<list-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3072,7 +3089,7 @@
 ;;type.
 ;;
 (define-record-type (<list-of-type-spec> make-list-of-type-spec list-of-type-spec?)
-  (nongenerative *2*vicare:expander:<list-of-type-spec>)
+  (nongenerative *3*vicare:expander:<list-of-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3162,7 +3179,7 @@
 ;;heterogeneous type.
 ;;
 (define-record-type (<vector-type-spec> make-vector-type-spec vector-type-spec?)
-  (nongenerative *2*vicare:expander:<vector-type-spec>)
+  (nongenerative *3*vicare:expander:<vector-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3275,7 +3292,7 @@
 ;;"<vector>" representing vector objects holding items of a known type.
 ;;
 (define-record-type (<vector-of-type-spec> make-vector-of-type-spec vector-of-type-spec?)
-  (nongenerative *2*vicare:expander:<vector-of-type-spec>)
+  (nongenerative *3*vicare:expander:<vector-of-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3360,7 +3377,7 @@
 ;;type.
 ;;
 (define-record-type (<hashtable-type-spec> make-hashtable-type-spec hashtable-type-spec?)
-  (nongenerative *2*vicare:expander:<hashtable-type-spec>)
+  (nongenerative *3*vicare:expander:<hashtable-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3440,7 +3457,7 @@
 ;;"<list>" representing alist objects holding keys and values of a known type.
 ;;
 (define-record-type (<alist-type-spec> make-alist-type-spec alist-type-spec?)
-  (nongenerative *2*vicare:expander:<alist-type-spec>)
+  (nongenerative *3*vicare:expander:<alist-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3537,7 +3554,7 @@
 ;;annotation.
 ;;
 (define-record-type (<enumeration-type-spec> make-enumeration-type-spec enumeration-type-spec?)
-  (nongenerative *2*vicare:expander:<enumeration-type-spec>)
+  (nongenerative *3*vicare:expander:<enumeration-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3613,7 +3630,7 @@
 ;;defined with DEFINE-LABEL.
 ;;
 (define-record-type (<label-type-spec> make-label-type-spec label-type-spec?)
-  (nongenerative *2*vicare:expander:<label-type-spec>)
+  (nongenerative *3*vicare:expander:<label-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3910,19 +3927,19 @@
 					   (cons ?component-type ?component-type*))))
 
      ((lambda ?argtypes => ?rettypes)
-      (make-closure-type-spec (make-clambda-signature
+      (make-closure-type-spec (make-case-lambda-signature
 			       (list
-				(make-clambda-clause-signature (make-type-signature ?rettypes)
+				(make-lambda-signature (make-type-signature ?rettypes)
 							       (make-type-signature ?argtypes))))
 			      name.stx))
 
      ((case-lambda (?argtypes0 => ?rettypes0) (?argtypes* => ?rettypes*) ...)
-      (make-closure-type-spec (make-clambda-signature
-			       (cons (make-clambda-clause-signature
+      (make-closure-type-spec (make-case-lambda-signature
+			       (cons (make-lambda-signature
 				      (make-type-signature ?rettypes0)
 				      (make-type-signature ?argtypes0))
 				     (map (lambda (argtypes.stx rettypes.stx)
-					    (make-clambda-clause-signature
+					    (make-lambda-signature
 					     (make-type-signature rettypes.stx)
 					     (make-type-signature argtypes.stx)))
 				       ?argtypes* ?rettypes*)))

@@ -906,8 +906,7 @@
 	 (compensate				(macro . compensate))
 	 (push-compensation			(macro . push-compensation))
 ;;;
-	 (define-type-spec			(macro . define-type-spec))
-	 (define-callable-spec			(macro . define-callable-spec))))
+	 ))
     ))
 
 

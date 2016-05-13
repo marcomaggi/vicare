@@ -120,7 +120,7 @@
   #| end of DEFINE-RECORD-TYPE |# )
 
 (define* (qdef-closure.clause-signature* {qdef qdef-closure?})
-  (clambda-signature.clause-signature* (closure-type-spec.signature (qdef-closure.ots qdef))))
+  (case-lambda-signature.clause-signature* (closure-type-spec.signature (qdef-closure.ots qdef))))
 
 
 ;;;; type definitions: qualified RHS single-clause function definition

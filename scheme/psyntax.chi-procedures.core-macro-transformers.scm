@@ -1804,7 +1804,7 @@
 	 ;;this code even if we discard it. (Marco Maggi; Tue May 3, 2016)
 	 (chi-lambda/checked/parsed-formals input-form.stx lexenv.run lexenv.expand
 					    (list arg.id)
-					    (make-clambda-clause-signature
+					    (make-lambda-signature
 					     (make-type-signature/fully-untyped)
 					     (make-type-signature/single-value (<top>-ots)))
 					    consumer*.stx)
@@ -2044,7 +2044,7 @@
 	      (consumer.core	(psi.core-expr consumer.psi))
 	      (output.sig	(if return-values?
 				    formals.sig
-				  (callable-signature.retvals
+				  (case-lambda-signature.retvals
 				   (closure-type-spec.signature
 				    (car (type-signature.object-type-specs
 					  (psi.retvals-signature consumer.psi))))))))
@@ -2195,7 +2195,7 @@
 	 ;;this code even if we discard it. (Marco Maggi; Tue May 3, 2016)
 	 (chi-lambda/checked/parsed-formals input-form.stx lexenv.run lexenv.expand
 					    (list arg.id)
-					    (make-clambda-clause-signature
+					    (make-lambda-signature
 					     (make-type-signature/fully-untyped)
 					     (make-type-signature/single-value (or arg.ots (<top>-ots))))
 					    consumer*.stx)
@@ -2308,7 +2308,7 @@
 	 ;;this code even if we discard it. (Marco Maggi; Tue May 3, 2016)
 	 (chi-lambda/checked/parsed-formals input-form.stx lexenv.run lexenv.expand
 					    standard-formals.stx
-					    (make-clambda-clause-signature (make-type-signature/fully-untyped)
+					    (make-lambda-signature (make-type-signature/fully-untyped)
 									   cleared-formals.sig)
 					    consumer*.stx)
 	 producer.psi)
@@ -2423,7 +2423,7 @@
 	 ;;this code even if we discard it. (Marco Maggi; Tue May 3, 2016)
 	 (chi-lambda/checked/parsed-formals input-form.stx lexenv.run lexenv.expand
 					    standard-formals.stx
-					    (make-clambda-clause-signature (make-type-signature/fully-untyped)
+					    (make-lambda-signature (make-type-signature/fully-untyped)
 									   cleared-formals.sig)
 					    consumer*.stx)
 	 producer.psi)
@@ -2629,7 +2629,7 @@
        (let* ((producer.core	(build-lambda no-source
 				    '()
 				  (psi.core-expr producer.psi)))
-	      (consumer.psi	(let ((clause-signature		(make-clambda-clause-signature
+	      (consumer.psi	(let ((clause-signature		(make-lambda-signature
 								 (make-type-signature/fully-untyped)
 								 cleared-formals.sig))
 				      (consumer-body*.stx	(%compose-consumer-body
@@ -2640,7 +2640,7 @@
 	      (consumer.core	(psi.core-expr consumer.psi))
 	      (output.sig	(if return-values?
 				    cleared-formals.sig
-				  (callable-signature.retvals
+				  (case-lambda-signature.retvals
 				   (closure-type-spec.signature
 				    (car (type-signature.object-type-specs
 					  (psi.retvals-signature consumer.psi))))))))

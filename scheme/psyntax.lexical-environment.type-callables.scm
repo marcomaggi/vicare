@@ -22,222 +22,206 @@
 
 
 (module PSYNTAX-TYPE-CALLABLES
-    (
-     <callable-signature>
-     callable-signature?
-     callable-signature.retvals
+  (<lambda-signature>
+   make-lambda-signature			lambda-signature?
+   lambda-signature=?
+   lambda-signature.retvals			lambda-signature.retvals.specs
+   lambda-signature.argvals			lambda-signature.argvals.specs
+   lambda-signature.fully-untyped?		lambda-signature.only-<untyped>-and-<list>?
+   lambda-signature.untyped-to-top
 
-     <clambda-clause-signature>
-     make-clambda-clause-signature			clambda-clause-signature?
-     clambda-clause-signature=?
-     clambda-clause-signature.retvals			clambda-clause-signature.retvals.specs
-     clambda-clause-signature.retvals-set!
-     clambda-clause-signature.argvals			clambda-clause-signature.argvals.specs
-     clambda-clause-signature.fully-untyped?		clambda-clause-signature.only-<untyped>-and-<list>?
-     clambda-clause-signature.untyped-to-top		clambda-clause-signature.untyped-to-top!
+   <case-lambda-signature>
+   make-case-lambda-signature			case-lambda-signature?
+   case-lambda-signature=?
+   case-lambda-signature.retvals		case-lambda-signature.clause-signature*
+   case-lambda-signature.min-and-max-argvals
 
-     <clambda-signature>
-     make-clambda-signature				clambda-signature?
-     clambda-signature=?
-     clambda-signature.retvals				clambda-signature.clause-signature*
-     clambda-signature.min-and-max-argvals
-
-     #| end of exports |# )
+   #| end of exports |# )
 
 (import PSYNTAX-TYPE-SIGNATURES)
 
 
-;;;; type definition: callable signature
+;;;; type definition: applicable object clause signature
 
-;;This is the  base type of every object  that can be in operator position  in a form
-;;like:
-;;
-;;   (?rator ?rand ...)
-;;
-;;representing a function application.
-;;
-(define-record-type (<callable-signature> dummy-make-callable-signature callable-signature?)
-  (nongenerative *0*vicare:expander:<callable-signature>)
+(define-record-type (<lambda-signature> make-lambda-signature lambda-signature?)
+  (nongenerative vicare:expander:<lambda-signature>)
   (fields
-    (immutable retvals	callable-signature.retvals)
-		;An instance of "<type-signature>".
-		;
-		;For the  "<clambda-signature>" sub-type it represents  the signature
-		;of the  common retvals from  all the clambda clauses  represented by
-		;this struct.  For example:
-		;
-		;   (case-lambda
-		;    (({_ <fixnum>}) . ?body)
-		;     ({_ <fixnum>}) . ?body)))
-		;
-		;has common retvals "(<fixnum>)", while:
-		;
-		;   (case-lambda
-		;    (({_ <fixnum>}) . ?body)
-		;     ({_ <bignum>}) . ?body)))
-		;
-		;has common retvals "(<exact-integer>)".  When  it is not possible to
-		;determine a common retvals signature: the default value is "<list>",
-		;which means any number of objects of any type.
-    #| end of FIELDS |# ))
-
-
-;;;; type definition: CASE-LAMBDA clause signature
-
-(define-record-type (<clambda-clause-signature> make-clambda-clause-signature clambda-clause-signature?)
-  (nongenerative *0*vicare:expander:<clambda-clause-signature>)
-  (fields
-    (mutable retvals	clambda-clause-signature.retvals clambda-clause-signature.retvals-set!)
+    (immutable retvals	lambda-signature.retvals)
 		;An instance of "<type-signature>"  representing the signature of the
-		;return values.  This  is mutable to allow type  propagation from the
-		;last form in the body to the whole clambda clause.
-    (immutable argvals	clambda-clause-signature.argvals)
+		;return values.
+    (immutable argvals	lambda-signature.argvals)
 		;An instance of "<type-signature>"  representing the signature of the
 		;argument values.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
-      (define* (make-clambda-clause-signature {retvals type-signature?} {argvals type-signature?})
+      (define* (make-lambda-signature {retvals type-signature?} {argvals type-signature?})
 	(make-record retvals argvals))
-      make-clambda-clause-signature))
+      make-lambda-signature))
   (custom-printer
     (lambda (S port sub-printer)
-      (sub-printer `(<clambda-clause-signature>
-		     (:retvals ,(type-signature.syntax-object (clambda-clause-signature.retvals S)))
-		     (:argvals ,(type-signature.syntax-object (clambda-clause-signature.argvals S))))))))
+      (display "#[lambda-signature retvals=" port)
+      (display (lambda-signature.retvals S) port)
+      (display " argvals=" port)
+      (display (lambda-signature.argvals S) port)
+      (display "]" port)))
+  #| end of DEFINE-RECORD-TYPE |# )
 
-(define (not-empty-list-of-clambda-clause-signatures? obj)
+(define (not-empty-list-of-lambda-signatures? obj)
   (and (pair? obj)
-       (and (clambda-clause-signature? (car obj))
+       (and (lambda-signature? (car obj))
 	    (let loop ((obj (cdr obj)))
 	      (if (pair? obj)
-		  (and (clambda-clause-signature? (car obj))
+		  (and (lambda-signature? (car obj))
 		       (loop (cdr obj)))
 		(null? obj))))))
 
-(define* (clambda-clause-signature.argvals.specs {signature clambda-clause-signature?})
-  (type-signature.object-type-specs (clambda-clause-signature.argvals signature)))
+(define* (lambda-signature.argvals.specs {signature lambda-signature?})
+  (type-signature.object-type-specs (lambda-signature.argvals signature)))
 
-(define* (clambda-clause-signature.retvals.specs {signature clambda-clause-signature?})
-  (type-signature.object-type-specs (clambda-clause-signature.retvals signature)))
+(define* (lambda-signature.retvals.specs {signature lambda-signature?})
+  (type-signature.object-type-specs (lambda-signature.retvals signature)))
 
 ;;; --------------------------------------------------------------------
 
-(define* (clambda-clause-signature=? {signature1 clambda-clause-signature?} {signature2 clambda-clause-signature?})
+(define* (lambda-signature=? {signature1 lambda-signature?} {signature2 lambda-signature?})
   ;;Return true if the signatures are equal; otherwise return false.
   ;;
-  (and (type-signature=? (clambda-clause-signature.argvals signature1)
-			 (clambda-clause-signature.argvals signature2))
-       (type-signature=? (clambda-clause-signature.retvals signature1)
-			 (clambda-clause-signature.retvals signature2))))
+  (and (type-signature=? (lambda-signature.argvals signature1)
+			 (lambda-signature.argvals signature2))
+       (type-signature=? (lambda-signature.retvals signature1)
+			 (lambda-signature.retvals signature2))))
 
 ;;; --------------------------------------------------------------------
 
-(define* (clambda-clause-signature.fully-untyped? {clause-signature clambda-clause-signature?})
-  ;;A  clambda clause  signature  has fully  unspecified types  if  its retvals  type
-  ;;signature  is the  standalone  "<list>" and  its argvals  type  signature is  the
-  ;;standalone "<list>".
+(define* (lambda-signature.fully-untyped? {lambda-signature lambda-signature?})
+  ;;A clause signature  has fully unspecified types if its  retvals type signature is
+  ;;the  standalone  "<list>"  and  its  argvals type  signature  is  the  standalone
+  ;;"<list>".
   ;;
-  (and (type-signature.fully-untyped? (clambda-clause-signature.argvals clause-signature))
-       (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))))
+  (and (type-signature.fully-untyped? (lambda-signature.argvals lambda-signature))
+       (type-signature.fully-untyped? (lambda-signature.retvals lambda-signature))))
 
-(define* (clambda-clause-signature.only-<untyped>-and-<list>? {clause-signature clambda-clause-signature?})
-  ;;A  clambda  clause has  "untyped"  signature  if  both  its argvals  and  retvals
+(define* (lambda-signature.only-<untyped>-and-<list>? {lambda-signature lambda-signature?})
+  ;;A  clause signature  has  "untyped" signature  if both  its  argvals and  retvals
   ;;signatures only use "<untyped>" and "<list>" as type identifiers.
   ;;
-  (and (type-signature.only-<untyped>-and-<list>? (clambda-clause-signature.argvals clause-signature))
-       (type-signature.only-<untyped>-and-<list>? (clambda-clause-signature.retvals clause-signature))))
+  (and (type-signature.only-<untyped>-and-<list>? (lambda-signature.argvals lambda-signature))
+       (type-signature.only-<untyped>-and-<list>? (lambda-signature.retvals lambda-signature))))
 
 ;;; --------------------------------------------------------------------
 
-(define* (clambda-clause-signature.untyped-to-top {clause-signature clambda-clause-signature?})
-  (make-clambda-clause-signature (type-signature.untyped-to-top (clambda-clause-signature.retvals clause-signature))
-				 (type-signature.untyped-to-top (clambda-clause-signature.argvals clause-signature))))
+(define* (lambda-signature.untyped-to-top {lambda-signature lambda-signature?})
+  (make-lambda-signature (type-signature.untyped-to-top (lambda-signature.retvals lambda-signature))
+				 (type-signature.untyped-to-top (lambda-signature.argvals lambda-signature))))
 
-(define* (clambda-clause-signature.untyped-to-top! {clause-signature clambda-clause-signature?})
-  (type-signature.untyped-to-top! (clambda-clause-signature.retvals clause-signature))
-  (type-signature.untyped-to-top! (clambda-clause-signature.argvals clause-signature)))
+(define* (lambda-signature.untyped-to-top! {lambda-signature lambda-signature?})
+  (type-signature.untyped-to-top! (lambda-signature.retvals lambda-signature))
+  (type-signature.untyped-to-top! (lambda-signature.argvals lambda-signature)))
 
 
-;;;; type definition: CLAMBDA signature
+;;;; type definition: applicable object signatures
 
-;;Type representing the full type signature of closure objects.
-;;
-(define-record-type (<clambda-signature> make-clambda-signature clambda-signature?)
-  (nongenerative *0*vicare:expander:<clambda-signature>)
-  (parent <callable-signature>)
+(define-record-type (<case-lambda-signature> make-case-lambda-signature case-lambda-signature?)
+  (nongenerative vicare:expander:<case-lambda-signature>)
   (fields
-    (immutable clause-signature*	clambda-signature.clause-signature*)
-		;A proper list of "<clambda-clause-signature>" instances representing
-		;the signatures of the CASE-LAMBDA clauses.
-    (mutable memoised-min-count	clambda-signature.memoised-min-count	clambda-signature.memoised-min-count-set!)
-    (mutable memoised-max-count	clambda-signature.memoised-max-count	clambda-signature.memoised-max-count-set!)
+    (immutable clause-signature*	case-lambda-signature.clause-signature*)
+		;A  proper list  of "<lambda-signature>"  instances representing  the
+		;signatures of the clauses of an applicable object.
+    (mutable memoised-retvals	case-lambda-signature.memoised-retvals		case-lambda-signature.memoised-retvals-set!)
+    (mutable memoised-min-count	case-lambda-signature.memoised-min-count	case-lambda-signature.memoised-min-count-set!)
+    (mutable memoised-max-count	case-lambda-signature.memoised-max-count	case-lambda-signature.memoised-max-count-set!)
     #| end of FIELDS |# )
   (protocol
-    (lambda (make-callable-signature)
-      (define* (make-clambda-signature {signature* not-empty-list-of-clambda-clause-signatures?})
-	(define (%signature-union-synner message cnd)
-	  (raise
-	   (condition (make-who-condition 'make-clambda-signature)
-		      (make-message-condition message)
-		      cnd)))
-	((make-callable-signature (apply type-signature.union-same-number-of-operands
-					 %signature-union-synner
-					 (map clambda-clause-signature.retvals signature*)))
-	 signature* #f #f))
-      make-clambda-signature))
+    (lambda (make-record)
+      (define* (make-case-lambda-signature {clause*.sig not-empty-list-of-lambda-signatures?})
+	(make-record clause*.sig #f #f #f))
+      make-case-lambda-signature))
   (custom-printer
     (lambda (S port sub-printer)
-      (sub-printer `(<clambda-signature>
-		     (:common-retvals ,(callable-signature.retvals S))
-		     (:clause-signatures . ,(clambda-signature.clause-signature* S)))))))
+      (display "#[case-lambda-signature " port)
+      (for-each (lambda (clause-signature)
+		  (display clause-signature port)
+		  (display #\space port))
+	(case-lambda-signature.clause-signature* S))
+      (display "]" port)))
+  #| end of DEFINE-RECORD-TYPE |# )
 
-(define* (clambda-signature=? {sig1 clambda-signature?} {sig2 clambda-signature?})
-  (let ((csig1* (clambda-signature.clause-signature* sig1))
-	(csig2* (clambda-signature.clause-signature* sig2)))
+(define* (case-lambda-signature=? {sig1 case-lambda-signature?} {sig2 case-lambda-signature?})
+  (let ((csig1* (case-lambda-signature.clause-signature* sig1))
+	(csig2* (case-lambda-signature.clause-signature* sig2)))
     (and (for-all (lambda (csig1)
 		    (exists (lambda (csig2)
-			      (clambda-clause-signature=? csig1 csig2))
+			      (lambda-signature=? csig1 csig2))
 		      csig2*))
 	   csig1*)
 	 (for-all (lambda (csig2)
 		    (exists (lambda (csig1)
-			      (clambda-clause-signature=? csig1 csig2))
+			      (lambda-signature=? csig1 csig2))
 		      csig1*))
 	   csig2*))))
 
-(define* (clambda-signature.retvals {sig clambda-signature?})
-  (callable-signature.retvals sig))
+;;; --------------------------------------------------------------------
 
-(define* (clambda-signature.min-and-max-argvals {sig clambda-signature?})
+(define* (case-lambda-signature.min-and-max-argvals {sig case-lambda-signature?})
   ;;Return two non-negative real numbers  representing the minimum and maximum number
   ;;of values that can match the argvals type signatures of all the clauses.
   ;;
-  (cond ((clambda-signature.memoised-min-count sig)
+  (cond ((case-lambda-signature.memoised-min-count sig)
 	 => (lambda (min-count)
-	      (values min-count (clambda-signature.memoised-max-count sig))))
+	      (values min-count (case-lambda-signature.memoised-max-count sig))))
 	(else
-	 (let ((clause-signature* (clambda-signature.clause-signature* sig)))
+	 (let ((clause-signature* (case-lambda-signature.clause-signature* sig)))
 	   (receive (min-count max-count)
 	       (if (and (pair? clause-signature*)
 			(null? (cdr clause-signature*)))
 		   ;;There is only one clause signature.
-		   (type-signature.min-and-max-counts (clambda-clause-signature.argvals (car clause-signature*)))
+		   (type-signature.min-and-max-counts (lambda-signature.argvals (car clause-signature*)))
 		 ;;There are two or more clause signatures.
 		 (let ((cnts (fold-left
-				 (lambda (knil clause-signature)
+				 (lambda (knil lambda-signature)
 				   (receive (min-count max-count)
-				       (type-signature.min-and-max-counts (clambda-clause-signature.argvals clause-signature))
+				       (type-signature.min-and-max-counts (lambda-signature.argvals lambda-signature))
 				     (cons (min (car knil) min-count)
 					   (max (cdr knil) max-count))))
 			       (receive (min-count max-count)
-				   (type-signature.min-and-max-counts (clambda-clause-signature.argvals (car clause-signature*)))
+				   (type-signature.min-and-max-counts (lambda-signature.argvals (car clause-signature*)))
 				 (cons min-count max-count))
 			       (cdr clause-signature*))))
 		   (values (car cnts) (cdr cnts))))
-	     (clambda-signature.memoised-min-count-set! sig min-count)
-	     (clambda-signature.memoised-max-count-set! sig max-count)
+	     (case-lambda-signature.memoised-min-count-set! sig min-count)
+	     (case-lambda-signature.memoised-max-count-set! sig max-count)
 	     (values min-count max-count))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (case-lambda-signature.retvals {sig case-lambda-signature?})
+  ;;Return  an instance  of  "<type-signature>" representing  the  union between  the
+  ;;retvals signatures from all the clauses.  For example:
+  ;;
+  ;;   (case-lambda
+  ;;    (({_ <fixnum>}) . ?body)
+  ;;     ({_ <fixnum>}) . ?body)))
+  ;;
+  ;;has retvals signature "(<fixnum>)", while:
+  ;;
+  ;;   (case-lambda
+  ;;    (({_ <fixnum>}) . ?body)
+  ;;     ({_ <bignum>}) . ?body)))
+  ;;
+  ;;has retvals signature "(<exact-integer>)".  When  it is not possible to determine
+  ;;a common retvals signature: the default value is "<list>", which means any number
+  ;;of values of any type.
+  ;;
+  (or (case-lambda-signature.memoised-retvals sig)
+      (receive-and-return (retvals.sig)
+	  (apply type-signature.union-same-number-of-operands
+		 (lambda (message cnd)
+		   (raise (condition (make-who-condition 'case-lambda-signature.retvals)
+				     (make-message-condition message)
+				     cnd)))
+		 (map lambda-signature.retvals (case-lambda-signature.clause-signature* sig)))
+	(case-lambda-signature.memoised-retvals-set! sig retvals.sig))))
 
 
 ;;;; done

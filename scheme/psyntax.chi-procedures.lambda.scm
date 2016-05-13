@@ -159,7 +159,6 @@
   (define* (%chi-defun type qdef lexenv.run lexenv.expand)
     (define-constant input-form.stx (qdef.input-form qdef))
     (let ((clause-signature (car (qdef-closure.clause-signature* qdef))))
-      (clambda-clause-signature.untyped-to-top! clause-signature)
       (parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	(receive (standard-formals.lex body.psi)
 	    (case type
@@ -190,10 +189,9 @@
 	       (assertion-violation __who__ "internal error, invalid defun type" type)))
 	  (when (or (eq? type 'checked)
 		    (eq? type 'typed))
-	    ;;If no type  signature was specified for the clause:  we use the signature
+	    ;;If no type signature was specified for the clause: we use the signature
 	    ;;of the last form in the body, performing type propagation.
-	    (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
-	      (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi))))
+	    (closure-type-spec.set-new-retvals-when-untyped! (qdef-closure.ots qdef) (list (psi.retvals-signature body.psi))))
 	  (make-psi input-form.stx
 	    (build-lambda (identifier->symbol (qdef.var-id qdef))
 		standard-formals.lex
@@ -271,7 +269,6 @@
 	;;We  establish the  syntactic binding  for "__who__"  before processing  the
 	;;body.  So the formals may shadow this binding.
 	(fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qdef.var-id qdef))
-      (for-each clambda-clause-signature.untyped-to-top! clause-signature*)
       (parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	(receive (formals*.lex body*.psi)
 	    (case type
@@ -288,14 +285,9 @@
 	       (assertion-violation __who__ "internal error, invalid case-defun type" type)))
 	  (when (or (eq? type 'checked)
 		    (eq? type 'typed))
-	    (let ((clause-signature* (qdef-closure.clause-signature* qdef)))
-	      (for-each (lambda (clause-signature body.psi)
-			  ;;If no type signature was specified for the clause: we use
-			  ;;the signature  of the last  form in the  body, performing
-			  ;;type propagation.
-			  (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
-			    (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi))))
-		clause-signature* body*.psi)))
+	    ;;If no type  signature was specified for a clause:  we use the signature
+	    ;;of the last form in the body, performing type propagation.
+	    (closure-type-spec.set-new-retvals-when-untyped! (qdef-closure.ots qdef) (map psi.retvals-signature body*.psi)))
 	  (make-psi input-form.stx
 	    (build-case-lambda (syntax-annotation input-form.stx)
 		formals*.lex
@@ -318,8 +310,7 @@
   ;;
   (receive (standard-formals.stx clause-signature)
       (syntax-object.parse-standard-clambda-clause-formals input-formals.stx)
-    ;;CLAUSE-SIGNATURE is an instance of "<clambda-clause-signature>".
-    (clambda-clause-signature.untyped-to-top! clause-signature)
+    ;;CLAUSE-SIGNATURE is an instance of "<lambda-signature>".
     (receive (standard-formals.lex body.psi)
 	(chi-lambda-clause/std input-form.stx lexenv.run lexenv.expand
 			       standard-formals.stx clause-signature body*.stx)
@@ -330,7 +321,7 @@
 	    standard-formals.lex
 	  (psi.core-expr body.psi))
 	(make-type-signature/single-value
-	 (make-closure-type-spec (make-clambda-signature (list clause-signature))))))))
+	 (make-closure-type-spec (make-case-lambda-signature (list clause-signature))))))))
 
 (define* (chi-named-lambda/std input-form.stx lexenv.run lexenv.expand
 			       who.id standard-formals.stx body*.stx)
@@ -394,7 +385,6 @@
   (define (%chi-clambda input-form.stx lexenv.run lexenv.expand input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
 	(syntax-object.parse-standard-clambda-multi-clauses-formals input-formals*.stx)
-      (map clambda-clause-signature.untyped-to-top! clause-signature*)
       ;;We do  the validation  on the standard  formals, so that  the "_"  element is
       ;;excluded.
       (cond ((%sublists-of-same-length standard-formals*.stx)
@@ -410,7 +400,7 @@
 	      formals*.lex
 	    (map psi.core-expr body*.psi))
 	  (make-type-signature/single-value
-	   (make-closure-type-spec (make-clambda-signature clause-signature*)))))))
+	   (make-closure-type-spec (make-case-lambda-signature clause-signature*)))))))
 
   #| end of module |# )
 
@@ -441,7 +431,7 @@
     ;;The argument INPUT-FORM.STX is a syntax object representing the original LAMBDA
     ;;expression.  The argument STANDARD-FORMALS.STX  is a syntax object representing
     ;;the  standard formals  of the  closure.   The argument  CLAUSE-SIGNATURE is  an
-    ;;instance of "<clambda-clause-signature>" representing the type signature of the
+    ;;instance of "<lambda-signature>" representing the type signature of the
     ;;closure.  The argument  BODY*.STX is a list of syntax  objects representing the
     ;;body expressions.
     ;;
@@ -469,7 +459,7 @@
     ;;The argument INPUT-FORM.STX is a syntax object representing the original LAMBDA
     ;;expression.  The argument STANDARD-FORMALS.STX  is a syntax object representing
     ;;the  standard formals  of the  closure.   The argument  CLAUSE-SIGNATURE is  an
-    ;;instance of "<clambda-clause-signature>" representing the type signature of the
+    ;;instance of "<lambda-signature>" representing the type signature of the
     ;;closure.  The argument  BODY*.STX is a list of syntax  objects representing the
     ;;body expressions.
     ;;
@@ -482,7 +472,7 @@
     (receive (standard-formals.stx clause-signature)
 	;;STANDARD-FORMALS.STX is  a syntax object representing  the formal arguments
 	;;of the lambda clause as required  by R6RS.  CLAUSE-SIGNATURE is an instance
-	;;of  "<clambda-clause-signature>"  representing  the types  of  formals  and
+	;;of  "<lambda-signature>"  representing  the types  of  formals  and
 	;;retvals.   This call  will use  "<top>" as  type for  formals without  type
 	;;annotation.
 	(syntax-object.parse-typed-clambda-clause-formals input-formals.stx)
@@ -491,7 +481,6 @@
 
   (define* (%chi-lambda/parsed-formals input-form.stx lexenv.run lexenv.expand type
 				       standard-formals.stx clause-signature body*.stx)
-    (clambda-clause-signature.untyped-to-top! clause-signature)
     (receive (standard-formals.lex body.psi)
 	(case type
 	  ((typed)
@@ -504,14 +493,16 @@
 	   (assertion-violation __who__ "internal error, invalid lambda type" type)))
       ;;If no type signature was specified for the clause's return values: we use the
       ;;signature of the last form in the body, performing type propagation.
-      (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
-	(clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi)))
-      (make-psi input-form.stx
-	(build-lambda (syntax-annotation input-form.stx)
-	    standard-formals.lex
-	  (psi.core-expr body.psi))
-	(make-type-signature/single-value
-	 (make-closure-type-spec (make-clambda-signature (list clause-signature)))))))
+      (let ((clause-signature	(if (type-signature.fully-untyped? (lambda-signature.retvals clause-signature))
+				    (make-lambda-signature (psi.retvals-signature body.psi)
+							   (lambda-signature.argvals clause-signature))
+				  clause-signature)))
+	(make-psi input-form.stx
+	  (build-lambda (syntax-annotation input-form.stx)
+	      standard-formals.lex
+	    (psi.core-expr body.psi))
+	  (make-type-signature/single-value
+	   (make-closure-type-spec (make-case-lambda-signature (list clause-signature))))))))
 
   #| end of module |# )
 
@@ -540,15 +531,13 @@
     (receive (standard-formals.stx clause-signature)
 	;;STANDARD-FORMALS.STX is  a syntax object representing  the formal arguments
 	;;of the lambda clause as required  by R6RS.  CLAUSE-SIGNATURE is an instance
-	;;of  "<clambda-clause-signature>"  representing  the types  of  formals  and
-	;;retvals.   This call  will use  "<top>" as  type for  formals without  type
-	;;annotation.
+	;;of  "<lambda-signature>" representing  the  types of  formals and  retvals.
+	;;This call will use "<top>" as type for formals without type annotation.
 	(syntax-object.parse-typed-clambda-clause-formals input-formals.stx)
       (receive (lexenv.run lexenv.expand)
 	  ;;We establish  the syntactic binding  for "__who__" before  processing the
 	  ;;formals and the body.  So the formals may shadow this binding.
 	  (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ who.id)
-	(clambda-clause-signature.untyped-to-top! clause-signature)
 	(receive (standard-formals.lex body.psi)
 	    (case type
 	      ((typed)
@@ -561,14 +550,16 @@
 	       (assertion-violation __who__ "internal error, invalid named-lambda type" type)))
 	  ;;If no type signature was specified for the clause: we use the signature
 	  ;;of the last form in the body, performing type propagation.
-	  (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
-	    (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi)))
-	  (make-psi input-form.stx
-	    (build-lambda (syntax-annotation input-form.stx)
-		standard-formals.lex
-	      (psi.core-expr body.psi))
-	    (make-type-signature/single-value
-	     (make-closure-type-spec (make-clambda-signature (list clause-signature)))))))))
+	  (let ((clause-signature	(if (type-signature.fully-untyped? (lambda-signature.retvals clause-signature))
+					    (make-lambda-signature (psi.retvals-signature body.psi)
+								   (lambda-signature.argvals clause-signature))
+					  clause-signature)))
+	    (make-psi input-form.stx
+	      (build-lambda (syntax-annotation input-form.stx)
+		  standard-formals.lex
+		(psi.core-expr body.psi))
+	      (make-type-signature/single-value
+	       (make-closure-type-spec (make-case-lambda-signature (list clause-signature))))))))))
 
   #| end of module |# )
 
@@ -646,7 +637,6 @@
 		  (syntax-violation #f
 		    "invalid CASE-LAMBDA clause formals with the same length"
 		    input-form.stx same-length-formals*.stx))))
-      (for-each clambda-clause-signature.untyped-to-top! clause-signature*)
       (receive (formals*.lex body*.psi)
 	  (case type
 	    ((typed)
@@ -659,16 +649,18 @@
 	     (assertion-violation __who__ "internal error, invalid case-lambda type" type)))
 	;;If no type signature was specified for  the clause: we use the signature of
 	;;the last form in the body, performing type propagation.
-	(for-each (lambda (clause-signature body.psi)
-		    (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
-		      (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi))))
-	  clause-signature* body*.psi)
-	(make-psi input-form.stx
-	  (build-case-lambda (syntax-annotation input-form.stx)
-	      formals*.lex
-	    (map psi.core-expr body*.psi))
-	  (make-type-signature/single-value
-	   (make-closure-type-spec (make-clambda-signature clause-signature*)))))))
+	(let ((clause-signature* (map (lambda (clause-signature body.psi)
+					(if (type-signature.fully-untyped? (lambda-signature.retvals clause-signature))
+					    (make-lambda-signature (psi.retvals-signature body.psi)
+								   (lambda-signature.argvals clause-signature))
+					  clause-signature))
+				   clause-signature* body*.psi)))
+	  (make-psi input-form.stx
+	    (build-case-lambda (syntax-annotation input-form.stx)
+		formals*.lex
+	      (map psi.core-expr body*.psi))
+	    (make-type-signature/single-value
+	     (make-closure-type-spec (make-case-lambda-signature clause-signature*))))))))
 
   #| end of module |# )
 
@@ -710,7 +702,6 @@
 	  ;;We establish  the syntactic binding  for "__who__" before  processing the
 	  ;;formals and the body.  So the formals may shadow this binding.
 	  (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ who.id)
-	(for-each clambda-clause-signature.untyped-to-top! clause-signature*)
 	(receive (formals*.lex body*.psi)
 	    (case type
 	      ((typed)
@@ -723,16 +714,18 @@
 	       (assertion-violation __who__ "internal error, invalid named-case-lambda type" type)))
 	  ;;If no type  signature was specified for the clause:  we use the signature
 	  ;;of the last form in the body, performing type propagation.
-	  (for-each (lambda (clause-signature body.psi)
-		      (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
-			(clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi))))
-	    clause-signature* body*.psi)
-	  (make-psi input-form.stx
-	    (build-case-lambda (syntax-annotation input-form.stx)
-		formals*.lex
-	      (map psi.core-expr body*.psi))
-	    (make-type-signature/single-value
-	     (make-closure-type-spec (make-clambda-signature clause-signature*))))))))
+	  (let ((clause-signature* (map (lambda (clause-signature body.psi)
+					  (if (type-signature.fully-untyped? (lambda-signature.retvals clause-signature))
+					      (make-lambda-signature (psi.retvals-signature body.psi)
+								     (lambda-signature.argvals clause-signature))
+					    clause-signature))
+				     clause-signature* body*.psi)))
+	    (make-psi input-form.stx
+	      (build-case-lambda (syntax-annotation input-form.stx)
+		  formals*.lex
+		(map psi.core-expr body*.psi))
+	      (make-type-signature/single-value
+	       (make-closure-type-spec (make-case-lambda-signature clause-signature*)))))))))
 
   #| end of module |# )
 
@@ -746,7 +739,7 @@
   ;;The argument INPUT-FORM.STX is the syntax object holding the original input form.
   ;;The argument  STANDARD-FORMALS*.STX is a list  of syntax objects, each  holding a
   ;;proper or improper list of formal arguments.  The argument CLAUSE-SIGNATURE* is a
-  ;;list of "<clambda-clause-signature>" objects.  The  argument BODY**.STX is a list
+  ;;list of "<lambda-signature>" objects.  The  argument BODY**.STX is a list
   ;;of syntax objects each holding the body forms.
   ;;
   ;;Return the following values:
@@ -775,7 +768,7 @@
   ;;The argument INPUT-FORM.STX is the syntax object holding the original input form.
   ;;The argument  STANDARD-FORMALS*.STX is a list  of syntax objects, each  holding a
   ;;proper or improper list of formal arguments.  The argument CLAUSE-SIGNATURE* is a
-  ;;list of "<clambda-clause-signature>" objects.  The  argument BODY**.STX is a list
+  ;;list of "<lambda-signature>" objects.  The  argument BODY**.STX is a list
   ;;of syntax objects each holding the body forms.
   ;;
   ;;Return the following values:
@@ -804,7 +797,7 @@
   ;;The argument INPUT-FORM.STX is the syntax object holding the original input form.
   ;;The argument  STANDARD-FORMALS*.STX is a list  of syntax objects, each  holding a
   ;;proper or improper list of formal arguments.  The argument CLAUSE-SIGNATURE* is a
-  ;;list of "<clambda-clause-signature>" objects.  The  argument BODY**.STX is a list
+  ;;list of "<lambda-signature>" objects.  The  argument BODY**.STX is a list
   ;;of syntax objects each holding the body forms.
   ;;
   ;;Return the following values:
@@ -837,7 +830,7 @@
     ;;argument.  Here  we know that  STANDARD-FORMALS.STX and the  corresponding type
     ;;signature are proper lists with equal length.
     (receive (rib lexenv.run standard-formals*.lex)
-	(%establish-typed-syntactic-bindings-lhs* standard-formals.stx (clambda-clause-signature.argvals.specs clause-signature) lexenv.run)
+	(%establish-typed-syntactic-bindings-lhs* standard-formals.stx (lambda-signature.argvals.specs clause-signature) lexenv.run)
       (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals*.lex body*.stx rib)))
 
   (define (%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand
@@ -849,7 +842,7 @@
 	(((arg*.id  rest.id)
 	  (improper-list->list-and-rest standard-formals.stx))
 	 ((arg*.ots rest.ots)
-	  (improper-list->list-and-rest (clambda-clause-signature.argvals.specs clause-signature)))
+	  (improper-list->list-and-rest (lambda-signature.argvals.specs clause-signature)))
 	 ((rib lexenv.run standard-formals.lex)
 	  (receive (rib lexenv.run all*.lex)
 	      (%establish-typed-syntactic-bindings-lhs* (cons rest.id arg*.id) (cons rest.ots arg*.ots) lexenv.run)
@@ -875,7 +868,7 @@
   ;;The argument INPUT-FORM.STX is the syntax object holding the original input form.
   ;;The argument STANDARD-FORMALS.STX is a syntax object holding a proper or improper
   ;;list of standard formal arguments.   The argument CLAUSE-SIGNATURE is an instance
-  ;;of  "<clambda-clause-signature>".  The  argument BODY*.STX  is a  list of  syntax
+  ;;of  "<lambda-signature>".  The  argument BODY*.STX  is a  list of  syntax
   ;;objects holding the body forms.
   ;;
   ;;Return the following values:
@@ -910,7 +903,7 @@
     ;;The argument  INPUT-FORM.STX is  the syntax object  holding the  original input
     ;;form.  The argument STANDARD-FORMALS.STX is a syntax object holding a proper or
     ;;improper list of  standard formal arguments.  The  argument CLAUSE-SIGNATURE is
-    ;;an instance of "<clambda-clause-signature>".  The  argument BODY*.STX is a list
+    ;;an instance of "<lambda-signature>".  The  argument BODY*.STX is a list
     ;;of syntax objects holding the body forms.
     ;;
     ;;Return the following values:
@@ -946,7 +939,7 @@
     ;;The argument  INPUT-FORM.STX is  the syntax object  holding the  original input
     ;;form.  The argument STANDARD-FORMALS.STX is a syntax object holding a proper or
     ;;improper list of  standard formal arguments.  The  argument CLAUSE-SIGNATURE is
-    ;;an instance of "<clambda-clause-signature>".  The  argument BODY*.STX is a list
+    ;;an instance of "<lambda-signature>".  The  argument BODY*.STX is a list
     ;;of syntax objects holding the body forms.
     ;;
     ;;Return the following values:
@@ -961,7 +954,7 @@
     ;;
     (import LAMBDA-CLAUSE-EXPANSION-HELPERS)
     (define argvals-signature.specs
-      (type-signature.object-type-specs (clambda-clause-signature.argvals clause-signature)))
+      (type-signature.object-type-specs (lambda-signature.argvals clause-signature)))
     (define validation-who
       (let* ((id    (core-prim-id '__who__))
 	     (label (id->label id))
@@ -1141,7 +1134,7 @@
     ;;Add the return values validation to the last form in the body; return a list of
     ;;body forms.
     ;;
-    (let ((retvals-signature.sig (clambda-clause-signature.retvals clause-signature)))
+    (let ((retvals-signature.sig (lambda-signature.retvals clause-signature)))
       (if (type-signature.fully-untyped? retvals-signature.sig)
 	  ;;The number and type of return values is unknown.
 	  body-form*.stx

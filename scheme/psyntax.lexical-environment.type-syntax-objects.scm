@@ -524,7 +524,7 @@
   ;;
   ;;1. The argument INPUT-FORMALS.STX fully unwrapped.
   ;;
-  ;;2. An instance of "<clambda-clause-signature>".
+  ;;2. An instance of "<lambda-signature>".
   ;;
   ;;As usage example, when the syntax use:
   ;;
@@ -537,7 +537,7 @@
   (receive (standard-formals.stx argvals.sig)
       (syntax-object.parse-standard-formals input-formals.stx)
     (let ((retvals.sig (make-type-signature/fully-untyped)))
-      (values standard-formals.stx (make-clambda-clause-signature retvals.sig argvals.sig)))))
+      (values standard-formals.stx (make-lambda-signature retvals.sig argvals.sig)))))
 
 (define (syntax-object.parse-standard-clambda-multi-clauses-formals input-formals*.stx)
   ;;Given a list of syntax objects  INPUT-FORMALS*.STX: parse them as clambda clauses
@@ -545,7 +545,7 @@
   ;;
   ;;1. The argument INPUT-FORMALS*.STX fully unwrapped.
   ;;
-  ;;2. A list of "<clambda-clause-signature>" instances.
+  ;;2. A list of "<lambda-signature>" instances.
   ;;
   ;;As usage example, when the syntax use:
   ;;
@@ -589,7 +589,7 @@
    ;;
    ;;1. A proper or improper list of identifiers representing the standard formals.
    ;;
-   ;;2. An instance of "<clambda-clause-signature>".
+   ;;2. An instance of "<lambda-signature>".
    ;;
    ;;This function *does* enforce the  constraint: the identifiers in type identifier
    ;;positions must actually  be type identifiers (with  syntactic binding descriptor
@@ -610,13 +610,13 @@
       (receive (standard-formals.stx argvals.sig)
 	  (syntax-object.parse-typed-formals ?arg-formals untyped.ots)
 	(values standard-formals.stx
-		(make-clambda-clause-signature (make-type-signature ?rv-types) argvals.sig))))
+		(make-lambda-signature (make-type-signature ?rv-types) argvals.sig))))
      ;;Without return values tagging.
      (?arg-formals
       (receive (standard-formals.stx argvals.sig)
 	  (syntax-object.parse-typed-formals ?arg-formals untyped.ots)
 	(values standard-formals.stx
-		(make-clambda-clause-signature (make-type-signature/fully-untyped)
+		(make-lambda-signature (make-type-signature/fully-untyped)
 					       argvals.sig)))))))
 
 (case-define* syntax-object.parse-typed-clambda-multi-clauses-formals
@@ -630,7 +630,7 @@
    ;;
    ;;1. A list of syntax objects representing the standard formals of each clause.
    ;;
-   ;;2. A list of "<clambda-clause-signature>" instances.
+   ;;2. A list of "<lambda-signature>" instances.
    ;;
    ;;As usage example, when the syntax use:
    ;;

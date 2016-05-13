@@ -681,17 +681,17 @@
       (let ((core-prim.sym		(vector-ref hard-coded-sexp 0))
 	    (safety.boolean		(vector-ref hard-coded-sexp 1))
 	    (signature*.sexp		(vector-ref hard-coded-sexp 2)))
-	(let* ((clambda-sig (%signature-sexp->callable-signature core-prim.sym signature*.sexp))
+	(let* ((clambda-sig (%signature-sexp->case-lambda-signature core-prim.sym signature*.sexp))
 	       (closure.ots (make-closure-type-spec clambda-sig)))
 	  (set-car! descriptor 'core-prim-typed)
 	  (set-cdr! descriptor (cons (make-core-prim-type-spec core-prim.sym safety.boolean closure.ots)
 				     hard-coded-sexp))))))
 
-  (define* (%signature-sexp->callable-signature core-prim.sym signature*.sexp)
-    (let ((clause-signature* (map (lambda (signature.sexp)
-				    (%signature-sexp->clause-signature core-prim.sym signature.sexp))
-			       signature*.sexp)))
-      (make-clambda-signature clause-signature*)))
+  (define* (%signature-sexp->case-lambda-signature core-prim.sym signature*.sexp)
+    (let ((clause*.sig (map (lambda (signature.sexp)
+			      (%signature-sexp->clause-signature core-prim.sym signature.sexp))
+			 signature*.sexp)))
+      (make-case-lambda-signature clause*.sig)))
 
   (define* (%signature-sexp->clause-signature core-prim.sym sexp)
     (let* ((retvals.sexp (car sexp))
@@ -716,7 +716,7 @@
 					   (make-irritants-condition (list core-prim.sym formals.stx)))))
 			   (lambda ()
 			     (make-type-signature formals.stx)))))
-	(make-clambda-clause-signature retvals.sig formals.sig))))
+	(make-lambda-signature retvals.sig formals.sig))))
 
   #| end of module: HARD-CODED-TYPED-CORE-PRIM-BINDING-DESCRIPTOR->TYPE-CORE-PRIM-BINDING-DESCRIPTOR! |# )
 

@@ -34,6 +34,7 @@
      (eval . (put 'case-identifier-syntactic-binding-descriptor/no-indirection		'scheme-indent-function 1))
      (eval . (put 'case-object-type-binding						'scheme-indent-function 1))
      (eval . (put 'case-signature-specs							'scheme-indent-function 1))
+     (eval . (put 'closure-type-spec.signature-set!					'scheme-indent-function 1))
      (eval . (put 'core-lang-builder							'scheme-indent-function 1))
      (eval . (put 'declare-core-primitive						'scheme-indent-function 2))
      (eval . (put 'define-built-in-condition-type					'scheme-indent-function 2))
