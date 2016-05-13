@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -60,17 +60,6 @@
   (check
       (ffi::pointer? '#(123))
     => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check-for-true
-   (ffi::maybe-pointer? (ffi::integer->pointer 123)))
-
-  (check-for-false
-   (ffi::maybe-pointer? '#(123)))
-
-  (check-for-true
-   (ffi::maybe-pointer? (void)))
 
 ;;; --------------------------------------------------------------------
 

@@ -1424,7 +1424,9 @@
       ((_ ?signature ?expr => ?expected0 ?expected ...)
        (begin
 	 (check-for-true
-	  (void-object? (assert-signature ?signature ?expr)))
+	  (begin
+	    (assert-signature ?signature ?expr)
+	    #t))
 	 (check
 	     (assert-signature-and-return ?signature ?expr)
 	   => ?expected0 ?expected ...)

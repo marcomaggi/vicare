@@ -434,15 +434,16 @@
      (let recur ((rand*.stx	rand*.stx)
 		 (rand*.sig	rand*.sig))
        (if (pair? rand*.sig)
-	   (let ((appl.ots (%rand-signature->rand-object-type-spec input-form.stx (car rand*.stx) (car rand*.sig))))
-	     (if appl.ots
-		 ;;The operand returns a  single value with object-type specification
-		 ;;APPL.OTS.  Good.
-		 (cons appl.ots (recur (cdr rand*.stx) (cdr rand*.sig)))
-	       ;;The operand  has a  standalone "<no-return>"  as signature:  in this
-	       ;;case   the  whole   VALUES  application   must  have   a  standalone
-	       ;;"<no-return>"  as  signature.
-	       (<no-return>-ots)))
+	   (cond ((%rand-signature->rand-object-type-spec input-form.stx (car rand*.stx) (car rand*.sig))
+		  => (lambda (appl.ots)
+		       ;;The  operand   returns  a  single  value   with  object-type
+		       ;;specification APPL.OTS.  Good.
+		       (cons appl.ots (recur (cdr rand*.stx) (cdr rand*.sig)))))
+		 (else
+		  ;;The operand has a standalone  "<no-return>" as signature: in this
+		  ;;case  the  whole  VALUES   application  must  have  a  standalone
+		  ;;"<no-return>" as signature.
+		  (<no-return>-ots)))
 	 '()))))
 
   (define (%rand-signature->rand-object-type-spec input-form.stx rand.stx rand.sig)
@@ -1378,7 +1379,7 @@
 
       (<no-return>
        (handle-consumer-error "expression used as consumer operand is typed as not returning")
-       (make-type-signature/fully-untyped))
+       (make-type-signature/fully-unspecified))
 
       (<list-of>
        ;;The operand expression returns an unspecified number of values of specified,
@@ -1392,12 +1393,12 @@
        ;;The  operand  expression   returns  an  unspecified  number   of  values  of
        ;;unspecified type.  We rely on the  compiler to generate code that checks, at
        ;;run-time, if this operand returns a single value.
-       (make-type-signature/fully-untyped))
+       (make-type-signature/fully-unspecified))
 
       (else
        ;;The operand expression returns zero, two or more values.
        (handle-consumer-error "expression used as consumer operand returns multiple values")
-       (make-type-signature/fully-untyped))))
+       (make-type-signature/fully-unspecified))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1420,10 +1421,10 @@
 	   (case-lambda-signature.retvals (closure-type-spec.signature consumer.ots)))
 	  ((<procedure>-ots? consumer.ots)
 	   ;;Good.
-	   (make-type-signature/fully-untyped))
+	   (make-type-signature/fully-unspecified))
 	  (else
 	   (handle-consumer-error "expression used as consumer does not return a procedure")
-	   (make-type-signature/fully-untyped))))
+	   (make-type-signature/fully-unspecified))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1501,7 +1502,7 @@
 
 		  ((<procedure>)
 		   ;;The operator is an untyped procedure, good.
-		   (make-type-signature/fully-untyped))
+		   (make-type-signature/fully-unspecified))
 
 		  ((single-value)
 		   ;;The operator is a single value, but not a procedure.
@@ -1516,9 +1517,9 @@
 			(raise			(condition (make-expand-time-type-signature-violation) (common))))
 		       ((default)
 			(raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
-			(make-type-signature/fully-untyped))
+			(make-type-signature/fully-unspecified))
 		       ((strict-r6rs)
-			(make-type-signature/fully-untyped)))))
+			(make-type-signature/fully-unspecified)))))
 
 		  (<no-return>
 		   ;;The  operator is  marked to  no-return:  it means  it raises  an
@@ -1538,13 +1539,13 @@
 			(raise			(condition (make-expand-time-type-signature-violation) (common))))
 		       ((default)
 			(raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
-			(make-type-signature/fully-untyped))
+			(make-type-signature/fully-unspecified))
 		       ((strict-r6rs)
-			(make-type-signature/fully-untyped)))))
+			(make-type-signature/fully-unspecified)))))
 
 		  ((unspecified-values)
 		   ;;The operator expression returns fully unspecified values.
-		   (make-type-signature/fully-untyped))
+		   (make-type-signature/fully-unspecified))
 
 		  (else
 		   ;;The operator returns zero, two or more return values.
@@ -1560,9 +1561,9 @@
 			(raise			(condition (make-expand-time-type-signature-violation) (common))))
 		       ((default)
 			(raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
-			(make-type-signature/fully-untyped))
+			(make-type-signature/fully-unspecified))
 		       ((strict-r6rs)
-			(make-type-signature/fully-untyped))))))))))
+			(make-type-signature/fully-unspecified))))))))))
 
       ((single-value)
        ;;The operator expression correctly returns a  single value, but such value is
@@ -1885,66 +1886,28 @@
 
 ;;;; chi procedures: closure object application processing
 
-(define* (chi-closure-object-application input-form.stx lexenv.run lexenv.expand
-					 {rator.psi psi?} {rator.ots closure-type-spec?}
-					 rand*.psi)
-  ;;Handle the case of closure object application  to a given tuple of operands; here
-  ;;we know that the application to process is:
-  ;;
-  ;;   (?rator ?rand ...)
-  ;;
-  ;;and ?RATOR  will evaluate  to a closure  object with type  RATOR.OTS, which  is a
-  ;;sub-type of "<procedure>".
-  ;;
-  (let ((signature (closure-type-spec.signature rator.ots)))
-    ;;Here  SIGNATURE  is an  instance  of  "<case-lambda-signature>".  At  least  in
-    ;;theory: it could be something different from a closure object.
-    (cond ((case-lambda-signature? signature)
-	   (chi-clambda-application input-form.stx lexenv.run lexenv.expand
-				    signature rator.psi rand*.psi))
-	  (else
-	   (make-psi input-form.stx
-	     (build-application (syntax-annotation input-form.stx)
-		 (psi.core-expr rator.psi)
-	       (map psi.core-expr rand*.psi))
-	     (make-type-signature/fully-untyped))))))
-
-
-;;;; chi procedures: closure object application processing
-
-(module (chi-clambda-application)
+(module (chi-closure-object-application)
   (import CLOSURE-APPLICATION-ERRORS)
-  (define-module-who chi-clambda-application)
+  (define-module-who chi-closure-object-application)
 
-  (module (chi-clambda-application)
-
-    (define (chi-clambda-application input-form.stx lexenv.run lexenv.expand
-				     rator.case-lambda-signature rator.psi rand*.psi)
-      ;;Handle the case  of closure object application to a  given tuple of operands;
-      ;;here we know that the application to process is:
+  (define* (chi-closure-object-application input-form.stx lexenv.run lexenv.expand
+					   {rator.psi psi?} {rator.ots closure-type-spec?}
+					   rand*.psi)
+    ;;Handle the  case of closure  object application to  a given tuple  of operands;
+    ;;here we know that the application to process is:
+    ;;
+    ;;   (?rator ?rand ...)
+    ;;
+    ;;and ?RATOR will evaluate  to a closure object with type  RATOR.OTS, which is an
+    ;;instance of "<closure-type-spec>".
+    ;;
+    (let ((rator.clambda-sig (closure-type-spec.signature rator.ots)))
+      ;;RATOR.CLAMBDA-SIG is an instance of "<case-lambda-signature>".
       ;;
-      ;;   (?rator ?rand ...)
-      ;;
-      ;;and ?RATOR  will evaluate  to a closure  object with type  RATOR.OTS, which  is a
-      ;;sub-type of "<procedure>".
-      ;;
-
-      ;;Here we perform some preliminary validations:
-      ;;
-      ;;1. The number of operands must be  in the correct range of arguments accepted
-      ;;by the closure object.
-      ;;
-      ;;2. All the operands must return a single value.
-      ;;
-      (%validate-clambda-number-of-arguments input-form.stx rator.case-lambda-signature rator.psi rand*.psi)
-      (let ((rands.sig (%validate-operands-for-single-return-value input-form.stx rand*.psi)))
-	(%match-case-lambda-signature-against-operands input-form.stx lexenv.run lexenv.expand
-						   rator.case-lambda-signature rator.psi rand*.psi rands.sig)))
-
-    (define* (%validate-clambda-number-of-arguments input-form.stx rator.case-lambda-signature rator.psi rand*.psi)
-      (import CLOSURE-APPLICATION-ERRORS)
+      ;;The number of operands must be in  the correct range of arguments accepted by
+      ;;the closure object.
       (receive (minimum-arguments-count maximum-arguments-count)
-	  (case-lambda-signature.min-and-max-argvals rator.case-lambda-signature)
+	  (case-lambda-signature.min-and-max-argvals rator.clambda-sig)
 	(let ((given-operands-count (length rand*.psi)))
 	  (cond ((< maximum-arguments-count given-operands-count)
 		 (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
@@ -1953,14 +1916,22 @@
 		((> minimum-arguments-count given-operands-count)
 		 (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
 		   (psi.input-form rator.psi) (map psi.input-form rand*.psi)
-		   minimum-arguments-count given-operands-count))
-		(else
-		 (void))))))
+		   minimum-arguments-count given-operands-count)))))
+      ;;All the operands must return a single value.
+      (let ((rands.sig (%validate-operands-for-single-return-value input-form.stx rand*.psi)))
+	;;Search for a clause whose signature matches the operands' types.
+	(%match-case-lambda-signature-against-operands input-form.stx lexenv.run lexenv.expand
+						       rator.psi rand*.psi
+						       rator.clambda-sig rands.sig))))
+
+;;; --------------------------------------------------------------------
+
+  (module (%validate-operands-for-single-return-value)
 
     (define* (%validate-operands-for-single-return-value input-form.stx rand*.psi)
-      ;;In the context of INPUT-FORM.STX the  RAND*.PSI argument is a list of objects
-      ;;representing  the  operands of  an  operator  application.  Check  that  such
-      ;;expressions return a single value.
+      ;;In the  context of  INPUT-FORM.STX the  RAND*.PSI argument is  a list  of psi
+      ;;instances  representing  the  already  expanded operand  expressions  for  an
+      ;;operator application.  Check that such expressions return a single value.
       ;;
       ;;Return an instance  of "<type-signature>" representing the  type signature of
       ;;the  operands.  Whenever  it is  not  possible to  determine the  type of  an
@@ -1968,7 +1939,6 @@
       ;;
       (make-type-signature
        (map (lambda (rand.psi)
-	      (import CLOSURE-APPLICATION-ERRORS)
 	      (define rand.sig
 		(psi.retvals-signature rand.psi))
 	      (define (%handle-error message rv)
@@ -1980,24 +1950,34 @@
 			    (make-application-operand-signature-condition rand.sig)))
 			rv))
 	      (case-signature-specs rand.sig
+		(<no-return>
+		 ;;The operand expression will not return.
+		 (if (options::warn-about-not-returning-expressions)
+		     (%handle-error "expression used as operand in procedure application is typed as not returning"
+				    (<top>-ots))
+		   (<top>-ots)))
+		((<void>)
+		 ;;The expression is marked as returning void.
+		 (%handle-error "expression used as operand in procedure application is typed as returning void"
+				(<top>-ots)))
 		((single-value)
 		 ;;Single return value.  Good.
 		 => (lambda (rand.ots) rand.ots))
 		(<list-of>
 		 ;;Unspecified number  of return values,  of known type.  We  let the
-		 ;;compiler insert the checks for the single return value case.
+		 ;;compiler insert  the run-time  check for  the single  return value
+		 ;;case.
 		 => (lambda (rand.ots)
 		      (list-of-type-spec.item-ots rand.ots)))
 		(<list>
 		 ;;Unspecified number of return values,  of unknown type.  We let the
-		 ;;compiler insert the checks for the single return value case.
+		 ;;compiler insert  the run-time checks  for the single  return value
+		 ;;case.
 		 (<top>-ots))
-		(<no-return>
-		 ;;The operand expression will not return.
-		 (%handle-error "expression used as operand in procedure application is typed as not returning"        (<top>-ots)))
 		(else
 		 ;;Zero, two or more return values.  Wrong.
-		 (%handle-error "expression used as operand in procedure application returns zero, two or more values" (<top>-ots)))))
+		 (%handle-error "expression used as operand in procedure application returns zero, two or more values"
+				(<top>-ots)))))
 	 rand*.psi)))
 
     (define (%error common rv)
@@ -2010,83 +1990,95 @@
 	((strict-r6rs)
 	 rv)))
 
-    #| end of module: CHI-CLAMBDA-APPLICATION |# )
+    #| end of module: %VALIDATE-OPERANDS-FOR-SINGLE-RETURN-VALUE |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (%match-case-lambda-signature-against-operands input-form.stx lexenv.run lexenv.expand
-						     rator.case-lambda-signature rator.psi rand*.psi rands.sig)
-    ;;For operators having  a "<case-lambda-signature>" signature: we  iterate, in order,
-    ;;through  the  "<lambda-signature>"  instances representing  the  clause
-    ;;signatures, looking for the first that matches exactly; otherwise we accumulate
-    ;;a list of possible matching clauses.
-    ;;
-    ;;The argument  RATOR.CASE-LAMBDA-SIGNATURE is  an instance  of "<case-lambda-signature>"
-    ;;representing the closure object's signatures.
-    ;;
-    ;;The argument RATOR.PSI is the already expanded operator expression.
-    ;;
-    ;;The  argument  RAND*.PSI   is  a  proper  list  of   already  expanded  operand
-    ;;expressions.
-    ;;
-    ;;Assuming  each operand  expression in  RAND*.PSI  returns a  single value:  the
-    ;;argument  RANDS.SIG  is  an  instance of  "<type-signature>"  representing  the
-    ;;operands' types.
-    ;;
-    (let* ((selected-clause-signature* '())
-	   (state (returnable
-		    (fold-left (lambda (state clause-signature)
-				 (let ((args.sig (lambda-signature.argvals clause-signature)))
-				   (case (type-signature.match-arguments-against-operands args.sig rands.sig)
-				     ((exact-match)
-				      (set! selected-clause-signature* (list clause-signature))
-				      (return 'exact-match))
-				     ((possible-match)
-				      (set-cons! selected-clause-signature* clause-signature)
-				      'possible-match)
-				     (else state))))
-		      'no-match (case-lambda-signature.clause-signature* rator.case-lambda-signature)))))
-      (define (%build-default-application)
-	(define (%signature-union-synner message cnd)
-	  (raise
-	   (condition (make-who-condition 'chi-application)
-		      (make-message-condition message)
-		      (make-syntax-violation input-form.stx #f)
-		      cnd)))
-	(%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi
-				(if (pair? selected-clause-signature*)
-				    (apply type-signature.union-same-number-of-operands
-					   %signature-union-synner
-					   (map lambda-signature.retvals selected-clause-signature*))
-				  (make-type-signature/fully-untyped))))
-      (case state
-	((exact-match)
-	 ;;There is a clause that exactly matches the operands.  When we are here: we
-	 ;;know that SELECTED-CLAUSE-SIGNATURE* holds a single item.
-	 (let ((matching-clause-signature (car selected-clause-signature*)))
+  (module (%match-case-lambda-signature-against-operands)
+
+    (define (%match-case-lambda-signature-against-operands input-form.stx lexenv.run lexenv.expand
+							   rator.psi rand*.psi
+							   rator.clambda-sig rands.sig)
+      ;;Iterate, in  order, through  the "<lambda-signature>"  instances representing
+      ;;the operator's clause signatures, looking  for the first that matches exactly
+      ;;the operands' signature;  otherwise accumulate a list  of compatible clauses.
+      ;;Build and return a psi instance representing the application form.
+      ;;
+      ;;The argument RATOR.PSI is the already expanded operator expression.
+      ;;
+      ;;The  argument  RAND*.PSI  is  a  proper  list  of  already  expanded  operand
+      ;;expressions.
+      ;;
+      ;;The argument  RATOR.CLAMBDA-SIG is  an instance  of "<case-lambda-signature>"
+      ;;representing the closure object's signatures.
+      ;;
+      ;;Assuming each  operand expression  in RAND*.PSI returns  a single  value: the
+      ;;argument  RANDS.SIG is  an  instance of  "<type-signature>" representing  the
+      ;;operands' types.
+      ;;
+      (let* ((selected-clause-signature* '())
+	     (state (returnable
+		      (fold-left (lambda (state clause-signature)
+				   (let ((args.sig (lambda-signature.argvals clause-signature)))
+				     (case (type-signature.match-arguments-against-operands args.sig rands.sig)
+				       ((exact-match)
+					(set! selected-clause-signature* (list clause-signature))
+					(return 'exact-match))
+				       ((possible-match)
+					(set-cons! selected-clause-signature* clause-signature)
+					'possible-match)
+				       (else state))))
+			'no-match (case-lambda-signature.clause-signature* rator.clambda-sig)))))
+	(define (%default-core-expr)
+	  (%build-default-application input-form.stx rator.psi rand*.psi selected-clause-signature*))
+	(case state
+	  ((exact-match)
+	   ;;There is a clause that exactly  matches the operands.  When we are here:
+	   ;;we know that SELECTED-CLAUSE-SIGNATURE* holds a single item.
 	   (%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
 							 rator.psi rand*.psi
-							 (lambda-signature.retvals matching-clause-signature))))
-	((possible-match)
-	 ;;There is at least one clause with a possible match.  It is not possible to
-	 ;;fully  validate  the  signatures  at  expand-time;  we  rely  on  run-time
-	 ;;checking.
-	 (%build-default-application))
-	(else
-	 ;;There are no  matching clauses, not even possible  matches.  Arguments and
-	 ;;operands do *not* match at expand-time.
-	 (assert (null? selected-clause-signature*))
-	 (let ((make-arguments-signature* (lambda ()
-					    (map lambda-signature.argvals
-					      (case-lambda-signature.clause-signature* rator.case-lambda-signature)))))
-	   (case-expander-language
-	     ((typed)
-	      (%error-mismatch-between-args-signature-and-operands-signature   input-form.stx (make-arguments-signature*) rands.sig))
-	     ((default)
-	      (%warning-mismatch-between-args-signature-and-operands-signature input-form.stx (make-arguments-signature*) rands.sig)
-	      (%build-default-application))
-	     ((strict-r6rs)
-	      (%build-default-application))))))))
+							 (lambda-signature.retvals (car selected-clause-signature*))))
+	  ((possible-match)
+	   ;;There is at least one clause with  a possible match.  It is not possible
+	   ;;to fully  validate the  signatures at expand-time;  we rely  on run-time
+	   ;;checking.
+	   (%default-core-expr))
+	  (else
+	   ;;There are no matching clauses, not even possible matches.  Arguments and
+	   ;;operands do *not* match at expand-time.
+	   (assert (null? selected-clause-signature*))
+	   (let ((make-arguments-signature* (lambda ()
+					      (map lambda-signature.argvals
+						(case-lambda-signature.clause-signature* rator.clambda-sig)))))
+	     (case-expander-language
+	       ((typed)
+		(%error-mismatch-between-args-signature-and-operands-signature   input-form.stx (make-arguments-signature*) rands.sig))
+	       ((default)
+		(%warning-mismatch-between-args-signature-and-operands-signature input-form.stx (make-arguments-signature*) rands.sig)
+		(%default-core-expr))
+	       ((strict-r6rs)
+		(%default-core-expr))))))))
+
+    (define (%build-default-application input-form.stx rator.psi rand*.psi selected-clause-signature*)
+      (%build-core-expression input-form.stx rator.psi rand*.psi
+			      (cond ((list-of-single-item? selected-clause-signature*)
+				     ;;There is a single compatible clause signature.
+				     (lambda-signature.retvals (car selected-clause-signature*)))
+				    ((pair? selected-clause-signature*)
+				     ;;There    are   multiple    compatible   clause
+				     ;;signatures.  Let's  compute the  union between
+				     ;;the retvals type signatures.
+				     (apply type-signature.union-same-number-of-operands
+					    (lambda (message cnd)
+					      (raise (condition (make-who-condition __module_who__)
+								(make-message-condition message)
+								(make-syntax-violation input-form.stx #f)
+								cnd)))
+					    (map lambda-signature.retvals selected-clause-signature*)))
+				    (else
+				     (make-type-signature/fully-unspecified)))))
+
+    #| end of module: %MATCH-CASE-LAMBDA-SIGNATURE-AGAINST-OPERANDS |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -2094,20 +2086,15 @@
 							rator.psi rand*.psi application-retvals.sig)
     ;;We are  applying an operator RATOR.PSI  to a tuple of  operands RAND*.PSI.  The
     ;;operator is a closure object.  One of the closure's clauses has arguments' type
-    ;;signature  matching (or  compatible with)  the operands'  type signature.   The
-    ;;matching   closure's   clause   has   return   values   with   type   signature
-    ;;APPLICATION-RETVALS.SIG.
-    ;;
-    ;;If the operator is an identifier: it is possible that it has an unsafe variant.
-    ;;Let's  try to  substitute  the application  of the  operantor  with its  unsafe
-    ;;variant.
+    ;;signatures  matching  the operands'  type  signature.   The matching  closure's
+    ;;clause has return values with type signature APPLICATION-RETVALS.SIG.
     ;;
     (define (%build-default-application)
-      (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi application-retvals.sig))
+      (%build-core-expression input-form.stx rator.psi rand*.psi application-retvals.sig))
     (define (%build-unsafe-variant-application unsafe-rator.sexp)
       ;; (let* ((unsafe-rator.stx (bless unsafe-rator.sexp))
       ;;        (unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
-      ;;   (%build-core-expression input-form.stx lexenv.run unsafe-rator.psi rand*.psi application-retvals.sig))
+      ;;   (%build-core-expression input-form.stx unsafe-rator.psi rand*.psi application-retvals.sig))
       (%build-default-application))
     (define* (%build-typed-variable-application {rator.spec typed-variable-spec?})
       ;; (cond ((typed-variable-spec.unsafe-variant-sexp rator.spec)
@@ -2150,8 +2137,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi
-				   {application-retvals.sig type-signature?})
+  (define* (%build-core-expression input-form.stx rator.psi rand*.psi {application-retvals.sig type-signature?})
     (make-psi input-form.stx
       (build-application (syntax-annotation input-form.stx)
 	  (psi.core-expr rator.psi)

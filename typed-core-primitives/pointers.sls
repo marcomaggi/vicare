@@ -39,15 +39,6 @@
 (declare-type-predicate/false	false-or-pointer?	<pointer>)
 (declare-list-of-type-predicate	list-of-pointers?	<pointer>)
 
-(declare-core-primitive maybe-pointer?
-    (safe)
-  (signatures
-   (((or <pointer> <void>))			=> (<true>))
-   (((and (not <void>)
-	  (not <pointer>)
-	  (not (ancestor-of <pointer>))))	=> (<false>))
-   (((not <pointer>))				=> (<false>))))
-
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive pointer-null?

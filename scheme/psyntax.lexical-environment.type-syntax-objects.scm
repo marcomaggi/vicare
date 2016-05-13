@@ -536,7 +536,7 @@
   ;;
   (receive (standard-formals.stx argvals.sig)
       (syntax-object.parse-standard-formals input-formals.stx)
-    (let ((retvals.sig (make-type-signature/fully-untyped)))
+    (let ((retvals.sig (make-type-signature/fully-unspecified)))
       (values standard-formals.stx (make-lambda-signature retvals.sig argvals.sig)))))
 
 (define (syntax-object.parse-standard-clambda-multi-clauses-formals input-formals*.stx)
@@ -616,8 +616,7 @@
       (receive (standard-formals.stx argvals.sig)
 	  (syntax-object.parse-typed-formals ?arg-formals untyped.ots)
 	(values standard-formals.stx
-		(make-lambda-signature (make-type-signature/fully-untyped)
-					       argvals.sig)))))))
+		(make-lambda-signature (make-type-signature/fully-unspecified) argvals.sig)))))))
 
 (case-define* syntax-object.parse-typed-clambda-multi-clauses-formals
   ((input-formals*.stx)

@@ -396,11 +396,11 @@
 	(assertion-violation __who__ "index out of range" arry i)
       (let ((data ($<dynamic-array>-data arry)))
 	(cond (($fx= obj-idx fir-idx)
-	       ($vector-set! data fir-idx (void))
+	       ($vector-set-void! data fir-idx)
 	       ($<dynamic-array>-fir-idx-set! arry ($fxadd1 fir-idx)))
 
 	      (($fx= obj-idx ($fxsub1 pas-idx))
-	       ($vector-set! data obj-idx (void))
+	       ($vector-set-void! data obj-idx)
 	       ($<dynamic-array>-pas-idx-set! arry ($fxsub1 pas-idx)))
 
 	      (else
@@ -410,12 +410,12 @@
 		     ;;Less used slots at the left.
 		     (begin
 		       ($vector-self-copy-backwards! data obj-idx ($fxadd1 obj-idx) used-at-left)
-		       ($vector-set! data fir-idx (void))
+		       ($vector-set-void! data fir-idx)
 		       ($<dynamic-array>-fir-idx-set! arry ($fxadd1 fir-idx)))
 		   ;;Less used slots at the right.
 		   (let ((pas-idx.new ($fxsub1 pas-idx)))
 		     ($vector-self-copy-forwards! data ($fxadd1 obj-idx) obj-idx ($fxsub1 used-at-right))
-		     ($vector-set! data pas-idx.new (void))
+		     ($vector-set-void! data pas-idx.new)
 		     ($<dynamic-array>-pas-idx-set! arry pas-idx.new))))))))))
 
 ;;; --------------------------------------------------------------------

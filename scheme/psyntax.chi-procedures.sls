@@ -179,7 +179,7 @@
     (lambda (make-record)
       (case-define* make-psi
 	((stx core-expr)
-	 (make-record stx core-expr (make-type-signature/fully-untyped)))
+	 (make-record stx core-expr (make-type-signature/fully-unspecified)))
 	((stx core-expr {retvals-signature type-signature?})
 	 (make-record stx core-expr retvals-signature)))
       make-psi))

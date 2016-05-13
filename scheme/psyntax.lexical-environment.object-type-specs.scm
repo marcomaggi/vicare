@@ -2160,7 +2160,7 @@
 
   (case-define* union-of-type-specs
     (()
-     (make-type-signature/fully-untyped))
+     (make-type-signature/fully-unspecified))
     (({sig object-type-spec?})
      sig)
     (({sig1 object-type-spec?} {sig2 object-type-spec?})
@@ -2759,9 +2759,9 @@
   (closure-type-spec.signature-set! closure.ots
     (make-case-lambda-signature
      (map (lambda (clause-signature retvals.new-sig)
-	    ;;If no type signature was  specified for the clause: we use
+	    ;;If  no   type  signature   was  specified  for   the  clause:   we  use
 	    ;;RETVALS.NEW-SIG.
-	    (if (type-signature.fully-untyped? (lambda-signature.retvals clause-signature))
+	    (if (type-signature.fully-unspecified? (lambda-signature.retvals clause-signature))
 		(make-lambda-signature retvals.new-sig
 				       (lambda-signature.argvals clause-signature))
 	      clause-signature))
@@ -3928,9 +3928,8 @@
 
      ((lambda ?argtypes => ?rettypes)
       (make-closure-type-spec (make-case-lambda-signature
-			       (list
-				(make-lambda-signature (make-type-signature ?rettypes)
-							       (make-type-signature ?argtypes))))
+			       (list (make-lambda-signature (make-type-signature ?rettypes)
+							    (make-type-signature ?argtypes))))
 			      name.stx))
 
      ((case-lambda (?argtypes0 => ?rettypes0) (?argtypes* => ?rettypes*) ...)

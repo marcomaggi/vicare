@@ -5830,6 +5830,11 @@ Return the value at index @var{fx} in @var{vec}.
 Store @var{value} at index @var{fx} in @var{vec}.
 @end deffn
 
+
+@deffn {Unsafe Operation} $vector-set-void! @var{vec} @var{fx}
+Store the void value at index @var{fx} in @var{vec}.
+@end deffn
+
 @c page
 @node syslib vectors mapping
 @subsection Mapping over vectors

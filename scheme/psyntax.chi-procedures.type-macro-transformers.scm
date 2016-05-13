@@ -872,7 +872,7 @@
 	  (cons* (build-data no-source method-name.sym)
 		 expr.core
 		 arg*.core))
-	(make-type-signature/fully-untyped))))
+	(make-type-signature/fully-unspecified))))
 
   #| end of module |# )
 
@@ -906,7 +906,7 @@
 	  (build-application no-source
 	      (psi.core-expr matcher.psi)
 	    (list (psi.core-expr expr.psi)))
-	  (make-type-signature/fully-untyped)))))
+	  (make-type-signature/fully-unspecified)))))
 
   (define (%build-branches input-form.stx arg.sym case-clause*.stx)
     ;;This loop is like MAP, but we want  to detect if the ELSE clause (when present)
@@ -1009,11 +1009,11 @@
 	    ((type-signature.no-return? expr.sig)
 	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
 
-	    ((type-signature.fully-untyped? asrt.sig)
+	    ((type-signature.fully-unspecified? asrt.sig)
 	     ;;The assertion's signature always matches expression's signature.
 	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
 
-	    ((type-signature.fully-untyped? expr.sig)
+	    ((type-signature.fully-unspecified? expr.sig)
 	     ;;When  the  assertion's  signature   has  types  and  the  expression's
 	     ;;signature is unspecified: always do a run-time validation.
 	     (%run-time-validation input-form.stx lexenv.run lexenv.expand

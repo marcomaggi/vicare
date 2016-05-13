@@ -20,7 +20,7 @@
 
     ;; pointer objects
     pointer?				list-of-pointers?
-    false-or-pointer?			maybe-pointer?
+    false-or-pointer?
     null-pointer			set-pointer-null!
     pointer-null?			pointer-non-null?
     pointer->integer			integer->pointer
@@ -161,7 +161,7 @@
   (import (except (vicare)
 		  ;; pointer objects
 		  pointer?				list-of-pointers?
-		  false-or-pointer?			maybe-pointer?
+		  false-or-pointer?
 		  null-pointer				set-pointer-null!
 		  pointer-null?				pointer-non-null?
 		  pointer->integer			integer->pointer
@@ -475,10 +475,6 @@
 
 
 ;;; pointer manipulation procedures
-
-(define (maybe-pointer? obj)
-  (or (eq? obj (void))
-      (pointer? obj)))
 
 (define (false-or-pointer? obj)
   (or (not obj)

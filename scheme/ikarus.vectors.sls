@@ -158,6 +158,7 @@
     $vector-self-copy-backwards!
     $vector-copy-source-range!
     $vector-copy-source-count!
+    $vector-set-void!
     $fill-vector-from-list!)
   (import (except (vicare)
 		  list-of-vectors?
@@ -528,6 +529,9 @@
   (preconditions
    (valid-index-for-vector-slot vec idx))
   ($vector-set! vec idx new-item))
+
+(define ($vector-set-void! vec idx)
+  ($vector-set! vec idx (void)))
 
 
 (define* (vector->list {vec vector?})

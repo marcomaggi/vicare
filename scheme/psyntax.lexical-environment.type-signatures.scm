@@ -38,7 +38,7 @@
    make-type-signature/single-procedure			make-type-signature/single-symbol
    make-type-signature/single-stx			make-type-signature/single-syntactic-identifier
    make-type-signature/single-value
-   make-type-signature/standalone-list			make-type-signature/fully-untyped
+   make-type-signature/standalone-list			make-type-signature/fully-unspecified
    make-type-signature/no-return
 
 ;;; comparison
@@ -46,7 +46,7 @@
 
 ;;; predicates
    list-of-type-signatures?				type-signature.empty?
-   type-signature.fully-untyped?			type-signature.partially-untyped?
+   type-signature.fully-unspecified?
    type-signature.super-and-sub?			type-signature.compatible-super-and-sub?
    type-signature.single-type?				type-signature.single-top-tag?
    type-signature.single-type-or-fully-untyped?		type-signature.no-return?
@@ -439,7 +439,7 @@
   (define-cached-signature-maker make-type-signature/no-return				(<no-return>-ots))
   #| end of LET-SYNTAX |# )
 
-(define-syntax-rule (make-type-signature/fully-untyped)
+(define-syntax-rule (make-type-signature/fully-unspecified)
   (make-type-signature/standalone-list))
 
 (define* (make-type-signature/single-value type-annotation)
@@ -459,30 +459,13 @@
 (define* (type-signature.empty? {signature type-signature?})
   (null? (type-signature.object-type-specs signature)))
 
-(define* (type-signature.fully-untyped? {signature type-signature?})
+(define* (type-signature.fully-unspecified? {signature type-signature?})
   ;;Return true  if the type  signature specifies  neither object types,  nor objects
   ;;count; otherwise return false.
   ;;
   (%type-signature-memoised-body
    signature type-signature.memoised-fully-untyped? type-signature.memoised-fully-untyped?-set!
    (<list>-ots? (type-signature.object-type-specs signature))))
-
-(define* (type-signature.partially-untyped? {signature type-signature?})
-  ;;Return  true  if  the type  signature  has  at  least  one untyped  item,  either
-  ;;"<untyped>" or "<list>"; otherwise return false.
-  ;;
-  (%type-signature-memoised-body
-   signature type-signature.memoised-partially-untyped? type-signature.memoised-partially-untyped?-set!
-   (let loop ((specs (type-signature.object-type-specs signature)))
-     (cond ((pair? specs)
-	    (or (<untyped>-ots? (car specs))
-		(loop (cdr specs))))
-	   ((null? specs)
-	    ;;End of proper list.
-	    #f)
-	   (else
-	    ;;End of IMproper list.
-	    #t)))))
 
 (define* (type-signature.only-<untyped>-and-<list>? {signature type-signature?})
   ;;Return true if  the type signature has only untyped  items, either "<untyped>" or
@@ -1111,7 +1094,7 @@
   ;;common ancestor.
   ;;
   (()
-   (make-type-signature/fully-untyped))
+   (make-type-signature/fully-unspecified))
   (({sig type-signature?})
    sig)
   (({sig1 type-signature?} {sig2 type-signature?})
@@ -1172,7 +1155,7 @@
   ;;union.
   ;;
   (()
-   (make-type-signature/fully-untyped))
+   (make-type-signature/fully-unspecified))
   (({sig type-signature?})
    sig)
   (({sig1 type-signature?} {sig2 type-signature?})
@@ -1247,7 +1230,7 @@
   ;;union.  UNION-SYNNER must be a procedure used to signal errors.
   ;;
   (({union-synner procedure?})
-   (make-type-signature/fully-untyped))
+   (make-type-signature/fully-unspecified))
   (({union-synner procedure?} {sig type-signature?})
    sig)
   (({union-synner procedure?} {sig1 type-signature?} {sig2 type-signature?})

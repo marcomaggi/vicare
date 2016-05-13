@@ -1481,7 +1481,7 @@
        (receive (standard-formals.stx argvals.sig)
 	   ;;This call will use "<top>" for untyped arguments.
 	   (syntax-object.parse-typed-formals ?formals)
-	 (let ((clause-signature (make-lambda-signature (make-type-signature/fully-untyped) argvals.sig)))
+	 (let ((clause-signature (make-lambda-signature (make-type-signature/fully-unspecified) argvals.sig)))
 	   (%process-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 					 ?lhs ?lhs standard-formals.stx clause-signature
 					 `(,?body0 . ,?body*) %synner))))

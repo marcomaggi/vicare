@@ -213,7 +213,7 @@
   (let ((vec ($chain-link-ref lnk)))
     (receive-and-return (obj)
 	($vector-ref vec idx)
-      ($vector-set! vec idx (void)))))
+      ($vector-set-void! vec idx))))
 
 ;;; --------------------------------------------------------------------
 

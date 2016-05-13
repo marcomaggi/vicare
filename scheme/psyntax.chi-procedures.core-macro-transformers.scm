@@ -1804,9 +1804,8 @@
 	 ;;this code even if we discard it. (Marco Maggi; Tue May 3, 2016)
 	 (chi-lambda/checked/parsed-formals input-form.stx lexenv.run lexenv.expand
 					    (list arg.id)
-					    (make-lambda-signature
-					     (make-type-signature/fully-untyped)
-					     (make-type-signature/single-value (<top>-ots)))
+					    (make-lambda-signature (make-type-signature/fully-unspecified)
+								   (make-type-signature/single-top))
 					    consumer*.stx)
 	 producer.psi)
 
@@ -2196,7 +2195,7 @@
 	 (chi-lambda/checked/parsed-formals input-form.stx lexenv.run lexenv.expand
 					    (list arg.id)
 					    (make-lambda-signature
-					     (make-type-signature/fully-untyped)
+					     (make-type-signature/fully-unspecified)
 					     (make-type-signature/single-value (or arg.ots (<top>-ots))))
 					    consumer*.stx)
 	 producer.psi)
@@ -2308,8 +2307,8 @@
 	 ;;this code even if we discard it. (Marco Maggi; Tue May 3, 2016)
 	 (chi-lambda/checked/parsed-formals input-form.stx lexenv.run lexenv.expand
 					    standard-formals.stx
-					    (make-lambda-signature (make-type-signature/fully-untyped)
-									   cleared-formals.sig)
+					    (make-lambda-signature (make-type-signature/fully-unspecified)
+								   cleared-formals.sig)
 					    consumer*.stx)
 	 producer.psi)
 
@@ -2423,8 +2422,8 @@
 	 ;;this code even if we discard it. (Marco Maggi; Tue May 3, 2016)
 	 (chi-lambda/checked/parsed-formals input-form.stx lexenv.run lexenv.expand
 					    standard-formals.stx
-					    (make-lambda-signature (make-type-signature/fully-untyped)
-									   cleared-formals.sig)
+					    (make-lambda-signature (make-type-signature/fully-unspecified)
+								   cleared-formals.sig)
 					    consumer*.stx)
 	 producer.psi)
 
@@ -2630,7 +2629,7 @@
 				    '()
 				  (psi.core-expr producer.psi)))
 	      (consumer.psi	(let ((clause-signature		(make-lambda-signature
-								 (make-type-signature/fully-untyped)
+								 (make-type-signature/fully-unspecified)
 								 cleared-formals.sig))
 				      (consumer-body*.stx	(%compose-consumer-body
 								 return-values? standard-formals.stx consumer*.stx)))

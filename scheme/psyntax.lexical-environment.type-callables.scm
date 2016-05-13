@@ -27,7 +27,7 @@
    lambda-signature=?
    lambda-signature.retvals			lambda-signature.retvals.specs
    lambda-signature.argvals			lambda-signature.argvals.specs
-   lambda-signature.fully-untyped?		lambda-signature.only-<untyped>-and-<list>?
+   lambda-signature.fully-unspecified?		lambda-signature.only-<untyped>-and-<list>?
    lambda-signature.untyped-to-top
 
    <case-lambda-signature>
@@ -94,13 +94,13 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (lambda-signature.fully-untyped? {lambda-signature lambda-signature?})
+(define* (lambda-signature.fully-unspecified? {lambda-signature lambda-signature?})
   ;;A clause signature  has fully unspecified types if its  retvals type signature is
   ;;the  standalone  "<list>"  and  its  argvals type  signature  is  the  standalone
   ;;"<list>".
   ;;
-  (and (type-signature.fully-untyped? (lambda-signature.argvals lambda-signature))
-       (type-signature.fully-untyped? (lambda-signature.retvals lambda-signature))))
+  (and (type-signature.fully-unspecified? (lambda-signature.argvals lambda-signature))
+       (type-signature.fully-unspecified? (lambda-signature.retvals lambda-signature))))
 
 (define* (lambda-signature.only-<untyped>-and-<list>? {lambda-signature lambda-signature?})
   ;;A  clause signature  has  "untyped" signature  if both  its  argvals and  retvals

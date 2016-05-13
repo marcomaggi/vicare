@@ -493,7 +493,7 @@
 	   (assertion-violation __who__ "internal error, invalid lambda type" type)))
       ;;If no type signature was specified for the clause's return values: we use the
       ;;signature of the last form in the body, performing type propagation.
-      (let ((clause-signature	(if (type-signature.fully-untyped? (lambda-signature.retvals clause-signature))
+      (let ((clause-signature	(if (type-signature.fully-unspecified? (lambda-signature.retvals clause-signature))
 				    (make-lambda-signature (psi.retvals-signature body.psi)
 							   (lambda-signature.argvals clause-signature))
 				  clause-signature)))
@@ -550,7 +550,7 @@
 	       (assertion-violation __who__ "internal error, invalid named-lambda type" type)))
 	  ;;If no type signature was specified for the clause: we use the signature
 	  ;;of the last form in the body, performing type propagation.
-	  (let ((clause-signature	(if (type-signature.fully-untyped? (lambda-signature.retvals clause-signature))
+	  (let ((clause-signature	(if (type-signature.fully-unspecified? (lambda-signature.retvals clause-signature))
 					    (make-lambda-signature (psi.retvals-signature body.psi)
 								   (lambda-signature.argvals clause-signature))
 					  clause-signature)))
@@ -650,7 +650,7 @@
 	;;If no type signature was specified for  the clause: we use the signature of
 	;;the last form in the body, performing type propagation.
 	(let ((clause-signature* (map (lambda (clause-signature body.psi)
-					(if (type-signature.fully-untyped? (lambda-signature.retvals clause-signature))
+					(if (type-signature.fully-unspecified? (lambda-signature.retvals clause-signature))
 					    (make-lambda-signature (psi.retvals-signature body.psi)
 								   (lambda-signature.argvals clause-signature))
 					  clause-signature))
@@ -715,7 +715,7 @@
 	  ;;If no type  signature was specified for the clause:  we use the signature
 	  ;;of the last form in the body, performing type propagation.
 	  (let ((clause-signature* (map (lambda (clause-signature body.psi)
-					  (if (type-signature.fully-untyped? (lambda-signature.retvals clause-signature))
+					  (if (type-signature.fully-unspecified? (lambda-signature.retvals clause-signature))
 					      (make-lambda-signature (psi.retvals-signature body.psi)
 								     (lambda-signature.argvals clause-signature))
 					    clause-signature))
@@ -1135,7 +1135,7 @@
     ;;body forms.
     ;;
     (let ((retvals-signature.sig (lambda-signature.retvals clause-signature)))
-      (if (type-signature.fully-untyped? retvals-signature.sig)
+      (if (type-signature.fully-unspecified? retvals-signature.sig)
 	  ;;The number and type of return values is unknown.
 	  body-form*.stx
 	(let ((retvals-signature.tags (type-signature.syntax-object retvals-signature.sig)))

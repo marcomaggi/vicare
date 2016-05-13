@@ -340,6 +340,13 @@
   (attributes
    ((_ _ _)			result-true)))
 
+(declare-core-primitive $vector-set-void!
+    (unsafe)
+  (signatures
+   ((<nevector> <non-negative-fixnum>)		=> (<void>)))
+  (attributes
+   ((_ _)			result-true)))
+
 ;;; --------------------------------------------------------------------
 ;;; iterations
 

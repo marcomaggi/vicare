@@ -18700,12 +18700,6 @@ otherwise.
 @end defun
 
 
-@defun maybe-pointer? @var{obj}
-Return @true{} if @var{obj} is a pointer object or @void{}, return @false{}
-otherwise.
-@end defun
-
-
 @defun false-or-pointer? @var{obj}
 Return @true{} if @var{obj} is a pointer object or @false{}, return
 @false{} otherwise.

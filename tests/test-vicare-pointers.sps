@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011-2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -101,17 +101,6 @@
   (check
       (pointer? '#(123))
     => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check-for-true
-   (maybe-pointer? (integer->pointer 123)))
-
-  (check-for-false
-   (maybe-pointer? '#(123)))
-
-  (check-for-true
-   (maybe-pointer? (void)))
 
 ;;; --------------------------------------------------------------------
 
@@ -395,8 +384,8 @@
   (check
       (begin
 	(make-memory-block/guarded (malloc 16) 16)
-	(collect))
-    => (void))
+	(void-object? (collect)))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 
