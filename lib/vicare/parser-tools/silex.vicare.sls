@@ -3113,18 +3113,21 @@
 	  "          (final-lexer\n"
 	  "           (lambda ()\n"
 	  "             (init-lexeme)\n"
-	  (cond ((eq? counters 'none)
-		 "             ((start-automaton))")
-		((eq? counters 'line)
-		 (string-append
-		  "             (let ((yyline (get-start-line)))\n"
-		  "               ((start-automaton) yyline))"))
-		((eq? counters 'all)
-		 (string-append
-		  "             (let ((yyline (get-start-line))\n"
-		  "                   (yycolumn (get-start-column))\n"
-		  "                   (yyoffset (get-start-offset)))\n"
-		  "               ((start-automaton) yyline yycolumn yyoffset))")))
+	  (case counters
+	    ((none)
+	     "             ((start-automaton))")
+	    ((line)
+	     (string-append
+	      "             (let ((yyline (get-start-line)))\n"
+	      "               ((start-automaton) yyline))"))
+	    ((all)
+	     (string-append
+	      "             (let ((yyline (get-start-line))\n"
+	      "                   (yycolumn (get-start-column))\n"
+	      "                   (yyoffset (get-start-offset)))\n"
+	      "               ((start-automaton) yyline yycolumn yyoffset))"))
+	    (else
+	     (error #f "internal error, invalid counters value" counters)))
 	  "))"
 	  ;; Fermer les bindings du grand letrec
 	  ")\n"
