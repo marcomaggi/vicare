@@ -1255,13 +1255,13 @@
 		 (typed-variable-spec.ots-set! lts rhs.ots)
 		 ;;A typed  lexical binding used as  LHS of SET!  is  assigned and so
 		 ;;unexportable, but this is a special  case.  We use this variant of
-		 ;;the SET!  syntax  only to initialise syntactic bindings,  so we do
-		 ;;*not* mark this variable as assigned.
-		 #;(lexical-typed-variable-spec.assigned?-set! lts #f)
+		 ;;the SET!  syntax only to  initialise syntactic bindings (as in the
+		 ;;current implementation  of DEFINE-VALUES, [Sat May  14, 2016]), so
+		 ;;we do *not* mark this variable as assigned.
 		 (psi.core-expr rhs.psi))
 	     (begin
-	       ;;A  typed lexical  binding used  as LHS  of SET!   is mutable  and so
-	       ;;unexportable.
+	       ;;A typed  lexical binding  used as  LHS of SET!   is assigned  and so
+	       ;;unexportable.  We mark it as such.
 	       (lexical-typed-variable-spec.assigned?-set! lts #t)
 	       (%generate-rhs-core-expr input-form.stx lexenv.run lexenv.expand
 					caller-who lts.ots rhs.ots lhs.id rhs.psi))))
