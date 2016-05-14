@@ -389,6 +389,7 @@
 (declare-fixnum-multi $fxlogor unsafe)
 (declare-fixnum-multi $fxlogand unsafe)
 (declare-fixnum-multi $fxlogxor unsafe)
+(declare-fixnum-unary $fxlognot unsafe)
 (declare-fixnum-unary $fxnot unsafe)
 (declare-fixnum-binary $fxsll unsafe)
 (declare-fixnum-binary $fxsra unsafe)

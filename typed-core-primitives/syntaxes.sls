@@ -295,11 +295,11 @@
     ;;than a list, memory-wise.
     ;;
     (with-syntax
-	((PRIM-NAME	prim-name.id)
-	 (SAFETY	(%validate-safety safety.id))
-	 (SIGNATURES	(%validate-and-format-signatures signatures.stx))
-	 (REPLACEMENTS	(%validate-replacements replacements.stx)))
-      #'(declare-primitive (quote PRIM-NAME) (quote #(PRIM-NAME SAFETY SIGNATURES REPLACEMENTS)))))
+	((PRIM-NAME		prim-name.id)
+	 (SAFETY		(%validate-safety safety.id))
+	 (SIGNATURES		(%validate-and-format-signatures signatures.stx))
+	 ((REPLACEMENT ...)	(%validate-replacements replacements.stx)))
+      #'(declare-primitive (quote PRIM-NAME) (quote #(PRIM-NAME SAFETY SIGNATURES #(REPLACEMENT ...))))))
 
   (define (%validate-safety safety.stx)
     (syntax-case safety.stx (safe unsafe)

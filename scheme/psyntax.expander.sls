@@ -1223,7 +1223,7 @@
 	       ;;cannot be  referenced in the  EXPORT-SUBST; this validation  will be
 	       ;;performed later.
 	       ;;
-	       (let* ((loc  (let lookup ((the-lex	(lexical-var-binding-descriptor-value.lex-name descr.value))
+	       (let* ((loc  (let lookup ((the-lex	(syntactic-binding-descriptor/lexical-var/value.lex-name descr.value))
 					 (lex*		lex*)
 					 (loc*		loc*))
 			      ;;Search  for  THE-LEX in  the  list  LEX*: when  found
@@ -1235,7 +1235,7 @@
 				    (lookup the-lex (cdr lex*) (cdr loc*)))
 				(assertion-violation/internal-error __who__
 				  "missing lexical gensym in lexenv" the-lex))))
-		      (type  (if (lexical-var-binding-descriptor-value.assigned? descr.value)
+		      (type  (if (syntactic-binding-descriptor/lexical-var/value.assigned? descr.value)
 				 'global-mutable
 			       'global)))
 		 (loop (cdr lexenv.run)

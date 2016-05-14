@@ -2035,9 +2035,15 @@
 	  ((exact-match)
 	   ;;There is a clause that exactly  matches the operands.  When we are here:
 	   ;;we know that SELECTED-CLAUSE-SIGNATURE* holds a single item.
-	   (%chi-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
-							 rator.psi rand*.psi rands.sig
-							 (lambda-signature.retvals (car selected-clause-signature*))))
+	   (case-expander-language
+	     ((typed)
+	      (%chi-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
+							rator.psi rand*.psi rands.sig
+							(lambda-signature.retvals (car selected-clause-signature*))))
+	     ((default)
+	      (%default-core-expr))
+	     ((strict-r6rs)
+	      (%default-core-expr))))
 	  ((possible-match)
 	   ;;There is at least one clause with  a possible match.  It is not possible
 	   ;;to fully  validate the  signatures at expand-time;  we rely  on run-time
@@ -2116,7 +2122,14 @@
 			   ;;
 			   ;;   (fx+ 1 2)
 			   ;;
-			   (cond (else
+			   (cond ((core-prim-type-spec.replacements
+				   (syntactic-binding-descriptor/core-prim-typed.core-prim-type-spec rator.descr))
+				  => (lambda (replacements)
+				       (%select-application-replacement input-form.stx lexenv.run lexenv.expand
+									rator.psi rand*.psi
+									rands.sig application-retvals.sig
+									replacements)))
+				 (else
 				  (%build-default-application))))
 
 			  ((syntactic-binding-descriptor/lexical-closure-var? rator.descr)
@@ -2172,22 +2185,35 @@
 	(if (fx=? idx len)
 	    ;;No matching replacement.
 	    (%build-core-expression input-form.stx rator.psi rand*.psi application-retvals.sig)
-	  (let* ((repl.psi		(let ((repl.id (vector-ref replacements idx)))
-					  (chi-expr repl.id lexenv.run lexenv.expand)))
-		 (repl.clambda-sig	(let* ((repl.sig (psi.retvals-signature repl.psi))
-					       (repl.ots (car (type-signature.object-type-specs repl.sig))))
-					  (closure-type-spec.signature repl.ots))))
-	    (cond ((exists (lambda (clause-signature)
-			     (let ((args.sig (lambda-signature.argvals clause-signature)))
-			       (if (eq? 'exact-match (type-signature.match-arguments-against-operands args.sig rands.sig))
-				   (lambda-signature.retvals clause-signature)
-				 #f)))
-		     (case-lambda-signature.clause-signature* repl.clambda-sig))
-		   => (lambda (repl-application-retvals.sig)
-			;;Found replacement.
-			(%build-core-expression input-form.stx repl.psi rand*.psi repl-application-retvals.sig)))
-		  (else
-		   (loop (fxadd1 idx) len)))))))
+	  (let* ((repl.id		(vector-ref replacements idx))
+		 (repl.psi		(chi-expr repl.id lexenv.run lexenv.expand))
+		 (repl.ots		(let ((repl.sig (psi.retvals-signature repl.psi)))
+					  (car (type-signature.object-type-specs repl.sig)))))
+	    (if (closure-type-spec? repl.ots)
+		;;Examine a typed closure object as possible replacement.
+		(let ((repl.clambda-sig (closure-type-spec.signature repl.ots)))
+		  (cond ((exists (lambda (clause-signature)
+				   (let ((args.sig (lambda-signature.argvals clause-signature)))
+				     (if (eq? 'exact-match (type-signature.match-arguments-against-operands args.sig rands.sig))
+					 (lambda-signature.retvals clause-signature)
+				       #f)))
+			   (case-lambda-signature.clause-signature* repl.clambda-sig))
+			 => (lambda (repl-application-retvals.sig)
+			      ;;Found replacement.
+			      (%build-core-expression input-form.stx repl.psi rand*.psi repl-application-retvals.sig)))
+			(else
+			 (loop (fxadd1 idx) len))))
+	      ;;This  replacement is  not a  typed closure  object.  For  example, it
+	      ;;could be an UNtyped core primitive.
+	      (begin
+		(raise-continuable
+		 (condition (make-warning)
+			    (make-who-condition __module_who__)
+			    (make-message-condition
+			     "syntactic identifier listed as typed function replacement is not bound to a typed function")
+			    (make-syntax-violation input-form.stx (psi.input-form rator.psi))
+			    (make-irritants-condition (list repl.id))))
+		(loop (fxadd1 idx) len)))))))
 
     #| end of module: %CHI-APPLICATION-WITH-MATCHING-SIGNATURE |# )
 

@@ -44,7 +44,10 @@
 
 	 <core-prim-type-spec>
 	 make-core-prim-type-spec			core-prim-type-spec?
-	 core-prim-type-spec.name			core-prim-type-spec.safety)
+	 core-prim-type-spec.name			core-prim-type-spec.safety
+	 core-prim-type-spec.replacements
+
+	 #| end of exports |# )
 
 
 ;;;; lexical variable specification: base type
@@ -153,18 +156,20 @@
 		;A symbol representing the public name of this core primitive.
     (immutable safety			core-prim-type-spec.safety)
 		;Boolean.  True if this core primitive is safe.
+    (immutable replacements		core-prim-type-spec.replacements)
+		;False or  a vector  of syntactic identifiers  bound to  the possible
+		;replacements for this closure object.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-typed-variable-spec)
-      (define* (make-core-prim-type-spec {core-prim.sym symbol?} safety {closure.ots closure-type-spec?})
-	;;CORE-PRIM.SYM  is  a  symbol  representing  the public  name  of  the  core
-	;;primitive.
-	;;
-	;;SAFETY is a boolean, true if this primitive is safe.
-	;;
-	;;TYPE-ID is a syntactic identifier representing the type of this function.
-	;;
-	((make-typed-variable-spec closure.ots) core-prim.sym safety))
+      (case-define* make-core-prim-type-spec
+	(({core-prim.sym symbol?} safety {closure.ots closure-type-spec?})
+	 ;;CORE-PRIM.SYM  is  a symbol  representing  the  public  name of  the  core
+	 ;;primitive.  SAFETY is a boolean, true  if this primitive is safe.  TYPE-ID
+	 ;;is a syntactic identifier representing the type of this function.
+	 ((make-typed-variable-spec closure.ots) core-prim.sym safety #f))
+	(({core-prim.sym symbol?} safety {closure.ots closure-type-spec?} {replacements (or not vector?)})
+	 ((make-typed-variable-spec closure.ots) core-prim.sym safety replacements)))
       make-core-prim-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 

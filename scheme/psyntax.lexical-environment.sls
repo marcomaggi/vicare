@@ -252,6 +252,7 @@
     <core-prim-type-spec>
     make-core-prim-type-spec				core-prim-type-spec?
     core-prim-type-spec.name				core-prim-type-spec.safety
+    core-prim-type-spec.replacements
 ;;;
     ;; lexical environment utilities
     label->syntactic-binding-descriptor
@@ -994,7 +995,7 @@
     ;;
     ;;   (displaced-lexical . #f)
     ;;
-    (let* ((fluid-label (fluid-syntax-binding-descriptor.fluid-label descr))
+    (let* ((fluid-label (syntactic-binding-descriptor/fluid-syntax.fluid-label descr))
 	   (fluid-descr (cond ((assq fluid-label lexenv)
 			       => lexenv-entry.binding-descriptor)
 			      (else
@@ -1004,7 +1005,7 @@
 	fluid-descr)))
 
   (define (%follow-through-synonym-descriptor descr lexenv accum-labels)
-    (let ((synonym-label (synonym-syntax-binding-descriptor.synonym-label descr)))
+    (let ((synonym-label (syntactic-binding-descriptor/synonym-syntax.synonym-label descr)))
       (if (memq synonym-label accum-labels)
 	  (syntax-violation #f "circular reference detected while resolving synonym transformers" #f)
 	(%label->descriptor synonym-label lexenv (cons synonym-label accum-labels)))))
@@ -2709,10 +2710,10 @@
     (current-inferior-lexenv))
   (case-identifier-syntactic-binding-descriptor (__who__ id lexenv)
     ((local-etv)
-     (local-expand-time-value-binding-descriptor.object __descr__))
+     (syntactic-binding-descriptor/local-expand-time-value.object __descr__))
 
     ((global-etv)
-     (global-expand-time-value-binding-descriptor.object __descr__))
+     (syntactic-binding-descriptor/global-expand-time-value.object __descr__))
 
     (else
      (procedure-argument-violation __who__
@@ -2737,12 +2738,12 @@
 		  ;;The given identifier is bound to a local compile-time value.  The
 		  ;;actual object is stored in the descriptor itself.
 		  ((local-etv)
-		   (local-expand-time-value-binding-descriptor.object descr))
+		   (syntactic-binding-descriptor/local-expand-time-value.object descr))
 		  ;;The given  identifier is bound  to a compile-time  value imported
 		  ;;from a library  or the top-level environment.   The actual object
 		  ;;is stored in the "value" field of a loc gensym.
 		  ((global-etv)
-		   (global-expand-time-value-binding-descriptor.object descr))
+		   (syntactic-binding-descriptor/global-expand-time-value.object descr))
 		  (else
 		   ;; (assertion-violation __who__
 		   ;;   "identifier not bound to an object-type specification"

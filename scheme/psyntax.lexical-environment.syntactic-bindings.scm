@@ -26,8 +26,8 @@
 ;;; local lexical variables, standard variant
      make-syntactic-binding-descriptor/lexical-var
      syntactic-binding-descriptor/lexical-var?
-     lexical-var-binding-descriptor-value.lex-name
-     lexical-var-binding-descriptor-value.assigned?
+     syntactic-binding-descriptor/lexical-var/value.lex-name
+     syntactic-binding-descriptor/lexical-var/value.assigned?
      lexenv-add-lexical-var-binding
      lexenv-add-lexical-var-bindings
 
@@ -82,7 +82,11 @@
 
 ;;; core primitive with type signature binding
      syntactic-binding-descriptor/core-prim-typed?
-     core-prim-typed-binding-descriptor.core-prim-type-spec
+     syntactic-binding-descriptor/core-prim-typed.core-prim-type-spec
+
+;;; core primitive without type signature binding
+     syntactic-binding-descriptor/core-prim?
+     syntactic-binding-descriptor/core-prim.public-name
 
 ;;; core built-in object-type descriptor binding
      hard-coded-core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor!
@@ -90,7 +94,7 @@
 
 ;;; Vicare struct-type name bindings
      syntactic-binding-descriptor/struct-type-name?
-     struct-type-name-binding-descriptor.type-descriptor
+     syntactic-binding-descriptor/struct-type-name.type-descriptor
 
 ;;; usable R6RS record-type descriptor binding
      syntactic-binding-descriptor/record-type-name?
@@ -110,19 +114,21 @@
 ;;; fluid syntax bindings
      make-syntactic-binding-descriptor/local-global-macro/fluid-syntax
      syntactic-binding-descriptor/fluid-syntax?
-     fluid-syntax-binding-descriptor.fluid-label
+     syntactic-binding-descriptor/fluid-syntax.fluid-label
 
 ;;; synonym bindings
      make-syntactic-binding-descriptor/local-global-macro/synonym-syntax
      syntactic-binding-descriptor/synonym-syntax?
-     synonym-syntax-binding-descriptor.synonym-label
+     syntactic-binding-descriptor/synonym-syntax.synonym-label
 
-;;; compile-time values bindings
+;;; local compile-time values bindings
      make-syntactic-binding-descriptor/local-macro/expand-time-value
-     local-expand-time-value-binding-descriptor.object
-     global-expand-time-value-binding-descriptor.lib
-     global-expand-time-value-binding-descriptor.loc
-     global-expand-time-value-binding-descriptor.object
+     syntactic-binding-descriptor/local-expand-time-value.object
+
+;;; global compile-time values bindings
+     syntactic-binding-descriptor/global-expand-time-value.lib
+     syntactic-binding-descriptor/global-expand-time-value.loc
+     syntactic-binding-descriptor/global-expand-time-value.object
 
 ;;; module bindings
      make-syntactic-binding-descriptor/local-global-macro/module-interface
@@ -207,7 +213,7 @@
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/lexical-var?
   lexical)
 
-(define-syntax-rule (lexical-var-binding-descriptor-value.lex-name ?descriptor-value)
+(define-syntax-rule (syntactic-binding-descriptor/lexical-var/value.lex-name ?descriptor-value)
   ;;Accessor  for  the lexical  gensym  in  a  lexical variable's  syntactic  binding
   ;;descriptor's value.
   ;;
@@ -224,7 +230,7 @@
   ;;
   (car ?descriptor-value))
 
-(define-syntax lexical-var-binding-descriptor-value.assigned?
+(define-syntax syntactic-binding-descriptor/lexical-var/value.assigned?
   ;;Accessor  and mutator  for assigned  boolean  in a  lexical variable's  syntactic
   ;;binding descriptor's value.
   ;;
@@ -710,31 +716,21 @@
   vector-of-type-spec?)
 
 
-;;;; syntactic binding descriptor: core primitive
-
-;;NOTE Commented out because unused.  Kept here for reference.  (Marco Maggi; Sat Apr
-;;18, 2015)
+;;;; syntactic binding descriptor: UNtyped core primitive binding
 ;;
-(comment
- (define (make-syntactic-binding-descriptor/core-primitive public-name)
-   ;;Build and  return a syntactic  binding descriptor representing a  core primitive.
-   ;;PUBLIC-NAME must be a symbol representing the public name of the primitive.
-   ;;
-   ;;The returned descriptor has format:
-   ;;
-   ;;   (core-prim . ?public-name)
-   ;;
-   (make-syntactic-binding-descriptor core-prim public-name))
+;;The syntactic binding's descriptor has the format:
+;;
+;;   (core-prim . ?public-name)
+;;
 
- (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-primitive?
-   core-prim)
+;;Return true  if the argument  is a  syntactic binding's descriptor  representing an
+;;UNtyped core primitive; otherwise return false.
+;;
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-prim?
+  core-prim)
 
- (define-syntax-rule (core-primitive-binding-descriptor.public-name ?descriptor)
-   ;;Given a  syntactic binding descriptor  representing a core primitive:  return its
-   ;;public name symbol.
-   ;;
-   (cdr ?descriptor))
- /comment)
+(define-syntax-rule (syntactic-binding-descriptor/core-prim.public-name ?descriptor)
+  (syntactic-binding-descriptor.value ?descriptor))
 
 
 ;;;; syntactic binding descriptor: hard-coded core primitive with type signature binding
@@ -755,7 +751,8 @@
     ;;
     ;;where ?HARD-CODED-SEXP has the format:
     ;;
-    ;;   #(?core-prim-name ?safety-boolean (?signature-spec0 ?signature-spec ...))
+    ;;   #(?core-prim-name ?safety-boolean (?signature-spec0 ?signature-spec ...)
+    ;;     ?replacements)
     ;;
     ;;?CORE-PRIM-NAME  is a  symbol  representing the  core  primitive's public  name
     ;;("display", "write", "list", et cetera).  ?SIGNATURE-SPEC has the format:
@@ -774,6 +771,10 @@
     ;;                      | (?type0 ?type ... . <list>)
     ;;                      | (?type0 ?type ... . <list-sub-type>)
     ;;
+    ;;?REPLACEMENTS is false or a vector  of symbols representing the public names of
+    ;;other core  primitives that can be  used as possible replacements  for the core
+    ;;primitive.
+    ;;
     ;;The usable descriptor has the format:
     ;;
     ;;   (core-prim-typed . (#<core-prim-type-spec> . ?hard-coded-sexp))
@@ -783,14 +784,17 @@
     ;;Whenever the  function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used  to retrieve
     ;;the descriptor from the label: this function is used to convert the descriptor.
     ;;
-    (let ((hard-coded-sexp		(syntactic-binding-descriptor.value descriptor)))
-      (let ((core-prim.sym		(vector-ref hard-coded-sexp 0))
-	    (safety.boolean		(vector-ref hard-coded-sexp 1))
-	    (signature*.sexp		(vector-ref hard-coded-sexp 2)))
-	(let* ((clambda-sig (%signature-sexp->case-lambda-signature core-prim.sym signature*.sexp))
-	       (closure.ots (make-closure-type-spec clambda-sig)))
+    (let ((hard-coded-sexp	(syntactic-binding-descriptor.value descriptor)))
+      (let ((core-prim.sym	(vector-ref hard-coded-sexp 0))
+	    (safety.boolean	(vector-ref hard-coded-sexp 1))
+	    (signature*.sexp	(vector-ref hard-coded-sexp 2))
+	    (replacements.sexp	(vector-ref hard-coded-sexp 3)))
+	(let* ((clambda.sig	(%signature-sexp->case-lambda-signature core-prim.sym signature*.sexp))
+	       (closure.ots	(make-closure-type-spec clambda.sig))
+	       (replacements	(vector-map core-prim-id replacements.sexp)))
 	  (set-car! descriptor 'core-prim-typed)
-	  (set-cdr! descriptor (cons (make-core-prim-type-spec core-prim.sym safety.boolean closure.ots)
+	  (set-cdr! descriptor (cons (make-core-prim-type-spec core-prim.sym safety.boolean closure.ots
+							       replacements)
 				     hard-coded-sexp))))))
 
   (define* (%signature-sexp->case-lambda-signature core-prim.sym signature*.sexp)
@@ -846,7 +850,7 @@
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-prim-typed?
   core-prim-typed)
 
-(define-syntax-rule (core-prim-typed-binding-descriptor.core-prim-type-spec ?descriptor)
+(define-syntax-rule (syntactic-binding-descriptor/core-prim-typed.core-prim-type-spec ?descriptor)
   (cadr ?descriptor))
 
 
@@ -926,7 +930,7 @@
 (define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/struct-type-name?
   struct-type-spec?)
 
-(define-syntax-rule (struct-type-name-binding-descriptor.type-descriptor ?descriptor)
+(define-syntax-rule (syntactic-binding-descriptor/struct-type-name.type-descriptor ?descriptor)
   ;;Given a  syntactic binding's descriptor  representing a struct-type  name: return
   ;;the struct-type descriptor itself.
   ;;
@@ -1141,7 +1145,7 @@
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/fluid-syntax?
   $fluid)
 
-(define-syntax-rule (fluid-syntax-binding-descriptor.fluid-label ?binding)
+(define-syntax-rule (syntactic-binding-descriptor/fluid-syntax.fluid-label ?binding)
   (syntactic-binding-descriptor.value ?binding))
 
 
@@ -1175,7 +1179,7 @@
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/synonym-syntax?
   $synonym)
 
-(define-syntax-rule (synonym-syntax-binding-descriptor.synonym-label ?binding)
+(define-syntax-rule (syntactic-binding-descriptor/synonym-syntax.synonym-label ?binding)
   (syntactic-binding-descriptor.value ?binding))
 
 
@@ -1199,7 +1203,7 @@
   ;;
   (make-syntactic-binding-descriptor local-etv (cons obj expanded-expr)))
 
-(define-syntax-rule (local-expand-time-value-binding-descriptor.object ?descriptor)
+(define-syntax-rule (syntactic-binding-descriptor/local-expand-time-value.object ?descriptor)
   ;;Given a  syntactic binding  descriptor representing a  local compile  time value:
   ;;return the actual compile-time object.  We expect ?DESCRIPTOR to have the format:
   ;;
@@ -1227,13 +1231,13 @@
 ;;   ;;
 ;;   (make-syntactic-binding-descriptor global-etv (cons lib loc)))
 
-(define-syntax-rule (global-expand-time-value-binding-descriptor.lib ?descriptor)
+(define-syntax-rule (syntactic-binding-descriptor/global-expand-time-value.lib ?descriptor)
   (car (syntactic-binding-descriptor.value ?descriptor)))
 
-(define-syntax-rule (global-expand-time-value-binding-descriptor.loc ?descriptor)
+(define-syntax-rule (syntactic-binding-descriptor/global-expand-time-value.loc ?descriptor)
   (cdr (syntactic-binding-descriptor.value ?descriptor)))
 
-(define (global-expand-time-value-binding-descriptor.object descriptor)
+(define (syntactic-binding-descriptor/global-expand-time-value.object descriptor)
   ;;Given a syntactic binding descriptor representing an imported compile time value:
   ;;return the actual compile-time object.  We expect ?DESCRIPTOR to have the format:
   ;;
@@ -1243,8 +1247,8 @@
   ;;the binding is imported;  ?LOC is the log gensym containing  the actual object in
   ;;its VALUE slot (but only after the library has been visited).
   ;;
-  (let ((lib (global-expand-time-value-binding-descriptor.lib descriptor))
-	(loc (global-expand-time-value-binding-descriptor.loc descriptor)))
+  (let ((lib (syntactic-binding-descriptor/global-expand-time-value.lib descriptor))
+	(loc (syntactic-binding-descriptor/global-expand-time-value.loc descriptor)))
     ;;When the  library LIB  has been  loaded from  source: the  compile-time value's
     ;;object is stored in the loc gensym.   When the library LIB has been loaded from
     ;;a compiled file: the compile-time value itself is in the loc gensym, so we have

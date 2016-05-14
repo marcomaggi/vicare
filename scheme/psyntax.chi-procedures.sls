@@ -398,7 +398,7 @@
   ;;
   (case-identifier-syntactic-binding-descriptor/no-indirection (__who__ lhs.id lexenv)
     (($fluid)
-     (fluid-syntax-binding-descriptor.fluid-label __descr__))
+     (syntactic-binding-descriptor/fluid-syntax.fluid-label __descr__))
     (else
      (raise
       (condition (make-who-condition caller-who)
@@ -755,7 +755,7 @@
        ;;
        ;;   (core-prim-typed . (#<core-prim-type-spec> . ?hard-coded-sexp))
        ;;
-       (let* ((cpts		(core-prim-typed-binding-descriptor.core-prim-type-spec descr))
+       (let* ((cpts		(syntactic-binding-descriptor/core-prim-typed.core-prim-type-spec descr))
 	      (prim.name	(core-prim-type-spec.name cpts))
 	      (prim.ots		(typed-variable-spec.ots cpts)))
 	 (make-psi expr.stx
@@ -769,7 +769,7 @@
        ;;
        ;;   (core-prim . ?prim-name)
        ;;
-       (let ((name (syntactic-binding-descriptor.value descr)))
+       (let ((name (syntactic-binding-descriptor/core-prim.public-name descr)))
 	 (make-psi expr.stx
 	   (build-primref no-source name)
 	   (make-type-signature/single-top))))
@@ -781,6 +781,9 @@
        ;;
        ;;   ($core-rtd . ?prim-name)
        ;;
+       ;;NOTE There should  be no more of  these.  All the build-in  RTDs should have
+       ;;syntactic  binding's  descriptor  of type  "core-object-type-name".   (Marco
+       ;;Maggi; Sat May 14, 2016)
        (let ((name (syntactic-binding-descriptor.value descr)))
 	 (make-psi expr.stx
 	   (build-primref no-source name)
@@ -793,6 +796,9 @@
        ;;
        ;;   ($core-rcd . ?prim-name)
        ;;
+       ;;NOTE There should  be no more of  these.  All the build-in  RCDs should have
+       ;;syntactic  binding's  descriptor  of type  "core-object-type-name".   (Marco
+       ;;Maggi; Sat May 14, 2016)
        (let ((name (syntactic-binding-descriptor.value descr)))
 	 (make-psi expr.stx
 	   (build-primref no-source name)
@@ -824,7 +830,7 @@
        ;;
        ;;   (lexical . (?lex-gensym . ?assigned-bool))
        ;;
-       (let ((lex (lexical-var-binding-descriptor-value.lex-name (syntactic-binding-descriptor.value descr))))
+       (let ((lex (syntactic-binding-descriptor/lexical-var/value.lex-name (syntactic-binding-descriptor.value descr))))
 	 (make-psi expr.stx
 	   (build-lexical-reference no-source lex)
 	   (make-type-signature/single-top))))
@@ -1224,11 +1230,11 @@
        ;;   (lexical . (?lex-gensym . ?assigned-bool))
        ;;
        (let ((descr.value (syntactic-binding-descriptor.value descr)))
-	 (lexical-var-binding-descriptor-value.assigned? descr.value #t)
+	 (syntactic-binding-descriptor/lexical-var/value.assigned? descr.value #t)
 	 (let ((rhs.psi (chi-expr rhs.stx lexenv.run lexenv.expand)))
 	   (make-psi input-form.stx
 		     (build-lexical-assignment no-source
-		       (lexical-var-binding-descriptor-value.lex-name descr.value)
+		       (syntactic-binding-descriptor/lexical-var/value.lex-name descr.value)
 		       (psi.core-expr rhs.psi))
 		     (make-type-signature/single-void)))))
 
