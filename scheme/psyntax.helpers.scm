@@ -22,6 +22,9 @@
 
 (import (prefix (rnrs syntax-case) sys::))
 
+
+;;;; helper syntaxes
+
 (define-syntax commented-out
   ;;Comment out a sequence of forms.  It allows us to comment out forms and still use
   ;;the editor's autoindentation features in the commented out section.
@@ -191,7 +194,8 @@
 
     (main input-form.stx)))
 
-;;; --------------------------------------------------------------------
+
+;;;; helper procedures
 
 (define (false-or-procedure? obj)
   (or (not obj)

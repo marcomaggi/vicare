@@ -70,12 +70,6 @@
     ((condition . ?rand*)
      (chi-condition-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
-    ((cons . ?rand*)
-     (chi-cons-application input-form.stx lexenv.run lexenv.expand ?rand* 'cons))
-
-    ((foldable-cons . ?rand*)
-     (chi-cons-application input-form.stx lexenv.run lexenv.expand ?rand* 'foldable-cons))
-
     ((list . ?rand*)
      (chi-list-application input-form.stx lexenv.run lexenv.expand ?rand* 'list))
 
@@ -84,12 +78,6 @@
 
     ((<nelist>-constructor . ?rand*)
      (chi-nelist-constructor-application input-form.stx lexenv.run lexenv.expand ?rand*))
-
-    ((car . ?rand*)
-     (chi-car-application input-form.stx lexenv.run lexenv.expand ?rand*))
-
-    ((cdr . ?rand*)
-     (chi-cdr-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
     ((vector . ?rand*)
      (chi-vector-application input-form.stx lexenv.run lexenv.expand ?rand* 'vector))
@@ -495,111 +483,6 @@
   #| end of module: CHI-VALUES-APPLICATION |# )
 
 
-(module (chi-cons-application)
-  ;;The input form has the syntax:
-  ;;
-  ;;   (cons ?rand ...)
-  ;;
-  ;;and RANDS.STX is the syntax object:
-  ;;
-  ;;   #'(?rand ...)
-  ;;
-  ;;which holds  a proper list  of expressions.  The  application of CONS  is special
-  ;;because  we  want  the  expression  to  return  a  type  signature  describing  a
-  ;;"<pair-type-spec>".
-  ;;
-  (import CLOSURE-APPLICATION-ERRORS)
-
-  (define-module-who chi-cons-application)
-
-  (define (chi-cons-application input-form.stx lexenv.run lexenv.expand rands.stx prim-name)
-    (syntax-match rands.stx ()
-      ((?car-rand ?cdr-rand)
-       ;;Two or more values.
-       (let* ((car-rand.psi	(chi-expr ?car-rand lexenv.run lexenv.expand))
-	      (cdr-rand.psi	(chi-expr ?cdr-rand lexenv.run lexenv.expand))
-	      (car-rand.core	(psi.core-expr car-rand.psi))
-	      (cdr-rand.core	(psi.core-expr cdr-rand.psi))
-	      (car-rand.sig	(psi.retvals-signature car-rand.psi))
-	      (cdr-rand.sig	(psi.retvals-signature cdr-rand.psi))
-	      (car-rand.ots	(%single-operand-signature->ots input-form.stx ?car-rand car-rand.sig))
-	      (cdr-rand.ots	(%single-operand-signature->ots input-form.stx ?cdr-rand cdr-rand.sig)))
-	 (let ((application.sig (make-type-signature/single-value (make-pair-type-spec car-rand.ots cdr-rand.ots))))
-	   (make-psi input-form.stx
-	     (build-application (syntax-annotation input-form.stx)
-		 (build-primref no-source prim-name)
-	       (list car-rand.core cdr-rand.core))
-	     application.sig))))
-
-      ((?rand1 ?rand2 ?rand3 ?rand* ...)
-       (let* ((rand*.stx		(cons* ?rand1 ?rand2 ?rand3 ?rand*))
-	      (maximum-arguments-count	2)
-	      (given-operands-count	(length rand*.stx)))
-	 (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
-	   input-form.stx rand*.stx maximum-arguments-count given-operands-count)))
-
-      ((?rand* ...)
-       (let* ((minimum-arguments-count	2)
-	      (given-operands-count	(length ?rand*)))
-         (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
-	   input-form.stx ?rand* minimum-arguments-count given-operands-count)))
-      ))
-
-  (define (%single-operand-signature->ots input-form.stx rand.stx rand.sig)
-    (case-signature-specs rand.sig
-      ((single-value)
-       => (lambda (rand.ots)
-	    rand.ots))
-
-      (<no-return>
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __module_who__)
-			 (make-message-condition "expression used as application operand is typed as not returning")
-			 (make-syntax-violation input-form.stx rand.stx)
-			 (make-application-operand-signature-condition rand.sig)))))
-	 (case-expander-language
-	   ((typed)
-	    (raise             (condition (make-expand-time-type-signature-violation) (common))))
-	   ((default)
-	    (raise-continuable (condition (make-expand-time-type-signature-warning)   (common)))
-	    (<top>-ots))
-	   ((strict-r6rs)
-	    (<top>-ots)))))
-
-      (<list-of>
-       ;;The operand expression returns an unspecified number of values of specified,
-       ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
-       ;;run-time, if this operand returns a single value.
-       => (lambda (rand.ots)
-	    (list-of-type-spec.item-ots rand.ots)))
-
-      (<list>
-       ;;The  operand  expression   returns  an  unspecified  number   of  values  of
-       ;;unspecified type.   We relay  on the  automatically generated  validation to
-       ;;check at run-time if the expression returns a single value.
-       (<top>-ots))
-
-      (else
-       ;;The operand expression returns zero, two or more values.
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __module_who__)
-			 (make-message-condition "expression used as application operand returns multiple values")
-			 (make-syntax-violation input-form.stx rand.stx)
-			 (make-application-operand-signature-condition rand.sig)))))
-	 (case-expander-language
-	   ((typed)
-	    (raise             (condition (make-expand-time-type-signature-violation) (common))))
-	   ((default)
-	    (raise-continuable (condition (make-expand-time-type-signature-warning)   (common)))
-	    (<top>-ots))
-	   ((strict-r6rs)
-	    (<top>-ots)))))))
-
-  #| end of module: CHI-CONS-APPLICATION |# )
-
-
 (module (chi-list-application chi-nelist-constructor-application)
   ;;The input form has the syntax:
   ;;
@@ -706,289 +589,6 @@
 	    (<top>-ots)))))))
 
   #| end of module: CHI-LIST-APPLICATION |# )
-
-
-(module (chi-car-application)
-  ;;The input form has the syntax:
-  ;;
-  ;;   (car ?rand ...)
-  ;;
-  ;;and RANDS.STX is the syntax object:
-  ;;
-  ;;   #'(?rand ...)
-  ;;
-  ;;which holds  a proper  list of  expressions.  The application  of CAR  is special
-  ;;because we want  to extract the type of  the returned value from the  type of the
-  ;;operand.
-  ;;
-  (import CLOSURE-APPLICATION-ERRORS)
-  (define-module-who chi-car-application)
-
-  (define (%core-prim-id)
-    (core-prim-id 'car))
-
-  (define (chi-car-application input-form.stx lexenv.run lexenv.expand rands.stx)
-    (syntax-match rands.stx ()
-      ((?rand)
-       (let* ((rand.psi		(chi-expr ?rand lexenv.run lexenv.expand))
-	      (rand.core	(psi.core-expr rand.psi))
-	      (rand.sig		(psi.retvals-signature rand.psi))
-	      (application.sig	(%operand-signature->application-signature input-form.stx ?rand rand.sig)))
-	 (make-psi input-form.stx
-	   (build-application (syntax-annotation input-form.stx)
-	       (build-primref no-source 'car)
-	     (list rand.core))
-	   application.sig)))
-
-      (()
-       (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
-	 (%core-prim-id) '() 1 0))
-
-      ((?rand0 ?rand1 ?rand* ...)
-       (let ((rand*.stx (cons* ?rand0 ?rand1 ?rand*)))
-	 (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
-	   (%core-prim-id) rand*.stx 1 (length rand*.stx))))
-      ))
-
-  (define (%operand-signature->application-signature input-form.stx rand.stx rand.sig)
-    (case-signature-specs rand.sig
-      ((single-value)
-       => (lambda (rand.ots)
-	    (%single-value-operand-signature->application-signature input-form.stx rand.stx rand.sig rand.ots)))
-
-      (<no-return>
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __module_who__)
-			 (make-message-condition "expression used as application operand is typed as not returning")
-			 (make-syntax-violation input-form.stx rand.stx)
-			 (make-application-operand-signature-condition rand.sig)))))
-	 (case-expander-language
-	   ((typed)
-	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
-	   ((default)
-	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
-	    (make-type-signature/single-top))
-	   ((strict-r6rs)
-	    (make-type-signature/single-top)))))
-
-      (<list-of>
-       ;;The operand expression returns an unspecified number of values of specified,
-       ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
-       ;;run-time, if this operand returns a single value.
-       => (lambda (rand.ots)
-	    (%single-value-operand-signature->application-signature input-form.stx rand.stx rand.sig
-								    (list-of-type-spec.item-ots rand.ots))))
-
-      (<list>
-       ;;The  operand  expression   returns  an  unspecified  number   of  values  of
-       ;;unspecified type.   We relay  on the  automatically generated  validation to
-       ;;check at run-time if the expression returns a single value.
-       (make-type-signature/single-top))
-
-      (else
-       ;;The operand expression returns zero, two or more values.
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __module_who__)
-			 (make-message-condition "expression used as application operand returns multiple values")
-			 (make-syntax-violation input-form.stx rand.stx)
-			 (make-application-operand-signature-condition rand.sig)))))
-	 (case-expander-language
-	   ((typed)
-	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
-	   ((default)
-	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
-	    (make-type-signature/single-top))
-	   ((strict-r6rs)
-	    (make-type-signature/single-top)))))))
-
-  (define (%single-value-operand-signature->application-signature input-form.stx rand.stx rand.sig rand.ots)
-    (make-type-signature/single-value
-     (cond ((list-of-type-spec? rand.ots)
-	    (list-of-type-spec.item-ots rand.ots))
-
-	   ((list-type-spec? rand.ots)
-	    (car (list-type-spec.item-ots* rand.ots)))
-
-	   ((pair-of-type-spec? rand.ots)
-	    (pair-of-type-spec.item-ots rand.ots))
-
-	   ((pair-type-spec? rand.ots)
-	    (pair-type-spec.car-ots rand.ots))
-
-	   ((or (<nelist>-ots? rand.ots)
-		(<pair>-ots?   rand.ots))
-	    (<top>-ots))
-
-	   ((or (object-type-spec.compatible-super-and-sub? (<nelist>-ots) rand.ots)
-		(object-type-spec.compatible-super-and-sub? (<pair>-ots)   rand.ots))
-	    (<top>-ots))
-
-	   (else
-	    (let ((common (lambda ()
-			    (condition
-			      (make-who-condition __module_who__)
-			      (make-message-condition
-			       "expand-time mismatch between closure object's arguments signatures and operands signature")
-			      (make-syntax-violation input-form.stx rand.stx)
-			      (make-application-operator-expression-condition (%core-prim-id))
-			      (make-application-operands-expressions-condition (list rand.stx))
-			      (make-application-argument-type-name-condition (<pair>-type-id))
-			      (make-application-operand-signature-condition rand.sig)))))
-	      (case-expander-language
-		((typed)
-		 (raise			(condition (make-expand-time-type-signature-violation) (common))))
-		((default)
-		 (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
-		 (<top>-ots))
-		((strict-r6rs)
-		 (<top>-ots))))))))
-
-  #| end of module: CHI-CAR-APPLICATION |# )
-
-
-(module (chi-cdr-application)
-  ;;The input form has the syntax:
-  ;;
-  ;;   (cdr ?rand ...)
-  ;;
-  ;;and RANDS.STX is the syntax object:
-  ;;
-  ;;   #'(?rand ...)
-  ;;
-  ;;which holds  a proper  list of  expressions.  The application  of CDR  is special
-  ;;because we want  to extract the type of  the returned value from the  type of the
-  ;;operand.
-  ;;
-  (import CLOSURE-APPLICATION-ERRORS)
-  (define-module-who chi-cdr-application)
-
-  (define (%core-prim-id)
-    (core-prim-id 'cdr))
-
-  (define (chi-cdr-application input-form.stx lexenv.run lexenv.expand rands.stx)
-    (syntax-match rands.stx ()
-      ((?rand)
-       (let* ((rand.psi		(chi-expr ?rand lexenv.run lexenv.expand))
-	      (rand.core	(psi.core-expr rand.psi))
-	      (rand.sig		(psi.retvals-signature rand.psi))
-	      (application.sig	(%operand-signature->application-signature input-form.stx ?rand rand.sig)))
-	 (make-psi input-form.stx
-	   (build-application (syntax-annotation input-form.stx)
-	       (build-primref no-source 'cdr)
-	     (list rand.core))
-	   application.sig)))
-
-      (()
-       (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
-	 (%core-prim-id) '() 1 0))
-
-      ((?rand0 ?rand1 ?rand* ...)
-       (let ((rand*.stx (cons* ?rand0 ?rand1 ?rand*)))
-	 (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
-	   (%core-prim-id) rand*.stx 1 (length rand*.stx))))
-      ))
-
-  (define* ({%operand-signature->application-signature type-signature?} input-form.stx rand.stx rand.sig)
-    (case-signature-specs rand.sig
-      ((single-value)
-       => (lambda (rand.ots)
-	    (%single-value-operand-signature->application-signature input-form.stx rand.stx rand.sig rand.ots)))
-
-      (<no-return>
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __module_who__)
-			 (make-message-condition "expression used as application operand is typed as not returning")
-			 (make-syntax-violation input-form.stx rand.stx)
-			 (make-application-operand-signature-condition rand.sig)))))
-	 (case-expander-language
-	   ((typed)
-	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
-	   ((default)
-	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
-	    (make-type-signature/single-top))
-	   ((strict-r6rs)
-	    (make-type-signature/single-top)))))
-
-      (<list-of>
-       ;;The operand expression returns an unspecified number of values of specified,
-       ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
-       ;;run-time, if this operand returns a single value.
-       => (lambda (rand.ots)
-	    (%single-value-operand-signature->application-signature input-form.stx rand.stx rand.sig
-								    (list-of-type-spec.item-ots rand.ots))))
-
-      (<list>
-       ;;The  operand  expression   returns  an  unspecified  number   of  values  of
-       ;;unspecified type.   We relay  on the  automatically generated  validation to
-       ;;check at run-time if the expression returns a single value.
-       (make-type-signature/single-top))
-
-      (else
-       ;;The operand expression returns zero, two or more values.
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __module_who__)
-			 (make-message-condition "expression used as application operand returns multiple values")
-			 (make-syntax-violation input-form.stx rand.stx)
-			 (make-application-operand-signature-condition rand.sig)))))
-	 (case-expander-language
-	   ((typed)
-	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
-	   ((default)
-	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
-	    (make-type-signature/single-top))
-	   ((strict-r6rs)
-	    (make-type-signature/single-top)))))))
-
-  (define* ({%single-value-operand-signature->application-signature type-signature?} input-form.stx rand.stx rand.sig rand.ots)
-    (make-type-signature/single-value
-     (cond ((list-of-type-spec? rand.ots)
-	    rand.ots)
-
-	   ((list-type-spec? rand.ots)
-	    (let ((cdr-ots* (cdr (list-type-spec.item-ots* rand.ots))))
-	      (if (null? cdr-ots*)
-		  (<null>-ots)
-		(make-list-type-spec cdr-ots*))))
-
-	   ((pair-of-type-spec? rand.ots)
-	    (pair-of-type-spec.item-ots rand.ots))
-
-	   ((pair-type-spec? rand.ots)
-	    (pair-type-spec.cdr-ots rand.ots))
-
-	   ((or (<nelist>-ots? rand.ots)
-		(<pair>-ots?   rand.ots))
-	    (<top>-ots))
-
-	   ((or (object-type-spec.compatible-super-and-sub? (<nelist>-ots) rand.ots)
-		(object-type-spec.compatible-super-and-sub? (<pair>-ots)   rand.ots))
-	    (<top>-ots))
-
-	   (else
-	    (let ((common (lambda ()
-			    (condition
-			      (make-who-condition __module_who__)
-			      (make-message-condition
-			       "expand-time mismatch between closure object's arguments signatures and operands signature")
-			      (make-syntax-violation input-form.stx rand.stx)
-			      (make-application-operator-expression-condition (%core-prim-id))
-			      (make-application-operands-expressions-condition (list rand.stx))
-			      (make-application-argument-type-name-condition (<pair>-type-id))
-			      (make-application-operand-signature-condition rand.sig)))))
-	      (case-expander-language
-		((typed)
-		 (raise			(condition (make-expand-time-type-signature-violation) (common))))
-		((default)
-		 (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
-		 (<top>-ots))
-		((strict-r6rs)
-		 (<top>-ots))))))))
-
-  #| end of module: CHI-CDR-APPLICATION |# )
 
 
 (module (chi-vector-application chi-nevector-constructor-application)
@@ -1884,6 +1484,41 @@
 	    (%build-default-application))))))))
 
 
+(module SPECIAL-PRIMITIVES
+  ( ;;
+   cons-id		cons-id?
+   foldable-cons-id	foldable-cons-id?
+   car-id		car-id?
+   cdr-id		cdr-id?
+   $car-id		$car-id?
+   $cdr-id		$cdr-id?)
+
+  (let-syntax
+      ((declare (syntax-rules ()
+		  ((_ ?prim-id ?prim-id-pred ?prim-name)
+		   (begin
+		     (define ?prim-id
+		       (let ((memoised #f))
+			 (lambda ()
+			   (or memoised (receive-and-return (id)
+					    (core-prim-id (quote ?prim-name))
+					  (set! memoised id))))))
+		     (define (?prim-id-pred obj)
+		       (and (identifier? obj)
+			    (free-identifier=? obj (?prim-id))))
+		     #| end of BEGIN |# ))
+		  )))
+    (declare cons-id			cons-id?		cons)
+    (declare foldable-cons-id		foldable-cons-id?	foldable-cons)
+    (declare car-id			car-id?			car)
+    (declare cdr-id			cdr-id?			cdr)
+    (declare $car-id			$car-id?		$car)
+    (declare $cdr-id			$cdr-id?		$cdr)
+    #| end of LET-SYNTAX |# )
+
+  #| end of module: SPECIAL-CORE-PRIMITIVES |# )
+
+
 ;;;; chi procedures: closure object application processing
 
 (module (chi-closure-object-application)
@@ -1996,9 +1631,9 @@
 
   (module (%match-case-lambda-signature-against-operands)
 
-    (define (%match-case-lambda-signature-against-operands input-form.stx lexenv.run lexenv.expand
-							   rator.psi rand*.psi
-							   rator.clambda-sig rands.sig)
+    (define* (%match-case-lambda-signature-against-operands input-form.stx lexenv.run lexenv.expand
+							    rator.psi rand*.psi
+							    rator.clambda-sig rands.sig)
       ;;Iterate, in  order, through  the "<lambda-signature>"  instances representing
       ;;the operator's clause signatures, looking  for the first that matches exactly
       ;;the operands' signature;  otherwise accumulate a list  of compatible clauses.
@@ -2048,7 +1683,15 @@
 	   ;;There is at least one clause with  a possible match.  It is not possible
 	   ;;to fully  validate the  signatures at expand-time;  we rely  on run-time
 	   ;;checking.
-	   (%default-core-expr))
+	   (case-expander-language
+	     ((typed)
+	      (%chi-application-with-compatible-signature input-form.stx lexenv.run lexenv.expand
+							  rator.psi rand*.psi rands.sig
+							  %default-core-expr))
+	     ((default)
+	      (%default-core-expr))
+	     ((strict-r6rs)
+	      (%default-core-expr))))
 	  (else
 	   ;;There are no matching clauses, not even possible matches.  Arguments and
 	   ;;operands do *not* match at expand-time.
@@ -2100,14 +1743,25 @@
       ;;APPLICATION-RETVALS.SIG.
       ;;
       (let ((rator.stx (psi.input-form rator.psi)))
-	(cond ((identifier? rator.stx)
-	       (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
-						     rator.psi rand*.psi rator.stx
-						     rands.sig application-retvals.sig))
-	      (else
-	       ;;If we are here the rator  is a non-identifier expression returning a
-	       ;;closure object with known signature.
-	       (%build-core-expression input-form.stx rator.psi rand*.psi application-retvals.sig)))))
+	(import SPECIAL-PRIMITIVES)
+	(cond
+	 ((identifier? rator.stx)
+	  (cond
+	   ((or (cons-id?          rator.stx)
+		(foldable-cons-id? rator.stx))
+	    (chi-cons-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	   (( car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'car))
+	   (($car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$car))
+	   (( cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'cdr))
+	   (($cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$cdr))
+	   (else
+	    (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
+						  rator.psi rand*.psi rator.stx
+						  rands.sig application-retvals.sig))))
+	 (else
+	  ;;If  we are  here the  rator is  a non-identifier  expression returning  a
+	  ;;closure object with known signature.
+	  (%build-core-expression input-form.stx rator.psi rand*.psi application-retvals.sig)))))
 
     (define* (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
 						   rator.psi rand*.psi rator.id
@@ -2219,6 +1873,27 @@
 
 ;;; --------------------------------------------------------------------
 
+  (define* (%chi-application-with-compatible-signature input-form.stx lexenv.run lexenv.expand
+						       rator.psi rand*.psi rands.sig
+						       default-application-maker)
+    (import SPECIAL-PRIMITIVES)
+    (define rator.stx (psi.input-form rator.psi))
+    (cond
+     ((identifier? rator.stx)
+      (cond
+       (( car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'car))
+       (($car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$car))
+       (( cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'cdr))
+       (($cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$cdr))
+       (else
+	(default-application-maker))))
+     (else
+      ;;If we are  here the rator is a non-identifier  expression returning a closure
+      ;;object with known signature.
+      (default-application-maker))))
+
+;;; --------------------------------------------------------------------
+
   (define* (%build-core-expression input-form.stx rator.psi rand*.psi {application-retvals.sig type-signature?})
     (make-psi input-form.stx
       (build-application (syntax-annotation input-form.stx)
@@ -2227,6 +1902,166 @@
       application-retvals.sig))
 
   #| end of module |# )
+
+
+;;;; special applications: CONS, FOLDABLE-CONS
+
+(define (chi-cons-application input-form.stx lexenv.run lexenv.expand
+			      rator.psi rand*.psi rands.sig)
+  ;;The input form has the syntax:
+  ;;
+  ;;   (cons ?car ?cdr)
+  ;;
+  ;;We have  already validated  the number  and type of  the operands.   The argument
+  ;;RATOR.PSI  represents  the  expanded  CONS syntactic  identifier.   The  argument
+  ;;RAND*.PSI is a list of two items, each having a single value type signature.  The
+  ;;argument  RANDS.SIG  is  a  "<type-signature>"  representing  the  types  of  the
+  ;;operands.
+  ;;
+  ;;The application  of CONS is  special because we want  the expression to  return a
+  ;;type signature describing a "<pair-type-spec>".
+  ;;
+  (let ((car.core		(psi.core-expr (car  rand*.psi)))
+	(cdr.core		(psi.core-expr (cadr rand*.psi)))
+	(application.sig	(let* ((rands.specs	(type-signature.object-type-specs rands.sig))
+				       (car.ots		(car  rands.specs))
+				       (cdr.ots		(cadr rands.specs)))
+				  (make-type-signature/single-value (make-pair-type-spec car.ots cdr.ots)))))
+    (make-psi input-form.stx
+      (build-application (syntax-annotation input-form.stx)
+	  (psi.core-expr rator.psi)
+	(list car.core cdr.core))
+      application.sig)))
+
+
+;;;; special applications: CAR, $CAR
+
+(module (chi-car-application)
+  (define-module-who chi-car-application)
+
+  (define (chi-car-application input-form.stx lexenv.run lexenv.expand
+			       rator.psi rand*.psi rands.sig original-prim-name)
+    ;;The input form has the syntax:
+    ;;
+    ;;   (car ?expr)
+    ;;
+    ;;We have already  validated the number of operands and  determined that the type
+    ;;of the operand is either an  exact or compatible match.  The argument RATOR.PSI
+    ;;represents  the  expanded  CAR  or $CAR  syntactic  identifier.   The  argument
+    ;;RAND*.PSI is a list of single item,  having a single value type signature.  The
+    ;;argument  RANDS.SIG  is  a  "<type-signature>" representing  the  type  of  the
+    ;;operand.
+    ;;
+    ;;The application of  CAR is special because  we want to extract the  type of the
+    ;;returned value from the type of the operand.
+    ;;
+    (receive (prim-name application.sig)
+	(%single-value-operand-signature->application-signature input-form.stx rands.sig original-prim-name)
+      (make-psi input-form.stx
+	(build-application (syntax-annotation input-form.stx)
+	    (build-primref no-source prim-name)
+	  (list (psi.core-expr (car rand*.psi))))
+	application.sig)))
+
+  (define (%single-value-operand-signature->application-signature input-form.stx rands.sig original-prim-name)
+    (let ((rand.ots (car (type-signature.object-type-specs rands.sig))))
+      (cond ((list-of-type-spec? rand.ots)
+	     ;;This is not  an exact match: the  operand might be null.   So we apply
+	     ;;the original primitive.
+	     (values original-prim-name (make-type-signature/single-value (list-of-type-spec.item-ots rand.ots))))
+
+	    ((list-type-spec? rand.ots)
+	     (values '$car (make-type-signature/single-value (car (list-type-spec.item-ots* rand.ots)))))
+
+	    ((pair-of-type-spec? rand.ots)
+	     (values '$car (make-type-signature/single-value (pair-of-type-spec.item-ots rand.ots))))
+
+	    ((pair-type-spec? rand.ots)
+	     (values '$car (make-type-signature/single-value (pair-type-spec.car-ots rand.ots))))
+
+	    ((or (<nelist>-ots? rand.ots)
+		 (<pair>-ots?   rand.ots))
+	     (values '$car (make-type-signature/single-top)))
+
+	    ((or (object-type-spec.compatible-super-and-sub? (<nelist>-ots) rand.ots)
+		 (object-type-spec.compatible-super-and-sub? (<pair>-ots)   rand.ots))
+	     ;;This is not  an exact match: the  operand might be null.   So we apply
+	     ;;the original primitive.
+	     (values original-prim-name (make-type-signature/single-top)))
+
+	    (else
+	     ;;This should never happen.
+	     (assertion-violation __module_who__
+	       "internal error, core primitive operand of wrong type" input-form.stx rands.sig)))))
+
+  #| end of module: CHI-CAR-APPLICATION |# )
+
+
+;;;; special applications: CDR, $CDR
+
+(module (chi-cdr-application)
+  (define-module-who chi-cdr-application)
+
+  (define (chi-cdr-application input-form.stx lexenv.run lexenv.expand
+			       rator.psi rand*.psi rands.sig original-prim-name)
+    ;;The input form has the syntax:
+    ;;
+    ;;   (cdr ?expr)
+    ;;
+    ;;We have already  validated the number of operands and  determined that the type
+    ;;of the operand is either an  exact or compatible match.  The argument RATOR.PSI
+    ;;represents  the  expanded  CDR  or $CDR  syntactic  identifier.   The  argument
+    ;;RAND*.PSI is a list of single item,  having a single value type signature.  The
+    ;;argument  RANDS.SIG  is  a  "<type-signature>" representing  the  type  of  the
+    ;;operand.
+    ;;
+    ;;The application of  CDR is special because  we want to extract the  type of the
+    ;;returned value from the type of the operand.
+    ;;
+    (receive (prim-name application.sig)
+	(%single-value-operand-signature->application-signature input-form.stx rands.sig original-prim-name)
+      (make-psi input-form.stx
+	(build-application (syntax-annotation input-form.stx)
+	    (build-primref no-source prim-name)
+	  (list (psi.core-expr (car rand*.psi))))
+	application.sig)))
+
+  (define (%single-value-operand-signature->application-signature input-form.stx rands.sig original-prim-name)
+    (let ((rand.ots (car (type-signature.object-type-specs rands.sig))))
+      (cond ((list-of-type-spec? rand.ots)
+	     ;;This is not  an exact match: the  operand might be null.   So we apply
+	     ;;the original primitive.
+	     (values original-prim-name (make-type-signature/single-value rand.ots)))
+
+	    ((list-type-spec? rand.ots)
+	     (values '$cdr (make-type-signature/single-value
+			    (let ((cdr-ots* (cdr (list-type-spec.item-ots* rand.ots))))
+			      (if (null? cdr-ots*)
+				  (<null>-ots)
+				(make-list-type-spec cdr-ots*))))))
+
+	    ((pair-of-type-spec? rand.ots)
+	     (values '$cdr (make-type-signature/single-value (pair-of-type-spec.item-ots rand.ots))))
+
+	    ((pair-type-spec? rand.ots)
+	     (values '$cdr (make-type-signature/single-value (pair-type-spec.cdr-ots rand.ots))))
+
+	    ((or (<nelist>-ots? rand.ots)
+		 (<pair>-ots?   rand.ots))
+	     (values '$cdr (make-type-signature/single-top)))
+
+	    ((or (object-type-spec.compatible-super-and-sub? (<nelist>-ots) rand.ots)
+		 (object-type-spec.compatible-super-and-sub? (<pair>-ots)   rand.ots))
+	     ;;This is not  an exact match: the  operand might be null.   So we apply
+	     ;;the original primitive.
+	     (values original-prim-name (make-type-signature/single-top)))
+
+	    (else
+	     ;;This should never happen.
+	     (assertion-violation __module_who__
+	       "internal error, core primitive operand of wrong type" input-form.stx rands.sig)))))
+
+  #| end of module: CHI-CDR-APPLICATION |# )
 
 
 ;;;; done
