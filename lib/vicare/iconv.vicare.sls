@@ -217,7 +217,7 @@
     (assert (= 1 (length ell)))
     (car ell)))
 
-(define (iconv-encoding-aliases? set1 set2)
+(define* (iconv-encoding-aliases? set1 set2)
   (let ((sym1 (%set->encoding-symbol set1))
 	(sym2 (%set->encoding-symbol set2)))
     (if (memq sym2 (case sym1
@@ -438,8 +438,13 @@
 		     ((CP1361 JOHAB)
 		      '(CP1361 JOHAB))
 		     ((ISO-2022-KR CSISO2022KR)
-		      '(ISO-2022-KR CSISO2022KR))))
-		     #t #f)))
+		      '(ISO-2022-KR CSISO2022KR))
+		     (else
+		      (error __who__ "internal error, unknown encoding name" sym1))))
+	;;Yes, they are aliases.
+	#t
+      ;;No, they are not aliases.
+      #f)))
 
 (define (iconv-encoding=? set1 set2)
   (define-syntax both
