@@ -378,43 +378,42 @@
 	(define (%run-time-predicate)
 	  (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand
 						     expr.psi type-annotation.ots synner))
-	(case-signature-specs expr.sig
-	  ((single-value)
-	   => (lambda (expr.ots)
-		(%match-pred-type-against-single-value-expr input-form.stx lexenv.run lexenv.expand
-							    expr.psi expr.ots type-annotation.ots %run-time-predicate)))
+	(if (options::typed-language-enabled?)
+	    (case-signature-specs expr.sig
+	      ((single-value)
+	       => (lambda (expr.ots)
+		    (%match-pred-type-against-single-value-expr input-form.stx lexenv.run lexenv.expand
+								expr.psi expr.ots type-annotation.ots %run-time-predicate)))
 
-	  (<no-return>
-	   (let ((common (condition
-			  (make-who-condition __module_who__)
-			  (make-message-condition "subject expression typed as not returning")
-			  (make-syntax-violation input-form.stx expr.stx))))
-	     (if (options::typed-language-enabled?)
-		 (raise (condition (make-expand-time-type-signature-violation) common))
-	       (begin
-		 (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-		 (%run-time-predicate)))))
+	      (<no-return>
+	       (let ((common (condition
+			       (make-who-condition __module_who__)
+			       (make-message-condition "subject expression typed as not returning")
+			       (make-syntax-violation input-form.stx expr.stx))))
+		 (if (options::typed-language-enabled?)
+		     (raise (condition (make-expand-time-type-signature-violation) common))
+		   (begin
+		     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
+		     (%run-time-predicate)))))
 
-	  (<list>
-	   ;;The expression  returns an unspecified  number of values  of UNspecified
-	   ;;type.
-	   (%run-time-predicate))
+	      (<list>
+	       ;;The expression  returns an unspecified  number of values  of UNspecified
+	       ;;type.
+	       (%run-time-predicate))
 
-	  (<list-of>
-	   => (lambda (expr.ots)
-		(%match-pred-type-against-list-of input-form.stx lexenv.run lexenv.expand
-						  expr.psi expr.ots type-annotation.ots %run-time-predicate)))
+	      (<list-of>
+	       => (lambda (expr.ots)
+		    (%match-pred-type-against-list-of input-form.stx lexenv.run lexenv.expand
+						      expr.psi expr.ots type-annotation.ots %run-time-predicate)))
 
-	  (else
-	   (let ((common (condition
-			  (make-who-condition __module_who__)
-			  (make-message-condition "subject expression returns multiple values")
-			  (make-syntax-violation input-form.stx expr.stx))))
-	     (if (options::typed-language-enabled?)
-		 (raise (condition (make-expand-time-type-signature-violation) common))
-	       (begin
-		 (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-		 (%run-time-predicate))))))))
+	      (else
+	       (raise
+		(condition (make-expand-time-type-signature-violation)
+			   (make-who-condition __module_who__)
+			   (make-message-condition "subject expression returns multiple values")
+			   (make-syntax-violation input-form.stx expr.stx)))))
+	  ;;We cannot trust typing when the typed language is disabled.
+	  (%run-time-predicate))))
 
     (define (%match-pred-type-against-single-value-expr input-form.stx lexenv.run lexenv.expand
 							expr.psi expr.ots type-annotation.ots %run-time-predicate)
@@ -994,47 +993,52 @@
 		    (make-syntax-violation input-form.stx expr.stx)
 		    (make-expected-type-signature-condition asrt.sig)
 		    (make-returned-type-signature-condition expr.sig))))
-      (cond ((and (type-signature.empty? asrt.sig)
-		  (type-signature.empty? expr.sig))
-	     ;;The uncommon  case of empty  signatures.  The expression  returns zero
-	     ;;values and  the assertion expects  zero values.  We just  evaluate the
-	     ;;expression.
-	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
+      (if (options::typed-language-enabled?)
+	  (cond ((and (type-signature.empty? asrt.sig)
+		      (type-signature.empty? expr.sig))
+		 ;;The  uncommon case  of empty  signatures.  The  expression returns
+		 ;;zero  values  and the  assertion  expects  zero values.   We  just
+		 ;;evaluate the expression.
+		 (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
 
-	    ((type-signature.no-return? asrt.sig)
-	     (syntax-violation caller-who
-	       "internal error, invalid <no-return> assertion signature"
-	       input-form.stx asrt.stx))
+		((type-signature.no-return? asrt.sig)
+		 (syntax-violation caller-who
+		   "internal error, invalid <no-return> assertion signature"
+		   input-form.stx asrt.stx))
 
-	    ((type-signature.no-return? expr.sig)
-	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
+		((type-signature.no-return? expr.sig)
+		 (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
 
-	    ((type-signature.fully-unspecified? asrt.sig)
-	     ;;The assertion's signature always matches expression's signature.
-	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
+		((type-signature.fully-unspecified? asrt.sig)
+		 ;;The assertion's signature always matches expression's signature.
+		 (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
 
-	    ((type-signature.fully-unspecified? expr.sig)
-	     ;;When  the  assertion's  signature   has  types  and  the  expression's
-	     ;;signature is unspecified: always do a run-time validation.
-	     (%run-time-validation input-form.stx lexenv.run lexenv.expand
-				   caller-who asrt.stx asrt.sig expr.psi
-				   return-values? cast-signature?))
+		((type-signature.fully-unspecified? expr.sig)
+		 ;;When  the assertion's  signature  has types  and the  expression's
+		 ;;signature is unspecified: always do a run-time validation.
+		 (%run-time-validation input-form.stx lexenv.run lexenv.expand
+				       caller-who asrt.stx asrt.sig expr.psi
+				       return-values? cast-signature?))
 
-	    ((type-signature.super-and-sub? asrt.sig expr.sig)
-	     ;;Good.   Everything  is  all  right at  expand-time.   We  replace  the
-	     ;;expression's  type signature  with the  asserted type  signature: yes,
-	     ;;this  is  really useful,  especially  with  RHS type  propagation  and
-	     ;;mutable variables.
-	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
+		((type-signature.super-and-sub? asrt.sig expr.sig)
+		 ;;Good.  Everything  is all  right at  expand-time.  We  replace the
+		 ;;expression's type signature with the asserted type signature: yes,
+		 ;;this is  really useful, especially  with RHS type  propagation and
+		 ;;mutable variables.
+		 (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
 
-	    ((type-signature.compatible-super-and-sub? asrt.sig expr.sig)
-	     ;;Compatible signatures, let's check the values at run-time.
-	     (%run-time-validation input-form.stx lexenv.run lexenv.expand
-				   caller-who asrt.stx asrt.sig expr.psi
-				   return-values? cast-signature?))
+		((type-signature.compatible-super-and-sub? asrt.sig expr.sig)
+		 ;;Compatible signatures, let's check the values at run-time.
+		 (%run-time-validation input-form.stx lexenv.run lexenv.expand
+				       caller-who asrt.stx asrt.sig expr.psi
+				       return-values? cast-signature?))
 
-	    (else
-	     (%error-mismatching-signatures)))))
+		(else
+		 (%error-mismatching-signatures)))
+	;;Just insert a run-time validation when using a non-typed language.
+	(%run-time-validation input-form.stx lexenv.run lexenv.expand
+			      caller-who asrt.stx asrt.sig expr.psi
+			      return-values? cast-signature?))))
 
 ;;; --------------------------------------------------------------------
 

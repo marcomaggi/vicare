@@ -40,8 +40,7 @@
   ;;
   ;;and the sub-application form can be a SPLICE-FIRST-EXPAND syntax.
   ;;
-  (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1
-				       condition call-with-values)
+  (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1 call-with-values)
     (((?nested-rator ?nested-rand* ...) ?rand* ...)
      ;;Sub-expression application.  It could be a nested expression application:
      ;;
@@ -64,12 +63,12 @@
      ;;signature, but the retvals signature equals the arguments' signature.
      (chi-values-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
-    ((condition . ?rand*)
-     (chi-condition-application input-form.stx lexenv.run lexenv.expand ?rand*))
-
     ((apply ?rator ?rand* ...)
      (chi-apply-application input-form.stx lexenv.run lexenv.expand
 			    ?rator ?rand*))
+
+    ((call-with-values . ?rand*)
+     (chi-call-with-values-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
     ((map1 ?func ?list)
      (expander-option.integrate-special-list-functions?)
@@ -150,9 +149,6 @@
 			     (or (,?func ($car ,L))
 				 (,exists1 ($cdr ,L))))))
 		 lexenv.run lexenv.expand)))
-
-    ((call-with-values . ?rand*)
-     (chi-call-with-values-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
     ((?rator ?rand* ...)
      ;;The input form is either a common function application like:
@@ -460,182 +456,6 @@
 	    (<top>-ots)))))))
 
   #| end of module: CHI-VALUES-APPLICATION |# )
-
-
-(module (chi-condition-application)
-  ;;The input form has the syntax:
-  ;;
-  ;;   (condition ?rand ...)
-  ;;
-  ;;and RANDS.STX is the syntax object:
-  ;;
-  ;;   #'(?rand ...)
-  ;;
-  ;;which  holds a  proper  list of  expressions.  The  application  of CONDITION  is
-  ;;special because  we want the expression  to return a type  signature describing a
-  ;;"<compound-condition-object-type>".
-  ;;
-  ;;We need to verify that the operands expressions in RANDS.STX are either sub-types
-  ;;of "&condition", or instances  of type "<compound-condition-object-type>".  Let's
-  ;;remember that the type hierarchy for condition objects is this:
-  ;;
-  ;;   <condition> --> <compound-condition> --> <compound-condition-object-type>
-  ;;        |
-  ;;         --------> &condition --> &who
-  ;;                       |
-  ;;                       |--------> &message
-  ;;                       |
-  ;;                        --------> ... all the condition types ...
-  ;;
-  (define-module-who chi-condition-application)
-
-  (define (chi-condition-application input-form.stx lexenv.run lexenv.expand rands.stx)
-    (syntax-match rands.stx ()
-      (()
-       ;;No arguments.  Just evaluate "(condition)".
-       (make-psi input-form.stx
-	 (build-application (syntax-annotation input-form.stx)
-	     (build-primref no-source 'condition)
-	   '())
-	 (make-type-signature/single-value (make-compound-condition-type-spec '()))))
-
-      ((?rand ?rand* ...)
-       ;;Two or more values.
-       (let* ((rand*.stx  (cons ?rand ?rand*))
-	      (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
-	      (rand*.core (map psi.core-expr rand*.psi))
-	      (rand*.sig  (map psi.retvals-signature rand*.psi)))
-	 (let ((application.sig (%operand-signatures->application-signature input-form.stx rand*.stx rand*.sig)))
-	   (make-psi input-form.stx
-	     (build-application (syntax-annotation input-form.stx)
-		 (build-primref no-source 'condition)
-	       rand*.core)
-	     application.sig))))
-      ))
-
-  (define (%operand-signatures->application-signature input-form.stx rand*.stx rand*.sig)
-    (make-type-signature/single-value
-     (call/cc
-	 (lambda (escape)
-	   (define specs
-	     (fold-right (lambda (rand.stx rand.sig application.specs)
-			   (%single-operand-signature->application-signature input-form.stx rand.stx rand.sig application.specs
-									     (lambda ()
-									       (escape (<compound-condition>-ots)))))
-	       '() rand*.stx rand*.sig))
-	   ;;We want:
-	   ;;
-	   ;;   (type-of (make-who-condition 'ciao))
-	   ;;   => #[type-signature (&who)]
-	   ;;
-	   ;;   (type-of (condition (make-who-condition 'ciao)))
-	   ;;   => #[type-signature (&who)]
-	   ;;
-	   (if (list-of-single-item? specs)
-	       (car specs)
-	     (make-compound-condition-type-spec specs))))))
-
-  (define (%single-operand-signature->application-signature input-form.stx rand.stx rand.sig application.specs unspecified-kont)
-    ;;The argument UNSPECIFIED-KONT  is a continuation thunk to be  called when it is
-    ;;not  possible to  determine the  type of  an operand;  in this  case the  whole
-    ;;CONDITION application signature must  represent a single "<compound-condition>"
-    ;;value.
-    ;;
-    (case-signature-specs rand.sig
-      ((single-value)
-       => (lambda (rand.ots)
-	    (%process-single-value-operand input-form.stx rand.stx rand.sig rand.ots application.specs unspecified-kont)))
-
-      (<no-return>
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __module_who__)
-			 (make-message-condition "expression used as application operand is typed as not returning")
-			 (make-syntax-violation input-form.stx rand.stx)
-			 (make-application-operand-signature-condition rand.sig)))))
-	 (case-expander-language
-	   ((typed)
-	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
-	   ((default)
-	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
-	    (unspecified-kont))
-	   ((strict-r6rs)
-	    (unspecified-kont)))))
-
-      (<list-of>
-       ;;The operand expression returns an unspecified number of values of specified,
-       ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
-       ;;run-time, if this operand returns a single value.
-       => (lambda (rand.ots)
-	    (let ((item.ots (list-of-type-spec.item-ots rand.ots)))
-	      (%process-single-value-operand input-form.stx rand.stx rand.sig item.ots application.specs unspecified-kont))))
-
-      (<list>
-       ;;The  operand  expression   returns  an  unspecified  number   of  values  of
-       ;;unspecified type.  We rely on the  compiler to generate code that checks, at
-       ;;run-time, if this operand returns a single value.
-       (unspecified-kont))
-
-      (else
-       ;;The operand expression returns zero, two or more values.
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __module_who__)
-			 (make-message-condition "expression used as application operand returns multiple values")
-			 (make-syntax-violation input-form.stx rand.stx)
-			 (make-application-operand-signature-condition rand.sig)))))
-	 (case-expander-language
-	   ((typed)
-	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
-	   ((default)
-	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
-	    (unspecified-kont))
-	   ((strict-r6rs)
-	    (unspecified-kont)))))))
-
-  (define (%process-single-value-operand input-form.stx rand.stx rand.sig rand.ots application.specs unspecified-kont)
-    (cond ((simple-condition-object-type-spec? rand.ots)
-	   (cons rand.ots application.specs))
-	  ((compound-condition-type-spec? rand.ots)
-	   (append (compound-condition-type-spec.component-ots* rand.ots)
-		   application.specs))
-	  ((and (union-type-spec? rand.ots)
-		(for-all (lambda (item.ots)
-			   (or (simple-condition-object-type-spec?	item.ots)
-			       (compound-condition-type-spec?		item.ots)
-			       (<compound-condition>-ots?		item.ots)
-			       (<condition>-ots?			item.ots)))
-		  (union-type-spec.component-ots* rand.ots)))
-	   (unspecified-kont))
-	  ((and (intersection-type-spec? rand.ots)
-		(for-all (lambda (item.ots)
-			   (or (simple-condition-object-type-spec?	item.ots)
-			       (compound-condition-type-spec?		item.ots)
-			       (<compound-condition>-ots?		item.ots)
-			       (<condition>-ots?			item.ots)))
-		  (intersection-type-spec.component-ots* rand.ots)))
-	   (unspecified-kont))
-	  ((or (<compound-condition>-ots? rand.ots)
-	       (<condition>-ots?          rand.ots))
-	   (unspecified-kont))
-	  (else
-	   (let ((common (lambda ()
-			   (condition
-			     (make-who-condition __module_who__)
-			     (make-message-condition
-			      "expected condition object-type specification as component of compound condition object-type")
-			     (make-syntax-violation input-form.stx rand.stx)
-			     (make-application-operand-signature-condition rand.sig)))))
-	     (case-expander-language
-	       ((typed)
-		(raise			(condition (make-expand-time-type-signature-violation) (common))))
-	       ((default)
-		(raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
-		(unspecified-kont))
-	       ((strict-r6rs)
-		(unspecified-kont)))))))
-
-  #| end of module: CHI-CONDITION-APPLICATION |# )
 
 
 (module (chi-call-with-values-application)
@@ -1258,7 +1078,8 @@
    car-id			car-id?
    cdr-id			cdr-id?
    $car-id			$car-id?
-   $cdr-id			$cdr-id?)
+   $cdr-id			$cdr-id?
+   condition-id			condition-id?)
 
   (let-syntax
       ((declare (syntax-rules ()
@@ -1287,6 +1108,7 @@
     (declare cdr-id			cdr-id?				cdr)
     (declare $car-id			$car-id?			$car)
     (declare $cdr-id			$cdr-id?			$cdr)
+    (declare condition-id		condition-id?			condition)
     #| end of LET-SYNTAX |# )
 
   #| end of module: SPECIAL-CORE-PRIMITIVES |# )
@@ -1531,10 +1353,14 @@
 		(foldable-vector-id?		rator.stx)
 		(<nevector>-constructor-id?	rator.stx))
 	    (chi-vector-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	   ;;
 	   (( car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'car))
 	   (( cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'cdr))
 	   (($car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$car))
 	   (($cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$cdr))
+	   ;;
+	   ((condition-id? rator.stx)
+	    (chi-condition-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
 	   (else
 	    (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
 						  rator.psi rand*.psi rator.stx
@@ -1666,6 +1492,10 @@
        (($car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$car))
        (( cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'cdr))
        (($cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$cdr))
+       ;;
+       ((condition-id? rator.stx)
+	(chi-condition-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+       ;;
        (else
 	(default-application-maker))))
      (else
@@ -1884,7 +1714,7 @@
   ;;We have  already validated  the number  and type of  the operands.   The argument
   ;;RATOR.PSI     represents    the     expanded    VECTOR,     FOLDABLE-VECTOR    or
   ;;<NEVECTOR>-CONSTRUCTOR  syntactic  identifier.   The   argument  RAND*.PSI  is  a
-  ;;(possibly empty) vector of items, each having a single value type signature.  The
+  ;;(possibly empty) list  of items, each having a single  value type signature.  The
   ;;argument  RANDS.SIG  is  a  "<type-signature>"  representing  the  types  of  the
   ;;operands.
   ;;
@@ -1900,6 +1730,115 @@
 	  (psi.core-expr rator.psi)
 	(map psi.core-expr rand*.psi))
       application.sig)))
+
+
+;;;; special applications: CONDITION
+
+(module (chi-condition-application)
+  ;;The input form has the syntax:
+  ;;
+  ;;   (condition ?rand ...)
+  ;;
+  ;;We have  already validated  the number  and type of  the operands.   The argument
+  ;;RATOR.PSI represents  the expanded CONDITION syntactic  identifier.  The argument
+  ;;RAND*.PSI is a  (possibly empty) list of  items, each having a  single value type
+  ;;signature.  The argument RANDS.SIG is a "<type-signature>" representing the types
+  ;;of the operands.
+  ;;
+  ;;This function is called both when the operands signature matches exactly and when
+  ;;the operands signature is a compatible match.
+  ;;
+  ;;We need to verify that the operands expressions in RANDS.STX are either sub-types
+  ;;of "&condition", or instances  of type "<compound-condition-object-type>".  Let's
+  ;;remember that the type hierarchy for condition objects is this:
+  ;;
+  ;;   <condition> --> <compound-condition> --> <compound-condition-object-type>
+  ;;        |
+  ;;         --------> &condition --> &who
+  ;;                       |
+  ;;                       |--------> &message
+  ;;                       |
+  ;;                        --------> ... all the condition types ...
+  ;;
+  (define-module-who chi-condition-application)
+
+  (define (chi-condition-application input-form.stx lexenv.run lexenv.expand
+				     rator.psi rand*.psi rands.sig)
+    (if (null? rand*.psi)
+	;;No arguments.  Just evaluate "(condition)".
+	(make-psi input-form.stx
+	  (build-application (syntax-annotation input-form.stx)
+	      (psi.core-expr rator.psi)
+	    '())
+	  (make-type-signature/single-value (make-compound-condition-type-spec '())))
+      ;;One or more operands.
+      (let ((application.sig (%operand-signatures->application-signature input-form.stx (type-signature.object-type-specs rands.sig))))
+	(make-psi input-form.stx
+	  (build-application (syntax-annotation input-form.stx)
+	      (psi.core-expr rator.psi)
+	    (map psi.core-expr rand*.psi))
+	  application.sig))))
+
+  (define (%operand-signatures->application-signature input-form.stx rand*.ots)
+    (make-type-signature/single-value
+     (call/cc
+	 (lambda (escape)
+	   (let* ((punt		  (lambda () (escape (<compound-condition>-ots))))
+		  (component*.ots (fold-right
+				      (lambda (rand.ots component*.ots)
+					(%process-single-value-operand input-form.stx component*.ots rand.ots punt))
+				    '() rand*.ots)))
+	     ;;We want:
+	     ;;
+	     ;;   (type-of (make-who-condition 'ciao))
+	     ;;   => #[type-signature (&who)]
+	     ;;
+	     ;;   (type-of (condition (make-who-condition 'ciao)))
+	     ;;   => #[type-signature (&who)]
+	     ;;
+	     (if (list-of-single-item? component*.ots)
+		 (car component*.ots)
+	       (make-compound-condition-type-spec component*.ots)))))))
+
+  (define (%process-single-value-operand input-form.stx component*.ots rand.ots punt)
+    (cond ((simple-condition-object-type-spec? rand.ots)
+	   (cons rand.ots component*.ots))
+
+	  ((compound-condition-type-spec? rand.ots)
+	   (append (compound-condition-type-spec.component-ots* rand.ots)
+		   component*.ots))
+
+	  ((and (union-type-spec? rand.ots)
+		(for-all (lambda (item.ots)
+			   (or (simple-condition-object-type-spec?	item.ots)
+			       (compound-condition-type-spec?		item.ots)
+			       (<compound-condition>-ots?		item.ots)
+			       (<condition>-ots?			item.ots)))
+		  (union-type-spec.component-ots* rand.ots)))
+	   (punt))
+
+	  ((and (intersection-type-spec? rand.ots)
+		(for-all (lambda (item.ots)
+			   (or (simple-condition-object-type-spec?	item.ots)
+			       (compound-condition-type-spec?		item.ots)
+			       (<compound-condition>-ots?		item.ots)
+			       (<condition>-ots?			item.ots)))
+		  (intersection-type-spec.component-ots* rand.ots)))
+	   (punt))
+
+	  ((or (<compound-condition>-ots? rand.ots)
+	       (<condition>-ots?          rand.ots))
+	   (punt))
+
+	  ((object-type-spec.compatible-super-and-sub? (<condition>-ots) rand.ots)
+	   (cons rand.ots component*.ots))
+
+	  (else
+	   ;;This should never happen.
+	   (assertion-violation __module_who__
+	     "internal error, core primitive operand of wrong type" input-form.stx rand.ots))))
+
+  #| end of module: CHI-CONDITION-APPLICATION |# )
 
 
 ;;;; done

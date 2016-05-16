@@ -859,9 +859,8 @@
 			 ((compound-condition? (car x*))
 			  (append (simple-conditions (car x*)) (recur (cdr x*))))
 			 (else
-			  (procedure-argument-violation __who__
-			    "expected condition object as argument"
-			    (car x*))))
+			  (procedure-argument-violation 'condition
+			    "expected condition object as argument" (car x*))))
 		 '()))))
      (cond ((null? ls)
 	    (make-compound-condition '()))

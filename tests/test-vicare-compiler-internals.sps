@@ -204,6 +204,7 @@
 
   ;;This is the (libtest compiler-internals) library.
   (libdoit* (library (recordize-demo-0)
+	      (options typed-language)
 	      (export a-func a-thunk a-const)
 	      (import (rnrs (6)))
 	      (define (a-func a b)
@@ -218,6 +219,7 @@
 
   ;;How reference imported bindings are recordised.
   (libdoit* (library (recordize-demo-1)
+	      (options typed-language)
 	      (export)
 	      (import (rnrs)
 		(libtest compiler-internals))
@@ -233,6 +235,7 @@
 
   ;;Record type definition.
   (libdoit* (library (recordize-demo-2)
+	      (options typed-language)
 	      (export make-a a?)
 	      (import (rnrs))
 	      (define-record-type a))
@@ -1575,6 +1578,7 @@
   (check
       (parametrise ((compiler.current-letrec-pass 'scc))
 	(let* ((form1 '(library (optimize-letrec-scc-demo-2)
+			 (options typed-language)
 			 (export make-a a?)
 			 (import (rnrs))
 			 (define-record-type a)))
@@ -1790,6 +1794,7 @@
   ;;Record type definition.
   (check
       (let* ((form1 '(library (rewrite-references-and-assignments-demo-3)
+		       (options typed-language)
 		       (export make-a a?)
 		       (import (rnrs))
 		       (define-record-type a)))

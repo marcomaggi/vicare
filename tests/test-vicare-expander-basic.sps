@@ -63,7 +63,12 @@
 ;;;; helpers
 
 (define (%eval sexp)
-  (eval sexp (environment '(vicare))))
+  (with-exception-handler
+      (lambda (E)
+	(unless (warning? E)
+	  (raise E)))
+    (lambda ()
+      (eval sexp (environment '(vicare))))))
 
 (define-syntax check-argument-violation
   (syntax-rules (=>)
@@ -96,7 +101,11 @@
 		   (else
 		    (print-condition E)
 		    E))
-	   ?body)
+	   (with-exception-handler
+	       (lambda (E)
+		 (unless (warning? E)
+		   (raise E)))
+	     (lambda () ?body)))
        => ?result))))
 
 
@@ -1319,13 +1328,10 @@
 		    ((1 2 3)	=> 123)
 		    (else	'else)))
 	(catch E
-	  ((expander::&expand-time-type-signature-violation)
-	   (values (expander::type-signature.syntax-object (expander::condition-expected-type-signature E))
-		   (expander::type-signature.syntax-object (expander::condition-returned-type-signature E))))
-	  (else
-	   (values E #f))))
-    (=> syntax=?)
-    #'(<procedure>) #'(<positive-fixnum>))
+	  ((&expression-return-value-violation)
+	   #t)
+	  (else #f)))
+    => #t)
 
   #t)
 
@@ -1414,13 +1420,10 @@
 		    ((one two three)	=> 'one-two-three)
 		    (else		'else)))
 	(catch E
-	  ((expander::&expand-time-type-signature-violation)
-	   (values (expander::type-signature.syntax-object (expander::condition-expected-type-signature E))
-		   (expander::type-signature.syntax-object (expander::condition-returned-type-signature E))))
-	  (else
-	   (values E #f))))
-    (=> syntax=?)
-    #'(<procedure>) #'((enumeration one-two-three)))
+	  ((&expression-return-value-violation)
+	   #t)
+	  (else #f)))
+    => #t)
 
   (check	;datum is not an identifier
       (guard (E ((syntax-violation? E)
