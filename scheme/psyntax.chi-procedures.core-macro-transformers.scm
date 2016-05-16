@@ -1450,9 +1450,7 @@
       (%error (lambda () (common message)) rv))
     (case-signature-specs expr.sig
       ((<void>)
-       (raise
-	(condition (make-expand-time-type-signature-violation)
-		   (common "expression used as operand in logic predicate is typed as returning void"))))
+       (%handle-error "expression used as operand in logic predicate is typed as returning void" 'always-true))
 
       (<no-return>
        ;;This is special.  We want to accept expressions like:
@@ -1811,18 +1809,26 @@
 
 	((<void>)
 	 ;;The producer expression is typed as returning void.
-	 (raise
-	  (condition (make-expand-time-type-signature-violation)
-		     (make-who-condition caller-who)
-		     (make-message-condition "the producer expression is typed as returning void")
-		     (make-syntax-violation input-form.stx producer.stx))))
+	 (let ((common (lambda ()
+			 (condition (make-who-condition caller-who)
+				    (make-message-condition "the producer expression is typed as returning void")
+				    (make-syntax-violation input-form.stx producer.stx)))))
+	   (case-expander-language
+	     ((typed)
+	      (raise
+	       (condition (make-expand-time-type-signature-violation) (common))))
+	     ((default)
+	      (raise-continuable
+	       (condition (make-expand-time-type-signature-warning)   (common))))))
+	 (%build-single-value-output input-form.stx lexenv.run lexenv.expand
+				     caller-who return-values?
+				     arg.id (psi.core-expr producer.psi) consumer*.stx))
 
 	((single-value)
 	 ;;The producer expression returns a single value.  Good.
-	 => (lambda (producer.ots)
-	      (%build-single-value-output input-form.stx lexenv.run lexenv.expand
-					  caller-who return-values?
-					  arg.id (psi.core-expr producer.psi) consumer*.stx)))
+	 (%build-single-value-output input-form.stx lexenv.run lexenv.expand
+				     caller-who return-values?
+				     arg.id (psi.core-expr producer.psi) consumer*.stx))
 
 	((unspecified-values)
 	 ;;The producer expression returns an  unspecified number of values, of known
@@ -2202,11 +2208,22 @@
 
 	((<void>)
 	 ;;The producer expression is typed as returning void.
-	 (raise
-	  (condition (make-expand-time-type-signature-violation)
-		     (make-who-condition caller-who)
-		     (make-message-condition "the producer expression is typed as returning void")
-		     (make-syntax-violation input-form.stx producer.stx))))
+	 (let ((common (lambda ()
+			 (condition (make-who-condition caller-who)
+				    (make-message-condition "the producer expression is typed as returning void")
+				    (make-syntax-violation input-form.stx producer.stx)))))
+	   (case-expander-language
+	     ((typed)
+	      (raise
+	       (condition (make-expand-time-type-signature-violation) (common))))
+	     ((default)
+	      (raise-continuable
+	       (condition (make-expand-time-type-signature-warning)   (common))))))
+	 (let ((producer.core (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
+						  caller-who arg.ots producer.psi (<void>-ots))))
+	   (%build-single-value-output input-form.stx lexenv.run lexenv.expand
+				       caller-who return-values?
+				       arg.id arg.ots producer.core consumer*.stx)))
 
 	((single-value)
 	 ;;The producer expression returns a single value.  Good.
