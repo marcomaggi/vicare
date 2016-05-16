@@ -67,8 +67,6 @@
     null-environment			scheme-report-environment
     interaction-environment		new-interaction-environment
 
-    enable-typed-language		disable-typed-language
-
     ;; inspection of non-interaction environment objects
     environment-symbols			environment-libraries
     environment-labels			environment-binding
@@ -127,28 +125,6 @@
 (include "psyntax.helpers.scm" #t)
 
 
-;;;; public interface: typed language support
-
-(module (enable-typed-language
-	 disable-typed-language)
-
-  (define (enable-typed-language)
-    ;;This is meant to be used at the  REPL to turn on typed language support, which
-    ;;is off by default.
-    ;;
-    (typed-language-support #t))
-
-  (define (disable-typed-language)
-    ;;This is meant to be used at the REPL to turn off typed language support.
-    ;;
-    (typed-language-support #f))
-
-  (define (typed-language-support enable?)
-    (options::typed-language-enabled? enable?))
-
-  #| end of module |# )
-
-
 (module (eval)
   (define-constant __module_who__ 'eval)
 
@@ -164,21 +140,20 @@
      ;;
      (define expander-option* (%parse-eval-options expander-options))
      (define compiler-option* (%parse-eval-options compiler-options))
-     (receive (x invoke-req*)
-	 (parametrise
-	     ((options::expander-language (cond ((memq 'typed-language expander-option*)
-						 'typed)
-						((memq 'strict-r6rs    expander-option*)
-						 'strict-r6rs)
-						(else
-						 ;;No options  from the  source code,
-						 ;;so leave it unchanged.
-						 (options::expander-language)))))
-	   (expand-form-to-core-language x env))
-       ;;Here we use the expander and compiler options from the libraries.
-       (for-each libman::invoke-library invoke-req*)
-       (parametrise
-	   ((compiler::options::strict-r6rs (memq 'strict-r6rs compiler-option*)))
+     (parametrise
+	 ((options::expander-language (cond ((memq 'typed-language expander-option*)
+					     'typed)
+					    ((memq 'strict-r6rs    expander-option*)
+					     'strict-r6rs)
+					    (else
+					     ;;No  options from  the source  code, so
+					     ;;leave it unchanged.
+					     (options::expander-language))))
+	  (compiler::options::strict-r6rs (memq 'strict-r6rs compiler-option*)))
+       (receive (x invoke-req*)
+	   (expand-form-to-core-language x env)
+	 ;;Here we use the expander and compiler options from the libraries.
+	 (for-each libman::invoke-library invoke-req*)
 	 (compiler::eval-core (expanded->core x))))))
 
   (module (%parse-eval-options)

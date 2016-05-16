@@ -52,7 +52,10 @@
 	       '(types-of-lists)))
 
 (define-syntax-rule (%eval ?sexp)
-  (eval (quasiquote ?sexp) ENVIRONMENT))
+  (eval (quasiquote ?sexp)
+	ENVIRONMENT
+	(expander-options typed-language)
+	(compiler-options)))
 
 (define-syntax check-expand-time-signature-violation
   (syntax-rules (=>)

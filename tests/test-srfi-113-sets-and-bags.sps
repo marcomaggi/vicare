@@ -3062,22 +3062,22 @@
   (check
       (with-result
 	(let ((B (bag fixnum-comparator 1 2 3)))
-	  (bag-for-each-unique (lambda (elm count)
-				 (add-result (list elm count)))
-			       B)))
-    => `(,(void) ((1 1)
-		  (2 1)
-		  (3 1))))
+	  (void-object? (bag-for-each-unique (lambda (elm count)
+					       (add-result (list elm count)))
+					     B))))
+    => '(#t ((1 1)
+	     (2 1)
+	     (3 1))))
 
   (check
       (with-result
 	(let ((B (bag fixnum-comparator 1 2 2 3 3 3)))
-	  (bag-for-each-unique (lambda (elm count)
-				 (add-result (list elm count)))
-			       B)))
-    => `(,(void) ((1 1)
-		  (2 2)
-		  (3 3))))
+	  (void-object? (bag-for-each-unique (lambda (elm count)
+					       (add-result (list elm count)))
+					     B))))
+    => '(#t ((1 1)
+	     (2 2)
+	     (3 3))))
 
 ;;; --------------------------------------------------------------------
 ;;; bag-fold-unique

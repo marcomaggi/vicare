@@ -40,7 +40,10 @@
   (environment '(vicare)))
 
 (define-syntax-rule (%eval ?sexp)
-  (eval (quasiquote ?sexp) ENVIRONMENT))
+  (eval (quasiquote ?sexp)
+	ENVIRONMENT
+	(expander-options typed-language)
+	(compiler-options)))
 
 
 (parametrise ((check-test-name	'type-of))

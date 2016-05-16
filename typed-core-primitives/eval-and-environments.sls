@@ -38,8 +38,9 @@
 (declare-core-primitive eval
     (safe)
   (signatures
-   ((_ <lexical-environment>)				=> <list>)
-   ((_ <lexical-environment> <enum-set> <enum-set>)	=> <list>)))
+   ((_ <lexical-environment>)			=> <list>)
+   ((_ <lexical-environment>
+       (list-of <symbol>) (list-of <symbol>))	=> <list>)))
 
 ;;; --------------------------------------------------------------------
 

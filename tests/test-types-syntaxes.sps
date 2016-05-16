@@ -80,7 +80,10 @@
     ((_ ?input-form => ?expected-signature-sexp ?returned-signature-sexp)
      (check
 	 (try
-	     (eval (quote ?input-form) EVAL-ENVIRONMENT)
+	     (eval (quote ?input-form)
+		   EVAL-ENVIRONMENT
+		   (expander-options typed-language)
+		   (compiler-options))
 	   (catch E
 	     ((expander::&expand-time-type-signature-violation)
 	      #;(print-condition E)

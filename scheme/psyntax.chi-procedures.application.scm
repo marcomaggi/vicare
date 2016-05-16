@@ -42,9 +42,7 @@
   ;;
   (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1
 				       condition call-with-values
-				       cons list car cdr vector
-				       foldable-cons foldable-list foldable-vector
-				       <nelist>-constructor <nevector>-constructor)
+				       vector foldable-vector <nevector>-constructor)
     (((?nested-rator ?nested-rand* ...) ?rand* ...)
      ;;Sub-expression application.  It could be a nested expression application:
      ;;
@@ -69,15 +67,6 @@
 
     ((condition . ?rand*)
      (chi-condition-application input-form.stx lexenv.run lexenv.expand ?rand*))
-
-    ((list . ?rand*)
-     (chi-list-application input-form.stx lexenv.run lexenv.expand ?rand* 'list))
-
-    ((foldable-list . ?rand*)
-     (chi-list-application input-form.stx lexenv.run lexenv.expand ?rand* 'foldable-list))
-
-    ((<nelist>-constructor . ?rand*)
-     (chi-nelist-constructor-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
     ((vector . ?rand*)
      (chi-vector-application input-form.stx lexenv.run lexenv.expand ?rand* 'vector))
@@ -481,114 +470,6 @@
 	    (<top>-ots)))))))
 
   #| end of module: CHI-VALUES-APPLICATION |# )
-
-
-(module (chi-list-application chi-nelist-constructor-application)
-  ;;The input form has the syntax:
-  ;;
-  ;;   (list ?rand ...)
-  ;;
-  ;;and RANDS.STX is the syntax object:
-  ;;
-  ;;   #'(?rand ...)
-  ;;
-  ;;which holds  a proper list  of expressions.  The  application of LIST  is special
-  ;;because  we  want  the  expression  to  return  a  type  signature  describing  a
-  ;;"<list-type-spec>".
-  ;;
-  (import CLOSURE-APPLICATION-ERRORS)
-
-  (define-module-who chi-list-application)
-
-  (define (chi-nelist-constructor-application input-form.stx lexenv.run lexenv.expand rands.stx)
-    (syntax-match rands.stx ()
-      (()
-       (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
-	 (core-prim-id '<nelist>-constructor) '() 1 0))
-
-      ((?rand ?rand* ...)
-       (chi-list-application input-form.stx lexenv.run lexenv.expand rands.stx '<nelist>-constructor))))
-
-  (define (chi-list-application input-form.stx lexenv.run lexenv.expand rands.stx prim-name)
-    (syntax-match rands.stx ()
-      (()
-       ;;No arguments.  Just return null.
-       (make-psi/single-null input-form.stx))
-
-      ((?rand ?rand* ...)
-       ;;Two or more values.
-       (let* ((rand*.stx  (cons ?rand ?rand*))
-	      (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
-	      (rand*.core (map psi.core-expr rand*.psi))
-	      (rand*.sig  (map psi.retvals-signature rand*.psi)))
-	 (let ((application.sig (%operand-signatures->application-signature input-form.stx rand*.stx rand*.sig)))
-	   (make-psi input-form.stx
-	     (build-application (syntax-annotation input-form.stx)
-		 (build-primref no-source prim-name)
-	       rand*.core)
-	     application.sig))))
-      ))
-
-  (define (%operand-signatures->application-signature input-form.stx rand*.stx rand*.sig)
-    (make-type-signature/single-value
-     (make-list-type-spec
-      (map (lambda (rand.stx rand.sig)
-	     (%single-operand-signature->ots input-form.stx rand.stx rand.sig))
-	rand*.stx rand*.sig))))
-
-  (define (%single-operand-signature->ots input-form.stx rand.stx rand.sig)
-    (case-signature-specs rand.sig
-      ((single-value)
-       => (lambda (rand.ots)
-	    rand.ots))
-
-      (<no-return>
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __module_who__)
-			 (make-message-condition "expression used as application operand is typed as not returning")
-			 (make-syntax-violation input-form.stx rand.stx)
-			 (make-application-operand-signature-condition rand.sig)))))
-	 (case-expander-language
-	   ((typed)
-	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
-	   ((default)
-	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
-	    (<top>-ots))
-	   ((strict-r6rs)
-	    (<top>-ots)))))
-
-      (<list-of>
-       ;;The operand expression returns an unspecified number of values of specified,
-       ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
-       ;;run-time, if this operand returns a single value.
-       => (lambda (rand.ots)
-	    (list-of-type-spec.item-ots rand.ots)))
-
-      (<list>
-       ;;The  operand  expression   returns  an  unspecified  number   of  values  of
-       ;;unspecified type.   We relay  on the  automatically generated  validation to
-       ;;check at run-time if the expression returns a single value.
-       (<top>-ots))
-
-      (else
-       ;;The operand expression returns zero, two or more values.
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __module_who__)
-			 (make-message-condition "expression used as application operand returns multiple values")
-			 (make-syntax-violation input-form.stx rand.stx)
-			 (make-application-operand-signature-condition rand.sig)))))
-	 (case-expander-language
-	   ((typed)
-	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
-	   ((default)
-	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
-	    (<top>-ots))
-	   ((strict-r6rs)
-	    (<top>-ots)))))))
-
-  #| end of module: CHI-LIST-APPLICATION |# )
 
 
 (module (chi-vector-application chi-nevector-constructor-application)
@@ -1486,12 +1367,15 @@
 
 (module SPECIAL-PRIMITIVES
   ( ;;
-   cons-id		cons-id?
-   foldable-cons-id	foldable-cons-id?
-   car-id		car-id?
-   cdr-id		cdr-id?
-   $car-id		$car-id?
-   $cdr-id		$cdr-id?)
+   cons-id			cons-id?
+   foldable-cons-id		foldable-cons-id?
+   list-id			list-id?
+   foldable-list-id		foldable-list-id?
+   <nelist>-constructor-id	<nelist>-constructor-id?
+   car-id			car-id?
+   cdr-id			cdr-id?
+   $car-id			$car-id?
+   $cdr-id			$cdr-id?)
 
   (let-syntax
       ((declare (syntax-rules ()
@@ -1508,12 +1392,15 @@
 			    (free-identifier=? obj (?prim-id))))
 		     #| end of BEGIN |# ))
 		  )))
-    (declare cons-id			cons-id?		cons)
-    (declare foldable-cons-id		foldable-cons-id?	foldable-cons)
-    (declare car-id			car-id?			car)
-    (declare cdr-id			cdr-id?			cdr)
-    (declare $car-id			$car-id?		$car)
-    (declare $cdr-id			$cdr-id?		$cdr)
+    (declare cons-id			cons-id?			cons)
+    (declare foldable-cons-id		foldable-cons-id?		foldable-cons)
+    (declare list-id			list-id?			list)
+    (declare foldable-list-id		foldable-list-id?		foldable-list)
+    (declare <nelist>-constructor-id	<nelist>-constructor-id?	<nelist>-constructor)
+    (declare car-id			car-id?				car)
+    (declare cdr-id			cdr-id?				cdr)
+    (declare $car-id			$car-id?			$car)
+    (declare $cdr-id			$cdr-id?			$cdr)
     #| end of LET-SYNTAX |# )
 
   #| end of module: SPECIAL-CORE-PRIMITIVES |# )
@@ -1750,9 +1637,13 @@
 	   ((or (cons-id?          rator.stx)
 		(foldable-cons-id? rator.stx))
 	    (chi-cons-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	   ((or (list-id?			rator.stx)
+		(foldable-list-id?		rator.stx)
+		(<nelist>-constructor-id?	rator.stx))
+	    (chi-list-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
 	   (( car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'car))
-	   (($car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$car))
 	   (( cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'cdr))
+	   (($car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$car))
 	   (($cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$cdr))
 	   (else
 	    (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
@@ -1913,10 +1804,10 @@
   ;;   (cons ?car ?cdr)
   ;;
   ;;We have  already validated  the number  and type of  the operands.   The argument
-  ;;RATOR.PSI  represents  the  expanded  CONS syntactic  identifier.   The  argument
-  ;;RAND*.PSI is a list of two items, each having a single value type signature.  The
-  ;;argument  RANDS.SIG  is  a  "<type-signature>"  representing  the  types  of  the
-  ;;operands.
+  ;;RATOR.PSI  represents the  expanded CONS  or FOLDABLE-CONS  syntactic identifier.
+  ;;The argument RAND*.PSI  is a list of  two items, each having a  single value type
+  ;;signature.  The argument RANDS.SIG is a "<type-signature>" representing the types
+  ;;of the operands.
   ;;
   ;;The application  of CONS is  special because we want  the expression to  return a
   ;;type signature describing a "<pair-type-spec>".
@@ -1934,12 +1825,40 @@
       application.sig)))
 
 
+;;;; special applications: LIST, FOLDABLE-LIST, <NELIST>-CONSTRUCTOR
+
+(define (chi-list-application input-form.stx lexenv.run lexenv.expand
+			      rator.psi rand*.psi rands.sig)
+  ;;The input form has the syntax:
+  ;;
+  ;;   (list ?expr ...)
+  ;;
+  ;;We have  already validated  the number  and type of  the operands.   The argument
+  ;;RATOR.PSI  represents the  expanded LIST,  FOLDABLE-LIST or  <NELIST>-CONSTRUCTOR
+  ;;syntactic  identifier.  The  argument RAND*.PSI  is  a (possibly  empty) list  of
+  ;;items, each  having a single value  type signature.  The argument  RANDS.SIG is a
+  ;;"<type-signature>" representing the types of the operands.
+  ;;
+  ;;The application  of LIST is  special because we want  the expression to  return a
+  ;;type signature describing a sub-type of "<list>".
+  ;;
+  (let ((application.sig (let ((rands.specs (type-signature.object-type-specs rands.sig)))
+			   (if (null? rands.specs)
+			       (make-type-signature/single-null)
+			     (make-type-signature/single-value (make-list-type-spec rands.specs))))))
+    (make-psi input-form.stx
+      (build-application (syntax-annotation input-form.stx)
+	  (psi.core-expr rator.psi)
+	(map psi.core-expr rand*.psi))
+      application.sig)))
+
+
 ;;;; special applications: CAR, $CAR
 
 (module (chi-car-application)
   (define-module-who chi-car-application)
 
-  (define (chi-car-application input-form.stx lexenv.run lexenv.expand
+  (define* (chi-car-application input-form.stx lexenv.run lexenv.expand
 			       rator.psi rand*.psi rands.sig original-prim-name)
     ;;The input form has the syntax:
     ;;

@@ -66,7 +66,10 @@
 	(unless (warning? E)
 	  (raise E)))
     (lambda ()
-      (eval expr THE-ENVIRONMENT))))
+      (eval expr
+	    THE-ENVIRONMENT
+	    (expander-options typed-language)
+	    (compiler-options)))))
 
 (define-syntax type-signature-violation-for-message
   (syntax-rules (=>)
