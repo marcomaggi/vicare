@@ -63,6 +63,10 @@
 (library (psyntax.expander)
   (export
     eval
+    <expander-options>-rtd		<expander-options>-rcd
+    make-expander-options		expander-options?
+    <compiler-options>-rtd		<compiler-options>-rcd
+    make-compiler-options		compiler-options?
     environment				environment?
     null-environment			scheme-report-environment
     interaction-environment		new-interaction-environment
@@ -125,7 +129,9 @@
 (include "psyntax.helpers.scm" #t)
 
 
-(module (eval)
+(module (eval
+	 <expander-options>-rtd <expander-options>-rcd make-expander-options expander-options?
+	 <compiler-options>-rtd <compiler-options>-rcd make-compiler-options compiler-options?)
   (define-constant __module_who__ 'eval)
 
   (case-define* eval
@@ -134,35 +140,44 @@
      ;;expression,  invoke its  invoke-required libraries  and evaluate  its expanded
      ;;core form.  Return the result of the expansion.
      ;;
-     (eval x env '() '()))
-    ((x {env environment?} {expander-options list-of-symbols?} {compiler-options list-of-symbols?})
+     (eval x env (make-expander-options '()) (make-compiler-options '())))
+    ((x {env environment?} {expander-opts expander-options?} {compiler-opts compiler-options?})
      ;;This is the Vicare extension.
      ;;
-     (define expander-option* (%parse-eval-options expander-options))
-     (define compiler-option* (%parse-eval-options compiler-options))
      (parametrise
-	 ((options::expander-language (cond ((memq 'typed-language expander-option*)
-					     'typed)
-					    ((memq 'strict-r6rs    expander-option*)
-					     'strict-r6rs)
-					    (else
-					     ;;No  options from  the source  code, so
-					     ;;leave it unchanged.
-					     (options::expander-language))))
-	  (compiler::options::strict-r6rs (memq 'strict-r6rs compiler-option*)))
+	 ((options::expander-language		(expander-options.language expander-opts))
+	  (compiler::options::strict-r6rs	(compiler-options.language compiler-opts)))
        (receive (x invoke-req*)
 	   (expand-form-to-core-language x env)
 	 ;;Here we use the expander and compiler options from the libraries.
 	 (for-each libman::invoke-library invoke-req*)
 	 (compiler::eval-core (expanded->core x))))))
 
-  (module (%parse-eval-options)
+;;; --------------------------------------------------------------------
 
-    (define (%parse-eval-options input-options)
-      (let* ((option*.sym (%parse-input input-options))
-	     (option*.sym (list-of-symbols.delete-first-duplicates option*.sym))
-	     (option*.sym (%clean-language-selection option*.sym)))
-	option*.sym))
+  (define-record-type (<expander-options> make-expander-options expander-options?)
+    (fields
+      (immutable language	expander-options.language)
+		;A  symbol  representing  the  language under  which  to  expand  the
+		;expression.  One among: default, typed, strict-r6rs.
+      #| end of FIELDS |# )
+    (protocol
+      (lambda (make-record)
+	(lambda (sexp)
+	  (receive (language)
+	      (%parse-expander-options sexp)
+	    (make-record language))))))
+
+  (define <expander-options>-rtd (record-type-descriptor        <expander-options>))
+  (define <expander-options>-rcd (record-constructor-descriptor <expander-options>))
+
+  (module (%parse-expander-options)
+
+    (define (%parse-expander-options input-options)
+      (let* ((option*.sym	(%parse-input input-options))
+	     (option*.sym	(list-of-symbols.delete-first-duplicates option*.sym))
+	     (language		(%perform-language-selection option*.sym)))
+	(values language)))
 
     (define (%parse-input input-options)
       (let recur ((opts input-options))
@@ -173,41 +188,89 @@
 		 (case sym
 		   ((typed-language)
 		    (cons sym (recur (cdr opts))))
+		   ((default-language)
+		    (cons sym (recur (cdr opts))))
 		   ((strict-r6rs)
 		    (cons sym (recur (cdr opts))))
 		   (else
-		    (assertion-violation __module_who__ "unknown EVAL option" sym)))))
+		    (assertion-violation __module_who__ "unknown expander option" sym)))))
 	      (else
 	       (syntax-violation __module_who__
-		 "invalid syntax in EVAL options, expected list of symbols" input-options)))))
+		 "invalid syntax in expander options, expected list of symbols" input-options)))))
 
-    (define (%clean-language-selection option*.sym)
-      (let* ((option*.sym (cond ((memq 'strict-r6rs option*.sym)
-				 => (lambda (ell)
-				      (cond ((memq 'typed-language ell)
-					     ;;Both  STRICT-R6RS  and  TYPED-LANGUAGE
-					     ;;are  present.    TYPED-LANGUAGE  comes
-					     ;;after    STRICT-R6RS:   TYPED-LANGUAGE
-					     ;;wins.
-					     (remq 'strict-r6rs option*.sym))
-					    (else
-					     option*.sym))))
-				(else
-				 option*.sym)))
-	     (option*.sym (cond ((memq 'typed-language option*.sym)
-				 => (lambda (ell)
-				      (cond ((memq 'strict-r6rs ell)
-					     ;;Both  STRICT-R6RS  and  TYPED-LANGUAGE
-					     ;;are present.   STRICT-R6RS comes after
-					     ;;TYPED-LANGUAGE: STRICT-R6RS wins.
-					     (remq 'typed-language option*.sym))
-					    (else
-					     option*.sym))))
-				(else
-				 option*.sym))))
-	option*.sym))
+    (define (%perform-language-selection option*.sym)
+      ;;The last option in the list wins.
+      ;;
+      (let recur ((selection	(options::expander-language))
+		  (option*.sym	option*.sym))
+	(if (pair? option*.sym)
+	    (recur (case (car option*.sym)
+		     ((default-language)	'default)
+		     ((typed-language)		'typed)
+		     ((strict-r6rs)		'strict-r6rs)
+		     (else			selection))
+		   (cdr option*.sym))
+	  selection)))
 
-    #| end of module: %PARSE-EVAL-OPTIONS |# )
+    #| end of module: %PARSE-EXPANDER-OPTIONS |# )
+
+;;; --------------------------------------------------------------------
+
+  (define-record-type (<compiler-options> make-compiler-options compiler-options?)
+    (fields
+      (immutable language	compiler-options.language)
+		;A  symbol  representing the  language  under  which to  compile  the
+		;expression.  One among: default, strict-r6rs.
+      #| end of FIELDS |# )
+    (protocol
+      (lambda (make-record)
+	(lambda (sexp)
+	  (receive (language)
+	      (%parse-compiler-options sexp)
+	    (make-record language))))))
+
+  (define <compiler-options>-rtd (record-type-descriptor        <compiler-options>))
+  (define <compiler-options>-rcd (record-constructor-descriptor <compiler-options>))
+
+  (module (%parse-compiler-options)
+
+    (define (%parse-compiler-options input-options)
+      (let* ((option*.sym	(%parse-input input-options))
+	     (option*.sym	(list-of-symbols.delete-first-duplicates option*.sym))
+	     (language		(%perform-language-selection option*.sym)))
+	(values language)))
+
+    (define (%parse-input input-options)
+      (let recur ((opts input-options))
+	(cond ((null? opts)
+	       '())
+	      ((pair? opts)
+	       (let ((sym (car opts)))
+		 (case sym
+		   ((default-language)
+		    (cons sym (recur (cdr opts))))
+		   ((strict-r6rs)
+		    (cons sym (recur (cdr opts))))
+		   (else
+		    (assertion-violation __module_who__ "unknown compiler option" sym)))))
+	      (else
+	       (syntax-violation __module_who__
+		 "invalid syntax in compiler options, expected list of symbols" input-options)))))
+
+    (define (%perform-language-selection option*.sym)
+      ;;The last option in the list wins.
+      ;;
+      (let recur ((selection	'default)
+		  (option*.sym	option*.sym))
+	(if (pair? option*.sym)
+	    (recur (case (car option*.sym)
+		     ((default-language)	'default)
+		     ((strict-r6rs)		'strict-r6rs)
+		     (else			selection))
+		   (cdr option*.sym))
+	  selection)))
+
+    #| end of module: %PARSE-COMPILER-OPTIONS |# )
 
   #| end of module: EVAL |# )
 

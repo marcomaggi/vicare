@@ -5140,13 +5140,13 @@
   (define (valid-option? opt-stx)
     (and (identifier? opt-stx)
 	 (case (identifier->symbol opt-stx)
-	   ((strict-r6rs typed-language)
+	   ((strict-r6rs typed-language default-language)
 	    #t)
 	   (else #f))))
   (syntax-match input-form.stx ()
     ((_ ?opt* ...)
      (for-all valid-option? ?opt*)
-     (list (core-prim-id 'quote) ?opt*))
+     (list (core-prim-id 'make-expander-options) (list (core-prim-id 'quote) ?opt*)))
     (_
      (__synner__ "invalid options"))))
 
@@ -5156,11 +5156,11 @@
   ;;
   (define (valid-option? opt-stx)
     (and (identifier? opt-stx)
-	 (memq (identifier->symbol opt-stx) '(strict-r6rs))))
+	 (memq (identifier->symbol opt-stx) '(strict-r6rs default-language))))
   (syntax-match input-form.stx ()
     ((_ ?opt* ...)
      (for-all valid-option? ?opt*)
-     (list (core-prim-id 'quote) ?opt*))
+     (list (core-prim-id 'make-compiler-options) (list (core-prim-id 'quote) ?opt*)))
     (_
      (__synner__ "invalid options"))))
 

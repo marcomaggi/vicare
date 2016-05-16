@@ -40,7 +40,21 @@
   (signatures
    ((_ <lexical-environment>)			=> <list>)
    ((_ <lexical-environment>
-       (list-of <symbol>) (list-of <symbol>))	=> <list>)))
+       <expander-options> <compiler-options>)	=> <list>)))
+
+(declare-core-primitive make-expander-options
+    (safe)
+  (signatures
+   (((list-of <symbol>))		=> (<expander-options>)))
+  (attributes
+   (_			effect-free result-true)))
+
+(declare-core-primitive make-compiler-options
+    (safe)
+  (signatures
+   (((list-of <symbol>))		=> (<compiler-options>)))
+  (attributes
+   (_			effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 

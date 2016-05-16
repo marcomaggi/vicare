@@ -4623,7 +4623,7 @@
 ;;; --------------------------------------------------------------------
 ;;; expander stuff
 
-    ;;This goes in "(psyntax system $all)" and it is used in this makefile.
+    ;;These go in "(psyntax system $all)" and it is used in this makefile.
     (current-library-collection)
 
     (initialise-expander				$expander)
@@ -4991,6 +4991,18 @@
     (make-returned-type-signature-condition		$expander)
     (returned-type-signature-condition?			$expander)
     (condition-returned-type-signature			$expander)
+
+    ;;These are for internal use in the expander.
+    (<expander-options>-rtd)
+    (<expander-options>-rcd)
+    (<expander-options>)
+    (make-expander-options)
+    (expander-options?)
+    (<compiler-options>-rtd)
+    (<compiler-options>-rcd)
+    (<compiler-options>)
+    (make-compiler-options)
+    (compiler-options?)
 
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff

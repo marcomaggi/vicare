@@ -9620,15 +9620,14 @@ The following bindings are exported by the library @library{vicare}.
 @defun eval @var{sexp} @var{environment}
 @defunx eval @var{sexp} @var{environment} @var{expander-options} @var{compiler-options}
 Extension of @func{eval} as defined by @rnrs{6}.  The arguments
-@var{expander-options} and @var{compiler-options} must be proper lists
-of symbols as returned by @func{expander-options} and
-@func{compiler-options}.
+@var{expander-options} and @var{compiler-options} must be objects
+returned by @func{expander-options} and @func{compiler-options}.
 @end defun
 
 
 @deffn Syntax expander-options @meta{symbol} @dots{}
-Expand to a list of symbols to be used as argument to @func{eval}.
-Supported @meta{symbol} options are:
+Expand to an object representing the expander options to be used as
+argument to @func{eval}.  Supported @meta{symbol} options are:
 
 @table @code
 @item strict-r6rs
@@ -9638,18 +9637,24 @@ report errors at run--time, rather than at expand--time.
 @item typed-language
 Turn on the tagged language extensions (@pxref{types, The typed
 language}).
+
+@item default-language
+This is the @rnrs{6} language without strict rules.
 @end table
 @end deffn
 
 
 @deffn Syntax compiler-options @meta{symbol} @dots{}
-Expand to a list of symbols to be used as argument to @func{eval}.
-Supported @meta{symbol} options are:
+Expand to an object representing the compiler options to be used as
+argument to @func{eval}.  Supported @meta{symbol} options are:
 
 @table @code
 @item strict-r6rs
 Adhere more strictly to the behaviour defined by @rnrs{6}.  For example:
 report errors at run--time, rather than at compile--time.
+
+@item default-language
+This is the @rnrs{6} language without strict rules.
 @end table
 @end deffn
 

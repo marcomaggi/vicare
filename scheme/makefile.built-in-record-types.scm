@@ -83,6 +83,16 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-built-in-record-type <expander-options>
+    <record>
+  make-expander-options expander-options?)
+
+(define-built-in-record-type <compiler-options>
+    <record>
+  make-compiler-options compiler-options?)
+
+;;; --------------------------------------------------------------------
+
 (define-built-in-record-type <lexical-environment>
     <record>
   #f environment?)

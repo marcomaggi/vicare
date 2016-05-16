@@ -140,27 +140,10 @@
 (declare-core-primitive make-file-options
     (safe)
   (signatures
-   ((<null>)			=> (<enum-set>))
+   ((<null>)				=> (<enum-set>))
    (((list-of <symbol>))		=> (<enum-set>)))
   (attributes
    (_			effect-free result-true)))
-
-(declare-core-primitive make-expander-options
-    (safe)
-  (signatures
-   ((<null>)			=> (<enum-set>))
-   (((list-of <symbol>))		=> (<enum-set>)))
-  (attributes
-   (_			effect-free result-true)))
-
-(declare-core-primitive make-compiler-options
-    (safe)
-  (signatures
-   ((<null>)			=> (<enum-set>))
-   (((list-of <symbol>))		=> (<enum-set>)))
-  (attributes
-   (_			effect-free result-true)))
-
 
 /section)
 

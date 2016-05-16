@@ -50,8 +50,8 @@
 (declare-core-primitive eval
     (safe)
   (signatures
-   ((_ T:lexical-environment)					=> T:object)
-   ((_ T:lexical-environment T:proper-list T:proper-list)	=> T:object)))
+   ((_ T:lexical-environment)			=> T:object)
+   ((_ T:lexical-environment T:record T:record)	=> T:object)))
 
 ;;; --------------------------------------------------------------------
 
