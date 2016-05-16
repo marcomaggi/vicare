@@ -42,8 +42,22 @@
 
 (declare-core-primitive values
     (safe)
+  ;;VALUES is  the only  function that  is allowed  to return  a different  number of
+  ;;values depending on the number of arguments.  We do not specify it here because a
+  ;;SIGNATURES like:
+  ;;
+  ;;   (signatures
+  ;;    (()			=> ())
+  ;;    ((<top>)		=> (<top>))
+  ;;    ((<top> <top>)		=> (<top> <top>))
+  ;;    ((<top> <top> . <list>)	=> (<top> <top> . <list>)))
+  ;;
+  ;;would  cause an  error when  computing  the type  signature union  of the  return
+  ;;values.  We  leave it fully  unspecified here and  rely on the  expander function
+  ;;CHI-VALUES-APPLICATION to compute the right retvals type signature.
+  ;;
   (signatures
-   (<list>		=> <list>))
+   (<list>				=> <list>))
   (attributes
    (_			effect-free)))
 

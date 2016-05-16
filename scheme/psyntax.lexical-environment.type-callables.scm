@@ -219,6 +219,7 @@
 		 (lambda (message cnd)
 		   (raise (condition (make-who-condition 'case-lambda-signature.retvals)
 				     (make-message-condition message)
+				     (make-irritants-condition sig)
 				     cnd)))
 		 (map lambda-signature.retvals (case-lambda-signature.clause-signature* sig)))
 	(case-lambda-signature.memoised-retvals-set! sig retvals.sig))))

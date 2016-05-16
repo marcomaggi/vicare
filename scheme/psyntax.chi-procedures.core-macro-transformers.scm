@@ -1721,7 +1721,9 @@
 	   (syntax-object.parse-standard-formals ?formals))
 	 (cond ((null? standard-formals.stx)
 		(%the-consumer-expects-no-values input-form.stx lexenv.run lexenv.expand
-						 caller-who return-values? ?producer consumer*.stx))
+						 caller-who return-values?
+						 standard-formals.stx formals.sig
+						 ?producer consumer*.stx))
 	       ((list-of-single-item? standard-formals.stx)
 		(let ((arg.id	(car standard-formals.stx)))
 		  (%the-consumer-expects-a-single-value input-form.stx lexenv.run lexenv.expand
@@ -1745,7 +1747,9 @@
 ;;; --------------------------------------------------------------------
 
   (define (%the-consumer-expects-no-values input-form.stx lexenv.run lexenv.expand
-					   caller-who return-values? producer.stx consumer*.stx)
+					   caller-who return-values?
+					   standard-formals.stx formals.sig
+					   producer.stx consumer*.stx)
     (let* ((producer.psi	(chi-expr producer.stx lexenv.run lexenv.expand))
 	   (producer.sig	(psi.retvals-signature producer.psi)))
       (case-signature-specs producer.sig
@@ -1769,6 +1773,12 @@
 	(()
 	 (%build-zero-values-output input-form.stx lexenv.run lexenv.expand
 				    caller-who return-values? producer.psi consumer*.stx))
+
+	((unspecified-values)
+	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
+					   caller-who return-values?
+					   standard-formals.stx formals.sig
+					   producer.psi consumer*.stx))
 
 	(else
 	 (raise
