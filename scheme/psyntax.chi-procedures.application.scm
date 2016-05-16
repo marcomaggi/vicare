@@ -41,8 +41,7 @@
   ;;and the sub-application form can be a SPLICE-FIRST-EXPAND syntax.
   ;;
   (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1
-				       condition call-with-values
-				       vector foldable-vector <nevector>-constructor)
+				       condition call-with-values)
     (((?nested-rator ?nested-rand* ...) ?rand* ...)
      ;;Sub-expression application.  It could be a nested expression application:
      ;;
@@ -67,15 +66,6 @@
 
     ((condition . ?rand*)
      (chi-condition-application input-form.stx lexenv.run lexenv.expand ?rand*))
-
-    ((vector . ?rand*)
-     (chi-vector-application input-form.stx lexenv.run lexenv.expand ?rand* 'vector))
-
-    ((foldable-vector . ?rand*)
-     (chi-vector-application input-form.stx lexenv.run lexenv.expand ?rand* 'foldable-vector))
-
-    ((<nevector>-constructor . ?rand*)
-     (chi-nevector-constructor-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
     ((apply ?rator ?rand* ...)
      (chi-apply-application input-form.stx lexenv.run lexenv.expand
@@ -470,116 +460,6 @@
 	    (<top>-ots)))))))
 
   #| end of module: CHI-VALUES-APPLICATION |# )
-
-
-(module (chi-vector-application chi-nevector-constructor-application)
-  ;;The input form has the syntax:
-  ;;
-  ;;   (vector ?rand ...)
-  ;;
-  ;;and RANDS.STX is the syntax object:
-  ;;
-  ;;   #'(?rand ...)
-  ;;
-  ;;which holds a  proper list of expressions.  The application  of VECTOR is special
-  ;;because  we  want  the  expression  to  return  a  type  signature  describing  a
-  ;;"<vector-type-spec>".
-  ;;
-  (import CLOSURE-APPLICATION-ERRORS)
-
-  (define-module-who chi-list-application)
-
-  (define (chi-nevector-constructor-application input-form.stx lexenv.run lexenv.expand rands.stx)
-    (syntax-match rands.stx ()
-      (()
-       (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
-	 (core-prim-id '<nevector>-constructor) '() 1 0))
-
-      ((?rand ?rand* ...)
-       (chi-vector-application input-form.stx lexenv.run lexenv.expand rands.stx '<nevector>-constructor))))
-
-  (define (chi-vector-application input-form.stx lexenv.run lexenv.expand rands.stx prim-name)
-    (syntax-match rands.stx ()
-      (()
-       ;;No arguments.  Just return the empty vector.
-       (make-psi input-form.stx
-	 (build-data no-source '#())
-	 (make-type-signature/single-value (<empty-vector>-ots))))
-
-      ((?rand ?rand* ...)
-       ;;Two or more values.
-       (let* ((rand*.stx  (cons ?rand ?rand*))
-	      (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
-	      (rand*.core (map psi.core-expr rand*.psi))
-	      (rand*.sig  (map psi.retvals-signature rand*.psi)))
-	 (let ((application.sig (%operand-signatures->application-signature input-form.stx rand*.stx rand*.sig)))
-	   (make-psi input-form.stx
-	     (build-application (syntax-annotation input-form.stx)
-		 (build-primref no-source prim-name)
-	       rand*.core)
-	     application.sig))))
-      ))
-
-  (define (%operand-signatures->application-signature input-form.stx rand*.stx rand*.sig)
-    (make-type-signature/single-value
-     (make-vector-type-spec
-      (map (lambda (rand.stx rand.sig)
-	     (%single-operand-signature->ots input-form.stx rand.stx rand.sig))
-	rand*.stx rand*.sig))))
-
-  (define* ({%single-operand-signature->ots object-type-spec?} input-form.stx rand.stx rand.sig)
-    (case-signature-specs rand.sig
-      ((single-value)
-       => (lambda (rand.ots)
-	    rand.ots))
-
-      (<no-return>
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __module_who__)
-			 (make-message-condition "expression used as application operand is typed as not returning")
-			 (make-syntax-violation input-form.stx rand.stx)
-			 (make-application-operand-signature-condition rand.sig)))))
-	 (case-expander-language
-	   ((typed)
-	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
-	   ((default)
-	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
-	    (<top>-ots))
-	   ((strict-r6rs)
-	    (<top>-ots)))))
-
-      (<list-of>
-       ;;The operand expression returns an unspecified number of values of specified,
-       ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
-       ;;run-time, if this operand returns a single value.
-       => (lambda (rand.ots)
-	    (list-of-type-spec.item-ots rand.ots)))
-
-      (<list>
-       ;;The  operand  expression   returns  an  unspecified  number   of  values  of
-       ;;unspecified type.   We relay  on the  automatically generated  validation to
-       ;;check at run-time if the expression returns a single value.
-       (<top>-ots))
-
-      (else
-       ;;The operand expression returns zero, two or more values.
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __module_who__)
-			 (make-message-condition "expression used as application operand returns multiple values")
-			 (make-syntax-violation input-form.stx rand.stx)
-			 (make-application-operand-signature-condition rand.sig)))))
-	 (case-expander-language
-	   ((typed)
-	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
-	   ((default)
-	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
-	    (<top>-ots))
-	   ((strict-r6rs)
-	    (<top>-ots)))))))
-
-  #| end of module: CHI-VECTOR-APPLICATION |# )
 
 
 (module (chi-condition-application)
@@ -1372,6 +1252,9 @@
    list-id			list-id?
    foldable-list-id		foldable-list-id?
    <nelist>-constructor-id	<nelist>-constructor-id?
+   vector-id			vector-id?
+   foldable-vector-id		foldable-vector-id?
+   <nevector>-constructor-id	<nevector>-constructor-id?
    car-id			car-id?
    cdr-id			cdr-id?
    $car-id			$car-id?
@@ -1397,6 +1280,9 @@
     (declare list-id			list-id?			list)
     (declare foldable-list-id		foldable-list-id?		foldable-list)
     (declare <nelist>-constructor-id	<nelist>-constructor-id?	<nelist>-constructor)
+    (declare vector-id			vector-id?			vector)
+    (declare foldable-vector-id		foldable-vector-id?		foldable-vector)
+    (declare <nevector>-constructor-id	<nevector>-constructor-id?	<nevector>-constructor)
     (declare car-id			car-id?				car)
     (declare cdr-id			cdr-id?				cdr)
     (declare $car-id			$car-id?			$car)
@@ -1641,6 +1527,10 @@
 		(foldable-list-id?		rator.stx)
 		(<nelist>-constructor-id?	rator.stx))
 	    (chi-list-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	   ((or (vector-id?			rator.stx)
+		(foldable-vector-id?		rator.stx)
+		(<nevector>-constructor-id?	rator.stx))
+	    (chi-vector-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
 	   (( car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'car))
 	   (( cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'cdr))
 	   (($car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$car))
@@ -1981,6 +1871,35 @@
 	       "internal error, core primitive operand of wrong type" input-form.stx rands.sig)))))
 
   #| end of module: CHI-CDR-APPLICATION |# )
+
+
+;;;; special applications: VECTOR, FOLDABLE-VECTOR, <NEVECTOR>-CONSTRUCTOR
+
+(define (chi-vector-application input-form.stx lexenv.run lexenv.expand
+				rator.psi rand*.psi rands.sig)
+  ;;The input form has the syntax:
+  ;;
+  ;;   (vector ?expr ...)
+  ;;
+  ;;We have  already validated  the number  and type of  the operands.   The argument
+  ;;RATOR.PSI     represents    the     expanded    VECTOR,     FOLDABLE-VECTOR    or
+  ;;<NEVECTOR>-CONSTRUCTOR  syntactic  identifier.   The   argument  RAND*.PSI  is  a
+  ;;(possibly empty) vector of items, each having a single value type signature.  The
+  ;;argument  RANDS.SIG  is  a  "<type-signature>"  representing  the  types  of  the
+  ;;operands.
+  ;;
+  ;;The application  of VECTOR is  special because we want  the expression to  return a
+  ;;type signature describing a sub-type of "<vector>".
+  ;;
+  (let ((application.sig (let ((rands.specs (type-signature.object-type-specs rands.sig)))
+			   (if (null? rands.specs)
+			       (make-type-signature/single-null)
+			     (make-type-signature/single-value (make-vector-type-spec rands.specs))))))
+    (make-psi input-form.stx
+      (build-application (syntax-annotation input-form.stx)
+	  (psi.core-expr rator.psi)
+	(map psi.core-expr rand*.psi))
+      application.sig)))
 
 
 ;;;; done
