@@ -315,7 +315,7 @@
 	   ;;INPUT-SIGNATURE must  be a proper  or improper list of  type identifiers
 	   ;;and/or instances of "<object-type-spec>".
 	   (let recur ((stx input-signature))
-	     (syntax-match stx (<list> <no-return> list-of)
+	     (syntax-match stx (<no-return> <list> <nelist> list-of list)
 	       (()
 		;;STX is a proper list.  Good.
 		'())
@@ -323,8 +323,16 @@
 	       (<list>
 		(<list>-ots))
 
+	       (<nelist>
+		(<nelist>-ots))
+
 	       ((list-of ?item-type)
 		(make-list-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)))
+
+	       ((list ?item0 ?item* ...)
+		(make-list-type-spec (map (lambda (item.ann)
+					    (type-annotation->object-type-spec item.ann lexenv))
+				       (cons ?item0 ?item*))))
 
 	       (<no-return>
 		(syntax-violation caller-who
@@ -333,8 +341,10 @@
 
 	       (?rest-ots
 		(object-type-spec? ?rest-ots)
-		(cond ((or (list-of-type-spec? ?rest-ots)
-			   (<list>-ots? ?rest-ots))
+		(cond ((or (list-of-type-spec?	?rest-ots)
+			   (list-type-spec?	?rest-ots)
+			   (<nelist>-ots?	?rest-ots)
+			   (<list>-ots?		?rest-ots))
 		       ?rest-ots)
 		      (else
 		       (syntax-violation caller-who
@@ -701,6 +711,12 @@
 	  ;;
 	  #t)
 
+	 ((<nelist>-ots? super-specs)
+	  ;;The super signature  is an improper list: either  a standalone "<nelist>"
+	  ;;or a list with  a "<nelist>" in tail position.  If there  is at least one
+	  ;;other sub item: it matches.
+	  (pair? sub-specs))
+
 	 ((list-of-type-spec? super-specs)
 	  ;;The  super   signature  is   an  improper   list:  either   a  standalone
 	  ;;"<list-of-type-spec>"  or a  list  with a  "<list-of-type-spec>" in  tail
@@ -762,8 +778,29 @@
 		    (let ((sub-item.ots (list-of-type-spec.item-ots sub-specs)))
 		      (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots)))
 
+		   ((list-type-spec? sub-specs)
+		    ;;This is the case:
+		    ;;
+		    ;;  super-signature == #'(<string> <string> . (list-of <number>))
+		    ;;  sub-signature   == #'(<string> <string> . (list <fixnum>))
+		    ;;
+		    ;;and we want it to match if the item OTSs match.
+		    (for-all (lambda (sub-item.ots)
+			       (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
+		      (list-type-spec.item-ots* sub-specs)))
+
 		   (else
 		    (assertion-violation the-who "invalid sub-signature" sub-signature)))))))
+
+	 ((list-type-spec? super-specs)
+	  ;;The  super   signature  is   an  improper   list:  either   a  standalone
+	  ;;"<list-type-spec>" or a list with a "<list-type-spec>" in tail position.
+	  (cond ((list-type-spec? sub-specs)
+		 (for-all (lambda (super-item.ots sub-item.ots)
+			    (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
+		   (list-type-spec.item-ots* super-specs)
+		   (list-type-spec.item-ots* sub-specs)))
+		(else #f)))
 
 	 (else
 	  (assertion-violation the-who "invalid super-signature" super-signature))))))))
@@ -830,6 +867,12 @@
 	  ;;
 	  #t)
 
+	 ((<nelist>-ots? super-specs)
+	  ;;The super signature  is an improper list: either  a standalone "<nelist>"
+	  ;;or a list with  a "<nelist>" in tail position.  If there  is at least one
+	  ;;other sub item: it matches.
+	  (pair? sub-specs))
+
 	 ((list-of-type-spec? super-specs)
 	  ;;The  super   signature  is   an  improper   list:  either   a  standalone
 	  ;;"<list-of-type-spec>"  or a  list  with a  "<list-of-type-spec>" in  tail
@@ -893,8 +936,31 @@
 		      (or (object-type-spec.matching-super-and-sub?   super-item.ots sub-item.ots)
 			  (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))))
 
+		   ((list-type-spec? sub-specs)
+		    ;;This is the case:
+		    ;;
+		    ;;  super-signature == #'(<string> <string> . (list-of <number>))
+		    ;;  sub-signature   == #'(<string> <string> . (list <fixnum>))
+		    ;;
+		    ;;and we want it to match if the item OTSs match.
+		    (for-all (lambda (sub-item.ots)
+			       (or (object-type-spec.matching-super-and-sub?   super-item.ots sub-item.ots)
+				   (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots)))
+		      (list-type-spec.item-ots* sub-specs)))
+
 		   (else
 		    (assertion-violation the-who "invalid sub-signature" sub-signature)))))))
+
+	 ((list-type-spec? super-specs)
+	  ;;The  super   signature  is   an  improper   list:  either   a  standalone
+	  ;;"<list-type-spec>" or a list with a "<list-type-spec>" in tail position.
+	  (cond ((list-type-spec? sub-specs)
+		 (for-all (lambda (super-item.ots sub-item.ots)
+			    (or (object-type-spec.matching-super-and-sub?   super-item.ots sub-item.ots)
+				(object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots)))
+		   (list-type-spec.item-ots* super-specs)
+		   (list-type-spec.item-ots* sub-specs)))
+		(else #f)))
 
 	 (else
 	  (assertion-violation the-who "invalid super-signature" super-signature))))))))
@@ -964,7 +1030,6 @@
 	       state)
 	      (else
 	       ;;There is an unspecified number of rest operands, of unknown type.
-	       (assert (or (<list>-ots? rands.ots) (list-of-type-spec? rands.ots)))
 	       'possible-match)))
 
        ((<list>-ots? args.ots)
@@ -981,6 +1046,32 @@
 	;;Good.  And we are done here, let's return the final state.
 	state)
 
+       ((<nelist>-ots? args.ots)
+	;;The operator accepts one or more operands of any type.
+	(cond ((pair? rands.ots)
+	       ;;There is at least one more operand.  Good.
+	       state)
+	      ((null? rands.ots)
+	       ;;No more operands.  Bad.
+	       'no-match)
+	      ((<list>-ots? rands.ots)
+	       ;;There is an unspecified number of rest operands, of unknown type.
+	       'possible-match)
+	      ((<nelist>-ots? rands.ots)
+	       ;;There is  an unspecified number  of rest operands, of  unknown type,
+	       ;;but at least one.
+	       state)
+	      ((list-of-type-spec? rands.ots)
+	       ;;There is an unspecified number of rest operands, of unknown type.
+	       'possible-match)
+	      ((list-type-spec? rands.ots)
+	       ;;There is at least one more operand.  Good.
+	       state)
+	      (else #f)))
+
+       ((list-type-spec? args.ots)
+	(loop state (list-type-spec.item-ots* args.ots) rands.ots))
+
        (else
 	;;The operator accepts zero or more operands of a specified type.  Example:
 	;;
@@ -992,6 +1083,7 @@
 	;;   ((lambda {args (list-of <fixnum>)} ?rator-body)
 	;;    ?rand ...)
 	;;
+	#;(assert (list-of-type-spec? args.ots))
 	(%match-rest-argument-against-operands state (list-of-type-spec.item-ots args.ots) rands.ots)))))
 
   (define (%match-rest-argument-against-operands state item.ots rands.ots)

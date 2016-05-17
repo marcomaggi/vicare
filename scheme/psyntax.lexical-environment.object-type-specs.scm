@@ -4013,7 +4013,7 @@
   ;;
   ;;the  type annotations  for the  ARGS and  REST arguments  are special:  they must
   ;;represent  lists.  It  is  established that  such type  annotations  can be  only
-  ;;"<list>" or  "(list-of ?type)".
+  ;;"<list>", "<nelist>", "(list ?type ?type* ...)" or "(list-of ?type)".
   ;;
   ;;This  function  parses   such  type  annotations  and  returns   an  instance  of
   ;;"<object-type-spce>"  representing it.   If the  type annotation  is invalid:  an
@@ -4024,12 +4024,18 @@
   ((annotation.stx lexenv name.stx)
    (define (%error)
      (syntax-violation __who__ "invalid type annotation in tail position" annotation.stx))
-   (syntax-match annotation.stx (<list> list-of)
+   (syntax-match annotation.stx (<list> <nelist> list-of list)
      (<list>
       (<list>-ots))
+     (<nelist>
+      (<nelist>-ots))
      ((list-of ?type-ann)
       (make-list-of-type-spec (type-annotation->object-type-spec ?type-ann lexenv)
 			      name.stx))
+     ((list ?item0 ?item* ...)
+      (make-list-type-spec (map (lambda (item.ann)
+				  (type-annotation->object-type-spec item.ann lexenv))
+			     (cons ?item0 ?item*))))
      ;;This allows:
      ;;
      ;;   (define-type <list-of-fixnums> (list-of <fixnum>))
@@ -4049,12 +4055,16 @@
 (define* (improper-object-type-specs->list-and-rest specs)
   (let loop ((ell	specs)
 	     (item*	'()))
-    (syntax-match ell (<list> list-of)
+    (syntax-match ell (<list> <nelist> list-of list)
       (()
        (values (reverse item*) '()))
       (<list>
        (values (reverse item*) ell))
+      (<nelist>
+       (values (reverse item*) ell))
       ((list-of ?type)
+       (values (reverse item*) ell))
+      ((list ?item0 ?item* ...)
        (values (reverse item*) ell))
       ((?car . ?cdr)
        (loop ?cdr (cons ?car item*)))

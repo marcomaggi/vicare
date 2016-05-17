@@ -61,23 +61,31 @@
   ((stx)
    (syntax-object.type-signature? stx (current-inferior-lexenv)))
   ((stx lexenv)
-   (syntax-match stx (<no-return> <list> list-of <void>)
+   (syntax-match stx (<no-return> <list> <nelist> list-of list <void>)
      (<no-return>
       #t)
      (<list>
       #t)
+     (<nelist>
+      #t)
      ((list-of ?type-annotation)
       (syntax-object.type-annotation? ?type-annotation))
+     ((list ?type0 ?type* ...)
+      (for-all syntax-object.type-annotation? (cons ?type0 ?type*)))
      ((<void>)
       #t)
      (else
       (let recur ((stx stx))
-	(syntax-match stx (<list> list-of)
+	(syntax-match stx (<list> <nelist> list-of list)
 	  (() #t)
 	  (<list>
 	   #t)
+	  (<nelist>
+	   #t)
 	  ((list-of ?type-annotation)
 	   (syntax-object.type-annotation? ?type-annotation))
+	  ((list ?type0 ?type* ...)
+	   (for-all syntax-object.type-annotation? (cons ?type0 ?type*)))
 	  (?rest-id
 	   (identifier? ?rest-id)
 	   ;;This is to allow type identifiers defined as:
@@ -87,7 +95,9 @@
 	   ;;
 	   (try
 	       (let ((ots (id->object-type-spec ?rest-id lexenv)))
-		 (or (<list>-ots? ots)
+		 (or (<list>-ots?        ots)
+		     (<nelist>-ots?      ots)
+		     (list-type-spec?    ots)
 		     (list-of-type-spec? ots)))
 	     (catch E
 	       (&syntactic-identifier-resolution
