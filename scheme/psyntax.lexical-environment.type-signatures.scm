@@ -162,7 +162,7 @@
 	      (declare signature.no-return?	<no-return>-ots?)
 	      (declare signature.empty?		null?)
 	      (declare signature.list?		<list>-ots?)
-	      (declare signature.list-of?	list-of-type-spec?)
+	      (declare signature.list-of-spec?	list-of-type-spec?)
 	      #| end of LET-SYNTAX |# )
 	    ;;
 	    (define (signature.single-value?)
@@ -232,9 +232,9 @@
        (sys::syntax ((signature.unspecified-values?)	?body0 ?body ...)))
 
       ((<list-of> => ?body)
-       (sys::syntax ((signature.list-of?)		(?body signature.specs))))
+       (sys::syntax ((signature.list-of-spec?)		(?body signature.specs))))
       ((<list-of> ?body0 ?body ...)
-       (sys::syntax ((signature.list-of?)		?body0 ?body ...)))
+       (sys::syntax ((signature.list-of-spec?)		?body0 ?body ...)))
 
       ((<list> ?body0 ?body ...)
        (sys::syntax ((signature.list?)			?body0 ?body ...)))
@@ -672,6 +672,8 @@
 		 ;;If the super-type is actually a super type of the sub-type good.
 		 (and (object-type-spec.matching-super-and-sub? (car super-specs) (car sub-specs))
 		      (recur (cdr super-specs) (cdr sub-specs))))
+		((list-type-spec? sub-specs)
+		 (recur super-specs (list-type-spec.item-ots* sub-specs)))
 		(else
 		 ;;There are more super-types than sub-types, for example:
 		 ;;
@@ -715,7 +717,9 @@
 	  ;;The super signature  is an improper list: either  a standalone "<nelist>"
 	  ;;or a list with  a "<nelist>" in tail position.  If there  is at least one
 	  ;;other sub item: it matches.
-	  (pair? sub-specs))
+	  (or (pair?		sub-specs)
+	      (<nelist>-ots?	sub-specs)
+	      (list-type-spec?	sub-specs)))
 
 	 ((list-of-type-spec? super-specs)
 	  ;;The  super   signature  is   an  improper   list:  either   a  standalone
@@ -795,12 +799,15 @@
 	 ((list-type-spec? super-specs)
 	  ;;The  super   signature  is   an  improper   list:  either   a  standalone
 	  ;;"<list-type-spec>" or a list with a "<list-type-spec>" in tail position.
-	  (cond ((list-type-spec? sub-specs)
-		 (for-all (lambda (super-item.ots sub-item.ots)
-			    (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
-		   (list-type-spec.item-ots* super-specs)
-		   (list-type-spec.item-ots* sub-specs)))
-		(else #f)))
+	  (let ((super-item*.ots (list-type-spec.item-ots* super-specs)))
+	    (cond ((list-type-spec? sub-specs)
+		   (for-all (lambda (super-item.ots sub-item.ots)
+			      (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
+		     super-item*.ots
+		     (list-type-spec.item-ots* sub-specs)))
+		  ((pair? sub-specs)
+		   (recur super-item*.ots sub-specs))
+		  (else #f))))
 
 	 (else
 	  (assertion-violation the-who "invalid super-signature" super-signature))))))))
@@ -820,7 +827,7 @@
       #f)
      (else
       (let recur ((super-specs	super-specs)
-		  (sub-specs		sub-specs))
+		  (sub-specs	sub-specs))
 	(cond
 	 ((pair? super-specs)
 	  (cond ((pair? sub-specs)
@@ -828,6 +835,8 @@
 		 (and (or (object-type-spec.matching-super-and-sub?   (car super-specs) (car sub-specs))
 			  (object-type-spec.compatible-super-and-sub? (car super-specs) (car sub-specs)))
 		      (recur (cdr super-specs) (cdr sub-specs))))
+		((list-type-spec? sub-specs)
+		 (recur super-specs (list-type-spec.item-ots* sub-specs)))
 		(else
 		 ;;There are more super-types than sub-types, for example:
 		 ;;
@@ -871,7 +880,11 @@
 	  ;;The super signature  is an improper list: either  a standalone "<nelist>"
 	  ;;or a list with  a "<nelist>" in tail position.  If there  is at least one
 	  ;;other sub item: it matches.
-	  (pair? sub-specs))
+	  (or (pair?			sub-specs)
+	      (<nelist>-ots?		sub-specs)
+	      (<list>-ots?		sub-specs)
+	      (list-type-spec?		sub-specs)
+	      (list-of-type-spec?	sub-specs)))
 
 	 ((list-of-type-spec? super-specs)
 	  ;;The  super   signature  is   an  improper   list:  either   a  standalone
@@ -954,13 +967,16 @@
 	 ((list-type-spec? super-specs)
 	  ;;The  super   signature  is   an  improper   list:  either   a  standalone
 	  ;;"<list-type-spec>" or a list with a "<list-type-spec>" in tail position.
-	  (cond ((list-type-spec? sub-specs)
-		 (for-all (lambda (super-item.ots sub-item.ots)
-			    (or (object-type-spec.matching-super-and-sub?   super-item.ots sub-item.ots)
-				(object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots)))
-		   (list-type-spec.item-ots* super-specs)
-		   (list-type-spec.item-ots* sub-specs)))
-		(else #f)))
+	  (let ((super-item*.ots (list-type-spec.item-ots* super-specs)))
+	    (cond ((list-type-spec? sub-specs)
+		   (for-all (lambda (super-item.ots sub-item.ots)
+			      (or (object-type-spec.matching-super-and-sub?   super-item.ots sub-item.ots)
+				  (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots)))
+		     super-item*.ots
+		     (list-type-spec.item-ots* sub-specs)))
+		  ((pair? sub-specs)
+		   (recur super-item*.ots sub-specs))
+		  (else #f))))
 
 	 (else
 	  (assertion-violation the-who "invalid super-signature" super-signature))))))))
@@ -1012,11 +1028,15 @@
 	      ((null? rands.ots)
 	       ;;One more argument and no more operands.  Bad.
 	       'no-match)
-	      ((<list>-ots? rands.ots)
+	      ((or (<list>-ots? rands.ots)
+		   (<nelist>-ots? rands.ots))
 	       ;;There is an unspecified number of rest operands, of unknown type.
 	       'possible-match)
+	      ((list-type-spec? rands.ots)
+	       (loop state args.ots (list-type-spec.item-ots* rands.ots)))
 	      (else
 	       ;;There is an unspecified number of rest operands, of known type.
+	       #;(assert (list-of-type-spec? rands.ots))
 	       (%match-arguments-against-rest-operands args.ots (list-of-type-spec.item-ots rands.ots)))))
 
        ((null? args.ots)
@@ -1028,8 +1048,13 @@
 	       ;;No more  arguments and  no more  operands.  Good.   And we  are done
 	       ;;here, let's return the final state.
 	       state)
+	      ((or (<nelist>-ots?   rands.ots)
+		   (list-type-spec? rands.ots))
+	       ;;There is at least one other operand.  Bad.
+	       'no-match)
 	      (else
 	       ;;There is an unspecified number of rest operands, of unknown type.
+	       #;(assert (list-of-type-spec? rands.ots))
 	       'possible-match)))
 
        ((<list>-ots? args.ots)

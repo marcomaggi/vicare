@@ -722,6 +722,11 @@
   (check-for-true	(type-signature-super-and-sub? <list> (<top> <top>)))
   (check-for-true	(type-signature-super-and-sub? <list> (<top> <top> . <list>)))
 
+  (check-for-false	(type-signature-super-and-sub? <nelist> ()))
+  (check-for-true	(type-signature-super-and-sub? <nelist> (<top>)))
+  (check-for-true	(type-signature-super-and-sub? <nelist> (<top> <top>)))
+  (check-for-true	(type-signature-super-and-sub? <nelist> (<top> <top> . <list>)))
+
 ;;; --------------------------------------------------------------------
 ;;; improper lists
 
@@ -734,6 +739,41 @@
 
   (check-for-false	(type-signature-super-and-sub? (<number> <number> . <list>) (<fixnum>)))
   (check-for-true	(type-signature-super-and-sub? (<number> <number> . <list>) (<fixnum> <fixnum>)))
+
+;;; --------------------------------------------------------------------
+;;; list specs
+
+  (check-for-true	(type-signature-super-and-sub? <list>		(list <top>)))
+  (check-for-true	(type-signature-super-and-sub? <nelist>		(list <top>)))
+  (check-for-true	(type-signature-super-and-sub? (list <top>)	(list <top>)))
+
+  (check-for-true	(type-signature-super-and-sub? <list>		(list <fixnum>)))
+  (check-for-true	(type-signature-super-and-sub? <nelist>		(list <fixnum>)))
+  (check-for-true	(type-signature-super-and-sub? (list <fixnum>)	(list <fixnum>)))
+
+  (check-for-true	(type-signature-super-and-sub? (list <top>)	(list <fixnum>)))
+  (check-for-false	(type-signature-super-and-sub? (list <fixnum>)	(list <top>)))
+
+  (check-for-true	(type-signature-super-and-sub? (list <number> <number>)
+						       (list <fixnum> <flonum>)))
+
+  (check-for-true	(type-signature-super-and-sub? (list-of <number>)
+						       (list <fixnum> <flonum>)))
+
+  (check-for-true	(type-signature-super-and-sub? (<top> <top> <top>)
+						       (list <top> <top> <top>)))
+  (check-for-true	(type-signature-super-and-sub? (<fixnum> <fixnum> <fixnum>)
+						       (list <fixnum> <fixnum> <fixnum>)))
+
+  (check-for-true	(type-signature-super-and-sub? (list <top> <top> <top>)
+						       (<top> <top> <top>)))
+  (check-for-true	(type-signature-super-and-sub? (list <fixnum> <fixnum> <fixnum>)
+						       (<fixnum> <fixnum> <fixnum>)))
+
+  (check-for-true	(type-signature-super-and-sub? (list <number> <number> <number>)
+						       (<number> <number> <number>)))
+  (check-for-true	(type-signature-super-and-sub? (list <fixnum> <fixnum> <fixnum>)
+						       (<fixnum> <fixnum> <fixnum>)))
 
   (void))
 
@@ -810,6 +850,26 @@
   (doit (pair <top> <null>)		<nelist>		=> possible-match)
   (doit (pair <top> <list>)		<nelist>		=> possible-match)
   (doit (pair <top> (list-of <string>))	<nelist>		=> possible-match)
+
+  ;;tests for list specs
+  (doit <list>				(list <top>)		=> exact-match)
+  (doit <nelist>			(list <top>)		=> exact-match)
+  (doit (list <top>)			(list <top>)		=> exact-match)
+
+  (doit <list>				(list <fixnum>)		=> exact-match)
+  (doit <nelist>			(list <fixnum>)		=> exact-match)
+  (doit (list <fixnum>)			(list <fixnum>)		=> exact-match)
+
+  (doit (list <top>)			(list <fixnum>)		=> exact-match)
+  (doit (list <fixnum>)			(list <top>)		=> possible-match)
+  (doit (list <fixnum>)			(list <number>)		=> possible-match)
+  (doit (list <fixnum>)			(list <string>)		=> no-match)
+
+  (doit (list <number> <number>)
+	(list <fixnum> <flonum>)				=> exact-match)
+
+  (doit (list-of <number>)
+	(list <fixnum> <flonum>)				=> exact-match)
 
 ;;; --------------------------------------------------------------------
 ;;; type unions
