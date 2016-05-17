@@ -1443,6 +1443,7 @@
 ;;;; special applications: APPLY
 
 (module (chi-apply-application)
+  (import CLOSURE-APPLICATION-ERRORS SPECIAL-PRIMITIVES)
   (define-module-who chi-apply-application)
 
   (define (chi-apply-application input-form.stx lexenv.run lexenv.expand
@@ -1468,16 +1469,26 @@
 	    (psi.core-expr rator.psi)
 	  (map psi.core-expr rand*.psi))
 	application.sig))
-    (assert (<= 2 (length rand*.psi)))
+    #;(assert (<= 2 (length rand*.psi)))
     (let* ((rand*.ots		(type-signature.object-type-specs rands.sig))
 	   (proc.ots		(car rand*.ots))
-	   (proc-rands.ots	(append (cdr rand*.ots)
+	   (proc-rands.specs	(append (%strip-first-and-last rand*.ots)
 					(%last-rand-specs input-form.stx
 							  (car (last-pair rand*.psi))
 							  (car (last-pair rand*.ots))))))
-      (cond ((closure-type-spec? proc.ots)
+      (cond ((values-id? (psi.input-form (car rand*.psi)))
+	     ;;VALUES is  special because it accepts  any number of arguments  of any
+	     ;;type and  it returns  a different  number of  values depending  on the
+	     ;;number of operands.
+	     (%build-default-application (make-type-signature proc-rands.specs)))
+
+	    ((closure-type-spec? proc.ots)
 	     ;;The first operand expression returns a closure object.  Good.
-	     (%build-default-application (case-lambda-signature.retvals (closure-type-spec.signature proc.ots))))
+	     (%build-closure-application input-form.stx
+					 (car rand*.psi) (cdr rand*.psi)
+					 proc.ots proc-rands.specs
+					 (+ -2 (length rand*.psi))
+					 %build-default-application))
 
 	    ((<procedure>-ots? proc.ots)
 	     ;;The  first  operand  expression  returns a  single  value,  marked  as
@@ -1490,6 +1501,8 @@
 	     ;;"<procedure>".   Return a  procedure application  and we  will see  at
 	     ;;run-time what happens; this is standard Scheme behaviour.
 	     (%build-default-application (make-type-signature/fully-unspecified))))))
+
+;;; --------------------------------------------------------------------
 
   (define (%last-rand-specs input-form.stx last-rand.psi last-rand.ots)
     (define (common)
@@ -1522,6 +1535,51 @@
 	      (<list>-ots))
 	     ((strict-r6rs)
 	      (<list>-ots))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%build-closure-application input-form.stx
+				      proc.psi proc-rand*.psi
+				      proc.ots proc-rands.specs
+				      min-given-operands-count
+				      %build-default-application)
+    ;;PROC-RANDS.SPECS is a proper or improper list of "<object-type-spec>" instances
+    ;;representing the type of the operands.
+    ;;
+    (let ((proc.clambda-sig (closure-type-spec.signature proc.ots)))
+      ;;PROC.CLAMBDA-SIG is an instance  of "<case-lambda-signature>".  The number of
+      ;;operands must  be in the correct  range of arguments accepted  by the closure
+      ;;object.
+      (receive (minimum-arguments-count maximum-arguments-count)
+	  (case-lambda-signature.min-and-max-argvals proc.clambda-sig)
+	(if (list? proc-rands.specs)
+	    ;;There is a known number of operands.
+	    (let ((given-operands-count (length proc-rands.specs)))
+	      (cond ((< maximum-arguments-count given-operands-count)
+		     (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
+		       (psi.input-form proc.psi) (map psi.input-form proc-rand*.psi)
+		       maximum-arguments-count given-operands-count))
+		    ((> minimum-arguments-count given-operands-count)
+		     (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
+		       (psi.input-form proc.psi) (map psi.input-form proc-rand*.psi)
+		       minimum-arguments-count given-operands-count))))
+	  ;;There is an unknown number of operands, but we know the minimum number.
+	  (when (< maximum-arguments-count min-given-operands-count)
+	    (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
+	      (psi.input-form proc.psi) (map psi.input-form proc-rand*.psi)
+	      maximum-arguments-count min-given-operands-count)))))
+      (%build-default-application (case-lambda-signature.retvals (closure-type-spec.signature proc.ots))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%strip-first-and-last ell)
+    ;;Strip the  first and last  items from ELL.   ELL must be a  list of at  least 2
+    ;;items.
+    ;;
+    (let recur ((ell (cdr ell)))
+      (if (null? (cdr ell))
+	  '()
+	(cons (car ell) (recur (cdr ell))))))
 
   #| end of module: CHI-APPLY-APPLICATION |# )
 

@@ -2727,7 +2727,35 @@
 	       (cast-signature (<top>) " mamma"))	=> (<string>))
     #| end of LET |# )
 
-  (void))
+  #| end of PARAMETRISE |# )
+
+
+(parametrise ((check-test-name	'apply-values))
+
+  (doit (apply values '())
+	=> ())
+
+  (doit (apply values 1 2.3 '())
+	=> (<positive-fixnum> <positive-flonum>))
+
+  (doit (apply values 1 2.3 '(a "b"))
+	=> (<positive-fixnum> <positive-flonum> (enumeration a) <string>))
+
+  (doit (apply values '(a "b"))
+	=> ((enumeration a) <string>))
+
+;;; --------------------------------------------------------------------
+
+  (doit (apply values 1 2.3 (unsafe-cast-signature (<list>) '(a "b")))
+	=> (<positive-fixnum> <positive-flonum> . <list>))
+
+  (doit (apply values 1 2.3 (unsafe-cast-signature (<nelist>) '(a "b")))
+	=> (<positive-fixnum> <positive-flonum> . <nelist>))
+
+  (doit (apply values 1 2.3 (unsafe-cast-signature ((list-of <symbol>)) '(a b)))
+	=> (<positive-fixnum> <positive-flonum> . (list-of <symbol>)))
+
+  #| end of parametrise |# )
 
 
 (parametrise ((check-test-name	'define-in-body))
