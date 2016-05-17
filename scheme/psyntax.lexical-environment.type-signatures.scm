@@ -66,14 +66,15 @@
 
 ;;; helpers
    case-signature-specs
-   single-value unspecified-values <list-of> <closure>
+   single-value unspecified-values <list-of-spec> <list-spec> <closure>
 
    #| end of exports |# )
 
 
 ;;;; syntax helpers
 
-(define-auxiliary-syntaxes single-value unspecified-values <closure> <list-of>)
+(define-auxiliary-syntaxes single-value unspecified-values <closure>
+  <list-of-spec> <list-spec>)
 
 (define-syntax* (case-signature-specs input-form.stx)
   ;;A typical use for an expression used as operand or similar:
@@ -162,7 +163,9 @@
 	      (declare signature.no-return?	<no-return>-ots?)
 	      (declare signature.empty?		null?)
 	      (declare signature.list?		<list>-ots?)
+	      (declare signature.nelist?	<nelist>-ots?)
 	      (declare signature.list-of-spec?	list-of-type-spec?)
+	      (declare signature.list-spec?	list-type-spec?)
 	      #| end of LET-SYNTAX |# )
 	    ;;
 	    (define (signature.single-value?)
@@ -193,7 +196,8 @@
   (define (%parse-single-clause clause.stx)
     (sys::syntax-case clause.stx (=> single-value unspecified-values
 				     <top> <untyped> <closure> <procedure>
-				     <no-return> <void> <list> <list-of>)
+				     <no-return> <void> <list> <nelist>
+				     <list-of-spec> <list-spec>)
       ((() ?body0 ?body ...)
        (sys::syntax ((signature.empty?)			?body0 ?body ...)))
 
@@ -231,13 +235,21 @@
       (((unspecified-values) ?body0 ?body ...)
        (sys::syntax ((signature.unspecified-values?)	?body0 ?body ...)))
 
-      ((<list-of> => ?body)
+      ((<list-of-spec> => ?body)
        (sys::syntax ((signature.list-of-spec?)		(?body signature.specs))))
-      ((<list-of> ?body0 ?body ...)
+      ((<list-of-spec> ?body0 ?body ...)
        (sys::syntax ((signature.list-of-spec?)		?body0 ?body ...)))
+
+      ((<list-spec> => ?body)
+       (sys::syntax ((signature.list-spec?)		(?body signature.specs))))
+      ((<list-spec> ?body0 ?body ...)
+       (sys::syntax ((signature.list-spec?)		?body0 ?body ...)))
 
       ((<list> ?body0 ?body ...)
        (sys::syntax ((signature.list?)			?body0 ?body ...)))
+
+      ((<nelist> ?body0 ?body ...)
+       (sys::syntax ((signature.nelist?)		?body0 ?body ...)))
 
       (_
        (synner "invalid input clause" clause.stx))))
@@ -296,7 +308,7 @@
 	;;position there must be a list type.
 	;;
 	#;(debug-print __who__ input-signature)
-	(syntax-match input-signature (<no-return> <void>)
+	(syntax-match input-signature (<no-return>)
 	  (<no-return>
 	   ;;INPUT-SIGNATURE is a standalone "<no-return>" type identifier.
 	   (<no-return>-ots))
@@ -305,12 +317,6 @@
 	   ;;INPUT-SIGNATURE   is   a    standalone   "<object-type-spec>"   instance
 	   ;;representing the type "<no-return>".
 	   input-signature)
-          ;; ((<void>)
-          ;;  ;;"<void>" is fine if it is the single component of a proper list.
-          ;;  (list (<void>-ots)))
-          ;; ((?item)
-          ;;  (<void>-ots? ?item)
-          ;;  (list (<void>-ots)))
 	  (_
 	   ;;INPUT-SIGNATURE must  be a proper  or improper list of  type identifiers
 	   ;;and/or instances of "<object-type-spec>".
@@ -329,6 +335,10 @@
 	       ((list-of ?item-type)
 		(make-list-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)))
 
+	       ((list)
+		;;STX is a proper list.  Good.
+		'())
+
 	       ((list ?item0 ?item* ...)
 		(make-list-type-spec (map (lambda (item.ann)
 					    (type-annotation->object-type-spec item.ann lexenv))
@@ -346,6 +356,8 @@
 			   (<nelist>-ots?	?rest-ots)
 			   (<list>-ots?		?rest-ots))
 		       ?rest-ots)
+		       ((<null>-ots? ?rest-ots)
+			'())
 		      (else
 		       (syntax-violation caller-who
 			 "expected list sub-type object-type specification as signature component in tail position"
@@ -364,8 +376,12 @@
 				  (lambda ()
 				    (id->object-type-spec ?rest-id lexenv)))))
 		  (cond ((or (list-of-type-spec? rest.ots)
+			     (list-type-spec?    rest.ots)
+			     (<nelist>-ots?      rest.ots)
 			     (<list>-ots?        rest.ots))
 			 rest.ots)
+			((<null>-ots? rest.ots)
+			 '())
 			(else
 			 (raise
 			  (condition (make-who-condition caller-who)

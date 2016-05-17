@@ -703,7 +703,7 @@
 		((single-value)
 		 ;;Single return value.  Good.
 		 => (lambda (rand.ots) rand.ots))
-		(<list-of>
+		(<list-of-spec>
 		 ;;Unspecified number  of return values,  of known type.  We  let the
 		 ;;compiler insert  the run-time  check for  the single  return value
 		 ;;case.

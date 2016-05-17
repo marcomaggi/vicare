@@ -401,7 +401,7 @@
 	       ;;type.
 	       (%run-time-predicate))
 
-	      (<list-of>
+	      (<list-of-spec>
 	       => (lambda (expr.ots)
 		    (%match-pred-type-against-list-of input-form.stx lexenv.run lexenv.expand
 						      expr.psi expr.ots type-annotation.ots %run-time-predicate)))

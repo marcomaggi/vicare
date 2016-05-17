@@ -1468,7 +1468,7 @@
        => (lambda (type.ots)
 	    (%expression-with-possibly-false-type-signature? type.ots common)))
 
-      (<list-of>
+      (<list-of-spec>
        ;;The operand expression returns an unspecified number of values of specified,
        ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
        ;;run-time, if this operand returns a single value.
@@ -2252,7 +2252,7 @@
 					      caller-who return-values?
 					      arg.id arg.ots producer.core consumer*.stx)))))
 
-	(<list-of>
+	(<list-of-spec>
 	 ;;The producer expression returns an  unspecified number of values, of known
 	 ;;type.  PRODUCER.SIG holds a standalone "<list-of-type-spec>".
 	 => (lambda (producer.ots)
@@ -2346,7 +2346,7 @@
 	((single-value)
 	 (%error-mismatch "two or more values are expected from the producer expression, but it returns one value"))
 
-	(<list-of>
+	(<list-of-spec>
 	 ;;The producer expression returns an  unspecified number of values, of known
 	 ;;type.   PRODUCER.SIG holds  a standalone  "<list-of-type-spec>".  We  will
 	 ;;perform at run-time the number of values validation.

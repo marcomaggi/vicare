@@ -1391,7 +1391,7 @@
 	 ;;of the syntactic binding.
 	 => (lambda (rhs.ots) rhs.ots))
 
-	(<list-of>
+	(<list-of-spec>
 	 ;;The RHS expression returns an unspecified number of values, of known type.
 	 ;;RHS.OTS holds a "<list-of-type-spec>" OTS.
 	 => (lambda (rhs.ots)
