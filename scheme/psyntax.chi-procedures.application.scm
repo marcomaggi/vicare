@@ -40,7 +40,7 @@
   ;;
   ;;and the sub-application form can be a SPLICE-FIRST-EXPAND syntax.
   ;;
-  (syntax-match input-form.stx (apply map1 for-each1 for-all1 exists1 call-with-values)
+  (syntax-match input-form.stx (apply map1 for-each1 for-all1 exists1)
     (((?nested-rator ?nested-rand* ...) ?rand* ...)
      ;;Sub-expression application.  It could be a nested expression application:
      ;;
@@ -61,9 +61,6 @@
     ((apply ?rator ?rand* ...)
      (chi-apply-application input-form.stx lexenv.run lexenv.expand
 			    ?rator ?rand*))
-
-    ((call-with-values . ?rand*)
-     (chi-call-with-values-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
     ((map1 ?func ?list)
      (expander-option.integrate-special-list-functions?)
@@ -324,169 +321,6 @@
 	     input-form.stx rator.stx)))
       (chi-application/psi-rator input-form.stx lexenv.run lexenv.expand
 				 rator.psi rand*.stx))))
-
-
-(module (chi-call-with-values-application)
-  (import CLOSURE-APPLICATION-ERRORS)
-  (define-module-who chi-call-with-values-application)
-
-  (define (%core-prim-id)
-    (core-prim-id 'call-with-values))
-
-  (define* (chi-call-with-values-application input-form.stx lexenv.run lexenv.expand rands.stx)
-    ;;The input form has the syntax:
-    ;;
-    ;;   (call-with-values ?rand ...)
-    ;;
-    ;;and RANDS.STX is the syntax object:
-    ;;
-    ;;   #'(?rand ...)
-    ;;
-    ;;which holds a proper list  of expressions.  The application of CALL-WITH-VALUES
-    ;;is  special; CALL-WITH-VALUES  accepts two  arguments: a  producer thunk  and a
-    ;;consumer closure object.  We want to  generate a core expression having as type
-    ;;signature the type signature of the application of the consumer.
-    ;;
-    (syntax-match rands.stx ()
-      ((?producer ?consumer)
-       (let* ((producer.psi	(chi-expr ?producer lexenv.run lexenv.expand))
-	      (consumer.psi	(chi-expr ?consumer lexenv.run lexenv.expand))
-	      (producer.core	(psi.core-expr producer.psi))
-	      (consumer.core	(psi.core-expr consumer.psi)))
-	 (define (%handle-producer-error message)
-	   (%error (lambda ()
-		     (condition
-		       (make-who-condition __module_who__)
-		       (make-message-condition message)
-		       (make-syntax-violation input-form.stx ?producer)
-		       (make-application-operand-signature-condition (psi.retvals-signature producer.psi))))))
-	 (define (%handle-consumer-error message)
-	   (%error (lambda ()
-		     (condition
-		       (make-who-condition __module_who__)
-		       (make-message-condition message)
-		       (make-syntax-violation input-form.stx ?consumer)
-		       (make-application-operand-signature-condition (psi.retvals-signature consumer.psi))))))
-	 (%validate-producer input-form.stx ?producer producer.psi %handle-producer-error)
-	 (let ((application.sig (%validate-consumer-return-application-signature input-form.stx ?consumer consumer.psi
-										 %handle-consumer-error)))
-	   (make-psi input-form.stx
-	     (build-application (syntax-annotation input-form.stx)
-		 (build-primref no-source 'call-with-values)
-	       (list producer.core consumer.core))
-	     application.sig))))
-
-      (()
-       (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx (%core-prim-id) '() 2 0))
-
-      ((?rand)
-       (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx (%core-prim-id) (list ?rand) 2 1))
-
-      ((?rand0 ?rand1 ?rand2 ?rand* ...)
-       (let ((rand*.stx (cons* ?rand0 ?rand1 ?rand2 ?rand*)))
-	 (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx (%core-prim-id) rand*.stx 2 (length rand*.stx))))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (define (%validate-producer input-form.stx producer.stx producer.psi handle-producer-error)
-    (define producer.sig (psi.retvals-signature producer.psi))
-    (case-signature-specs producer.sig
-      ((single-value)
-       => (lambda (producer.ots)
-	    (%process-single-value-producer input-form.stx producer.stx producer.psi producer.ots
-					    handle-producer-error)))
-
-      (<no-return>
-       (handle-producer-error "expression used as producer operand is typed as not returning"))
-
-      (<list-of>
-       ;;The operand expression returns an unspecified number of values of specified,
-       ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
-       ;;run-time, if this operand returns a single value.
-       => (lambda (rand.ots)
-	    (%process-single-value-producer input-form.stx producer.stx producer.psi (list-of-type-spec.item-ots rand.ots)
-					    handle-producer-error)))
-
-      (<list>
-       ;;The  operand  expression   returns  an  unspecified  number   of  values  of
-       ;;unspecified type.  We rely on the  compiler to generate code that checks, at
-       ;;run-time, if this operand returns a single value.
-       (void))
-
-      (else
-       ;;The operand expression returns zero, two or more values.
-       (handle-producer-error "expression used as producer operand returns multiple values"))))
-
-  (define (%validate-consumer-return-application-signature input-form.stx consumer.stx consumer.psi handle-consumer-error)
-    (define consumer.sig (psi.retvals-signature consumer.psi))
-    (case-signature-specs consumer.sig
-      ((single-value)
-       => (lambda (consumer.ots)
-	    (%process-single-value-consumer input-form.stx consumer.stx consumer.psi consumer.ots
-					    handle-consumer-error)))
-
-      (<no-return>
-       (handle-consumer-error "expression used as consumer operand is typed as not returning")
-       (make-type-signature/fully-unspecified))
-
-      (<list-of>
-       ;;The operand expression returns an unspecified number of values of specified,
-       ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
-       ;;run-time, if this operand returns a single value.
-       => (lambda (rand.ots)
-	    (%process-single-value-consumer input-form.stx consumer.stx consumer.psi (list-of-type-spec.item-ots rand.ots)
-					    handle-consumer-error)))
-
-      (<list>
-       ;;The  operand  expression   returns  an  unspecified  number   of  values  of
-       ;;unspecified type.  We rely on the  compiler to generate code that checks, at
-       ;;run-time, if this operand returns a single value.
-       (make-type-signature/fully-unspecified))
-
-      (else
-       ;;The operand expression returns zero, two or more values.
-       (handle-consumer-error "expression used as consumer operand returns multiple values")
-       (make-type-signature/fully-unspecified))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%process-single-value-producer input-form.stx producer.stx producer.psi producer.ots handle-producer-error)
-    (cond ((closure-type-spec? producer.ots)
-	   ;;Is this a thunk?
-	   (unless (closure-type-spec.thunk? producer.ots)
-	     (handle-producer-error "expression used as producer returns a procedure, but not a thunk")))
-	  ((<procedure>-ots? producer.ots)
-	   ;;Good.
-	   (void))
-	  (else
-	   (handle-producer-error "expression used as producer does not return a procedure"))))
-
-  (define (%process-single-value-consumer input-form.stx consumer.stx consumer.psi consumer.ots handle-consumer-error)
-    ;;Return a "<type-signature>"  representing the signature of  the values returned
-    ;;by the consumer application.
-    ;;
-    (cond ((closure-type-spec? consumer.ots)
-	   (case-lambda-signature.retvals (closure-type-spec.signature consumer.ots)))
-	  ((<procedure>-ots? consumer.ots)
-	   ;;Good.
-	   (make-type-signature/fully-unspecified))
-	  (else
-	   (handle-consumer-error "expression used as consumer does not return a procedure")
-	   (make-type-signature/fully-unspecified))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%error common)
-    (case-expander-language
-      ((typed)
-       (raise			(condition (make-expand-time-type-signature-violation)	(common))))
-      ((default)
-       (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common))))
-      ((strict-r6rs)
-       (void))))
-
-  #| end of module: CHI-CALL-WITH-VALUES-APPLICATION |# )
 
 
 (define (chi-apply-application input-form.stx lexenv.run lexenv.expand
@@ -948,7 +782,8 @@
    $car-id			$car-id?
    $cdr-id			$cdr-id?
    condition-id			condition-id?
-   values-id			values-id?)
+   values-id			values-id?
+   call-with-values-id		call-with-values-id?)
 
   (let-syntax
       ((declare (syntax-rules ()
@@ -979,6 +814,7 @@
     (declare $cdr-id			$cdr-id?			$cdr)
     (declare condition-id		condition-id?			condition)
     (declare values-id			values-id?			values)
+    (declare call-with-values-id	call-with-values-id?		call-with-values)
     #| end of LET-SYNTAX |# )
 
   #| end of module: SPECIAL-CORE-PRIMITIVES |# )
@@ -1238,6 +1074,9 @@
 	   ;;
 	   ((condition-id? rator.stx)
 	    (chi-condition-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	   ((call-with-values-id? rator.stx)
+	    (chi-call-with-values-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	   ;;
 	   (else
 	    (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
 						  rator.psi rand*.psi rator.stx
@@ -1371,7 +1210,9 @@
        (($cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$cdr))
        ;;
        ((condition-id? rator.stx)
-	(chi-condition-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	(chi-condition-application		input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+       ((call-with-values-id? rator.stx)
+	(chi-call-with-values-application	input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
        ;;
        (else
 	(default-application-maker))))
@@ -1754,6 +1595,41 @@
 	       (psi.core-expr rator.psi)
 	     (map psi.core-expr rand*.psi))
 	   rands.sig))))
+
+
+;;;; special applications: CALL-WITH-VALUES
+
+(define* (chi-call-with-values-application input-form.stx lexenv.run lexenv.expand
+					   rator.psi rand*.psi rands.sig)
+  ;;The input form has the syntax:
+  ;;
+  ;;   (call-with-values ?rand ...)
+  ;;
+  ;;We have already validated  the number and type of the  operands; this function is
+  ;;called both  when the operands's  signature is  an exact match  and when it  is a
+  ;;compatible   match.     The   argument   RATOR.PSI   represents    the   expanded
+  ;;CALL-WITH-VALUES syntactic identifier.   The argument RAND*.PSI is a  list of two
+  ;;items, each  having a single value  type signature.  The argument  RANDS.SIG is a
+  ;;"<type-signature>" representing the types of the operands.
+  ;;
+  ;;The  application of  CALL-WITH-VALUES  is special;  CALL-WITH-VALUES accepts  two
+  ;;arguments: a producer thunk and a consumer closure object.  We want to generate a
+  ;;core expression having as type signature the type signature of the application of
+  ;;the consumer.
+  ;;
+  (let* ((consumer.psi	(cadr rand*.psi))
+	 (consumer.ots	(cadr (type-signature.object-type-specs rands.sig)))
+	 (application.sig	(if (closure-type-spec? consumer.ots)
+				    (case-lambda-signature.retvals (closure-type-spec.signature consumer.ots))
+				  (begin
+				    #;(assert (<procedure>-ots? consumer.ots))
+				    (make-type-signature/fully-unspecified)))))
+    (make-psi input-form.stx
+      (build-application (syntax-annotation input-form.stx)
+	  (psi.core-expr rator.psi)
+	(list (psi.core-expr (car  rand*.psi))
+	      (psi.core-expr consumer.psi)))
+      application.sig)))
 
 
 ;;;; done

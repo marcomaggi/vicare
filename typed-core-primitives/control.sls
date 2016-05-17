@@ -38,7 +38,7 @@
 (declare-core-primitive apply
     (safe)
   (signatures
-   ((<procedure> . _)		=> <list>)))
+   ((<procedure> . <list>)		=> <list>)))
 
 (declare-core-primitive values
     (safe)
@@ -64,24 +64,24 @@
 (declare-core-primitive call-with-current-continuation
     (safe)
   (signatures
-   ((<procedure>)	=> <list>)))
+   (((lambda (<procedure>) => <list>))	=> <list>)))
 
 (declare-core-primitive call/cc
     (safe)
   (signatures
-   ((<procedure>)	=> <list>)))
+   (((lambda (<procedure>) => <list>))	=> <list>)))
 
 (declare-core-primitive unwinding-call/cc
     (safe)
   (signatures
-   ((<procedure>)	=> <list>)))
+   (((lambda (<procedure>) => <list>))	=> <list>)))
 
 (declare-parameter run-unwind-protection-cleanup-upon-exit?	<top>)
 
 (declare-core-primitive call-with-values
     (safe)
   (signatures
-   ((<procedure> <procedure>)	=> <list>)))
+   ((<thunk> <procedure>)	=> <list>)))
 
 /section)
 
