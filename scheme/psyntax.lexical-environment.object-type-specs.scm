@@ -174,7 +174,8 @@
 	 <list-type-spec>
 	 <list-type-spec>-rtd				<list-type-spec>-rcd
 	 make-list-type-spec				list-type-spec?
-	 list-type-spec.item-ots*
+	 list-type-spec.item-ots*			list-type-spec.length
+	 list-type-spec.list-of-single-item?
 	 make-null-or-list-type-spec
 
 	 <list-of-type-spec>
@@ -1231,46 +1232,6 @@
     ;;Untyped is compatible with everything.
     #t)
 
-;;; lists
-
-   ((and (list-of-type-spec? super.ots)
-	 (list-type-spec?    sub.ots))
-    (let ((super-item.ots (list-of-type-spec.item-ots super.ots)))
-      (for-all (lambda (sub-item.ots)
-		 (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))
-	(list-type-spec.item-ots* sub.ots))))
-
-   ((list-of-type-spec? super.ots)
-    (or (<nelist>-ots? sub.ots)
-	(object-type-spec.matching-super-and-sub? sub.ots super.ots)))
-
-   ((list-type-spec? super.ots)
-    (or (<list>-ots?   sub.ots)
-	(object-type-spec.matching-super-and-sub? sub.ots super.ots)))
-
-   ((<nelist>-ots? super.ots)
-    ;; (type-annotation-matching <nelist> (list-of <top>)) => possible-match
-    (or (list-of-type-spec? sub.ots)
-	(<pair>-ots?        sub.ots)
-	(object-type-spec.matching-super-and-sub? sub.ots super.ots)))
-
-   ((and (%compare-super-with-sub-and-its-parents (<list>-ots) super.ots)
-	 (%compare-super-with-sub-and-its-parents (<pair>-ots) sub.ots))
-    (cond ((pair-type-spec? sub.ots)
-	   (object-type-spec.compatible-super-and-sub? (<list>-ots) (pair-type-spec.cdr-ots sub.ots)))
-	  ((pair-of-type-spec? sub.ots)
-	   (object-type-spec.compatible-super-and-sub? (<list>-ots) (pair-of-type-spec.item-ots sub.ots)))
-	  (else #t)))
-
-;;; --------------------------------------------------------------------
-
-   ((and (vector-of-type-spec? super.ots)
-	 (vector-type-spec? sub.ots))
-    (let ((super-item.ots (vector-of-type-spec.item-ots super.ots)))
-      (for-all (lambda (sub-item.ots)
-		 (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))
-	(vector-type-spec.item-ots* sub.ots))))
-
 ;;; --------------------------------------------------------------------
 ;;; we want to do labels before unions
 
@@ -1335,6 +1296,68 @@
 
    ((complement-type-spec? sub.ots)
     #f)
+
+;;; --------------------------------------------------------------------
+;;; lists
+
+   ((and (list-of-type-spec? super.ots)
+	 (list-type-spec?    sub.ots))
+    (let ((super-item.ots (list-of-type-spec.item-ots super.ots)))
+      (for-all (lambda (sub-item.ots)
+		 (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))
+	(list-type-spec.item-ots* sub.ots))))
+
+   ((list-of-type-spec? super.ots)
+    (or (<nelist>-ots? sub.ots)
+	(object-type-spec.matching-super-and-sub? sub.ots super.ots)))
+
+   ((list-type-spec? super.ots)
+    (or (<list>-ots?   sub.ots)
+	(object-type-spec.matching-super-and-sub? sub.ots super.ots)))
+
+   ((<nelist>-ots? super.ots)
+    ;; (type-annotation-matching <nelist> (list-of <top>)) => possible-match
+    (or (list-of-type-spec? sub.ots)
+	(<pair>-ots?        sub.ots)
+	(object-type-spec.matching-super-and-sub? sub.ots super.ots)))
+
+   ((and (%compare-super-with-sub-and-its-parents (<list>-ots) super.ots)
+	 (%compare-super-with-sub-and-its-parents (<pair>-ots) sub.ots))
+    (cond ((pair-type-spec? sub.ots)
+	   (object-type-spec.compatible-super-and-sub? (<list>-ots) (pair-type-spec.cdr-ots sub.ots)))
+	  ((pair-of-type-spec? sub.ots)
+	   (object-type-spec.compatible-super-and-sub? (<list>-ots) (pair-of-type-spec.item-ots sub.ots)))
+	  (else #t)))
+
+;;; --------------------------------------------------------------------
+
+   ((and (vector-of-type-spec? super.ots)
+	 (vector-type-spec? sub.ots))
+    (let ((super-item.ots (vector-of-type-spec.item-ots super.ots)))
+      (for-all (lambda (sub-item.ots)
+		 (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))
+	(vector-type-spec.item-ots* sub.ots))))
+
+;;; --------------------------------------------------------------------
+;;; closure type specifications
+
+   ((closure-type-spec? super.ots)
+    (cond ((closure-type-spec? sub.ots)
+	   ;;For every  super-type signature there  must be a  matching sub-type
+	   ;;signature; so that the sub can  be used everywhere the super can be
+	   ;;used.  It does not matter if  the sub has clauses with non-matching
+	   ;;signatures.
+	   (for-all (lambda (super.clause-signature)
+		      (exists (lambda (sub.clause-signature)
+				(and (type-signature.compatible-super-and-sub? (lambda-signature.argvals super.clause-signature)
+									       (lambda-signature.argvals sub.clause-signature))
+				     (type-signature.compatible-super-and-sub? (lambda-signature.retvals super.clause-signature)
+									       (lambda-signature.retvals sub.clause-signature))))
+			(case-lambda-signature.clause-signature* (closure-type-spec.signature sub.ots))))
+	     (case-lambda-signature.clause-signature* (closure-type-spec.signature super.ots))))
+	  (else
+	   (or (<procedure>-ots? sub.ots)
+	       (<top>-ots?       sub.ots)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3080,6 +3103,9 @@
 	    (length (list-type-spec.item-ots* list.ots))
 	  (list-type-spec.memoised-length-set! list.ots len))
       mem)))
+
+(define* (list-type-spec.list-of-single-item? {list.ots list-type-spec?})
+  (= 1 (list-type-spec.length list.ots)))
 
 
 ;;;; homogeneous list object spec

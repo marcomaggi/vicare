@@ -321,7 +321,14 @@
 	    standard-formals.lex
 	  (psi.core-expr body.psi))
 	(make-type-signature/single-value
-	 (make-closure-type-spec (make-case-lambda-signature (list clause-signature))))))))
+	 (make-closure-type-spec
+	  (make-case-lambda-signature
+	   (list
+	    ;;For a standard  form: no type signature was specified  for the clause's
+	    ;;return values.   We use  the signature  of the last  form in  the body,
+	    ;;performing type propagation.
+	    (make-lambda-signature (psi.retvals-signature body.psi)
+				   (lambda-signature.argvals clause-signature))))))))))
 
 (define* (chi-named-lambda/std input-form.stx lexenv.run lexenv.expand
 			       who.id standard-formals.stx body*.stx)
@@ -400,7 +407,15 @@
 	      formals*.lex
 	    (map psi.core-expr body*.psi))
 	  (make-type-signature/single-value
-	   (make-closure-type-spec (make-case-lambda-signature clause-signature*)))))))
+	   (make-closure-type-spec
+	    (make-case-lambda-signature
+	     ;;For a standard form: no type  signature was specified for the clause's
+	     ;;return values.   We use the  signature of the  last form in  the body,
+	     ;;performing type propagation.
+	     (map (lambda (clause-signature body.psi)
+		    (make-lambda-signature (psi.retvals-signature body.psi)
+					   (lambda-signature.argvals clause-signature)))
+	       clause-signature* body*.psi))))))))
 
   #| end of module |# )
 
@@ -825,15 +840,24 @@
    %expand-guts-with-improper-list-formals)
 
   (define (%expand-guts-with-proper-list-formals input-form.stx lexenv.run lexenv.expand
+						 standard-bindings?
 						 standard-formals.stx clause-signature body*.stx)
     ;;Expand  the guts  of a  lambda  clause for  the  case of  formals without  rest
     ;;argument.  Here  we know that  STANDARD-FORMALS.STX and the  corresponding type
     ;;signature are proper lists with equal length.
     (receive (rib lexenv.run standard-formals*.lex)
-	(%establish-typed-syntactic-bindings-lhs* standard-formals.stx (lambda-signature.argvals.specs clause-signature) lexenv.run)
+	;;If this function call is for a standard language syntax: we need to convert
+	;;all the types  to "<top>", including the  args and rest types.   This is to
+	;;avoid problems if these bindings are assigned with SET!.
+	(let* ((formal*.ots (lambda-signature.argvals.specs clause-signature))
+	       (formal*.ots (if standard-bindings?
+				(%topify-list formal*.ots)
+			      formal*.ots)))
+	  (%establish-typed-syntactic-bindings-lhs* standard-formals.stx formal*.ots lexenv.run))
       (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals*.lex body*.stx rib)))
 
   (define (%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand
+						   standard-bindings?
 						   standard-formals.stx clause-signature body*.stx)
     ;;Expand the guts of a lambda clause  for the case of formals with rest argument.
     ;;Here we know that STANDARD-FORMALS.STX and the corresponding type signature are
@@ -845,7 +869,14 @@
 	  (improper-list->list-and-rest (lambda-signature.argvals.specs clause-signature)))
 	 ((rib lexenv.run standard-formals.lex)
 	  (receive (rib lexenv.run all*.lex)
-	      (%establish-typed-syntactic-bindings-lhs* (cons rest.id arg*.id) (cons rest.ots arg*.ots) lexenv.run)
+	      ;;If this function  call is for a standard language  syntax: we need to
+	      ;;convert all the types to "<top>",  including the args and rest types.
+	      ;;This is to avoid problems if these bindings are assigned with SET!.
+	      (let* ((formal*.ots (cons rest.ots arg*.ots))
+		     (formal*.ots (if standard-bindings?
+				      (%topify-list formal*.ots)
+				    formal*.ots)))
+		(%establish-typed-syntactic-bindings-lhs* (cons rest.id arg*.id) formal*.ots lexenv.run))
 	    ;;Yes, this call to APPEND builds an improper list.
 	    (values rib lexenv.run (append (cdr all*.lex) (car all*.lex))))))
       (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals.lex body*.stx rib)))
@@ -854,6 +885,9 @@
     (let* ((body*.stx (push-lexical-contour rib body*.stx))
 	   (body.psi  (chi-internal-body body*.stx lexenv.run lexenv.expand)))
       (values standard-formals.lex body.psi)))
+
+  (define (%topify-list item*.ots)
+    (map (lambda (item*.ots) (<top>-ots)) item*.ots))
 
   #| end of module: LAMBDA-CLAUSE-EXPANSION-HELPERS |# )
 
@@ -884,10 +918,10 @@
   (import LAMBDA-CLAUSE-EXPANSION-HELPERS)
   (cond
    ((list? standard-formals.stx)
-    (%expand-guts-with-proper-list-formals   input-form.stx lexenv.run lexenv.expand
+    (%expand-guts-with-proper-list-formals   input-form.stx lexenv.run lexenv.expand #t
 					     standard-formals.stx clause-signature body*.stx))
    (else
-    (%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand
+    (%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand #t
 					     standard-formals.stx clause-signature body*.stx))))
 
 
@@ -922,13 +956,13 @@
        ((list? standard-formals.stx)
 	;;Without rest  argument.  Here  we know  that both  STANDARD-FORMALS.STX and
 	;;ARGVALS-SIGNATURE.SPECS are proper lists with equal length.
-	(%expand-guts-with-proper-list-formals input-form.stx lexenv.run lexenv.expand
+	(%expand-guts-with-proper-list-formals input-form.stx lexenv.run lexenv.expand #f
 					       standard-formals.stx clause-signature body*.stx))
 
        (else
 	;;With  rest  argument.  Here  we  know  that both  STANDARD-FORMALS.STX  and
 	;;ARGVALS-SIGNATURE.SPECS are improper lists with equal length.
-	(%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand
+	(%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand #f
 						 standard-formals.stx clause-signature body*.stx)))))
 
   (define* (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
@@ -980,7 +1014,7 @@
 				      ;;BODY*.STX.
 				      `((,(core-prim-id 'internal-body) . ,body*.stx)))
 			    body*.stx)))
-	  (%expand-guts-with-proper-list-formals input-form.stx lexenv.run lexenv.expand
+	  (%expand-guts-with-proper-list-formals input-form.stx lexenv.run lexenv.expand #f
 						 standard-formals.stx clause-signature body*.stx))))
 
      (else
@@ -999,7 +1033,7 @@
 				      ;;BODY*.STX.
 				      `((,(core-prim-id 'internal-body) . ,body*.stx)))
 			    body*.stx)))
-	  (%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand
+	  (%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand #f
 						   standard-formals.stx clause-signature body*.stx))))))
 
 ;;; --------------------------------------------------------------------

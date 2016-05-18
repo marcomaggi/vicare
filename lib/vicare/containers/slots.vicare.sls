@@ -826,7 +826,7 @@
 
 (define ($slots-find-left fun slots not-found-rv)
   (returnable
-    ($slots-fold-left (lambda (knil obj)
+    ($slots-fold-left (lambda ({_ <top>} knil obj)
 			 (if (fun obj)
 			     (return obj)
 			   knil))
@@ -842,7 +842,7 @@
 
 (define ($slots-find-right fun slots not-found-rv)
   (returnable
-    ($slots-fold-right (lambda (obj knil)
+    ($slots-fold-right (lambda ({_ <top>} obj knil)
 			(if (fun obj)
 			    (return obj)
 			  knil))
@@ -855,7 +855,7 @@
 
 (define ($slots-for-all fun slots)
   (returnable
-    ($slots-fold-left (lambda (knil obj)
+    ($slots-fold-left (lambda ({_ <top>} knil obj)
 			 (or (fun obj)
 			     (return #f)))
       #t slots)))
@@ -868,7 +868,7 @@
 (define ($slots-exists-left fun slots)
   (call/cc
       (lambda (escape)
-	($slots-fold-left (lambda (knil obj)
+	($slots-fold-left (lambda ({_ <top>} knil obj)
 			    (cond ((fun obj)
 				   => escape)
 				  (else knil)))
@@ -882,7 +882,7 @@
 (define ($slots-exists-right fun slots)
   (call/cc
       (lambda (escape)
-	($slots-fold-right (lambda (obj knil)
+	($slots-fold-right (lambda ({_ <top>} obj knil)
 			     (cond ((fun obj)
 				    => escape)
 				   (else knil)))

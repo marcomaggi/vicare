@@ -171,7 +171,7 @@
     complement-type-spec.item-ots
 
     <ancestor-of-type-spec>
-    <ancestor-of-type-spec>-rtd			<ancestor-of-type-spec>-rcd
+    <ancestor-of-type-spec>-rtd				<ancestor-of-type-spec>-rcd
     make-ancestor-of-type-spec				ancestor-of-type-spec?
     ancestor-of-type-spec.item-ots			ancestor-of-type-spec.component-ots*
 ;;;
@@ -188,7 +188,8 @@
     <list-type-spec>
     <list-type-spec>-rtd				<list-type-spec>-rcd
     make-list-type-spec					list-type-spec?
-    list-type-spec.item-ots*
+    list-type-spec.item-ots*				list-type-spec.length
+    list-type-spec.list-of-single-item?
 
     <list-of-type-spec>
     <list-of-type-spec>-rtd				<list-of-type-spec>-rcd

@@ -1467,6 +1467,11 @@
 ;;; --------------------------------------------------------------------
 
   (module (let-values/std-macro)
+    ;;NOTE Remember  that (as much  as I would like)  we *cannot* do  right-hand side
+    ;;type propagation for  this standard language syntax: if a  syntactic binding is
+    ;;assigned with SET!   the propagated type information  becomes meaningless.  For
+    ;;this only reason we have to keep  all the syntactic bindings of type "<top>" or
+    ;;"<list>".  (Marco Maggi; Wed May 18, 2016)
 
     (define-macro-transformer (let-values/std input-form.stx)
       ;;Transformer function used  to expand Vicare's LET-VALUES/STD  macros from the
@@ -1479,6 +1484,8 @@
 
 	((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
 	 (receive (standard-formals*.stx formals*.sig)
+	     ;;Here we make sure that all the syntactic bindings are declared without
+	     ;;type annotations.
 	     (%parse-lhs* ?lhs*)
 	   (bless
 	    (let recur ((standard-formals*.stx		standard-formals*.stx)

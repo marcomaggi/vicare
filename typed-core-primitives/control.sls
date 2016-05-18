@@ -64,17 +64,17 @@
 (declare-core-primitive call-with-current-continuation
     (safe)
   (signatures
-   (((lambda (<procedure>) => <list>))	=> <list>)))
+   (((lambda ((lambda <list> => <no-return>)) => <list>))	=> <list>)))
 
 (declare-core-primitive call/cc
     (safe)
   (signatures
-   (((lambda (<procedure>) => <list>))	=> <list>)))
+   (((lambda ((lambda <list> => <no-return>)) => <list>))	=> <list>)))
 
 (declare-core-primitive unwinding-call/cc
     (safe)
   (signatures
-   (((lambda (<procedure>) => <list>))	=> <list>)))
+   (((lambda ((lambda <list> => <no-return>)) => <list>))	=> <list>)))
 
 (declare-parameter run-unwind-protection-cleanup-upon-exit?	<top>)
 

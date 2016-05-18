@@ -616,7 +616,538 @@
   #| end of PARAMETRISE |# )
 
 
-(parametrise ((check-test-name	'receive))
+(parametrise ((check-test-name	'receive-std))
+
+;;; no return values
+
+  (doit (receive/std ()
+	    (values)
+	  123)
+	=> (<positive-fixnum>))
+  (check
+      (receive/std ()
+	  (values)
+	123)
+    => 123)
+
+  (doit (receive/std ()
+	    (cast-signature <list> (values))
+	  123)
+	=> (<positive-fixnum>))
+  (check
+      (receive/std ()
+	  (cast-signature <list> (values))
+	123)
+    => 123)
+
+  (doit (receive/std ()
+	    (cast-signature (list-of <fixnum>) (values))
+	  123)
+	=> (<positive-fixnum>))
+  (check
+      (receive/std ()
+	  (cast-signature (list-of <fixnum>) (values))
+	123)
+    => 123)
+
+;;; special cases
+
+  ;;Producer not returning.
+  ;;
+  (doit (receive/std ()
+	    (error #f "wrong")
+	  123)
+	=> <no-return>)
+  (check
+      (try
+	  (receive/std ()
+	      (error #f "wrong")
+	    123)
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  ;;Producer returns values.
+  ;;
+  (type-signature-violation-for-message
+   (receive/std ()
+       (values 1)
+     123)
+   => "zero return values are expected from the producer expression")
+
+;;; --------------------------------------------------------------------
+;;; single return value
+
+  ;;UNtyped single value ignored in body.  Type propagation.
+  ;;
+  (doit (receive/std (a)
+	    1
+	  123)
+	=> (<positive-fixnum>))
+  (check
+      (receive/std (a)
+	  1
+	123)
+    => 123)
+
+  ;;UNtyped single value used in body.  Type propagation.
+  ;;
+  (doit (receive/std (a)
+	    1
+	  a)
+	=> (<top>))
+  (check
+      (receive/std (a)
+	  1
+	a)
+    => 1)
+
+  ;;UNtyped single value used in body.  Type propagation.  More body forms
+  ;;
+  (doit (receive/std (a)
+	    1
+	  (+ 1 2)
+	  (list a))
+	=> ((list <top>)))
+  (check
+      (receive/std (a)
+	  1
+	(+ 1 2)
+	(list a))
+    => '(1))
+
+  ;;Producer returns a <list>.
+  ;;
+  (doit (receive/std (a)
+	    (cast-signature <list> 1)
+	  a)
+	=> (<top>))
+  (check
+      (receive/std (a)
+	  (cast-signature <list> 1)
+	a)
+    => 1)
+
+  ;;Producer returns a <nelist>.
+  ;;
+  (doit (receive/std (a)
+	    (cast-signature <nelist> 1)
+	  a)
+	=> (<top>))
+  (check
+      (receive/std (a)
+	  (cast-signature <nelist> 1)
+	a)
+    => 1)
+
+  ;;Producer returns a LIST-OF.
+  ;;
+  (doit (receive/std (a)
+	    (cast-signature (list-of <fixnum>) 1)
+	  a)
+	=> (<top>))
+  (check
+      (receive/std (a)
+	  (cast-signature (list-of <fixnum>) 1)
+	a)
+    => 1)
+
+  ;;Producer returns a LIST.
+  ;;
+  (doit (receive/std (a)
+	    (cast-signature (list <fixnum>) 1)
+	  a)
+	=> (<top>))
+  (check
+      (receive/std (a)
+	  (cast-signature (list <fixnum>) 1)
+	a)
+    => 1)
+
+  ;;Producer returns a <list> with multiple values.  Run-time violaion.
+  ;;
+  (assertion-violation-for-message
+   (receive/std (a)
+       (cast-signature <list> (values 1 2 3))
+     a)
+   => "incorrect number of values returned to single value context")
+
+  ;;Producer returns a <nelist> with multiple values.  Run-time violation.
+  ;;
+  (assertion-violation-for-message
+   (receive/std (a)
+       (cast-signature <nelist> (values 1 2 3))
+     a)
+   => "incorrect number of values returned to single value context")
+
+  ;;Producer returns a LIST with multiple values.  Expand-time violation.
+  ;;
+  (type-signature-violation-for-message
+   (receive/std (a)
+       (cast-signature (list <fixnum> <fixnum> <fixnum>) (values 1 2 3))
+     a)
+   => "one value is expected but the producer expression is typed as returning zero, two or more values")
+
+;;; special cases
+
+  ;;Producer not returning.
+  ;;
+  (doit (receive/std (a)
+	    (error #f "wrong")
+	  a)
+	=> <no-return>)
+  (check
+      (try
+	  (receive/std (a)
+	      (error #f "wrong")
+	    123)
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  ;;Producer returns zero values.
+  ;;
+  (type-signature-violation-for-message
+   (receive/std (a)
+       (values)
+     a)
+   => "one value is expected but the producer expression is typed as returning zero, two or more values")
+
+  ;;Producer returns multiple values.
+  ;;
+  (type-signature-violation-for-message
+   (receive/std (a)
+       (values 1 2 3)
+     a)
+   => "one value is expected but the producer expression is typed as returning zero, two or more values")
+
+  ;;Producer returning void.
+  ;;
+  (type-signature-violation-for-message
+   (receive/std (a)
+       (void)
+     a)
+   => "the producer expression is typed as returning void")
+
+;;; --------------------------------------------------------------------
+;;; fixed number of two or more mandatory arguments
+
+  ;;Two values.  Unused bindings.  Type propagation of return values.
+  ;;
+  (doit (receive/std (a b)
+	    (values 1 2)
+	  (values "hello" "world"))
+	=> (<string> <string>))
+  (check
+      (receive/std (a b)
+	  (values 1 2)
+	(values "hello" "world"))
+    => "hello" "world")
+
+  ;;Two values, UNtyped syntactic bindings.  Type propagation.
+  ;;
+  (doit (receive/std (a b)
+	    (values 1 2.3)
+	  (values a b))
+	=> (<top> <top>))
+  (check
+      (receive/std (a b)
+	  (values 1 2.3)
+	(values a b))
+    => 1 2.3)
+
+;;; special cases
+
+  ;;Producer not returning.
+  ;;
+  (doit (receive/std (a b)
+	    (error #f "wrong")
+	  (values a b))
+	=> <no-return>)
+  (check
+      (try
+	  (receive/std (a b)
+	      (error #f "wrong")
+	    (values a b))
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  ;;Producer returns zero values.
+  ;;
+  (type-signature-violation-for-message
+   (receive/std (a b)
+       (values)
+     (list a b))
+   => "two or more values are expected from the producer expression, but it returns zero values")
+
+  ;;Producer returns one value.
+  ;;
+  (type-signature-violation-for-message
+   (receive/std (a b)
+       (values 1)
+     (list a b))
+   => "two or more values are expected from the producer expression, but it returns one value")
+
+  ;;Two bindings.  Producer returns an UNtyped list of two values.
+  ;;
+  (doit (receive/std (a b)
+	    (cast-signature <list> (values 1 2.3))
+	  (values a b))
+	=> (<top> <top>))
+  (check
+      (receive/std (a b)
+	  (cast-signature <list> (values 1 2.3))
+	(values a b))
+    => 1 2.3)
+
+  ;;Two bindings.  Producer returns a typed list of two values.
+  ;;
+  (doit (receive/std (a b)
+	    (cast-signature (list-of <number>) (values 1 2.3))
+	  (values a b))
+	=> (<top> <top>))
+  (check
+      (receive/std (a b)
+	  (cast-signature (list-of <number>) (values 1 2.3))
+	(values a b))
+    => 1 2.3)
+
+  ;;Two bindings.  Producer returns a typed list of two values.
+  ;;
+  (doit (receive/std (a b)
+	    (cast-signature (list-of <number>) (values 1 2.3))
+	  (values a b))
+	=> (<top> <top>))
+  (check
+      (receive/std (a b)
+	  (cast-signature (list-of <number>) (values 1 2.3))
+	(values a b))
+    => 1 2.3)
+
+;;; -------------------------------------------------------------------- ;
+;;; unspecified number of values
+
+  ;;Args catch-all syntactic binding.
+  ;;
+  (doit (receive/std vals
+	    (values 1 2 3)
+	  vals)
+	=> (<top>))
+  (check
+      (receive/std vals
+	  (values 1 2 3)
+	vals)
+    => '(1 2 3))
+
+  ;;Args catch-all syntactic bindings.  The producer returns a single value.
+  ;;
+  (doit (receive/std vals
+	    1
+	  vals)
+	=> (<top>))
+  (check
+      (receive/std vals
+	  1
+	vals)
+    => '(1))
+
+  ;;Args catch-all syntactic bindings.  The producer returns no values.
+  ;;
+  (doit (receive/std vals
+	    (values)
+	  vals)
+	=> (<top>))
+  (check
+      (receive/std vals
+	  (values)
+	vals)
+    => '())
+
+  ;;Args catch-all syntactic binding.  The producer returns a LIST-OF.
+  ;;
+  (doit (receive/std vals
+	    (cast-signature (list-of <fixnum>) (values 1 2 3))
+	  vals)
+	=> (<top>))
+  (check
+      (receive/std vals
+	  (cast-signature (list-of <fixnum>) (values 1 2 3))
+	vals)
+    => '(1 2 3))
+
+  ;;Args catch-all syntactic binding.  The producer returns a LIST.
+  ;;
+  (doit (receive/std vals
+	    (cast-signature (list <fixnum> <fixnum> <fixnum>) (values 1 2 3))
+	  vals)
+	=> (<top>))
+  (check
+      (receive/std vals
+	  (cast-signature (list <fixnum> <fixnum> <fixnum>) (values 1 2 3))
+	vals)
+    => '(1 2 3))
+
+  ;;Args catch-all syntactic binding.  The producer returns a <nelist>.
+  ;;
+  (doit (receive/std vals
+	    (cast-signature <nelist> (values 1 2 3))
+	  vals)
+	=> (<top>))
+  (check
+      (receive/std vals
+	  (cast-signature <nelist> (values 1 2 3))
+	vals)
+    => '(1 2 3))
+
+  ;;Args catch-all syntactic binding.  The producer returns a <list>.
+  ;;
+  (doit (receive/std vals
+	    (cast-signature <list> (values 1 2 3))
+	  vals)
+	=> (<top>))
+  (check
+      (receive/std vals
+	  (cast-signature <list> (values 1 2 3))
+	vals)
+    => '(1 2 3))
+
+;;;
+
+  ;;Formals with rest argument.  The producer returns a <list>.
+  ;;
+  (doit (receive/std (a b . vals)
+	    (cast-signature <list> (values 1 2 3))
+	  (values a b vals))
+	=> (<top> <top> <top>))
+  (check
+      (receive/std (a b . vals)
+	  (cast-signature <list> (values 1 2 3))
+	(values a b vals))
+    => 1 2 '(3))
+
+  ;;Formals with rest argument.  The producer returns a <nelist>.
+  ;;
+  (doit (receive/std (a b . vals)
+	    (cast-signature <nelist> (values 1 2 3))
+	  (values a b vals))
+	=> (<top> <top> <top>))
+  (check
+      (receive/std (a b . vals)
+	  (cast-signature <nelist> (values 1 2 3))
+	(values a b vals))
+    => 1 2 '(3))
+
+  ;;Formals with rest argument.  The producer returns a LIST-OF.
+  ;;
+  (doit (receive/std (a b . vals)
+	    (cast-signature (list-of <fixnum>) (values 1 2 3))
+	  (values a b vals))
+	=> (<top> <top> <top>))
+  (check
+      (receive/std (a b . vals)
+	  (cast-signature (list-of <fixnum>) (values 1 2 3))
+	(values a b vals))
+    => 1 2 '(3))
+
+  ;;Formals with rest argument.  The producer returns a LIST.
+  ;;
+  (doit (receive/std (a b . vals)
+	    (cast-signature (list <fixnum> <fixnum> <fixnum>) (values 1 2 3))
+	  (values a b vals))
+	=> (<top> <top> <top>))
+  (check
+      (receive/std (a b . vals)
+	  (cast-signature (list <fixnum> <fixnum> <fixnum>) (values 1 2 3))
+	(values a b vals))
+    => 1 2 '(3))
+
+  ;;Formals with  rest argument.   The producer  returns a  LIST with  exactly enough
+  ;;values.
+  ;;
+  (doit (receive/std (a b . vals)
+	    (cast-signature (list <fixnum> <fixnum>) (values 1 2))
+	  (values a b vals))
+	=> (<top> <top> <top>))
+  (check
+      (receive/std (a b . vals)
+	  (cast-signature (list <fixnum> <fixnum>) (values 1 2))
+	(values a b vals))
+    => 1 2 '())
+
+  ;;Formals with rest argument.  The producer returns a LIST with not enough values.
+  ;;
+  (type-signature-violation-for-message
+   (receive/std (a b . vals)
+       (cast-signature (list <fixnum>) 1)
+     (values a b vals))
+   => "mismatching number of arguments in type signatures")
+
+  ;;Formals with rest argument.
+  ;;
+  (doit (receive/std (a b . vals)
+	    (values 1 2.3 "C" "D")
+	  (values a b vals))
+	=> (<top> <top> <top>))
+  (check
+      (receive/std (a b . vals)
+	  (values 1 2.3 "C" "D")
+	(values a b vals))
+    => 1 2.3 '("C" "D"))
+
+  ;;Formals with rest argument.
+  ;;
+  (doit (receive/std (a b . vals)
+	    (cast-signature (<fixnum> <flonum> . (list-of <string>))
+			    (values 1 2.3 "C" "D"))
+	  (values a b vals))
+     => (<top> <top> <top>))
+  (check
+      (receive/std (a b . vals)
+	  (cast-signature (<fixnum> <flonum> . (list-of <string>))
+			  (values 1 2.3 "C" "D"))
+	(values a b vals))
+    => 1 2.3 '("C" "D"))
+
+  ;;Formals with rest argument.  The producer returns a single value.
+  ;;
+  (doit (receive/std (a . vals)
+	    1
+	  (values a vals))
+	=> (<top> <top>))
+  (check
+      (receive/std (a . vals)
+	  1
+	(values a vals))
+    => 1 '())
+
+  ;;Formals with rest argument.  Producer not returning.
+  ;;
+  (doit (receive/std (a b . rest)
+	    (error #f "wrong")
+	  (values a b rest))
+	=> <no-return>)
+  (check
+      (try
+	  (receive/std (a b . rest)
+	      (error #f "wrong")
+	    (values a b rest))
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  (void))
+
+
+(parametrise ((check-test-name	'receive-checked))
 
 ;;; no return values
 
@@ -630,7 +1161,49 @@
 	123)
     => 123)
 
+  (doit (receive ()
+	    (cast-signature <list> (values))
+	  123)
+	=> (<positive-fixnum>))
+  (check
+      (receive ()
+	  (cast-signature <list> (values))
+	123)
+    => 123)
+
 ;;; special cases
+
+  (type-signature-violation-for-message
+   (receive ()
+       (cast-signature <nelist> (values 1))
+     123)
+   => "zero return values are expected from the producer expression")
+
+  (type-signature-violation-for-message
+   (receive ()
+       (cast-signature (list <fixnum> <fixnum>) (values 1 2))
+     123)
+   => "zero return values are expected from the producer expression")
+
+  (doit (receive ()
+	    (cast-signature (list-of <fixnum>) (values))
+	  123)
+	=> (<positive-fixnum>))
+  (check
+      (receive ()
+	  (cast-signature (list-of <fixnum>) (values))
+	123)
+    => 123)
+
+  (doit (receive ()
+	    (cast-signature (list-of <fixnum>) (values 1 2))
+	  123)
+	=> (<positive-fixnum>))
+  (assertion-violation-for-message
+      (receive ()
+	  (cast-signature (list-of <fixnum>) (values 1 2))
+	123)
+    => "incorrect number of arguments")
 
   ;;Producer not returning.
   ;;
@@ -746,13 +1319,77 @@
 	a)
     => 1)
 
-  ;;Producer returns a LIST-OF with multiple values.
+  ;;Producer returns a LIST-OF with too many values.
   ;;
+  (doit (receive (a)
+	    (cast-signature (list-of <fixnum>) (values 1 2))
+	  a)
+	=> (<fixnum>))
   (assertion-violation-for-message
-   (receive ({a <fixnum>})
-       (cast-signature <list> (values 1 2 3))
+   (receive (a)
+       (cast-signature (list-of <fixnum>) (values 1 2))
      a)
    => "incorrect number of values returned to single value context")
+
+;;;
+
+  ;;Producer returns a LIST.  Untyped syntactic binding.
+  ;;
+  (doit (receive (a)
+	    (cast-signature (list <fixnum>) 1)
+	  a)
+	=> (<fixnum>))
+  (check
+      (receive (a)
+	  (cast-signature (list <fixnum>) 1)
+	a)
+    => 1)
+
+  ;;Producer returns a LIST.  Typed syntactic binding.
+  ;;
+  (doit (receive ({a <fixnum>})
+	    (cast-signature (list <positive-fixnum>) 1)
+	  a)
+	=> (<fixnum>))
+  (check
+      (receive ({a <fixnum>})
+	  (cast-signature (list <positive-fixnum>) 1)
+	a)
+    => 1)
+
+  ;;Producer returns a LIST with too many values.
+  ;;
+  (type-signature-violation-for-message
+   (receive (a)
+       (cast-signature (list <fixnum> <flonum>) (values 1 2.3))
+     a)
+   => "mismatching number of arguments in type signatures")
+
+  ;;Producer returns a <nelist>.  Untyped syntactic binding.
+  ;;
+  (doit (receive (a)
+	    (cast-signature <nelist> 1)
+	  a)
+	=> (<top>))
+  (check
+      (receive (a)
+	  (cast-signature <nelist> 1)
+	a)
+    => 1)
+
+  ;;Producer returns a <nelist> with too many values.
+  ;;
+  (doit (receive (a)
+	    (cast-signature <nelist> (values 1 2))
+	  a)
+	=> (<top>))
+  (assertion-violation-for-message
+   (receive (a)
+       (cast-signature <nelist> (values 1 2))
+     a)
+   => "incorrect number of values returned to single value context")
+
+;;;
 
   ;;Producer returns a "<list>".  Untyped syntactic binding.
   ;;
@@ -778,18 +1415,17 @@
 	a)
     => 1)
 
-  ;;Producer returns a "<list>" with multiple values.
+  ;;Producer returns a <list> with multiple values.
   ;;
-  (check
-      (try
-	  (receive ({a <fixnum>})
-	      (cast-signature <list> (values 1 2 3))
-	    a)
-	(catch E
-	  ((&assertion)
-	   (condition-message E))
-	  (else E)))
-    => "incorrect number of values returned to single value context")
+  (doit (receive ({a <fixnum>})
+	    (cast-signature <list> (values 1 2 3))
+	  a)
+	=> (<fixnum>))
+  (assertion-violation-for-message
+   (receive ({a <fixnum>})
+       (cast-signature <list> (values 1 2 3))
+     a)
+   => "incorrect number of values returned to single value context")
 
 ;;; special cases
 
@@ -922,6 +1558,8 @@
      (list a b))
    => "two or more values are expected from the producer expression, but it returns one value")
 
+;;;
+
   ;;Two Untyped bindings.  Producer returns an UNtyped list of two values.
   ;;
   (doit (receive (a b)
@@ -946,6 +1584,82 @@
 	  (cast-signature <list> (values 1 2.3))
 	(values a b))
     => 1 2.3)
+
+  ;;The producer returns a <list> with too many values.
+  ;;
+  (doit (receive (a b)
+	    (cast-signature <list> (values 1 2 3))
+	  (values a b))
+	=> (<top> <top>))
+  (assertion-violation-for-message
+   (receive (a b)
+       (cast-signature <list> (values 1 2 3))
+     (values a b))
+   => "incorrect number of arguments")
+
+  ;;The producer returns a <list> with too few values.
+  ;;
+  (doit (receive (a b)
+	    (cast-signature <list> (values 1))
+	  (values a b))
+	=> (<top> <top>))
+  (assertion-violation-for-message
+   (receive (a b)
+       (cast-signature <list> (values 1))
+     (values a b))
+   => "incorrect number of arguments")
+
+;;;
+
+  ;;Two Untyped bindings.  Producer returns a <nelist>.
+  ;;
+  (doit (receive (a b)
+	    (cast-signature <nelist> (values 1 2.3))
+	  (values a b))
+	=> (<top> <top>))
+  (check
+      (receive (a b)
+	  (cast-signature <nelist> (values 1 2.3))
+	(values a b))
+    => 1 2.3)
+
+  ;;Two typed bindings.  Producer returns a <nelist>.  Run-time validation.
+  ;;
+  (doit (receive ({a <fixnum>} {b <flonum>})
+	    (cast-signature <nelist> (values 1 2.3))
+	  (values a b))
+	=> (<fixnum> <flonum>))
+  (check
+      (receive ({a <fixnum>} {b <flonum>})
+	  (cast-signature <nelist> (values 1 2.3))
+	(values a b))
+    => 1 2.3)
+
+  ;;The producer returns a <nelist> with too many values.
+  ;;
+  (doit (receive (a b)
+	    (cast-signature <nelist> (values 1 2 3))
+	  (values a b))
+	=> (<top> <top>))
+  (assertion-violation-for-message
+   (receive (a b)
+       (cast-signature <nelist> (values 1 2 3))
+     (values a b))
+   => "incorrect number of arguments")
+
+  ;;The producer returns a <nelist> with too few values.
+  ;;
+  (doit (receive (a b)
+	    (cast-signature <nelist> (values 1))
+	  (values a b))
+	=> (<top> <top>))
+  (assertion-violation-for-message
+   (receive (a b)
+       (cast-signature <nelist> (values 1))
+     (values a b))
+   => "incorrect number of arguments")
+
+;;;
 
   ;;Two Untyped bindings.  Producer returns a typed list of two values.
   ;;
@@ -972,8 +1686,75 @@
 	(values a b))
     => 1 2.3)
 
-;;; -------------------------------------------------------------------- ;
-;;; unspecified number of values
+  ;;The producer returns a LIST-OF with too many values.
+  ;;
+  (doit (receive (a b)
+	    (cast-signature (list-of <fixnum>) (values 1 2 3))
+	  (values a b))
+	=> (<fixnum> <fixnum>))
+  (assertion-violation-for-message
+   (receive (a b)
+       (cast-signature (list-of <fixnum>) (values 1 2 3))
+     (values a b))
+   => "incorrect number of arguments")
+
+  ;;The producer returns a LIST-OF with too few values.
+  ;;
+  (doit (receive (a b)
+	    (cast-signature (list-of <fixnum>) (values 1))
+	  (values a b))
+	=> (<fixnum> <fixnum>))
+  (assertion-violation-for-message
+   (receive (a b)
+       (cast-signature (list-of <fixnum>) (values 1))
+     (values a b))
+   => "incorrect number of arguments")
+
+;;;
+
+  ;;Two Untyped bindings.  Producer returns a typed list of two values.
+  ;;
+  (doit (receive (a b)
+	    (cast-signature (list <number> <number>) (values 1 2.3))
+	  (values a b))
+	=> (<number> <number>))
+  (check
+      (receive (a b)
+	  (cast-signature (list <number> <number>) (values 1 2.3))
+	(values a b))
+    => 1 2.3)
+
+  ;;Two  typed bindings.   Producer returns  a typed  list of  two values.   Run-time
+  ;;validation.
+  ;;
+  (doit (receive ({a <fixnum>} {b <flonum>})
+	    (cast-signature (list <number> <number>) (values 1 2.3))
+	  (values a b))
+	=> (<fixnum> <flonum>))
+  (check
+      (receive ({a <fixnum>} {b <flonum>})
+	  (cast-signature (list <number> <number>) (values 1 2.3))
+	(values a b))
+    => 1 2.3)
+
+  ;;The producer returns a LIST with too many values.
+  ;;
+  (type-signature-violation-for-message
+   (receive (a b)
+       (cast-signature (list <fixnum> <fixnum> <fixnum>) (values 1 2 3))
+     (values a b))
+   => "mismatching number of arguments in type signatures")
+
+  ;;The producer returns a LIST with too few values.
+  ;;
+  (type-signature-violation-for-message
+   (receive (a b)
+       (cast-signature (list <fixnum>) (values 1))
+     (values a b))
+   => "mismatching number of arguments in type signatures")
+
+;;; --------------------------------------------------------------------
+;;; unspecified number of values, args arguments
 
   ;;Typed catch-all syntactic binding.
   ;;
@@ -1011,17 +1792,7 @@
 	vals)
     => '(1))
 
-  ;;Untyped catch-all syntactic binding.  Special case of type propagation.
-  ;;
-  (doit (receive vals
-	    (cast-signature (list-of <fixnum>) (values 1 2 3))
-	  vals)
-	=> ((list-of <fixnum>)))
-  (check
-      (receive vals
-	  (cast-signature (list-of <fixnum>) (values 1 2 3))
-	vals)
-    => '(1 2 3))
+;;;
 
   ;;Untyped catch-all syntactic binding.  The  producer returns an unspecified number
   ;;of unspecified values.
@@ -1035,6 +1806,45 @@
 	  (cast-signature <list> (values 1 2 3))
 	vals)
     => '(1 2 3))
+
+  ;;Untyped catch-all syntactic binding.  The producer returns a <nelist>.
+  ;;
+  (doit (receive vals
+	    (cast-signature <nelist> (values 1 2 3))
+	  vals)
+	=> (<list>))
+  (check
+      (receive vals
+	  (cast-signature <nelist> (values 1 2 3))
+	vals)
+    => '(1 2 3))
+
+  ;;Untyped catch-all syntactic binding.  The producer returns a LIST-OF.
+  ;;
+  (doit (receive vals
+	    (cast-signature (list-of <fixnum>) (values 1 2 3))
+	  vals)
+	=> ((list-of <fixnum>)))
+  (check
+      (receive vals
+	  (cast-signature (list-of <fixnum>) (values 1 2 3))
+	vals)
+    => '(1 2 3))
+
+  ;;Untyped catch-all syntactic binding.  The producer returns a LIST.
+  ;;
+  (doit (receive vals
+	    (cast-signature (list <fixnum> <fixnum> <fixnum>) (values 1 2 3))
+	  vals)
+	=> (<list>))
+  (check
+      (receive vals
+	  (cast-signature (list <fixnum> <fixnum> <fixnum>) (values 1 2 3))
+	vals)
+    => '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; unspecified number of values, rest arguments
 
   ;;Untyped syntactic bindings with rest.  The producer returns an unspecified number
   ;;of unspecified values.
@@ -1774,6 +2584,19 @@
 	  (values)))
     => '((one two)))
 
+  (doit (let-values/std ((() (values)))
+	  (one)
+	  (two)
+	  (values 1 2.3))
+	=> (<positive-fixnum> <positive-flonum>))
+  (check
+      (with-result
+	(let-values/std ((() (values)))
+	  (one)
+	  (two)
+	  (values 1 2.3)))
+    => '(1 2.3 (one two)))
+
 ;;; --------------------------------------------------------------------
 ;;; single clause, untyped syntactic bindings combinations
 
@@ -1791,7 +2614,7 @@
   (doit (let-values/std (((a b) (values 1 2.3)))
 	  (one)
 	  (values a b))
-	=> <list>)
+	=> (<top> <top>))
   (check
       (with-result
 	(let-values/std (((a b) (values 1 2.3)))
@@ -1802,7 +2625,7 @@
   (doit (let-values/std (((a b c) (values 1 2.3 "ciao")))
 	  (one)
 	  (values a b c))
-	=> <list>)
+	=> (<top> <top> <top>))
   (check
       (with-result
 	(let-values/std (((a b c) (values 1 2.3 "ciao")))
@@ -1813,7 +2636,7 @@
   (doit (let-values/std (((a b . rest) (values 1 2.3 "C" "D")))
 	  (one)
 	  (values a b rest))
-	=> <list>)
+	=> (<top> <top> <top>))
   (check
       (with-result
 	(let-values/std (((a b . rest) (values 1 2.3 "C" "D")))
@@ -1841,7 +2664,7 @@
 			 ((c d) (values 1+i 2/3)))
 	  (one)
 	  (values a b c d))
-	=> <list>)
+	=> (<top> <top> <top> <top>))
   (check
       (with-result
 	(let-values/std (((a b) (values 1 2.3))
@@ -1854,7 +2677,7 @@
 			 ((d e) (values 1+i 2/3)))
 	  (one)
 	  (values a b c d e))
-	=> <list>)
+	=> (<top> <top> <top> <top> <top>))
   (check
       (with-result
 	(let-values/std (((a b c) (values 1 2.3 "ciao"))
@@ -1867,7 +2690,7 @@
 			 ((c . stuff) (values 1+i 'x 'y)))
 	  (one)
 	  (values a b rest c stuff))
-	=> <list>)
+	=> (<top> <top> <top> <top> <top>))
   (check
       (with-result
 	(let-values/std (((a b . rest) (values 1 2.3 "C" "D"))
@@ -2135,7 +2958,7 @@
   (doit (let*-values/std (((a b) (values 1 2.3)))
 	  (one)
 	  (values a b))
-	=> <list>)
+	=> (<top> <top>))
   (check
       (with-result
 	(let*-values/std (((a b) (values 1 2.3)))
@@ -2146,7 +2969,7 @@
   (doit (let*-values/std (((a b c) (values 1 2.3 "ciao")))
 	  (one)
 	  (values a b c))
-	=> <list>)
+	=> (<top> <top> <top>))
   (check
       (with-result
 	(let*-values/std (((a b c) (values 1 2.3 "ciao")))
@@ -2157,7 +2980,7 @@
   (doit (let*-values/std (((a b . rest) (values 1 2.3 "C" "D")))
 	  (one)
 	  (values a b rest))
-	=> <list>)
+	=> (<top> <top> <top>))
   (check
       (with-result
 	(let*-values/std (((a b . rest) (values 1 2.3 "C" "D")))
@@ -2185,7 +3008,7 @@
 			  ((c d) (values 1+i 2/3)))
 	  (one)
 	  (values a b c d))
-	=> <list>)
+	=> (<top> <top> <top> <top>))
   (check
       (with-result
 	(let*-values/std (((a b) (values 1 2.3))
@@ -2198,7 +3021,7 @@
 			  ((d e) (values 1+i 2/3)))
 	  (one)
 	  (values a b c d e))
-	=> <list>)
+	=> (<top> <top> <top> <top> <top>))
   (check
       (with-result
 	(let*-values/std (((a b c) (values 1 2.3 "ciao"))
@@ -2211,7 +3034,7 @@
 			  ((c . stuff) (values 1+i 'x 'y)))
 	  (one)
 	  (values a b rest c stuff))
-	=> <list>)
+	=> (<top> <top> <top> <top> <top>))
   (check
       (with-result
 	(let*-values/std (((a b . rest) (values 1 2.3 "C" "D"))
