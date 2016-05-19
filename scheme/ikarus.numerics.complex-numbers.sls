@@ -53,7 +53,7 @@
     (vicare system $bignums)
     (vicare system $ratnums)
     (vicare system $flonums)
-    (rename (only (ikarus generic-arithmetic)
+    (rename (only (ikarus numerics generic-arithmetic)
 		  $abs-fixnum
 		  $abs-bignum
 		  $abs-ratnum
