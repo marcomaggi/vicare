@@ -808,24 +808,17 @@
   	   (formals.sexp (cdr sexp))
   	   (retvals.stx  (bless retvals.sexp))
   	   (formals.stx  (bless formals.sexp)))
-      (let ((retvals.sig (with-exception-handler
-			     (lambda (E)
-			       (raise-continuable
-				(condition E
-					   (make-who-condition __module_who__)
-					   (make-message-condition "error initialising core primitive retvals signature")
-					   (make-irritants-condition (list core-prim.sym retvals.stx)))))
-			   (lambda ()
-			     (make-type-signature retvals.stx))))
-	    (formals.sig (with-exception-handler
-			     (lambda (E)
-			       (raise-continuable
-				(condition E
-					   (make-who-condition __module_who__)
-					   (make-message-condition "error initialising core primitive formals signature")
-					   (make-irritants-condition (list core-prim.sym formals.stx)))))
-			   (lambda ()
-			     (make-type-signature formals.stx)))))
+      (define (%make-synner message signature.stx)
+	(lambda (message subform)
+	  (raise
+	   (condition (make-who-condition __module_who__)
+		      (make-message-condition message)
+		      (make-irritants-condition (list core-prim.sym))
+		      (make-syntax-violation signature.stx subform)))))
+      (let ((retvals.sig (let ((synner (%make-synner "error initialising core primitive retvals signature" retvals.stx)))
+			   (make-type-signature (syntax-object->type-signature-specs retvals.stx (current-inferior-lexenv) synner))))
+	    (formals.sig (let ((synner (%make-synner "error initialising core primitive formals signature" formals.stx)))
+			   (make-type-signature (syntax-object->type-signature-specs formals.stx (current-inferior-lexenv) synner)))))
 	(make-lambda-signature retvals.sig formals.sig))))
 
   #| end of module: HARD-CODED-TYPED-CORE-PRIM-BINDING-DESCRIPTOR->TYPE-CORE-PRIM-BINDING-DESCRIPTOR! |# )
@@ -905,7 +898,9 @@
       (let* ((parent-name.ots	(and parent-name.id
 				     (with-exception-handler
 					 (lambda (E)
-					   (raise (condition E (make-who-condition __who__))))
+					   (raise (condition
+						    (make-who-condition __who__)
+						    E)))
 				       (lambda ()
 					 (id->object-type-spec parent-name.id (make-empty-lexenv))))))
 	     (type-name.ots	(make-scheme-type-spec type-name.id parent-name.ots

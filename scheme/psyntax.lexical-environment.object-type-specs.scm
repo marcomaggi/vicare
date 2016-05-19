@@ -246,9 +246,8 @@
 
 	 make-type-annotation
 	 syntax-object.type-annotation?
-	 type-annotation->object-type-spec		tail-type-annotation->object-type-spec
+	 type-annotation->object-type-spec
 	 expression-expander-for-type-annotations
-	 improper-object-type-specs->list-and-rest
 
 	 #| end of export list |# )
 
@@ -2839,10 +2838,12 @@
 	    car.ots cdr.ots (void))))
 
       (define (pair-name? name.stx)
-	(syntax-match name.stx (pair)
+	(syntax-match name.stx (pair nelist-of)
 	  ((pair ?car-type ?cdr-type)
 	   (and (syntax-object.type-annotation? ?car-type)
 		(syntax-object.type-annotation? ?cdr-type))
+	   #t)
+	  ((nelist-of ?type)
 	   #t)
 	  (?type-id
 	   (identifier? ?type-id)
@@ -3730,19 +3731,21 @@
      (identifier-syntax
       (lambda (stx)
 	(syntax-object.type-annotation? input-form.stx lexenv stx))))
+   (define (%mk-type-signature type.ann)
+     (let ((synner (lambda (message subform)
+		     (syntax-violation __who__ message input-form.stx subform))))
+       (make-type-signature (syntax-object->type-signature-specs type.ann lexenv synner))))
    (syntax-match stx (pair list vector pair-of list-of nelist-of vector-of
 			   hashtable alist condition enumeration
 			   or and not lambda case-lambda => parent-of ancestor-of
 			   type-predicate equality-predicate comparison-procedure hash-function
 			   type-of)
      (?type-id
-      (and (identifier? ?type-id)
-	   (try
-	       (id->object-type-spec ?type-id lexenv)
-	     (catch E
-	       (&syntactic-identifier-resolution
-		#f))))
-      #t)
+      (identifier? ?type-id)
+      (try
+	  (if (id->object-type-spec ?type-id lexenv) #t #f)
+	(catch E
+	  (else #f))))
 
      ((pair ?car-type ?cdr-type)
       (and (recur ?car-type)
@@ -3778,18 +3781,18 @@
       (for-all identifier? (cons ?symbol ?symbol*)))
 
      ((lambda ?argtypes => ?rettypes)
-      (and (make-type-signature ?argtypes)
-	   (make-type-signature ?rettypes)
+      (and (%mk-type-signature ?argtypes)
+	   (%mk-type-signature ?rettypes)
 	   #t))
 
      ((case-lambda
 	(?argtypes0 => ?rettypes0)
 	(?argtypes* => ?rettypes*)
 	...)
-      (and (make-type-signature ?argtypes0)
-	   (make-type-signature ?rettypes0)
-	   (for-all make-type-signature ?argtypes*)
-	   (for-all make-type-signature ?rettypes*)
+      (and (%mk-type-signature ?argtypes0)
+	   (%mk-type-signature ?rettypes0)
+	   (for-all %mk-type-signature ?argtypes*)
+	   (for-all %mk-type-signature ?rettypes*)
 	   #t))
 
      ((condition ?component-type* ...)
@@ -3857,6 +3860,10 @@
    ;;
    ;;as NAME.STX argument.
    ;;
+   (define (%mk-type-signature type.ann)
+     (let ((synner (lambda (message subform)
+		     (syntax-violation __who__ message annotation.stx subform))))
+       (make-type-signature (syntax-object->type-signature-specs type.ann lexenv synner))))
    (syntax-match annotation.stx (pair list vector pair-of list-of nelist-of vector-of
 				      hashtable alist condition enumeration
 				      or and not lambda case-lambda => parent-of ancestor-of
@@ -3864,7 +3871,11 @@
 				      type-of)
      (?type-id
       (identifier? ?type-id)
-      (id->object-type-spec ?type-id lexenv))
+      (with-exception-handler
+	  (lambda (E)
+	    (raise (condition (make-who-condition __who__) E)))
+	(lambda ()
+	  (id->object-type-spec ?type-id lexenv))))
 
      ((pair ?car-type ?cdr-type)
       (let ((car.ots (type-annotation->object-type-spec ?car-type lexenv))
@@ -3892,10 +3903,8 @@
 			      name.stx))
 
      ((nelist-of ?item-type)
-      (let ((pair-id	(core-prim-id 'pair))
-	    (list-of-id	(core-prim-id 'list-of)))
-	(type-annotation->object-type-spec `(,pair-id ,?item-type (,list-of-id ,?item-type))
-					   lexenv name.stx)))
+      (let ((type.ots (type-annotation->object-type-spec ?item-type lexenv)))
+	(make-pair-type-spec type.ots (make-list-of-type-spec type.ots) name.stx)))
 
      ((list-of ?item-type)
       (make-list-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
@@ -3954,19 +3963,19 @@
 
      ((lambda ?argtypes => ?rettypes)
       (make-closure-type-spec (make-case-lambda-signature
-			       (list (make-lambda-signature (make-type-signature ?rettypes)
-							    (make-type-signature ?argtypes))))
+			       (list (make-lambda-signature (%mk-type-signature ?rettypes)
+							    (%mk-type-signature ?argtypes))))
 			      name.stx))
 
      ((case-lambda (?argtypes0 => ?rettypes0) (?argtypes* => ?rettypes*) ...)
       (make-closure-type-spec (make-case-lambda-signature
 			       (cons (make-lambda-signature
-				      (make-type-signature ?rettypes0)
-				      (make-type-signature ?argtypes0))
+				      (%mk-type-signature ?rettypes0)
+				      (%mk-type-signature ?argtypes0))
 				     (map (lambda (argtypes.stx rettypes.stx)
 					    (make-lambda-signature
-					     (make-type-signature rettypes.stx)
-					     (make-type-signature argtypes.stx)))
+					     (%mk-type-signature rettypes.stx)
+					     (%mk-type-signature argtypes.stx)))
 				       ?argtypes* ?rettypes*)))
 			      name.stx))
 
@@ -4026,77 +4035,6 @@
 
      (else
       (syntax-violation __who__ "invalid type annotation" annotation.stx)))))
-
-;;; --------------------------------------------------------------------
-
-(case-define* tail-type-annotation->object-type-spec
-  ;;Let's consider the following LAMBDA syntaxes:
-  ;;
-  ;;   (lambda/typed {args <list>}				?body)
-  ;;   (lambda/typed {args (list-of <fixnum>)}			?body)
-  ;;   (lambda/typed ({a <fixnum>} . {rest <list>})		?body)
-  ;;   (lambda/typed ({a <fixnum>} . {rest (list-of <fixnum>)})	?body)
-  ;;
-  ;;the  type annotations  for the  ARGS and  REST arguments  are special:  they must
-  ;;represent  lists.  It  is  established that  such type  annotations  can be  only
-  ;;"<list>", "<nelist>", "(list ?type ?type* ...)" or "(list-of ?type)".
-  ;;
-  ;;This  function  parses   such  type  annotations  and  returns   an  instance  of
-  ;;"<object-type-spce>"  representing it.   If the  type annotation  is invalid:  an
-  ;;exception is raised.
-  ;;
-  ((annotation.stx lexenv)
-   (tail-type-annotation->object-type-spec annotation.stx lexenv annotation.stx))
-  ((annotation.stx lexenv name.stx)
-   (define (%error)
-     (syntax-violation __who__ "invalid type annotation in tail position" annotation.stx))
-   (syntax-match annotation.stx (<list> <nelist> list-of list)
-     (<list>
-      (<list>-ots))
-     (<nelist>
-      (<nelist>-ots))
-     ((list-of ?type-ann)
-      (make-list-of-type-spec (type-annotation->object-type-spec ?type-ann lexenv)
-			      name.stx))
-     ((list ?item0 ?item* ...)
-      (make-list-type-spec (map (lambda (item.ann)
-				  (type-annotation->object-type-spec item.ann lexenv))
-			     (cons ?item0 ?item*))))
-     ;;This allows:
-     ;;
-     ;;   (define-type <list-of-fixnums> (list-of <fixnum>))
-     ;;   (define-type <some-list> <list>)
-     ;;
-     (?type-ann
-      (identifier? ?type-ann)
-      (receive-and-return (ots)
-	  (id->object-type-spec ?type-ann lexenv)
-	(unless (or (<list>-ots? ots)
-		    (list-of-type-spec? ots))
-	  (%error))))
-
-     (else
-      (%error)))))
-
-(define* (improper-object-type-specs->list-and-rest specs)
-  (let loop ((ell	specs)
-	     (item*	'()))
-    (syntax-match ell (<list> <nelist> list-of list)
-      (()
-       (values (reverse item*) '()))
-      (<list>
-       (values (reverse item*) ell))
-      (<nelist>
-       (values (reverse item*) ell))
-      ((list-of ?type)
-       (values (reverse item*) ell))
-      ((list ?item0 ?item* ...)
-       (values (reverse item*) ell))
-      ((?car . ?cdr)
-       (loop ?cdr (cons ?car item*)))
-      (_
-       (assertion-violation __who__
-	 "list of object type specifications" specs)))))
 
 
 ;;;; done

@@ -29,12 +29,18 @@
   (define-macro-transformer (define-record-type input-form.stx)
     (syntax-match input-form.stx ()
       ((_ ?namespec ?clause* ...)
-       (begin
-	 (%validate-definition-clauses ?clause* __synner__)
-	 ;; (receive-and-return (out)
-	 ;;     (%do-define-record input-form.stx ?namespec ?clause* __synner__)
-	 ;;   (debug-print out))
-	 (%do-define-record input-form.stx ?namespec ?clause* __synner__)))
+       (with-exception-handler
+	   (lambda (E)
+	     (raise
+	      (condition (make-who-condition __who__)
+			 (make-syntax-violation input-form.stx #f)
+			 E)))
+	 (lambda ()
+	   (%validate-definition-clauses ?clause* __synner__)
+	   ;; (receive-and-return (out)
+	   ;;     (%do-define-record input-form.stx ?namespec ?clause* __synner__)
+	   ;;   (debug-print out))
+	   (%do-define-record input-form.stx ?namespec ?clause* __synner__))))
       (_
        (__synner__ "invalid syntax in macro use"))))
 

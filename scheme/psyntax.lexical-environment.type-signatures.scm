@@ -29,6 +29,10 @@
    type-signature.object-type-specs			type-signature.object-type-specs-set!
    type-signature.syntax-object
 
+   syntax-object->type-signature-specs			type-signature-specs?
+   tail-type-annotation->object-type-spec		type-signature.syntax-object-list-and-rest
+   syntax-object.type-signature?
+
 ;;; special constructors
    make-type-signature/single-void			make-type-signature/single-untyped
    make-type-signature/single-top
@@ -256,7 +260,302 @@
 
   (main input-form.stx))
 
+
+;;;; type signature syntax object parser
 
+(define* (syntax-object->type-signature-specs input-signature.stx lexenv synner)
+  ;;Parse the syntax object INPUT-SIGNATURE.STX and as a type signature specification
+  ;;and convert it into a proper  or improper list of "<object-type-spec>" instances.
+  ;;If the input is invalid: raise a syntax violation.
+  ;;
+  ;;We can always use "(current-inferior-lexenv)" as value for the LEXENV argument.
+  ;;
+  ;;SYNNER must be a function called, in tail position, as:
+  ;;
+  ;;   (SYNNER ?message ?subform)
+  ;;
+  ;;for example:
+  ;;
+  ;;   (define (synner message subform)
+  ;;     (syntax-violation #f message input-signature.stx subform))
+  ;;
+  ;;Examples of acceptable type signatures:
+  ;;
+  ;;   <no-return>
+  ;;   <list>
+  ;;   <nelist>
+  ;;   <null>
+  ;;   ()
+  ;;   (list-of ?type)
+  ;;   (list)
+  ;;   (list ?type0 ?type ...)
+  ;;   (pair ?car-type ?list-type-signature)
+  ;;   (?car-type . ?list-type-signature)
+  ;;
+  (define (%acceptable-list-ots? type.ots)
+    (or (<list>-ots?		type.ots)
+	(<nelist>-ots?		type.ots)
+	(<null>-ots?		type.ots)
+	(list-of-type-spec?	type.ots)
+	(list-type-spec?	type.ots)
+	(and (pair-type-spec? type.ots)
+	     (%acceptable-list-ots? (pair-type-spec.cdr-ots type.ots)))))
+  (define (ta->ots type.stx)
+    (try
+	(type-annotation->object-type-spec type.stx lexenv)
+      (catch E
+	(else
+	 (%synner type.stx)))))
+  (define (%synner subform)
+    (synner "invalid syntax object as type signature" subform))
+  (syntax-match input-signature.stx (<no-return> <null> <list> <nelist> list-of list pair nelist-of enumeration)
+    (<no-return>
+     (<no-return>-ots))
+
+    (<list>
+     (<list>-ots))
+
+    (<nelist>
+     (<nelist>-ots))
+
+    (<null>
+     (<null>-ots))
+
+    ((list-of ?type)
+     (make-list-of-type-spec (ta->ots ?type)))
+
+    ((list)
+     (<null>-ots))
+
+    ((list ?type ?type* ...)
+     (make-list-type-spec (map ta->ots (cons ?type ?type*))))
+
+    ((pair ?car ?cdr)
+     (let ((cdr.ots (ta->ots ?cdr)))
+       (if (%acceptable-list-ots? cdr.ots)
+	   (make-pair-type-spec (ta->ots ?car))
+	 (%synner ?cdr))))
+
+    ((nelist-of ?type)
+     (let ((type.ots (ta->ots ?type)))
+       (make-pair-type-spec type.ots (make-list-of-type-spec type.ots))))
+
+    (?type
+     (identifier? ?type)
+     ;;For example, here we want to allow syntactic identifiers bound with:
+     ;;
+     ;;   (define-type ?type <list>)
+     ;;
+     (let ((type.ots (ta->ots ?type)))
+       (if (or (<no-return>-ots?	type.ots)
+	       (%acceptable-list-ots?	type.ots))
+	   type.ots
+	 (%synner ?type))))
+
+    (()
+     ;;This is good: an empty type signature means no values.
+     '())
+
+    ((enumeration . ?stuff)
+     (%synner #f))
+
+    ((?car . ?cdr)
+     ;;INPUT-SIGNATURE.STX must be a proper or improper list of type annotations.
+     (cons (ta->ots ?car)
+	   (let recur ((stx ?cdr))
+	     (syntax-match stx (<no-return> <null> <list> <nelist> list-of list pair nelist-of enumeration)
+	       ((list-of ?type)
+		(make-list-of-type-spec (ta->ots ?type)))
+
+	       ((list)
+		(<null>-ots))
+
+	       ((list ?type ?type* ...)
+		(make-list-type-spec (map ta->ots (cons ?type ?type*))))
+
+	       ((pair ?car ?cdr)
+		(let ((cdr.ots (ta->ots ?cdr)))
+		  (if (%acceptable-list-ots? cdr.ots)
+		      (make-pair-type-spec (ta->ots ?car))
+		    (%synner ?cdr))))
+
+	       ((nelist-of ?type)
+		(let ((type.ots (ta->ots ?type)))
+		  (make-pair-type-spec type.ots (make-list-of-type-spec type.ots))))
+
+	       ((enumeration . ?stuff)
+		(%synner #f))
+
+	       ((?car . ?cdr)
+		(cons (ta->ots ?car) (recur ?cdr)))
+
+	       (()
+		'())
+
+;;; the ones below are less probable
+
+	       (?type
+		(identifier? ?type)
+		;;For example, here we want to allow syntactic identifiers bound with:
+		;;
+		;;   (define-type ?type <list>)
+		;;
+		(let ((type.ots (ta->ots ?type)))
+		  (if (%acceptable-list-ots? type.ots)
+		      type.ots
+		    (%synner ?type))))
+
+	       (<list>
+		(<list>-ots))
+
+	       (<nelist>
+		(<nelist>-ots))
+
+	       (<null>
+		(<null>-ots))
+
+	       (_
+		(%synner stx))))))
+
+    (_
+     (%synner #f))))
+
+;;; --------------------------------------------------------------------
+
+(case-define* syntax-object.type-signature?
+  ;;Return true  if STX  is a  syntax object  representing the  type signature  of an
+  ;;expression's return values; otherwise return false.   The return value is true if
+  ;;STX is null or  a proper or improper list of type  identifiers, with a standalone
+  ;;type identifier being acceptable if it is "<list>" or one of its sub-types.
+  ;;
+  ;;Examples:
+  ;;
+  ;;   (syntax-object.type-signature? #'<no-return>)			=> #t
+  ;;   (syntax-object.type-signature? #'<list>)				=> #t
+  ;;   (syntax-object.type-signature? #'())				=> #t
+  ;;   (syntax-object.type-signature? #'(<fixnum> <string>))		=> #t
+  ;;   (syntax-object.type-signature? #'(<fixnum> <string> . <list>))	=> #t
+  ;;
+  ;;A standalone "<list>" identifier means: any number of values of any type.
+  ;;
+  ((stx)
+   (syntax-object.type-signature? stx (current-inferior-lexenv)))
+  ((stx lexenv)
+   (syntax-object->type-signature-specs stx lexenv (lambda (message subform) #f))))
+
+;;; --------------------------------------------------------------------
+
+(case-define* tail-type-annotation->object-type-spec
+  ;;Let's consider the following LAMBDA syntaxes:
+  ;;
+  ;;   (lambda/typed {args <list>}				?body)
+  ;;   (lambda/typed {args (list-of <fixnum>)}			?body)
+  ;;   (lambda/typed ({a <fixnum>} . {rest <list>})		?body)
+  ;;   (lambda/typed ({a <fixnum>} . {rest (list-of <fixnum>)})	?body)
+  ;;
+  ;;the  type annotations  for the  ARGS and  REST arguments  are special:  they must
+  ;;represent  lists.  This  function parses  such  type annotations  and returns  an
+  ;;instance  of "<object-type-spce>"  representing it.   If the  type annotation  is
+  ;;invalid: an exception is raised.
+  ;;
+  ((annotation.stx lexenv)
+   (tail-type-annotation->object-type-spec annotation.stx lexenv annotation.stx))
+  ((annotation.stx lexenv name.stx)
+   (define (%acceptable-list-ots? type.ots)
+     (or (<list>-ots?		type.ots)
+	 (<nelist>-ots?		type.ots)
+	 (<null>-ots?		type.ots)
+	 (list-of-type-spec?	type.ots)
+	 (list-type-spec?	type.ots)
+	 (and (pair-type-spec? type.ots)
+	      (%acceptable-list-ots? (pair-type-spec.cdr-ots type.ots)))))
+   (define (ta->ots type.stx)
+     (try
+	 (type-annotation->object-type-spec type.stx lexenv)
+       (catch E
+	 (else
+	  (%synner type.stx)))))
+   (define (%synner subform)
+     (syntax-violation __who__ "invalid syntax object as type signature" annotation.stx subform))
+   (syntax-match annotation.stx (<null> <list> <nelist> list-of list pair nelist-of)
+     (<list>
+      (<list>-ots))
+
+     (<nelist>
+      (<nelist>-ots))
+
+     (<null>
+      (<null>-ots))
+
+     ((list-of ?type)
+      (make-list-of-type-spec (ta->ots ?type)))
+
+     ((list)
+      (<null>-ots))
+
+     ((list ?type ?type* ...)
+      (make-list-type-spec (map ta->ots (cons ?type ?type*))))
+
+     ((pair ?car ?cdr)
+      (let ((cdr.ots (ta->ots ?car)))
+	(if (%acceptable-list-ots? cdr.ots)
+	    (make-pair-type-spec (ta->ots ?car))
+	  (%synner ?cdr))))
+
+    ((nelist-of ?type)
+     (let ((type.ots (ta->ots ?type)))
+       (make-pair-type-spec type.ots (make-list-of-type-spec type.ots))))
+
+     (?type
+      (identifier? ?type)
+      ;;For example, here we want to allow syntactic identifiers bound with:
+      ;;
+      ;;   (define-type ?type <list>)
+      ;;
+      (let ((type.ots (ta->ots ?type)))
+	(if (or (<no-return>-ots?	type.ots)
+		(%acceptable-list-ots?	type.ots))
+	    type.ots
+	  (%synner ?type))))
+
+     (()
+      ;;This is good: an empty type signature means no values.
+      '())
+
+     (else
+      (%synner #f)))))
+
+
+;;;; signature specs parser
+
+(define* (type-signature-specs? input-signature.specs)
+  ;;Return  true   if  INPUT-SIGNATURE.SPECS  is   a  proper  or  improper   list  of
+  ;;"<object-type-spec>" instances  representing a  valid type  signature.  Otherwise
+  ;;return false.
+  ;;
+  (define (%acceptable-list-ots? type.ots)
+    #;(debug-print '%acceptable-list-ots? type.ots)
+    (or (<list>-ots?		type.ots)
+	(<nelist>-ots?		type.ots)
+	(<null>-ots?		type.ots)
+	(list-of-type-spec?	type.ots)
+	(list-type-spec?	type.ots)
+	(and (pair-type-spec? type.ots)
+	     (%acceptable-list-ots? (pair-type-spec.cdr-ots type.ots)))))
+  (cond ((pair? input-signature.specs)
+	 ;;INPUT-SIGNATURE.SPECS  must  be   a  proper  or  improper   list  of  type
+	 ;;annotations.
+	 (let loop ((specs (cdr input-signature.specs)))
+	   (cond ((pair? specs)
+		  (loop (cdr specs)))
+		 ((null? specs))
+		 ((%acceptable-list-ots? specs))
+		 (else #f))))
+	((<no-return>-ots?	input-signature.specs))
+	((%acceptable-list-ots?	input-signature.specs))
+	;;This is good: an empty type signature means no values.
+	((null? input-signature.specs))
+	(else #f)))
 
 
 ;;;; type signature: type definition
@@ -280,135 +579,8 @@
     #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
-      (case-define* make-type-signature
-	((stx)
-	 (make-type-signature stx (current-inferior-lexenv)))
-	((stx lexenv)
-	 (let ((specs (with-exception-handler
-			  (lambda (E)
-			    (raise
-			     (condition E
-					(make-who-condition __who__)
-					(make-message-condition "invalid type signature")
-					(make-irritants-condition (list stx)))))
-			(lambda ()
-			  (%parse-input-signature __who__ stx lexenv)))))
-	   (make-record specs (void) (void) (void) (void) #f #f))))
-
-      (define (%parse-input-signature caller-who input-signature lexenv)
-	;;Accept as input:
-	;;
-	;;* A standalone "<no-return>" identifier.
-	;;
-	;;*  A   standalone  "<object-type-spec>"  instance  representing   the  type
-	;;"<no-return>".
-	;;
-	;;*  A   proper  or  improper   list  of  type  identifiers,   compound  type
-	;;specifications,  instances  of  "<object-type-spec>";  in  standalone  tail
-	;;position there must be a list type.
-	;;
-	#;(debug-print __who__ input-signature)
-	(syntax-match input-signature (<no-return>)
-	  (<no-return>
-	   ;;INPUT-SIGNATURE is a standalone "<no-return>" type identifier.
-	   (<no-return>-ots))
-	  (?item
-	   (<no-return>-ots? ?item)
-	   ;;INPUT-SIGNATURE   is   a    standalone   "<object-type-spec>"   instance
-	   ;;representing the type "<no-return>".
-	   input-signature)
-	  (_
-	   ;;INPUT-SIGNATURE must  be a proper  or improper list of  type identifiers
-	   ;;and/or instances of "<object-type-spec>".
-	   (let recur ((stx input-signature))
-	     (syntax-match stx (<no-return> <list> <nelist> list-of list)
-	       (()
-		;;STX is a proper list.  Good.
-		'())
-
-	       (<list>
-		(<list>-ots))
-
-	       (<nelist>
-		(<nelist>-ots))
-
-	       ((list-of ?item-type)
-		(make-list-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)))
-
-	       ((list)
-		;;STX is a proper list.  Good.
-		'())
-
-	       ((list ?item0 ?item* ...)
-		(make-list-type-spec (map (lambda (item.ann)
-					    (type-annotation->object-type-spec item.ann lexenv))
-				       (cons ?item0 ?item*))))
-
-	       (<no-return>
-		(syntax-violation caller-who
-		  "type signature component \"<no-return>\" in invalid position"
-		  input-signature stx))
-
-	       (?rest-ots
-		(object-type-spec? ?rest-ots)
-		(cond ((or (list-of-type-spec?	?rest-ots)
-			   (list-type-spec?	?rest-ots)
-			   (<nelist>-ots?	?rest-ots)
-			   (<list>-ots?		?rest-ots))
-		       ?rest-ots)
-		       ((<null>-ots? ?rest-ots)
-			'())
-		      (else
-		       (syntax-violation caller-who
-			 "expected list sub-type object-type specification as signature component in tail position"
-			 input-signature ?rest-ots))))
-
-	       (?rest-id
-		(identifier? ?rest-id)
-		;;This is meant to match type identifiers defined as:
-		;;
-		;;   (define-type <list-of-fixnums> (list-of <fixnum>))
-		;;   (define-type <some-list> <list>)
-		;;
-		(let ((rest.ots (with-exception-handler
-				    (lambda (E)
-				      (raise-continuable (condition E (make-who-condition 'make-type-signature))))
-				  (lambda ()
-				    (id->object-type-spec ?rest-id lexenv)))))
-		  (cond ((or (list-of-type-spec? rest.ots)
-			     (list-type-spec?    rest.ots)
-			     (<nelist>-ots?      rest.ots)
-			     (<list>-ots?        rest.ots))
-			 rest.ots)
-			((<null>-ots? rest.ots)
-			 '())
-			(else
-			 (raise
-			  (condition (make-who-condition caller-who)
-				     (make-message-condition "expected list type identifier as signature component in tail position")
-				     (make-syntax-violation input-signature ?rest-id)))))))
-
-	       ((?thing . ?rest)
-		(cons (let ((ots (if (object-type-spec? ?thing)
-				     ?thing
-				   (type-annotation->object-type-spec ?thing lexenv))))
-			(cond
-			 ;; ((<no-return>-ots? ots)
-			 ;;  (syntax-violation caller-who
-			 ;;    "type signature component \"<no-return>\" in invalid position"
-			 ;;    input-signature ?thing))
-			 ;; ((<void>-ots? ots)
-			 ;;  (syntax-violation caller-who
-			 ;; 	 "type signature component \"<void>\" in invalid position"
-			 ;; 	 input-signature ?thing))
-			 (else ots)))
-		      (recur ?rest)))
-
-	       (_
-		(syntax-violation caller-who
-		  "expected type identifier or object-type specification as signature component"
-		  input-signature stx)))))))
-
+      (define* (make-type-signature {specs type-signature-specs?})
+	(make-record specs (void) (void) (void) (void) #f #f))
       make-type-signature))
   ;; (custom-printer
   ;;   (lambda (S port sub-printer)
@@ -437,18 +609,18 @@
 (let*-syntax
     ((define-cached-signature-maker
        (syntax-rules ()
-	 ((_ ?who ?stx-maker)
+	 ((_ ?who ?ots-maker)
 	  (define ?who
 	    (let ((rvs #f))
 	      (lambda ()
 		(or rvs
 		    (receive-and-return (S)
-			(make-type-signature ?stx-maker)
+			(make-type-signature ?ots-maker)
 		      (set! rvs S)))))))))
      (define-single-type-signature-maker
        (syntax-rules ()
-	 ((_ ?who ?type-id-maker)
-	  (define-cached-signature-maker ?who (list (?type-id-maker)))))))
+	 ((_ ?who ?type-ots-maker)
+	  (define-cached-signature-maker ?who (list (?type-ots-maker)))))))
   (define-single-type-signature-maker make-type-signature/single-void			<void>-ots)
   (define-single-type-signature-maker make-type-signature/single-untyped		<untyped>-ots)
   (define-single-type-signature-maker make-type-signature/single-top			<top>-ots)
@@ -468,7 +640,7 @@
 (define-syntax-rule (make-type-signature/fully-unspecified)
   (make-type-signature/standalone-list))
 
-(define* (make-type-signature/single-value type-annotation)
+(define* (make-type-signature/single-value {type-annotation object-type-spec?})
   (make-type-signature (list type-annotation)))
 
 
@@ -577,6 +749,42 @@
 	    '())
 	   (else
 	    (object-type-spec.name specs))))))
+
+(define* (type-signature.syntax-object-list-and-rest {sig type-signature?})
+  ;;Return two values:
+  ;;
+  ;;1. A proper  list of syntax objects  representing the proper portion  of the type
+  ;;signature.
+  ;;
+  ;;2.  Null  or a  syntax  object  representing the  improper  portion  of the  type
+  ;;signature.
+  ;;
+  ;;Examples:
+  ;;
+  ;;  (type-signature.syntax-object-list-and-rest #[sig (<top> <top>)])
+  ;;  => (<top> <top>) ()
+  ;;
+  ;;  (type-signature.syntax-object-list-and-rest #[sig (<top> <top> . <list>)])
+  ;;  => (<top> <top>) <list>
+  ;;
+  ;;  (type-signature.syntax-object-list-and-rest #[sig <list>])
+  ;;  => () <list>
+  ;;
+  ;;  (type-signature.syntax-object-list-and-rest #[sig ()])
+  ;;  => () ()
+  ;;
+  (let loop ((stx*	'())
+	     (specs	(type-signature.object-type-specs sig)))
+    (cond ((pair? specs)
+	   (loop (cons (object-type-spec.name (car specs)) stx*)
+		 (cdr specs)))
+	  ((null? specs)
+	   (values (reverse stx*) '()))
+	  (else
+	   (assert (object-type-spec? specs))
+	   (values (reverse stx*) (object-type-spec.name specs))))))
+
+;;; --------------------------------------------------------------------
 
 (define* (type-signature.min-count {signature type-signature?})
   ;;Return a non-negative  fixnum representing the minimum number of  values that can
@@ -1441,14 +1649,17 @@
 
 ;;;; helpers and utilities
 
-(define (datum-type-signature datum)
-  ;;Build and  return a new instance  of "<type-signature>" representing the  type of
-  ;;the single value returned by the expression  DATUM, which must be a Scheme object
-  ;;extracted from a syntax object representing a literal expression.
-  ;;
-  (make-type-signature/single-value (datum-type-annotation datum)))
+(case-define datum-type-signature
+  ((datum)
+   (datum-type-signature datum (current-inferior-lexenv)))
+  ((datum lexenv)
+   ;;Build and return  a new instance of "<type-signature>" representing  the type of
+   ;;the single value returned by the expression DATUM, which must be a Scheme object
+   ;;extracted from a syntax object representing a literal expression.
+   ;;
+   (make-type-signature/single-value (datum-type-annotation datum lexenv))))
 
-(define (datum-type-annotation datum)
+(define (datum-type-annotation datum lexenv)
   ;;Recursive  function.  Build  and return  a  syntax object  representing the  type
   ;;annotation of DATUM, which must be a Scheme object extracted from a syntax object
   ;;representing a literal expression.
@@ -1458,94 +1669,91 @@
   (define table (make-eq-hashtable))
   (let recur ((datum datum))
     (cond ((boolean? datum)		(cond (datum
-					       (<true>-type-id))
+					       (<true>-ots))
 					      (else
-					       (<false>-type-id))))
-	  ((char?    datum)		(core-prim-id '<char>))
-	  ((symbol?  datum)		(list (enumeration-id) (make-syntactic-identifier-for-quoted-symbol datum)))
-	  ((keyword? datum)		(core-prim-id '<keyword>))
+					       (<false>-ots))))
+	  ((char?    datum)		(core-prim-spec '<char> lexenv))
+	  ((symbol?  datum)		(make-enumeration-type-spec (list datum)))
+	  ((keyword? datum)		(core-prim-spec '<keyword> lexenv))
 
 	  ((fixnum?  datum)		(cond ((fxpositive? datum)
-					       (core-prim-id '<positive-fixnum>))
+					       (core-prim-spec '<positive-fixnum> lexenv))
 					      ((fxnegative? datum)
-					       (core-prim-id '<negative-fixnum>))
+					       (core-prim-spec '<negative-fixnum> lexenv))
 					      ((fxzero? datum)
-					       (core-prim-id '<zero-fixnum>))
+					       (core-prim-spec '<zero-fixnum> lexenv))
 					      (else
 					       ;;This should never happen.
-					       (core-prim-id '<fixnum>))))
+					       (core-prim-spec '<fixnum> lexenv))))
 	  ((flonum?  datum)		(cond ((flpositive? datum)
-					       (core-prim-id '<positive-flonum>))
+					       (core-prim-spec '<positive-flonum> lexenv))
 					      ((flnegative? datum)
-					       (core-prim-id '<negative-flonum>))
+					       (core-prim-spec '<negative-flonum> lexenv))
 					      ((flzero?/positive datum)
-					       (core-prim-id '<positive-zero-flonum>))
+					       (core-prim-spec '<positive-zero-flonum> lexenv))
 					      ((flzero?/negative datum)
-					       (core-prim-id '<negative-zero-flonum>))
+					       (core-prim-spec '<negative-zero-flonum> lexenv))
 					      (else
 					       ;;This  happens  when  the  flonum  is
 					       ;;not-a-number.
-					       (core-prim-id '<flonum>))))
+					       (core-prim-spec '<flonum> lexenv))))
 	  ((ratnum?  datum)		(cond ((ratnum-positive? datum)
-					       (core-prim-id '<positive-ratnum>))
+					       (core-prim-spec '<positive-ratnum> lexenv))
 					      ((ratnum-negative? datum)
-					       (core-prim-id '<negative-ratnum>))
+					       (core-prim-spec '<negative-ratnum> lexenv))
 					      (else
 					       ;;This should never happen.
-					       (core-prim-id '<ratnum>))))
+					       (core-prim-spec '<ratnum> lexenv))))
 	  ((bignum?  datum)		(cond ((bignum-positive? datum)
-					       (core-prim-id '<positive-bignum>))
+					       (core-prim-spec '<positive-bignum> lexenv))
 					      ((bignum-negative? datum)
-					       (core-prim-id '<negative-bignum>))
+					       (core-prim-spec '<negative-bignum> lexenv))
 					      (else
 					       ;;This should never happen.
-					       (core-prim-id '<bignum>))))
+					       (core-prim-spec '<bignum> lexenv))))
 	  ((compnum? datum)		(cond ((exact-compnum? datum)
-					       (core-prim-id '<exact-compnum>))
+					       (core-prim-spec '<exact-compnum> lexenv))
 					      ((zero-compnum? datum)
-					       (core-prim-id '<zero-compnum>))
+					       (core-prim-spec '<zero-compnum> lexenv))
 					      (else
-					       (core-prim-id '<non-zero-inexact-compnum>))))
+					       (core-prim-spec '<non-zero-inexact-compnum> lexenv))))
 	  ((cflonum? datum)		(cond ((zero-cflonum? datum)
-					       (core-prim-id '<zero-cflonum>))
+					       (core-prim-spec '<zero-cflonum> lexenv))
 					      (else
-					       (core-prim-id '<non-zero-cflonum>))))
-	  ((string?  datum)		(core-prim-id '<string>))
+					       (core-prim-spec '<non-zero-cflonum> lexenv))))
+	  ((string?  datum)		(core-prim-spec '<string> lexenv))
 
-	  ((null? datum)		(<null>-type-id))
+	  ((null? datum)		(<null>-ots))
 
 	  ((list? datum)		(if (hashtable-ref table datum #f)
-					    (<nelist>-type-id)
+					    (<nelist>-ots)
 					  (begin
 					    (let pair-recur ((P datum))
 					      (when (pair? P)
 						(hashtable-set! table P #t)
 						(pair-recur (cdr P))))
-					    (cons (core-prim-id 'list)
-						  (map recur datum)))))
+					    (make-list-type-spec (map recur datum)))))
 
 	  ((pair? datum)		(if (hashtable-ref table datum #f)
-					    (<pair>-type-id)
+					    (<pair>-ots)
 					  (begin
 					    (hashtable-set! table datum #t)
-					    (list (core-prim-id 'pair)
-						  (recur (car datum))
-						  (recur (cdr datum))))))
+					    (make-pair-type-spec (recur (car datum))
+								 (recur (cdr datum))))))
 
 	  ((vector?  datum)		(if (hashtable-ref table datum #f)
-					    (<nevector>-type-id)
+					    (<nevector>-ots)
 					  (begin
 					    (hashtable-set! table datum #t)
 					    (cond ((vector-empty? datum)
-						   (<empty-vector>-type-id))
+						   (<empty-vector>-ots))
 						  (else
-						   (cons (core-prim-id 'vector)
-							 (map recur (vector->list datum))))))))
+						   (make-vector-type-spec (map recur (vector->list datum))))))))
 
-	  ((bytevector? datum)		(core-prim-id '<bytevector>))
+	  ((bytevector? datum)		(core-prim-spec '<bytevector> lexenv))
 
-	  ((eq? datum (void))		(<void>-type-id))
-	  (else				(<top>-type-id)))))
+	  ((eq? datum (void))		(<void>-ots))
+	  (else				(<top>-ots)))))
 
 
 ;;;; done

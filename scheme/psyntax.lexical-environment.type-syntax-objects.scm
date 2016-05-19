@@ -22,8 +22,7 @@
 
 
 (module PSYNTAX-TYPE-SYNTAX-OBJECTS
-  (syntax-object.type-signature?
-   syntax-object.typed-argument?			syntax-object.parse-typed-argument
+  (syntax-object.typed-argument?			syntax-object.parse-typed-argument
    syntax-object.parse-standard-formals			syntax-object.parse-typed-formals
    syntax-object.parse-standard-list-of-bindings	syntax-object.parse-standard-list-of-bindings/let-star
    syntax-object.parse-typed-list-of-bindings		syntax-object.parse-typed-list-of-bindings/let-star
@@ -38,74 +37,6 @@
    syntax-object.typed-clambda-clause-formals?
 
    #| end of exports |# )
-
-
-;;;; type signature syntaxes predicates
-
-(case-define* syntax-object.type-signature?
-  ;;Return true  if STX  is a  syntax object  representing the  type signature  of an
-  ;;expression's return values; otherwise return false.   The return value is true if
-  ;;STX is null or  a proper or improper list of type  identifiers, with a standalone
-  ;;type identifier being acceptable if it is "<list>" or one of its sub-types.
-  ;;
-  ;;Examples:
-  ;;
-  ;;   (syntax-object.type-signature? #'<no-return>)			=> #t
-  ;;   (syntax-object.type-signature? #'<list>)				=> #t
-  ;;   (syntax-object.type-signature? #'())				=> #t
-  ;;   (syntax-object.type-signature? #'(<fixnum> <string>))		=> #t
-  ;;   (syntax-object.type-signature? #'(<fixnum> <string> . <list>))	=> #t
-  ;;
-  ;;A standalone "<list>" identifier means: any number of values of any type.
-  ;;
-  ((stx)
-   (syntax-object.type-signature? stx (current-inferior-lexenv)))
-  ((stx lexenv)
-   (syntax-match stx (<no-return> <list> <nelist> list-of list <void>)
-     (<no-return>
-      #t)
-     (<list>
-      #t)
-     (<nelist>
-      #t)
-     ((list-of ?type-annotation)
-      (syntax-object.type-annotation? ?type-annotation))
-     ((list ?type0 ?type* ...)
-      (for-all syntax-object.type-annotation? (cons ?type0 ?type*)))
-     ((<void>)
-      #t)
-     (else
-      (let recur ((stx stx))
-	(syntax-match stx (<list> <nelist> list-of list)
-	  (() #t)
-	  (<list>
-	   #t)
-	  (<nelist>
-	   #t)
-	  ((list-of ?type-annotation)
-	   (syntax-object.type-annotation? ?type-annotation))
-	  ((list ?type0 ?type* ...)
-	   (for-all syntax-object.type-annotation? (cons ?type0 ?type*)))
-	  (?rest-id
-	   (identifier? ?rest-id)
-	   ;;This is to allow type identifiers defined as:
-	   ;;
-	   ;;   (define-type <list-of-fixnums> (list-of <fixnum>))
-	   ;;   (define-type <some-list> <list>)
-	   ;;
-	   (try
-	       (let ((ots (id->object-type-spec ?rest-id lexenv)))
-		 (or (<list>-ots?        ots)
-		     (<nelist>-ots?      ots)
-		     (list-type-spec?    ots)
-		     (list-of-type-spec? ots)))
-	     (catch E
-	       (&syntactic-identifier-resolution
-		#f))))
-	  ((?thing . ?rest)
-	   (and (syntax-object.type-annotation? ?thing)
-		(recur ?rest)))
-	  (_ #f)))))))
 
 
 ;;;; tagged binding parsing: standalone identifiers
@@ -435,7 +366,11 @@
       ;;Non-standard formals: typed args, as in: (lambda (brace args <list>) ---)
       ((brace ?args-id ?args-type)
        (identifier? ?args-id)
-       (values ?args-id (tail-type-annotation->object-type-spec ?args-type lexenv ?args-type)))
+       (values ?args-id (try
+			    (tail-type-annotation->object-type-spec ?args-type lexenv ?args-type)
+			  (catch E
+			    (else
+			     (%synner "invalid type annotation for return values" ?args-type))))))
 
       ;;Standard formals, UNtyped args as in: (lambda args ---)
       (?args-id
@@ -449,7 +384,11 @@
 	     (cond ((pair? arg*.stx)
 		    (%process-arg* arg*.stx untyped.ots lexenv process-next-arg %synner))
 		   ((identifier? ?rest-id)
-		    (values ?rest-id (tail-type-annotation->object-type-spec ?rest-type lexenv ?rest-type)))
+		    (values ?rest-id (try
+					 (tail-type-annotation->object-type-spec ?rest-type lexenv ?rest-type)
+				       (catch E
+					 (else
+					  (%synner "invalid type annotation for rest argument" ?rest-type))))))
 		   (else
 		    (%synner "invalid rest argument syntax" (list (brace-id) ?rest-id ?rest-type)))))
 	 (%validate-standard-formals standard-formals.stx %synner)))
@@ -510,7 +449,11 @@
 	  ((brace ?id ?type)
 	   (identifier? ?id)
 	   (values (cons ?id standard-formals.stx)
-		   (cons (type-annotation->object-type-spec ?type lexenv)
+		   (cons (try
+			     (type-annotation->object-type-spec ?type lexenv)
+			   (catch E
+			     (else
+			      (synner "invalid type annotation for argument" ?type))))
 			 formals.ots)))
 	  (else
 	   (synner "invalid argument in formals syntax" arg.stx))))))
@@ -620,7 +563,11 @@
       (receive (standard-formals.stx argvals.sig)
 	  (syntax-object.parse-typed-formals ?arg-formals untyped.ots)
 	(values standard-formals.stx
-		(make-lambda-signature (make-type-signature ?rv-types) argvals.sig))))
+		(let* ((synner		(lambda (message subform)
+					  (syntax-violation __who__ message input-formals.stx subform)))
+		       (retvals.sig	(make-type-signature
+					 (syntax-object->type-signature-specs ?rv-types (current-inferior-lexenv) synner))))
+		  (make-lambda-signature retvals.sig argvals.sig)))))
      ;;Without return values tagging.
      (?arg-formals
       (receive (standard-formals.stx argvals.sig)

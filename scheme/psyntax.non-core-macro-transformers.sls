@@ -74,6 +74,7 @@
 ;; module interfaces
 (import PSYNTAX-SYNTAX-MATCH
   PSYNTAX-SYNTAX-UTILITIES
+  PSYNTAX-TYPE-SIGNATURES
   PSYNTAX-TYPE-SYNTAX-OBJECTS
   PSYNTAX-TYPE-CALLABLES)
 
@@ -4481,7 +4482,7 @@
 	  ;;        TMP-REST))))
 	  ;;
 	  (receive (type* rest-type)
-	      (improper-object-type-specs->list-and-rest (type-signature.syntax-object formals.sig))
+	      (type-signature.syntax-object-list-and-rest formals.sig)
 	    (let* ((id*.stx	(cons ?id ?id*))
 		   (TMP*	(generate-temporaries id*.stx))
 		   (rest.sym	(make-syntactic-identifier-for-temporary-variable (syntax->datum ?rest-id))))

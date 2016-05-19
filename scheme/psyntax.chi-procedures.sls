@@ -787,7 +787,7 @@
        (let ((name (syntactic-binding-descriptor.value descr)))
 	 (make-psi expr.stx
 	   (build-primref no-source name)
-	   (make-type-signature/single-value (core-prim-id '<record-type-descriptor>)))))
+	   (make-type-signature/single-value (core-prim-spec '<record-type-descriptor> lexenv.run)))))
 
       (($core-rcd)
        ;;Core record-constructor descriptor reference; it is a built-in constant like
@@ -802,7 +802,7 @@
        (let ((name (syntactic-binding-descriptor.value descr)))
 	 (make-psi expr.stx
 	   (build-primref no-source name)
-	   (make-type-signature/single-value (core-prim-id '<record-constructor-descriptor>)))))
+	   (make-type-signature/single-value (core-prim-spec '<record-constructor-descriptor> lexenv.run)))))
 
       (($core-scheme-type-descriptor)
        ;;Core Scheme object-type descriptor reference; it is a built-in constant like
@@ -814,7 +814,7 @@
        (let ((name (syntactic-binding-descriptor.value descr)))
 	 (make-psi expr.stx
 	   (build-primref no-source name)
-	   (make-type-signature/single-value (core-prim-id '<scheme-type-descriptor>)))))
+	   (make-type-signature/single-value (core-prim-spec '<scheme-type-descriptor> lexenv.run)))))
 
       ((call)
        ;;A function call; this means EXPR.STX has one of the formats:
@@ -890,7 +890,7 @@
        (let ((datum descr))
 	 (make-psi expr.stx
 	   (build-data no-source datum)
-	   (datum-type-signature datum))))
+	   (datum-type-signature datum lexenv.run))))
 
       ((set!)
        ;;Macro use of SET!; it means EXPR.STX has the format:

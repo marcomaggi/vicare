@@ -146,6 +146,8 @@
 		       (cons qdef rev-qdef*)
 		       mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
 
+	#;(debug-print __who__ body-form.stx)
+
 	(parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	  (case type
 
@@ -1384,7 +1386,11 @@
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
       (let* ((lhs.ots	(if lhs.type-ann
-			    (type-annotation->object-type-spec lhs.type-ann lexenv.run)
+			    (try
+				(type-annotation->object-type-spec lhs.type-ann lexenv.run)
+			      (catch E
+				(else
+				 (synner "invalid type annotation" lhs.type-ann))))
 			  (<untyped>-ots)))
 	     (qdef	(make-qdef-typed-defvar input-form.stx lhs.id lhs.ots init-expr? rhs.stx)))
 	(values lhs.id lhs.ots qdef lexenv.run)))
@@ -1472,7 +1478,10 @@
 	 (receive (standard-formals.stx argvals.sig)
 	     ;;This call will use "<top>" for untyped arguments.
 	     (syntax-object.parse-typed-formals ?formals)
-	   (let ((clause-signature (make-lambda-signature (make-type-signature ?rv-types) argvals.sig)))
+	   (let* ((retvals.sig		(let ((synner (lambda (message subform)
+							(syntax-violation __module_who__ message input-form.stx subform))))
+					  (make-type-signature (syntax-object->type-signature-specs ?rv-types lexenv.run synner))))
+		  (clause-signature	(make-lambda-signature retvals.sig argvals.sig)))
 	     (%process-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 					   ?lhs `(,(brace-id) ,?lhs . ,?rv-types) standard-formals.stx clause-signature
 					   `(,?body0 . ,?body*) %synner)))))
@@ -1504,7 +1513,11 @@
     (when (bound-id-member? lhs.id kwd*)
       (synner "cannot redefine keyword"))
     (let* ((lhs.ots	(if lhs.type-ann
-			    (type-annotation->object-type-spec lhs.type-ann lexenv.run)
+			    (try
+				(type-annotation->object-type-spec lhs.type-ann lexenv.run)
+			      (catch E
+				(else
+				 (synner "invalid type annotation" lhs.type-ann))))
 			  (<untyped>-ots)))
 	   (qdef	(make-qdef-checked-defvar input-form.stx lhs.id lhs.ots init-expr? rhs.stx))
 	   (lhs.lab	(generate-label-gensym lhs.id))

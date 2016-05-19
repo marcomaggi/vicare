@@ -304,7 +304,6 @@
     id->object-type-spec			id->record-type-spec
     id->struct-type-spec			type-annotation->object-type-spec
     make-type-annotation			syntax-object.type-annotation?
-    improper-object-type-specs->list-and-rest
     expression-expander-for-type-annotations
     case-identifier-syntactic-binding-descriptor
     case-identifier-syntactic-binding-descriptor/no-indirection
@@ -330,6 +329,7 @@
     define/typed-id			case-define/typed-id
     define/std-id			case-define/std-id
     begin-id
+    core-prim-spec
 
     ;; public interface: identifiers handling
     identifier?				false-or-identifier-bound?
@@ -2437,12 +2437,37 @@
 
   (case-define* system-id
     (({x symbol?})
-     ;;If X is the symbol name of a primitive procedure: return its syntactic binding
-     ;;identifier, otherwise return false.
+     ;;If X is  the symbol name of  a core primitive's syntactic  binding: return its
+     ;;syntactic binding identifier, otherwise return false.
      ;;
      (getprop x SYSTEM-ID-GENSYM))
     (({x symbol?} property)
      (putprop x SYSTEM-ID-GENSYM property)))
+
+  #| end of module |# )
+
+
+;;;; system ots gensym
+
+(module (system-ots-gensym system-ots)
+
+  (define-constant SYSTEM-OTS-GENSYM
+    ;;Notice  that this  gensym  is generated  a-new  every time  the  boot image  is
+    ;;initialised.  We must avoid the source  optimizer to precompute and hard-code a
+    ;;value.
+    (expand-time-gensym "system-ots-gensym"))
+
+  (define (system-ots-gensym)
+    SYSTEM-OTS-GENSYM)
+
+  (case-define* system-ots
+    (({x symbol?})
+     ;;If X is  the symbol name of  a core primitive's syntactic  binding: return its
+     ;;"<object-types-spec>" instance, otherwise return false.
+     ;;
+     (getprop x SYSTEM-OTS-GENSYM))
+    (({x symbol?} property)
+     (putprop x SYSTEM-OTS-GENSYM property)))
 
   #| end of module |# )
 
@@ -2533,6 +2558,15 @@
 		    (system-id sym id))))
 	    (else
 	     (assertion-violation __who__ "invalid core primitive symbol name" sym)))))
+
+(case-define* core-prim-spec
+  (({sym symbol?})
+   (core-prim-spec sym (current-inferior-lexenv)))
+  (({sym symbol?} lexenv)
+   (or (system-ots sym)
+       (receive-and-return (ots)
+	   (type-annotation->object-type-spec (core-prim-id sym) lexenv)
+	 (system-ots sym ots)))))
 
 (define* (make-syntactic-identifier-for-fake-core-primitive {source-name symbol?})
   (make-syntactic-identifier source-name '() '() '()))

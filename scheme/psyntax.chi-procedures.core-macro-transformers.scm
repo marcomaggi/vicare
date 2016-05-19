@@ -469,7 +469,7 @@
      (let ((datum (syntax->datum ?datum)))
        (make-psi input-form.stx
 	 (build-data no-source datum)
-	 (datum-type-signature datum))))
+	 (datum-type-signature datum lexenv.run))))
     (_
      (__synner__ "invalid syntax in macro use"))))
 
@@ -3795,7 +3795,11 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
-       (let ((sts (id->struct-type-spec ?type-id lexenv.run)))
+       (let ((sts (with-exception-handler
+		      (lambda (E)
+			(raise (condition E (make-syntax-violation input-form.stx ?type-id))))
+		    (lambda ()
+		      (id->struct-type-spec ?type-id lexenv.run)))))
 	 (%make-struct-type-descriptor input-form.stx lexenv.run lexenv.expand sts)))
       (_
        (__synner__ "invalid syntax in macro use"))))
@@ -3807,7 +3811,11 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
-       (let ((rts (id->record-type-spec ?type-id lexenv.run)))
+       (let ((rts (with-exception-handler
+		      (lambda (E)
+			(raise (condition E (make-syntax-violation input-form.stx ?type-id))))
+		    (lambda ()
+		      (id->record-type-spec ?type-id lexenv.run)))))
 	 (%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand rts)))
       (_
        (__synner__ "invalid syntax in macro use"))))
@@ -3819,12 +3827,16 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
-       (let* ((rts       (id->record-type-spec ?type-id lexenv.run))
+       (let* ((rts       (with-exception-handler
+			     (lambda (E)
+			       (raise (condition E (make-syntax-violation input-form.stx ?type-id))))
+			   (lambda ()
+			     (id->record-type-spec ?type-id lexenv.run))))
 	      (expr.stx  (record-type-spec.rcd-id rts))
 	      (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
 	 (make-psi input-form.stx
 	   (psi.core-expr expr.psi)
-	   (make-type-signature/single-value (core-prim-id '<record-constructor-descriptor>)))))
+	   (make-type-signature/single-value (core-prim-spec '<record-constructor-descriptor> lexenv.run)))))
       (_
        (__synner__ "invalid syntax in macro use"))))
 
@@ -3843,7 +3855,11 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
-       (let ((ots (id->object-type-spec ?type-id lexenv.run)))
+       (let ((ots (with-exception-handler
+		      (lambda (E)
+			(raise (condition E (make-syntax-violation input-form.stx ?type-id))))
+		    (lambda ()
+		      (id->object-type-spec ?type-id lexenv.run)))))
 	 (cond ((record-type-spec? ots)
 		(%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
 	       ((struct-type-spec? ots)
@@ -3862,7 +3878,7 @@
     (let* ((std (struct-type-spec.std sts)))
       (make-psi input-form.stx
 	(build-data no-source std)
-	(make-type-signature/single-value (core-prim-id '<struct-type-descriptor>)))))
+	(make-type-signature/single-value (core-prim-spec '<struct-type-descriptor> lexenv.run)))))
 
   (define (%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand
 					rts)
@@ -3870,7 +3886,7 @@
 	   (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
       (make-psi input-form.stx
 	(psi.core-expr expr.psi)
-	(make-type-signature/single-value (core-prim-id '<record-type-descriptor>)))))
+	(make-type-signature/single-value (core-prim-spec '<record-type-descriptor> lexenv.run)))))
 
   (define (%make-scheme-type-descriptor input-form.stx lexenv.run lexenv.expand
 					ots)
@@ -3878,7 +3894,7 @@
 	   (expr.psi (chi-expr expr.stx lexenv.run lexenv.expand)))
       (make-psi input-form.stx
 	(psi.core-expr expr.psi)
-	(make-type-signature/single-value (core-prim-id '<scheme-type-descriptor>)))))
+	(make-type-signature/single-value (core-prim-spec '<scheme-type-descriptor> lexenv.run)))))
 
   #| end of module |# )
 

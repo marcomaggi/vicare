@@ -154,9 +154,9 @@
       ((_ ?type-annotation ?expected-tags)
        ;;Here we test only type signature describing a single value.
        (check
-	   (.syntax-object (new expander::<type-signature> #'(?type-annotation)))
+	   (type-annotation-syntax ?type-annotation)
 	 (=> syntax=?)
-	 #'(?expected-tags)))
+	 #'?expected-tags))
       ))
 
 ;;; --------------------------------------------------------------------
