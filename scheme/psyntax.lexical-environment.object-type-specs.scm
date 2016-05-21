@@ -1081,10 +1081,12 @@
 		;;signatures.
 		(for-all (lambda (super.clause-signature)
 			   (exists (lambda (sub.clause-signature)
-				     (and (type-signature.super-and-sub? (lambda-signature.argvals super.clause-signature)
-									 (lambda-signature.argvals sub.clause-signature))
-					  (type-signature.super-and-sub? (lambda-signature.retvals super.clause-signature)
-									 (lambda-signature.retvals sub.clause-signature))))
+				     (and (type-signature.matching-super-and-sub?
+					   (lambda-signature.argvals super.clause-signature)
+					   (lambda-signature.argvals sub.clause-signature))
+					  (type-signature.matching-super-and-sub?
+					   (lambda-signature.retvals super.clause-signature)
+					   (lambda-signature.retvals sub.clause-signature))))
 			     (case-lambda-signature.clause-signature* (closure-type-spec.signature sub.ots))))
 		  (case-lambda-signature.clause-signature* (closure-type-spec.signature super.ots))))
 	       (else #f)))

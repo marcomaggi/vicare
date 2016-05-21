@@ -459,7 +459,7 @@
 	  (make-message-condition message)
 	  (make-syntax-violation (qdef.input-form qdef) rhs.stx)
 	  (make-type-signature-condition rhs.sig)))
-      (case-signature-specs rhs.sig
+      (case-type-signature-full-structure rhs.sig
 	(<no-return>
 	 ;;The expression is marked as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
@@ -489,7 +489,7 @@
 	 #;(assert (<top>-ots? (qdef-defvar.lhs-ots qdef)))
 	 rhs.psi)
 
-	((unspecified-values)
+	(<list>/<list-of-spec>
 	 ;;Fully unspecified  return values: we  accept it here and  delegate further
 	 ;;checks at run-time.
 	 rhs.psi)
@@ -520,7 +520,7 @@
 	    (make-message-condition message)
 	    (make-syntax-violation (qdef.input-form qdef) rhs.stx)
 	    (make-type-signature-condition rhs.sig)))
-	(case-signature-specs (psi.retvals-signature rhs.psi)
+	(case-type-signature-full-structure (psi.retvals-signature rhs.psi)
 	  (<no-return>
 	   ;;The expression is marked as not-returning.
 	   (when (options::warn-about-not-returning-expressions)
@@ -620,7 +620,7 @@
 	    (make-message-condition message)
 	    (make-syntax-violation (qdef.input-form qdef) rhs.stx)
 	    (make-type-signature-condition rhs.sig)))
-	(case-signature-specs (psi.retvals-signature rhs.psi)
+	(case-type-signature-full-structure (psi.retvals-signature rhs.psi)
 	  (<no-return>
 	   ;;The expression is marked as not-returning.
 	   (when (options::warn-about-not-returning-expressions)

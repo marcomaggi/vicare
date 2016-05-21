@@ -51,13 +51,13 @@
 ;;; predicates
    list-of-type-signatures?				type-signature.empty?
    type-signature.fully-unspecified?
-   type-signature.super-and-sub?			type-signature.compatible-super-and-sub?
+   type-signature.matching-super-and-sub?		type-signature.compatible-super-and-sub?
    type-signature.single-type?				type-signature.single-top-tag?
    type-signature.single-type-or-fully-untyped?		type-signature.no-return?
    type-signature.only-<untyped>-and-<list>?
    type-signature.only-<untyped>-and-<top>-and-<list>?
 
-   type-signature.match-arguments-against-operands
+   type-signature.match-arguments-against-operands	type-signature.type-propagation
 
 ;;; accessors
    type-signature.min-count				type-signature.max-count
@@ -69,22 +69,22 @@
    datum-type-signature
 
 ;;; helpers
-   case-signature-specs
-   single-value unspecified-values <list-of-spec> <list-spec> <closure>
+   case-type-signature-full-structure
+   single-value <list>/<list-of-spec> <list-of-spec> <list-spec> <closure> <pair-spec>
 
    #| end of exports |# )
 
 
-;;;; syntax helpers
+;;;; syntax helpers: type signature specs matching
 
-(define-auxiliary-syntaxes single-value unspecified-values <closure>
-  <list-of-spec> <list-spec>)
+(define-auxiliary-syntaxes single-value <list>/<list-of-spec> <closure>
+  <list-of-spec> <list-spec> <pair-spec>)
 
-(define-syntax* (case-signature-specs input-form.stx)
+(define-syntax* (case-type-signature-full-structure input-form.stx)
   ;;A typical use for an expression used as operand or similar:
   ;;
-  ;;  (case-signature-specs expr.sig
-  ;;    ((unspecified-values)
+  ;;  (case-type-signature-full-structure expr.sig
+  ;;    (<list>/<list-of-spec>
   ;;     ;;The expression returns an unspecified number of values.
   ;;     ?body0 ?body ...)
   ;;
@@ -106,7 +106,7 @@
   ;;
   ;;A typical use for an expression used as operator in an application form:
   ;;
-  ;;  (case-signature-specs expr.sig
+  ;;  (case-type-signature-full-structure expr.sig
   ;;    ((<closure>)
   ;;     ;;The expression returns a single value, typed as closure object.
   ;;     => (lambda (closure.ots) ?body0 ?body ...))
@@ -127,7 +127,7 @@
   ;;     ;;The expression returns a single value, but not a procedure.
   ;;     => (lambda (obj.ots) ?body0 ?body ...))
   ;;
-  ;;    ((unspecified-values)
+  ;;    (<list>/<list-of-spec>
   ;;     ;;The expression returns an unspecified number of values.
   ;;     ?body0 ?body ...)
   ;;
@@ -137,7 +137,7 @@
   ;;
   (define (main input-form.stx)
     (sys::syntax-case input-form.stx ()
-      ((?kwd ?signature . ?clause*)
+      ((_ ?signature . ?clause*)
        (sys::with-syntax
 	   (((CLAUSE ...)	(%parse-clauses (sys::syntax ?clause*))))
 	 (sys::syntax
@@ -166,10 +166,12 @@
 			    )))
 	      (declare signature.no-return?	<no-return>-ots?)
 	      (declare signature.empty?		null?)
+	      (declare signature.null?		<null>-ots?)
 	      (declare signature.list?		<list>-ots?)
 	      (declare signature.nelist?	<nelist>-ots?)
 	      (declare signature.list-of-spec?	list-of-type-spec?)
 	      (declare signature.list-spec?	list-type-spec?)
+	      (declare signature.pair-spec?	pair-type-spec?)
 	      #| end of LET-SYNTAX |# )
 	    ;;
 	    (define (signature.single-value?)
@@ -198,10 +200,10 @@
        (synner "invalid input clauses" clause*.stx))))
 
   (define (%parse-single-clause clause.stx)
-    (sys::syntax-case clause.stx (=> single-value unspecified-values
+    (sys::syntax-case clause.stx (=> single-value <list>/<list-of-spec> <null>
 				     <top> <untyped> <closure> <procedure>
 				     <no-return> <void> <list> <nelist>
-				     <list-of-spec> <list-spec>)
+				     <list-of-spec> <list-spec> <pair-spec>)
       ((() ?body0 ?body ...)
        (sys::syntax ((signature.empty?)			?body0 ?body ...)))
 
@@ -234,9 +236,9 @@
       ((<no-return> ?body0 ?body ...)
        (sys::syntax ((signature.no-return?)		?body0 ?body ...)))
 
-      (((unspecified-values) => ?body)
+      ((<list>/<list-of-spec> => ?body)
        (sys::syntax ((signature.unspecified-values?)	(?body signature.specs))))
-      (((unspecified-values) ?body0 ?body ...)
+      ((<list>/<list-of-spec> ?body0 ?body ...)
        (sys::syntax ((signature.unspecified-values?)	?body0 ?body ...)))
 
       ((<list-of-spec> => ?body)
@@ -252,11 +254,127 @@
       ((<list> ?body0 ?body ...)
        (sys::syntax ((signature.list?)			?body0 ?body ...)))
 
+      ((<null> ?body0 ?body ...)
+       (sys::syntax ((signature.null?)			?body0 ?body ...)))
+
       ((<nelist> ?body0 ?body ...)
        (sys::syntax ((signature.nelist?)		?body0 ?body ...)))
 
+      ((<pair-spec> => ?body)
+       (sys::syntax ((signature.pair-spec?)		(?body signature.specs))))
+      ((<pair-spec> ?body0 ?body ...)
+       (sys::syntax ((signature.pair-spec?)		?body0 ?body ...)))
+
       (_
        (synner "invalid input clause" clause.stx))))
+
+  (main input-form.stx))
+
+
+;;;; syntax helpers: type annotation specs matching
+
+(define-syntax case-type-signature-structure*
+  ;;This is like CASE-TYPE-SIGNATURE-STRUCTURE but it has all the clauses.
+  ;;
+  (syntax-rules (else null? pair?
+		      <pair-spec> <null>
+		      <list> <nelist> <list-of-spec> <list-spec>)
+    ((_ ?specs
+	(pair? . ?body-pair)
+	(<pair-spec> . ?body-<pair-spec>)
+	(null? . ?body-null)
+	(<null> . ?body-<null>)
+	(<list> . ?body-<list>)
+	(<nelist> . ?body-<nelist>)
+	(<list-of-spec> . ?body-<list-of-spec>)
+	(<list-spec> . ?body-<list-spec>)
+	(else . ?body-else))
+     (case-type-signature-structure ?specs
+       (pair? . ?body-pair)
+       (<pair-spec> . ?body-<pair-spec>)
+       (null? . ?body-null)
+       (<null> . ?body-<null>)
+       (<list> . ?body-<list>)
+       (<nelist> . ?body-<nelist>)
+       (<list-of-spec> . ?body-<list-of-spec>)
+       (<list-spec> . ?body-<list-spec>)
+       (else . ?body-else)))
+    ))
+
+(define-syntax* (case-type-signature-structure input-form.stx)
+  (define (main input-form.stx)
+    (sys::syntax-case input-form.stx ()
+      ((_ ?annotation . ?clause*)
+       (sys::with-syntax
+	   (((CLAUSE ...)	(%parse-clauses (sys::syntax ?clause*))))
+	 (sys::syntax
+	  (let ((annotation ?annotation))
+	    (cond CLAUSE ...)))))
+       ))
+
+  (define (%parse-clauses clause*.stx)
+    (sys::syntax-case clause*.stx ()
+      (()
+       '())
+      ((?clause0 . ?other-clauses)
+       (cons (%parse-single-clause (sys::syntax ?clause0))
+	     (%parse-clauses       (sys::syntax ?other-clauses))))
+      (_
+       (sys::syntax-violation __who__ "invalid syntax in input clauses" input-form.stx clause*.stx))))
+
+  (define (%parse-single-clause clause.stx)
+    (sys::syntax-case clause.stx (else => null? <null>
+				       pair? <pair-spec>
+				       <list> <nelist> <list-of-spec> <list-spec>
+				       <list>/<list-of-spec>)
+      ((else . ?body)
+       clause.stx)
+
+      ((null? . ?body)
+       (sys::syntax ((null? annotation) . ?body)))
+
+      ((<null> => ?expr)
+       (sys::syntax ((<null>-ots? annotation) (?expr annotation))))
+      ((<null> . ?body)
+       (sys::syntax ((<null>-ots? annotation) . ?body)))
+
+      ((pair? => ?expr)
+       (sys::syntax ((pair? annotation) (?expr annotation))))
+      ((pair? . ?body)
+       (sys::syntax ((pair? annotation) . ?body)))
+
+      ((<pair-spec> => ?expr)
+       (sys::syntax ((pair-type-spec? annotation) (?expr annotation))))
+      ((<pair-spec> . ?body)
+       (sys::syntax ((pair-type-spec? annotation) . ?body)))
+
+      ((<list> => ?expr)
+       (sys::syntax ((<list>-ots? annotation) (?expr annotation))))
+      ((<list> . ?body)
+       (sys::syntax ((<list>-ots? annotation) . ?body)))
+
+      ((<nelist> => ?expr)
+       (sys::syntax ((<nelist>-ots? annotation) (?expr annotation))))
+      ((<nelist> . ?body)
+       (sys::syntax ((<nelist>-ots? annotation) . ?body)))
+
+      ((<list-of-spec> => ?expr)
+       (sys::syntax ((list-of-type-spec? annotation) (?expr annotation))))
+      ((<list-of-spec> . ?body)
+       (sys::syntax ((list-of-type-spec? annotation) . ?body)))
+
+      ((<list-spec> => ?expr)
+       (sys::syntax ((list-type-spec? annotation) (?expr annotation))))
+      ((<list-spec> . ?body)
+       (sys::syntax ((list-type-spec? annotation) . ?body)))
+
+      ((<list>/<list-of-spec> => ?expr)
+       (sys::syntax ((list-type-spec? annotation) (?expr annotation))))
+      ((<list>/<list-of-spec> . ?body)
+       (sys::syntax ((list-type-spec? annotation) . ?body)))
+
+      (_
+       (sys::syntax-violation __who__ "invalid syntax in input clauses" input-form.stx clause.stx))))
 
   (main input-form.stx))
 
@@ -872,338 +990,184 @@
 	   (object-type-spec=? specs1 specs2)))))
 
 
-;;;; matching: signatures super-type and sub-type matching
+;;;; matching: signatures hierarchy matching super-type and sub-type
 
-(define* (type-signature.super-and-sub? super-signature sub-signature)
-  ;;Return true if SUPER-SIGNATURE and SUB-SIGNATURE  have the same structure and the
-  ;;identifiers in  the homologous  position are  super-type and  sub-type; otherwise
+(define* (type-signature.matching-super-and-sub? formals.sig operands.sig)
+  ;;Return true if FORMALS.SIG and OPERANDS.SIG  have the same structure and the type
+  ;;in  the homologous  positions  are matching  super-type  and sub-type;  otherwise
   ;;return false.
   ;;
-  (define-constant the-who __who__)
-  (let  ((super-specs	(type-signature.object-type-specs super-signature))
-	 (sub-specs	(type-signature.object-type-specs sub-signature)))
-    (cond
-     ((<no-return>-ots? super-specs)
-      (<no-return>-ots? sub-specs))
-     ((<no-return>-ots? sub-specs)
-      #f)
-     (else
-      (let recur ((super-specs	super-specs)
-		  (sub-specs	sub-specs))
-	(cond
-	 ((pair? super-specs)
-	  (cond ((pair? sub-specs)
-		 ;;If the super-type is actually a super type of the sub-type good.
-		 (and (object-type-spec.matching-super-and-sub? (car super-specs) (car sub-specs))
-		      (recur (cdr super-specs) (cdr sub-specs))))
-		((list-type-spec? sub-specs)
-		 (recur super-specs (list-type-spec.item-ots* sub-specs)))
-		(else
-		 ;;There are more super-types than sub-types, for example:
-		 ;;
-		 ;;  super-signature == #'(<number>  <fixnum> <string)
-		 ;;  sub-signature   == #'(<complex> <fixnum>)
-		 ;;
-		 ;;or the sub signature is an improper list:
-		 ;;
-		 ;;  super-signature == #'(<number>  <fixnum> <string)
-		 ;;  sub-signature   == #'(<complex> <fixnum> . <list>)
-		 ;;
-		 ;;we want these cases to fail matching.
-		 #f)))
+  (%type-signature.criterion-super-and-sub? __who__ formals.sig operands.sig
+					    object-type-spec.matching-super-and-sub?))
 
-	 ((null? super-specs)
-	  ;;Return true if both the signatures  are proper lists with the same number
-	  ;;of items, and all the items are correct super and sub.
-	  (null? sub-specs))
-
-	 ((<list>-ots? super-specs)
-	  ;;The super signature is an improper  list: either a standalone "<list>" or
-	  ;;a  list with  a  "<list>" in  tail  position.  As  example,  we want  the
-	  ;;following to match successfully:
-	  ;;
-	  ;;  super-signature == #'(<number>  <fixnum> . <list>)
-	  ;;  sub-signature   == #'(<complex> <fixnum>)
-	  ;;
-	  ;;and the following to match successfully:
-	  ;;
-	  ;;  super-signature == #'<list>
-	  ;;  sub-signature   == #'(<complex> <fixnum>)
-	  ;;
-	  ;;and the following to match successfully:
-	  ;;
-	  ;;  super-signature == #'(<fixnum> <fixnum> . <list>)
-	  ;;  sub-signature   == #'(<fixnum> <fixnum> <string> <vector>)
-	  ;;
-	  #t)
-
-	 ((<nelist>-ots? super-specs)
-	  ;;The super signature  is an improper list: either  a standalone "<nelist>"
-	  ;;or a list with  a "<nelist>" in tail position.  If there  is at least one
-	  ;;other sub item: it matches.
-	  (or (pair?		sub-specs)
-	      (<nelist>-ots?	sub-specs)
-	      (list-type-spec?	sub-specs)))
-
-	 ((list-of-type-spec? super-specs)
-	  ;;The  super   signature  is   an  improper   list:  either   a  standalone
-	  ;;"<list-of-type-spec>"  or a  list  with a  "<list-of-type-spec>" in  tail
-	  ;;position.   The super-signature  accepts  any number  of  arguments of  a
-	  ;;specified type.
-	  ;;
-	  ;;As example, we want the following to match successfully:
-	  ;;
-	  ;;  super-signature == #'(<number>  <fixnum> . (list-of <string>))
-	  ;;  sub-signature   == #'(<complex> <fixnum>)
-	  ;;
-	  ;;and the following to match successfully:
-	  ;;
-	  ;;  super-signature == #'(list-of <number>)
-	  ;;  sub-signature   == #'(<complex> <fixnum>)
-	  ;;
-	  ;;and the following to match successfully:
-	  ;;
-	  ;;  super-signature == #'(<fixnum> <fixnum> . (list-of <number>))
-	  ;;  sub-signature   == #'(<fixnum> <fixnum> <integer> <rational>)
-	  ;;
-	  (let ((super-item.ots (list-of-type-spec.item-ots super-specs)))
-	    (or (<top>-ots? super-item.ots)
-		(let item-recur ((sub-specs sub-specs))
-		  (cond
-		   ;;This is the case:
-		   ;;
-		   ;;  super-signature == #'(<number>  <fixnum> . (list-of <string>))
-		   ;;  sub-signature   == #'(<complex> <fixnum>)
-		   ;;
-		   ;;and we want it to match successfully.
-		   ((null? sub-specs))
-
-		   ((pair? sub-specs)
-		    ;;We want the following signatures to match:
-		    ;;
-		    ;;  super-signature == #'(<number>  . (list-of <fixnum>))
-		    ;;  sub-signature   == #'(<complex> <fixnum> <fixnum>)
-		    ;;
-		    (and (object-type-spec.matching-super-and-sub? super-item.ots (car sub-specs))
-			 (item-recur (cdr sub-specs))))
-
-		   ((<list>-ots? sub-specs)
-		    ;;This is the case:
-		    ;;
-		    ;;  super-signature == #'(<number>  . (list-of <fixnum>))
-		    ;;  sub-signature   == #'(<complex> . <list>)
-		    ;;
-		    ;;and we want it to fail matching.
-		    #f)
-
-		   ((list-of-type-spec? sub-specs)
-		    ;;This is the case:
-		    ;;
-		    ;;  super-signature == #'(<string> <string> . (list-of <number>))
-		    ;;  sub-signature   == #'(<string> <string> . (list-of <fixnum>))
-		    ;;
-		    ;;and we want it to match if the item OTSs match.
-		    (let ((sub-item.ots (list-of-type-spec.item-ots sub-specs)))
-		      (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots)))
-
-		   ((list-type-spec? sub-specs)
-		    ;;This is the case:
-		    ;;
-		    ;;  super-signature == #'(<string> <string> . (list-of <number>))
-		    ;;  sub-signature   == #'(<string> <string> . (list <fixnum>))
-		    ;;
-		    ;;and we want it to match if the item OTSs match.
-		    (for-all (lambda (sub-item.ots)
-			       (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
-		      (list-type-spec.item-ots* sub-specs)))
-
-		   (else
-		    (assertion-violation the-who "invalid sub-signature" sub-signature)))))))
-
-	 ((list-type-spec? super-specs)
-	  ;;The  super   signature  is   an  improper   list:  either   a  standalone
-	  ;;"<list-type-spec>" or a list with a "<list-type-spec>" in tail position.
-	  (let ((super-item*.ots (list-type-spec.item-ots* super-specs)))
-	    (cond ((list-type-spec? sub-specs)
-		   (for-all (lambda (super-item.ots sub-item.ots)
-			      (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
-		     super-item*.ots
-		     (list-type-spec.item-ots* sub-specs)))
-		  ((pair? sub-specs)
-		   (recur super-item*.ots sub-specs))
-		  (else #f))))
-
-	 (else
-	  (assertion-violation the-who "invalid super-signature" super-signature))))))))
-
-(define* (type-signature.compatible-super-and-sub? super-signature sub-signature)
-  ;;Return true if SUPER-SIGNATURE and SUB-SIGNATURE  have the same structure and the
-  ;;identifiers in  the homologous position  are compatible super-type  and sub-type;
-  ;;otherwise return false.
+(define* (type-signature.compatible-super-and-sub? formals.sig operands.sig)
+  ;;Return true if FORMALS.SIG and OPERANDS.SIG  have the same structure and the type
+  ;;in the  homologous positions  are compatible  super-type and  sub-type; otherwise
+  ;;return false.
   ;;
-  (define-constant the-who __who__)
-  (let  ((super-specs	(type-signature.object-type-specs super-signature))
-	 (sub-specs	(type-signature.object-type-specs sub-signature)))
+  (%type-signature.criterion-super-and-sub? __who__ formals.sig operands.sig
+					    (lambda (formal.ots operand.ots)
+					      (or (object-type-spec.matching-super-and-sub?   formal.ots operand.ots)
+						  (object-type-spec.compatible-super-and-sub? formal.ots operand.ots)))))
+
+(define (%type-signature.criterion-super-and-sub? caller-who formals.sig operands.sig
+						  super-and-sub?)
+  (let  ((formals.specs		(type-signature.object-type-specs formals.sig))
+	 (operands.specs	(type-signature.object-type-specs operands.sig)))
     (cond
-     ((<no-return>-ots? super-specs)
-      (<no-return>-ots? sub-specs))
-     ((<no-return>-ots? sub-specs)
+     ((<no-return>-ots? formals.specs)
+      (<no-return>-ots? operands.specs))
+     ((<no-return>-ots? operands.specs)
       #f)
      (else
-      (let recur ((super-specs	super-specs)
-		  (sub-specs	sub-specs))
-	(cond
-	 ((pair? super-specs)
-	  (cond ((pair? sub-specs)
-		 ;;If the super-type is actually a super type of the sub-type good.
-		 (and (or (object-type-spec.matching-super-and-sub?   (car super-specs) (car sub-specs))
-			  (object-type-spec.compatible-super-and-sub? (car super-specs) (car sub-specs)))
-		      (recur (cdr super-specs) (cdr sub-specs))))
-		((list-type-spec? sub-specs)
-		 (recur super-specs (list-type-spec.item-ots* sub-specs)))
-		(else
-		 ;;There are more super-types than sub-types, for example:
-		 ;;
-		 ;;  super-signature == #'(<number>  <fixnum> <string)
-		 ;;  sub-signature   == #'(<complex> <fixnum>)
-		 ;;
-		 ;;or the sub signature is an improper list:
-		 ;;
-		 ;;  super-signature == #'(<number>  <fixnum> <string)
-		 ;;  sub-signature   == #'(<complex> <fixnum> . <list>)
-		 ;;
-		 ;;we want these cases to fail matching.
-		 #f)))
+      (let recur ((formals.specs	formals.specs)
+		  (operands.specs	operands.specs))
+	(case-type-signature-structure* formals.specs
+	  (pair?
+	   (case-type-signature-structure operands.specs
+	     (pair?
+	      ;;If the formal is actually a super-type of the operand: good.
+	      (and (super-and-sub? (car formals.specs) (car operands.specs))
+		   (recur (cdr formals.specs) (cdr operands.specs))))
+	     (<pair-spec>
+	      (and (super-and-sub? (car formals.specs) (pair-type-spec.car-ots operands.specs))
+		   (recur (cdr formals.specs) (pair-type-spec.cdr-ots operands.specs))))
+	     (<list-spec>
+	      ;;Splice the operand OTSs.
+	      (recur formals.specs (list-type-spec.item-ots* operands.specs)))
+	     (else
+	      ;;It is possible that there are more formals than operands.  Examples:
+	      ;;
+	      ;;  formals.sig  == (<number>  <fixnum> <string)
+	      ;;  operands.sig == (<complex> <fixnum> . ())
+	      ;;
+	      ;;  formals.sig  == (<number>  <fixnum> <string)
+	      ;;  operands.sig == (<complex> <fixnum> . <list>)
+	      ;;
+	      ;;  formals.sig  == (<number>  <fixnum> <string)
+	      ;;  operands.sig == (<complex> <fixnum> . <null>)
+	      ;;
+	      ;;we want these cases to fail matching, in this function.
+	      #f)))
 
-	 ((null? super-specs)
-	  ;;Return true if both the signatures  are proper lists with the same number
-	  ;;of items, and all the items are correct super and sub.
-	  (null? sub-specs))
+	  (<pair-spec>
+	   (let ((formal-car.ots (pair-type-spec.car-ots formals.specs))
+		 (formal-cdr.ots (pair-type-spec.cdr-ots formals.specs)))
+	     (case-type-signature-structure operands.specs
+	       (pair?
+		;;If the formal is actually a super-type of the operand good.
+		(and (super-and-sub? formal-car.ots (car operands.specs))
+		     (recur formal-cdr.ots (cdr operands.specs))))
+	       (<pair-spec>
+		(and (super-and-sub? formal-car.ots (pair-type-spec.car-ots operands.specs))
+		     (recur formal-cdr.ots (pair-type-spec.cdr-ots operands.specs))))
+	       (<list-spec>
+		(let ((operand-item*.ots (list-type-spec.item-ots* operands.specs)))
+		  (case-type-signature-structure operand-item*.ots
+		    (pair?
+		     (and (super-and-sub? formal-car.ots (car operand-item*.ots))
+			  ;;Splice the operand OTSs.
+			  (recur formal-cdr.ots (cdr operand-item*.ots))))
+		    (else
+		     #f))))
+	       (else #f))))
 
-	 ((<list>-ots? super-specs)
-	  ;;The super signature is an improper  list: either a standalone "<list>" or
-	  ;;a  list with  a  "<list>" in  tail  position.  As  example,  we want  the
-	  ;;following to match successfully:
-	  ;;
-	  ;;  super-signature == #'(<number>  <fixnum> . <list>)
-	  ;;  sub-signature   == #'(<complex> <fixnum>)
-	  ;;
-	  ;;and the following to match successfully:
-	  ;;
-	  ;;  super-signature == #'<list>
-	  ;;  sub-signature   == #'(<complex> <fixnum>)
-	  ;;
-	  ;;and the following to match successfully:
-	  ;;
-	  ;;  super-signature == #'(<fixnum> <fixnum> . <list>)
-	  ;;  sub-signature   == #'(<fixnum> <fixnum> <string> <vector>)
-	  ;;
-	  #t)
+	  (null?
+	   ;;Return true if both the signatures are proper lists with the same number
+	   ;;of items, and all the items are correct super and sub.
+	   (case-type-signature-structure operands.specs
+	     (null?	#t)
+	     (<null>	#t)
+	     (else	#f)))
 
-	 ((<nelist>-ots? super-specs)
-	  ;;The super signature  is an improper list: either  a standalone "<nelist>"
-	  ;;or a list with  a "<nelist>" in tail position.  If there  is at least one
-	  ;;other sub item: it matches.
-	  (or (pair?			sub-specs)
-	      (<nelist>-ots?		sub-specs)
-	      (<list>-ots?		sub-specs)
-	      (list-type-spec?		sub-specs)
-	      (list-of-type-spec?	sub-specs)))
+	  (<null>
+	   (case-type-signature-structure operands.specs
+	     (null?	#t)
+	     (<null>	#t)
+	     (else	#f)))
 
-	 ((list-of-type-spec? super-specs)
-	  ;;The  super   signature  is   an  improper   list:  either   a  standalone
-	  ;;"<list-of-type-spec>"  or a  list  with a  "<list-of-type-spec>" in  tail
-	  ;;position.   The super-signature  accepts  any number  of  arguments of  a
-	  ;;specified type.
-	  ;;
-	  ;;As example, we want the following to match successfully:
-	  ;;
-	  ;;  super-signature == #'(<number>  <fixnum> . (list-of <string>))
-	  ;;  sub-signature   == #'(<complex> <fixnum>)
-	  ;;
-	  ;;and the following to match successfully:
-	  ;;
-	  ;;  super-signature == #'(list-of <number>)
-	  ;;  sub-signature   == #'(<complex> <fixnum>)
-	  ;;
-	  ;;and the following to match successfully:
-	  ;;
-	  ;;  super-signature == #'(<fixnum> <fixnum> . (list-of <number>))
-	  ;;  sub-signature   == #'(<fixnum> <fixnum> <integer> <rational>)
-	  ;;
-	  (let ((super-item.ots (list-of-type-spec.item-ots super-specs)))
-	    (or (<top>-ots? super-item.ots)
-		(let item-recur ((sub-specs sub-specs))
-		  (cond
-		   ;;This is the case:
-		   ;;
-		   ;;  super-signature == #'(<number>  <fixnum> . (list-of <string>))
-		   ;;  sub-signature   == #'(<complex> <fixnum>)
-		   ;;
-		   ;;and we want it to match successfully.
-		   ((null? sub-specs))
+	  (<list>
+	   ;;The formals signature matches any number operands of any type.
+	   #t)
 
-		   ((pair? sub-specs)
-		    ;;We want the following signatures to match:
-		    ;;
-		    ;;  super-signature == #'(<number>  . (list-of <fixnum>))
-		    ;;  sub-signature   == #'(<complex> <fixnum> <fixnum>)
-		    ;;
-		    (and (or (object-type-spec.matching-super-and-sub?   super-item.ots (car sub-specs))
-			     (object-type-spec.compatible-super-and-sub? super-item.ots (car sub-specs)))
-			 (item-recur (cdr sub-specs))))
+	  (<nelist>
+	   ;;The formals signature matches one or more operands of any type.
+	   (case-type-signature-structure operands.specs
+	     (pair?		#t)
+	     (<nelist>		#t)
+	     (<list-spec>	#t)
+	     (<pair-spec>	#t)
+	     (else		#f)))
 
-		   ((<list>-ots? sub-specs)
-		    ;;This is the case:
-		    ;;
-		    ;;  super-signature == #'(<number>  . (list-of <fixnum>))
-		    ;;  sub-signature   == #'(<complex> . <list>)
-		    ;;
-		    ;;and we want it to fail matching.
-		    #f)
+	  (<list-of-spec>
+	   ;;The formals  signature matches any  number of operands of  the specified
+	   ;;type.  Examples:
+	   ;;
+	   ;;  formals.sig  == (... . (list-of <number>))
+	   ;;  operands.sig == (... . <fixnum>)
+	   ;;
+	   ;;  formals.sig  == (... . (list-of <string>))
+	   ;;  operands.sig == (... . (list-of <string>))
+	   ;;
+	   ;;  formals.sig  == (... . (list-of <string>))
+	   ;;  operands.sig == (... . (list <string>))
+	   ;;
+	   (let ((formal-item.ots (list-of-type-spec.item-ots formals.specs)))
+	     ;;If the formal's type is "<top>": any type of operands is matched.
+	     (or (<top>-ots? formal-item.ots)
+		 (let item-recur ((operands.specs operands.specs))
+		   (case-type-signature-structure* operands.specs
+		     (pair?
+		      ;;formals.sig  == (... . (list-of <fixnum>))
+		      ;;operands.sig == (... <fixnum> <fixnum>)
+		      (and (super-and-sub? formal-item.ots (car operands.specs))
+			   (item-recur (cdr operands.specs))))
 
-		   ((list-of-type-spec? sub-specs)
-		    ;;This is the case:
-		    ;;
-		    ;;  super-signature == #'(<string> <string> . (list-of <number>))
-		    ;;  sub-signature   == #'(<string> <string> . (list-of <fixnum>))
-		    ;;
-		    ;;and we want it to match if the item OTSs match.
-		    (let ((sub-item.ots (list-of-type-spec.item-ots sub-specs)))
-		      (or (object-type-spec.matching-super-and-sub?   super-item.ots sub-item.ots)
-			  (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))))
+		     (<pair-spec>
+		      ;;formals.sig  == (... . (list-of <number>))
+		      ;;operands.sig == (... . (pair <fixnum> . ?list-type))
+		      (and (super-and-sub? formal-item.ots (pair-type-spec.car-ots operands.specs))
+			   (item-recur (pair-type-spec.cdr-ots operands.specs))))
 
-		   ((list-type-spec? sub-specs)
-		    ;;This is the case:
-		    ;;
-		    ;;  super-signature == #'(<string> <string> . (list-of <number>))
-		    ;;  sub-signature   == #'(<string> <string> . (list <fixnum>))
-		    ;;
-		    ;;and we want it to match if the item OTSs match.
-		    (for-all (lambda (sub-item.ots)
-			       (or (object-type-spec.matching-super-and-sub?   super-item.ots sub-item.ots)
-				   (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots)))
-		      (list-type-spec.item-ots* sub-specs)))
+		     (null?
+		      ;;formals.sig  == (... . (list-of <string>))
+		      ;;operands.sig == (... . ())
+		      #t)
 
-		   (else
-		    (assertion-violation the-who "invalid sub-signature" sub-signature)))))))
+		     (<null>
+		      ;;formals.sig  == (... . (list-of <string>))
+		      ;;operands.sig == (... . <null>)
+		      #t)
 
-	 ((list-type-spec? super-specs)
-	  ;;The  super   signature  is   an  improper   list:  either   a  standalone
-	  ;;"<list-type-spec>" or a list with a "<list-type-spec>" in tail position.
-	  (let ((super-item*.ots (list-type-spec.item-ots* super-specs)))
-	    (cond ((list-type-spec? sub-specs)
-		   (for-all (lambda (super-item.ots sub-item.ots)
-			      (or (object-type-spec.matching-super-and-sub?   super-item.ots sub-item.ots)
-				  (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots)))
-		     super-item*.ots
-		     (list-type-spec.item-ots* sub-specs)))
-		  ((pair? sub-specs)
-		   (recur super-item*.ots sub-specs))
-		  (else #f))))
+		     (<list>
+		      ;;formals.sig  == (... . (list-of <fixnum>))
+		      ;;operands.sig == (... . <list>)
+		      #f)
 
-	 (else
-	  (assertion-violation the-who "invalid super-signature" super-signature))))))))
+		     (<nelist>
+		      ;;formals.sig  == (... . (list-of <fixnum>))
+		      ;;operands.sig == (... . <nelist>)
+		      #f)
+
+		     (<list-of-spec>
+		      ;;formals.sig  == (... . (list-of <number>))
+		      ;;operands.sig == (... . (list-of <fixnum>))
+		      (super-and-sub? formal-item.ots (list-of-type-spec.item-ots operands.specs)))
+
+		     (<list-spec>
+		      ;;formals.sig  == (... . (list-of <number>))
+		      ;;operands.sig == (... . (list <fixnum>))
+		      (item-recur (list-type-spec.item-ots* operands.specs)))
+
+		     (else
+		      (assertion-violation caller-who "invalid operands signature" operands.sig)))))))
+
+	  (<list-spec>
+	   ;;Splice the formals OTSs.
+	   (recur (list-type-spec.item-ots* formals.specs) operands.specs))
+
+	  (else
+	   (assertion-violation caller-who "invalid formals signature" formals.sig))))))))
 
 
 ;;;; matching: arguments and operands
@@ -1531,37 +1495,41 @@
 
       (else
        (let recur ((specs1 specs1) (specs2 specs2))
-	 (cond ((pair? specs1)
-		(cond ((pair? specs2)
-		       (cons (union-of-type-specs (car specs1) (car specs2))
-			     (recur (cdr specs1) (cdr specs2))))
-		      ((null? specs2)
-		       ;;SIG2 is a proper list shorter that SIG1.
-		       (<list>-ots))
-		      (else
-		       ;;SIG2 is an improper list shorter that SIG1.
-		       (<list>-ots))))
+	 (case-type-signature-structure specs1
+	   (pair?
+	    (case-type-signature-structure specs2
+	      (pair?
+	       (cons (union-of-type-specs (car specs1) (car specs2))
+		     (recur (cdr specs1) (cdr specs2))))
+	      (null?
+	       ;;SIG2 is a proper list shorter that SIG1.
+	       (<list>-ots))
+	      (else
+	       ;;SIG2 is an improper list shorter that SIG1.
+	       (<list>-ots))))
 
-	       ((null? specs1)
-		(if (null? specs2)
-		    ;;Both the  signatures are proper  lists with the same  number of
-		    ;;items: success!
-		    '()
-		  ;;SIG1 is a proper list shorter that SIG2.
-		  (<list>-ots)))
+	   (null?
+	    (case-type-signature-structure specs2
+	      (null?
+	       ;;Both the signatures are proper lists  with the same number of items:
+	       ;;success!
+	       '())
+	      (else
+	       ;;SIG1 is a proper list shorter that SIG2.
+	       (<list>-ots))))
 
-	       (else
-		;;SIG1 is an improper list.
-		(cond ((null? specs2)
-		       ;;SIG2 is an proper list shorter that SIG1.
-		       (<list>-ots))
-		      ((pair? specs2)
-		       ;;SIG2 is an proper list longer that SIG1.
-		       (<list>-ots))
-		      (else
-		       ;;Both SIG1 and  SIG2 are improper lists with  the same number
-		       ;;of items.
-		       (union-of-type-specs specs1 specs2)))))))))))
+	   (else
+	    ;;SIG1 is an improper list.
+	    (case-type-signature-structure specs2
+	      (null?
+	       ;;SIG2 is an proper list shorter that SIG1.
+	       (<list>-ots))
+	      (pair?
+	       ;;SIG2 is an proper list longer that SIG1.
+	       (<list>-ots))
+	      (else
+	       ;;Both SIG1 and SIG2 are improper lists with the same number of items.
+	       (union-of-type-specs specs1 specs2)))))))))))
 
 
 ;;;; matching: union with same number of operands
@@ -1647,6 +1615,334 @@
 		       (union-of-type-specs specs1 specs2)))))))))))
 
 
+;;;; type propagation
+
+(module (type-signature.type-propagation)
+
+  (define* (type-signature.type-propagation formals.sig operands.sig)
+    ;;Assume we have this situation:
+    ;;
+    ;;   (receive ?formals
+    ;;       ?operands
+    ;;     ---)
+    ;;
+    ;;FORMALS.SIG is a "<type-signature>" instance representing the type signature of
+    ;;?FORMALS; OPERANDS.SIG  is a "<type-signature>" instance  representing the type
+    ;;signature of ?OPERANDS.
+    ;;
+    ;;We want to perform type propagation  from the values returned by the expression
+    ;;?OPERANDS to the variables in the ?FORMALS, so that:
+    ;;
+    ;;   (receive (a b c)
+    ;;       (values 1 2.3 "ciao")
+    ;;     ---)
+    ;;
+    ;;becomes equivalent to:
+    ;;
+    ;;   (receive ({a <positive-fixnum>} {b <positive-flonum>} {c <nestring>})
+    ;;       (values 1 2.3 "ciao")
+    ;;     ---)
+    ;;
+    ;;We want to propagate  the type for all the untyped variables  in ?FORMALS; if a
+    ;;variable  in  ?formals already  has  a  type: we  leave  it  alone.  We  assume
+    ;;FORMALS.SIG and OPERANDS.SIG have already been matched and the result is either
+    ;;"exact-match" or "possible-match".
+    ;;
+    ;;Build  and return  a new  "<type-signature>" instance  representing FORMALS.SIG
+    ;;with propagated types.  If an error occurs: raise an exception.
+    ;;
+    ;;Examples:
+    ;;
+    ;;   formals.sig    == (<untyped> <untyped> . <list>)
+    ;;   operands.sig   == (<fixnum>  <fixnum>  . (list-of <fixnum>))
+    ;;   propagated.sig == (<fixnum>  <fixnum>  . (list-of <fixnum>))
+    ;;
+    ;;   formals.sig    == (<untyped> . <list>)
+    ;;   operands.sig   == (<fixnum>  <fixnum>  . (list-of <fixnum>))
+    ;;   propagated.sig == (<fixnum>  . (pair <fixnum> (list-of <fixnum>)))
+    ;;
+    ;;   formals.sig    == (<untyped> <untyped> . <list>)
+    ;;   operands.sig   == (<fixnum>  . <list>)
+    ;;   propagated.sig == (<fixnum>  <top>     . <list>)
+    ;;
+    (define (%error-mismatch message)
+      (raise
+       (condition (make-expand-time-type-signature-violation)
+		  (make-who-condition 'type-signature.type-propagation)
+		  (make-message-condition message)
+		  (make-expected-type-signature-condition formals.sig)
+		  (make-returned-type-signature-condition operands.sig))))
+    (define (%error-invalid-formals-signature)
+      (assertion-violation 'type-signature.type-propagation "internal error, invalid formals signature" formals.sig))
+    (define (%error-invalid-operands-signature)
+      (assertion-violation 'type-signature.type-propagation "internal error, invalid operands signature" operands.sig))
+    (make-type-signature
+     (let recur ((formals.specs		(type-signature.object-type-specs formals.sig))
+		 (operands.specs	(type-signature.object-type-specs operands.sig)))
+       (case-type-signature-structure* formals.specs
+	 (pair?
+	  (%process-pair-formals (car formals.specs) (cdr formals.specs)
+				 operands.specs
+				 recur %error-invalid-operands-signature %error-mismatch))
+
+	 (<pair-spec>
+	  (%process-pair-formals (pair-type-spec.car-ots formals.specs) (pair-type-spec.cdr-ots formals.specs)
+				 operands.specs
+				 recur %error-invalid-operands-signature %error-mismatch))
+
+	 (null?
+	  (%process-null-formals formals.specs operands.specs %error-mismatch))
+
+	 (<null>
+	  (%process-null-formals formals.specs operands.specs %error-mismatch))
+
+	 (<list>
+	  (%process-list-formals operands.specs %error-invalid-operands-signature))
+
+	 (<nelist>
+	  (%process-nelist-formals formals.specs operands.specs %error-invalid-operands-signature))
+
+	 (<list-of-spec>
+	  ;;We give precedence to the formals type.
+	  ;;
+	  ;;formals.sig    == (... . (list-of <fixnum>))
+	  ;;operands.sig   == (... . ?operand-rest)
+	  ;;propagated.sig == (... . (list-of <fixnum>))
+	  formals.specs)
+
+	 (<list-spec>
+	  ;;We give precedence to the formals type.
+	  ;;
+	  ;;formals.sig    == (... . (list <fixnum> ...))
+	  ;;operands.sig   == (... . ?operand-rest)
+	  ;;propagated.sig == (... . (list <fixnum> ...))
+	  formals.specs)
+
+	 (else
+	  (%error-invalid-formals-signature))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%process-pair-formals formals-car.ots formals-cdr.ots operands.specs recur
+				 error-invalid-operands-signature error-mismatch)
+    (define untyped? (<untyped>-ots? formals-car.ots))
+    (case-type-signature-structure* operands.specs
+      (pair?	;there is at least one more operand
+       ;;formals.sig    == (... <untyped> ...)
+       ;;operands.sig   == (... <fixnum> ...)
+       ;;propagated.sig == (... <fixnum> ...)
+       (cons (if untyped? (car operands.specs) formals-car.ots)
+	     (recur formals-cdr.ots (cdr operands.specs))))
+
+      (<pair-spec>
+       ;;formals.sig    == (... <untyped> ...)
+       ;;operands.sig   == (... . (pair <fixnum> ?list-type))
+       ;;propagated.sig == (... <fixnum> ...)
+       (cons (if untyped? (pair-type-spec.car-ots operands.specs) formals-car.ots)
+	     (recur formals-cdr.ots (pair-type-spec.cdr-ots operands.specs))))
+
+      (null?	;no more operands
+       ;;formals.sig    == (... <untyped> ...)
+       ;;operands.sig   == (... . ())
+       (error-mismatch "more operands than formals"))
+
+      (<null>	;no more operands
+       ;;formals.sig    == (... <untyped> ...)
+       ;;operands.sig   == (... . <null>)
+       (error-mismatch "more operands than formals"))
+
+      (<list>
+       ;;formals.sig    == (... <untyped> ...)
+       ;;operands.sig   == (... . <list>)
+       ;;propagated.sig == (... <top> ...)
+       (cons (if untyped? (<top>-ots) formals-car.ots)
+	     (recur formals-cdr.ots operands.specs)))
+
+      (<nelist>
+       ;;formals.sig    == (... <untyped> ...)
+       ;;operands.sig   == (... . <nelist>)
+       ;;propagated.sig == (... <top> ...)
+       (cons (if untyped? (<top>-ots) formals-car.ots)
+	     ;;We replace  "<nelist>" with  "<list>", because we  have consumed
+	     ;;the mandatory item.
+	     (recur formals-cdr.ots (<list>-ots))))
+
+      (<list-of-spec>
+       ;;formals.sig    == (... <untyped> ...)
+       ;;operands.sig   == (... . (list-of <fixnum>))
+       ;;propagated.sig == (... <fixnum> ...)
+       (cons (if untyped? (list-of-type-spec.item-ots operands.specs) formals-car.ots)
+	     (recur formals-cdr.ots operands.specs)))
+
+      (<list-spec>
+       ;;formals.sig    == (... <untyped> ...)
+       ;;operands.sig   == (... . (list <fixnum> ...))
+       ;;propagated.sig == (... <fixnum> ...)
+       (let ((operands.specs (list-type-spec.item-ots* operands.specs)))
+	 (cons (if untyped? (car operands.specs) formals-car.ots)
+	       (recur formals-cdr.ots (cdr operands.specs)))))
+
+      (else
+       (error-invalid-operands-signature))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%process-null-formals formals.specs operands.specs error-mismatch)
+    (case-type-signature-structure operands.specs
+      (null?	;no more operands
+       '())
+      (<null>	;no more operands
+       '())
+      (<list>/<list-of-spec>
+       ;;formals.sig    == (... . ())
+       ;;operands.sig   == (... . <list>)
+       ;;propagated.sig == (... . ())
+       formals.specs)
+      (else
+       (error-mismatch "more operands than formals"))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%process-list-formals operands.specs error-invalid-operands-signature)
+    (case-type-signature-structure* operands.specs
+      (pair?
+       (if (list? operands.specs)
+	   ;;Good, it is a proper list.
+	   ;;
+	   ;;formals.sig    == (... . <list>)
+	   ;;operands.sig   == (... <fixnum> ...)
+	   ;;propagated.sig == (... . (list <fixnum> ...))
+	   (make-list-type-spec operands.specs)
+	 ;;It is an improper list: let's build a compound of pair specs.
+	 ;;
+	 ;;formals.sig    == (... . <list>)
+	 ;;operands.sig   == (... <fixnum> <flonum> . <list>)
+	 ;;propagated.sig == (... . (pair <fixnum> (pair <flonum> <list>)))
+	 (let recur ((specs operands.specs))
+	   (if (pair? specs)
+	       (make-pair-type-spec (car specs) (recur (cdr specs)))
+	     specs))))
+
+      (<pair-spec>
+       ;;formals.sig    == (... . <list>)
+       ;;operands.sig   == (... . (pair <fixnum> ?list-type))
+       ;;propagated.sig == (... . (pair <fixnum> ?list-type))
+       operands.specs)
+
+      (null?	;no more operands
+       ;;formals.sig    == (... . <list>)
+       ;;operands.sig   == (... . ())
+       ;;propagated.sig == (... . <null>)
+       (<null>-ots))
+
+      (<null>
+       ;;formals.sig    == (... . <list>)
+       ;;operands.sig   == (... . <null>)
+       ;;propagated.sig == (... . <null>)
+       operands.specs)
+
+      (<list>
+       ;;formals.sig    == (... . <list>)
+       ;;operands.sig   == (... . <list>)
+       ;;propagated.sig == (... . <list>)
+       operands.specs)
+
+      (<nelist>
+       ;;formals.sig    == (... . <list>)
+       ;;operands.sig   == (... . <nelist>)
+       ;;propagated.sig == (... . <nelist>)
+       operands.specs)
+
+      (<list-of-spec>
+       ;;formals.sig    == (... . <list>)
+       ;;operands.sig   == (... . (list-of <fixnum>))
+       ;;propagated.sig == (... . (list-of <fixnum>))
+       operands.specs)
+
+      (<list-spec>
+       ;;formals.sig    == (... . <list>)
+       ;;operands.sig   == (... . (list <fixnum>))
+       ;;propagated.sig == (... . (list <fixnum>))
+       operands.specs)
+
+      (else
+       (error-invalid-operands-signature))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%process-nelist-formals formals.specs operands.specs error-invalid-operands-signature)
+    ;;We have to remember  that we have already decided that  the type signatures are
+    ;;compatible, so  any mismatch in  the number of  values is checked  at run-time.
+    ;;Here we force the propagated type signature to be possible.
+    ;;
+    (case-type-signature-structure* operands.specs
+      (pair?
+       (if (list? operands.specs)
+	   ;;Good, it is a proper list.
+	   ;;
+	   ;;formals.sig    == (... . <nelist>)
+	   ;;operands.sig   == (... <fixnum> ...)
+	   ;;propagated.sig == (... . (list <fixnum> ...))
+	   (make-list-type-spec operands.specs)
+	 ;;It is an improper list: let's build a compound of pair specs.
+	 ;;
+	 ;;formals.sig    == (... . <nelist>)
+	 ;;operands.sig   == (... <fixnum> <flonum> . <list>)
+	 ;;propagated.sig == (... . (pair <fixnum> (pair <flonum> <list>)))
+	 (let recur ((specs operands.specs))
+	   (if (pair? specs)
+	       (make-pair-type-spec (car specs) (recur (cdr specs)))
+	     specs))))
+
+      (<pair-spec>
+       ;;formals.sig    == (... . <nelist>)
+       ;;operands.sig   == (... . (pair <fixnum> ?list-type))
+       ;;propagated.sig == (... . (pair <fixnum> ?list-type))
+       operands.specs)
+
+      (null?	;no more operands
+       ;;formals.sig    == (... . <nelist>)
+       ;;operands.sig   == (... . ())
+       ;;propagated.sig == (... . <nelist>)
+       formals.specs)
+
+      (<null>
+       ;;formals.sig    == (... . <nelist>)
+       ;;operands.sig   == (... . <null>)
+       ;;propagated.sig == (... . <nelist>)
+       formals.specs)
+
+      (<list>
+       ;;formals.sig    == (... . <nelist>)
+       ;;operands.sig   == (... . <list>)
+       ;;propagated.sig == (... . <nelist>)
+       formals.specs)
+
+      (<nelist>
+       ;;formals.sig    == (... . <nelist>)
+       ;;operands.sig   == (... . <nelist>)
+       ;;propagated.sig == (... . <nelist>)
+       operands.specs)
+
+      (<list-of-spec>
+       ;;formals.sig    == (... . <nelist>)
+       ;;operands.sig   == (... . (list-of <fixnum>))
+       ;;propagated.sig == (... . (pair <fixnum> (list-of <fixnum>)))
+       (make-pair-type-spec (list-of-type-spec.item-ots operands.specs)
+			    operands.specs))
+
+      (<list-spec>
+       ;;formals.sig    == (... . <nelist>)
+       ;;operands.sig   == (... . (list <fixnum> ...))
+       ;;propagated.sig == (... . (list <fixnum> ...))
+       operands.specs)
+
+      (else
+       (error-invalid-operands-signature))))
+
+  #| end of module: TYPE-SIGNATURE.TYPE-PROPAGATION |# )
+
+
 ;;;; helpers and utilities
 
 (case-define datum-type-signature
@@ -1721,7 +2017,11 @@
 					       (core-prim-spec '<zero-cflonum> lexenv))
 					      (else
 					       (core-prim-spec '<non-zero-cflonum> lexenv))))
-	  ((string?  datum)		(core-prim-spec '<string> lexenv))
+
+	  ((string?  datum)		(cond ((string-empty? datum)
+					       (core-prim-spec '<empty-string> lexenv))
+					      (else
+					       (core-prim-spec '<nestring> lexenv))))
 
 	  ((null? datum)		(<null>-ots))
 
@@ -1741,13 +2041,13 @@
 					    (make-pair-type-spec (recur (car datum))
 								 (recur (cdr datum))))))
 
-	  ((vector?  datum)		(if (hashtable-ref table datum #f)
-					    (<nevector>-ots)
-					  (begin
-					    (hashtable-set! table datum #t)
-					    (cond ((vector-empty? datum)
-						   (<empty-vector>-ots))
-						  (else
+	  ((vector?  datum)		(cond ((vector-empty? datum)
+					       (<empty-vector>-ots))
+					      (else
+					       (if (hashtable-ref table datum #f)
+						   (<nevector>-ots)
+						 (begin
+						   (hashtable-set! table datum #t)
 						   (make-vector-type-spec (map recur (vector->list datum))))))))
 
 	  ((bytevector? datum)		(core-prim-spec '<bytevector> lexenv))

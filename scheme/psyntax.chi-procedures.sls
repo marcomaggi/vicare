@@ -1050,8 +1050,8 @@
   ;;annotations.
   ;;
   (let ((expr.sig (psi.retvals-signature (chi-expr expr.stx lexenv.run (make-empty-lexenv)))))
-    (case-signature-specs expr.sig
-      ((unspecified-values)
+    (case-type-signature-full-structure expr.sig
+      (<list>/<list-of-spec>
        (syntax-violation __who__
 	 "the expression in the TYPE-OF annotation is typed as returning an unspecified number of values"
 	 expr.stx))
@@ -1376,7 +1376,7 @@
 	  (make-message-condition message)
 	  (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
 	  (make-type-signature-condition (psi.retvals-signature rhs.psi))))
-      (case-signature-specs (psi.retvals-signature rhs.psi)
+      (case-type-signature-full-structure (psi.retvals-signature rhs.psi)
 	(<no-return>
 	 ;;The expression is marked as not-returning.
 	 (when (options::warn-about-not-returning-expressions)

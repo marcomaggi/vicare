@@ -55,7 +55,7 @@
 	#'((pair <positive-fixnum> <positive-fixnum>)))
 
   (doit (cons 1 "ciao")
-	#'((pair <positive-fixnum> <string>)))
+	#'((pair <positive-fixnum> <nestring>)))
 
   (doit (cons 1 (read))
 	#'((pair <positive-fixnum> <top>)))
@@ -69,7 +69,7 @@
 	#'(<positive-fixnum>))
 
   (doit (cdr '(1 . "2"))
-	#'(<string>))
+	#'(<nestring>))
 
   (doit (car (read))
 	#'(<top>))

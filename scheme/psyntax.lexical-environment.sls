@@ -100,7 +100,7 @@
     type-signature=?
     type-signature.fully-unspecified?
     type-signature.only-<untyped>-and-<list>?		type-signature.empty?
-    type-signature.super-and-sub?			type-signature.compatible-super-and-sub?
+    type-signature.matching-super-and-sub?		type-signature.compatible-super-and-sub?
     type-signature.single-type?				type-signature.single-top-tag?
     type-signature.single-type-or-fully-untyped?	type-signature.no-return?
     type-signature.match-arguments-against-operands

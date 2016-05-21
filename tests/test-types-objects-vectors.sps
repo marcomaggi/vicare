@@ -70,7 +70,7 @@
 	#'((vector <positive-fixnum> <positive-fixnum> <positive-fixnum>)))
 
   (doit (vector 1 "ciao" 'ciao)
-	#'((vector <positive-fixnum> <string> (enumeration ciao))))
+	#'((vector <positive-fixnum> <nestring> (enumeration ciao))))
 
   (doit (vector 1 '#(2 3))
 	#'((vector <positive-fixnum> (vector <positive-fixnum> <positive-fixnum>))))

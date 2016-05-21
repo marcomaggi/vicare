@@ -351,7 +351,7 @@
 	    rator.core
 	  rand*.core))))
 
-  (case-signature-specs (psi.retvals-signature rator.psi)
+  (case-type-signature-full-structure (psi.retvals-signature rator.psi)
     ((<top>)
      ;;The operator expression correctly returns a  single value; it is not specified
      ;;to return a  procedure, but the return value is  compatible because "<top>" is
@@ -396,7 +396,7 @@
 	      ((strict-r6rs)
 	       (%build-default-application))))))
 
-    ((unspecified-values)
+    (<list>/<list-of-spec>
      ;;The  operator  expression   returns  an  unspecified  number   of  values,  of
      ;;unspecified type.   Return a normal procedure  application and we will  see at
      ;;run-time what happens; this is standard Scheme behaviour.
@@ -475,7 +475,7 @@
 	      rator.core
 	    (cons first-rand.core other-rand*.core)))))
 
-    (case-signature-specs rator.sig
+    (case-type-signature-full-structure rator.sig
       ((<top>)
        ;;The  operator  expression  correctly  returns  a single  value;  it  is  not
        ;;specified to return a procedure, but  the return value is compatible because
@@ -521,7 +521,7 @@
 		((strict-r6rs)
 		 (%build-default-application))))))
 
-      ((unspecified-values)
+      (<list>/<list-of-spec>
        ;;The  operator  expression   returns  an  unspecified  number   of  values,  of
        ;;unspecified type.   Return a normal procedure  application and we will  see at
        ;;run-time what happens; this is standard Scheme behaviour.
@@ -689,7 +689,7 @@
 			    (make-syntax-violation input-form.stx (psi.input-form rand.psi))
 			    (make-application-operand-signature-condition rand.sig)))
 			rv))
-	      (case-signature-specs rand.sig
+	      (case-type-signature-full-structure rand.sig
 		(<no-return>
 		 ;;The operand expression will not return.
 		 (if (options::warn-about-not-returning-expressions)
@@ -807,7 +807,7 @@
 	    (else
 	     ;;There are no matching clauses, not even possible matches.  Arguments and
 	     ;;operands do *not* match at expand-time.
-	     (assert (null? selected-clause-signature*))
+	     #;(assert (null? selected-clause-signature*))
 	     (let ((make-arguments-signature* (lambda ()
 						(map lambda-signature.argvals
 						  (case-lambda-signature.clause-signature* rator.clambda-sig)))))
@@ -1546,29 +1546,87 @@
     ;;PROC-RANDS.SPECS is a proper or improper list of "<object-type-spec>" instances
     ;;representing the type of the operands.
     ;;
-    (let ((proc.clambda-sig (closure-type-spec.signature proc.ots)))
-      ;;PROC.CLAMBDA-SIG is an instance  of "<case-lambda-signature>".  The number of
-      ;;operands must  be in the correct  range of arguments accepted  by the closure
-      ;;object.
-      (receive (minimum-arguments-count maximum-arguments-count)
-	  (case-lambda-signature.min-and-max-argvals proc.clambda-sig)
-	(if (list? proc-rands.specs)
-	    ;;There is a known number of operands.
-	    (let ((given-operands-count (length proc-rands.specs)))
-	      (cond ((< maximum-arguments-count given-operands-count)
-		     (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
-		       (psi.input-form proc.psi) (map psi.input-form proc-rand*.psi)
-		       maximum-arguments-count given-operands-count))
-		    ((> minimum-arguments-count given-operands-count)
-		     (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
-		       (psi.input-form proc.psi) (map psi.input-form proc-rand*.psi)
-		       minimum-arguments-count given-operands-count))))
-	  ;;There is an unknown number of operands, but we know the minimum number.
-	  (when (< maximum-arguments-count min-given-operands-count)
-	    (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
-	      (psi.input-form proc.psi) (map psi.input-form proc-rand*.psi)
-	      maximum-arguments-count min-given-operands-count)))))
-      (%build-default-application (case-lambda-signature.retvals (closure-type-spec.signature proc.ots))))
+    (define proc.clambda-sig (closure-type-spec.signature proc.ots))
+    (define proc-rands.sig (make-type-signature proc-rands.specs))
+    ;;PROC.CLAMBDA-SIG is  an instance  of "<case-lambda-signature>".  The  number of
+    ;;operands must  be in  the correct  range of arguments  accepted by  the closure
+    ;;object.
+    (receive (minimum-arguments-count maximum-arguments-count)
+	(case-lambda-signature.min-and-max-argvals proc.clambda-sig)
+      (if (list? proc-rands.specs)
+	  ;;There is a known number of operands.
+	  (let ((given-operands-count (length proc-rands.specs)))
+	    (cond ((< maximum-arguments-count given-operands-count)
+		   (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
+		     (psi.input-form proc.psi) (map psi.input-form proc-rand*.psi)
+		     maximum-arguments-count given-operands-count))
+		  ((> minimum-arguments-count given-operands-count)
+		   (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
+		     (psi.input-form proc.psi) (map psi.input-form proc-rand*.psi)
+		     minimum-arguments-count given-operands-count))))
+	;;There is an unknown number of operands, but we know the minimum number.
+	(when (< maximum-arguments-count min-given-operands-count)
+	  (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
+	    (psi.input-form proc.psi) (map psi.input-form proc-rand*.psi)
+	    maximum-arguments-count min-given-operands-count))))
+    ;;Search for matching clauses.
+    (let* ((selected-clause-signature* '())
+	   (state (returnable
+		    (fold-left (lambda (state clause-signature)
+				 (let ((formals.sig (lambda-signature.argvals clause-signature)))
+				   (case (type-signature.match-arguments-against-operands formals.sig proc-rands.sig)
+				     ((exact-match)
+				      (set! selected-clause-signature* (list clause-signature))
+				      (return 'exact-match))
+				     ((possible-match)
+				      (set-cons! selected-clause-signature* clause-signature)
+				      'possible-match)
+				     (else state))))
+		      'no-match (case-lambda-signature.clause-signature* proc.clambda-sig)))))
+      (define (%default-core-expr)
+	(%build-default-application (%compute-application-signature input-form.stx selected-clause-signature*)))
+      (case state
+	((exact-match possible-match)
+	 ;;There is a clause that exactly matches the operands.  When we are here: we
+	 ;;know that SELECTED-CLAUSE-SIGNATURE* holds a single item.
+	 (%default-core-expr))
+	((possible-match)
+	 ;;There is at least one clause with a possible match.  It is not possible to
+	 ;;fully  validate  the  signatures  at  expand-time;  we  rely  on  run-time
+	 ;;checking.
+	 (%default-core-expr))
+	(else
+	 ;;There are no  matching clauses, not even possible  matches.  Arguments and
+	 ;;operands do *not* match at expand-time.
+	 #;(assert (null? selected-clause-signature*))
+	 (let ((make-arguments-signature* (lambda ()
+					    (map lambda-signature.argvals
+					      (case-lambda-signature.clause-signature* proc.clambda-sig)))))
+	   (case-expander-language
+	     ((typed)
+	      (%error-mismatch-between-args-signature-and-operands-signature   input-form.stx (make-arguments-signature*) proc-rands.sig))
+	     ((default)
+	      (%warning-mismatch-between-args-signature-and-operands-signature input-form.stx (make-arguments-signature*) proc-rands.sig)
+	      (%default-core-expr))
+	     ((strict-r6rs)
+	      (%default-core-expr))))))))
+
+  (define (%compute-application-signature input-form.stx selected-clause-signature*)
+    (cond ((list-of-single-item? selected-clause-signature*)
+	   ;;There is a single compatible clause signature.
+	   (lambda-signature.retvals (car selected-clause-signature*)))
+	  ((pair? selected-clause-signature*)
+	   ;;There  are multiple  compatible  clause signatures.   Let's compute  the
+	   ;;union between the retvals type signatures.
+	   (apply type-signature.union-same-number-of-operands
+		  (lambda (message cnd)
+		    (raise (condition (make-who-condition __module_who__)
+				      (make-message-condition message)
+				      (make-syntax-violation input-form.stx #f)
+				      cnd)))
+		  (map lambda-signature.retvals selected-clause-signature*)))
+	  (else
+	   (make-type-signature/fully-unspecified))))
 
 ;;; --------------------------------------------------------------------
 

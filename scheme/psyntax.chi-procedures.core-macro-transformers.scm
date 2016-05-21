@@ -521,7 +521,7 @@
 	  (make-message-condition message)
 	  (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
 	  (make-type-signature-condition (psi.retvals-signature rhs.psi))))
-      (case-signature-specs (psi.retvals-signature rhs.psi)
+      (case-type-signature-full-structure (psi.retvals-signature rhs.psi)
 	((single-value)
 	 ;;The expression returns a single value.  Good this OTS will become the type
 	 ;;of the syntactic binding.
@@ -542,7 +542,7 @@
 	 ;;The expression is marked as returning void.
 	 (%handle-error common "expression used as right-hand side in LET syntactic binding is typed as returning void"))
 
-	((unspecified-values)
+	(<list>/<list-of-spec>
 	 ;;The expression returns an unspecified  number of values.  Let's simulate a
 	 ;;"<top>" syntactic binding  and delegate the run-time code  to validate the
 	 ;;number of arguments.
@@ -1448,7 +1448,7 @@
 	(make-type-signature-condition expr.sig)))
     (define (%handle-error message rv)
       (%error (lambda () (common message)) rv))
-    (case-signature-specs expr.sig
+    (case-type-signature-full-structure expr.sig
       ((<void>)
        (%handle-error "expression used as operand in logic predicate is typed as returning void" 'always-true))
 
@@ -1575,7 +1575,7 @@
        (let* ((form0.psi	(chi-expr ?form0 lexenv.run lexenv.expand))
 	      (form0.sig	(psi.retvals-signature form0.psi))
 	      (form*.psi	(chi-expr* ?form* lexenv.run lexenv.expand)))
-	 (case-signature-specs form0.sig
+	 (case-type-signature-full-structure form0.sig
 	   (<no-return>
 	    ;;The expression is typed as not-returning.
 	    (when (options::warn-about-not-returning-expressions)
@@ -1612,7 +1612,7 @@
 			    (list (build-lexical-reference no-source rv.lex))))))
 	      form0.sig))
 
-	   ((unspecified-values)
+	   (<list>/<list-of-spec>
 	    ;;The expression returns an unspecified  number of values.  FORM0.SIG holds
 	    ;;either a  standalone "<list-of-type-spec>" or a  standalone "<list>-ots".
 	    (%build-unspecified-values-output input-form.stx form0.psi form*.psi form0.sig))
@@ -1757,7 +1757,7 @@
 					   producer.stx consumer*.stx)
     (let* ((producer.psi	(chi-expr producer.stx lexenv.run lexenv.expand))
 	   (producer.sig	(psi.retvals-signature producer.psi)))
-      (case-signature-specs producer.sig
+      (case-type-signature-full-structure producer.sig
 	(<no-return>
 	 ;;The producer expression is typed as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
@@ -1779,7 +1779,7 @@
 	 (%build-zero-values-output input-form.stx lexenv.run lexenv.expand
 				    caller-who return-values? producer.psi consumer*.stx))
 
-	((unspecified-values)
+	(<list>/<list-of-spec>
 	 ;;We  handle "<list>"  and "(list-of  ?type)" type  signatures because  they
 	 ;;could represent zero values.
 	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
@@ -1812,7 +1812,7 @@
 		  (make-syntax-violation input-form.stx producer.stx))))
     (let* ((producer.psi	(chi-expr producer.stx lexenv.run lexenv.expand))
 	   (producer.sig	(psi.retvals-signature producer.psi)))
-      (case-signature-specs producer.sig
+      (case-type-signature-full-structure producer.sig
 	(<no-return>
 	 ;;The producer expression is typed as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
@@ -1875,7 +1875,7 @@
 					      arg.id (psi.core-expr producer.psi) consumer*.stx)
 		(%error-invalid-number-of-values))))
 
-	((unspecified-values)
+	(<list>/<list-of-spec>
 	 ;;The producer expression returns an  unspecified number of values, of known
 	 ;;type.   PRODUCER.SIG   holds  a   standalone  "<list>"  or   a  standalone
 	 ;;"<list-of-type-spec>".
@@ -1903,7 +1903,7 @@
 		    (make-syntax-violation input-form.stx (psi.input-form producer.psi))
 		    (make-expected-type-signature-condition formals.sig)
 		    (make-returned-type-signature-condition producer.sig))))
-      (case-signature-specs producer.sig
+      (case-type-signature-full-structure producer.sig
 	(<no-return>
 	 ;;The producer expression is typed as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
@@ -2002,7 +2002,7 @@
 		    (make-syntax-violation input-form.stx (psi.input-form producer.psi))
 		    (make-expected-type-signature-condition formals.sig)
 		    (make-returned-type-signature-condition producer.sig))))
-      (case-signature-specs producer.sig
+      (case-type-signature-full-structure producer.sig
 	(<no-return>
 	 ;;The producer expression is typed as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
@@ -2046,7 +2046,7 @@
 					   standard-formals.stx formals.sig
 					   producer.psi consumer*.stx))
 
-	((unspecified-values)
+	(<list>/<list-of-spec>
 	 ;;The  producer  returns  an  one  or  more  values,  of  unspecified  type.
 	 ;;PRODUCER.SIG holds  a standalone "<list>"  or "(list-of ?type)".   We will
 	 ;;validate at run-time the actual number of arguments.
@@ -2254,7 +2254,7 @@
 					   producer.stx consumer*.stx)
     (let* ((producer.psi	(chi-expr producer.stx lexenv.run lexenv.expand))
 	   (producer.sig	(psi.retvals-signature producer.psi)))
-      (case-signature-specs producer.sig
+      (case-type-signature-full-structure producer.sig
 	(<no-return>
 	 ;;The producer expression is typed as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
@@ -2276,7 +2276,7 @@
 	 (%build-zero-values-output input-form.stx lexenv.run lexenv.expand
 				    caller-who return-values? producer.psi consumer*.stx))
 
-	((unspecified-values)
+	(<list>/<list-of-spec>
 	 ;;We  handle "<list>"  and "(list-of  ?type)" type  signatures because  they
 	 ;;could represent zero values.
 	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
@@ -2328,7 +2328,7 @@
 	    (%build-single-value-output input-form.stx lexenv.run lexenv.expand
 					caller-who return-values?
 					arg.id arg.ots producer.core consumer*.stx)))
-	(case-signature-specs producer.sig
+	(case-type-signature-full-structure producer.sig
 	  (<no-return>
 	   ;;The producer expression is typed as not-returning.
 	   (when (options::warn-about-not-returning-expressions)
@@ -2475,7 +2475,7 @@
 		      (make-syntax-violation input-form.stx (psi.input-form producer.psi))
 		      (make-expected-type-signature-condition formals.sig)
 		      (make-returned-type-signature-condition producer.sig))))
-	(case-signature-specs producer.sig
+	(case-type-signature-full-structure producer.sig
 	  (<no-return>
 	   ;;The producer expression is typed as not-returning.
 	   (when (options::warn-about-not-returning-expressions)
@@ -2616,6 +2616,15 @@
       (let* ((producer.psi		(chi-expr producer.stx lexenv.run lexenv.expand))
 	     (producer.sig		(psi.retvals-signature producer.psi))
 	     (cleared-formals.sig	(type-signature.untyped-to-top formals.sig)))
+	(define (%mk-propagated-signature producer.sig)
+	  (with-exception-handler
+	      (lambda (E)
+		(raise-continuable
+		 (condition (make-who-condition caller-who)
+			    (make-syntax-violation input-form.stx #f)
+			    E)))
+	    (lambda ()
+	      (type-signature.type-propagation formals.sig producer.sig))))
 	(define (%error-mismatch message)
 	  (raise
 	   (condition (make-expand-time-type-signature-violation)
@@ -2624,7 +2633,7 @@
 		      (make-syntax-violation input-form.stx (psi.input-form producer.psi))
 		      (make-expected-type-signature-condition formals.sig)
 		      (make-returned-type-signature-condition producer.sig))))
-	(case-signature-specs producer.sig
+	(case-type-signature-full-structure producer.sig
 	  (<no-return>
 	   ;;The producer expression is typed as not-returning.
 	   (when (options::warn-about-not-returning-expressions)
@@ -2650,7 +2659,7 @@
 	   ;;The producer expression is typed as returning void.
 	   (%error-mismatch "the producer expression is typed as returning void"))
 
-	  ((unspecified-values)
+	  (<list>/<list-of-spec>
 	   ;;The  producer returns  an  unspecified number  of values.   PRODUCER.SIG
 	   ;;holds either  a standalone  "<list>" or a  standalone LIST-OF.   We will
 	   ;;validate at run-time the actual number of arguments.
@@ -2658,7 +2667,7 @@
 				 caller-who return-values?
 				 standard-formals.stx formals.sig cleared-formals.sig
 				 producer.psi producer.sig consumer*.stx
-				 %error-mismatch))
+				 %error-mismatch %mk-propagated-signature))
 
 	  (<nelist>
 	   ;;The  producer  returns   one  or  more  values,   of  unspecified  type.
@@ -2669,12 +2678,11 @@
 	   ;;
 	   ;;then process  it.  We  will validate  at run-time  the actual  number of
 	   ;;arguments.
-	   (let ((producer.sig (make-type-signature (cons (<top>-ots) (<list>-ots)))))
-	     (%process-some-values input-form.stx lexenv.run lexenv.expand
-				   caller-who return-values?
-				   standard-formals.stx formals.sig cleared-formals.sig
-				   producer.psi producer.sig consumer*.stx
-				   %error-mismatch)))
+	   (%process-some-values input-form.stx lexenv.run lexenv.expand
+				 caller-who return-values?
+				 standard-formals.stx formals.sig cleared-formals.sig
+				 producer.psi producer.sig consumer*.stx
+				 %error-mismatch %mk-propagated-signature))
 
 	  (<list-spec>
 	   ;;The  producer  returns  a  known   number  of  values,  of  known  type.
@@ -2688,7 +2696,7 @@
 					    caller-who return-values?
 					    standard-formals.stx formals.sig cleared-formals.sig
 					    producer.psi producer.sig consumer*.stx
-					    %error-mismatch))
+					    %error-mismatch %mk-propagated-signature))
 		  (%error-mismatch "mismatching number of arguments in type signatures"))))
 
 	  (else
@@ -2706,172 +2714,33 @@
 	   ;;   (cast-signature (... . (list-of ?type))		(values ...))
 	   ;;   (cast-signature (... . (list ?type ...))	(values ...))
 	   ;;
-	   (let ((producer.sig (%normalise-producer-signature-for-some-values producer.sig)))
-	     (if (<= (type-signature.min-count formals.sig)
-		     (type-signature.min-count producer.sig))
-		 (%process-some-values input-form.stx lexenv.run lexenv.expand
-				       caller-who return-values?
-				       standard-formals.stx formals.sig cleared-formals.sig
-				       producer.psi producer.sig consumer*.stx
-				       %error-mismatch)
-	       (%error-mismatch "mismatching number of arguments in type signatures")))))))
-
-    (define* (%normalise-producer-signature-for-some-values producer.sig)
-      ;;Normalise the  PRODUCER.SIG to be  either a proper  list or an  improper list
-      ;;with "<list>"  or "(list-of  ?type)" tail.  "<nelist>"  and "(list  ...)" are
-      ;;removed from the returned signature by converting them to their components.
-      ;;
-      (let ((producer.specs (type-signature.object-type-specs producer.sig)))
-	(cond ((or (list? producer.specs)
-		   (<list>-ots? producer.specs))
-	       ;;Either:  a proper  list,  a  fixed number  of  values; a  standalone
-	       ;;"<list>".
-	       producer.sig)
-	      ((<nelist>-ots? producer.specs)
-	       ;;A standalone "<nelist>".  We convert it to:
-	       ;;
-	       ;;   (<top> . <list>)
-	       ;;
-	       (make-type-signature (cons (<top>-ots) (<list>-ots))))
-	      ((list-type-spec? producer.specs)
-	       ;;A standalone "(list ...)".
-	       (make-type-signature (list-type-spec.item-ots* producer.specs)))
-	      (else
-	       ;;An improper list.
-	       (receive (head tail)
-		   (improper-list->list-and-rest producer.specs)
-		 (cond ((or (<list>-ots? tail)
-			    (list-of-type-spec? tail))
-			producer.sig)
-		       ((<nelist>-ots? tail)
-			;;An improper  list with "<nelist>"  as tail.  We  convert it
-			;;to:
-			;;
-			;;   (... <top> . <list>)
-			;;
-			(make-type-signature (append head (cons (<top>-ots) (<list>-ots)))))
-		       ((list-type-spec? tail)
-			;;An improper list with "(list ...)"  as tail.
-			(make-type-signature (append head (list-type-spec.item-ots* tail))))
-		       (else
-			(assertion-violation __who__
-			  "internal error, invalid producer signature" producer.sig))))))))
+	   (if (<= (type-signature.min-count formals.sig)
+		   (type-signature.min-count producer.sig))
+	       (%process-some-values input-form.stx lexenv.run lexenv.expand
+				     caller-who return-values?
+				     standard-formals.stx formals.sig cleared-formals.sig
+				     producer.psi producer.sig consumer*.stx
+				     %error-mismatch %mk-propagated-signature)
+	     (%error-mismatch "mismatching number of arguments in type signatures"))))))
 
     (define (%process-some-values input-form.stx lexenv.run lexenv.expand
 				  caller-who return-values?
 				  standard-formals.stx formals.sig cleared-formals.sig
 				  producer.psi producer.sig consumer*.stx
-				  %error-mismatch)
-      ;;If we  are here we know  FORMALS.SIG holds an improper  list and PRODUCER.SIG
-      ;;holds either  a proper list  or an improper  list with "<list>"  or "(list-of
-      ;;?type)" as tail.
-      (if (type-signature.only-<untyped>-and-<list>? formals.sig)
-	  ;;The  expected type  signature has  only untyped  items.  We  perform type
-	  ;;propagation   as   much   as    possible   replacing   FORMALS.SIG   with
-	  ;;PROPAGATED.SIG.
-	  (let ((propagated.sig (%propagate-types-for-improper-signature formals.sig producer.sig %error-mismatch)))
-	    (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
-					      caller-who return-values?
-					      standard-formals.stx propagated.sig
-					      producer.psi consumer*.stx chi-lambda/typed/parsed-formals))
-	(case (type-signature.match-arguments-against-operands formals.sig producer.sig)
-	  ((exact-match)
-	   (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
-					     caller-who return-values?
-					     standard-formals.stx cleared-formals.sig
-					     producer.psi consumer*.stx chi-lambda/typed/parsed-formals))
-	  ((possible-match)
-	   (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
-					     caller-who return-values?
-					     standard-formals.stx cleared-formals.sig
-					     producer.psi consumer*.stx))
-	  (else
-	   (%error-mismatch "type mismatch between expected and returned values")))))
-
-    (define* (%propagate-types-for-improper-signature formals.sig producer.sig %error-mismatch)
-      ;;If we  are here we know that:
-      ;;
-      ;;* FORMALS.SIG holds an improper list.
-      ;;
-      ;;* PRODUCER.SIG holds  either a proper list or an  improper list with "<list>"
-      ;;  or  "(list-of ?type)"  as tail.
-      ;;
-      ;;* FORMALS.SIG has only untyped items.
-      ;;
-      ;;Build and return a new type  signature holding, for each item in FORMALS.SIG,
-      ;;a suitable item from PRODUCER.SIG.
-      ;;
-      ;;Examples:
-      ;;
-      ;;   formals.sig    == (<untyped> <untyped> . <list>)
-      ;;   producer.sig   == (<fixnum>  <fixnum>  . (list-of <fixnum>))
-      ;;   propagated.sig == (<fixnum>  <fixnum>  . (list-of <fixnum>))
-      ;;
-      ;;   formals.sig    == (<untyped> . <list>)
-      ;;   producer.sig   == (<fixnum>  <fixnum>  . (list-of <fixnum>))
-      ;;   propagated.sig == (<fixnum>  . <list>)
-      ;;
-      ;;   formals.sig    == (<untyped> <untyped> . <list>)
-      ;;   producer.sig   == (<fixnum>  . <list>)
-      ;;   propagated.sig == (<fixnum>  <top>     . <list>)
-      ;;
-      (make-type-signature
-       (let recur ((formals.specs	(type-signature.object-type-specs formals.sig))
-		   (producer.specs	(type-signature.object-type-specs producer.sig)))
-	 (cond ((pair? formals.specs)
-		(cond ((pair? producer.specs)
-		       ;;formals.sig    == (... <untyped> ...)
-		       ;;producer.sig   == (... <fixnum> ...)
-		       ;;propagated.sig == (... <fixnum> ...)
-		       (cons (car producer.specs)
-			     (recur (cdr formals.specs) (cdr producer.specs))))
-		      ((null? producer.specs)
-		       ;;formals.sig    == (... <untyped> ...)
-		       ;;producer.sig   == (... )
-		       (%error-mismatch "number of return values does not match the expected one"))
-		      ((<list>-ots? producer.specs)
-		       ;;formals.sig    == (... <untyped> ...)
-		       ;;producer.sig   == (... . <list>)
-		       ;;propagated.sig == (... <top> ...)
-		       (cons (<top>-ots)
-			     (recur (cdr formals.specs) producer.specs)))
-		      ((list-of-type-spec? producer.specs)
-		       ;;formals.sig    == (... <untyped> ...)
-		       ;;producer.sig   == (... . (list-of <fixnum>))
-		       ;;propagated.sig == (... <fixnum> ...)
-		       (cons (list-of-type-spec.item-ots producer.specs)
-			     (recur (cdr formals.specs) producer.specs)))
-		      (else
-		       (error __who__ "internal error, invalid producer signature" producer.sig))))
-	       ((<list>-ots? formals.specs)
-		(cond ((list-of-type-spec? producer.specs)
-		       ;;formals.sig    == (... . <list>)
-		       ;;producer.sig   == (... . (list-of <fixnum>))
-		       ;;propagated.sig == (... . (list-of <fixnum>))
-		       producer.specs)
-		      (else
-		       ;;formals.sig    == (... . <list>)
-		       ;;producer.sig   == (... <fixnum> <string> ...)
-		       ;;propagated.sig == (... . <list>)
-		       formals.specs)))
-	       ((<nelist>-ots? formals.specs)
-		(cond ((list-of-type-spec? producer.specs)
-		       ;;formals.sig    == (... . <nelist>)
-		       ;;producer.sig   == (... . (list-of <fixnum>))
-		       ;;propagated.sig == (... . <nelist>)
-		       formals.specs)
-		      (else
-		       ;;formals.sig    == (... . <nelist>)
-		       ;;producer.sig   == (... <fixnum> <string> ...)
-		       ;;propagated.sig == (... . <nelist>)
-		       formals.specs)))
-	       ((or (list-of-type-spec? formals.specs)
-		    (list-type-spec?    formals.specs))
-		formals.specs)
-	       ((null? formals.specs)
-		(error __who__ "internal error, expected improper list in formals signature" formals.sig))
-	       (else
-		(error __who__ "internal error, invalid formals signature" formals.sig))))))
+				  %error-mismatch %mk-propagated-signature)
+      (case (type-signature.match-arguments-against-operands cleared-formals.sig producer.sig)
+	((exact-match)
+	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
+					   caller-who return-values?
+					   standard-formals.stx (%mk-propagated-signature producer.sig)
+					   producer.psi consumer*.stx chi-lambda/typed/parsed-formals))
+	((possible-match)
+	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
+					   caller-who return-values?
+					   standard-formals.stx (%mk-propagated-signature producer.sig)
+					   producer.psi consumer*.stx))
+	(else
+	 (%error-mismatch "type mismatch between expected and returned values"))))
 
     #| end of module: %THE-CONSUMER-EXPECTS-SOME-VALUES |# )
 

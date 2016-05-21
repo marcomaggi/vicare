@@ -98,7 +98,7 @@
 	#'((list <positive-fixnum> <positive-fixnum> <positive-fixnum>)))
 
   (doit (list 1 "ciao" 'ciao)
-	#'((list <positive-fixnum> <string> (enumeration ciao))))
+	#'((list <positive-fixnum> <nestring> (enumeration ciao))))
 
   (doit (list 1 '(2 3))
 	#'((list <positive-fixnum> (list <positive-fixnum> <positive-fixnum>))))
@@ -112,7 +112,7 @@
 	#'(<positive-fixnum>))
 
   (doit (cdr '(1 "2"))
-	#'((list <string>)))
+	#'((list <nestring>)))
 
   (doit (car (read))
 	#'(<top>))
@@ -422,7 +422,7 @@
   (check
       (expander::type-signature.syntax-object (type-of (new <list-of-strings> "a" "b")))
     (=> syntax=?)
-    #'((list <string> <string>)))
+    #'((list <nestring> <nestring>)))
 
   ;;Expand-time signature violation.  First operand.
   ;;
@@ -434,7 +434,7 @@
   ;;
   (check-expand-time-signature-violation
       (new <list-of-strings> "a" 1)
-    => (<list-of-strings>) ((list <string> <positive-fixnum>)))
+    => (<list-of-strings>) ((list <nestring> <positive-fixnum>)))
 
   ;;Run-time validation.
   ;;

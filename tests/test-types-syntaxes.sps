@@ -1437,7 +1437,7 @@
   (doit (type-annotation-syntax (or (type-of 1)
 				    (type-of "ciao")
 				    (type-of 'hey)))
-	=> (or <positive-fixnum> <string> (enumeration hey)))
+	=> (or <positive-fixnum> <nestring> (enumeration hey)))
 
 ;;; --------------------------------------------------------------------
 ;;; invalid expressions
@@ -1507,7 +1507,7 @@
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum>) "ciao")
-    => (<fixnum>) (<string>))
+    => (<fixnum>) (<nestring>))
 
 ;;; --------------------------------------------------------------------
 ;;; multiple return values
@@ -1517,15 +1517,15 @@
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum>) (values "A" "B"))
-    => (<fixnum> <flonum>) (<string> <string>))
+    => (<fixnum> <flonum>) (<nestring> <nestring>))
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum>) (values 1 "B"))
-    => (<fixnum> <flonum>) (<positive-fixnum> <string>))
+    => (<fixnum> <flonum>) (<positive-fixnum> <nestring>))
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum>) (values "A" 2.0))
-    => (<fixnum> <flonum>) (<string> <positive-flonum>))
+    => (<fixnum> <flonum>) (<nestring> <positive-flonum>))
 
   ;;Any tuple of values matches.
   (doit <list>			1				=> 1)
@@ -1588,11 +1588,11 @@
 
   (check-expand-time-signature-violation
       (assert-signature <list-of-flonums> (values 1 "A"))
-    => <list-of-flonums> (<positive-fixnum> <string>))
+    => <list-of-flonums> (<positive-fixnum> <nestring>))
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> . <list-of-flonums>) (values 1 "A"))
-    => (<fixnum> . <list-of-flonums>) (<positive-fixnum> <string>))
+    => (<fixnum> . <list-of-flonums>) (<positive-fixnum> <nestring>))
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum> . <list-of-strings>) (values 1))
@@ -1651,7 +1651,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  #;(parametrise ((print-gensym #f))
+  #;#;(parametrise ((print-gensym #f))
     (begin-for-syntax
       (expander::generate-descriptive-gensyms? #t))
 

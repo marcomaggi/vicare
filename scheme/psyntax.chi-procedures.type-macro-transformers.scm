@@ -200,7 +200,7 @@
 	  (make-message-condition message)
 	  (make-syntax-violation input-form.stx (psi.input-form constructor.psi))
 	  (make-type-signature-condition (psi.retvals-signature constructor.psi))))
-      (case-signature-specs (psi.retvals-signature constructor.psi)
+      (case-type-signature-full-structure (psi.retvals-signature constructor.psi)
 	((single-value)
 	 ;;The expression returns a single value.  Good this OTS will become the type
 	 ;;of the expression.
@@ -214,7 +214,7 @@
 	 ;;The expression is marked as returning void.
 	 (%handle-error common "type constructor expression is typed as returning void"))
 
-	((unspecified-values)
+	(<list>/<list-of-spec>
 	 ;;The expression returns an unspecified  number of values.  Let's simulate a
 	 ;;"<top>" syntactic binding  are delegate the run-time code  to validate the
 	 ;;number of arguments.
@@ -292,7 +292,7 @@
       ((_ ?expr)
        (let* ((expr.psi (chi-expr ?expr lexenv.run lexenv.expand))
 	      (expr.sig (psi.retvals-signature expr.psi)))
-	 (case-signature-specs expr.sig
+	 (case-type-signature-full-structure expr.sig
 	   ((single-value)
 	    => (lambda (type.ots)
 		 (%apply-appropriate-destructor __who__ input-form.stx lexenv.run lexenv.expand type.ots expr.psi)))
@@ -384,7 +384,7 @@
 	  (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand
 						     expr.psi type-annotation.ots synner))
 	(if (options::typed-language-enabled?)
-	    (case-signature-specs expr.sig
+	    (case-type-signature-full-structure expr.sig
 	      ((single-value)
 	       => (lambda (expr.ots)
 		    (%match-pred-type-against-single-value-expr input-form.stx lexenv.run lexenv.expand
@@ -570,7 +570,7 @@
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%error-unknown-type)
 	   (__synner__ "unable to determine type of expression at expand-time" ?expr))
-	 (case-signature-specs expr.sig
+	 (case-type-signature-full-structure expr.sig
 	   ((<top>)
 	    (%error-unknown-type))
 	   ((<untyped>)
@@ -671,7 +671,7 @@
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%error-unknown-type)
 	   (__synner__ "unable to determine type of expression at expand-time" ?expr))
-	 (case-signature-specs expr.sig
+	 (case-type-signature-full-structure expr.sig
 	   ((<top>)
 	    (%error-unknown-type))
 	   ((<untyped>)
@@ -764,7 +764,7 @@
 		       (make-message-condition message)
 		       (make-syntax-violation input-form.stx ?subject-expr)
 		       (make-irritants-condition (list subject-expr.sig)))))
-	 (case-signature-specs subject-expr.sig
+	 (case-type-signature-full-structure subject-expr.sig
 	   ((<top>)
 	    (%late-binding))
 	   ((<untyped>)
@@ -989,7 +989,11 @@
 	   (asrt.sig	(make-type-signature
 			 (syntax-object->type-signature-specs
 			  asrt.stx lexenv.run (lambda (message subform)
-						(syntax-violation caller-who message asrt.stx subform)))))
+						(raise
+						 (condition (make-who-condition caller-who)
+							    (make-message-condition message)
+							    (make-syntax-violation input-form.stx)
+							    (make-syntax-violation asrt.stx subform)))))))
 	   (asrt.sig	(type-signature.untyped-to-top asrt.sig))
 	   (expr.psi	(chi-expr expr.stx lexenv.run lexenv.expand))
 	   (expr.sig	(psi.retvals-signature expr.psi)))
@@ -1028,7 +1032,7 @@
 				       caller-who asrt.stx asrt.sig expr.psi
 				       return-values? cast-signature?))
 
-		((type-signature.super-and-sub? asrt.sig expr.sig)
+		((type-signature.matching-super-and-sub? asrt.sig expr.sig)
 		 ;;Good.  Everything  is all  right at  expand-time.  We  replace the
 		 ;;expression's type signature with the asserted type signature: yes,
 		 ;;this is  really useful, especially  with RHS type  propagation and
@@ -1215,9 +1219,9 @@
 ;;;; module core-macro-transformer: UNSAFE-CAST-SIGNATURE
 
 (define-core-transformer (unsafe-cast-signature input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function  used to  expand  Vicare's  UNSAFE-CAST-SIGNATURE syntaxes  from  the
-  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
+  ;;Transformer function used to  expand Vicare's UNSAFE-CAST-SIGNATURE syntaxes from
+  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
+  ;;the context of the given LEXENV; return a PSI struct.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?target-signature ?expr)
@@ -1225,14 +1229,18 @@
 				 (syntax-object->type-signature-specs
 				  ?target-signature lexenv.run
 				  (lambda (message subform)
-				    (syntax-violation __who__ message ?target-signature subform)))))
+				    (raise
+				     (condition (make-who-condition __who__)
+						(make-message-condition message)
+						(make-syntax-violation input-form.stx)
+						(make-syntax-violation ?target-signature subform)))))))
 	    (target.sig		(type-signature.untyped-to-top target.sig))
 	    (expr.psi		(chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core		(psi.core-expr expr.psi))
 	    (expr.sig		(psi.retvals-signature expr.psi)))
        (define (%do-unsafe-cast-signature)
 	 (make-psi input-form.stx expr.core target.sig))
-       (cond ((type-signature.super-and-sub? target.sig expr.sig)
+       (cond ((type-signature.matching-super-and-sub? target.sig expr.sig)
 	      ;;Good,  matching  type  signatures:   we  are  generalising  the  type
 	      ;;specification.  For example:
 	      ;;
@@ -1465,14 +1473,22 @@
   (syntax-match input-form.stx ()
     ((_ ?super-signature ?sub-signature)
      (let* ((super.sig	(let ((synner (lambda (message subform)
-					(syntax-violation __who__
-					  "invalid super signature argument" input-form.stx ?super-signature))))
+					(raise
+					 (condition (make-who-condition __who__)
+						    (make-message-condition
+						     (string-append "invalid super signature argument: " message))
+						    (make-syntax-violation input-form.stx #f)
+						    (make-syntax-violation ?super-signature subform))))))
 			  (make-type-signature (syntax-object->type-signature-specs ?super-signature lexenv.run synner))))
 	    (sub.sig	(let ((synner (lambda (message subform)
-					(syntax-violation __who__
-					  "invalid sub signature argument" input-form.stx ?sub-signature))))
+					(raise
+					 (condition (make-who-condition __who__)
+						    (make-message-condition
+						     (string-append "invalid sub signature argument: " message))
+						    (make-syntax-violation input-form.stx #f)
+						    (make-syntax-violation ?sub-signature subform))))))
 			  (make-type-signature (syntax-object->type-signature-specs ?sub-signature lexenv.run synner))))
-	    (bool	(type-signature.super-and-sub? super.sig sub.sig)))
+	    (bool	(type-signature.matching-super-and-sub? super.sig sub.sig)))
        (make-psi input-form.stx
 	 (build-data no-source bool)
 	 (if bool
@@ -1489,12 +1505,20 @@
   (syntax-match input-form.stx ()
     ((_ ?super-signature ?sub-signature)
      (let* ((super.sig	(let ((synner (lambda (message subform)
-					(syntax-violation __who__
-					  "invalid super signature argument" input-form.stx ?super-signature))))
+					(raise
+					 (condition (make-who-condition __who__)
+						    (make-message-condition
+						     (string-append "invalid super signature argument: " message))
+						    (make-syntax-violation input-form.stx #f)
+						    (make-syntax-violation ?super-signature subform))))))
 			  (make-type-signature (syntax-object->type-signature-specs ?super-signature lexenv.run synner))))
 	    (sub.sig	(let ((synner (lambda (message subform)
-					(syntax-violation __who__
-					  "invalid sub signature argument" input-form.stx ?sub-signature))))
+					(raise
+					 (condition (make-who-condition __who__)
+						    (make-message-condition
+						     (string-append "invalid sub signature argument: " message))
+						    (make-syntax-violation input-form.stx #f)
+						    (make-syntax-violation ?sub-signature subform))))))
 			  (make-type-signature (syntax-object->type-signature-specs ?sub-signature lexenv.run synner))))
 	    (sym	(type-signature.match-arguments-against-operands super.sig sub.sig)))
        (make-psi input-form.stx
@@ -1523,7 +1547,12 @@
 		 %signature-union-synner
 		 (map (lambda (signature.stx)
 			(let ((synner (lambda (message subform)
-					(syntax-violation __who__ "invalid type signature argument" input-form.stx signature.stx))))
+					(raise
+					 (condition (make-who-condition __who__)
+						    (make-message-condition
+						     (string-append "invalid type signature argument: " message))
+						    (make-syntax-violation input-form.stx #f)
+						    (make-syntax-violation signature.stx subform))))))
 			  (make-type-signature (syntax-object->type-signature-specs signature.stx lexenv.run synner))))
 		   ?signature*))))
        (make-type-signature/single-top)))
@@ -1538,12 +1567,20 @@
   (syntax-match input-form.stx ()
     ((_ ?super-signature ?sub-signature)
      (let* ((super.sig	(let ((synner (lambda (message subform)
-					(syntax-violation __who__
-					  "invalid super signature argument" input-form.stx ?super-signature))))
+					(raise
+					 (condition (make-who-condition __who__)
+						    (make-message-condition
+						     (string-append "invalid super signature argument: " message))
+						    (make-syntax-violation input-form.stx #f)
+						    (make-syntax-violation ?super-signature subform))))))
 			  (make-type-signature (syntax-object->type-signature-specs ?super-signature lexenv.run synner))))
 	    (sub.sig	(let ((synner (lambda (message subform)
-					(syntax-violation __who__
-					  "invalid sub signature argument" input-form.stx ?sub-signature))))
+					(raise
+					 (condition (make-who-condition __who__)
+						    (make-message-condition
+						     (string-append "invalid sub signature argument: " message))
+						    (make-syntax-violation input-form.stx #f)
+						    (make-syntax-violation ?sub-signature subform))))))
 			  (make-type-signature (syntax-object->type-signature-specs ?sub-signature lexenv.run synner))))
 	    (sig	(type-signature.common-ancestor super.sig sub.sig)))
        (make-psi input-form.stx

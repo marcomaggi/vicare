@@ -106,12 +106,12 @@
 
   (doit (let ((A "ciao"))
 	  A)
-	=> (<string>))
+	=> (<nestring>))
 
   (doit (let ((A "ciao"))
 	  (let ((B A))
 	    B))
-	=> (<string>))
+	=> (<nestring>))
 
   (doit (let ((A (fxadd1 1)))
 	  A)
@@ -158,12 +158,12 @@
 
   (doit (let* ((A "ciao"))
 	  A)
-	=> (<string>))
+	=> (<nestring>))
 
   (doit (let* ((A "ciao"))
 	  (let* ((B A))
 	    B))
-	=> (<string>))
+	=> (<nestring>))
 
   (doit (let* ((A (fxadd1 1)))
 	  A)
@@ -210,12 +210,12 @@
 
   (doit (letrec ((A "ciao"))
 	  A)
-	=> (<string>))
+	=> (<nestring>))
 
   (doit (letrec ((A "ciao"))
 	  (letrec ((B A))
 	    B))
-	=> (<string>))
+	=> (<nestring>))
 
   (doit (letrec ((A (fxadd1 1)))
 	  A)
@@ -262,12 +262,12 @@
 
   (doit (letrec* ((A "ciao"))
 	  A)
-	=> (<string>))
+	=> (<nestring>))
 
   (doit (letrec* ((A "ciao"))
 	  (letrec* ((B A))
 	    B))
-	=> (<string>))
+	=> (<nestring>))
 
   (doit (letrec* ((A (fxadd1 1)))
 	  A)
@@ -459,7 +459,7 @@
   (doit ((case-lambda
 	   (({a <fixnum>} {b <fixnum>})
 	    (fx+ a b))
-	   (({a <string>} {b <string>} {c <string>})
+	   (({a <nestring>} {b <nestring>} {c <nestring>})
 	    (string-append a b c)))
 	 1 2)
 	=> (<fixnum>))
@@ -467,10 +467,10 @@
   (doit ((case-lambda
 	   (({a <fixnum>} {b <fixnum>})
 	    (fx+ a b))
-	   (({a <string>} {b <string>} {c <string>})
+	   (({a <nestring>} {b <nestring>} {c <nestring>})
 	    (string-append a b c)))
 	 "1" "2" "3")
-	=> (<string>))
+	=> (<nestring>))
 
   (void))
 
@@ -555,7 +555,7 @@
   (doit ((named-case-lambda me
 	   (({a <fixnum>} {b <fixnum>})
 	    (fx+ a b))
-	   (({a <string>} {b <string>} {c <string>})
+	   (({a <nestring>} {b <nestring>} {c <nestring>})
 	    (string-append a b c)))
 	 1 2)
 	=> (<fixnum>))
@@ -563,10 +563,10 @@
   (doit ((named-case-lambda me
 	   (({a <fixnum>} {b <fixnum>})
 	    (fx+ a b))
-	   (({a <string>} {b <string>} {c <string>})
+	   (({a <nestring>} {b <nestring>} {c <nestring>})
 	    (string-append a b c)))
 	 "1" "2" "3")
-	=> (<string>))
+	=> (<nestring>))
 
   (void))
 
@@ -580,7 +580,7 @@
 	=> (<top>))
 
   (doit (begin0 (values "ciao" 'hey) 1 2)
-	=> (<string> (enumeration hey)))
+	=> (<nestring> (enumeration hey)))
 
 ;;; --------------------------------------------------------------------
 ;;; special cases
@@ -841,7 +841,7 @@
   (doit (receive/std (a b)
 	    (values 1 2)
 	  (values "hello" "world"))
-	=> (<string> <string>))
+	=> (<nestring> <nestring>))
   (check
       (receive/std (a b)
 	  (values 1 2)
@@ -1104,13 +1104,13 @@
   ;;Formals with rest argument.
   ;;
   (doit (receive/std (a b . vals)
-	    (cast-signature (<fixnum> <flonum> . (list-of <string>))
+	    (cast-signature (<fixnum> <flonum> . (list-of <nestring>))
 			    (values 1 2.3 "C" "D"))
 	  (values a b vals))
      => (<top> <top> <top>))
   (check
       (receive/std (a b . vals)
-	  (cast-signature (<fixnum> <flonum> . (list-of <string>))
+	  (cast-signature (<fixnum> <flonum> . (list-of <nestring>))
 			  (values 1 2.3 "C" "D"))
 	(values a b vals))
     => 1 2.3 '("C" "D"))
@@ -1475,12 +1475,12 @@
 
   ;;Two values, typed syntactic bindings.
   ;;
-  (doit (receive ({a <positive-fixnum>} {b <string>})
+  (doit (receive ({a <positive-fixnum>} {b <nestring>})
 	    (values 123 "ciao")
 	  (values a b))
-	=> (<positive-fixnum> <string>))
+	=> (<positive-fixnum> <nestring>))
   (check
-      (receive ({a <positive-fixnum>} {b <string>})
+      (receive ({a <positive-fixnum>} {b <nestring>})
 	  (values 123 "ciao")
 	(values a b))
     => 123 "ciao")
@@ -1504,7 +1504,7 @@
   (doit (receive (a b)
 	    (values 1 2)
 	  (values "hello" "world"))
-	=> (<string> <string>))
+	=> (<nestring> <nestring>))
   (check
       (receive (a b)
 	  (values 1 2)
@@ -1773,7 +1773,7 @@
   (doit (receive vals
 	    (values 1 2 3)
 	  vals)
-	=> (<list>))
+	=> ((list <positive-fixnum> <positive-fixnum> <positive-fixnum>)))
   (check
       (receive vals
 	  (values 1 2 3)
@@ -1785,7 +1785,7 @@
   (doit (receive vals
 	    1
 	  vals)
-	=> (<list>))
+	=> ((list <positive-fixnum>)))
   (check
       (receive vals
 	  1
@@ -1812,7 +1812,7 @@
   (doit (receive vals
 	    (cast-signature <nelist> (values 1 2 3))
 	  vals)
-	=> (<list>))
+	=> (<nelist>))
   (check
       (receive vals
 	  (cast-signature <nelist> (values 1 2 3))
@@ -1836,7 +1836,7 @@
   (doit (receive vals
 	    (cast-signature (list <fixnum> <fixnum> <fixnum>) (values 1 2 3))
 	  vals)
-	=> (<list>))
+	=> ((list <fixnum> <fixnum> <fixnum>)))
   (check
       (receive vals
 	  (cast-signature (list <fixnum> <fixnum> <fixnum>) (values 1 2 3))
@@ -1861,12 +1861,12 @@
 
   ;;Typed syntactic bindings with rest.
   ;;
-  (doit (receive ({a <fixnum>} {b <flonum>} . {vals (list-of <string>)})
+  (doit (receive ({a <fixnum>} {b <flonum>} . {vals (list-of <nestring>)})
 	    (values 1 2.3 "C" "D")
 	  (values a b vals))
-	=> (<fixnum> <flonum> (list-of <string>)))
+	=> (<fixnum> <flonum> (list-of <nestring>)))
   (check
-      (receive ({a <fixnum>} {b <flonum>} . {vals (list-of <string>)})
+      (receive ({a <fixnum>} {b <flonum>} . {vals (list-of <nestring>)})
 	  (values 1 2.3 "C" "D")
 	(values a b vals))
     => 1 2.3 '("C" "D"))
@@ -1876,7 +1876,7 @@
   (doit (receive (a b . vals)
 	    (values 1 2.3 "C" "D")
 	  (values a b vals))
-	=> (<positive-fixnum> <positive-flonum> <list>))
+	=> (<positive-fixnum> <positive-flonum> (list <nestring> <nestring>)))
   (check
       (receive (a b . vals)
 	  (values 1 2.3 "C" "D")
@@ -1886,13 +1886,13 @@
   ;;Untyped syntactic bindings with rest.  Special case of type propagation.
   ;;
   (doit (receive (a b . vals)
-	    (cast-signature (<fixnum> <flonum> . (list-of <string>))
+	    (cast-signature (<fixnum> <flonum> . (list-of <nestring>))
 			    (values 1 2.3 "C" "D"))
 	  (values a b vals))
-	=> (<fixnum> <flonum> (list-of <string>)))
+	=> (<fixnum> <flonum> (list-of <nestring>)))
   (check
       (receive (a b . vals)
-	  (cast-signature (<fixnum> <flonum> . (list-of <string>))
+	  (cast-signature (<fixnum> <flonum> . (list-of <nestring>))
 			  (values 1 2.3 "C" "D"))
 	(values a b vals))
     => 1 2.3 '("C" "D"))
@@ -1902,7 +1902,7 @@
   (doit (receive (a . vals)
 	    1
 	  (values a vals))
-	=> (<positive-fixnum> <list>))
+	=> (<positive-fixnum> <null>))
   (check
       (receive (a . vals)
 	  1
@@ -2201,14 +2201,14 @@
 
   ;;Two values, typed syntactic bindings.
   ;;
-  (doit (receive-and-return ({a <positive-fixnum>} {b <string>})
+  (doit (receive-and-return ({a <positive-fixnum>} {b <nestring>})
 	    (values 123 "ciao")
 	  (one)
 	  (two a b))
-	=> (<positive-fixnum> <string>))
+	=> (<positive-fixnum> <nestring>))
   (check
       (with-result
-	(receive-and-return ({a <positive-fixnum>} {b <string>})
+	(receive-and-return ({a <positive-fixnum>} {b <nestring>})
 	    (values 123 "ciao")
 	  (one)
 	  (two a b)))
@@ -2386,7 +2386,7 @@
 	    (values 1 2 3)
 	  (one)
 	  (two))
-	=> <list>)
+	=> (list <positive-fixnum> <positive-fixnum> <positive-fixnum>))
   (check
       (with-result
 	(receive-and-return vals
@@ -2401,7 +2401,7 @@
 	    1
 	  (one)
 	  (two))
-	=> <list>)
+	=> (list <positive-fixnum>))
   (check
       (with-result
 	(receive-and-return vals
@@ -2459,14 +2459,14 @@
 
   ;;Typed syntactic bindings with rest.
   ;;
-  (doit (receive-and-return ({a <fixnum>} {b <flonum>} . {vals (list-of <string>)})
+  (doit (receive-and-return ({a <fixnum>} {b <flonum>} . {vals (list-of <nestring>)})
 	    (values 1 2.3 "C" "D")
 	  (one)
 	  (two))
-	=> (<fixnum> <flonum> . (list-of <string>)))
+	=> (<fixnum> <flonum> . (list-of <nestring>)))
   (check
       (with-result
-	(receive-and-return ({a <fixnum>} {b <flonum>} . {vals (list-of <string>)})
+	(receive-and-return ({a <fixnum>} {b <flonum>} . {vals (list-of <nestring>)})
 	    (values 1 2.3 "C" "D")
 	  (one)
 	  (two a b vals)))
@@ -2478,7 +2478,7 @@
 	    (values 1 2.3 "C" "D")
 	  (one)
 	  (two a b vals))
-	=> (<positive-fixnum> <positive-flonum> . <list>))
+	=> (<positive-fixnum> <positive-flonum> . (list <nestring> <nestring>)))
   (check
       (with-result
 	(receive-and-return (a b . vals)
@@ -2490,15 +2490,15 @@
   ;;Untyped syntactic bindings with rest.  Special case of type propagation.
   ;;
   (doit (receive-and-return (a b . vals)
-	    (cast-signature (<fixnum> <flonum> . (list-of <string>))
+	    (cast-signature (<fixnum> <flonum> . (list-of <nestring>))
 			    (values 1 2.3 "C" "D"))
 	  (one)
 	  (two a b vals))
-	=> (<fixnum> <flonum> . (list-of <string>)))
+	=> (<fixnum> <flonum> . (list-of <nestring>)))
   (check
       (with-result
 	(receive-and-return (a b . vals)
-	    (cast-signature (<fixnum> <flonum> . (list-of <string>))
+	    (cast-signature (<fixnum> <flonum> . (list-of <nestring>))
 			    (values 1 2.3 "C" "D"))
 	  (one)
 	  (two a b vals)))
@@ -2510,7 +2510,7 @@
 	    1
 	  (one)
 	  (two a vals))
-	=> (<positive-fixnum> . <list>))
+	=> (<positive-fixnum> . <null>))
   (check
       (with-result
 	(receive-and-return (a . vals)
@@ -2770,25 +2770,25 @@
 	  (values a b)))
     => '(1 2.3 (one)))
 
-  (doit (let-values ((({a <fixnum>} {b <flonum>} {c <string>}) (values 1 2.3 "ciao")))
+  (doit (let-values ((({a <fixnum>} {b <flonum>} {c <nestring>}) (values 1 2.3 "ciao")))
 	  (one)
 	  (values a b c))
-	=> (<fixnum> <flonum> <string>))
+	=> (<fixnum> <flonum> <nestring>))
   (check
       (with-result
-	(let-values ((({a <fixnum>} {b <flonum>} {c <string>}) (values 1 2.3 "ciao")))
+	(let-values ((({a <fixnum>} {b <flonum>} {c <nestring>}) (values 1 2.3 "ciao")))
 	  (one)
 	  (values a b c)))
     => '(1 2.3 "ciao" (one)))
 
-  (doit (let-values ((({a <fixnum>} {b <flonum>} . {rest (list-of <string>)}) (values 1 2.3 "C" "D")))
+  (doit (let-values ((({a <fixnum>} {b <flonum>} . {rest (list-of <nestring>)}) (values 1 2.3 "C" "D")))
 	  (one)
 	  (values a b rest))
-	=> (<fixnum> <flonum> (list-of <string>)))
+	=> (<fixnum> <flonum> (list-of <nestring>)))
 
   (check
       (with-result
-	(let-values ((({a <fixnum>} {b <flonum>} . {rest (list-of <string>)}) (values 1 2.3 "C" "D")))
+	(let-values ((({a <fixnum>} {b <flonum>} . {rest (list-of <nestring>)}) (values 1 2.3 "C" "D")))
 	  (one)
 	  (values a b rest)))
     => '(1 2.3 ("C" "D") (one)))
@@ -2821,7 +2821,7 @@
   (doit (let-values (((a b c) (values 1 2.3 "ciao")))
 	  (one)
 	  (values a b c))
-	=> (<positive-fixnum> <positive-flonum> <string>))
+	=> (<positive-fixnum> <positive-flonum> <nestring>))
   (check
       (with-result
 	(let-values (((a b c) (values 1 2.3 "ciao")))
@@ -2832,7 +2832,7 @@
   (doit (let-values (((a b . rest) (values 1 2.3 "C" "D")))
 	  (one)
 	  (values a b rest))
-	=> (<positive-fixnum> <positive-flonum> <list>))
+	=> (<positive-fixnum> <positive-flonum> (list <nestring> <nestring>)))
   (check
       (with-result
 	(let-values (((a b . rest) (values 1 2.3 "C" "D")))
@@ -2873,7 +2873,7 @@
 		     ((d e) (values 1+i 2/3)))
 	  (one)
 	  (values a b c d e))
-	=> (<positive-fixnum> <positive-flonum> <string> <exact-compnum> <positive-ratnum>))
+	=> (<positive-fixnum> <positive-flonum> <nestring> <exact-compnum> <positive-ratnum>))
   (check
       (with-result
 	(let-values (((a b c) (values 1 2.3 "ciao"))
@@ -2886,7 +2886,7 @@
 		     ((c . stuff) (values 1+i 'x 'y)))
 	  (one)
 	  (values a b rest c stuff))
-	=> (<positive-fixnum> <positive-flonum> <list> <exact-compnum> <list>))
+	=> (<positive-fixnum> <positive-flonum> (list <nestring> <nestring>) <exact-compnum> (list (enumeration x) (enumeration y))))
   (check
       (with-result
 	(let-values (((a b . rest) (values 1 2.3 "C" "D"))
@@ -3114,25 +3114,25 @@
 	  (values a b)))
     => '(1 2.3 (one)))
 
-  (doit (let*-values ((({a <fixnum>} {b <flonum>} {c <string>}) (values 1 2.3 "ciao")))
+  (doit (let*-values ((({a <fixnum>} {b <flonum>} {c <nestring>}) (values 1 2.3 "ciao")))
 	  (one)
 	  (values a b c))
-	=> (<fixnum> <flonum> <string>))
+	=> (<fixnum> <flonum> <nestring>))
   (check
       (with-result
-	(let*-values ((({a <fixnum>} {b <flonum>} {c <string>}) (values 1 2.3 "ciao")))
+	(let*-values ((({a <fixnum>} {b <flonum>} {c <nestring>}) (values 1 2.3 "ciao")))
 	  (one)
 	  (values a b c)))
     => '(1 2.3 "ciao" (one)))
 
-  (doit (let*-values ((({a <fixnum>} {b <flonum>} . {rest (list-of <string>)}) (values 1 2.3 "C" "D")))
+  (doit (let*-values ((({a <fixnum>} {b <flonum>} . {rest (list-of <nestring>)}) (values 1 2.3 "C" "D")))
 	  (one)
 	  (values a b rest))
-	=> (<fixnum> <flonum> (list-of <string>)))
+	=> (<fixnum> <flonum> (list-of <nestring>)))
 
   (check
       (with-result
-	(let*-values ((({a <fixnum>} {b <flonum>} . {rest (list-of <string>)}) (values 1 2.3 "C" "D")))
+	(let*-values ((({a <fixnum>} {b <flonum>} . {rest (list-of <nestring>)}) (values 1 2.3 "C" "D")))
 	  (one)
 	  (values a b rest)))
     => '(1 2.3 ("C" "D") (one)))
@@ -3165,7 +3165,7 @@
   (doit (let*-values (((a b c) (values 1 2.3 "ciao")))
 	  (one)
 	  (values a b c))
-	=> (<positive-fixnum> <positive-flonum> <string>))
+	=> (<positive-fixnum> <positive-flonum> <nestring>))
   (check
       (with-result
 	(let*-values (((a b c) (values 1 2.3 "ciao")))
@@ -3176,7 +3176,7 @@
   (doit (let*-values (((a b . rest) (values 1 2.3 "C" "D")))
 	  (one)
 	  (values a b rest))
-	=> (<positive-fixnum> <positive-flonum> <list>))
+	=> (<positive-fixnum> <positive-flonum> (list <nestring> <nestring>)))
   (check
       (with-result
 	(let*-values (((a b . rest) (values 1 2.3 "C" "D")))
@@ -3217,7 +3217,7 @@
 		      ((d e) (values 1+i 2/3)))
 	  (one)
 	  (values a b c d e))
-	=> (<positive-fixnum> <positive-flonum> <string> <exact-compnum> <positive-ratnum>))
+	=> (<positive-fixnum> <positive-flonum> <nestring> <exact-compnum> <positive-ratnum>))
   (check
       (with-result
 	(let*-values (((a b c) (values 1 2.3 "ciao"))
@@ -3230,7 +3230,7 @@
 		      ((c . stuff) (values 1+i 'x 'y)))
 	  (one)
 	  (values a b rest c stuff))
-	=> (<positive-fixnum> <positive-flonum> <list> <exact-compnum> <list>))
+	=> (<positive-fixnum> <positive-flonum> (list <nestring> <nestring>) <exact-compnum> (list (enumeration x) (enumeration y))))
   (check
       (with-result
 	(let*-values (((a b . rest) (values 1 2.3 "C" "D"))
@@ -3305,7 +3305,7 @@
 	  ((1)	=> (lambda (x) (list 'hey x)))
 	  ((2)	"ciao")
 	  (else	#f))
-	=> ((or <string>
+	=> ((or <nestring>
 		(list (enumeration hey) <positive-fixnum>)
 		<false>)))
 
@@ -3313,13 +3313,13 @@
 	  ((1)	=> (lambda ({x <positive-fixnum>}) x))
 	  ((2)	"ciao")
 	  (else	#f))
-	=> ((or <string> <positive-fixnum> <false>)))
+	=> ((or <nestring> <positive-fixnum> <false>)))
 
   (doit (case (read)
 	  ((1)	=> (lambda (x) 999))
 	  ((2)	"ciao")
 	  (else	#f))
-	=> ((or <string> <positive-fixnum> <false>)))
+	=> ((or <nestring> <positive-fixnum> <false>)))
 
   (void))
 
@@ -3336,7 +3336,7 @@
 	=> (<positive-fixnum>))
 
   (doit (and 1 2 "3")
-	=> (<string>))
+	=> (<nestring>))
 
   (doit (and #f 2 3)
 	=> (<false>))
@@ -3378,7 +3378,7 @@
 	=> (<positive-fixnum>))
 
   (doit (or #f #f "3")
-	=> (<string>))
+	=> (<nestring>))
 
   ;;This is expanded to:
   ;;
@@ -3388,7 +3388,7 @@
   ;;     (quote "ciao"))
   ;;
   (doit (or #f (and #t "ciao") 3.4)
-	=> (<string>))
+	=> (<nestring>))
 
   (doit (or (unsafe-cast-signature (<top>) (read))
 	    (unsafe-cast-signature (<top>) (read))
@@ -3410,25 +3410,25 @@
 	    (unsafe-cast-signature (<top>) (read)))
 	=> (<fixnum>))
 
-  (doit (or (unsafe-cast-signature ((or <false> <string>)) (read))
+  (doit (or (unsafe-cast-signature ((or <false> <nestring>)) (read))
 	    (unsafe-cast-signature (<fixnum>) (read))
 	    (unsafe-cast-signature (<top>) (read)))
-	=> ((or <string> <fixnum>)))
+	=> ((or <nestring> <fixnum>)))
 
-  (doit (or (unsafe-cast-signature ((or <false> <string>)) (read))
+  (doit (or (unsafe-cast-signature ((or <false> <nestring>)) (read))
 	    (unsafe-cast-signature ((or <false> <vector>)) (read))
 	    (unsafe-cast-signature (<fixnum>) (read)))
-	=> ((or <string> <vector> <fixnum>)))
+	=> ((or <nestring> <vector> <fixnum>)))
 
   (doit (or (unsafe-cast-signature ((or <false> <fixnum>)) (read))
-	    (unsafe-cast-signature ((or <false> <string>)) (read))
+	    (unsafe-cast-signature ((or <false> <nestring>)) (read))
 	    (unsafe-cast-signature ((or <false> <vector>)) (read)))
-	=> ((or <fixnum> <string> <false> <vector>)))
+	=> ((or <fixnum> <nestring> <false> <vector>)))
 
   (doit (or (unsafe-cast-signature ((or <boolean> <fixnum>)) (read))
-	    (unsafe-cast-signature ((or <boolean> <string>)) (read))
+	    (unsafe-cast-signature ((or <boolean> <nestring>)) (read))
 	    (unsafe-cast-signature ((or <boolean> <vector>)) (read)))
-	=> ((or <fixnum> <string> <boolean> <vector>)))
+	=> ((or <fixnum> <nestring> <boolean> <vector>)))
 
   (doit (or (unsafe-cast-signature (<top>) (read))
 	    (unsafe-cast-signature (<top>) (read))
@@ -3480,9 +3480,9 @@
   (doit (xor #f 2 #f)		=> (<positive-fixnum>))
   (doit (xor #f #f 3)		=> (<positive-fixnum>))
 
-  (doit (xor "1" #f #f)		=> (<string>))
-  (doit (xor #f "2" #f)		=> (<string>))
-  (doit (xor #f #f "3")		=> (<string>))
+  (doit (xor "1" #f #f)		=> (<nestring>))
+  (doit (xor #f "2" #f)		=> (<nestring>))
+  (doit (xor #f #f "3")		=> (<nestring>))
 
 ;;; --------------------------------------------------------------------
 
@@ -3523,19 +3523,19 @@
   ;;
   (let ((fun (case-lambda
 	       (({a <fixnum>}) a)
-	       (({a <string>} {b <string>}) (string-append a b)))))
+	       (({a <nestring>} {b <nestring>}) (string-append a b)))))
     (doit (fun 1)			=> (<fixnum>))
-    (doit (fun "ciao" " mamma")		=> (<string>))
+    (doit (fun "ciao" " mamma")		=> (<nestring>))
     #| end of LET |# )
 
   ;;Possible match between operands and clauses: only one clause is possible.
   ;;
   (let ((fun (case-lambda
 	       (({a <fixnum>}) a)
-	       (({a <string>} {b <string>}) (string-append a b)))))
+	       (({a <nestring>} {b <nestring>}) (string-append a b)))))
     (doit (fun (cast-signature (<number>) 1))		=> (<fixnum>))
     (doit (fun (cast-signature (<top>) "ciao")
-	       (cast-signature (<top>) " mamma"))	=> (<string>))
+	       (cast-signature (<top>) " mamma"))	=> (<nestring>))
     #| end of LET |# )
 
   ;;Possible match between operands and clauses: multiple clauses are possible.
@@ -3543,11 +3543,11 @@
   (let ((fun (case-lambda
 	       (({a <fixnum>}) a)
 	       ((a b c d)	'no-match)
-	       (({a <string>} . {b* (list-of <string>)}) (apply string-append a b*)))))
-    (doit (fun (cast-signature (<top>) 1))		=> ((or <string> <fixnum>)))
-    (doit (fun (cast-signature (<top>) "ciao"))		=> ((or <string> <fixnum>)))
+	       (({a <nestring>} . {b* (list-of <nestring>)}) (apply string-append a b*)))))
+    (doit (fun (cast-signature (<top>) 1))		=> ((or <nestring> <fixnum>)))
+    (doit (fun (cast-signature (<top>) "ciao"))		=> ((or <nestring> <fixnum>)))
     (doit (fun (cast-signature (<top>) "ciao")
-	       (cast-signature (<top>) " mamma"))	=> (<string>))
+	       (cast-signature (<top>) " mamma"))	=> (<nestring>))
     #| end of LET |# )
 
   #| end of PARAMETRISE |# )
@@ -3562,10 +3562,10 @@
 	=> (<positive-fixnum> <positive-flonum>))
 
   (doit (apply values 1 2.3 '(a "b"))
-	=> (<positive-fixnum> <positive-flonum> (enumeration a) <string>))
+	=> (<positive-fixnum> <positive-flonum> (enumeration a) <nestring>))
 
   (doit (apply values '(a "b"))
-	=> ((enumeration a) <string>))
+	=> ((enumeration a) <nestring>))
 
 ;;; --------------------------------------------------------------------
 
@@ -3926,7 +3926,7 @@
   (doit (let ((A "ciao"))
 	  (set! A "hello")
 	  A)
-	=> (<string>))
+	=> (<nestring>))
 
   #;(doit (let ((A 1))
 	  (set! A -1)
@@ -3944,7 +3944,7 @@
   (doit (case (read)
 	  ((1 "2" 'ciao) => (lambda (x) x))
 	  (else #f))
-	=> ((or <positive-fixnum> <string> (enumeration ciao) <false>)))
+	=> ((or <positive-fixnum> <nestring> (enumeration ciao) <false>)))
 
   (void))
 
