@@ -2577,31 +2577,33 @@
 					       standard-formals.stx formals.sig cleared-formals.sig producer.sig
 					       producer.psi consumer*.stx
 					       %error-mismatch)
+      (define (%mk-propagated-signature producer.sig)
+	(with-exception-handler
+	    (lambda (E)
+	      (raise-continuable
+	       (condition (make-who-condition caller-who)
+			  (make-syntax-violation input-form.stx #f)
+			  E)))
+	  (lambda ()
+	    (type-signature.type-propagation formals.sig producer.sig))))
       (unless (= (type-signature.min-count formals.sig)
 		 (type-signature.min-count producer.sig))
 	(%error-mismatch "mismatching number of arguments in type signatures"))
       ;;If we are here  the number of produced values matches  the number of expected
       ;;values.
-      (if (type-signature.only-<untyped>-and-<list>? formals.sig)
-	  ;;The  expected type  signature has  only untyped  items.  We  perform type
-	  ;;propagation by replacing FORMALS.SIG with PRODUCER.SIG.
-	  (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
-					    caller-who return-values?
-					    standard-formals.stx producer.sig
-					    producer.psi consumer*.stx chi-lambda/typed/parsed-formals)
-	(case (type-signature.match-arguments-against-operands cleared-formals.sig producer.sig)
-	  ((exact-match)
-	   (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
-					     caller-who return-values?
-					     standard-formals.stx cleared-formals.sig
-					     producer.psi consumer*.stx chi-lambda/typed/parsed-formals))
-	  ((possible-match)
-	   (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
-					     caller-who return-values?
-					     standard-formals.stx cleared-formals.sig
-					     producer.psi consumer*.stx))
-	  (else
-	   (%error-mismatch "type mismatch between expected and returned values")))))
+      (case (type-signature.match-arguments-against-operands cleared-formals.sig producer.sig)
+	((exact-match)
+	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
+					   caller-who return-values?
+					   standard-formals.stx (%mk-propagated-signature producer.sig)
+					   producer.psi consumer*.stx chi-lambda/typed/parsed-formals))
+	((possible-match)
+	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
+					   caller-who return-values?
+					   standard-formals.stx (%mk-propagated-signature producer.sig)
+					   producer.psi consumer*.stx))
+	(else
+	 (%error-mismatch "type mismatch between expected and returned values"))))
 
     #| end of module: %THE-CONSUMER-EXPECTS-TWO-OR-MORE-MANDATORY-VALUES |# )
 
