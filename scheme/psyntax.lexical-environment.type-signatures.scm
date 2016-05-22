@@ -285,8 +285,8 @@
 	(null? . ?body-null)
 	(<null> . ?body-<null>)
 	(<list> . ?body-<list>)
-	(<nelist> . ?body-<nelist>)
 	(<list-of-spec> . ?body-<list-of-spec>)
+	(<nelist> . ?body-<nelist>)
 	(<list-spec> . ?body-<list-spec>)
 	(else . ?body-else))
      (case-type-signature-structure ?specs
@@ -295,8 +295,8 @@
        (null? . ?body-null)
        (<null> . ?body-<null>)
        (<list> . ?body-<list>)
-       (<nelist> . ?body-<nelist>)
        (<list-of-spec> . ?body-<list-of-spec>)
+       (<nelist> . ?body-<nelist>)
        (<list-spec> . ?body-<list-spec>)
        (else . ?body-else)))
     ))
@@ -1090,15 +1090,6 @@
 	   ;;The formals signature matches any number operands of any type.
 	   #t)
 
-	  (<nelist>
-	   ;;The formals signature matches one or more operands of any type.
-	   (case-type-signature-structure operands.specs
-	     (pair?		#t)
-	     (<nelist>		#t)
-	     (<list-spec>	#t)
-	     (<pair-spec>	#t)
-	     (else		#f)))
-
 	  (<list-of-spec>
 	   ;;The formals  signature matches any  number of operands of  the specified
 	   ;;type.  Examples:
@@ -1144,15 +1135,15 @@
 		      ;;operands.sig == (... . <list>)
 		      #f)
 
-		     (<nelist>
-		      ;;formals.sig  == (... . (list-of <fixnum>))
-		      ;;operands.sig == (... . <nelist>)
-		      #f)
-
 		     (<list-of-spec>
 		      ;;formals.sig  == (... . (list-of <number>))
 		      ;;operands.sig == (... . (list-of <fixnum>))
 		      (super-and-sub? formal-item.ots (list-of-type-spec.item-ots operands.specs)))
+
+		     (<nelist>
+		      ;;formals.sig  == (... . (list-of <fixnum>))
+		      ;;operands.sig == (... . <nelist>)
+		      #f)
 
 		     (<list-spec>
 		      ;;formals.sig  == (... . (list-of <number>))
@@ -1161,6 +1152,15 @@
 
 		     (else
 		      (assertion-violation caller-who "invalid operands signature" operands.sig)))))))
+
+	  (<nelist>
+	   ;;The formals signature matches one or more operands of any type.
+	   (case-type-signature-structure operands.specs
+	     (pair?		#t)
+	     (<nelist>		#t)
+	     (<list-spec>	#t)
+	     (<pair-spec>	#t)
+	     (else		#f)))
 
 	  (<list-spec>
 	   ;;Splice the formals OTSs.
@@ -1175,7 +1175,7 @@
 (module (type-signature.match-arguments-against-operands)
   (define-module-who type-signature.match-arguments-against-operands)
 
-  (define* (type-signature.match-arguments-against-operands args.sig rands.sig)
+  (define* (type-signature.match-arguments-against-operands formals.sig operands.sig)
     ;;In the context of a closure object application to fixed operands:
     ;;
     ;;   (?operator ?operand ...)
@@ -1184,210 +1184,297 @@
     ;;the  given  operands.   Return  a symbol  among:  exact-match,  possible-match,
     ;;no-match.
     ;;
-    ;;ARGS.SIG is a "<type-signature>" instance  representing the type signature of a
-    ;;closure object's clause arguments.
+    ;;FORMALS.SIG is a "<type-signature>" instance representing the type signature of
+    ;;a closure object's clause arguments.
     ;;
-    ;;RANDS.SIG is a  "<type-signature>" instance representing the  type signature of
-    ;;the given operands.
+    ;;OPERANDS.SIG is  a "<type-signature>" instance representing  the type signature
+    ;;of the given operands.
     ;;
+    (define (%error-invalid-formals-signature)
+      (assertion-violation __who__ "invalid formals signature" formals.sig))
+    (define (%error-invalid-operands-signature)
+      (assertion-violation __who__ "invalid operands signature" operands.sig))
     (let loop ((state		'exact-match)
-	       (args.ots	(type-signature.object-type-specs args.sig))
-	       (rands.ots	(type-signature.object-type-specs rands.sig)))
+	       (formals.specs	(type-signature.object-type-specs formals.sig))
+	       (operands.specs	(type-signature.object-type-specs operands.sig)))
       ;;In  this loop  the  variable  STATE always  degrades:  from "exact-match"  to
       ;;"possible-match"  or "no-match";  from  "possible-match"  to "no-match".   It
       ;;never upgrades.
-      (cond
-
-       ((pair? args.ots)
+      (case-type-signature-structure* formals.specs
 	;;The operator accepts one more mandatory operand.
-	(cond ((pair? rands.ots)
-	       ;;One more argument and one more operand.  Good, let's inspect them.
-	       (let ((arg.ots	(car args.ots))
-		     (rand.ots	(car rands.ots)))
-		 (cond ((object-type-spec.matching-super-and-sub? arg.ots rand.ots)
-			;;The argument matches the operand.  Good.
-			(loop state (cdr args.ots) (cdr rands.ots)))
-		       ((object-type-spec.compatible-super-and-sub? arg.ots rand.ots)
-			;;The argument is compatible with the operand.  Good.
-			(loop 'possible-match (cdr args.ots) (cdr rands.ots)))
-		       (else
-			;;The argument is INcompatible with the operand.  Bad.
-			'no-match))))
-	      ((null? rands.ots)
-	       ;;One more argument and no more operands.  Bad.
-	       'no-match)
-	      ((or (<list>-ots? rands.ots)
-		   (<nelist>-ots? rands.ots))
-	       ;;There is an unspecified number of rest operands, of unknown type.
-	       'possible-match)
-	      ((list-type-spec? rands.ots)
-	       (loop state args.ots (list-type-spec.item-ots* rands.ots)))
-	      (else
-	       ;;There is an unspecified number of rest operands, of known type.
-	       #;(assert (list-of-type-spec? rands.ots))
-	       (%match-arguments-against-rest-operands args.ots (list-of-type-spec.item-ots rands.ots)))))
+	(pair?
+	 (%match-formals-pair-against-operands loop state
+					       (car formals.specs) (cdr formals.specs)
+					       operands.specs
+					       %error-invalid-formals-signature %error-invalid-operands-signature))
+	(<pair-spec>
+	 (%match-formals-pair-against-operands loop state
+					       (pair-type-spec.car-ots formals.specs) (pair-type-spec.cdr-ots formals.specs)
+					       operands.specs
+					       %error-invalid-formals-signature %error-invalid-operands-signature))
 
-       ((null? args.ots)
 	;;The operator accepts no more operands.
-	(cond ((pair? rands.ots)
-	       ;;No more arguments and leftover operands.  Bad.
-	       'no-match)
-	      ((null? rands.ots)
-	       ;;No more  arguments and  no more  operands.  Good.   And we  are done
-	       ;;here, let's return the final state.
-	       state)
-	      ((or (<nelist>-ots?   rands.ots)
-		   (list-type-spec? rands.ots))
-	       ;;There is at least one other operand.  Bad.
-	       'no-match)
-	      (else
-	       ;;There is an unspecified number of rest operands, of unknown type.
-	       #;(assert (list-of-type-spec? rands.ots))
-	       'possible-match)))
+	(null?
+	 (%match-formals-null-against-operands state operands.specs %error-invalid-operands-signature))
+	(<null>
+	 (%match-formals-null-against-operands state operands.specs %error-invalid-operands-signature))
 
-       ((<list>-ots? args.ots)
-	;;The operator accepts zero or more operands of any type.  Example:
-	;;
-	;;   ((lambda (arg . {rest <list>}) ?rator-body)
-	;;    ?rand ...)
-	;;
-	;;another example:
-	;;
-	;;   ((lambda {args <list>} ?rator-body)
-	;;    ?rand ...)
-	;;
-	;;Good.  And we are done here, let's return the final state.
-	state)
+	(<list>
+	 ;;The operator accepts zero or more operands of any type.
+	 ;;
+	 ;;   formals.sig  == (... . <list>)
+	 ;;   operands.sig == (... ?type ...)
+	 ;;
+	 ;;Good.  And we are done here, let's return the final state.
+	 state)
 
-       ((<nelist>-ots? args.ots)
-	;;The operator accepts one or more operands of any type.
-	(cond ((pair? rands.ots)
-	       ;;There is at least one more operand.  Good.
-	       state)
-	      ((null? rands.ots)
-	       ;;No more operands.  Bad.
-	       'no-match)
-	      ((<list>-ots? rands.ots)
-	       ;;There is an unspecified number of rest operands, of unknown type.
-	       'possible-match)
-	      ((<nelist>-ots? rands.ots)
-	       ;;There is  an unspecified number  of rest operands, of  unknown type,
-	       ;;but at least one.
-	       state)
-	      ((list-of-type-spec? rands.ots)
-	       ;;There is an unspecified number of rest operands, of unknown type.
-	       'possible-match)
-	      ((list-type-spec? rands.ots)
-	       ;;There is at least one more operand.  Good.
-	       state)
-	      (else #f)))
+	(<list-of-spec>
+	 ;;The operator accepts zero or more operands of a known type.
+	 ;;
+	 ;;   formals.sig  == (... . (list-of ?type))
+	 ;;   operands.sig == (... ?type ...)
+	 ;;
+	 (%match-formals-list-of-against-operands state (list-of-type-spec.item-ots formals.specs) operands.specs
+						  %error-invalid-operands-signature))
 
-       ((list-type-spec? args.ots)
-	(loop state (list-type-spec.item-ots* args.ots) rands.ots))
+	(<nelist>
+	 ;;The operator accepts one or more operands of any type.
+	 (case-type-signature-structure* operands.specs
+	   ;;There is at least one more operand.  Good.
+	   (pair?		state)
+	   (<pair-spec>		state)
+	   ;;No more operands.  Bad.
+	   (null?		'no-match)
+	   (<null>		'no-match)
+	   ;;There is an unspecified number of rest operands.
+	   (<list>		'possible-match)
+	   (<list-of-spec>	'possible-match)
+	   ;;There are one or more operands.
+	   (<nelist>		state)
+	   (<list-spec>		state)
+	   (else
+	    (%error-invalid-formals-signature))))
 
-       (else
-	;;The operator accepts zero or more operands of a specified type.  Example:
-	;;
-	;;   ((lambda (arg . {rest (list-of <fixnum>)}) ?rator-body)
-	;;    ?rand ...)
-	;;
-	;;another example:
-	;;
-	;;   ((lambda {args (list-of <fixnum>)} ?rator-body)
-	;;    ?rand ...)
-	;;
-	#;(assert (list-of-type-spec? args.ots))
-	(%match-rest-argument-against-operands state (list-of-type-spec.item-ots args.ots) rands.ots)))))
+	(<list-spec>
+	 ;;The operator  accepts a known  number of  operands, of known  type.  Let's
+	 ;;splice the specifications.
+	 (loop state (list-type-spec.item-ots* formals.specs) operands.specs))
 
-  (define (%match-rest-argument-against-operands state item.ots rands.ots)
-    ;;Recursive function.   We use this  function when  the operator accepts  zero or
-    ;;more operands of a specified type.  Example:
-    ;;
-    ;;   ((lambda (arg . {rest (list-of <fixnum>)}) ?rator-body)
-    ;;    ?rand ...)
-    ;;
-    ;;another example:
-    ;;
-    ;;   ((lambda {args (list-of <fixnum>)} ?rator-body)
-    ;;    ?rand ...)
-    ;;
-    ;;The argument ITEM.OTS  is an instance of  "<object-type-spec>" representing the
-    ;;requested type  for all  rest operands.   The argument RANDS.OTS  is a  list of
-    ;;"<object-type-spec>"  instances  representing  the  types  of  the  given  rest
-    ;;operands.
-    ;;
-    (cond ((pair? rands.ots)
-	   ;;At least one more operand.  Let's match it against the argument.
-	   (cond ((object-type-spec.matching-super-and-sub?   item.ots (car rands.ots))
-		  ;;The argument matches the operand.  Good.
-		  (%match-rest-argument-against-operands state item.ots (cdr rands.ots)))
-		 ((object-type-spec.compatible-super-and-sub? item.ots (car rands.ots))
-		  ;;The argument is compatible with the operand.  Good.
-		  (%match-rest-argument-against-operands 'possible-match item.ots (cdr rands.ots)))
-		 (else
-		  ;;The argument is INcompatible with the operand.  Bad.
-		  'no-match)))
-	  ((null? rands.ots)
-	   ;;No more operands.  Good.
-	   state)
-	  ((<list>-ots? rands.ots)
-	   ;;There is an unspecified number of rest operands, with an unknown type.
-	   'possible-match)
+	(else
+	 (%error-invalid-formals-signature)))))
+
+;;; --------------------------------------------------------------------
+
+  (module (%match-formals-pair-against-operands)
+
+    (define (%match-formals-pair-against-operands loop state
+						  formals-car.ots formals-cdr.specs operands.specs
+						  %error-invalid-formals-signature %error-invalid-operands-signature)
+      (case-type-signature-structure* operands.specs
+	(pair?
+	 (%match-formals-pair-against-operands-pair loop state
+						    formals-car.ots formals-cdr.specs
+						    (car operands.specs) (cdr operands.specs)))
+	(<pair-spec>
+	 (%match-formals-pair-against-operands-pair loop state
+						    formals-car.ots formals-cdr.specs
+						    (pair-type-spec.car-ots operands.specs)
+						    (pair-type-spec.cdr-ots operands.specs)))
+	;;At least one more formal and no more operands.  Bad.
+	(null?			'no-match)
+	(<null>			'no-match)
+	;;There is an unspecified number of operands, of unspecified type.
+	(<list>			'possible-match)
+	;;There is an unspecified number of operands, of known type.
+	(<list-of-spec>
+	 (%match-formals-pair-against-operands-list-of formals-car.ots formals-cdr.specs
+						       (list-of-type-spec.item-ots operands.specs)
+						       %error-invalid-formals-signature))
+	;;There is at least one more operand, of unknown type.
+	(<nelist>		'possible-match)
+	;;There  is a  known number  of operands,  of known  type.  Let's  splice the
+	;;operands.
+	(<list-spec>
+	 (%match-formals-pair-against-operands loop state
+					       formals-car.ots formals-cdr.specs
+					       (list-type-spec.item-ots* operands.specs)
+					       %error-invalid-formals-signature %error-invalid-operands-signature))
+	(else
+	 (%error-invalid-operands-signature))))
+
+    (define (%match-formals-pair-against-operands-pair loop state
+						       formals-car.ots formals-cdr.specs
+						       operands-car.ots operands-cdr.specs)
+      (cond ((object-type-spec.matching-super-and-sub? formals-car.ots operands-car.ots)
+	     (loop state formals-cdr.specs operands-cdr.specs))
+	    ((object-type-spec.compatible-super-and-sub? formals-car.ots operands-car.ots)
+	     (loop 'possible-match formals-cdr.specs operands-cdr.specs))
+	    (else
+	     'no-match)))
+
+    (module (%match-formals-pair-against-operands-list-of)
+
+      (define (%match-formals-pair-against-operands-list-of formals-car.ots formals-cdr.specs operand.ots
+							    %error-invalid-formals-signature)
+	;;This       is      a       mutually      recursive       function      with
+	;;%MATCH-FORMALS-AGAINST-OPERANDS-LIST-OF.
+	;;
+	(cond ((object-type-spec.matching-super-and-sub? formals-car.ots operand.ots)
+	       (%match-formals-against-operands-list-of formals-cdr.specs operand.ots %error-invalid-formals-signature))
+	      ((object-type-spec.compatible-super-and-sub? formals-car.ots operand.ots)
+	       (%match-formals-against-operands-list-of formals-cdr.specs operand.ots %error-invalid-formals-signature))
+	      (else 'no-match)))
+
+      (define (%match-formals-against-operands-list-of formals.specs operand.ots %error-invalid-formals-signature)
+	;;This  is   a  recursive  function   a  mutually  recursive   function  with
+	;;%MATCH-FORMALS-PAIR-AGAINST-OPERANDS-LIST-OF.   The  operator accepts  more
+	;;arguments of  a specified type and  there is an unspecified  number of rest
+	;;operands of known type.
+	;;
+	;;   formals.sig  == (... ?type ...)
+	;;   operands.sig == (... . (list-of ?type))
+	;;
+	;;This  function returns  a  symbol among:  possible-match, no-match.   Exact
+	;;match is already excluded.
+	;;
+	;;The   argument   FORMALS.SPECS   is   a  proper   or   improper   list   of
+	;;"<object-type-spec>" representing the requested type for all rest operands.
+	;;The argument  OPERAND.OTS is an "<object-type-spec>"  instance representing
+	;;the type of all the given rest operands.
+	;;
+	(case-type-signature-structure* formals.specs
+	  ;;At least one more formal.
+	  (pair?
+	   (%match-formals-pair-against-operands-list-of (car formals.specs) (cdr formals.specs) operand.ots
+							 %error-invalid-formals-signature))
+	  (<pair-spec>
+	   (%match-formals-pair-against-operands-list-of (pair-type-spec.car-ots formals.specs)
+							 (pair-type-spec.cdr-ots formals.specs)
+							 operand.ots
+							 %error-invalid-formals-signature))
+	  ;;No more formals.
+	  (null?			'possible-match)
+	  (<null>			'possible-match)
+
+	  ;;There is an unspecified number of formals, of unspecified type.
+	  (<list>			'possible-match)
+
+	  ;;There is an unspecified number of formals, with a known type.
+	  (<list-of-spec>
+	   (let ((formal.ots (list-of-type-spec.item-ots formals.specs)))
+	     (cond ((object-type-spec.matching-super-and-sub? formal.ots operand.ots)
+		    'possible-match)
+		   ((object-type-spec.compatible-super-and-sub? formal.ots operand.ots)
+		    'possible-match)
+		   (else 'no-match))))
+
+	  ;;There is at least one more formals, of unspecified type.
+	  (<nelist>		'possible-match)
+
+	  ;;There  is a  known number  of  formals, of  known type.   Let's splice  the
+	  ;;specifications.
+	  (<list-spec>
+	   (%match-formals-against-operands-list-of (list-type-spec.item-ots* formals.specs)
+						    operand.ots %error-invalid-formals-signature))
+
 	  (else
-	   ;;There is an unspecified number of rest operands, with a known type.
-	   (let ((rand.ots (list-of-type-spec.item-ots rands.ots)))
-	     (cond ((object-type-spec.matching-super-and-sub? item.ots rand.ots)
-		    ;;The rest argument matches the rest operands.  Good.
-		    state)
-		   ((object-type-spec.compatible-super-and-sub? item.ots rand.ots)
-		    ;;The rest argument is compatible with the rest operands.  Good.
-		    'possible-match)
-		   (else
-		    ;;The rest argument is INcompatible with the rest operand.  Bad.
-		    'no-match))))))
+	   (%error-invalid-formals-signature))))
 
-  (define (%match-arguments-against-rest-operands args.ots rand.ots)
-    ;;Recursive  function.  We  use  this  function when  the  operator accepts  more
-    ;;arguments  of a  specified type  and  there is  an unspecified  number of  rest
-    ;;operands of known type.
-    ;;
-    ;;This function returns a symbol among: possible-match, no-match.  Exact match is
-    ;;already excluded.
-    ;;
-    ;;The  argument ARGS.OTS  is a  proper or  improper list  of "<object-type-spec>"
-    ;;representing the requested  type for all rest operands.   The argument RAND.OTS
-    ;;is an "<object-type-spec>" instance representing the type of all the given rest
-    ;;operands.
-    ;;
-    (cond ((pair? args.ots)
-	   ;;At least one more argument.  Let's match it against the argument.
-	   (cond ((object-type-spec.matching-super-and-sub? (car args.ots) rand.ots)
-		  ;;The argument matches the operand.  Good.
-		  (%match-arguments-against-rest-operands (cdr args.ots) rand.ots))
-		 ((object-type-spec.compatible-super-and-sub? (car args.ots) rand.ots)
-		  ;;The argument is compatible with the operand.  Good.
-		  (%match-arguments-against-rest-operands (cdr args.ots) rand.ots))
-		 (else
-		  ;;The argument is INcompatible with the operand.  Bad.
-		  'no-match)))
-	  ((null? args.ots)
-	   ;;No more arguments.  Good.
-	   'possible-match)
-	  ((<list>-ots? args.ots)
-	   ;;There is an unspecified number of rest arguments, with an unknown type.
-	   'possible-match)
-	  (else
-	   ;;There is an unspecified number of rest arguments, with a known type.
-	   (let ((arg.ots (list-of-type-spec.item-ots args.ots)))
-	     (cond ((object-type-spec.matching-super-and-sub? arg.ots rand.ots)
-		    ;;The rest argument matches the rest operand.  Good.
-		    'possible-match)
-		   ((object-type-spec.compatible-super-and-sub? arg.ots rand.ots)
-		    ;;The rest argument is compatible with the rest operand.  Good.
-		    'possible-match)
-		   (else
-		    ;;The rest argument is INcompatible with the rest operand.  Bad.
-		    'no-match))))))
+      #| end of module: %MATCH-FORMALS-PAIR-AGAINST-OPERANDS-LIST-OF |# )
+
+    #| end of module: %MATCH-FORMALS-PAIR-AGAINST-OPERANDS |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%match-formals-null-against-operands state operands.specs %error-invalid-operands-signature)
+    (case-type-signature-structure* operands.specs
+      ;;No more arguments and leftover operands.  Bad.
+      (pair?		'no-match)
+      (<pair-spec>	'no-match)
+
+      ;;No more arguments and  no more operands.  Good.  And we  are done here, let's
+      ;;return the final state.
+      (null?		state)
+      (<null>		state)
+
+      ;;There may be other operands.
+      (<list>		'possible-match)
+      (<list-of-spec>	'possible-match)
+
+      ;;There is at least one other operand.  Bad.
+      (<nelist>		'no-match)
+      (<list-spec>	'no-match)
+
+      (else
+       (%error-invalid-operands-signature))))
+
+;;; --------------------------------------------------------------------
+
+  (module (%match-formals-list-of-against-operands)
+
+    (define (%match-formals-list-of-against-operands state formal.ots operands.specs %error-invalid-operands-signature)
+      ;;Recursive function.  We  use this function when the operator  accepts zero or
+      ;;more operands of a specified type.
+      ;;
+      ;;   formals.sig  == (... . (list-of ?type))
+      ;;   operands.sig == (... ?type ...)
+      ;;
+      ;;The argument  FORMAL.OTS is an instance  of "<object-type-spec>" representing
+      ;;the requested type for all the rest operands.  The argument OPERANDS.SPECS is
+      ;;a proper or improper list  of "<object-type-spec>" instances representing the
+      ;;types of the given rest operands.
+      ;;
+      (case-type-signature-structure* operands.specs
+	;;At least one more operand.  Let's match it against the argument.
+	(pair?
+	 (%match-formals-list-of-against-operands-pair state formal.ots (car operands.specs) (cdr operands.specs)
+						       %error-invalid-operands-signature))
+	(<pair-spec>
+	 (%match-formals-list-of-against-operands-pair state formal.ots
+						       (pair-type-spec.car-ots operands.specs)
+						       (pair-type-spec.cdr-ots operands.specs)
+						       %error-invalid-operands-signature))
+	;;No more operands.  Good.
+	(null?		state)
+	(<null>		state)
+
+	;;There is an unspecified number of rest operands, with unspecified type.
+	(<list>		'possible-match)
+
+	;;There is an unspecified number of rest operands, with a known type.
+	(<list-of-spec>
+	 (let ((operand.ots (list-of-type-spec.item-ots operands.specs)))
+	   (cond ((object-type-spec.matching-super-and-sub? formal.ots operand.ots)
+		  state)
+		 ((object-type-spec.compatible-super-and-sub? formal.ots operand.ots)
+		  'possible-match)
+		 (else 'no-match))))
+
+	;;There is at least one more operand, with unspecified type.
+	(<nelist>	'possible-match)
+
+	;;There is  a known number  of operands, with  known type.  Let's  splice the
+	;;specifications.
+	(<list-spec>
+	 (%match-formals-list-of-against-operands state formal.ots (list-type-spec.item-ots* operands.specs)
+						  %error-invalid-operands-signature))
+
+	(else
+	 (%error-invalid-operands-signature))))
+
+    (define (%match-formals-list-of-against-operands-pair state formal.ots operands-car.ots operands-cdr.specs
+							  %error-invalid-operands-signature)
+      (cond ((object-type-spec.matching-super-and-sub? formal.ots operands-car.ots)
+	     (%match-formals-list-of-against-operands state formal.ots operands-cdr.specs
+						      %error-invalid-operands-signature))
+	    ((object-type-spec.compatible-super-and-sub? formal.ots operands-car.ots)
+	     (%match-formals-list-of-against-operands 'possible-match formal.ots operands-cdr.specs
+						      %error-invalid-operands-signature))
+	    (else
+	     ;;The formal is INcompatible with the operand.  Bad.
+	     'no-match)))
+
+    #| end of module: %MATCH-FORMALS-LIST-OF-AGAINST-OPERANDS |# )
 
   #| end of module: TYPE-SIGNATURE.MATCH-ARGUMENTS-AGAINST-OPERANDS |# )
 
@@ -1699,9 +1786,6 @@
 	 (<list>
 	  (%process-list-formals operands.specs %error-invalid-operands-signature))
 
-	 (<nelist>
-	  (%process-nelist-formals formals.specs operands.specs %error-invalid-operands-signature))
-
 	 (<list-of-spec>
 	  ;;We give precedence to the formals type.
 	  ;;
@@ -1709,6 +1793,9 @@
 	  ;;operands.sig   == (... . ?operand-rest)
 	  ;;propagated.sig == (... . (list-of <fixnum>))
 	  formals.specs)
+
+	 (<nelist>
+	  (%process-nelist-formals formals.specs operands.specs %error-invalid-operands-signature))
 
 	 (<list-spec>
 	  ;;We give precedence to the formals type.
@@ -1758,6 +1845,13 @@
        (cons (if untyped? (<top>-ots) formals-car.ots)
 	     (recur formals-cdr.ots operands.specs)))
 
+      (<list-of-spec>
+       ;;formals.sig    == (... <untyped> ...)
+       ;;operands.sig   == (... . (list-of <fixnum>))
+       ;;propagated.sig == (... <fixnum> ...)
+       (cons (if untyped? (list-of-type-spec.item-ots operands.specs) formals-car.ots)
+	     (recur formals-cdr.ots operands.specs)))
+
       (<nelist>
        ;;formals.sig    == (... <untyped> ...)
        ;;operands.sig   == (... . <nelist>)
@@ -1766,13 +1860,6 @@
 	     ;;We replace  "<nelist>" with  "<list>", because we  have consumed
 	     ;;the mandatory item.
 	     (recur formals-cdr.ots (<list>-ots))))
-
-      (<list-of-spec>
-       ;;formals.sig    == (... <untyped> ...)
-       ;;operands.sig   == (... . (list-of <fixnum>))
-       ;;propagated.sig == (... <fixnum> ...)
-       (cons (if untyped? (list-of-type-spec.item-ots operands.specs) formals-car.ots)
-	     (recur formals-cdr.ots operands.specs)))
 
       (<list-spec>
        ;;formals.sig    == (... <untyped> ...)
@@ -1847,16 +1934,16 @@
        ;;propagated.sig == (... . <list>)
        operands.specs)
 
-      (<nelist>
-       ;;formals.sig    == (... . <list>)
-       ;;operands.sig   == (... . <nelist>)
-       ;;propagated.sig == (... . <nelist>)
-       operands.specs)
-
       (<list-of-spec>
        ;;formals.sig    == (... . <list>)
        ;;operands.sig   == (... . (list-of <fixnum>))
        ;;propagated.sig == (... . (list-of <fixnum>))
+       operands.specs)
+
+      (<nelist>
+       ;;formals.sig    == (... . <list>)
+       ;;operands.sig   == (... . <nelist>)
+       ;;propagated.sig == (... . <nelist>)
        operands.specs)
 
       (<list-spec>
@@ -1918,18 +2005,18 @@
        ;;propagated.sig == (... . <nelist>)
        formals.specs)
 
-      (<nelist>
-       ;;formals.sig    == (... . <nelist>)
-       ;;operands.sig   == (... . <nelist>)
-       ;;propagated.sig == (... . <nelist>)
-       operands.specs)
-
       (<list-of-spec>
        ;;formals.sig    == (... . <nelist>)
        ;;operands.sig   == (... . (list-of <fixnum>))
        ;;propagated.sig == (... . (pair <fixnum> (list-of <fixnum>)))
        (make-pair-type-spec (list-of-type-spec.item-ots operands.specs)
 			    operands.specs))
+
+      (<nelist>
+       ;;formals.sig    == (... . <nelist>)
+       ;;operands.sig   == (... . <nelist>)
+       ;;propagated.sig == (... . <nelist>)
+       operands.specs)
 
       (<list-spec>
        ;;formals.sig    == (... . <nelist>)
