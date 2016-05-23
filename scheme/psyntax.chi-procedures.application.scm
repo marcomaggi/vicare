@@ -40,7 +40,8 @@
   ;;
   ;;and the sub-application form can be a SPLICE-FIRST-EXPAND syntax.
   ;;
-  (syntax-match input-form.stx (map1 for-each1 for-all1 exists1)
+  (syntax-match input-form.stx (map1 for-each1 for-all1 exists1 call-with-values
+				     lambda lambda/checked)
     (((?nested-rator ?nested-rand* ...) ?rand* ...)
      ;;Sub-expression application.  It could be a nested expression application:
      ;;
@@ -57,6 +58,15 @@
      ;;Because of the last case, we process this specially.
      (chi-nested-rator-application input-form.stx lexenv.run lexenv.expand
 				   (cons ?nested-rator ?nested-rand*) ?rand*))
+
+    ((call-with-values ?producer (lambda . ?consumer-stuff))
+     (options::typed-language-enabled?)
+     (chi-call-with-values-application/stx-operands input-form.stx lexenv.run lexenv.expand
+						    ?producer ?consumer-stuff))
+    ((call-with-values ?producer (lambda/checked . ?consumer-stuff))
+     (options::typed-language-enabled?)
+     (chi-call-with-values-application/stx-operands input-form.stx lexenv.run lexenv.expand
+						    ?producer ?consumer-stuff))
 
     ((map1 ?func ?list)
      (expander-option.integrate-special-list-functions?)
@@ -567,6 +577,227 @@
 	    (%build-default-application))
 	   ((strict-r6rs)
 	    (%build-default-application))))))))
+
+
+;;;; chi procedures: special CALL-WITH-VALUES handling
+
+(module (chi-call-with-values-application/stx-operands)
+  (define-module-who chi-call-with-values-application/stx-operands)
+
+  (define* (chi-call-with-values-application/stx-operands input-form.stx lexenv.run lexenv.expand
+							  producer.stx consumer-stuff.stx)
+    ;;Special  handling for  CALL-WITH-VALUES  applications when  the  producer is  a
+    ;;LAMBDA/CHECKED syntax  and the  typed language is  enabled.  When  possible, we
+    ;;perform type propagation from the return  values of the producer to the formals
+    ;;of the consumer.  Return a psi object.
+    ;;
+    (receive (consumer-standard-formals.stx consumer-clause-signature consumer-body*.stx)
+	(syntax-match consumer-stuff.stx ()
+	  ((?formals ?body0 ?body* ...)
+	   (receive (consumer-standard-formals.stx consumer-clause-signature)
+	       (syntax-object.parse-typed-clambda-clause-formals ?formals (<untyped>-ots))
+	     (values consumer-standard-formals.stx consumer-clause-signature (cons ?body0 ?body*))))
+	  (_
+	   (syntax-violation __who__ "invalid consumer syntax" consumer-stuff.stx #f)))
+      ;;CONSUMER-CLAUSE-SIGNATURE is an instance of "<lambda-signature>".
+      (let* ((producer.psi		(chi-expr producer.stx lexenv.run lexenv.expand))
+	     (producer.ots		(%validate-producer input-form.stx producer.psi)))
+	(if (closure-type-spec? producer.ots)
+	    ;;Good, we can attempt type propagation.   Here we know that the producer
+	    ;;is a thunk.
+	    (%chi-thunk-application input-form.stx lexenv.run lexenv.expand
+				    consumer-standard-formals.stx consumer-clause-signature consumer-body*.stx
+				    producer.psi producer.ots)
+	  ;;We can do nothing here.  Just build the return value.
+	  (let ((consumer.psi (chi-lambda/typed/parsed-formals input-form.stx lexenv.run lexenv.expand
+							       consumer-standard-formals.stx consumer-clause-signature
+							       consumer-body*.stx)))
+	    (%build-core-expr input-form.stx producer.psi consumer.psi))))))
+
+;;; --------------------------------------------------------------------
+
+  (define* (%chi-thunk-application input-form.stx lexenv.run lexenv.expand
+				   consumer-standard-formals.stx consumer-clause-signature consumer-body*.stx
+				   producer.psi producer.ots)
+    (let* ((producer-retvals.sig	(case-lambda-signature.retvals (closure-type-spec.signature producer.ots)))
+	   (consumer-argvals.sig	(lambda-signature.argvals consumer-clause-signature))
+	   (match-symbol		(let ((clear-argvals.sig (type-signature.untyped-to-top consumer-argvals.sig)))
+					  (case-type-signature-full-structure producer-retvals.sig
+					    (<no-return>
+					     'no-return)
+					    (else
+					     (type-signature.match-arguments-against-operands clear-argvals.sig producer-retvals.sig))))))
+      (case match-symbol
+	((exact-match)
+	 ;;Here we use CHI-LAMBDA/TYPED/PARSED-FORMALS.
+	 (%build-thunk-core-expr input-form.stx lexenv.run lexenv.expand
+				 producer.psi producer-retvals.sig
+				 consumer-standard-formals.stx consumer-clause-signature consumer-body*.stx
+				 chi-lambda/typed/parsed-formals))
+	((possible-match)
+	 ;;Here we use CHI-LAMBDA/CHECKED/PARSED-FORMALS.
+	 (%build-thunk-core-expr input-form.stx lexenv.run lexenv.expand
+				 producer.psi producer-retvals.sig
+				 consumer-standard-formals.stx consumer-clause-signature consumer-body*.stx
+				 chi-lambda/checked/parsed-formals))
+	((no-return)
+	 ;;We expand  the consumer forms for  these reasons: the side  effects of the
+	 ;;expansion; to catch expand-time errors in  the source code.  We throw away
+	 ;;the result because we do not need it.
+	 ;;
+	 ;;NOTE Is this what we desire?  Yes,  we want to catch expand-time errors in
+	 ;;this code even if we discard it. (Marco Maggi; Tue May 3, 2016)
+	 (chi-lambda/typed/parsed-formals input-form.stx lexenv.run lexenv.expand
+					  consumer-standard-formals.stx consumer-clause-signature
+					  consumer-body*.stx)
+	 (make-psi input-form.stx
+	   (build-application (syntax-annotation input-form.stx)
+	       (psi.core-expr producer.psi)
+	     '())
+	   producer-retvals.sig))
+	((no-match)
+	 (raise
+	  (condition (make-expand-time-type-signature-violation)
+		     (make-who-condition __module_who__)
+		     (make-message-condition "type signature mismatch between producer return values and consumer expected arguments")
+		     (make-syntax-violation input-form.stx #f)
+		     (make-returned-type-signature-condition producer-retvals.sig)
+		     (make-expected-type-signature-condition consumer-argvals.sig))))
+	(else
+	 (assertion-violation __who__ "internal error, invalid match symbol" input-form.stx match-symbol)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%build-thunk-core-expr input-form.stx lexenv.run lexenv.expand
+				  producer.psi producer-retvals.sig
+				  consumer-standard-formals.stx consumer-clause-signature consumer-body*.stx
+				  chi-lambda)
+    (let* ((consumer.psi	(let* ((consumer-retvals.sig	(lambda-signature.retvals consumer-clause-signature))
+				       (consumer-argvals.sig	(lambda-signature.argvals consumer-clause-signature))
+				       (consumer-retvals.sig	(type-signature.untyped-to-top consumer-retvals.sig))
+				       (consumer-argvals.sig	(type-signature.type-propagation consumer-argvals.sig
+												 producer-retvals.sig))
+				       (clause-signature	(make-lambda-signature consumer-retvals.sig
+										       consumer-argvals.sig)))
+				  (chi-lambda input-form.stx lexenv.run lexenv.expand
+					      consumer-standard-formals.stx clause-signature
+					      consumer-body*.stx)))
+	   ;;CHI-LAMBDA might have  performed type propagation from the  last form of
+	   ;;the consumer body into the consumer  return values.  So we reextract the
+	   ;;consumer retvals.
+	   (application.sig	(case-lambda-signature.retvals
+				 (closure-type-spec.signature
+				  (car (type-signature.object-type-specs (psi.retvals-signature consumer.psi)))))))
+      (%build-core-expr input-form.stx producer.psi consumer.psi application.sig)))
+
+  (case-define %build-core-expr
+    ((input-form.stx producer.psi consumer.psi)
+     (%build-core-expr input-form.stx producer.psi consumer.psi (make-type-signature/fully-unspecified)))
+    ((input-form.stx producer.psi consumer.psi application.sig)
+     (make-psi input-form.stx
+       (build-application (syntax-annotation input-form.stx)
+	   (build-primref no-source 'call-with-values)
+	 (list (psi.core-expr producer.psi)
+	       (psi.core-expr consumer.psi)))
+       application.sig)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%validate-producer input-form.stx producer.psi)
+    ;;Validate PRODUCER.PSI as returning a single value compatible with "<producer>".
+    ;;If successful return an instance  of "<object-type-spec>" representing the type
+    ;;of the single value; otherwise raise an exception.
+    ;;
+    (define producer.sig
+      (psi.retvals-signature producer.psi))
+    (define (%handle-error message)
+      (raise
+       (condition (make-expand-time-type-signature-violation)
+		  (make-who-condition __module_who__)
+		  (make-message-condition message)
+		  (make-syntax-violation input-form.stx (psi.input-form producer.psi))
+		  (make-application-operand-signature-condition producer.sig))))
+    (define (%error-non-procedure)
+      (%handle-error "expression used as producer operand is typed as returning a non-procedure value"))
+    (define (%error-invalid-number-of-return-values)
+      (%handle-error "expression used as producer operand returns zero, two or more values"))
+    (define (%return-if-compatible-with-procedure item.ots)
+      (cond ((closure-type-spec? item.ots)
+	     (if (closure-type-spec.thunk? item.ots)
+		 item.ots
+	       (%handle-error "expression used as producer operand is typed as procedure but not a thunk")))
+	    ((or (<procedure>-ots?   item.ots)
+		 (<top>-ots?         item.ots))
+	     item.ots)
+	    (else
+	     (%error-non-procedure))))
+    (case-type-signature-full-structure* producer.sig
+      (<no-return>
+       ;;The operand expression will not return.
+       (when (options::warn-about-not-returning-expressions)
+	 (raise-continuable
+	  (condition (make-expand-time-type-signature-violation)
+		     (make-who-condition __module_who__)
+		     (make-message-condition "expression used as operand in procedure application is typed as not returning")
+		     (make-syntax-violation input-form.stx (psi.input-form producer.psi))
+		     (make-application-operand-signature-condition producer.sig))))
+       (<top>-ots))
+
+      ((<void>)
+       ;;The expression is marked as returning void.
+       (%handle-error "expression used as operand in procedure application is typed as returning void"))
+
+      ((single-value)
+       ;;Single return value.  Good.
+       => %return-if-compatible-with-procedure)
+
+      ;; ------------------------------------------------------------
+
+      (<list>
+       ;;Unspecified  number of  return  values,  of unspecified  type.   We let  the
+       ;;compiler insert the run-time checks for the single return value case.
+       (<top>-ots))
+
+      (<null>
+       (%error-invalid-number-of-return-values))
+
+      (<list-of-spec>
+       ;;Unspecified number  of return values,  of known  type.  We let  the compiler
+       ;;insert the run-time checks for the single return value case.
+       => (lambda (producer.ots)
+	    (%return-if-compatible-with-procedure (list-of-type-spec.item-ots producer.ots))))
+
+      ;; ------------------------------------------------------------
+
+      (<pair-spec>
+       ;;One or more return values, of known type.
+       => (lambda (producer.ots)
+	    (let ((item-cdr.ots (pair-type-spec.cdr-ots producer.ots)))
+	      (unless (or (<list>-ots? item-cdr.ots)
+			  (<null>-ots? item-cdr.ots)
+			  (list-of-type-spec? item-cdr.ots))
+		(%error-invalid-number-of-return-values)))
+	    (%return-if-compatible-with-procedure (pair-type-spec.car-ots producer.ots))))
+
+      (<nelist>
+       ;;One or more return values, of  unspecified type.  We let the compiler insert
+       ;;the run-time checks for the single return value case.
+       (<top>-ots))
+
+      (<list-spec>
+       ;;Known number of values, of known type.
+       => (lambda (producer.ots)
+	    (let ((item*.ots (list-type-spec.item-ots* producer.ots)))
+	      (if (= 1 (length item*.ots))
+		  (%return-if-compatible-with-procedure (car item*.ots))
+		(%error-invalid-number-of-return-values)))))
+
+      ;; ------------------------------------------------------------
+
+      (else
+       (assertion-violation __module_who__ "invalid type signature" producer.sig))))
+
+  #| end of module: CHI-CALL-WITH-VALUES-APPLICATION/STX-OPERANDS |# )
 
 
 (module SPECIAL-PRIMITIVES

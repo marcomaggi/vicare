@@ -69,7 +69,8 @@
    datum-type-signature
 
 ;;; helpers
-   case-type-signature-full-structure
+   case-type-signature-full-structure			case-type-signature-full-structure*
+   case-type-signature-structure			case-type-signature-structure*
    single-value <list>/<list-of-spec> <list-of-spec> <list-spec> <closure> <pair-spec>
 
    #| end of exports |# )
@@ -273,34 +274,6 @@
 
 ;;;; syntax helpers: type annotation specs matching
 
-(define-syntax case-type-signature-structure*
-  ;;This is like CASE-TYPE-SIGNATURE-STRUCTURE but it has all the clauses.
-  ;;
-  (syntax-rules (else null? pair?
-		      <pair-spec> <null>
-		      <list> <nelist> <list-of-spec> <list-spec>)
-    ((_ ?specs
-	(pair? . ?body-pair)
-	(<pair-spec> . ?body-<pair-spec>)
-	(null? . ?body-null)
-	(<null> . ?body-<null>)
-	(<list> . ?body-<list>)
-	(<list-of-spec> . ?body-<list-of-spec>)
-	(<nelist> . ?body-<nelist>)
-	(<list-spec> . ?body-<list-spec>)
-	(else . ?body-else))
-     (case-type-signature-structure ?specs
-       (pair? . ?body-pair)
-       (<pair-spec> . ?body-<pair-spec>)
-       (null? . ?body-null)
-       (<null> . ?body-<null>)
-       (<list> . ?body-<list>)
-       (<list-of-spec> . ?body-<list-of-spec>)
-       (<nelist> . ?body-<nelist>)
-       (<list-spec> . ?body-<list-spec>)
-       (else . ?body-else)))
-    ))
-
 (define-syntax* (case-type-signature-structure input-form.stx)
   (define (main input-form.stx)
     (sys::syntax-case input-form.stx ()
@@ -369,14 +342,87 @@
        (sys::syntax ((list-type-spec? annotation) . ?body)))
 
       ((<list>/<list-of-spec> => ?expr)
-       (sys::syntax ((list-type-spec? annotation) (?expr annotation))))
+       (sys::syntax ((or (<list>-ots?     annotation)
+			 (list-of-type-spec? annotation))
+		     (?expr annotation))))
       ((<list>/<list-of-spec> . ?body)
-       (sys::syntax ((list-type-spec? annotation) . ?body)))
+       (sys::syntax ((or (<list>-ots?     annotation)
+			 (list-of-type-spec? annotation))
+		     . ?body)))
 
       (_
        (sys::syntax-violation __who__ "invalid syntax in input clauses" input-form.stx clause.stx))))
 
   (main input-form.stx))
+
+
+;;;; syntax helpers
+
+(define-syntax case-type-signature-full-structure*
+  ;;This is like CASE-TYPE-SIGNATURE-FULL-STRUCTURE but it has all the clauses.
+  ;;
+  (syntax-rules (<no-return>
+		 single-value <void>
+		 <list> <null> <list-of-spec>
+		 <nelist> <pair-spec> <list-spec>
+		 else)
+    ((_ ?specs
+	(<no-return>		. ?body-no-return)
+	((<void>)		. ?body-single-void)
+	((single-value)		. ?body-single-value)
+	;;
+	(<list>			. ?body-<list>)
+	(<null>			. ?body-<null>)
+	(<list-of-spec>		. ?body-<list-of-spec>)
+	;;
+	(<pair-spec>		. ?body-<pair-spec>)
+	(<nelist>		. ?body-<nelist>)
+	(<list-spec>		. ?body-<list-spec>)
+	;;
+	(else			. ?body-else))
+     (case-type-signature-full-structure ?specs
+	(<no-return>		. ?body-no-return)
+	((<void>)		. ?body-single-void)
+	((single-value)		. ?body-single-value)
+	;;
+	(<list>			. ?body-<list>)
+	(<null>			. ?body-<null>)
+	(<list-of-spec>		. ?body-<list-of-spec>)
+	;;
+	(<pair-spec>		. ?body-<pair-spec>)
+	(<nelist>		. ?body-<nelist>)
+	(<list-spec>		. ?body-<list-spec>)
+	;;
+	(else			. ?body-else)))
+    ))
+
+(define-syntax case-type-signature-structure*
+  ;;This is like CASE-TYPE-SIGNATURE-STRUCTURE but it has all the clauses.
+  ;;
+  (syntax-rules (else null? pair?
+		      <pair-spec> <null>
+		      <list> <nelist> <list-of-spec> <list-spec>)
+    ((_ ?specs
+	(pair? . ?body-pair)
+	(<pair-spec> . ?body-<pair-spec>)
+	(null? . ?body-null)
+	(<null> . ?body-<null>)
+	(<list> . ?body-<list>)
+	(<list-of-spec> . ?body-<list-of-spec>)
+	(<nelist> . ?body-<nelist>)
+	(<list-spec> . ?body-<list-spec>)
+	(else . ?body-else))
+     (case-type-signature-structure ?specs
+       (pair? . ?body-pair)
+       (<pair-spec> . ?body-<pair-spec>)
+       (null? . ?body-null)
+       (<null> . ?body-<null>)
+       (<list> . ?body-<list>)
+       (<list-of-spec> . ?body-<list-of-spec>)
+       (<nelist> . ?body-<nelist>)
+       (<list-spec> . ?body-<list-spec>)
+       (else . ?body-else)))
+    ))
 
 
 ;;;; type signature syntax object parser
@@ -1190,10 +1236,11 @@
     ;;OPERANDS.SIG is  a "<type-signature>" instance representing  the type signature
     ;;of the given operands.
     ;;
+    (define the-who __who__)
     (define (%error-invalid-formals-signature)
-      (assertion-violation __who__ "invalid formals signature" formals.sig))
+      (assertion-violation the-who "invalid formals signature" formals.sig))
     (define (%error-invalid-operands-signature)
-      (assertion-violation __who__ "invalid operands signature" operands.sig))
+      (assertion-violation the-who "invalid operands signature" operands.sig))
     (let loop ((state		'exact-match)
 	       (formals.specs	(type-signature.object-type-specs formals.sig))
 	       (operands.specs	(type-signature.object-type-specs operands.sig)))

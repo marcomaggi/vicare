@@ -318,7 +318,902 @@
 	    (lambda () 1)
 	  (lambda (a)
 	    (add1 a)))
-	=> (<number>))
+	=> (<exact-integer>))
+
+;;; --------------------------------------------------------------------
+;;; no return values
+
+  (doit (call-with-values
+	    (lambda () (values))
+	  (lambda () 123))
+	=> (<positive-fixnum>))
+  (check
+      (call-with-values
+	  (lambda () (values))
+	(lambda () 123))
+    => 123)
+
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature <list> (values)))
+	  (lambda () 123))
+	=> (<positive-fixnum>))
+  (check
+      (call-with-values
+	  (lambda () (cast-signature <list> (values)))
+       	(lambda () 123))
+    => 123)
+
+;;; special cases
+
+  (type-signature-violation-for-message
+   (call-with-values
+       (lambda () (cast-signature <nelist> (values 1)))
+     (lambda () 123))
+   => "type signature mismatch between producer return values and consumer expected arguments")
+
+  (type-signature-violation-for-message
+   (call-with-values
+       (lambda ()
+	 (cast-signature (list <fixnum> <fixnum>) (values 1 2)))
+     (lambda () 123))
+   => "type signature mismatch between producer return values and consumer expected arguments")
+
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature (list-of <fixnum>) (values)))
+	  (lambda () 123))
+	=> (<positive-fixnum>))
+  (check
+      (call-with-values
+	  (lambda ()
+	    (cast-signature (list-of <fixnum>) (values)))
+	(lambda () 123))
+    => 123)
+
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature (list-of <fixnum>) (values 1 2)))
+	  (lambda () 123))
+	=> (<positive-fixnum>))
+  (assertion-violation-for-message
+   (call-with-values
+       (lambda ()
+	 (cast-signature (list-of <fixnum>) (values 1 2)))
+     (lambda () 123))
+   => "incorrect number of arguments")
+
+  ;;Producer not returning.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (error #f "wrong"))
+	  (lambda () 123))
+	=> <no-return>)
+  (check
+      (try
+	  (call-with-values
+	      (lambda ()
+		(error #f "wrong"))
+	    (lambda () 123))
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+  (when #f
+    (debug-print
+     (expansion-of
+      (call-with-values
+	  (lambda ()
+	    (error #f "wrong"))
+	(lambda () 123)))))
+
+  ;;Producer returns values.
+  ;;
+  (type-signature-violation-for-message
+   (call-with-values
+       (lambda ()
+	 (values 1))
+     (lambda () 123))
+   => "type signature mismatch between producer return values and consumer expected arguments")
+
+;;; --------------------------------------------------------------------
+;;; single return value
+
+  ;;Typed single argument, expand-time validation.
+  ;;
+  (doit (call-with-values
+	    (lambda () 1)
+	  (lambda ({a <fixnum>})
+	    a))
+	=> (<fixnum>))
+  (check
+      (call-with-values
+	  (lambda () 1)
+	(lambda ({a <fixnum>})
+	  a))
+    => 1)
+
+  ;;Typed single argument, run-time validation.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature (<top>) 1))
+	  (lambda ({a <fixnum>})
+	    a))
+	=> (<fixnum>))
+  (check
+      (call-with-values
+	  (lambda ()
+	    (cast-signature (<top>) 1))
+	(lambda ({a <fixnum>})
+	  a))
+    => 1)
+
+  ;;UNtyped single value ignored in body.  Type propagation.
+  ;;
+  (doit (call-with-values
+	    (lambda () 1)
+	  (lambda (a) 123))
+	=> (<positive-fixnum>))
+  (check
+      (call-with-values
+	  (lambda () 1)
+	(lambda (a) 123))
+    => 123)
+
+  ;;UNtyped single value used in body.  Type propagation.
+  ;;
+  (doit (call-with-values
+	    (lambda () 1)
+	  (lambda (a) a))
+	=> (<positive-fixnum>))
+  (check
+      (call-with-values
+	  (lambda () 1)
+	(lambda (a) a))
+    => 1)
+
+  ;;UNtyped single value used in body.  Type propagation.  More body forms
+  ;;
+  (doit (call-with-values
+	    (lambda () 1)
+	  (lambda (a)
+	    (+ 1 2)
+	    (list a)))
+	=> ((list <positive-fixnum>)))
+  (check
+      (call-with-values
+	  (lambda () 1)
+	(lambda (a)
+	  (+ 1 2)
+	  (list a)))
+    => '(1))
+
+  ;;Producer returns a LIST-OF.  Untyped syntactic binding.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature (list-of <fixnum>) 1))
+	  (lambda (a) a))
+	=> (<fixnum>))
+  (check
+      (call-with-values
+	  (lambda ()
+	    (cast-signature (list-of <fixnum>) 1))
+	(lambda (a) a))
+    => 1)
+
+  ;;Producer returns a LIST-OF.  Typed syntactic binding.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature (list-of <fixnum>) 1))
+	  (lambda ({a <fixnum>})
+	    a))
+	=> (<fixnum>))
+  (check
+      (call-with-values
+	  (lambda ()
+	    (cast-signature (list-of <fixnum>) 1))
+	(lambda ({a <fixnum>})
+	  a))
+    => 1)
+
+  ;;Producer returns a LIST-OF with too many values.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature (list-of <fixnum>) (values 1 2)))
+	  (lambda (a) a))
+	=> (<fixnum>))
+  (assertion-violation-for-message
+   (call-with-values
+       (lambda ()
+	 (cast-signature (list-of <fixnum>) (values 1 2)))
+     (lambda (a) a))
+   => "incorrect number of values returned to single value context")
+
+;;;
+
+  ;;Producer returns a LIST.  Untyped syntactic binding.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature (list <fixnum>) 1))
+	  (lambda (a) a))
+	=> (<fixnum>))
+  (check
+      (call-with-values
+	  (lambda ()
+	    (cast-signature (list <fixnum>) 1))
+	(lambda (a) a))
+    => 1)
+
+  ;;Producer returns a LIST.  Typed syntactic binding.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature (list <positive-fixnum>) 1))
+	  (lambda ({a <fixnum>})
+	    a))
+	=> (<fixnum>))
+  (check
+      (call-with-values
+	  (lambda ()
+	    (cast-signature (list <positive-fixnum>) 1))
+	(lambda ({a <fixnum>})
+	  a))
+    => 1)
+
+  ;;Producer returns a LIST with too many values.
+  ;;
+  (type-signature-violation-for-message
+   (call-with-values
+       (lambda ()
+	 (cast-signature (list <fixnum> <flonum>) (values 1 2.3)))
+     (lambda (a) a))
+   => "type signature mismatch between producer return values and consumer expected arguments")
+
+  ;;Producer returns a <nelist>.  Untyped syntactic binding.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature <nelist> 1))
+	  (lambda (a) a))
+	=> (<top>))
+  (check
+      (call-with-values
+	  (lambda ()
+	    (cast-signature <nelist> 1))
+	(lambda (a) a))
+    => 1)
+
+  ;;Producer returns a <nelist> with too many values.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature <nelist> (values 1 2)))
+	  (lambda (a) a))
+	=> (<top>))
+  (assertion-violation-for-message
+   (call-with-values
+       (lambda ()
+	 (cast-signature <nelist> (values 1 2)))
+     (lambda (a) a))
+   => "incorrect number of values returned to single value context")
+
+;;;
+
+  ;;Producer returns a "<list>".  Untyped syntactic binding.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature <list> 1))
+	  (lambda (a) a))
+	=> (<top>))
+  (check
+      (call-with-values
+	  (lambda ()
+	    (cast-signature <list> 1))
+	(lambda (a) a))
+    => 1)
+
+  ;;Producer returns a "<list>".  Typed syntactic binding.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature <list> 1))
+	  (lambda ({a <fixnum>})
+	    a))
+	=> (<fixnum>))
+  (check
+      (call-with-values
+	  (lambda ()
+	    (cast-signature <list> 1))
+	(lambda ({a <fixnum>})
+	  a))
+    => 1)
+
+  ;;Producer returns a <list> with multiple values.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature <list> (values 1 2 3)))
+	  (lambda ({a <fixnum>})
+	    a))
+	=> (<fixnum>))
+  (assertion-violation-for-message
+   (call-with-values
+       (lambda ()
+	 (cast-signature <list> (values 1 2 3)))
+     (lambda ({a <fixnum>})
+       a))
+   => "incorrect number of values returned to single value context")
+
+;;; special cases
+
+  ;;Producer not returning.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (error #f "wrong"))
+	  (lambda (a) a))
+	=> <no-return>)
+  (check
+      (try
+	  (call-with-values
+	      (lambda ()
+		(error #f "wrong"))
+	    (lambda (a) 123))
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  ;;Producer returns zero values.
+  ;;
+  (type-signature-violation-for-message
+   (call-with-values
+       (lambda () (values))
+     (lambda (a) a))
+   => "type signature mismatch between producer return values and consumer expected arguments")
+
+  ;;Producer returns multiple values.
+  ;;
+  (type-signature-violation-for-message
+   (call-with-values
+       (lambda () (values 1 2 3))
+     (lambda (a) a))
+   => "type signature mismatch between producer return values and consumer expected arguments")
+
+  ;;Producer returning void.
+  ;;
+  (type-signature-violation-for-message
+   (call-with-values
+       (lambda () (void))
+     (lambda (a) a))
+   => "type signature mismatch between producer return values and consumer expected arguments")
+
+;;; --------------------------------------------------------------------
+;;; fixed number of two or more mandatory arguments
+
+  ;;Two values, typed syntactic bindings.
+  ;;
+  (doit (call-with-values
+	    (lambda () (values 123 "ciao"))
+	  (lambda ({a <positive-fixnum>} {b <nestring>})
+	    (values a b)))
+	=> (<positive-fixnum> <nestring>))
+  (check
+      (call-with-values
+	  (lambda () (values 123 "ciao"))
+	(lambda ({a <positive-fixnum>} {b <nestring>})
+	  (values a b)))
+    => 123 "ciao")
+
+  ;;Two values, typed syntactic bindings.  Run-time validation.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (values (cast-signature (<top>) 1)
+		      (cast-signature (<top>) 2.3)))
+	  (lambda ({a <fixnum>} {b <flonum>})
+	    (values a b)))
+	=> (<fixnum> <flonum>))
+  (check
+      (call-with-values
+	  (lambda ()
+	    (values (cast-signature (<top>) 1)
+		    (cast-signature (<top>) 2.3)))
+	(lambda ({a <fixnum>} {b <flonum>})
+	  (values a b)))
+    => 1 2.3)
+
+  ;;Two values, UNtyped syntactic bindings.  Unused bindings.  Type propagation.
+  ;;
+  (doit (call-with-values
+	    (lambda () (values 1 2))
+	  (lambda (a b)
+	    (values "hello" "world")))
+	=> (<nestring> <nestring>))
+  (check
+      (call-with-values
+	  (lambda () (values 1 2))
+	(lambda (a b)
+	  (values "hello" "world")))
+    => "hello" "world")
+
+  ;;Two values, UNtyped syntactic bindings.  Type propagation.
+  ;;
+  (doit (call-with-values
+	    (lambda () (values 1 2.3))
+	  (lambda (a b)
+	    (values a b)))
+	=> (<positive-fixnum> <positive-flonum>))
+  (check
+      (call-with-values
+	  (lambda () (values 1 2.3))
+	(lambda (a b)
+	  (values a b)))
+    => 1 2.3)
+
+;;; special cases
+
+  ;;Producer not returning.
+  ;;
+  (doit (call-with-values
+	    (lambda () (error #f "wrong"))
+	  (lambda (a b)
+	    (values a b)))
+	=> <no-return>)
+  (check
+      (try
+	  (call-with-values
+	      (lambda () (error #f "wrong"))
+	    (lambda (a b)
+	      (values a b)))
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
+
+  ;;Producer returns zero values.
+  ;;
+  (type-signature-violation-for-message
+   (call-with-values
+       (lambda () (values))
+     (lambda (a b)
+       (list a b)))
+   => "type signature mismatch between producer return values and consumer expected arguments")
+
+  ;;Producer returns one value.
+  ;;
+  (type-signature-violation-for-message
+   (call-with-values
+       (lambda () (values 1))
+     (lambda (a b)
+       (list a b)))
+   => "type signature mismatch between producer return values and consumer expected arguments")
+
+;;;
+
+  ;;Two Untyped bindings.  Producer returns an UNtyped list of two values.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature <list> (values 1 2.3)))
+	  (lambda (a b)
+	    (values a b)))
+	=> (<top> <top>))
+  (check
+      (call-with-values
+	  (lambda () (cast-signature <list> (values 1 2.3)))
+	(lambda (a b)
+	  (values a b)))
+    => 1 2.3)
+
+  ;;Two typed  bindings.  Producer returns an  UNtyped list of two  values.  Run-time
+  ;;validation.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature <list> (values 1 2.3)))
+	  (lambda ({a <fixnum>} {b <flonum>})
+	    (values a b)))
+	=> (<fixnum> <flonum>))
+  (check
+      (call-with-values
+	  (lambda () (cast-signature <list> (values 1 2.3)))
+	(lambda ({a <fixnum>} {b <flonum>})
+	  (values a b)))
+    => 1 2.3)
+
+  ;;The producer returns a <list> with too many values.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature <list> (values 1 2 3)))
+	  (lambda (a b)
+	    (values a b)))
+	=> (<top> <top>))
+  (assertion-violation-for-message
+   (call-with-values
+       (lambda () (cast-signature <list> (values 1 2 3)))
+     (lambda (a b)
+       (values a b)))
+   => "incorrect number of arguments")
+
+  ;;The producer returns a <list> with too few values.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature <list> (values 1)))
+	  (lambda (a b)
+	    (values a b)))
+	=> (<top> <top>))
+  (assertion-violation-for-message
+   (call-with-values
+       (lambda () (cast-signature <list> (values 1)))
+     (lambda (a b)
+       (values a b)))
+   => "incorrect number of arguments")
+
+;;;
+
+  ;;Two Untyped bindings.  Producer returns a <nelist>.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature <nelist> (values 1 2.3)))
+	  (lambda (a b)
+	    (values a b)))
+	=> (<top> <top>))
+  (check
+      (call-with-values
+	  (lambda () (cast-signature <nelist> (values 1 2.3)))
+	(lambda (a b)
+	  (values a b)))
+    => 1 2.3)
+
+  ;;Two typed bindings.  Producer returns a <nelist>.  Run-time validation.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature <nelist> (values 1 2.3)))
+	  (lambda ({a <fixnum>} {b <flonum>})
+	    (values a b)))
+	=> (<fixnum> <flonum>))
+  (check
+      (call-with-values
+	  (lambda () (cast-signature <nelist> (values 1 2.3)))
+	(lambda ({a <fixnum>} {b <flonum>})
+	  (values a b)))
+    => 1 2.3)
+
+  ;;The producer returns a <nelist> with too many values.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature <nelist> (values 1 2 3)))
+	  (lambda (a b)
+	    (values a b)))
+	=> (<top> <top>))
+  (assertion-violation-for-message
+   (call-with-values
+       (lambda () (cast-signature <nelist> (values 1 2 3)))
+     (lambda (a b)
+       (values a b)))
+   => "incorrect number of arguments")
+
+  ;;The producer returns a <nelist> with too few values.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature <nelist> (values 1)))
+	  (lambda (a b)
+	    (values a b)))
+	=> (<top> <top>))
+  (assertion-violation-for-message
+   (call-with-values
+       (lambda () (cast-signature <nelist> (values 1)))
+     (lambda (a b)
+       (values a b)))
+   => "incorrect number of arguments")
+
+;;;
+
+  ;;Two Untyped bindings.  Producer returns a typed list of two values.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature (list-of <number>) (values 1 2.3)))
+	  (lambda (a b)
+	    (values a b)))
+	=> (<number> <number>))
+  (check
+      (call-with-values
+	  (lambda () (cast-signature (list-of <number>) (values 1 2.3)))
+	(lambda (a b)
+	  (values a b)))
+    => 1 2.3)
+
+  ;;Two  typed bindings.   Producer returns  a typed  list of  two values.   Run-time
+  ;;validation.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature (list-of <number>) (values 1 2.3)))
+	  (lambda ({a <fixnum>} {b <flonum>})
+	    (values a b)))
+	=> (<fixnum> <flonum>))
+  (check
+      (call-with-values
+	  (lambda () (cast-signature (list-of <number>) (values 1 2.3)))
+	(lambda ({a <fixnum>} {b <flonum>})
+	  (values a b)))
+    => 1 2.3)
+
+  ;;The producer returns a LIST-OF with too many values.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature (list-of <fixnum>) (values 1 2 3)))
+	  (lambda (a b)
+	    (values a b)))
+	=> (<fixnum> <fixnum>))
+  (assertion-violation-for-message
+   (call-with-values
+       (lambda () (cast-signature (list-of <fixnum>) (values 1 2 3)))
+     (lambda (a b)
+       (values a b)))
+   => "incorrect number of arguments")
+
+  ;;The producer returns a LIST-OF with too few values.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature (list-of <fixnum>) (values 1)))
+	  (lambda (a b)
+	    (values a b)))
+	=> (<fixnum> <fixnum>))
+  (assertion-violation-for-message
+   (call-with-values
+       (lambda () (cast-signature (list-of <fixnum>) (values 1)))
+     (lambda (a b)
+       (values a b)))
+   => "incorrect number of arguments")
+
+;;;
+
+  ;;Two Untyped bindings.  Producer returns a typed list of two values.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature (list <number> <number>) (values 1 2.3)))
+	  (lambda (a b)
+	    (values a b)))
+	=> (<number> <number>))
+  (check
+      (call-with-values
+	  (lambda ()
+	    (cast-signature (list <number> <number>) (values 1 2.3)))
+	(lambda (a b)
+	  (values a b)))
+    => 1 2.3)
+
+  ;;Two  typed bindings.   Producer returns  a typed  list of  two values.   Run-time
+  ;;validation.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature (list <number> <number>) (values 1 2.3)))
+	  (lambda ({a <fixnum>} {b <flonum>})
+	    (values a b)))
+	=> (<fixnum> <flonum>))
+  (check
+      (call-with-values
+	  (lambda () (cast-signature (list <number> <number>) (values 1 2.3)))
+	(lambda ({a <fixnum>} {b <flonum>})
+	  (values a b)))
+    => 1 2.3)
+
+  ;;The producer returns a LIST with too many values.
+  ;;
+  (type-signature-violation-for-message
+   (call-with-values
+       (lambda () (cast-signature (list <fixnum> <fixnum> <fixnum>) (values 1 2 3)))
+     (lambda (a b)
+       (values a b)))
+   => "type signature mismatch between producer return values and consumer expected arguments")
+
+  ;;The producer returns a LIST with too few values.
+  ;;
+  (type-signature-violation-for-message
+   (call-with-values
+       (lambda () (cast-signature (list <fixnum>) (values 1)))
+     (lambda (a b)
+       (values a b)))
+   => "type signature mismatch between producer return values and consumer expected arguments")
+
+;;; --------------------------------------------------------------------
+;;; unspecified number of values, args arguments
+
+  ;;Typed catch-all syntactic binding.
+  ;;
+  (doit (call-with-values
+	    (lambda () (values 1 2 3))
+	  (lambda {vals (list-of <fixnum>)}
+	    vals))
+	=> ((list-of <fixnum>)))
+  (check
+      (call-with-values
+	  (lambda () (values 1 2 3))
+	(lambda {vals (list-of <fixnum>)}
+	  vals))
+    => '(1 2 3))
+
+  ;;Untyped catch-all syntactic binding.
+  ;;
+  (doit (call-with-values
+	    (lambda () (values 1 2 3))
+	  (lambda vals vals))
+	=> ((list <positive-fixnum> <positive-fixnum> <positive-fixnum>)))
+  (check
+      (call-with-values
+	  (lambda () (values 1 2 3))
+	(lambda vals vals))
+    => '(1 2 3))
+
+  ;;Untyped catch-all syntactic bindings.  The producer returns a single value.
+  ;;
+  (doit (call-with-values
+	    (lambda () 1)
+	  (lambda vals vals))
+	=> ((list <positive-fixnum>)))
+  (check
+      (call-with-values
+	  (lambda () 1)
+	(lambda vals vals))
+    => '(1))
+
+;;;
+
+  ;;Untyped catch-all syntactic binding.  The  producer returns an unspecified number
+  ;;of unspecified values.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature <list> (values 1 2 3)))
+	  (lambda vals vals))
+	=> (<list>))
+  (check
+      (call-with-values
+	  (lambda () (cast-signature <list> (values 1 2 3)))
+	(lambda vals vals))
+    => '(1 2 3))
+
+  ;;Untyped catch-all syntactic binding.  The producer returns a <nelist>.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature <nelist> (values 1 2 3)))
+	  (lambda vals vals))
+	=> (<nelist>))
+  (check
+      (call-with-values
+	  (lambda () (cast-signature <nelist> (values 1 2 3)))
+	(lambda vals vals))
+    => '(1 2 3))
+
+  ;;Untyped catch-all syntactic binding.  The producer returns a LIST-OF.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature (list-of <fixnum>) (values 1 2 3)))
+	  (lambda vals vals))
+	=> ((list-of <fixnum>)))
+  (check
+      (call-with-values
+	  (lambda () (cast-signature (list-of <fixnum>) (values 1 2 3)))
+	(lambda vals vals))
+    => '(1 2 3))
+
+  ;;Untyped catch-all syntactic binding.  The producer returns a LIST.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature (list <fixnum> <fixnum> <fixnum>) (values 1 2 3)))
+	  (lambda vals vals))
+	=> ((list <fixnum> <fixnum> <fixnum>)))
+  (check
+      (call-with-values
+	  (lambda () (cast-signature (list <fixnum> <fixnum> <fixnum>) (values 1 2 3)))
+	(lambda vals vals))
+    => '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; unspecified number of values, rest arguments
+
+  ;;Untyped syntactic bindings with rest.  The producer returns an unspecified number
+  ;;of unspecified values.
+  ;;
+  (doit (call-with-values
+	    (lambda () (cast-signature <list> (values 1 2 3)))
+	  (lambda (a b . vals)
+	    (values a b vals)))
+	=> (<top> <top> <list>))
+  (check
+      (call-with-values
+	  (lambda () (cast-signature <list> (values 1 2 3)))
+	(lambda (a b . vals)
+	  (values a b vals)))
+    => 1 2 '(3))
+
+  ;;Typed syntactic bindings with rest.
+  ;;
+  (doit (call-with-values
+	    (lambda () (values 1 2.3 "C" "D"))
+	  (lambda ({a <fixnum>} {b <flonum>} . {vals (list-of <nestring>)})
+	    (values a b vals)))
+	=> (<fixnum> <flonum> (list-of <nestring>)))
+  (check
+      (call-with-values
+	  (lambda () (values 1 2.3 "C" "D"))
+	(lambda ({a <fixnum>} {b <flonum>} . {vals (list-of <nestring>)})
+	  (values a b vals)))
+    => 1 2.3 '("C" "D"))
+
+  ;;Untyped syntactic bindings with rest.
+  ;;
+  (doit (call-with-values
+	    (lambda () (values 1 2.3 "C" "D"))
+	  (lambda (a b . vals)
+	    (values a b vals)))
+	=> (<positive-fixnum> <positive-flonum> (list <nestring> <nestring>)))
+  (check
+      (call-with-values
+	  (lambda () (values 1 2.3 "C" "D"))
+	(lambda (a b . vals)
+	  (values a b vals)))
+    => 1 2.3 '("C" "D"))
+
+  ;;Untyped syntactic bindings with rest.  Special case of type propagation.
+  ;;
+  (doit (call-with-values
+	    (lambda ()
+	      (cast-signature (<fixnum> <flonum> . (list-of <nestring>))
+			      (values 1 2.3 "C" "D")))
+	  (lambda (a b . vals)
+	    (values a b vals)))
+	=> (<fixnum> <flonum> (list-of <nestring>)))
+  (check
+      (call-with-values
+	  (lambda ()
+	    (cast-signature (<fixnum> <flonum> . (list-of <nestring>))
+			    (values 1 2.3 "C" "D")))
+	(lambda (a b . vals)
+	  (values a b vals)))
+    => 1 2.3 '("C" "D"))
+
+  ;;Untyped syntactic bindings with rest.  The producer returns a single value.
+  ;;
+  (doit (call-with-values
+	    (lambda () 1)
+	  (lambda (a . vals)
+	    (values a vals)))
+	=> (<positive-fixnum> <null>))
+  (check
+      (call-with-values
+	  (lambda () 1)
+	(lambda (a . vals)
+	  (values a vals)))
+    => 1 '())
+
+  ;;Producer not returning.
+  ;;
+  (doit (call-with-values
+	    (lambda () (error #f "wrong"))
+	  (lambda (a b . rest)
+	    (values a b rest)))
+	=> <no-return>)
+  (check
+      (try
+	  (call-with-values
+	      (lambda () (error #f "wrong"))
+	    (lambda (a b . rest)
+	      (values a b rest)))
+	(catch E
+	  ((&error)
+	   (condition-message E))
+	  (else E)))
+    => "wrong")
 
   (void))
 
