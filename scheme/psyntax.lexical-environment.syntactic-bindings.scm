@@ -808,16 +808,16 @@
   	   (formals.sexp (cdr sexp))
   	   (retvals.stx  (bless retvals.sexp))
   	   (formals.stx  (bless formals.sexp)))
-      (define (%make-synner message signature.stx)
+      (define (%make-synner super-message signature.stx)
 	(lambda (message subform)
 	  (raise
 	   (condition (make-who-condition __module_who__)
-		      (make-message-condition message)
+		      (make-message-condition (string-append super-message message))
 		      (make-irritants-condition (list core-prim.sym))
 		      (make-syntax-violation signature.stx subform)))))
-      (let ((retvals.sig (let ((synner (%make-synner "error initialising core primitive retvals signature" retvals.stx)))
+      (let ((retvals.sig (let ((synner (%make-synner "error initialising core primitive retvals signature: " retvals.stx)))
 			   (make-type-signature (syntax-object->type-signature-specs retvals.stx (current-inferior-lexenv) synner))))
-	    (formals.sig (let ((synner (%make-synner "error initialising core primitive formals signature" formals.stx)))
+	    (formals.sig (let ((synner (%make-synner "error initialising core primitive formals signature: " formals.stx)))
 			   (make-type-signature (syntax-object->type-signature-specs formals.stx (current-inferior-lexenv) synner)))))
 	(make-lambda-signature retvals.sig formals.sig))))
 
@@ -861,11 +861,11 @@
   ;;
   ;;and ?HARD-CODED-SEXP has the format:
   ;;
-  ;;   (?type-name ?parent-name
-  ;;     ?constructor-name ?type-predicate-name
-  ;;     ?equality-predicate-name ?comparison-procedure-name ?hash-function-name
-  ;;     ?type-descriptor-name
-  ;;     ((?method-name . ?method-implementation-procedure) ...))
+  ;;   (?type-name ?uid-symbol ?parent-name
+  ;;    ?constructor-name ?type-predicate-name
+  ;;    ?equality-predicate-name ?comparison-procedure-name ?hash-function-name
+  ;;    ?type-descriptor-name
+  ;;    ((?method-name . ?method-implementation-procedure) ...))
   ;;
   ;;and the usable descriptor has the format:
   ;;
@@ -882,20 +882,21 @@
   (let* ((descr.type			(syntactic-binding-descriptor.type  descriptor))
 	 (descr.value			(syntactic-binding-descriptor.value descriptor))
 	 (type-name.sym			(car descr.value))
-	 (parent-name.sexp		(list-ref descr.value 1))
-	 (constructor.stx		(bless (list-ref descr.value 2)))
-	 (type-predicate.stx		(bless (list-ref descr.value 3)))
-	 (equality-predicate.sexp	(list-ref descr.value 4))
-	 (comparison-procedure.sexp	(list-ref descr.value 5))
-	 (hash-function.sexp		(list-ref descr.value 6))
-	 (type-descriptor.id		(core-prim-id (list-ref descr.value 7)))
-	 (methods-table			(%alist-ref-or-null descr.value 8)))
+	 (uid.sym			(list-ref descr.value 1))
+	 (parent-name.sexp		(list-ref descr.value 2))
+	 (constructor.stx		(bless (list-ref descr.value 3)))
+	 (type-predicate.stx		(bless (list-ref descr.value 4)))
+	 (equality-predicate.sexp	(list-ref descr.value 5))
+	 (comparison-procedure.sexp	(list-ref descr.value 6))
+	 (hash-function.sexp		(list-ref descr.value 7))
+	 (type-descriptor.id		(core-prim-id (list-ref descr.value 8)))
+	 (methods-table			(%alist-ref-or-null descr.value 9)))
     (let ((type-name.id			(core-prim-id type-name.sym))
 	  (parent-name.id		(and parent-name.sexp		(core-prim-id parent-name.sexp)))
 	  (equality-predicate.stx	(and equality-predicate.sexp	(core-prim-id equality-predicate.sexp)))
 	  (comparison-procedure.stx	(and comparison-procedure.sexp	(core-prim-id comparison-procedure.sexp)))
 	  (hash-function.stx		(and hash-function.sexp		(core-prim-id hash-function.sexp))))
-      (let* ((parent-name.ots	(and parent-name.id
+      (let* ((parent.ots	(and parent-name.id
 				     (with-exception-handler
 					 (lambda (E)
 					   (raise (condition
@@ -903,7 +904,10 @@
 						    E)))
 				       (lambda ()
 					 (id->object-type-spec parent-name.id (make-empty-lexenv))))))
-	     (type-name.ots	(make-scheme-type-spec type-name.id parent-name.ots
+	     (uids-list		(cons uid.sym (if parent.ots
+						  (object-type-spec.unique-identifiers parent.ots)
+						'())))
+	     (type-name.ots	(make-scheme-type-spec type-name.id uids-list parent.ots
 						       constructor.stx type-predicate.stx
 						       equality-predicate.stx comparison-procedure.stx hash-function.stx
 						       type-descriptor.id methods-table)))
@@ -965,7 +969,7 @@
   ;;
   ;;where ?HARD-CODED-SEXP has the format:
   ;;
-  ;;   (?type-name ?rtd-name ?rcd-name ?parent-id
+  ;;   (?type-name ?uid ?rtd-name ?rcd-name ?parent-id
   ;;    ?constructor-id ?type-predicate-id
   ;;    ?accessors-alist ?mutators-alist)
   ;;
@@ -977,22 +981,23 @@
   (let* ((descr.type			(syntactic-binding-descriptor.type  descriptor))
 	 (hard-coded-sexp		(syntactic-binding-descriptor.value descriptor))
 	 (type-name.id			(core-prim-id (car hard-coded-sexp)))
-	 (rtd.id			(core-prim-id (list-ref hard-coded-sexp 1)))
-	 (rcd.id			(core-prim-id (list-ref hard-coded-sexp 2)))
+	 (uid.sym			(list-ref hard-coded-sexp 1))
+	 (rtd.id			(core-prim-id (list-ref hard-coded-sexp 2)))
+	 (rcd.id			(core-prim-id (list-ref hard-coded-sexp 3)))
 	 (super-protocol.id		#f)
-	 (parent.id			(cond ((list-ref hard-coded-sexp 3)
+	 (parent.id			(cond ((list-ref hard-coded-sexp 4)
 					       => core-prim-id)
 					      (else #f)))
-	 (constructor-sexp		(bless (list-ref hard-coded-sexp 4)))
+	 (constructor-sexp		(bless (list-ref hard-coded-sexp 5)))
 	 (destructor-sexp		#f)
-	 (type-predicate-sexp		(bless (list-ref hard-coded-sexp 5)))
+	 (type-predicate-sexp		(bless (list-ref hard-coded-sexp 6)))
 	 (equality-predicate.id		#f)
 	 (comparison-procedure.id	#f)
 	 (hash-function.id		#f)
-	 (accessors-table		(%alist-ref-or-null hard-coded-sexp 6))
+	 (accessors-table		(%alist-ref-or-null hard-coded-sexp 7))
 	 (mutators-table		'())
 	 (methods-table			accessors-table)
-	 (ots				(make-record-type-spec type-name.id rtd.id rcd.id super-protocol.id parent.id
+	 (ots				(make-record-type-spec type-name.id uid.sym rtd.id rcd.id super-protocol.id parent.id
 							       constructor-sexp destructor-sexp type-predicate-sexp
 							       equality-predicate.id comparison-procedure.id hash-function.id
 							       accessors-table mutators-table methods-table)))
@@ -1024,7 +1029,7 @@
   ;;
   ;;where ?HARD-CODED-SEXP has the format:
   ;;
-  ;;   (?type-name ?rtd-name ?rcd-name
+  ;;   (?type-name ?uid ?rtd-name ?rcd-name
   ;;    ?parent-name ?constructor-name ?type-predicate-name ?accessors-alist)
   ;;
   ;;Syntactic  binding  descriptors  of type  "$core-condition-object-type-name"  are
@@ -1036,22 +1041,23 @@
   (let* ((descr.type			(syntactic-binding-descriptor.type  descriptor))
 	 (hard-coded-sexp		(syntactic-binding-descriptor.value descriptor))
 	 (type-name.id			(core-prim-id (car hard-coded-sexp)))
-	 (rtd.id			(core-prim-id (list-ref hard-coded-sexp 1)))
-	 (rcd.id			(core-prim-id (list-ref hard-coded-sexp 2)))
+	 (uid.sym			(list-ref hard-coded-sexp 1))
+	 (rtd.id			(core-prim-id (list-ref hard-coded-sexp 2)))
+	 (rcd.id			(core-prim-id (list-ref hard-coded-sexp 3)))
 	 (super-protocol.id		#f)
-	 (parent.id			(cond ((list-ref hard-coded-sexp 3)
+	 (parent.id			(cond ((list-ref hard-coded-sexp 4)
 					       => core-prim-id)
 					      (else #f)))
-	 (constructor.id		(core-prim-id (list-ref hard-coded-sexp 4)))
+	 (constructor.id		(core-prim-id (list-ref hard-coded-sexp 5)))
 	 (destructor.id			#f)
-	 (type-predicate.id		(core-prim-id (list-ref hard-coded-sexp 5)))
+	 (type-predicate.id		(core-prim-id (list-ref hard-coded-sexp 6)))
 	 (equality-predicate.id		#f)
 	 (comparison-procedure.id	#f)
 	 (hash-function.id		#f)
-	 (accessors-table		(%alist-ref-or-null hard-coded-sexp 6))
+	 (accessors-table		(%alist-ref-or-null hard-coded-sexp 7))
 	 (mutators-table		'())
 	 (methods-table			accessors-table)
-	 (ots				(make-record-type-spec type-name.id
+	 (ots				(make-record-type-spec type-name.id uid.sym
 							       rtd.id rcd.id super-protocol.id parent.id
 							       constructor.id destructor.id type-predicate.id
 							       equality-predicate.id comparison-procedure.id hash-function.id

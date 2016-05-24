@@ -197,6 +197,14 @@
   (attributes
    ((_)				effect-free)))
 
+(declare-core-primitive record-type-uids-list
+    (safe)
+  (signatures
+   #;((<record-type-descriptor>)	=> ((or <false> <symbol>)))
+   ((<record-type-descriptor>)		=> ((list-of <symbol>))))
+  (attributes
+   ((_)				effect-free)))
+
 (declare-core-primitive record-type-all-field-names
     (safe)
   (signatures
@@ -374,13 +382,13 @@
     (unsafe)
   (signatures
    ;;name
-   ;;parent uid sealed? opaque?
+   ;;parent uid generative? sealed? opaque?
    ;;fields normalised-fields
    ;;destructor printer
    ;;equality-predicate comparison-procedure hash-function
    ;;method-retriever
    ((<symbol>
-     (or <false> <record-type-descriptor>) (or <false> <symbol>) <boolean> <boolean>
+     (or <false> <record-type-descriptor>) <symbol> <boolean> <boolean> <boolean>
      (vector-of (list <symbol> <symbol>)) (vector-of (pair <boolean> <symbol>))
      (or <false> <type-destructor>) (or <false> <type-printer>)
      (or <false> <equality-predicate>) (or <false> <comparison-procedure>) (or <false> <hash-function>)

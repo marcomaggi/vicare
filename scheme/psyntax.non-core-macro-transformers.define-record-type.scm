@@ -144,10 +144,9 @@
   (define-values (foo-parent.id parent-rtd.id parent-rcd.id parent-rtd-definition parent-rcd-definition)
     (%make-parent-rtd+rcd-code clause* foo input-form.stx synner))
 
-  ;;This can be a symbol or false.  When a symbol: the symbol is the record type UID,
-  ;;which will make this record type non-generative.  When false: this record type is
-  ;;generative.
-  (define foo-uid
+  ;;FOO-UID is a  symbol representing the record-type  UID; it is a  symbol even when
+  ;;the record-type is generative.  GENERATIVE?  can be true or false.
+  (define-values (foo-uid generative?)
     (%get-uid foo clause* synner))
 
   ;;Code for default record-constructor descriptor.
@@ -236,7 +235,7 @@
 
   ;;Null or a list of definitions to build at run-time the record-type descriptor.
   (define foo-rtd-definitions
-    (%make-rtd-definitions foo foo-rtd foo-uid clause* parent-rtd.id fields-vector-spec
+    (%make-rtd-definitions foo foo-rtd foo-uid generative? clause* parent-rtd.id fields-vector-spec
 			   foo-destructor.id (%make-custom-printer-code clause* foo synner)
 			   foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
 			   methods-retriever-code.sexp synner))
@@ -245,7 +244,7 @@
   ;;expand-time, returns the right-hand side of the record-type name's DEFINE-SYNTAX.
   ;;The value of the right-hand side is the syntactic binding's descriptor.
   (define foo-syntactic-binding-form
-    (%make-type-name-syntactic-binding-form foo make-foo foo? foo-super-rcd.id foo-destructor.id
+    (%make-type-name-syntactic-binding-form foo foo-uid make-foo foo? foo-super-rcd.id foo-destructor.id
 					    foo-parent.id foo-rtd foo-rcd
 					    field-name*.sym field-relative-idx*
 					    foo-equality-predicate.id
@@ -390,13 +389,16 @@
   (let ((clause (%get-clause 'nongenerative clause*)))
     (syntax-match clause ()
       ((_)
-       (gensym (syntax->datum foo)))
+       ;;This record-type is nongenerative.
+       (values (gensym (syntax->datum foo)) #f))
       ((_ ?uid)
+       ;;This record-type is nongenerative.
        (identifier? ?uid)
-       (syntax->datum ?uid))
+       (values (syntax->datum ?uid) #f))
       ;;No matching clause found.  This record type will be non-generative.
       (#f
-       #f)
+       ;;This record-type is generative.
+       (values (gensym (syntax->datum foo)) #t))
       (_
        (synner "expected symbol or no argument in nongenerative clause" clause)))))
 
@@ -939,7 +941,8 @@
        (synner "invalid syntax in PARENT clause" parent-clause)))))
 
 
-(define (%make-rtd-definitions foo foo-rtd foo-uid clause* parent-rtd fields-vector-spec
+(define (%make-rtd-definitions foo foo-rtd foo-uid generative?
+			       clause* parent-rtd fields-vector-spec
 			       destructor printer
 			       equality-predicate comparison-procedure hash-function
 			       method-retriever synner)
@@ -971,7 +974,8 @@
 						       (cons (eq? 'mutable (car item)) (cadr item)))
 					   fields-vector-spec))))
     `((define/typed (brace ,foo-rtd <record-type-descriptor>)
-	($make-record-type-descriptor-ex (quote ,foo) ,parent-rtd (quote ,foo-uid) ,sealed? ,opaque?
+	($make-record-type-descriptor-ex (quote ,foo) ,parent-rtd
+					 (quote ,foo-uid) ,generative? ,sealed? ,opaque?
 					 ,fields-vec ,normalised-fields-vec
 					 ,destructor ,printer
 					 ,equality-predicate ,comparison-procedure ,hash-function
@@ -1310,7 +1314,7 @@
     #f))
 
 
-(define* (%make-type-name-syntactic-binding-form foo.id make-foo.id foo?.id
+(define* (%make-type-name-syntactic-binding-form foo.id foo-uid make-foo.id foo?.id
 						 foo-super-rcd.sym foo-destructor.sym
 						 foo-parent.id foo-rtd.sym foo-rcd.sym
 						 field-name*.sym field-relative-idx*
@@ -1324,6 +1328,8 @@
   ;;name's syntactic binding's descriptor.
   ;;
   ;;FOO.ID must be the identifier bound to the type name.
+  ;;
+  ;;FOO-UID must be false or the UID of this record type.
   ;;
   ;;MAKE-FOO.ID must be the identifier bound to the default constructor function.
   ;;
@@ -1407,6 +1413,7 @@
     (%make-alist-from-syms method-name*.sym method-procname*.sym))
 
   `(make-record-type-spec (syntax ,foo.id)
+			  (quote ,foo-uid)
 			  (syntax ,foo-rtd.sym)
 			  (syntax ,foo-rcd.sym)
 			  ,(and foo-super-rcd.sym `(syntax ,foo-super-rcd.sym))

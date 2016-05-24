@@ -46,12 +46,14 @@
        (define (mkid . str*)
 	 (datum->syntax #'?type-name (string->symbol (apply string-append str*))))
        (with-syntax
-	   ((TYPE-RTD (mkid type-name.str "-rtd"))
-	    (TYPE-RCD (mkid type-name.str "-rcd")))
+	   ((UID	(datum->syntax #'?kwd (string->symbol
+					       (string-append "vicare:scheme-type:" type-name.str))))
+	    (TYPE-RTD	(mkid type-name.str "-rtd"))
+	    (TYPE-RCD	(mkid type-name.str "-rcd")))
 	 #'(set-cons! VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 		      (quote (?type-name
 			      ($core-record-type-name
-			       . (?type-name TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate
+			       . (?type-name UID TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate
 					     ((?field-name . ?accessor-name) ...)))))))))
     ))
 
@@ -112,6 +114,7 @@
   #f object-type-spec?
   (methods
    (name				object-type-spec.name)
+   (unique-identifiers			object-type-spec.unique-identifiers)
    (type-annotation			object-type-spec.type-annotation)
    (parent-ots				object-type-spec.parent-ots)
    (constructor-stx			object-type-spec.constructor-stx)

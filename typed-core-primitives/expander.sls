@@ -742,6 +742,7 @@
     (safe)
   (signatures
    ((<syntactic-identifier>		 ;type-name
+     <symbol>				 ;uid
      <syntactic-identifier>		 ;rcd-id
      <syntactic-identifier>		 ;rtd-id
      (or <false> <syntactic-identifier>) ;super-protocol-id

@@ -143,6 +143,7 @@
 		   (attributes
 		    ((_)		effect-free))))
 		)))
+  (declare struct-std		<struct-type-descriptor>)
   (declare struct-rtd		<struct-type-descriptor>)
   (declare struct-name		<string>)
   (declare struct-length	<non-negative-fixnum>)

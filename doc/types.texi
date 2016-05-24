@@ -3304,7 +3304,7 @@ is no constructor.  The type predicate is @func{inexact-compnum?}.
 @deftpx {Parent Type} @aclass{inexact-compnum}
 Type of compnum values having both the real part and imaginary part
 equal to zero.  There is no constructor.  The type predicate is
-@func{zero-cflonum?}.
+@func{zero-compnum?}.
 
 Remembering that a compnum with exact zero as imaginary part is
 converted to a real number by @func{make-rectangular}:

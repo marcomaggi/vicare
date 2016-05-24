@@ -774,6 +774,7 @@
 	      `(module (,?name ,?constructor ,?predicate . ,?accessor*)
 		 (define-syntax ,?name
 		   (make-record-type-spec (syntax ,?name)
+					  (quote ,UID)
 					  (syntax ,RTD)
 					  (syntax ,RCD)
 					  #f #;super-rcd
@@ -789,7 +790,7 @@
 					  ,METHOD-TABLE))
 		 (define/std ,RTD
 		   ($make-record-type-descriptor-ex (quote ,?name) (record-type-descriptor ,?parent-name)
-						    (quote ,UID) ,SEALED? ,OPAQUE?
+						    (quote ,UID) #f ,SEALED? ,OPAQUE?
 						    (quote ,FIELDS-VECTOR) (quote ,NORMAL-FIELDS-VECTOR)
 						    #f ;destructor
 						    #f ;printer

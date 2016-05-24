@@ -632,7 +632,11 @@ vicare_sed_edit = sed \
 	-e 's|@VICARE_BUILT_WITH_GLIBC_ENABLED[@]|$(VICARE_BUILT_WITH_GLIBC_ENABLED)|g'	      \
 	-e 's|@VICARE_BUILT_WITH_LINUX_ENABLED[@]|$(VICARE_BUILT_WITH_LINUX_ENABLED)|g'
 
-scheme/ikarus.config.scm: scheme/ikarus.config.scm.in Makefile
+# NOTE I am  not putting "Makefile" in the list  of dependencies here,
+# although it would be more correct.   This is because I do *not* want
+# to trigger a  full rebuild every time I touch  the makefile for some
+# minor reason.  Sue me.  (Marco Maggi; Tue May 24, 2016)
+scheme/ikarus.config.scm: scheme/ikarus.config.scm.in
 	test -d $(builddir)/scheme || $(MKDIR_P) $(builddir)/scheme
 	$(vicare_sed_edit) $(srcdir)/scheme/ikarus.config.scm.in >$(builddir)/scheme/ikarus.config.scm
 
@@ -1017,6 +1021,8 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-language-extensions-simple-match.sps		\
 	tests/test-vicare-language-extensions-streams.sps		\
 	tests/test-vicare-language-extensions-variables.sps		\
+	tests/test-vicare-multimethods-ordinary.sps			\
+	tests/test-vicare-multimethods-starred.sps			\
 	\
 	tests/test-vicare-containers-arrays.sps				\
 	tests/test-vicare-containers-binary-heaps.sps			\

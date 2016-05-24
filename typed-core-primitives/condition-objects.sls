@@ -38,6 +38,11 @@
 (declare-type-predicate condition?		<condition>)
 (declare-type-predicate compound-condition?	<compound-condition>)
 
+(declare-core-primitive simple-condition?
+    (safe)
+  (signatures
+   ((&condition)		=> (<boolean>))))
+
 (declare-list-of-type-predicate list-of-conditions?		<condition>)
 (declare-list-of-type-predicate list-of-simple-conditions?	&condition)
 

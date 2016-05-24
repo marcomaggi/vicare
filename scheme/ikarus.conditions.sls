@@ -717,7 +717,8 @@
 	  (andmap identifier? #'(?field ...))
 	  (andmap identifier? #'(?accessor ...)))
      (with-syntax
-	 ((UID			(mkname "vicare:condition:" #'?name ""))
+	 ((UID			(mkname "vicare:scheme-type:" #'?name ""))
+	  (GENERATIVE?		#f)
 	  (RTD			(mkname "" #'?name "-rtd"))
 	  (RCD			(mkname "" #'?name "-rcd"))
 	  (PARENT-RTD		(mkname "" #'?parent-name "-rtd"))
@@ -729,7 +730,8 @@
        ;;easier to rotate the boot images.
        #'(begin ;;module (RTD RCD ?constructor ?predicate ?accessor ...)
 	   (define RTD
-	     ($make-record-type-descriptor-ex (quote ?name) PARENT-RTD (quote UID) SEALED? OPAQUE?
+	     ($make-record-type-descriptor-ex (quote ?name) PARENT-RTD
+					      (quote UID) GENERATIVE? SEALED? OPAQUE?
 					      '#((immutable ?field) ...) '#((#f . ?field) ...)
 					      #f	;destructor
 					      #f	;printer

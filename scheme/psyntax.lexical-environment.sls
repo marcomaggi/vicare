@@ -113,7 +113,7 @@
     <object-type-spec>-rtd				<object-type-spec>-rcd
     object-type-spec?
     object-type-spec.name				object-type-spec.type-annotation
-    object-type-spec.parent-ots
+    object-type-spec.parent-ots				object-type-spec.unique-identifiers
     object-type-spec.constructor-stx			object-type-spec.destructor-stx
     object-type-spec.type-predicate-stx			object-type-spec.equality-predicate
     object-type-spec.comparison-procedure		object-type-spec.hash-function

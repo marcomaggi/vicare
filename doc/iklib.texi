@@ -11843,6 +11843,24 @@ as follows:
 @end lisp
 @end defun
 
+
+@defun record-type-uids-list @var{rtd}
+Return a list of symbols representing the hierarchy of the record--type
+@var{rtd}.
+
+@lisp
+(define-record-type duo
+  (nongenerative user:duo)
+  (fields one two))
+
+(record-type-uids-list (record-type-descriptor duo))
+@result{} (user:duo
+    vicare:scheme-type:<record>
+    vicare:scheme-type:<struct>
+    vicare:scheme-type:<top>)
+@end lisp
+@end defun
+
 @c page
 @node iklib promises
 @section Delay, force and promises

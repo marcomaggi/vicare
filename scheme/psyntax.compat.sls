@@ -44,6 +44,7 @@
 
     for-each-in-order
     define-struct			make-struct-type
+    struct-type-symbol
     make-parameter			parametrise
     symbol-value			set-symbol-value!
     symbol-bound?

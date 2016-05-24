@@ -44,12 +44,14 @@
        (define (mkid . str*)
 	 (datum->syntax #'?type-name (string->symbol (apply string-append str*))))
        (with-syntax
-	   ((TYPE-RTD (mkid type-name.str "-rtd"))
-	    (TYPE-RCD (mkid type-name.str "-rcd")))
+	   ((UID	(datum->syntax #'?kwd (string->symbol
+					       (string-append "vicare:scheme-type:" type-name.str))))
+	    (TYPE-RTD	(mkid type-name.str "-rtd"))
+	    (TYPE-RCD	(mkid type-name.str "-rcd")))
 	 #'(set-cons! VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 		      (quote (?type-name
 			      ($core-condition-object-type-name
-			       . (?type-name TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate
+			       . (?type-name UID TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate
 					     ((?field-name . ?accessor-name) ...)))))))))
     ))
 

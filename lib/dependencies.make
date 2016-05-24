@@ -607,6 +607,80 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/tracing-syntaxes.sls
 CLEANFILES += lib/vicare/language-extensions/tracing-syntaxes.fasl
 
+lib/vicare/language-extensions/multimethods/types.fasl: \
+		lib/vicare/language-extensions/multimethods/types.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_language_extensions_multimethods_types_fasldir = $(bundledlibsdir)/vicare/language-extensions/multimethods
+lib_vicare_language_extensions_multimethods_types_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions/multimethods
+nodist_lib_vicare_language_extensions_multimethods_types_fasl_DATA = lib/vicare/language-extensions/multimethods/types.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_language_extensions_multimethods_types_vicare_sls_DATA = lib/vicare/language-extensions/multimethods/types.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/language-extensions/multimethods/types.vicare.sls
+CLEANFILES += lib/vicare/language-extensions/multimethods/types.fasl
+
+lib/vicare/language-extensions/multimethods/symbols-tree.fasl: \
+		lib/vicare/language-extensions/multimethods/symbols-tree.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_language_extensions_multimethods_symbols_tree_fasldir = $(bundledlibsdir)/vicare/language-extensions/multimethods
+lib_vicare_language_extensions_multimethods_symbols_tree_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions/multimethods
+nodist_lib_vicare_language_extensions_multimethods_symbols_tree_fasl_DATA = lib/vicare/language-extensions/multimethods/symbols-tree.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_language_extensions_multimethods_symbols_tree_vicare_sls_DATA = lib/vicare/language-extensions/multimethods/symbols-tree.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/language-extensions/multimethods/symbols-tree.vicare.sls
+CLEANFILES += lib/vicare/language-extensions/multimethods/symbols-tree.fasl
+
+lib/vicare/language-extensions/multimethods/auxiliary-syntaxes.fasl: \
+		lib/vicare/language-extensions/multimethods/auxiliary-syntaxes.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_language_extensions_multimethods_auxiliary_syntaxes_fasldir = $(bundledlibsdir)/vicare/language-extensions/multimethods
+lib_vicare_language_extensions_multimethods_auxiliary_syntaxes_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions/multimethods
+nodist_lib_vicare_language_extensions_multimethods_auxiliary_syntaxes_fasl_DATA = lib/vicare/language-extensions/multimethods/auxiliary-syntaxes.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_language_extensions_multimethods_auxiliary_syntaxes_vicare_sls_DATA = lib/vicare/language-extensions/multimethods/auxiliary-syntaxes.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/language-extensions/multimethods/auxiliary-syntaxes.vicare.sls
+CLEANFILES += lib/vicare/language-extensions/multimethods/auxiliary-syntaxes.fasl
+
+lib/vicare/language-extensions/multimethods/methods-table.fasl: \
+		lib/vicare/language-extensions/multimethods/methods-table.vicare.sls \
+		lib/vicare/language-extensions/multimethods/symbols-tree.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_language_extensions_multimethods_methods_table_fasldir = $(bundledlibsdir)/vicare/language-extensions/multimethods
+lib_vicare_language_extensions_multimethods_methods_table_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions/multimethods
+nodist_lib_vicare_language_extensions_multimethods_methods_table_fasl_DATA = lib/vicare/language-extensions/multimethods/methods-table.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_language_extensions_multimethods_methods_table_vicare_sls_DATA = lib/vicare/language-extensions/multimethods/methods-table.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/language-extensions/multimethods/methods-table.vicare.sls
+CLEANFILES += lib/vicare/language-extensions/multimethods/methods-table.fasl
+
+lib/vicare/language-extensions/multimethods.fasl: \
+		lib/vicare/language-extensions/multimethods.vicare.sls \
+		lib/vicare/language-extensions/multimethods/types.fasl \
+		lib/vicare/language-extensions/multimethods/methods-table.fasl \
+		lib/vicare/language-extensions/multimethods/auxiliary-syntaxes.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_language_extensions_multimethods_fasldir = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_multimethods_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+nodist_lib_vicare_language_extensions_multimethods_fasl_DATA = lib/vicare/language-extensions/multimethods.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_language_extensions_multimethods_vicare_sls_DATA = lib/vicare/language-extensions/multimethods.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/language-extensions/multimethods.vicare.sls
+CLEANFILES += lib/vicare/language-extensions/multimethods.fasl
+
 lib/vicare/build-tools/automake.fasl: \
 		lib/vicare/build-tools/automake.vicare.sls \
 		lib/vicare/posix.fasl \

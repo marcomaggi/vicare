@@ -3770,6 +3770,28 @@
   #| end of module |# )
 
 
+;;;; module core-macro-transformer: TYPE-UNIQUE-IDENTIFIERS
+
+(define-core-transformer (type-unique-identifiers input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  TYPE-UNIQUE-IDENTIFIERS syntaxes  from the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI object.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?type-id)
+     (identifier? ?type-id)
+     (let ((ots (with-exception-handler
+		    (lambda (E)
+		      (raise (condition E (make-syntax-violation input-form.stx ?type-id))))
+		  (lambda ()
+		    (id->object-type-spec ?type-id lexenv.run)))))
+       (make-psi input-form.stx
+	 (build-data no-source (object-type-spec.unique-identifiers ots))
+	 (make-type-signature/single-value (make-list-of-type-spec (<symbol>-ots))))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
+
+
 ;;;; module core-macro-transformer: EXPANSION-OF
 
 (define-core-transformer (expansion-of input-form.stx lexenv.run lexenv.expand)

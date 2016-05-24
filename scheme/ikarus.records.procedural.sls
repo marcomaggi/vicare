@@ -34,6 +34,7 @@
     record-type-sealed?			record-type-opaque?
     record-field-mutable?
     record-type-field-names
+    (rename (<rtd>-uids-list record-type-uids-list))
 
     ;; bindings for (vicare system $records)
 
@@ -94,7 +95,7 @@
 		  record-type-uid			record-type-generative?
 		  record-type-sealed?			record-type-opaque?
 		  record-field-mutable?
-		  record-type-field-names
+		  record-type-field-names		record-type-uids-list
 
 		  ;; extension utility functions, non-R6RS
 		  rtd-subtype?				record-type-all-field-names
@@ -244,6 +245,9 @@
    uid
 		;Scheme symbol  acting as unique  record type identifier.   The field
 		;"value" of the UID holds a reference to this <RTD>.
+   uids-list
+		;A  proper list  of symbols  representing the  type hierarcy  of this
+		;record-type.
    generative?
 		;True if this record type is generative.
    fields
@@ -953,14 +957,16 @@
       ($make-record-type-descriptor name parent uid sealed? opaque? fields normalised-fields)))
 
   (define ($make-record-type-descriptor name parent uid sealed? opaque? fields normalised-fields)
-    ($make-record-type-descriptor-ex name parent uid sealed? opaque? fields normalised-fields
-				     #f	;destructor
-				     #f	;printer
-				     #f	;equality-predicate
-				     #f	;comparison-procedure
-				     #f	;hash-function
-				     #f	;method-retriever
-				     ))
+    (let ((generative?	(if uid #f #t))
+	  (uid		(or uid (gensym name))))
+      ($make-record-type-descriptor-ex name parent uid generative? sealed? opaque? fields normalised-fields
+				       #f ;destructor
+				       #f ;printer
+				       #f ;equality-predicate
+				       #f ;comparison-procedure
+				       #f ;hash-function
+				       #f ;method-retriever
+				       )))
 
   (define* (make-record-type-descriptor-ex {name    record-type-name?}
 					   {parent  false/non-sealed-record-type-descriptor?}
@@ -974,13 +980,15 @@
 					   {comparison-procedure (or not procedure?)}
 					   {hash-function (or not procedure?)}
 					   {method-retriever (or not procedure?)})
-    (let ((normalised-fields (%normalise-fields-vector fields)))
-      ($make-record-type-descriptor-ex name parent uid sealed? opaque? fields normalised-fields
+    (let ((normalised-fields	(%normalise-fields-vector fields))
+	  (generative?		(if uid #f #t))
+	  (uid			(or uid (gensym name))))
+      ($make-record-type-descriptor-ex name parent uid generative? sealed? opaque? fields normalised-fields
 				       destructor printer
 				       equality-predicate comparison-procedure hash-function
 				       method-retriever)))
 
-  (define ($make-record-type-descriptor-ex name parent uid sealed? opaque? fields normalised-fields
+  (define ($make-record-type-descriptor-ex name parent uid generative? sealed? opaque? fields normalised-fields
 					   destructor printer
 					   equality-predicate comparison-procedure hash-function
 					   method-retriever)
@@ -997,15 +1005,15 @@
     ;;building a normalised fields vector here.  (Marco Maggi; Fri Dec 4, 2015)
     ;;
     (receive-and-return (rtd)
-	(if (symbol? uid)
-	    (%make-nongenerative-rtd name parent uid sealed? opaque? fields normalised-fields
-				     destructor printer
-				     equality-predicate comparison-procedure hash-function
-				     method-retriever)
-	  (%generate-rtd name parent (gensym name) #t sealed? opaque? normalised-fields
-			 destructor printer
-			 equality-predicate comparison-procedure hash-function
-			 method-retriever))
+	(if generative?
+	    (%generate-rtd name parent uid generative? sealed? opaque? normalised-fields
+			   destructor printer
+			   equality-predicate comparison-procedure hash-function
+			   method-retriever)
+	  (%make-nongenerative-rtd name parent uid sealed? opaque? fields normalised-fields
+				   destructor printer
+				   equality-predicate comparison-procedure hash-function
+				   method-retriever))
       ($set-<rtd>-initialiser! rtd (%make-record-initialiser rtd))))
 
   (define (%generate-rtd name parent-rtd uid generative? sealed? opaque? normalised-fields
@@ -1026,15 +1034,20 @@
 	  ;;We  use  "$struct"  rather  than  "make-<rtd>"  to  avoid  crashes  while
 	  ;;initialising the boot  image!!!  This way we separate  this function from
 	  ;;whatever is the expansion of DEFINE-STRUCT.
-	  ($struct (type-descriptor <rtd>) name
-		   total-fields-number fields-number first-field-index
-		   parent-rtd sealed? opaque? uid generative? normalised-fields
-		   (void) ;initialiser
-		   #f     ;default-protocol
-		   #f     ;default-rcd
-		   destructor printer
-		   equality-predicate comparison-procedure hash-function
-		   method-retriever)
+	  (let ((uids-list (cons uid (if parent-rtd
+					 (<rtd>-uids-list parent-rtd)
+				       '(vicare:scheme-type:<record>
+					 vicare:scheme-type:<struct>
+					 vicare:scheme-type:<top>)))))
+	    ($struct (type-descriptor <rtd>) name
+		     total-fields-number fields-number first-field-index
+		     parent-rtd sealed? opaque? uid uids-list generative? normalised-fields
+		     (void) ;initialiser
+		     #f     ;default-protocol
+		     #f     ;default-rcd
+		     destructor printer
+		     equality-predicate comparison-procedure hash-function
+		     method-retriever))
 	(%intern-nongenerative-rtd! uid rtd))))
 
   (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? fields normalised-fields

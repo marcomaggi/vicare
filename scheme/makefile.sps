@@ -705,6 +705,7 @@
 	 (new					(core-macro . new))
 	 (delete				(core-macro . delete))
 	 (type-descriptor			(core-macro . type-descriptor))
+	 (type-unique-identifiers		(core-macro . type-unique-identifiers))
 	 (is-a?					(core-macro . is-a?))
 	 (slot-ref				(core-macro . slot-ref))
 	 (slot-set!				(core-macro . slot-set!))
@@ -920,14 +921,16 @@
   (define (main stx)
     (syntax-case stx ()
       ((?kwd ?type-name ?parent-name . ?clauses)
-       (let* ((clause*.stx	(syntax-clauses-unwrap #'?clauses synner))
+       (let* ((type-name.str	(symbol->string (syntax->datum #'?type-name)))
+	      (clause*.stx	(syntax-clauses-unwrap #'?clauses synner))
 	      (clause*.stx	(syntax-clauses-collapse clause*.stx))
 	      (parsed-specs	(%parse-clauses clause*.stx)))
 	 (%validate-parent #'?parent-name)
 	 (with-syntax
-	     ((TYPE-DESCRIPTOR	(datum->syntax #'?kwd (string->symbol
-						       (string-append (symbol->string (syntax->datum #'?type-name))
-								      "-type-descriptor"))))
+	     ((TYPE-DESCRIPTOR		(datum->syntax #'?kwd (string->symbol
+							       (string-append type-name.str "-type-descriptor"))))
+	      (UID			(datum->syntax #'?kwd (string->symbol
+							       (string-append "vicare:scheme-type:" type-name.str))))
 	      (CONSTRUCTOR		(parsed-specs-constructor		parsed-specs))
 	      (PREDICATE		(parsed-specs-predicate			parsed-specs))
 	      (EQUALITY-PREDICATE	(parsed-specs-equality-predicate	parsed-specs))
@@ -937,7 +940,7 @@
 	   #'(set-cons! VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 			(quote (?type-name
 				($core-scheme-object-type-name
-				 . (?type-name ?parent-name CONSTRUCTOR PREDICATE
+				 . (?type-name UID ?parent-name CONSTRUCTOR PREDICATE
 					       EQUALITY-PREDICATE COMPARISON-PROCEDURE HASH-FUNCTION
 					       TYPE-DESCRIPTOR METHODS))))))))
       ))
@@ -1195,6 +1198,7 @@
     (new					v $language)
     (delete					v $language)
     (type-descriptor				v $language)
+    (type-unique-identifiers			v $language)
     (is-a?					v $language)
     (slot-ref					v $language)
     (slot-set!					v $language)
@@ -3255,6 +3259,7 @@
     (record-type-parent				v r ri)
     (record-type-sealed?			v r ri)
     (record-type-uid				v r ri)
+    (record-type-uids-list			v $language)
     (record?					v r ri)
     (record-object?				v $language)
     (make-record-constructor-descriptor		v r rp)
@@ -4671,6 +4676,7 @@
     (<object-type-spec>					$expander)
     (object-type-spec?					$expander)
     (object-type-spec.name				$expander)
+    (object-type-spec.unique-identifiers		$expander)
     (object-type-spec.type-annotation			$expander)
     (object-type-spec.parent-ots			$expander)
     (object-type-spec.constructor-stx			$expander)

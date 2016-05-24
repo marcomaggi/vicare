@@ -154,6 +154,91 @@
   (void))
 
 
+(parametrise ((check-test-name	'type-unique-identifiers))
+
+  (check
+      (type-unique-identifiers <top>)
+    => '(vicare:scheme-type:<top>))
+
+  (check
+      (type-unique-identifiers <string>)
+    => '(vicare:scheme-type:<string>
+	 vicare:scheme-type:<top>))
+
+  (check
+      (type-unique-identifiers <condition>)
+    => '(vicare:scheme-type:<condition>
+	 vicare:scheme-type:<record>
+	 vicare:scheme-type:<struct>
+	 vicare:scheme-type:<top>))
+
+  (check
+      (type-unique-identifiers <compound-condition>)
+    => '(vicare:scheme-type:<compound-condition>
+	 vicare:scheme-type:<condition>
+	 vicare:scheme-type:<record>
+	 vicare:scheme-type:<struct>
+	 vicare:scheme-type:<top>))
+
+  (check
+      (type-unique-identifiers &condition)
+    => '(vicare:scheme-type:&condition
+	 vicare:scheme-type:<condition>
+	 vicare:scheme-type:<record>
+	 vicare:scheme-type:<struct>
+	 vicare:scheme-type:<top>))
+
+  (check
+      (type-unique-identifiers &message)
+    => '(vicare:scheme-type:&message
+	 vicare:scheme-type:&condition
+	 vicare:scheme-type:<condition>
+	 vicare:scheme-type:<record>
+	 vicare:scheme-type:<struct>
+	 vicare:scheme-type:<top>))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (internal-body
+	(define-struct duo
+	  (one two)
+	  (nongenerative yeah))
+	(type-unique-identifiers duo))
+    => '(yeah
+	 vicare:scheme-type:<struct>
+	 vicare:scheme-type:<top>))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (internal-body
+	(define-record-type duo
+	  (nongenerative duo-1)
+	  (fields one two))
+	(type-unique-identifiers duo))
+    => '(duo-1
+	 vicare:scheme-type:<record>
+	 vicare:scheme-type:<struct>
+	 vicare:scheme-type:<top>))
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (nongenerative alpha-1))
+	(define-record-type beta
+	  (parent alpha)
+	  (nongenerative beta-1))
+	(type-unique-identifiers beta))
+    => '(beta-1
+	 alpha-1
+	 vicare:scheme-type:<record>
+	 vicare:scheme-type:<struct>
+	 vicare:scheme-type:<top>))
+
+  #| end of PARAMETRISE |# )
+
+
 (parametrise ((check-test-name	'is-a))
 
   (check-for-true	(is-a? "string" <string>))

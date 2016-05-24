@@ -1712,7 +1712,8 @@ the boot image has descriptor with one of the formats:
 
 @example
 ($core-record-type-name
-  . (@meta{rtd-name} @meta{rcd-name}
+  . (@meta{type-name} @meta{uid}
+     @meta{rtd-name} @meta{rcd-name}
      @meta{parent-name}
      @meta{constructor-name} @meta{type-predicate-name}
      @meta{accessors-alist} @meta{mutators-alist}))
@@ -1722,6 +1723,12 @@ the boot image has descriptor with one of the formats:
 where the values are:
 
 @table @asis
+@item @meta{type-name}
+A symbol representing the public name of the type.
+
+@item @meta{uid}
+A symbol representing a unique identifier for the type.
+
 @item @meta{rtd-name}
 A symbol representing the public name of the syntactic identifier to
 which the record--type descriptor is bound.
@@ -1760,7 +1767,8 @@ the formats:
 
 @example
 ($core-condition-object-type-name
-  . (@meta{rtd-name} @meta{rcd-name}
+  . (@meta{type-name} @meta{uid}
+     @meta{rtd-name} @meta{rcd-name}
      @meta{parent-name}
      @meta{constructor-name} @meta{type-predicate-name}
      @meta{accessors-alist}))
@@ -1770,6 +1778,12 @@ the formats:
 where the values are:
 
 @table @asis
+@item @meta{type-name}
+A symbol representing the public name of the type.
+
+@item @meta{uid}
+A symbol representing a unique identifier for the type.
+
 @item @meta{rtd-name}
 A symbol representing the public name of the syntactic identifier to
 which the record--type descriptor is bound.
@@ -1810,7 +1824,8 @@ the following descriptor is generated:
 
 @example
 ($core-condition-object-type-name
-  . (&who-rtd &who-rcd &condition
+  . (&who vicare:scheme-type:&who
+     &who-rtd &who-rcd &condition
      make-who-condition who-condition?
      ((who condition-who))))
 @end example
