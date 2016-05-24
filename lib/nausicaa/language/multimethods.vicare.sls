@@ -98,10 +98,10 @@
 ;;
 ;;   (lambda (a b c call-next-method next-method?) ---)
 ;;
-;;this has  the advantge of speed,  but it also has  some drawbacks, for
-;;example  it is not  possible to  use any  existent function  as method
-;;implementation.  This library makes  use of parameters instread, which
-;;are slower but simpler in the opinion of the author.
+;;this has the advantge  of speed, but it also has some drawbacks,  for example it is
+;;not possible to  use any existent function as method  implementation.  This library
+;;makes use of parameters instead, which are slower but simpler in the opinion of the
+;;author.
 ;;
 
 (define next-method-func-parm (make-parameter #f))
