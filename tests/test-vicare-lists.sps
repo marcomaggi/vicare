@@ -4985,56 +4985,6 @@ called with at least two arguments.
       ($length '())
     => 0)
 
-;;; --------------------------------------------------------------------
-
-  (check
-      (map1 even-value '())
-    => '())
-
-  (check
-      (map1 even-value '(1 2 3 4))
-    => '(#f 2 #f 4))
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (with-result
-	(void-object? (for-each1 add-result '())))
-    => '(#t ()))
-
-  (check
-      (with-result
-	(void-object? (for-each1 add-result '(2 4 6))))
-    => '(#t (2 4 6)))
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (for-all1 even-value '())
-    => #t)
-
-  (check
-      (for-all1 even-value '(2 4 6))
-    => 6)
-
-  (check
-      (for-all1 even-value '(2 4 3))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (exists1 even-value '())
-    => #f)
-
-  (check
-      (exists1 even-value '(1 2 3))
-    => 2)
-
-  (check
-      (exists1 even-value '(1 3 5))
-    => #f)
-
   #t)
 
 

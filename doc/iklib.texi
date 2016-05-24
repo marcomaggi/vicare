@@ -12982,34 +12982,6 @@ Like @func{for-each} from @rsixlibrary{base} but guarantees that
 @end defun
 
 
-@defun map1 @var{proc} @var{ell}
-Like @func{map} from @rsixlibrary{lists} for a single list argument, but
-it is meant to be faster.  It does not check for circular list; it
-processes the input list from head to tail (in order).
-@end defun
-
-
-@defun for-each1 @var{proc} @var{ell}
-Like @func{for-each} from @rsixlibrary{lists} for a single list
-argument, but it is meant to be faster.  It does not check for circular
-list; it processes the input list from head to tail (in order).
-@end defun
-
-
-@defun for-all1 @var{proc} @var{ell}
-Like @func{for-all} from @rsixlibrary{lists} for a single list argument,
-but it is meant to be faster.  It does not check for circular list; it
-processes the input list from head to tail (in order).
-@end defun
-
-
-@defun exists1 @var{proc} @var{ell}
-Like @func{exists} from @rsixlibrary{lists} for a single list argument,
-but it is meant to be faster.  It does not check for circular list; it
-processes the input list from head to tail (in order).
-@end defun
-
-
 @defun andmap @var{proc} @var{ell}
 @defunx andmap @var{proc} @vari{ell} @varii{ell}
 Iterate in order the list arguments, applying @var{proc} to the items in

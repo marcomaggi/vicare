@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -1520,11 +1520,11 @@
       (if (pair? segments)
 	  (begin
 	    (put-bytevector port ($percent-encode ($car segments)))
-	    (for-each1 (lambda (segment)
-			 ;; 47 = (char->integer #\/)
-			 (put-u8 port 47)
-			 (put-bytevector port ($percent-encode segment)))
-		       ($cdr segments)))
+	    (for-each (lambda (segment)
+			;; 47 = (char->integer #\/)
+			(put-u8 port 47)
+			(put-bytevector port ($percent-encode segment)))
+	      ($cdr segments)))
 	(unless absolute?
 	  ;; 46 = (char->integer #\.)
 	  (put-u8 port 46)))

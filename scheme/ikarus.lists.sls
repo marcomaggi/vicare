@@ -28,9 +28,7 @@
     make-queue-procs
 
     ;; unsafe bindings
-    $length
-    map1		for-each1
-    for-all1		exists1)
+    $length)
   (import (except (vicare)
 		  make-list-of-predicate
 		  list?  circular-list?
@@ -39,9 +37,7 @@
 		  assq assp assv assoc remq remv remove remp filter
 		  map for-each for-each-in-order andmap ormap list-tail partition
 		  for-all exists fold-left fold-right
-		  make-queue-procs
-		  map1		for-each1
-		  for-all1	exists1)
+		  make-queue-procs)
     (vicare system $fx)
     (vicare system $pairs))
 
@@ -1286,71 +1282,6 @@
 	(error 'dequeue! "no more items in queue")))
 
     (values empty-queue? enqueue! dequeue!))))
-
-
-;;;; unsafe functions
-
-(define* (map1 func ell)
-  ;;Defined by Vicare.   Like MAP for a single list  argument, but it is
-  ;;meant  to be  faster.   It  does not  check  for  circular list;  it
-  ;;processes the input list from head to tail (in order).
-  ;;
-  (let loop ((L ell)
-	     (H #f) ;head
-	     (T #f)) ;last pair
-    (cond ((pair? L)
-	   (let* ((V (func ($car L))) ;value
-		  (P (cons V '()))    ;new last pair
-		  (T (if T
-			 (begin
-			   ($set-cdr! T P)
-			   P)
-		       P))
-		  (H (or H P)))
-	     (loop ($cdr L) H T)))
-	  ((null? L)
-	   (or H '()))
-	  (else
-	   (procedure-argument-violation __who__ "expected proper list as argument" L)))))
-
-(define* (for-each1 func ell)
-  ;;Defined by Vicare.  Like FOR-EACH for a single list argument, but it
-  ;;is meant  to be  faster.  It  does not check  for circular  list; it
-  ;;processes the input list from head to tail (in order).
-  ;;
-  (cond ((pair? ell)
-	 (func ($car ell))
-	 (for-each1 func ($cdr ell)))
-	((null? ell)
-	 (void))
-	(else
-	 (procedure-argument-violation __who__ "expected proper list as argument" ell))))
-
-(define (for-all1 func ell)
-  ;;Defined by Vicare.  Like FOR-ALL for  a single list argument, but it
-  ;;is meant  to be  faster.  It  does not check  for circular  list; it
-  ;;processes the input list from head to tail (in order).
-  ;;
-  (if (pair? ell)
-      (if (pair? ($cdr ell))
-	  (and (func ($car ell))
-	       (for-all1 func ($cdr ell)))
-	;;Last call in tail position.
-	(func ($car ell)))
-    #t))
-
-(define (exists1 func ell)
-  ;;Defined by Vicare.   Like EXISTS for a single list  argument, but it
-  ;;is meant  to be  faster.  It  does not check  for circular  list; it
-  ;;processes the input list from head to tail (in order).
-  ;;
-  (if (pair? ell)
-      (if (pair? ($cdr ell))
-	  (or (func ($car ell))
-	      (exists1 func ($cdr ell)))
-	;;Last call in tail position.
-	(func ($car ell)))
-    #f))
 
 
 ;;;; done

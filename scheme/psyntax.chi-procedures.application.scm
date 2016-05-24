@@ -40,8 +40,7 @@
   ;;
   ;;and the sub-application form can be a SPLICE-FIRST-EXPAND syntax.
   ;;
-  (syntax-match input-form.stx (map1 for-each1 for-all1 exists1 call-with-values
-				     lambda lambda/checked)
+  (syntax-match input-form.stx (call-with-values lambda lambda/checked)
     (((?nested-rator ?nested-rand* ...) ?rand* ...)
      ;;Sub-expression application.  It could be a nested expression application:
      ;;
@@ -67,86 +66,6 @@
      (options::typed-language-enabled?)
      (chi-call-with-values-application/stx-operands input-form.stx lexenv.run lexenv.expand
 						    ?producer ?consumer-stuff))
-
-    ((map1 ?func ?list)
-     (expander-option.integrate-special-list-functions?)
-     ;;This is to  be considered experimental.  The purpose of  this code integration
-     ;;it not to integrate the list  iteration function, but to allow the integration
-     ;;of ?FUNC.
-     (let ((map1 (gensym))
-	   (L (gensym))
-	   (H (gensym))
-	   (T (gensym))
-	   (V (gensym))
-	   (P (gensym)))
-       (chi-expr (bless
-		  `(let ,map1 ((,L ,?list)
-			       (,H #f)	;head
-			       (,T #f))	;last pair
-			(cond ((pair? ,L)
-			       (let* ((,V (,?func ($car ,L))) ;value
-				      (,P (cons ,V '()))      ;new last pair
-				      (,T (if ,T
-					      (begin
-						($set-cdr! ,T ,P)
-						,P)
-					    ,P))
-				      (,H (or ,H ,P)))
-				 (,map1 ($cdr ,L) ,H ,T)))
-			      ((null? ,L)
-			       (or ,H '()))
-			      (else
-			       (procedure-argument-violation 'map1 "expected proper list as argument" ,L)))))
-		 lexenv.run lexenv.expand)))
-
-    ((for-each1 ?func ?list)
-     (expander-option.integrate-special-list-functions?)
-     ;;This is to  be considered experimental.  The purpose of  this code integration
-     ;;it not  to integrate the list  iteration function FOR-EACH1, but  to allow the
-     ;;integration of ?FUNC.
-     (let ((for-each1 (gensym))
-	   (L (gensym)))
-       (chi-expr (bless
-		  `(let ,for-each1 ((,L ,?list))
-			(cond ((pair? ,L)
-			       (,?func ($car ,L))
-			       (,for-each1 ($cdr ,L)))
-			      ((null? ,L)
-			       (void))
-			      (else
-			       (procedure-argument-violation 'for-each1 "expected proper list as argument" ,L)))))
-		 lexenv.run lexenv.expand)))
-
-    ((for-all1 ?func ?list)
-     (expander-option.integrate-special-list-functions?)
-     ;;This is to  be considered experimental.  The purpose of  this code integration
-     ;;it not  to integrate the  list iteration function  FOR-ALL1, but to  allow the
-     ;;integration of ?FUNC.
-     (let ((for-all1 (gensym))
-	   (L (gensym))
-	   (R (gensym)))
-       (chi-expr (bless
-		  `(let ,for-all1 ((,L ,?list)
-				   (,R #t))
-			(if (pair? ,L)
-			    (let ((,R (,?func ($car ,L))))
-			      (and ,R (,for-all1 ($cdr ,L) ,R)))
-			  ,R)))
-		 lexenv.run lexenv.expand)))
-
-    ((exists1 ?func ?list)
-     (expander-option.integrate-special-list-functions?)
-     ;;This is to  be considered experimental.  The purpose of  this code integration
-     ;;it not  to integrate  the list  iteration function EXISTS1,  but to  allow the
-     ;;integration of ?FUNC.
-     (let ((exists1 (gensym))
-	   (L (gensym)))
-       (chi-expr (bless
-		  `(let ,exists1 ((,L ,?list))
-			(and (pair? ,L)
-			     (or (,?func ($car ,L))
-				 (,exists1 ($cdr ,L))))))
-		 lexenv.run lexenv.expand)))
 
     ((?rator ?rand* ...)
      ;;The input form is either a common function application like:

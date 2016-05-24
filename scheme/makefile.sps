@@ -3550,14 +3550,6 @@
     (utf32-string-decoding-orphan-octets.octets			v $language)
 
 ;;; --------------------------------------------------------------------
-;;; special list functions
-
-    (map1					v $language)
-    (for-each1					v $language)
-    (for-all1					v $language)
-    (exists1					v $language)
-
-;;; --------------------------------------------------------------------
 ;;;
     (define-auxiliary-syntaxes			v $language)
     (define-integrable				v $language)
