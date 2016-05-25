@@ -21,16 +21,20 @@ functions} may have qualified primary, before, after and around methods
 for each possible tuple of argument types; the methods are applied
 (composed) according to a defined protocol.
 
+Multimethods are meant to be used with the typed language.
+
 @menu
 * multimethods examples::       Examples of method dispatching.
 * multimethods application::    How generic functions and methods
                                 are invoked.
 * multimethods dispatching::    How methods are dispatched.
 * multimethods definers::       Declaring multimethod definers.
+* multimethods defining::       Built-in multimethod definers.
 * multimethods methods::        Adding methods to a multimethod.
 * multimethods next::           Invoking the next method.
 * multimethods oopp::           Notes on using generics as @oopp{} type
                                 methods.
+* multimethods predefined::     Predefined multimethods.
 @end menu
 
 @c page
@@ -38,40 +42,47 @@ for each possible tuple of argument types; the methods are applied
 @section Examples of method dispatching
 
 
-Here we show with some examples what we have to expect from the
-multimethod dispatching of @library{vicare language-extensions
-multimethods}.  In the following examples the string @code{%apple} is
-written in place of the value bound to the symbol @class{apple}.
+Here we look at some examples of what we have to expect from
+multimethods dispatching.  We will always assume that the code in the
+examples is wrapped into a @syntax{program} form as follows:
 
-Let's examine this example which uses the generic functions definer
-@func{define-generic} from the library @library{vicare language-extensions
-builtins}:
-
-@example
+@lisp
 #!vicare
-(import (rnrs)
-  (vicare language-extensions oopp)
-  (vicare language-extensions multimethods)
-  (vicare language-extensions builtins))
+(program (demo)
+  (options typed-language)
+  (import (vicare)
+    (vicare language-extensions multimethods))
 
-(define-class <one> (parent <top>) (nongenerative one))
-(define-class <two> (parent <one>) (nongenerative two))
-(define-class <c>   (parent <two>) (nongenerative c))
+  ... ;here goes the code
+
+  #| end of program |# )
+@end lisp
+
+Let's examine an example using the generic functions definer
+@func{define-generic}:
+
+@example
+(define-record-type <one>                  (nongenerative one))
+(define-record-type <two>   (parent <one>) (nongenerative two))
+(define-record-type <three> (parent <two>) (nongenerative three))
 @end example
 
 @noindent
-the class hierarchy is:
+the type hierarchy is:
 
 @example
-<top> -> <one> -> <two> -> <c>
+<top> -> <struct> -> <record> -> <one> -> <two> -> <three>
 @end example
 
 @noindent
-the list of @uid{}s for @class{c} is:
+the list of @uid{}s for @class{three} is:
 
 @example
-(type-unique-identifiers <c>)
-@result{} (c two one vicare:scheme-type::<top>)
+(type-unique-identifiers <three>)
+@result{} (three two one
+    vicare:scheme-type:<record>
+    vicare:scheme-type:<struct>
+    vicare:scheme-type:<top>)
 @end example
 
 @noindent
@@ -84,12 +95,12 @@ so for the generic function:
 @end example
 
 @noindent
-applied to a value of type @class{c}: the method with @class{two} in the
-signature is @emph{more specific} than the method with @class{one} in
-the signature:
+applied to a value of type @class{three}: the method with @class{two} in
+the signature is @emph{more specific} than the method with @class{one}
+in the signature:
 
 @example
-(doit (<c> ())) @result{} two
+(doit (new <three>)) @result{} two
 @end example
 
 @noindent
@@ -107,7 +118,7 @@ method:
 (define-method (fluff @{o <two>@})
   (cons 'two (call-next-method)))
 
-(define o (<c> ()))
+(define o (new <three>))
 
 (fluff o)
 @result{} (two . one)
@@ -123,14 +134,13 @@ It is possible to define a function accepting different numbers of
 arguments as follows:
 
 @example
-(define fluff
-  (case-lambda
-   ((a)
-    (fluff-1 a))
-   ((a b)
-    (fluff-2 a b))
-   ((a b . rest)
-    (fluff-3 a b rest))))
+(case-define fluff
+  ((a)
+   (fluff-1 a))
+  ((a b)
+   (fluff-2 a b))
+  ((a b . rest)
+   (fluff-3 a b rest)))
 
 (define-generic fluff-1 (o))
 (define-generic fluff-2 (o p))
@@ -156,9 +166,10 @@ function we may gain a bit of speed in function calls.
 @section How generic functions and methods are invoked
 
 
-The library @library{vicare language-extensions multimethods} is designed to work
-with type definitions from the library @library{vicare language-extensions oopp};
-these types are identified by a unique symbol (@uid{}).
+The library @library{vicare language-extensions multimethods} is
+designed to work with type definitions from the library
+@library{vicare}; these types are identified by a unique symbol
+(@uid{}).
 
 Ordinary generic functions allow the association of a single method to a
 tuple of arguments' types; when an ordinary generic function is applied
@@ -369,8 +380,8 @@ Methods in a generic function have the same number of arguments, so the
 tuple of arguments must match that number.
 
 @item
-Given a tuple of arguments, position by position, the class of the
-method's argument is equal to, or a parent of, the class of the given
+Given a tuple of arguments, position by position, the type of the
+method's argument is equal to, or a parent of, the type of the given
 argument.
 @end enumerate
 
@@ -489,6 +500,87 @@ useful.
 @end deffn
 
 @c page
+@node multimethods defining
+@section Built-in multimethod definers
+
+
+@defun tag-unique-identifiers-of @var{obj}
+Object--type inspector function; return the list of @uid{}s in the type
+hierarchy of @var{obj}.  When this function does not recognise an
+object's type: the return value just identifies @var{obj} as of type
+@class{top}.  This function can recognise automatically all the
+instances of types declared by @func{define-record-type}, from
+@library{nausicaa language oopp}, defined in any library.  This function
+recognise only the following built--in labels:
+
+@example
+<positive-fixnum> <negative-fixnum> <fixnum>
+<positive-bignum> <negative-bignum>
+<integer-flonum> <rational-flonum> <flonum>
+<ratnum> <cflonum> <compnum>
+<char> <string> <symbol> <vector> <bytevector>
+<spine> <pair>
+<binary-input/output-port> <textual-input/output-port>
+<binary-input-port>        <textual-input-port>
+<binary-output-port>       <textual-output-port>
+<transcoder>
+<condition> <record> <hashtable> <procedure>
+<top>
+@end example
+
+Whenever we define new label types with @func{define-label} from
+@library{nausicaa language oopp}, for example @class{alpha} and
+@class{beta}, it is useful to define a new type inspector function as:
+
+@example
+(define (new-tag-unique-identifiers-of obj)
+  (cond (((<alpha>) obj)
+         (tag-unique-identifiers <alpha>))
+        (((<beta>) obj)
+         (tag-unique-identifiers <beta>))
+        (else
+         (tag-unique-identifiers-of obj))))
+@end example
+
+@noindent
+and use it as argument--type inspector function for multimethods.
+@end defun
+
+
+@deffn Syntax define-generic @meta{name} @meta{formals} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} merge-with-multimethods @meta{generic} @dots{}
+Define a new ordinary generic function (a macro) and bind it to
+@meta{name}.  The number of arguments is specified by @meta{formals}: a
+list of identifiers, one for each argument; the list is used only to
+determine the number of arguments (it can be used to document the
+intended meaning of arguments).
+
+When the optional @clause{merge-with-multimethods} clause is used: the
+internal methods table is initialised to the union of the methods tables
+from the @meta{generic} arguments, which must be ordinary generic
+function identifiers.  The union is performed by visiting arguments from
+left to right; when two methods have the same signature, the one from
+the leftmost generic function takes precedence.
+@end deffn
+
+
+@deffn Syntax define-generic* @meta{name} @meta{formals} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} merge-with-multimethods @meta{generic} @dots{}
+Define a new starred generic function (a macro) and bind it to
+@meta{name}.  The number of arguments is specified by @meta{formals}: a
+list of identifiers, one for each argument; the list is used only to
+determine the number of arguments (it can be used to document the
+intended meaning of arguments).
+
+When the optional @clause{merge-with-multimethods} clause is used: the
+internal methods tables are initialised to the unions of the methods
+tables from the @meta{generic} arguments, which must be starred generic
+function identifiers.  The union is performed by visiting arguments from
+left to right; when two methods have the same signature, the one from
+the leftmost generic function takes precedence.
+@end deffn
+
+@c page
 @node multimethods methods
 @section Adding methods to a multimethod
 
@@ -517,7 +609,7 @@ When the @meta{qualifier} argument is the @code{:before}, @code{:after} or
 function.
 @end itemize
 
-The list of @meta{arg-spec} specifies the class of the arguments for
+The list of @meta{arg-spec} specifies the type of the arguments for
 which this method specialises the generic function; an @meta{arg-spec}
 can be:
 
@@ -647,11 +739,11 @@ object--oriented systems.  For example, given the definitions:
   (options typed-language)
   (import (vicare))
 
-(define-class <alpha>
+(define-record-type <alpha>
   (fields a)
   (methods (doit doit)))
 
-(define-class <beta>
+(define-record-type <beta>
   (parent <alpha>)
   (fields b)
   (methods (doit doit)))
@@ -694,7 +786,7 @@ in which @code{(o doit ---)} is meant to call the @func{doit} method of
 called.  This behaviour can be obtained only with multimethods, not when
 defining methods as plain functions or macros.
 
-Another interesting use of generics as class methods is the
+Another interesting use of generics as type methods is the
 implementation of pre and post conditions.
 
 The Object--Oriented Programming substitution principle states that: if
@@ -725,11 +817,11 @@ methods when we use the @code{reverse-before-methods} clause in
     (only (vicare)
           with-result add-result))
 
-(define-class <alpha>
+(define-record-type <alpha>
   (fields a)
   (methods (doit doit)))
 
-(define-class <beta>
+(define-record-type <beta>
   (parent <alpha>)
   (fields b)
   (methods (doit doit)))
@@ -766,5 +858,21 @@ methods when we use the @code{reverse-before-methods} clause in
 
 #| end of program |# )
 @end example
+
+@c page
+@node multimethods predefined
+@section Predefined multimethods
+
+
+@deffn Multimethod object->string @var{obj}
+Return a string representation for @var{obj}.  A non--specialised method
+is predefined to use the following implementation:
+
+@example
+(call-with-string-output-port
+   (lambda (port)
+     (display obj port)))
+@end example
+@end deffn
 
 @c end of file
