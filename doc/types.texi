@@ -994,6 +994,82 @@ Examples:
 @end example
 @end deffn
 
+
+@deffn Syntax type-unique-identifiers @meta{type-name}
+Expand into a list of symbols representing the type hierarchy of
+@meta{type-name}, which must be a syntactic identifier bound to an
+object type specification.
+
+@lisp
+(type-unique-identifiers <top>)
+@result{} (vicare:scheme-type:<top>)
+
+(type-unique-identifiers <string>)
+@result{} (vicare:scheme-type:<string>
+    vicare:scheme-type:<top>)
+
+(type-unique-identifiers <condition>)
+@result{} (vicare:scheme-type:<condition>
+    vicare:scheme-type:<record>
+    vicare:scheme-type:<struct>
+    vicare:scheme-type:<top>)
+
+(type-unique-identifiers <compound-condition>)
+@result{} (vicare:scheme-type:<compound-condition>
+    vicare:scheme-type:<condition>
+    vicare:scheme-type:<record>
+    vicare:scheme-type:<struct>
+    vicare:scheme-type:<top>)
+
+(type-unique-identifiers &condition)
+@result{} (vicare:scheme-type:&condition
+    vicare:scheme-type:<condition>
+    vicare:scheme-type:<record>
+    vicare:scheme-type:<struct>
+    vicare:scheme-type:<top>)
+
+(type-unique-identifiers &message)
+@result{} (vicare:scheme-type:&message
+    vicare:scheme-type:&condition
+    vicare:scheme-type:<condition>
+    vicare:scheme-type:<record>
+    vicare:scheme-type:<struct>
+    vicare:scheme-type:<top>)
+
+(internal-body
+  (define-struct duo
+    (one two)
+    (nongenerative yeah))
+  (type-unique-identifiers duo))
+@result{} (yeah
+    vicare:scheme-type:<struct>
+    vicare:scheme-type:<top>)
+
+(internal-body
+  (define-record-type duo
+    (nongenerative duo)
+    (fields one two))
+  (type-unique-identifiers duo))
+@result{} (duo
+    vicare:scheme-type:<record>
+    vicare:scheme-type:<struct>
+    vicare:scheme-type:<top>)
+
+(internal-body
+   (define-record-type alpha
+     (nongenerative alpha))
+   (define-record-type beta
+     (parent alpha)
+     (nongenerative beta))
+   (type-unique-identifiers beta))
+@result{} (beta
+    alpha
+    vicare:scheme-type:<record>
+    vicare:scheme-type:<struct>
+    vicare:scheme-type:<top>)
+@end lisp
+@end deffn
+
 @c page
 @node types syntaxes defining
 @subsection Defining type annotations
