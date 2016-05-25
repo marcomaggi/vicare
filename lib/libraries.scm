@@ -89,7 +89,6 @@
      (vicare language-extensions tracing-syntaxes)
      (vicare language-extensions multimethods types)
      (vicare language-extensions multimethods symbols-tree)
-     (vicare language-extensions multimethods auxiliary-syntaxes)
      (vicare language-extensions multimethods methods-table)
      (vicare language-extensions multimethods)
 

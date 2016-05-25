@@ -440,17 +440,17 @@ closure.
 @subsubheading Applicability
 
 First we need to understand when a method is applicable to a tuple of
-arguments:
+operands:
 
 @enumerate
 @item
-Methods in a generic function have the same number of arguments, so the
-tuple of arguments must match that number.
+Methods in a multimethod have the same number of arguments, so the tuple
+of operands must match that number.
 
 @item
-Given a tuple of arguments, position by position, the type of the
+Given a tuple of operands, position by position, the type of the
 method's argument is equal to, or a parent of, the type of the given
-argument.
+operand.
 @end enumerate
 
 @c ------------------------------------------------------------
@@ -458,18 +458,19 @@ argument.
 @subsubheading Specificity
 
 Now we can understand how to determine which one, among two applicable
-methods, is more specific for a tuple of arguments.  Let's call the
+methods, is more specific for a tuple of operands.  Let's call the
 methods @var{A} and @var{B}.
 
-Notice that it is forbidden to two distinct methods, in the same generic
-function, to have the same signature.
+Notice that it is forbidden to two distinct methods, in the same
+multimethod, to have the same signature.
 
-@oopp{} types support only single inheritance, so if two methods are
-applicable: the homologous lists of @uid{}s in their signatures, have at
-least one @func{eq?} member (different from @class{top}).
+@value{PRJNAME} types support only single inheritance, so if two methods
+are applicable: the homologous lists of @uid{}s in their signatures,
+have at least one @func{eq?} member (different from @class{top}).
 
-The lists of @uid{}s in the signatures are compared in couples, position
-by position from the beginning to the end.
+The lists of @uid{}s in the signatures are compared in couples, from the
+first argument/first operand to the last argument/last operand, and from
+list head to list tail.
 
 @enumerate
 @item
@@ -491,35 +492,35 @@ generic functions bound to identifiers having the same name.
 
 
 @deffn Syntax define-generic-definer @meta{definer} @meta{clause} @dots{}
-@deffnx {Auxiliary Syntax} argument-type-inspector @meta{func}
+@deffnx {Auxiliary Syntax} operand-type-inspector @meta{func}
 Define a new syntax, bound to the identifier @meta{definer}, to be used
 to define ordinary generic functions.
 
-The argument of the clause @clause{argument-type-inspector} must be an
+The argument of the clause @clause{operand-type-inspector} must be an
 expression which, evaluated at run--time, returns a function; such
-function, applied to a multimethod argument, must return the list of
-type @uid{}s.  This clause is mandatory.  See below for details.
+function, applied to a multimethod operand, must return the list of type
+@uid{}s.  This clause is mandatory.  See below for details.
 
-The library @library{vicare language-extensions builtins} defines the macro
-@func{define-generic} as follows:
+The library @library{vicare language-extensions multimethods} defines
+the macro @func{define-generic} as follows:
 
 @example
 (define-generic-definer define-generic
-  (argument-type-inspector  type-unique-identifiers-of))
+  (operand-type-inspector type-unique-identifiers-of))
 @end example
 @end deffn
 
 
 @deffn Syntax define-generic*-definer @meta{definer} @meta{clause} @dots{}
-@deffnx {Auxiliary Syntax} argument-type-inspector @meta{func}
+@deffnx {Auxiliary Syntax} operand-type-inspector @meta{func}
 @deffnx {Auxiliary Syntax} reverse-before-methods? @meta{bool}
 Define a new syntax, bound to the identifier @meta{definer}, to be used
 to define starred generic functions.
 
-The argument of the clause @clause{argument-type-inspector} must be an
+The argument of the clause @clause{operand-type-inspector} must be an
 expression which, evaluated at run--time, returns a function; such
-function, applied to a multimethod argument, must return the list of
-type @uid{}s.  This clause is mandatory.  See below for details.
+function, applied to a multimethod operand, must return the list of type
+@uid{}s.  This clause is mandatory.  See below for details.
 
 The argument of the clause @clause{reverse-before-methods?} must be a
 boolean datum: @true{} if the methods qualified as @code{:before} must
@@ -528,29 +529,28 @@ be reversed and so applied from the least specific to the most specific;
 is optional: the default is to use the standard method protocol.  See
 below for details.
 
-The library @library{vicare language-extensions builtins} defines the macro
-@func{define-generic*} as follows:
+The library @library{vicare language-extensions multimethods} defines
+the macro @func{define-generic*} as follows:
 
 @example
 (define-generic*-definer define-generic*
-  (argument-type-inspector  type-unique-identifiers-of)
-  (reverse-before-methods?  #f))
+  (operand-type-inspector  type-unique-identifiers-of)
+  (reverse-before-methods? #f))
 @end example
 @end deffn
 
 
-@deffn {Auxiliary Syntax} argument-type-inspector @meta{func}
-The clause @clause{argument-type-inspector} allows the specification of
-a function to map a multimethod argument to the list of @uid{}s
+@deffn {Auxiliary Syntax} operand-type-inspector @meta{func}
+The clause @clause{operand-type-inspector} allows the specification of a
+function to map a multimethod operand to the list of @uid{}s
 representing its type.  @meta{func} must be an expression which,
 evaluated at run--time, returns a function.
 
 When merging generic functions: the type inspector function is the one
 of the multimethod in which the others are merged.
 
-Usually the @clause{argument-type-inspector} clause selects a wrapper
-for @func{type-unique-identifiers-of} from @library{vicare
-language-extensions builtins}.
+Usually the @clause{operand-type-inspector} clause selects a wrapper for
+@func{type-unique-identifiers-of}.
 @end deffn
 
 
@@ -572,28 +572,113 @@ useful.
 @section Built-in multimethod definers
 
 
-@defun tag-unique-identifiers-of @var{obj}
+@defun type-unique-identifiers-of @var{obj}
 Object--type inspector function; return the list of @uid{}s in the type
 hierarchy of @var{obj}.  When this function does not recognise an
 object's type: the return value just identifies @var{obj} as of type
 @class{top}.  This function can recognise automatically all the
-instances of types declared by @func{define-record-type}, from
-@library{nausicaa language oopp}, defined in any library.  This function
-recognise only the following built--in labels:
+instances of types declared by @func{define-record-type}.  This function
+recognise only the following built--in types:
 
 @example
-<positive-fixnum> <negative-fixnum> <fixnum>
-<positive-bignum> <negative-bignum>
-<integer-flonum> <rational-flonum> <flonum>
-<ratnum> <cflonum> <compnum>
-<char> <string> <symbol> <vector> <bytevector>
-<spine> <pair>
-<binary-input/output-port> <textual-input/output-port>
-<binary-input-port>        <textual-input-port>
-<binary-output-port>       <textual-output-port>
-<transcoder>
-<condition> <record> <hashtable> <procedure>
-<top>
+<compound-condition>
+<compound-condition>
+     ((record?                  obj)    (record-type-uids-list (record-rtd obj)))
+
+     ;;Remember that hashtables are structs.
+     ((hashtable?               obj)    (type-unique-identifiers <hashtable>))
+
+     (else
+      (cons (struct-type-symbol (struct-rtd obj)) (type-unique-identifiers <struct>)))))
+
+;;; --------------------------------------------------------------------
+
+   ;;Numeric object identification.  Order does matter here!!!
+   ;;
+   ;;Notice that it is  almost useless to apply NUMBER? first and  have a nested COND
+   ;;syntax with the various numeric predicates, as in:
+   ;;
+   ;;  ((number? obj)   (cond ((fixnum? obj) ...) ...))
+   ;;
+   ;;because  NUMBER?   itself is  implemented  as  a  series of  numeric  predicates
+   ;;applications.
+   ;;
+   ((fixnum?            obj)
+    (cond ((fxpositive? obj)            (type-unique-identifiers <positive-fixnum>))
+          ((fxnegative? obj)            (type-unique-identifiers <negative-fixnum>))
+          (else                         (type-unique-identifiers <zero-fixnum>))))
+
+   ((bignum?            obj)
+    (cond ((bignum-positive? obj)       (type-unique-identifiers <positive-bignum>))
+          (else                         (type-unique-identifiers <negative-bignum>))))
+
+   ((flonum?            obj)
+    (cond ((flpositive? obj)            (type-unique-identifiers <positive-flonum>))
+          ((flnegative? obj)            (type-unique-identifiers <negative-flonum>))
+          ((flzero?/positive obj)       (type-unique-identifiers <positive-zero-flonum>))
+          ((flzero?/negative obj)       (type-unique-identifiers <negative-zero-flonum>))
+          (else                         (type-unique-identifiers <flonum>))))
+
+   ((ratnum?            obj)
+    (cond ((ratnum-positive? obj)       (type-unique-identifiers <positive-ratnum>))
+          ((ratnum-negative? obj)       (type-unique-identifiers <negative-ratnum>))
+          (else                         (type-unique-identifiers <ratnum>))))
+
+   ((cflonum?           obj)
+    (cond ((zero-cflonum? obj)          (type-unique-identifiers <zero-cflonum>))
+          (else                         (type-unique-identifiers <non-zero-cflonum>))))
+
+   ((compnum?           obj)
+    (cond ((zero-compnum? obj)          (type-unique-identifiers <zero-compnum>))
+          ((inexact-compnum? obj)       (type-unique-identifiers <inexact-compnum>))
+          ((exact-compnum? obj)         (type-unique-identifiers <exact-compnum>))
+          (else                         (type-unique-identifiers <compnum>))))
+
+;;; --------------------------------------------------------------------
+
+   ((char?              obj)            (type-unique-identifiers <char>))
+
+   ((string?            obj)
+    (cond ((string-empty? obj)          (type-unique-identifiers <empty-string>))
+          (else                         (type-unique-identifiers <nestring>))))
+
+   ((gensym?            obj)            (type-unique-identifiers <gensym>))
+   ((symbol?            obj)            (type-unique-identifiers <symbol>))
+
+   ((vector?            obj)
+    (cond ((vector-empty? obj)          (type-unique-identifiers <empty-vector>))
+          (else                         (type-unique-identifiers <nevector>))))
+
+   ((bytevector?        obj)
+    (cond ((bytevector-empty? obj)      (type-unique-identifiers <empty-bytevector>))
+          (else                         (type-unique-identifiers <nebytevector>))))
+
+   ((null?              obj)            (type-unique-identifiers <null>))
+
+   ;;Notice that  we never try to  test for "<list>":  qualifying a long list  can be
+   ;;time-consuming.
+   ((pair?              obj)            (type-unique-identifiers <pair>))
+
+   ((port?              obj)
+    ;;Order here is arbitrary.
+    (cond ((input/output-port?  obj)    (if (binary-port? obj)
+                                            (type-unique-identifiers <binary-input/output-port>)
+                                          (type-unique-identifiers <textual-input/output-port>)))
+          ((input-port?         obj)    (if (binary-port? obj)
+                                            (type-unique-identifiers <binary-input-port>)
+                                          (type-unique-identifiers <textual-input-port>)))
+          (else                         #;(assert (output-port? obj))
+           (if (binary-port? obj)
+               (type-unique-identifiers <binary-output-port>)
+             (type-unique-identifiers <textual-output-port>)))))
+
+   ((transcoder?        obj)            (type-unique-identifiers <transcoder>))
+
+   ((procedure? obj)                    (type-unique-identifiers <procedure>))
+
+   ;;Everything else inluding records not defined by DEFINE-CLASS.
+   (else
+    (type-unique-identifiers <top>))))
 @end example
 
 Whenever we define new label types with @func{define-label} from

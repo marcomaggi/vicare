@@ -72,7 +72,7 @@
 
     ;; auxiliary syntaxes
     (deprefix (aux::reverse-before-methods?
-	       aux::argument-type-inspector
+	       aux::operand-type-inspector
 	       aux::merge-with-multimethods
 	       aux:::primary
 	       aux:::around
@@ -83,19 +83,33 @@
 	    run expand (meta 2))
     ;;See the source file for the customisable interface to types.
     (prefix (vicare language-extensions multimethods types (0 4)) type::)
-    (prefix (vicare language-extensions multimethods methods-table (0 4)) mt::)
-    (vicare language-extensions multimethods auxiliary-syntaxes (0 4)))
+    (prefix (vicare language-extensions multimethods methods-table (0 4)) mt::))
 
 
 ;;;; auxiliary syntaxes
 
 (define-auxiliary-syntaxes
-  aux::argument-type-inspector
+  aux::operand-type-inspector
   aux::reverse-before-methods?
   aux::merge-with-multimethods
   aux:::primary aux:::before aux:::after aux:::around
-  aux::<-)
 
+  :number-of-arguments
+
+  :primary-methods-alist
+  :before-methods-alist
+  :after-methods-alist
+  :around-methods-alist
+
+  :primary-cache
+  :before-cache
+  :after-cache
+  :around-cache
+
+  :primary-method-add
+  :before-method-add
+  :after-method-add
+  :around-method-add)
 
 
 ;;;; next method implementation
@@ -177,10 +191,10 @@
 	   (loop #'?other-clauses options))))))
 
   (define (%parse-option-clause! options clause)
-    (syntax-case clause (aux::argument-type-inspector)
+    (syntax-case clause (aux::operand-type-inspector)
       ;;The value of  this clause must be an expression  evaluating to a
       ;;function.
-      ((aux::argument-type-inspector ?uid-list-of)
+      ((aux::operand-type-inspector ?uid-list-of)
        (options-uid-list-function-id-set! options #'?uid-list-of))
       (_
        (synner "unknown clause or invalid clause syntax" clause))))
@@ -386,10 +400,10 @@
 	   (loop #'?other-clauses options))))))
 
   (define (%parse-option-clause! options clause)
-    (syntax-case clause (aux::argument-type-inspector aux::reverse-before-methods?)
+    (syntax-case clause (aux::operand-type-inspector aux::reverse-before-methods?)
       ;;The value of  this clause must be an expression  evaluating to a
       ;;function.
-      ((aux::argument-type-inspector ?uid-list-of)
+      ((aux::operand-type-inspector ?uid-list-of)
        (options-uid-list-function-id-set! options #'?uid-list-of))
       ((aux::reverse-before-methods? ?bool)
        (boolean? (syntax->datum #'?bool))
@@ -875,10 +889,10 @@
 ;;;; predefined multimethods and multimethods definers
 
 (define-generic-definer  define-generic
-  (aux::argument-type-inspector		type-unique-identifiers-of))
+  (aux::operand-type-inspector		type-unique-identifiers-of))
 
 (define-generic*-definer define-generic*
-  (aux::argument-type-inspector		type-unique-identifiers-of)
+  (aux::operand-type-inspector		type-unique-identifiers-of)
   (aux::reverse-before-methods?		#f))
 
 (define-generic object->string (o))
