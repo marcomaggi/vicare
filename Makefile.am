@@ -120,6 +120,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-levenshtein.texi			\
 	doc/libs-lists.texi				\
 	doc/libs-loops.texi				\
+	doc/libs-multimethods.texi			\
 	doc/libs-object-properties.texi			\
 	doc/libs-one-dimension.texi			\
 	doc/libs-parser-logic.texi			\

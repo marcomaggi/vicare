@@ -147,6 +147,7 @@ Trademarks used herein are the property of their respective owners.
 * getopts::                     Parsing command line arguments.
 * checks::                      Lightweight testing.
 * tracing::                     Tracing syntaxes.
+* multimethods::                Multimethods dispatching.
 
 Networking libraries
 
@@ -237,6 +238,7 @@ External documents
 @include libs-getopts.texi
 @include libs-checks.texi
 @include libs-tracing-syntaxes.texi
+@include libs-multimethods.texi
 
 @include libs-net-channels.texi
 
