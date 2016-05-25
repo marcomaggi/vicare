@@ -786,7 +786,7 @@
      ;;Remember that conditions are records by R6RS definition.
      ((compound-condition?	obj)	(type-unique-identifiers <compound-condition>))
 
-     ((simple-condition?	obj)	(type-unique-identifiers <compound-condition>))
+     ;;((simple-condition?	obj)	(type-unique-identifiers <compound-condition>))
 
      ((record?			obj)	(record-type-uids-list (record-rtd obj)))
 

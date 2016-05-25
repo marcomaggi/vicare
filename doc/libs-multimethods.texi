@@ -578,148 +578,52 @@ hierarchy of @var{obj}.  When this function does not recognise an
 object's type: the return value just identifies @var{obj} as of type
 @class{top}.  This function can recognise automatically all the
 instances of types declared by @func{define-record-type}.  This function
-recognise only the following built--in types:
+recognises only the following built--in types:
 
 @example
-<compound-condition>
-<compound-condition>
-     ((record?                  obj)    (record-type-uids-list (record-rtd obj)))
-
-     ;;Remember that hashtables are structs.
-     ((hashtable?               obj)    (type-unique-identifiers <hashtable>))
-
-     (else
-      (cons (struct-type-symbol (struct-rtd obj)) (type-unique-identifiers <struct>)))))
-
-;;; --------------------------------------------------------------------
-
-   ;;Numeric object identification.  Order does matter here!!!
-   ;;
-   ;;Notice that it is  almost useless to apply NUMBER? first and  have a nested COND
-   ;;syntax with the various numeric predicates, as in:
-   ;;
-   ;;  ((number? obj)   (cond ((fixnum? obj) ...) ...))
-   ;;
-   ;;because  NUMBER?   itself is  implemented  as  a  series of  numeric  predicates
-   ;;applications.
-   ;;
-   ((fixnum?            obj)
-    (cond ((fxpositive? obj)            (type-unique-identifiers <positive-fixnum>))
-          ((fxnegative? obj)            (type-unique-identifiers <negative-fixnum>))
-          (else                         (type-unique-identifiers <zero-fixnum>))))
-
-   ((bignum?            obj)
-    (cond ((bignum-positive? obj)       (type-unique-identifiers <positive-bignum>))
-          (else                         (type-unique-identifiers <negative-bignum>))))
-
-   ((flonum?            obj)
-    (cond ((flpositive? obj)            (type-unique-identifiers <positive-flonum>))
-          ((flnegative? obj)            (type-unique-identifiers <negative-flonum>))
-          ((flzero?/positive obj)       (type-unique-identifiers <positive-zero-flonum>))
-          ((flzero?/negative obj)       (type-unique-identifiers <negative-zero-flonum>))
-          (else                         (type-unique-identifiers <flonum>))))
-
-   ((ratnum?            obj)
-    (cond ((ratnum-positive? obj)       (type-unique-identifiers <positive-ratnum>))
-          ((ratnum-negative? obj)       (type-unique-identifiers <negative-ratnum>))
-          (else                         (type-unique-identifiers <ratnum>))))
-
-   ((cflonum?           obj)
-    (cond ((zero-cflonum? obj)          (type-unique-identifiers <zero-cflonum>))
-          (else                         (type-unique-identifiers <non-zero-cflonum>))))
-
-   ((compnum?           obj)
-    (cond ((zero-compnum? obj)          (type-unique-identifiers <zero-compnum>))
-          ((inexact-compnum? obj)       (type-unique-identifiers <inexact-compnum>))
-          ((exact-compnum? obj)         (type-unique-identifiers <exact-compnum>))
-          (else                         (type-unique-identifiers <compnum>))))
-
-;;; --------------------------------------------------------------------
-
-   ((char?              obj)            (type-unique-identifiers <char>))
-
-   ((string?            obj)
-    (cond ((string-empty? obj)          (type-unique-identifiers <empty-string>))
-          (else                         (type-unique-identifiers <nestring>))))
-
-   ((gensym?            obj)            (type-unique-identifiers <gensym>))
-   ((symbol?            obj)            (type-unique-identifiers <symbol>))
-
-   ((vector?            obj)
-    (cond ((vector-empty? obj)          (type-unique-identifiers <empty-vector>))
-          (else                         (type-unique-identifiers <nevector>))))
-
-   ((bytevector?        obj)
-    (cond ((bytevector-empty? obj)      (type-unique-identifiers <empty-bytevector>))
-          (else                         (type-unique-identifiers <nebytevector>))))
-
-   ((null?              obj)            (type-unique-identifiers <null>))
-
-   ;;Notice that  we never try to  test for "<list>":  qualifying a long list  can be
-   ;;time-consuming.
-   ((pair?              obj)            (type-unique-identifiers <pair>))
-
-   ((port?              obj)
-    ;;Order here is arbitrary.
-    (cond ((input/output-port?  obj)    (if (binary-port? obj)
-                                            (type-unique-identifiers <binary-input/output-port>)
-                                          (type-unique-identifiers <textual-input/output-port>)))
-          ((input-port?         obj)    (if (binary-port? obj)
-                                            (type-unique-identifiers <binary-input-port>)
-                                          (type-unique-identifiers <textual-input-port>)))
-          (else                         #;(assert (output-port? obj))
-           (if (binary-port? obj)
-               (type-unique-identifiers <binary-output-port>)
-             (type-unique-identifiers <textual-output-port>)))))
-
-   ((transcoder?        obj)            (type-unique-identifiers <transcoder>))
-
-   ((procedure? obj)                    (type-unique-identifiers <procedure>))
-
-   ;;Everything else inluding records not defined by DEFINE-CLASS.
-   (else
-    (type-unique-identifiers <top>))))
+<compound-condition> <record> <struct> <hashtable>
+<positive-fixnum> <negative-fixnum> <zero-fixnum>
+<positive-bignum> <negative-bignum>
+<positive-flonum> <negative-flonum>
+<positive-zero-flonum> <negative-zero-flonum>
+<positive-ratnum> <negative-ratnum>
+<zero-cflonum> <non-zero-cflonum>
+<zero-compnum> <inexact-compnum> <exact-compnum>
+<char> <empty-string> <nestring>
+<gensym> <symbol>
+<empty-vector> <nevector>
+<empty-bytevector> <nebytevector>
+<null> <pair>
+<binary-input/output-port> <textual-input/output-port>
+<binary-input-port>  <textual-input-port>
+<binary-output-port> <textual-output-port>
+<transcoder>
+<procedure>
+<top>
 @end example
-
-Whenever we define new label types with @func{define-label} from
-@library{nausicaa language oopp}, for example @class{alpha} and
-@class{beta}, it is useful to define a new type inspector function as:
-
-@example
-(define (new-tag-unique-identifiers-of obj)
-  (cond (((<alpha>) obj)
-         (tag-unique-identifiers <alpha>))
-        (((<beta>) obj)
-         (tag-unique-identifiers <beta>))
-        (else
-         (tag-unique-identifiers-of obj))))
-@end example
-
-@noindent
-and use it as argument--type inspector function for multimethods.
 @end defun
 
 
 @deffn Syntax define-generic @meta{name} @meta{formals} @meta{clause} @dots{}
 @deffnx {Auxiliary Syntax} merge-with-multimethods @meta{generic} @dots{}
-Define a new ordinary generic function (a macro) and bind it to
+Define a new ordinary multimethod (a macro) and bind it to
 @meta{name}.  The number of arguments is specified by @meta{formals}: a
 list of identifiers, one for each argument; the list is used only to
 determine the number of arguments (it can be used to document the
-intended meaning of arguments).
+intended meaning of the arguments).
 
 When the optional @clause{merge-with-multimethods} clause is used: the
 internal methods table is initialised to the union of the methods tables
-from the @meta{generic} arguments, which must be ordinary generic
-function identifiers.  The union is performed by visiting arguments from
-left to right; when two methods have the same signature, the one from
-the leftmost generic function takes precedence.
+from the @meta{generic} arguments, which must be ordinary multimethod
+identifiers.  The union is performed by visiting arguments from left to
+right; when two methods have the same signature, the one from the
+leftmost multimethod takes precedence.
 @end deffn
 
 
 @deffn Syntax define-generic* @meta{name} @meta{formals} @meta{clause} @dots{}
 @deffnx {Auxiliary Syntax} merge-with-multimethods @meta{generic} @dots{}
-Define a new starred generic function (a macro) and bind it to
+Define a new starred multimethod (a macro) and bind it to
 @meta{name}.  The number of arguments is specified by @meta{formals}: a
 list of identifiers, one for each argument; the list is used only to
 determine the number of arguments (it can be used to document the
@@ -727,10 +631,10 @@ intended meaning of arguments).
 
 When the optional @clause{merge-with-multimethods} clause is used: the
 internal methods tables are initialised to the unions of the methods
-tables from the @meta{generic} arguments, which must be starred generic
-function identifiers.  The union is performed by visiting arguments from
-left to right; when two methods have the same signature, the one from
-the leftmost generic function takes precedence.
+tables from the @meta{generic} arguments, which must be starred
+multimethod identifiers.  The union is performed by visiting arguments
+from left to right; when two methods have the same signature, the one
+from the leftmost multimethod takes precedence.
 @end deffn
 
 @c page
