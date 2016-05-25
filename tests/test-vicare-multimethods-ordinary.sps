@@ -109,6 +109,50 @@
   #t)
 
 
+(parametrise ((check-test-name 'fluid-who))
+
+  (check
+      (internal-body
+	(define-generic fluff (o))
+	(define-method (fluff {O <fixnum>})
+	  (list O __who__))
+	(fluff 123))
+    => '(123 fluff))
+
+  #| end of parametrise |# )
+
+
+(parametrise ((check-test-name 'typed-return-values))
+
+  (check
+      (internal-body
+	(define-generic fluff (o))
+	(define-method ({fluff <string>} {O <fixnum>})
+	  (number->string O))
+	(.length (fluff 123)))
+    => 3)
+
+  (check
+      (internal-body
+	(define-generic fluff (o))
+	(define-method ({fluff <string>} {O <fixnum>})
+	  (number->string O))
+	(.syntax-object (type-of (fluff 123))))
+    (=> syntax=?)
+    #'<list>)
+
+  #;(check
+      (internal-body
+	(define-generic fluff (o))
+	(define-method ({fluff <string>} {O <fixnum>})
+	  ;;Return value of wrong type.
+	  O)
+	(fluff 123))
+    => 1)
+
+  #| end of parametrise |# )
+
+
 (parametrise ((check-test-name 'simple-inheritance))
 
   (internal-body
@@ -586,12 +630,12 @@
 
 (parametrise ((check-test-name 'predefined))
 
-  (define-generic object->string (o))
+  ;; (define-generic object->string (o))
 
-  (define-method (object->string o)
-    (call-with-string-output-port
-	(lambda (port)
-	  (display o port))))
+  ;; (define-method (object->string o)
+  ;;   (call-with-string-output-port
+  ;; 	(lambda (port)
+  ;; 	  (display o port))))
 
   (define-record-type <alpha>
     (nongenerative generics-test:predefined:<alpha>)
@@ -605,14 +649,14 @@
       (object->string 123)
     => "123")
 
-  (let ((a (make-<alpha> "alpha"))
-	(b (make-<beta>  "beta")))
+  (let ((a (new <alpha> "alpha"))
+	(b (new <beta>  "beta")))
 
     (define-method (object->string {o <alpha>})
-      (<alpha>-the-string o))
+      (.the-string o))
 
     (define-method object->string ({o <beta>})
-      (<beta>-the-string o))
+      (.the-string o))
 
     (check
 	(object->string a)

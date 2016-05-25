@@ -32,8 +32,6 @@ Multimethods are meant to be used with the typed language.
 * multimethods defining::       Built-in multimethod definers.
 * multimethods methods::        Adding methods to a multimethod.
 * multimethods next::           Invoking the next method.
-* multimethods oopp::           Notes on using generics as @oopp{} type
-                                methods.
 * multimethods predefined::     Predefined multimethods.
 @end menu
 
@@ -643,7 +641,7 @@ from the leftmost multimethod takes precedence.
 
 
 @deffn Syntax define-method (@meta{generic} @meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
-@deffnx Syntax define-method ((brace @meta{generic} @metao{tag} @meta{tag} @dots{}) @meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define-method ((brace @meta{generic} @metao{type} @meta{type} @dots{}) @meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
 @deffnx Syntax define-method @meta{generic} (@meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
 @deffnx Syntax define-method @meta{qualifier} @meta{generic} (@meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
 @deffnx Syntax define-method @meta{generic} @meta{qualifier} (@meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
@@ -651,6 +649,7 @@ from the leftmost multimethod takes precedence.
 @deffnx {Auxiliary Syntax} :around
 @deffnx {Auxiliary Syntax} :before
 @deffnx {Auxiliary Syntax} :after
+@deffnx {Auxiliary Syntax} brace
 Add a new method to an already existent generic function @meta{generic},
 either ordinary or starred:
 
@@ -671,40 +670,30 @@ which this method specialises the generic function; an @meta{arg-spec}
 can be:
 
 @table @code
-@item (brace @meta{arg} @meta{tag})
-Where @meta{arg} is the formal name of the argument, @meta{tag} the
-(possibly conventional) type identifier of expected values, @func{brace}
-is the identifier exported by @library{vicare} and reexported by
-@library{vicare language-extensions oopp}.
+@item (brace @meta{arg} @meta{type})
+Where @meta{arg} is the formal name of the argument, @meta{type} the
+type identifier of the expected operand, @func{brace} is the identifier
+exported by @library{vicare} and reexported by @library{vicare
+language-extensions multimethods}.
 
 @item @meta{arg}
 Where @meta{arg} is the formal name of the argument.  In this case the
-type to the conventional @class{top}, which is interpreted as parent of
-every other type (and so it has the least specificity).
+type defaults to @class{top}, which is interpreted as parent of every
+other type (and so it has the least specificity).
 @end table
 
-If the @meta{generic} function name comes with @meta{tag} arguments: the
-@meta{body} forms will be enclosed in a @func{begin/tags} syntax, and
-the returned values validated as specified by the @meta{tag}
-identifiers.
+If the @meta{generic} function name comes with @meta{type} arguments:
+such arguments specify the type of the return values.  The types are
+used to validate the return values of the method's closure object, but
+they do @strong{not} constitute the types of values returned by the
+multimethod application.
 
 If a method is defined with the same signature of an already registered
 method: the old method is overwritten by the new one.
 
-@cindex @code{__who__}
-The @meta{body} forms are enclosed in a @func{let-constants} syntax as
-follows:
-
-@example
-(fluid-let-syntax
-    ((__who__ (identifier-syntax (quote @meta{generic}))))
-  @metao{body} @meta{body} @dots{})
-@end example
-
-@noindent
-so the binding @code{__who__} is available in the body forms to
-reference a symbol representing the generic function's name.  This is
-useful when raising exceptions with condition type @condition{who}.
+In the lexical context of the @meta{body} forms: the fluid syntax
+@syntax{__who__} is bound to the quoted name of the multimethod,
+@meta{generic}.
 @end deffn
 
 
@@ -714,25 +703,25 @@ useful when raising exceptions with condition type @condition{who}.
 @deffnx {Auxiliary Syntax} :around
 @deffnx {Auxiliary Syntax} :before
 @deffnx {Auxiliary Syntax} :after
-Add a new method to an already existent generic function @meta{generic},
+Add a new method to an already existent multimethod @meta{generic},
 either ordinary or starred:
 
 @itemize
 @item
 When the @meta{qualifier} argument is not present or it is the
 @code{:primary} syntax: @meta{generic} can be either an ordinary or
-starred generic function.
+starred multimethod.
 
 @item
 When the @meta{qualifier} argument is the @code{:before}, @code{:after}
-or @code{:around} syntax: @meta{generic} must be a starred generic
-function.
+or @code{:around} syntax: @meta{generic} must be a starred multimethod.
 @end itemize
 
 @meta{types} must be a list of type identifiers for which this method
 specialises the generic function.  @meta{closure} must be an expression
 which, evaluated at run--time, returns the method's implementation
-closure.
+closure.  It is responsibility of the programmer to make sure that
+@meta{types} and @meta{closure} are coherent.
 @end deffn
 
 @c page
@@ -740,12 +729,12 @@ closure.
 @section Invoking the next method
 
 
-The library @library{vicare language-extensions multimethods} makes use of
-parameters to implement the ``next method'' facility@footnote{A
+The library @library{vicare language-extensions multimethods} makes use
+of parameters to implement the ``next method'' facility@footnote{A
 ``traditional'' way to make the bindings @func{call-next-method} and
-@func{next-method?} available in the body of methods (rejected by
-@library{vicare language-extensions multimethods}) is to add two arguments to the
-function at expand time; the following method function:
+@func{next-method?} available in the body of methods (rejected by this
+implementation) is to add two arguments to the function at expand time;
+the following method function:
 
 @example
 (lambda (arg1 arg2)
@@ -764,9 +753,8 @@ is changed to:
 this way the bindings are available only to the methods.  This
 implementation requires the source syntax object of the method to be
 available at expansion time, and to hold a @func{lambda} form.}; this
-allows functions from foreign libraries to be used directly as methods
-and also macros to be used as methods (through @func{add-method}, which
-requires only the method implementation's identifier).  The bindings are
+allows, for example, functions from foreign libraries to be used
+directly as methods, through @syntax{add-method}.  The bindings are
 available also to code outside the method implementations, but this is
 not a big problem.
 
@@ -781,147 +769,11 @@ Return true if a next method is available.
 @end defun
 
 @c page
-@node multimethods oopp
-@section Notes on using generics as @oopp{} type methods
-
-
-It is possible to use generic functions as implementations of methods
-for types defined using the library @library{vicare language-extensions
-oopp}; doing it results in method behaviour which is traditional in
-object--oriented systems.  For example, given the definitions:
-
-@example
-#!vicare
-(program (demo)
-  (options typed-language)
-  (import (vicare))
-
-(define-record-type <alpha>
-  (fields a)
-  (methods (doit doit)))
-
-(define-record-type <beta>
-  (parent <alpha>)
-  (fields b)
-  (methods (doit doit)))
-
-(define-generic doit (o arg))
-
-(define-method (doit @{o <alpha>@} arg)
-  (list 'doit-alpha arg))
-
-(define-method (doit @{o <beta>@} arg)
-  (list 'doit-beta arg))
-@end example
-
-@noindent
-we have:
-
-@example
-(let ((@{o <alpha>@} (<alpha> (1))))
-  (o doit 10))
-@result{} (doit-alpha 10)
-
-(let ((@{o <beta>@} (<beta> (1 2))))
-  (o doit 20))
-@result{} (doit-beta 20)
-@end example
-
-@noindent
-but also:
-
-@example
-(let ((@{o <alpha>@} (<beta> (1 2))))
-  (o doit 30))
-@result{} (doit-beta 30)
-@end example
-
-@noindent
-in which @code{(o doit ---)} is meant to call the @func{doit} method of
-@class{alpha}, because @code{o} is tagged as @class{alpha}, but
-@class{beta} has redefined the method, so @func{doit} of @class{beta} is
-called.  This behaviour can be obtained only with multimethods, not when
-defining methods as plain functions or macros.
-
-Another interesting use of generics as type methods is the
-implementation of pre and post conditions.
-
-The Object--Oriented Programming substitution principle states that: if
-@class{beta} inherits from @class{alpha}, every chunk of code expecting
-an @class{alpha} instance as argument must work when a @class{beta}
-instance is used as argument.  We can write pre and post conditions in a
-method implementation for @class{alpha} and pre and post conditions in
-the method reimplementation for @class{beta}; when the reimplemented
-method is called, it is correct to enforce both the pre and post
-conditions for @class{beta} and for @class{alpha}.
-
-The conditions for the @class{alpha} method must imply the conditions
-for the @class{beta} method; for example, a precondition for
-@class{alpha} can be that an argument is a positive integer, while a
-precondition for @class{beta} can be that the integer is greater than
-@math{3}.  It follows that the preconditions for @class{alpha} should be
-tested before the preconditions of @class{beta}.
-
-This is exactly what happens with @code{:before} and @code{:after}
-methods when we use the @code{reverse-before-methods} clause in
-@func{define-generic*}:
-
-@example
-#!vicare
-(program (demo)
-  (options typed-language)
-  (import (vicare)
-    (only (vicare)
-          with-result add-result))
-
-(define-record-type <alpha>
-  (fields a)
-  (methods (doit doit)))
-
-(define-record-type <beta>
-  (parent <alpha>)
-  (fields b)
-  (methods (doit doit)))
-
-(define-generic* doit (o arg)
-  (reverse-before-methods #t))
-
-(define-method (doit @{o <alpha>@} arg)
-  (list 'doit-alpha arg))
-
-(define-method (doit @{o <beta>@} arg)
-  (list 'doit-beta arg))
-
-(define-method doit :before (@{o <alpha>@} arg)
-  (add-result 'before-alpha))
-
-(define-method doit :after (@{o <alpha>@} arg)
-  (add-result 'after-alpha))
-
-(define-method doit :before (@{o <beta>@} arg)
-  (add-result 'before-beta))
-
-(define-method doit :after (@{o <beta>@} arg)
-  (add-result 'after-beta))
-
-(with-result
- (let ((@{o <alpha>@} (make <beta> 1 2)))
-   (o.doit 30)))
-@result{} ((doit-beta 30)
-    (before-alpha   ;this is the order of invocation
-     before-beta    ;for :BEFORE and :AFTER methods
-     after-alpha
-     after-beta))
-
-#| end of program |# )
-@end example
-
-@c page
 @node multimethods predefined
 @section Predefined multimethods
 
 
-@deffn Multimethod object->string @var{obj}
+@deffn {Ordinary Multimethod} object->string @var{obj}
 Return a string representation for @var{obj}.  A non--specialised method
 is predefined to use the following implementation:
 

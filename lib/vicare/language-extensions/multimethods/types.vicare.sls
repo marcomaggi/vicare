@@ -42,8 +42,8 @@
   (export type-unique-identifiers method-lambda <top>)
   (import (rename (only (vicare)
 			type-unique-identifiers
-			lambda/typed
+			named-lambda/typed
 			<top>)
-		  (lambda/typed			method-lambda))))
+		  (named-lambda/typed	method-lambda))))
 
 ;;; end of file

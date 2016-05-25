@@ -71,6 +71,7 @@
     object->string
 
     ;; auxiliary syntaxes
+    brace
     (deprefix (aux::reverse-before-methods?
 	       aux::operand-type-inspector
 	       aux::merge-with-multimethods
@@ -677,10 +678,7 @@
 			  (BODY		body-stx))
 	      #'(define/typed dummy ;to make it a definition
 		  (add-method ?generic-function-id TABLE-KEY (TYPE ...)
-			      (type::method-lambda ((brace ARG TYPE) ...)
-						  (fluid-let-syntax
-						      ((__who__ (identifier-syntax (quote ?generic-function-id))))
-						    . BODY))))))
+			      (type::method-lambda ?generic-function-id ((brace ARG TYPE) ...) . BODY)))))
 
 	   ;;Tagged return values.
 	   ((brace ?generic-function-id ?rv-tag0 ?rv-tag ...)
@@ -691,10 +689,7 @@
 			  (BODY		body-stx))
 	      #'(define/typed dummy ;to make it a definition
 		  (add-method ?generic-function-id TABLE-KEY (TYPE ...)
-			      (type::method-lambda ((brace _ ?rv-tag0 ?rv-tag ...) (brace ARG TYPE) ...)
-						  (fluid-let-syntax
-						      ((__who__ (identifier-syntax (quote ?generic-function-id))))
-						    . BODY))))))
+			      (type::method-lambda  ?generic-function-id ((brace _ ?rv-tag0 ?rv-tag ...) (brace ARG TYPE) ...) . BODY)))))
 	   ))
 	(((brace ?arg ?type) . ?formals)
 	 (loop #'?formals (cons #'?arg arg-ids) (cons #'?type    type-ids)))
