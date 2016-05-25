@@ -24,7 +24,7 @@
 
 
 #!vicare
-(library (vicare language-extensions labels)
+(library (vicare language-extensions labels (0 4 2015 5 25))
   (options typed-language)
   (export
     define-label
@@ -36,7 +36,8 @@
     comparison-procedure
     hash-function
     method
-    case-method)
+    case-method
+    nongenerative)
   (import (vicare))
 
 
@@ -61,12 +62,15 @@
 	(new <syntax-clause-spec> #'hash-function		0 1      1 1      '() '())
 	(new <syntax-clause-spec> #'method			0 +inf.0 2 +inf.0 '() '())
 	(new <syntax-clause-spec> #'case-method			0 +inf.0 2 +inf.0 '() '())
+	(new <syntax-clause-spec> #'nongenerative		0 1      1 1      '() '())
 	#| end of LIST |# )))
 
     (define-record-type <parsed-clauses>
       (fields
 	(immutable type-name)
 		;Identifier representing the label type name.
+	(mutable uid)
+		;Unique identifier associated to this type.
 	(mutable parent)
 		;After  parsing:  a  syntax   object  representing  the  parent  type
 		;annotation.
@@ -105,7 +109,7 @@
       (protocol
 	(lambda (make-record)
 	  (lambda (type-name)
-	    (make-record type-name #f '() #f #f #f #f #f '())))))
+	    (make-record type-name #f #f '() #f #f #f #f #f '())))))
 
     (define (main stx synner)
       (syntax-case stx ()
@@ -121,7 +125,9 @@
 					      (syntax-clauses-unwrap #'?clauses synner) synner))
 		  (parent.stx (.parent parsed)))
 	     (with-syntax
-		 (((CONSTRUCTOR-ID CONSTRUCTOR-DEF ...)
+		 ((UID (or (.uid parsed)
+			   (datum->syntax type-name.id (gensym (syntax->datum type-name.id)))))
+		  ((CONSTRUCTOR-ID CONSTRUCTOR-DEF ...)
 		   (let ((clause*.stx (.constructor parsed)))
 		     (if (null? clause*.stx)
 			 '(#f)
@@ -195,6 +201,7 @@
 		   (define-syntax ?type-name
 		     (make-label-type-spec
 		      (syntax ?type-name)
+		      (quote UID)
 		      (syntax #,parent.stx)
 		      CONSTRUCTOR-ID
 		      DESTRUCTOR-ID
@@ -332,6 +339,17 @@
 	 ;;   #(#(?func-stx))
 	 ;;
 	 (set! (.hash-function parsed) (vector-ref (vector-ref args 0) 0)))
+
+	((nongenerative)
+	 ;;The input clause must have the format:
+	 ;;
+	 ;;   (nongenerative ?uid)
+	 ;;
+	 ;;and we expect ARGS to have the format:
+	 ;;
+	 ;;   #(#(?uid))
+	 ;;
+	 (set! (.uid parsed) (vector-ref (vector-ref args 0) 0)))
 
 	(else
 	 (assertion-violation __module_who__ "invalid clause spec" spec))))

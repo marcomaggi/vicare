@@ -3690,7 +3690,7 @@
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
-      (define* (make-label-type-spec {type-name.id identifier?} parent.stx
+      (define* (make-label-type-spec {type-name.id identifier?} {uid symbol?} parent.stx
 				     constructor.stx destructor.stx type-predicate.stx
 				     equality-predicate.id comparison-procedure.id hash-function.id
 				     methods-table)
@@ -3703,7 +3703,7 @@
 	       (type-predicate.stx	(or type-predicate.stx (object-type-spec.type-predicate-stx parent.ots)))
 	       (accessors-table		'())
 	       (mutators-table		'()))
-	  ((make-object-type-spec type-name.id (object-type-spec.unique-identifiers parent.ots)
+	  ((make-object-type-spec type-name.id (cons uid (object-type-spec.unique-identifiers parent.ots))
 				  parent.ots label-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx type-predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id

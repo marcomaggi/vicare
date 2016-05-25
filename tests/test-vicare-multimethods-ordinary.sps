@@ -28,6 +28,7 @@
   (options typed-language)
   (import (vicare (0 4))
     (vicare language-extensions multimethods)
+    (vicare language-extensions labels)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -669,6 +670,88 @@
     #f)
 
   #t)
+
+
+(parametrise ((check-test-name	'labels))
+
+  (define-label <list-coords>
+    (nongenerative user:<list-coords>)
+    (parent (list <flonum> <flonum> <flonum>))
+    (method (x {O <list-coords>})
+      (list-ref O 0))
+    (method (y {O <list-coords>})
+      (list-ref O 1))
+    (method (z {O <list-coords>})
+      (list-ref O 2)))
+
+  (define-label <vector-coords>
+    (nongenerative user:<vector-coords>)
+    (parent (vector <flonum> <flonum> <flonum>))
+    (method (x {O <vector-coords>})
+      (vector-ref O 0))
+    (method (y {O <vector-coords>})
+      (vector-ref O 1))
+    (method (z {O <vector-coords>})
+      (vector-ref O 2)))
+
+  (define-record-type <coords>
+    (fields {x <flonum>}
+	    {y <flonum>}
+	    {z <flonum>}))
+
+  (module (add)
+    (define-generic-definer definer
+      (operand-type-inspector
+       (lambda (obj)
+	 (cond ((is-a? obj <list-coords>)
+		(type-unique-identifiers <list-coords>))
+	       ((is-a? obj <vector-coords>)
+		(type-unique-identifiers <vector-coords>))
+	       (else
+		(type-unique-identifiers-of obj))))))
+
+    (definer add (A B)))
+
+  (define-method (add {A <list-coords>} {B <list-coords>})
+    (list (fl+ (.x A) (.x B))
+	  (fl+ (.y A) (.y B))
+	  (fl+ (.z A) (.z B))))
+
+  (define-method (add {A <vector-coords>} {B <vector-coords>})
+    (vector (fl+ (.x A) (.x B))
+	    (fl+ (.y A) (.y B))
+	    (fl+ (.z A) (.z B))))
+
+  (define-method (add {A <coords>} {B <coords>})
+    (new <coords>
+	 (fl+ (.x A) (.x B))
+	 (fl+ (.y A) (.y B))
+	 (fl+ (.z A) (.z B))))
+
+  (check
+      (add '(1. 2. 3.) '(10. 20. 30.))
+    => '(11. 22. 33.))
+
+  (check
+      (add '#(1. 2. 3.) '#(10. 20. 30.))
+    => '#(11. 22. 33.))
+
+  (check
+      (add (new <coords> 1. 2. 3.)
+	   (new <coords> 10. 20. 30.))
+    => (new <coords> 11. 22. 33.))
+
+  #;(begin
+    (display (add '(1. 2. 3.) '(10. 20. 30.)))
+    (newline)
+    (display (add '#(1. 2. 3.) '#(10. 20. 30.)))
+    (newline)
+    (display (add (new <coords> 1. 2. 3.)
+		  (new <coords> 10. 20. 30.)))
+    (newline)
+    (flush-output-port (current-output-port)))
+
+  #| end of parametrise |# )
 
 
 ;;;; done

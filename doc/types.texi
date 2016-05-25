@@ -4615,6 +4615,7 @@ The following syntactic bindings are exported by the library
 
 
 @deffn Syntax define-label @meta{type-name} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} nongenerative
 @deffnx {Auxiliary Syntax} parent
 @deffnx {Auxiliary Syntax} constructor
 @deffnx {Auxiliary Syntax} destructor
@@ -4668,6 +4669,11 @@ collector.  The @clause{destructor} clause has a syntax similar to
 where @meta{formals} must specify a single argument of type
 @meta{type-name}.  @meta{formals} must @strong{not} specify a return
 value: the destructor should return unspecified values.
+
+The optional clause @clause{nongenerative} must be used with a single
+argument being a symbol representing a @uid{} associated with the label
+type; such symbol is used by @syntax{type-unique-identifiers} and so it
+allows multimethods to use label types.
 @end deffn
 
 @c ------------------------------------------------------------------------

@@ -834,6 +834,7 @@
     (safe)
   (signatures
    ((<syntactic-identifier>		      ;label-name-id
+     <symbol>				      ;uid
      <syntax-object>			      ;parent-id
      (or <false> <syntactic-identifier>)      ;constructor
      (or <false> <syntactic-identifier>)      ;destructor
