@@ -1116,7 +1116,14 @@
 		 ;;values will match, so we generate no validator.
 		 '())
 
-		((list-of-type-spec? asrt.specs)
+		((<no-return>-ots? asrt.specs)
+		 ;;There is a rest argument, but its type is "<no-return>".  Any list
+		 ;;of values will match, so we generate no validator.
+		 '())
+
+		((or (list-of-type-spec? asrt.specs)
+		     (pair-type-spec?    asrt.specs)
+		     (<nelist>-ots?      asrt.specs))
 		 (set! number-of-validation-forms (fxadd1 number-of-validation-forms))
 		 (let ((validator.stx (object-type-spec.list-validator-lambda-stx asrt.specs return-values?)))
 		   `(,validator.stx ,consumer-formals.sexp ,operand-index __who__)))

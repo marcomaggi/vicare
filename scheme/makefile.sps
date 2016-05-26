@@ -549,13 +549,14 @@
 ;;;; core syntactic binding descriptors: fluids
 
 (define-constant VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS
-  `((__who__					($fluid . ,(gensym "fluid-label.__who__")))
-    (return					($fluid . ,(gensym "fluid-label.return")))
-    (continue					($fluid . ,(gensym "fluid-label.continue")))
-    (break					($fluid . ,(gensym "fluid-label.break")))
-    (with					($fluid . ,(gensym "fluid-label.with")))
-    (brace					($fluid . ,(gensym "fluid-label.brace")))
-    (<>						($fluid . ,(gensym "fluid-label.<>")))))
+  `((__who__		($fluid . ,(gensym "fluid-label.__who__")))
+    (__synner__		($fluid . ,(gensym "fluid-label.__synner__")))
+    (return		($fluid . ,(gensym "fluid-label.return")))
+    (continue		($fluid . ,(gensym "fluid-label.continue")))
+    (break		($fluid . ,(gensym "fluid-label.break")))
+    (with		($fluid . ,(gensym "fluid-label.with")))
+    (brace		($fluid . ,(gensym "fluid-label.brace")))
+    (<>			($fluid . ,(gensym "fluid-label.<>")))))
 
 ;;At present there are no fluid syntaxes  with default binding defined by Vicare.  To
 ;;define one for an imaginary fluid SPIFY, we should to this here:
@@ -3588,6 +3589,7 @@
     (begin-for-syntax				v $language)
 ;;;
     (__who__					v $language)
+    (__synner__					v $language)
     (__file__					v $language)
     (__line__					v $language)
     (<>						v $language)

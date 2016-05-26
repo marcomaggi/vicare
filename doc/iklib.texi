@@ -3004,6 +3004,12 @@ object.  It is meant to be used as follows:
 @end deffn
 
 
+@deffn {Fluid Syntax} __synner__
+A fluid syntax to be bound to the synner function in syntax
+transformers.
+@end deffn
+
+
 @deffn {Identifier Syntax} __file__
 Expand to a quoted string representing the source code location, for
 example the source file pathname.

@@ -569,7 +569,19 @@
     ((_ (?id ?arg) ?body0 ?body* ...)
      (and (identifier? ?id)
 	  (identifier? ?arg))
-     (values ?id (bless `(lambda (,?arg) ,?body0 ,@?body*))))
+     (values ?id (bless
+		  (let ((synner.id	(make-syntactic-identifier-for-temporary-variable "synner"))
+			(message.id	(make-syntactic-identifier-for-temporary-variable "message"))
+			(subform.id	(make-syntactic-identifier-for-temporary-variable "subform")))
+		    `(named-lambda/std ,?id (,?arg)
+		       (case-define/checked ,synner.id
+			 (({,message.id <string>})
+			  (,synner.id ,message.id #f))
+			 (({,message.id <string>} ,subform.id)
+			  (syntax-violation (quote ,?id) ,message.id ,?arg ,subform.id)))
+		       (fluid-let-syntax
+			   ((__synner__ (identifier-syntax ,synner.id)))
+			 ,?body0 . ,?body*))))))
     ((_ ?id)
      (identifier? ?id)
      (values ?id (bless '(syntax-rules ()))))
