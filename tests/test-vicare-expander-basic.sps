@@ -970,8 +970,6 @@
        (syntax-case stx ()
 	 ((_ ?id1 ?id2)
 	  (free-identifier=? #'?id1 #'?id2))))
-     ;; (eval-for-expand
-     ;;   (debug-print 'equal (free-identifier=? #'a #'b)))
      (doit a b)))
 
   (check-for-true
@@ -2403,7 +2401,7 @@
 	  #t)
 	(define-syntax (doit stx)
 	  (syntactic-binding-getprop #'ciao 'a))
-	(eval-for-expand
+	(begin-for-syntax
 	  (syntactic-binding-putprop #'ciao 'a 123))
 	(doit))
     => 123)
@@ -2427,7 +2425,7 @@
       (let-syntax ((ciao (lambda (stx) #t)))
 	(define-syntax (doit stx)
 	  (syntactic-binding-getprop #'ciao 'a))
-	(eval-for-expand
+	(begin-for-syntax
 	  (syntactic-binding-putprop #'ciao 'a 123))
 	(doit))
     => 123)
@@ -2440,7 +2438,7 @@
 	(define ciao "ciao")
 	(define-syntax (doit stx)
 	  (syntactic-binding-getprop #'ciao 'a))
-	(eval-for-expand
+	(begin-for-syntax
 	  (syntactic-binding-putprop #'ciao 'a 123))
 	(doit))
     => 123)
@@ -2452,7 +2450,7 @@
       (let ((ciao "ciao"))
 	(define-syntax (doit stx)
 	  (syntactic-binding-getprop #'ciao 'a))
-	(eval-for-expand
+	(begin-for-syntax
 	  (syntactic-binding-putprop #'ciao 'a 123))
 	(doit))
     => 123)
