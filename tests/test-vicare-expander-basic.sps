@@ -1308,18 +1308,19 @@
     => 2 2 2)
 
 ;;; --------------------------------------------------------------------
-;;; errors
+;;; arrow in ELSE clause
 
-  (check	;invalid arrow in ELSE clause
-      (guard (E ((syntax-violation? E)
-		 (condition-message E))
-		(else E))
-	(eval '(case 2
-		 ((a b c)	'symbol)
-		 ((1 2 3)	=> (lambda (N) (vector N)))
-		 (else		=> 'else))
-	      (environment '(vicare))))
-    => "incorrect use of auxiliary syntactic keyword")
+  (check
+      (case 9
+	((1)	1)
+	((2)	2)
+	(else
+	 => (lambda (obj)
+	      (list 'else obj))))
+    => '(else 9))
+
+;;; --------------------------------------------------------------------
+;;; errors
 
   (check	;receiver form does not evaluate to function
       (try
@@ -1327,6 +1328,18 @@
 		    ((a b c)	'symbol)
 		    ((1 2 3)	=> 123)
 		    (else	'else)))
+	(catch E
+	  ((&expression-return-value-violation)
+	   #t)
+	  (else #f)))
+    => #t)
+
+  (check	;receiver form does not evaluate to function
+      (try
+	  (%eval '(case 99
+		    ((a b c)	'symbol)
+		    ((1 2 3)	123)
+		    (else	=> 'else)))
 	(catch E
 	  ((&expression-return-value-violation)
 	   #t)
@@ -1362,14 +1375,14 @@
   (check	;no arrow, multiple values
       (case-identifiers #'two
   	((a b c)		'symbol)
-  	((one two three)	(values 7 8 9))
+  	((one two three)	123)
   	(else			'else))
-    => 7 8 9)
+    => 123)
 
   (check	;expr is not an identifier
       (case-identifiers 123
   	((a b c)		'symbol)
-  	((one two three)	(values 7 8 9))
+  	((one two three)	123)
   	(else			'else))
     => 'else)
 
@@ -1394,24 +1407,24 @@
   (check	;with arrow multiple values
       (case-identifiers #'two
   	((a b c)		'symbol)
-  	((one two three)	=> (lambda (N) (values N N N)))
+  	((one two three)	=> (lambda (N) N))
   	(else			'else))
     (=> syntax=?)
-    #'two #'two #'two)
+    #'two)
+
+;;; --------------------------------------------------------------------
+;;; arrow in ELSE clause
+
+  (check
+      (case-identifiers #'nine
+	((a b c)		'symbol)
+	((one two three)	'id)
+	(else			=> (lambda (N) (list #'else N))))
+    (=> syntax=?)
+    #'(else nine))
 
 ;;; --------------------------------------------------------------------
 ;;; errors
-
-  (check	;invalid arrow in ELSE clause
-      (guard (E ((syntax-violation? E)
-  		 (condition-message E))
-  		(else E))
-  	(eval '(case-identifiers #'two
-  		 ((a b c)		'symbol)
-  		 ((one two three)	=> (lambda (N) (vector N)))
-  		 (else			=> 'else))
-  	      (environment '(vicare))))
-    => "incorrect use of auxiliary syntactic keyword")
 
   (check	;receiver form does not evaluate to function
       (try
@@ -1419,6 +1432,18 @@
 		    ((a b c)		'symbol)
 		    ((one two three)	=> 'one-two-three)
 		    (else		'else)))
+	(catch E
+	  ((&expression-return-value-violation)
+	   #t)
+	  (else #f)))
+    => #t)
+
+  (check	;receiver form does not evaluate to function
+      (try
+	  (%eval '(case-identifiers #'nine
+		    ((a b c)		'symbol)
+		    ((one two three)	'one-two-three)
+		    (else		=> 'else)))
 	(catch E
 	  ((&expression-return-value-violation)
 	   #t)

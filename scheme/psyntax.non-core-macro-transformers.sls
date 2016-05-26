@@ -317,39 +317,39 @@
   ;;
   ;;is expanded to:
   ;;
-  ;;   (letrec ((expr.sym ?expr)
-  ;;            (g1      (lambda () (stuff1)))
-  ;;            (g2      (lambda () (stuff2)))
-  ;;            (else.sym (lambda () (else-stuff))))
-  ;;     (cond ((number? expr.sym)
-  ;;            (cond ((= expr.sym 1)
+  ;;   (letrec ((expr-result.tmp	?expr)
+  ;;            (g1			(lambda () (stuff1)))
+  ;;            (g2			(lambda () (stuff2)))
+  ;;            (else-proc.tmp		(lambda () (else-stuff))))
+  ;;     (cond ((number? expr-result.tmp)
+  ;;            (cond ((= expr-result.tmp 1)
   ;;                   (g1))
-  ;;                  ((= expr.sym 2)
+  ;;                  ((= expr-result.tmp 2)
   ;;                   (g2))
   ;;                  (else
-  ;;                   (else.sym)))
-  ;;           ((string? expr.sym)
-  ;;            (cond ((string=? expr.sym "a")
+  ;;                   (else-proc.tmp)))
+  ;;           ((string? expr-result.tmp)
+  ;;            (cond ((string=? expr-result.tmp "a")
   ;;                   (g1))
   ;;                  (else
-  ;;                   (else.sym)))
-  ;;           ((symbol? expr.sym)
-  ;;            (cond ((eq? expr.sym 'c)
+  ;;                   (else-proc.tmp)))
+  ;;           ((symbol? expr-result.tmp)
+  ;;            (cond ((eq? expr-result.tmp 'c)
   ;;                   (g1))
   ;;                  (else
-  ;;                   (else.sym)))
-  ;;           ((boolean? expr.sym)
-  ;;            (cond ((boolean=? expr.sym #t)
+  ;;                   (else-proc.tmp)))
+  ;;           ((boolean? expr-result.tmp)
+  ;;            (cond ((boolean=? expr-result.tmp #t)
   ;;                   (g2))
   ;;                  (else
-  ;;                   (else.sym)))
-  ;;           ((vector? expr.sym)
-  ;;            (cond ((equal? expr.sym '#(1 2))
+  ;;                   (else-proc.tmp)))
+  ;;           ((vector? expr-result.tmp)
+  ;;            (cond ((equal? expr-result.tmp '#(1 2))
   ;;                   (g2))
   ;;                  (else
-  ;;                   (else.sym)))
+  ;;                   (else-proc.tmp)))
   ;;           (else
-  ;;            (else.sym)))
+  ;;            (else-proc.tmp)))
   ;;
   ;;NOTE This implementation contains ideas from:
   ;;
@@ -362,38 +362,55 @@
   (define-module-who case)
 
   (define-macro-transformer (case input-form.stx)
-    (syntax-match input-form.stx (else)
+    (syntax-match input-form.stx (else =>)
       ;;Without ELSE clause.
       ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ...)
-       (%build-output-form input-form.stx ?expr
-			   (map cons
-			     (map cons ?datum0* ?datum**)
-			     (map cons ?body0*  ?body**))
-			   '((void))))
+       (let* ((expr-result.id	(make-syntactic-identifier-for-temporary-variable "expr-result"))
+	      (else-proc.id	(make-syntactic-identifier-for-temporary-variable "else-proc"))
+	      (else-binding.stx	`(,else-proc.id (lambda/checked () (void)))))
+	 (%build-output-form input-form.stx expr-result.id ?expr
+			     (map cons
+			       (map cons ?datum0* ?datum**)
+			       (map cons ?body0*  ?body**))
+			     else-proc.id else-binding.stx)))
+
+      ;;With else clause, arrow case.
+      ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ... (else => ?else-proc))
+       (not (options::strict-r6rs-enabled?))
+       (let* ((expr-result.id	(make-syntactic-identifier-for-temporary-variable "expr-result"))
+	      (else-proc.id	(make-syntactic-identifier-for-temporary-variable "else-proc"))
+	      (else-binding.stx	`(,else-proc.id (lambda/checked ()
+						  ((assert-signature-and-return (<procedure>) ,?else-proc) ,expr-result.id)))))
+	 (%build-output-form input-form.stx expr-result.id ?expr
+			     (map cons
+			       (map cons ?datum0* ?datum**)
+			       (map cons ?body0*  ?body**))
+			     else-proc.id else-binding.stx)))
 
       ;;With else clause.
       ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ... (else ?else-body0 ?else-body* ...))
-       (%build-output-form input-form.stx ?expr
-			   (map cons
-			     (map cons ?datum0* ?datum**)
-			     (map cons ?body0*  ?body**))
-			   (cons ?else-body0 ?else-body*)))
+       (let* ((expr-result.id	(make-syntactic-identifier-for-temporary-variable "expr-result"))
+	      (else-proc.id	(make-syntactic-identifier-for-temporary-variable "else-proc"))
+	      (else-binding.stx	`(,else-proc.id (lambda/checked () ,?else-body0 . ,?else-body*))))
+	 (%build-output-form input-form.stx expr-result.id ?expr
+			     (map cons
+			       (map cons ?datum0* ?datum**)
+			       (map cons ?body0*  ?body**))
+			     else-proc.id else-binding.stx)))
 
       (_
        (syntax-violation __module_who__ "invalid syntax in macro use" input-form.stx))))
 
-  (define (%build-output-form input-form.stx expr.stx datum-clause*.stx else-body*.stx)
-    (let ((expr.sym (make-syntactic-identifier-for-temporary-variable "expr.sym"))
-	  (else.sym (make-syntactic-identifier-for-temporary-variable "else.sym")))
-      (receive (branch-binding* cond-clause*)
-	  (%process-clauses input-form.stx expr.sym else.sym datum-clause*.stx)
-	(bless
-	 `(letrec/checked ((,expr.sym ,expr.stx)
-			   ,@branch-binding*
-			   (,else.sym (lambda/checked () . ,else-body*.stx)))
-	    (cond ,@cond-clause* (else (,else.sym))))))))
+  (define (%build-output-form input-form.stx expr-result.id expr.stx datum-clause*.stx else-proc.id else-binding.stx)
+    (receive (branch-binding*.stx cond-clause*.stx)
+	(%process-clauses input-form.stx expr-result.id else-proc.id datum-clause*.stx)
+      (bless
+       `(letrec/checked ((,expr-result.id ,expr.stx)
+			 ,@branch-binding*.stx
+			 ,else-binding.stx)
+	  (cond ,@cond-clause*.stx (else (,else-proc.id)))))))
 
-  (define (%process-clauses input-form.stx expr.sym else.sym clause*.stx)
+  (define (%process-clauses input-form.stx expr-result.id else-proc.id clause*.stx)
     (receive (closure*.stx closure*.sym entry**)
 	(%clauses->entries input-form.stx clause*.stx)
       (define boolean-entry*	'())
@@ -406,7 +423,7 @@
       (define pair-entry*	'())
       (define vector-entry*	'())
       (define-syntax-rule (mk-datum-clause ?pred.sym ?compar.sym ?entry*)
-	(%make-datum-clause input-form.stx expr.sym else.sym (core-prim-id '?pred.sym) (core-prim-id '?compar.sym) ?entry*))
+	(%make-datum-clause input-form.stx expr-result.id else-proc.id (core-prim-id '?pred.sym) (core-prim-id '?compar.sym) ?entry*))
       (let loop ((entry* (apply append entry**)))
 	(when (pair? entry*)
 	  (let ((datum (syntax->datum (caar entry*))))
@@ -458,12 +475,12 @@
 		 (mk-datum-clause boolean?	boolean=?	boolean-entry*)
 		 (mk-datum-clause char?		$char=		char-entry*)
 		 (mk-datum-clause symbol?	eq?		symbol-entry*)
-		 (%make-numbers-clause input-form.stx expr.sym else.sym number-entry*)
+		 (%make-numbers-clause input-form.stx expr-result.id else-proc.id number-entry*)
 		 (mk-datum-clause string?	$string=	string-entry*)
 		 (mk-datum-clause bytevector?	$bytevector=	bytevector-entry*)
 		 (mk-datum-clause pair?		equal?		pair-entry*)
 		 (mk-datum-clause vector?	equal?		vector-entry*)
-		 (%make-null-clause input-form.stx expr.sym null-entry*)
+		 (%make-null-clause input-form.stx expr-result.id null-entry*)
 		 )))))
 
   (define (%clauses->entries input-form.stx clause*.stx)
@@ -483,6 +500,7 @@
   (define (%process-single-clause input-form.stx clause.stx)
     (syntax-match clause.stx (=>)
       ((?datum* => ?closure)
+       (not (options::strict-r6rs-enabled?))
        (let ((closure.sym	(make-syntactic-identifier-for-temporary-variable))
 	     (obj.sym		(make-syntactic-identifier-for-temporary-variable)))
 	 (define closure.stx
@@ -533,36 +551,36 @@
       (_
        (syntax-violation __module_who__ "invalid clause syntax" input-form.stx clause.stx))))
 
-  (define (%make-datum-clause input-form.stx expr.sym else.sym pred.id compar.id entry*)
+  (define (%make-datum-clause input-form.stx expr-result.id else-proc.id pred.id compar.id entry*)
     (if (pair? entry*)
-	`((,pred.id ,expr.sym)
+	`((,pred.id ,expr-result.id)
 	  (cond ,@(map (lambda (entry)
 			 (let ((datum		(car entry))
 			       (closure.sym	(cadr entry))
 			       (arrow?		(cddr entry)))
-			   `((,compar.id ,expr.sym (quote ,datum))
+			   `((,compar.id ,expr-result.id (quote ,datum))
 			     ,(if arrow?
-				  `(,closure.sym ,expr.sym)
+				  `(,closure.sym ,expr-result.id)
 				`(,closure.sym)))))
 		    entry*)
 		(else
-		 (,else.sym))))
+		 (,else-proc.id))))
       '()))
 
-  (define (%make-null-clause input-form.stx expr.sym entry*)
+  (define (%make-null-clause input-form.stx expr-result.id entry*)
     (if (pair? entry*)
 	(if (<= 2 (length entry*))
 	    (syntax-violation __module_who__ "invalid datums, null is present multiple times" input-form.stx)
-	  `((null? ,expr.sym)
+	  `((null? ,expr-result.id)
 	    ,(let* ((entry		(car  entry*))
 		    (closure.sym	(cadr entry))
 		    (arrow?		(cddr entry)))
 	       (if arrow?
-		   `(,closure.sym ,expr.sym)
+		   `(,closure.sym ,expr-result.id)
 		 `(,closure.sym)))))
       '()))
 
-  (define (%make-numbers-clause input-form.stx expr.sym else.sym entry*)
+  (define (%make-numbers-clause input-form.stx expr-result.id else-proc.id entry*)
     ;;For generic  number objects we  use = as comparison  predicate and
     ;;NUMBER?  as type  predicate; but  if  all the  datums are  fixnums
     ;;(which is a common case): we use $FX= as comparison and FIXNUM? as
@@ -574,8 +592,8 @@
 		   (fixnum? (syntax->datum datum))))
 	entry*))
     (if all-fixnums?
-	(%make-datum-clause input-form.stx expr.sym else.sym (core-prim-id 'fixnum?) (core-prim-id '$fx=) entry*)
-      (%make-datum-clause input-form.stx expr.sym else.sym (core-prim-id 'number?) (core-prim-id '=) entry*)))
+	(%make-datum-clause input-form.stx expr-result.id else-proc.id (core-prim-id 'fixnum?) (core-prim-id '$fx=) entry*)
+      (%make-datum-clause input-form.stx expr-result.id else-proc.id (core-prim-id 'number?) (core-prim-id '=) entry*)))
 
   (define-syntax set-cons!
     (syntax-rules ()
@@ -595,7 +613,7 @@
     ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return
     ;;a syntax object that must be further expanded.
     ;;
-    (syntax-match input-form.stx (else)
+    (syntax-match input-form.stx (else =>)
       ((_ ?expr)
        (bless
 	`(begin
@@ -604,50 +622,66 @@
 
       ;;Without ELSE clause.
       ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ...)
-       (%build-output-form input-form.stx ?expr
-			   (map cons
-			     (map cons ?datum0* ?datum**)
-			     (map cons ?body0*  ?body**))
-			   (bless '((void)))))
+       (let* ((expr-result.id	(make-syntactic-identifier-for-temporary-variable "expr-result"))
+	      (else-proc.id	(make-syntactic-identifier-for-temporary-variable "else-proc"))
+	      (else-binding.stx	`(,else-proc.id (lambda/checked () (void)))))
+	 (%build-output-form input-form.stx expr-result.id ?expr
+			     (map cons
+			       (map cons ?datum0* ?datum**)
+			       (map cons ?body0*  ?body**))
+			     else-proc.id else-binding.stx)))
+
+      ;;With else clause, arrow case.
+      ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ... (else => ?else-proc))
+       (let* ((expr-result.id	(make-syntactic-identifier-for-temporary-variable "expr-result"))
+	      (else-proc.id	(make-syntactic-identifier-for-temporary-variable "else-proc"))
+	      (else-binding.stx	`(,else-proc.id (lambda/checked ()
+						  ((assert-signature-and-return (<procedure>) ,?else-proc) ,expr-result.id)))))
+	 (%build-output-form input-form.stx expr-result.id ?expr
+			     (map cons
+			       (map cons ?datum0* ?datum**)
+			       (map cons ?body0*  ?body**))
+			     else-proc.id else-binding.stx)))
 
       ;;With else clause.
       ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ... (else ?else-body0 ?else-body* ...))
-       (%build-output-form input-form.stx ?expr
-			   (map cons
-			     (map cons ?datum0* ?datum**)
-			     (map cons ?body0*  ?body**))
-			   (cons ?else-body0 ?else-body*)))
+       (let* ((expr-result.id	(make-syntactic-identifier-for-temporary-variable "expr-result"))
+	      (else-proc.id	(make-syntactic-identifier-for-temporary-variable "else-proc"))
+	      (else-binding.stx	`(,else-proc.id (lambda/checked () ,?else-body0 . ,?else-body*))))
+	 (%build-output-form input-form.stx expr-result.id ?expr
+			     (map cons
+			       (map cons ?datum0* ?datum**)
+			       (map cons ?body0*  ?body**))
+			     else-proc.id else-binding.stx)))
 
       (_
        (syntax-violation __module_who__ "invalid syntax in macro use" input-form.stx))))
 
-  (define (%build-output-form input-form.stx expr.stx datum-clause*.stx else-body*.stx)
-    (let ((expr.sym (make-syntactic-identifier-for-temporary-variable "expr.sym"))
-	  (else.sym (make-syntactic-identifier-for-temporary-variable "else.sym")))
-      (receive (branch-binding* cond-clause*)
-	  (%process-clauses input-form.stx expr.sym datum-clause*.stx)
-	(bless
-	 `(letrec/std ((,expr.sym ,expr.stx)
-		       ,@branch-binding*
-		       (,else.sym (lambda/std () . ,else-body*.stx)))
-	    (if (identifier? ,expr.sym)
-		(cond ,@cond-clause* (else (,else.sym)))
-	      (,else.sym)))))))
+  (define (%build-output-form input-form.stx expr-result.id expr.stx datum-clause*.stx else-proc.id else-binding.stx)
+    (receive (branch-binding*.stx cond-clause*.stx)
+	(%process-clauses input-form.stx expr-result.id datum-clause*.stx)
+      (bless
+       `(letrec/checked ((,expr-result.id ,expr.stx)
+			 ,@branch-binding*.stx
+			 ,else-binding.stx)
+	  (if (identifier? ,expr-result.id)
+	      (cond ,@cond-clause*.stx (else (,else-proc.id)))
+	    (,else-proc.id))))))
 
-  (define (%process-clauses input-form.stx expr.sym datum-clause*.stx)
+  (define (%process-clauses input-form.stx expr-result.id datum-clause*.stx)
     (syntax-match datum-clause*.stx ()
       (()
        (values '() '()))
       ((?clause . ?other-clause*)
        (let-values
-	   (((branch-binding* cond-clause*)	(%process-clauses       input-form.stx expr.sym ?other-clause*))
-	    ((branch-binding  cond-clause)	(%process-single-clause input-form.stx expr.sym ?clause)))
+	   (((branch-binding* cond-clause*)	(%process-clauses       input-form.stx expr-result.id ?other-clause*))
+	    ((branch-binding  cond-clause)	(%process-single-clause input-form.stx expr-result.id ?clause)))
 	 (values (cons branch-binding branch-binding*)
 		 (cons cond-clause    cond-clause*))))
       (_
        (syntax-violation __module_who__ "invalid syntax in macro use" input-form.stx))))
 
-  (define (%process-single-clause input-form.stx expr.sym clause.stx)
+  (define (%process-single-clause input-form.stx expr-result.id clause.stx)
     (syntax-match clause.stx (=>)
       ((?datum* => ?closure)
        (let ((closure.sym	(make-syntactic-identifier-for-temporary-variable)))
@@ -655,26 +689,26 @@
 	 ;;true.  That is why we wrap ?CLOSURE in a further LAMBDA.
 	 (values (bless
 		  `(,closure.sym (lambda/std ()
-				   ((assert-signature-and-return (<procedure>) ,?closure) ,expr.sym))))
-		 `(,(%build-branch-test input-form.stx expr.sym ?datum*)
+				   ((assert-signature-and-return (<procedure>) ,?closure) ,expr-result.id))))
+		 `(,(%build-branch-test input-form.stx expr-result.id ?datum*)
 		   (,closure.sym)))))
 
       ((?datum* . ?body)
        (let ((closure.sym	(make-syntactic-identifier-for-temporary-variable)))
 	 (values `(,closure.sym (lambda/std () . ,?body))
-		 `(,(%build-branch-test input-form.stx expr.sym ?datum*)
+		 `(,(%build-branch-test input-form.stx expr-result.id ?datum*)
 		   (,closure.sym)))))
 
       (_
        (syntax-violation __module_who__ "invalid clause syntax" input-form.stx clause.stx))
       ))
 
-  (define (%build-branch-test input-form.stx expr.sym datum*)
+  (define (%build-branch-test input-form.stx expr-result.id datum*)
     (syntax-match datum* ()
       ((?datum0 ?datum* ...)
        `(or . ,(map (lambda (datum.stx)
 		      (if (identifier? datum.stx)
-			  `(free-identifier=? ,expr.sym (syntax ,datum.stx))
+			  `(free-identifier=? ,expr-result.id (syntax ,datum.stx))
 			(syntax-violation __module_who__ "expected identifiers as datums" input-form.stx datum.stx)))
 		 (cons ?datum0 ?datum*))))
       (_

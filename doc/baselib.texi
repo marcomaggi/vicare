@@ -532,16 +532,16 @@ one of the following forms:
 
 @example
 ((@metai{datum} @dots{}) @metai{expression} @metaii{expression} @dots{})
-((@metai{datum} @dots{}) => @meta{expression})
 (else @metai{expression} @metaii{expression} @dots{})
+((@metai{datum} @dots{}) => @meta{expression})
+(else => @meta{expression})
 @end example
 
-The second form is only available in non--strict @rnrs{6} mode,
-@ref{using invoking, @option{--no-strict-r6rs}}.  The third form, which
-specifies an ``@code{else} clause'', may only appear as the last
-@meta{case-clause}.  Each @meta{datum} is an external representation of
-some object.  The data represented by the @meta{datum}s need not be
-distinct.
+The arrow forms are only available in non--strict @rnrs{6} mode,
+@ref{using invoking, @option{--no-strict-r6rs}}.  The ``@code{else}
+clauses'' may only appear as the last @meta{case-clause}.  Each
+@meta{datum} is an external representation of some object.  The data
+represented by the @meta{datum}s need not be distinct.
 
 A @func{case} expression is evaluated as follows.
 
@@ -592,6 +592,12 @@ values.
   ((1 2 3)      => (lambda (N) (vector N)))
   (else         'else))
 @result{} #(2)
+
+(case 9
+  ((a b c)      'symbol)
+  ((1 2 3)      'number)
+  (else         => (lambda (N) (vector N))))
+@result{} #(9)
 @end example
 
 The last @meta{expression} of a @meta{case-clause} is in tail context

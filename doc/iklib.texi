@@ -1401,16 +1401,29 @@ Exclusive @syntax{or}.  When expanded with no expressions: evaluate to
 @end deffn
 
 
-@deffn Macro case-identifiers @meta{expr} ((@metao{identifier} @meta{identifier} ...) @metao{sym-body} @meta{sym-body} ...) ...
-@deffnx Macro case-identifiers @meta{expr} ((@metao{identifier} @meta{identifier} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffn Macro case-identifiers @meta{expr} @metao{clause} @meta{clause} @dots{}
 @deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expecting only identifiers as
-datums; identifiers are compared with @func{free-identifier=?}.
-@func{else} must be the binding exported by @library{rnrs} and
-@library{vicare}.
+@deffnx {Auxiliary Syntax} =>
+Special implementation of @func{case} expecting only syntactic
+identifiers as datums; identifiers are compared with
+@func{free-identifier=?}.  The syntactic identifiers @syntax{else} and
+@syntax{=>} must be the syntactic bindings exported by @library{rnrs}
+and @library{vicare}.
 
-@meta{expr} must be an expression evaluating to an identifier, else the
-behaviour is undefined.
+Each @meta{clause} must have one of the formats:
+
+@lisp
+((@metao{identifier} @meta{identifier} ...) @metao{body} @meta{body} ...)
+((@metao{identifier} @meta{identifier} ...) => @meta{body})
+(else @metao{body} @meta{body} ...)
+(else => @meta{body})
+@end lisp
+
+@noindent
+where the @clause{else} clauses may appear only as last clause.
+
+@meta{expr} must be an expression evaluating to an identifier, otherwise
+the @clause{else} clause is evaluated.
 @end deffn
 
 @c page
