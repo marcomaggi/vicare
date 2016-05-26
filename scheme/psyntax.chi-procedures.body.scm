@@ -585,7 +585,9 @@
 			   ,?body0 . ,?body*)))))))
     ((_ ?id)
      (identifier? ?id)
-     (values ?id (bless '(syntax-rules ()))))
+     (values ?id (bless
+		  `(lambda/std (stx)
+		     (syntax-violation (quote ,?id)' "invalid syntax use" stx #f)))))
     ((_ ?id ?transformer-expr)
      (identifier? ?id)
      (values ?id ?transformer-expr))
