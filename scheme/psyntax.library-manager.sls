@@ -587,7 +587,8 @@
 			     ;;This  function is  used  also to  intern the  built-in
 			     ;;libraries.   So the  types  used by  the boot  image's
 			     ;;syntactic bindings are to be included too.
-			     ((core-prim $core-prim-typed
+			     (( ;;
+			       core-prim $core-prim-typed
 			       integrated-macro core-macro macro macro!
 			       $core-rtd $core-rcd $core-scheme-type-descriptor
 			       $core-record-type-name $core-condition-object-type-name

@@ -254,9 +254,8 @@
 		       core-prim core-prim-typed lexical lexical-typed
 		       global global-mutable global-typed global-typed-mutable
 		       integrated-macro macro macro! global-macro global-macro! local-macro local-macro!
-		       $module pattern-variable
-		       $core-rtd $core-rcd $core-scheme-type-descriptor
-		       local-etv global-etv
+		       local-etv global-etv pattern-variable
+		       $core-rtd $core-rcd $module $core-scheme-type-descriptor
 		       displaced-lexical)
 		      (values type descr ?id))
 		     (else
@@ -775,9 +774,6 @@
        ;;
        ;;   ($core-rtd . ?prim-name)
        ;;
-       ;;NOTE There should  be no more of  these.  All the build-in  RTDs should have
-       ;;syntactic  binding's  descriptor  of type  "core-object-type-name".   (Marco
-       ;;Maggi; Sat May 14, 2016)
        (let ((name (syntactic-binding-descriptor.value descr)))
 	 (make-psi expr.stx
 	   (build-primref no-source name)
@@ -790,9 +786,6 @@
        ;;
        ;;   ($core-rcd . ?prim-name)
        ;;
-       ;;NOTE There should  be no more of  these.  All the build-in  RCDs should have
-       ;;syntactic  binding's  descriptor  of type  "core-object-type-name".   (Marco
-       ;;Maggi; Sat May 14, 2016)
        (let ((name (syntactic-binding-descriptor.value descr)))
 	 (make-psi expr.stx
 	   (build-primref no-source name)
