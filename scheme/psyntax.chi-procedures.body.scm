@@ -116,290 +116,24 @@
 (module (chi-body*)
 
 
-(define* (chi-body* body-form*.stx lexenv.run lexenv.expand rev-qdef* mod** kwd* export-spec* rib
+(define* (chi-body* body-form*.stx lexenv.run lexenv.expand
+		    rev-qdef* mod** kwd* export-spec* rib
 		    mix? shadow/redefine-bindings?)
-  (import CHI-DEFINE)
   (if (pair? body-form*.stx)
       (let*-values
 	  (((body-form.stx)	(car body-form*.stx))
-	   ((type descr kwd)	(syntactic-form-type __who__ body-form.stx lexenv.run)))
-
-	(define keyword*
-	  (if (identifier? kwd)
-	      (cons kwd kwd*)
-	    kwd*))
-
-	(define-syntax-rule (%expand-internal-definition ?expander-who)
-	  ;;Used  to   process  an   internal  definition  core   macro:  DEFINE/STD,
-	  ;;DEFINE/TYPED,    DEFINE/CHECKED,   CASE-DEFINE/STD,    CASE-DEFINE/TYPED,
-	  ;;CASE-DEFINE/CHECKED.  We  parse the  body form  and generate  a qualified
-	  ;;right-hand side (QDEF) object that will be expanded later.
-	  ;;
-	  (receive (qdef lexenv.run)
-	      #;(?expander-who body-form.stx rib lexenv.run keyword* shadow/redefine-bindings?)
-	      (?expander-who (if (options::debug-mode-enabled?)
-				 (stx-push-annotated-expr body-form.stx body-form.stx)
-			       body-form.stx)
-			     rib lexenv.run keyword* shadow/redefine-bindings?)
-	    (chi-body* (cdr body-form*.stx)
-		       lexenv.run lexenv.expand
-		       (cons qdef rev-qdef*)
-		       mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
-
+	   ((type descr kwd)	(syntactic-form-type __who__ body-form.stx lexenv.run))
+	   ((kwd*)		(if (identifier? kwd)
+				    (cons kwd kwd*)
+				  kwd*)))
 	#;(debug-print __who__ body-form.stx)
-
 	(parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	  (case type
-
-	    ((define/std)
-	     ;;The body form is a DEFINE/STD core macro use, one among:
-	     ;;
-	     ;;   (define/std ?lhs ?rhs)
-	     ;;   (define/std (?lhs . ?formals) . ?body)
-	     ;;
-	     ;;it is meant to be the implementation of R6RS's DEFINE syntax.
-	     (%expand-internal-definition chi-define/std))
-
-	    ((define/typed)
-	     ;;The body form is a DEFINE/TYPED core macro use, one among:
-	     ;;
-	     ;;   (define/typed ?lhs ?rhs)
-	     ;;   (define/typed (?lhs . ?formals) . ?body)
-	     ;;
-	     ;;it is meant to be an extension to R6RS's DEFINE syntax supporting type
-	     ;;specifications.
-	     (%expand-internal-definition chi-define/typed))
-
-	    ((define/checked)
-	     ;;The body form is a DEFINE/TYPED core macro use, one among:
-	     ;;
-	     ;;   (define/checked ?lhs ?rhs)
-	     ;;   (define/checked (?lhs . ?formals) . ?body)
-	     ;;
-	     ;;it is meant to be an extension to R6RS's DEFINE syntax supporting type
-	     ;;specifications.
-	     (receive (qdef* lexenv.run)
-		 (chi-define/checked (if (options::debug-mode-enabled?)
-					 (stx-push-annotated-expr body-form.stx body-form.stx)
-				       body-form.stx)
-				     rib lexenv.run keyword* shadow/redefine-bindings?)
-	       (chi-body* (cdr body-form*.stx)
-			  lexenv.run lexenv.expand
-			  (append qdef* rev-qdef*)
-			  mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
-
-	    ((case-define/std)
-	     ;;The body form is a CASE-DEFINE/STD core macro use:
-	     ;;
-	     ;;   (case-define/std ?lhs ?case-lambda-clause ...)
-	     ;;
-	     ;;it is meant to be equivalent to:
-	     ;;
-	     ;;   (define/std ?lhs (case-lambda/std ?case-lambda-clause ...))
-	     ;;
-	     (%expand-internal-definition chi-case-define/std))
-
-	    ((case-define/typed)
-	     ;;The body form is a CASE-DEFINE/TYPED core macro use:
-	     ;;
-	     ;;   (case-define/typed ?lhs ?case-lambda-clause ...)
-	     ;;
-	     ;;it  is meant  to be  an extension  to the  CASE-DEFINE/STD syntax
-	     ;;supporting type specifications.
-	     (%expand-internal-definition chi-case-define/typed))
-
-	    ((case-define/checked)
-	     ;;The body form is a CASE-DEFINE/CHECKED core macro use:
-	     ;;
-	     ;;   (case-define/checked ?lhs ?case-lambda-clause ...)
-	     ;;
-	     ;;it  is  meant  to  be  an  extension  to  the  CASE-DEFINE/STD  syntax
-	     ;;supporting type specifications.
-	     (receive (qdef* lexenv.run)
-		 (chi-case-define/checked (if (options::debug-mode-enabled?)
-					      (stx-push-annotated-expr body-form.stx body-form.stx)
-					    body-form.stx)
-					  rib lexenv.run keyword* shadow/redefine-bindings?)
-	       (chi-body* (cdr body-form*.stx)
-			  lexenv.run lexenv.expand
-			  (append qdef* rev-qdef*)
-			  mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
-
-	    ((define-syntax)
-	     ;;The body  form is a  built-in DEFINE-SYNTAX  macro use.  This  is what
-	     ;;happens:
-	     ;;
-	     ;;1. Parse the syntactic form.
-	     ;;
-	     ;;2. Expand the right-hand side expression.  This expansion happens in a
-	     ;;lexical context in which the syntactic binding of the macro itself has
-	     ;;*not* yet been established.
-	     ;;
-	     ;;3. Add  to the rib  the syntactic binding's association  between the
-	     ;;macro keyword and the label.
-	     ;;
-	     ;;4.   Evaluate the  right-hand  side expression,  which  is meant  to
-	     ;;return:  a  macro  transformer  function, a  compile-time  value,  a
-	     ;;synonym transformer or whatever.
-	     ;;
-	     ;;5. Add to the lexenv the syntactic binding's association between the
-	     ;;label and the binding's descriptor.
-	     ;;
-	     ;;6. Finally recurse to expand the rest of the body.
-	     ;;
-	     (receive (id rhs.stx)
-		 (%parse-define-syntax body-form.stx)
-	       (when (bound-id-member? id keyword*)
-		 (stx-error body-form.stx "cannot redefine keyword"))
-	       (let ((rhs.core (expand-macro-transformer rhs.stx lexenv.expand))
-		     (lab      (generate-label-gensym id)))
-		 ;;This call will raise an exception if it represents an attempt to
-		 ;;illegally redefine a binding.
-		 (extend-rib! rib id lab shadow/redefine-bindings?)
-		 (let ((entry (cons lab (eval-macro-transformer rhs.core lexenv.run))))
-		   (chi-body* (cdr body-form*.stx)
-			      (cons entry lexenv.run)
-			      (cons entry lexenv.expand)
-			      rev-qdef* mod** keyword* export-spec* rib
-			      mix? shadow/redefine-bindings?)))))
-
-	    ((define-fluid-syntax)
-	     ;;The body  form is a  built-in DEFINE-FLUID-SYNTAX macro use.   This is
-	     ;;what happens:
-	     ;;
-	     ;;1. Parse the syntactic form.
-	     ;;
-	     ;;2. Expand the right-hand side expression.  This expansion happens in a
-	     ;;lexical context in which the syntactic binding of the macro itself has
-	     ;;*not* yet been established.
-	     ;;
-	     ;;3.  Add to  the rib  the syntactic  binding's association  between the
-	     ;;macro keyword and the label.
-	     ;;
-	     ;;4.  Evaluate the  right-hand side expression (which  usually returns a
-	     ;;macro transformer function).
-	     ;;
-	     ;;5. Add to  the lexenv the syntactic binding's  association between the
-	     ;;label and the binding's descriptor.
-	     ;;
-	     ;;6. Finally recurse to expand the rest of the body.
-	     ;;
-	     (receive (lhs.id rhs.stx)
-		 (%parse-define-syntax body-form.stx)
-	       (when (bound-id-member? lhs.id keyword*)
-		 (stx-error body-form.stx "cannot redefine keyword"))
-	       (let ((rhs.core (expand-macro-transformer rhs.stx lexenv.expand))
-		     (lhs.lab  (generate-label-gensym lhs.id)))
-		 ;;This call will  raise an exception if it represents  an attempt to
-		 ;;illegally redefine a binding.
-		 (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
-		 ;;The LEXENV  entry KEYWORD-ENTRY  represents the definition  of the
-		 ;;fluid  syntax's  keyword  syntactic  binding.   The  LEXENV  entry
-		 ;;FLUID-ENTRY represents the definition of  the current value of the
-		 ;;fluid syntax,  the one  that later can  be shadowed  with internal
-		 ;;definitions by FLUID-LET-SYNTAX.
-		 (let* ((descriptor	(eval-macro-transformer rhs.core lexenv.run))
-			(fluid-label	(generate-label-gensym lhs.id))
-			(fluid-entry	(cons fluid-label descriptor))
-			(keyword-entry	(cons lhs.lab (make-syntactic-binding-descriptor/local-global-macro/fluid-syntax fluid-label))))
-		   (chi-body* (cdr body-form*.stx)
-			      (cons* keyword-entry fluid-entry lexenv.run)
-			      (cons* keyword-entry fluid-entry lexenv.expand)
-			      rev-qdef* mod** keyword* export-spec* rib
-			      mix? shadow/redefine-bindings?)))))
-
-	    ((define-alias)
-	     ;;The body form  is a core language DEFINE-ALIAS macro  use.  We add a
-	     ;;new  association identifier/label  to the  current rib.   Finally we
-	     ;;recurse on the rest of the body.
-	     ;;
-	     (receive (alias-id old-id)
-		 (%parse-define-alias body-form.stx)
-	       (when (bound-id-member? old-id keyword*)
-		 (stx-error body-form.stx "cannot redefine keyword"))
-	       (cond ((id->label old-id)
-		      => (lambda (label)
-			   ;;This call will raise an  exception if it represents an
-			   ;;attempt to illegally redefine a binding.
-			   (extend-rib! rib alias-id label shadow/redefine-bindings?)
-			   (chi-body* (cdr body-form*.stx)
-				      lexenv.run lexenv.expand
-				      rev-qdef* mod** keyword* export-spec* rib
-				      mix? shadow/redefine-bindings?)))
-		     (else
-		      (stx-error body-form.stx "unbound source identifier")))))
-
-	    ((let-syntax letrec-syntax)
-	     ;;The body form is a  core language LET-SYNTAX or LETREC-SYNTAX macro
-	     ;;use.   We expand  and evaluate  the transformer  expressions, build
-	     ;;syntactic bindings  for them,  register their labels  in a  new rib
-	     ;;because they are  visible only in the internal  body.  The internal
-	     ;;forms are  spliced in the external  body but with the  rib added to
-	     ;;them.
-	     ;;
-	     (syntax-match body-form.stx ()
-	       ((_ ((?xlhs* ?xrhs*) ...) ?xbody* ...)
-		(unless (valid-bound-ids? ?xlhs*)
-		  (stx-error body-form.stx "invalid identifiers"))
-		(let* ((xlab*  (map generate-label-gensym ?xlhs*))
-		       (xrib   (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
-		       ;;We  evaluate  the  transformers  for  LET-SYNTAX  without
-		       ;;pushing the XRIB: the syntax bindings do not exist in the
-		       ;;environment in which the transformer is evaluated.
-		       ;;
-		       ;;We  evaluate  the  transformers for  LETREC-SYNTAX  after
-		       ;;pushing the  XRIB: the  syntax bindings  do exist  in the
-		       ;;environment in which the transformer is evaluated.
-		       (xbind* (map (lambda (x)
-				      (let ((in-form (if (eq? type 'let-syntax)
-							 x
-						       (push-lexical-contour xrib x))))
-					(eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
-								lexenv.run)))
-				 ?xrhs*)))
-		  (chi-body*
-		   ;;Splice the internal  body forms but add a  lexical contour to
-		   ;;them.
-		   (append (map (lambda (internal-body-form)
-				  (push-lexical-contour xrib
-				    internal-body-form))
-			     ?xbody*)
-			   (cdr body-form*.stx))
-		   ;;Push on the lexical  environment entries corresponding to the
-		   ;;defined syntaxes.  Such entries will stay there even after we
-		   ;;have processed the internal body forms; this is not a problem
-		   ;;because the labels cannot be seen by the rest of the body.
-		   (append (map cons xlab* xbind*) lexenv.run)
-		   (append (map cons xlab* xbind*) lexenv.expand)
-		   rev-qdef* mod** keyword* export-spec* rib
-		   mix? shadow/redefine-bindings?)))))
-
-	    ((begin-for-syntax)
-	     (chi-begin-for-syntax body-form.stx body-form*.stx lexenv.run lexenv.expand
-				   rev-qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))
-
-	    ((begin)
-	     ;;The body form  is a BEGIN syntax use.  Just  splice the expressions
-	     ;;and recurse on them.
-	     ;;
-	     (syntax-match body-form.stx ()
-	       ((_ ?expr* ...)
-		(chi-body* (append ?expr* (cdr body-form*.stx))
-			   lexenv.run lexenv.expand
-			   rev-qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))))
-
-	    ((stale-when)
-	     ;;The  body form  is a  STALE-WHEN syntax  use.  Process  the stale-when
-	     ;;guard expression, then  just splice the internal expressions  as we do
-	     ;;for BEGIN and recurse.
-	     ;;
-	     (syntax-match body-form.stx ()
-	       ((_ ?guard ?expr* ...)
-		(begin
-		  (handle-stale-when ?guard lexenv.expand)
-		  (chi-body* (append ?expr* (cdr body-form*.stx))
-			     lexenv.run lexenv.expand
-			     rev-qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))))
+	    ((integrated-macro)
+	     (%chi-integrated-macro body-form*.stx lexenv.run lexenv.expand
+				    rev-qdef* mod** kwd* export-spec* rib
+				    mix? shadow/redefine-bindings?
+				    body-form.stx descr kwd))
 
 	    ((global-macro global-macro!)
 	     ;;The body  form is  a macro  use, where  the macro  is imported  from a
@@ -414,7 +148,7 @@
 						     body-form.stx lexenv.run rib)))
 	       (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			  lexenv.run lexenv.expand
-			  rev-qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
+			  rev-qdef* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((local-macro local-macro!)
 	     ;;The body form is a macro use,  where the macro is locally defined.  We
@@ -428,7 +162,7 @@
 						    body-form.stx lexenv.run rib)))
 	       (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			  lexenv.run lexenv.expand
-			  rev-qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
+			  rev-qdef* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((macro macro!)
 	     ;;The body  form is  a macro use,  where the macro  is a  non-core macro
@@ -443,56 +177,7 @@
 						       body-form.stx lexenv.run rib)))
 	       (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			  lexenv.run lexenv.expand
-			  rev-qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
-
-	    ((module)
-	     ;;The body  form is  an internal module  definition.  We  process the
-	     ;;module, then recurse on the rest of the body.
-	     ;;
-	     (receive (rev-qdef* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** keyword*)
-		 (chi-internal-module body-form.stx lexenv.run lexenv.expand rev-qdef* mod** keyword*)
-	       ;;Extend the rib with the syntactic bindings exported by the module.
-	       (vector-for-each (lambda (id lab)
-				  ;;This  call  will  raise   an  exception  if  it
-				  ;;represents an  attempt to illegally  redefine a
-				  ;;binding.
-				  (extend-rib! rib id lab shadow/redefine-bindings?))
-		 m-exp-id* m-exp-lab*)
-	       (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
-			  rev-qdef* mod** keyword* export-spec*
-			  rib mix? shadow/redefine-bindings?)))
-
-	    ((library)
-	     ;;The body  form is  a library definition.   We process  the library,
-	     ;;then recurse on the rest of the body.
-	     ;;
-	     (expand-library (syntax->datum body-form.stx))
-	     (chi-body* (cdr body-form*.stx)
-			lexenv.run lexenv.expand
-			rev-qdef* mod** keyword* export-spec*
-			rib mix? shadow/redefine-bindings?))
-
-	    ((export)
-	     ;;The body  form is an  EXPORT form.   We just accumulate  the export
-	     ;;specifications, to be  processed later, and we recurse  on the rest
-	     ;;of the body.
-	     ;;
-	     (syntax-match body-form.stx ()
-	       ((_ ?export-spec* ...)
-		(chi-body* (cdr body-form*.stx)
-			   lexenv.run lexenv.expand
-			   rev-qdef* mod** keyword*
-			   (append ?export-spec* export-spec*)
-			   rib mix? shadow/redefine-bindings?))))
-
-	    ((import)
-	     ;;The body  form is an  IMPORT form.  We  just process the  form which
-	     ;;results  in   extending  the   RIB  with   more  identifier-to-label
-	     ;;associations.  Finally we recurse on the rest of the body.
-	     ;;
-	     (chi-import body-form.stx lexenv.run rib shadow/redefine-bindings?)
-	     (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
-			rev-qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))
+			  rev-qdef* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((standalone-unbound-identifier)
 	     (error-unbound-identifier __who__ body-form.stx))
@@ -509,30 +194,366 @@
 
 	    (else
 	     ;;Any other expression.
-	     ;;
-	     ;;If  mixed definitions  and  expressions are  allowed,  we handle  this
-	     ;;expression as an implicit definition:
-	     ;;
-	     ;;   (define/std dummy ?body-form)
-	     ;;
-	     ;;which is not really part of  the lexical environment: we only generate
-	     ;;a lex and a qdef for it, without adding entries to LEXENV.RUN; then we
-	     ;;move on to the next body form.
-	     ;;
-	     ;;If mixed  definitions and expressions  are forbidden: we  have reached
-	     ;;the end  of definitions  and expect  this and all  the other  forms in
-	     ;;BODY-FORM*.STX  to  be  expressions.  So  BODY-FORM*.STX  becomes  the
-	     ;;"trailing expressions" return value.
-	     ;;
-	     (if mix?
-		 ;;There must be a LEX for every QDEF, really.
-		 (let ((qdef (make-qdef-top-expr body-form.stx)))
+	     (%chi-trailing-expressions body-form*.stx lexenv.run lexenv.expand rev-qdef* mod** kwd* export-spec* rib
+					mix? shadow/redefine-bindings?)))))
+    (values body-form*.stx lexenv.run lexenv.expand rev-qdef* mod** kwd* export-spec*)))
+
+
+(define (%chi-integrated-macro body-form*.stx lexenv.run lexenv.expand
+			       rev-qdef* mod** kwd* export-spec* rib
+			       mix? shadow/redefine-bindings?
+			       body-form.stx descr kwd)
+  (import CHI-DEFINE)
+
+  (define-syntax-rule (%expand-internal-definition ?expander-who)
+    ;;Used to  process an internal  definition core macro:  DEFINE/STD, DEFINE/TYPED,
+    ;;DEFINE/CHECKED,  CASE-DEFINE/STD,  CASE-DEFINE/TYPED, CASE-DEFINE/CHECKED.   We
+    ;;parse the body form and generate a qualified right-hand side (QDEF) object that
+    ;;will be expanded later.
+    ;;
+    (receive (qdef lexenv.run)
+	#;(?expander-who body-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
+	(?expander-who (if (options::debug-mode-enabled?)
+			   (stx-push-annotated-expr body-form.stx body-form.stx)
+			 body-form.stx)
+		       rib lexenv.run kwd* shadow/redefine-bindings?)
+      (chi-body* (cdr body-form*.stx)
+		 lexenv.run lexenv.expand
+		 (cons qdef rev-qdef*)
+		 mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
+
+  (case (syntactic-binding-descriptor.value descr)
+    ((define/std)
+     ;;The body form is a DEFINE/STD core macro use, one among:
+     ;;
+     ;;   (define/std ?lhs ?rhs)
+     ;;   (define/std (?lhs . ?formals) . ?body)
+     ;;
+     ;;it is meant to be the implementation of R6RS's DEFINE syntax.
+     (%expand-internal-definition chi-define/std))
+
+    ((define/typed)
+     ;;The body form is a DEFINE/TYPED core macro use, one among:
+     ;;
+     ;;   (define/typed ?lhs ?rhs)
+     ;;   (define/typed (?lhs . ?formals) . ?body)
+     ;;
+     ;;it  is meant  to  be an  extension  to R6RS's  DEFINE  syntax supporting  type
+     ;;specifications.
+     (%expand-internal-definition chi-define/typed))
+
+    ((define/checked)
+     ;;The body form is a DEFINE/TYPED core macro use, one among:
+     ;;
+     ;;   (define/checked ?lhs ?rhs)
+     ;;   (define/checked (?lhs . ?formals) . ?body)
+     ;;
+     ;;it  is meant  to  be an  extension  to R6RS's  DEFINE  syntax supporting  type
+     ;;specifications.
+     (receive (qdef* lexenv.run)
+	 (chi-define/checked (if (options::debug-mode-enabled?)
+				 (stx-push-annotated-expr body-form.stx body-form.stx)
+			       body-form.stx)
+			     rib lexenv.run kwd* shadow/redefine-bindings?)
+       (chi-body* (cdr body-form*.stx)
+		  lexenv.run lexenv.expand
+		  (append qdef* rev-qdef*)
+		  mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
+
+    ((case-define/std)
+     ;;The body form is a CASE-DEFINE/STD core macro use:
+     ;;
+     ;;   (case-define/std ?lhs ?case-lambda-clause ...)
+     ;;
+     ;;it is meant to be equivalent to:
+     ;;
+     ;;   (define/std ?lhs (case-lambda/std ?case-lambda-clause ...))
+     ;;
+     (%expand-internal-definition chi-case-define/std))
+
+    ((case-define/typed)
+     ;;The body form is a CASE-DEFINE/TYPED core macro use:
+     ;;
+     ;;   (case-define/typed ?lhs ?case-lambda-clause ...)
+     ;;
+     ;;it is meant  to be an extension to the  CASE-DEFINE/STD syntax supporting type
+     ;;specifications.
+     (%expand-internal-definition chi-case-define/typed))
+
+    ((case-define/checked)
+     ;;The body form is a CASE-DEFINE/CHECKED core macro use:
+     ;;
+     ;;   (case-define/checked ?lhs ?case-lambda-clause ...)
+     ;;
+     ;;it is meant  to be an extension to the  CASE-DEFINE/STD syntax supporting type
+     ;;specifications.
+     (receive (qdef* lexenv.run)
+	 (chi-case-define/checked (if (options::debug-mode-enabled?)
+				      (stx-push-annotated-expr body-form.stx body-form.stx)
+				    body-form.stx)
+				  rib lexenv.run kwd* shadow/redefine-bindings?)
+       (chi-body* (cdr body-form*.stx)
+		  lexenv.run lexenv.expand
+		  (append qdef* rev-qdef*)
+		  mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
+
+    ((define-syntax)
+     ;;The body form is a built-in DEFINE-SYNTAX macro use.  This is what happens:
+     ;;
+     ;;1. Parse the syntactic form.
+     ;;
+     ;;2. Expand the right-hand side expression.  This expansion happens in a lexical
+     ;;context in which the syntactic binding of  the macro itself has *not* yet been
+     ;;established.
+     ;;
+     ;;3.  Add to  the  rib the  syntactic binding's  association  between the  macro
+     ;;keyword and the label.
+     ;;
+     ;;4.  Evaluate the right-hand side expression, which is meant to return: a macro
+     ;;transformer function, a compile-time value, a synonym transformer or whatever.
+     ;;
+     ;;5. Add to the lexenv the syntactic binding's association between the label and
+     ;;the binding's descriptor.
+     ;;
+     ;;6. Finally recurse to expand the rest of the body.
+     ;;
+     (receive (id rhs.stx)
+	 (%parse-define-syntax body-form.stx)
+       (when (bound-id-member? id kwd*)
+	 (stx-error body-form.stx "cannot redefine keyword"))
+       (let ((rhs.core (expand-macro-transformer rhs.stx lexenv.expand))
+	     (lab      (generate-label-gensym id)))
+	 ;;This call will raise an exception if it represents an attempt to illegally
+	 ;;redefine a binding.
+	 (extend-rib! rib id lab shadow/redefine-bindings?)
+	 (let ((entry (cons lab (eval-macro-transformer rhs.core lexenv.run))))
+	   (chi-body* (cdr body-form*.stx)
+		      (cons entry lexenv.run)
+		      (cons entry lexenv.expand)
+		      rev-qdef* mod** kwd* export-spec* rib
+		      mix? shadow/redefine-bindings?)))))
+
+    ((define-fluid-syntax)
+     ;;The  body form  is a  built-in DEFINE-FLUID-SYNTAX  macro use.   This is  what
+     ;;happens:
+     ;;
+     ;;1. Parse the syntactic form.
+     ;;
+     ;;2. Expand the right-hand side expression.  This expansion happens in a lexical
+     ;;context in which the syntactic binding of  the macro itself has *not* yet been
+     ;;established.
+     ;;
+     ;;3.   Add to  the rib  the syntactic  binding's association  between the  macro
+     ;;keyword and the label.
+     ;;
+     ;;4.  Evaluate  the right-hand  side expression (which  usually returns  a macro
+     ;;transformer function).
+     ;;
+     ;;5. Add to the lexenv the syntactic binding's association between the label and
+     ;;the binding's descriptor.
+     ;;
+     ;;6. Finally recurse to expand the rest of the body.
+     ;;
+     (receive (lhs.id rhs.stx)
+	 (%parse-define-syntax body-form.stx)
+       (when (bound-id-member? lhs.id kwd*)
+	 (stx-error body-form.stx "cannot redefine keyword"))
+       (let ((rhs.core (expand-macro-transformer rhs.stx lexenv.expand))
+	     (lhs.lab  (generate-label-gensym lhs.id)))
+	 ;;This call will raise an exception if it represents an attempt to illegally
+	 ;;redefine a binding.
+	 (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
+	 ;;The  LEXENV entry  KEYWORD-ENTRY represents  the definition  of the  fluid
+	 ;;syntax's  keyword   syntactic  binding.   The  LEXENV   entry  FLUID-ENTRY
+	 ;;represents the  definition of the current  value of the fluid  syntax, the
+	 ;;one   that  later   can   be  shadowed   with   internal  definitions   by
+	 ;;FLUID-LET-SYNTAX.
+	 (let* ((descriptor	(eval-macro-transformer rhs.core lexenv.run))
+		(fluid-label	(generate-label-gensym lhs.id))
+		(fluid-entry	(cons fluid-label descriptor))
+		(keyword-entry	(cons lhs.lab (make-syntactic-binding-descriptor/local-global-macro/fluid-syntax fluid-label))))
+	   (chi-body* (cdr body-form*.stx)
+		      (cons* keyword-entry fluid-entry lexenv.run)
+		      (cons* keyword-entry fluid-entry lexenv.expand)
+		      rev-qdef* mod** kwd* export-spec* rib
+		      mix? shadow/redefine-bindings?)))))
+
+    ((define-alias)
+     ;;The  body form  is a  core  language DEFINE-ALIAS  macro  use.  We  add a  new
+     ;;association identifier/label  to the current  rib.  Finally we recurse  on the
+     ;;rest of the body.
+     ;;
+     (receive (alias-id old-id)
+	 (%parse-define-alias body-form.stx)
+       (when (bound-id-member? old-id kwd*)
+	 (stx-error body-form.stx "cannot redefine keyword"))
+       (cond ((id->label old-id)
+	      => (lambda (label)
+		   ;;This call will raise an exception if it represents an attempt to
+		   ;;illegally redefine a binding.
+		   (extend-rib! rib alias-id label shadow/redefine-bindings?)
 		   (chi-body* (cdr body-form*.stx)
 			      lexenv.run lexenv.expand
-			      (cons qdef rev-qdef*)
-			      mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))
-	       (values body-form*.stx lexenv.run lexenv.expand rev-qdef* mod** keyword* export-spec*))))))
+			      rev-qdef* mod** kwd* export-spec* rib
+			      mix? shadow/redefine-bindings?)))
+	     (else
+	      (stx-error body-form.stx "unbound source identifier")))))
+
+    ((let-syntax letrec-syntax)
+     ;;The body  form is a core  language LET-SYNTAX or LETREC-SYNTAX  macro use.  We
+     ;;expand and evaluate the transformer  expressions, build syntactic bindings for
+     ;;them, register their labels in a new  rib because they are visible only in the
+     ;;internal body.  The  internal forms are spliced in the  external body but with
+     ;;the rib added to them.
+     ;;
+     (syntax-match body-form.stx ()
+       ((_ ((?xlhs* ?xrhs*) ...) ?xbody* ...)
+	(unless (valid-bound-ids? ?xlhs*)
+	  (stx-error body-form.stx "invalid identifiers"))
+	(let* ((xlab*  (map generate-label-gensym ?xlhs*))
+	       (xrib   (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
+	       ;;We  evaluate the  transformers  for LET-SYNTAX  without pushing  the
+	       ;;XRIB: the syntax  bindings do not exist in the  environment in which
+	       ;;the transformer is evaluated.
+	       ;;
+	       ;;We  evaluate the  transformers for  LETREC-SYNTAX after  pushing the
+	       ;;XRIB: the syntax  bindings do exist in the environment  in which the
+	       ;;transformer is evaluated.
+	       (xbind* (map (lambda (x)
+			      (let ((in-form (case (syntactic-binding-descriptor.value descr)
+					       ((let-syntax)
+						x)
+					       ((letrec-syntax)
+						(push-lexical-contour xrib x))
+					       (else
+						(assertion-violation __who__ "internal error" body-form.stx)))))
+				(eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
+							lexenv.run)))
+			 ?xrhs*)))
+	  (chi-body*
+	   ;;Splice the internal body forms but add a lexical contour to them.
+	   (append (map (lambda (internal-body-form)
+			  (push-lexical-contour xrib
+			    internal-body-form))
+		     ?xbody*)
+		   (cdr body-form*.stx))
+	   ;;Push on  the lexical  environment entries  corresponding to  the defined
+	   ;;syntaxes.  Such entries will stay there even after we have processed the
+	   ;;internal body forms; this is not  a problem because the labels cannot be
+	   ;;seen by the rest of the body.
+	   (append (map cons xlab* xbind*) lexenv.run)
+	   (append (map cons xlab* xbind*) lexenv.expand)
+	   rev-qdef* mod** kwd* export-spec* rib
+	   mix? shadow/redefine-bindings?)))))
+
+    ((begin-for-syntax)
+     (chi-begin-for-syntax body-form.stx body-form*.stx lexenv.run lexenv.expand
+			   rev-qdef* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))
+
+    ((begin)
+     ;;The body form is a BEGIN syntax  use.  Just splice the expressions and recurse
+     ;;on them.
+     ;;
+     (syntax-match body-form.stx ()
+       ((_ ?expr* ...)
+	(chi-body* (append ?expr* (cdr body-form*.stx))
+		   lexenv.run lexenv.expand
+		   rev-qdef* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))))
+
+    ((stale-when)
+     ;;The  body form  is  a STALE-WHEN  syntax use.   Process  the stale-when  guard
+     ;;expression, then just  splice the internal expressions as we  do for BEGIN and
+     ;;recurse.
+     ;;
+     (syntax-match body-form.stx ()
+       ((_ ?guard ?expr* ...)
+	(begin
+	  (handle-stale-when ?guard lexenv.expand)
+	  (chi-body* (append ?expr* (cdr body-form*.stx))
+		     lexenv.run lexenv.expand
+		     rev-qdef* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))))
+
+    ((module)
+     ;;The body form  is an internal module definition.  We  process the module, then
+     ;;recurse on the rest of the body.
+     ;;
+     (receive (rev-qdef* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** kwd*)
+	 (chi-internal-module body-form.stx lexenv.run lexenv.expand rev-qdef* mod** kwd*)
+       ;;Extend the rib with the syntactic bindings exported by the module.
+       (vector-for-each (lambda (id lab)
+			  ;;This call  will raise  an exception  if it  represents an
+			  ;;attempt to illegally redefine a binding.
+			  (extend-rib! rib id lab shadow/redefine-bindings?))
+	 m-exp-id* m-exp-lab*)
+       (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
+		  rev-qdef* mod** kwd* export-spec*
+		  rib mix? shadow/redefine-bindings?)))
+
+    ((library)
+     ;;The body form  is a library definition.  We process  the library, then recurse
+     ;;on the rest of the body.
+     ;;
+     (expand-library (syntax->datum body-form.stx))
+     (chi-body* (cdr body-form*.stx)
+		lexenv.run lexenv.expand
+		rev-qdef* mod** kwd* export-spec*
+		rib mix? shadow/redefine-bindings?))
+
+    ((export)
+     ;;The  body   form  is  an   EXPORT  form.    We  just  accumulate   the  export
+     ;;specifications, to be processed later, and we recurse on the rest of the body.
+     ;;
+     (syntax-match body-form.stx ()
+       ((_ ?export-spec* ...)
+	(chi-body* (cdr body-form*.stx)
+		   lexenv.run lexenv.expand
+		   rev-qdef* mod** kwd*
+		   (append ?export-spec* export-spec*)
+		   rib mix? shadow/redefine-bindings?))))
+
+    ((import)
+     ;;The body form  is an IMPORT form.   We just process the form  which results in
+     ;;extending  the RIB  with  more identifier-to-label  associations.  Finally  we
+     ;;recurse on the rest of the body.
+     ;;
+     (chi-import body-form.stx lexenv.run rib shadow/redefine-bindings?)
+     (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
+		rev-qdef* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))
+
+    ((set! set!/initialise)
+     (%chi-trailing-expressions body-form*.stx lexenv.run lexenv.expand rev-qdef* mod** kwd* export-spec* rib
+				mix? shadow/redefine-bindings?))
+
+    (else
+     (assertion-violation __who__
+       "internal error, invalid integrated-macro descriptor" (car body-form*.stx) descr))))
+
+
+(define (%chi-trailing-expressions body-form*.stx lexenv.run lexenv.expand
+				   rev-qdef* mod** kwd* export-spec* rib
+				   mix? shadow/redefine-bindings?)
+  ;;If mixed definitions and expressions are allowed, we handle this expression as an
+  ;;implicit definition:
+  ;;
+  ;;   (define/std dummy ?body-form)
+  ;;
+  ;;which is not really part of the lexical environment: we only generate a lex and a
+  ;;qdef for it,  without adding entries to  LEXENV.RUN; then we move on  to the next
+  ;;body form.
+  ;;
+  ;;If mixed  definitions and expressions are  forbidden: we have reached  the end of
+  ;;definitions  and expect  this and  all the  other forms  in BODY-FORM*.STX  to be
+  ;;expressions.  So BODY-FORM*.STX becomes the "trailing expressions" return value.
+  ;;
+  (if mix?
+      ;;There must be a LEX for every QDEF, really.
+      (let ((qdef (make-qdef-top-expr (car body-form*.stx))))
+	(chi-body* (cdr body-form*.stx)
+		   lexenv.run lexenv.expand
+		   (cons qdef rev-qdef*)
+		   mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))
     (values body-form*.stx lexenv.run lexenv.expand rev-qdef* mod** kwd* export-spec*)))
+
 
 
 ;;;; helpers

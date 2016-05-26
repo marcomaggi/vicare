@@ -250,14 +250,14 @@
 		 (let* ((descr (label->syntactic-binding-descriptor label lexenv))
 			(type  (syntactic-binding-descriptor.type descr)))
 		   (case type
-		     ((core-prim core-prim-typed
-				 lexical lexical-typed
-				 global global-mutable global-typed global-typed-mutable
-				 macro macro! global-macro global-macro! local-macro local-macro!
-				 import export library $module pattern-variable
-				 $core-rtd $core-rcd $core-scheme-type-descriptor
-				 local-etv global-etv
-				 displaced-lexical)
+		     (( ;;
+		       core-prim core-prim-typed lexical lexical-typed
+		       global global-mutable global-typed global-typed-mutable
+		       integrated-macro macro macro! global-macro global-macro! local-macro local-macro!
+		       $module pattern-variable
+		       $core-rtd $core-rcd $core-scheme-type-descriptor
+		       local-etv global-etv
+		       displaced-lexical)
 		      (values type descr ?id))
 		     (else
 		      ;;This will cause an error to be raised later.
@@ -276,16 +276,10 @@
 		 (let* ((descr (label->syntactic-binding-descriptor label lexenv))
 			(type  (syntactic-binding-descriptor.type descr)))
 		   (case type
-		     ((core-macro
-		       define/std define/typed define/checked
-		       case-define/std case-define/typed case-define/checked
-		       define-syntax define-alias
-		       define-fluid-syntax
-		       let-syntax letrec-syntax begin-for-syntax
-		       begin set! set!/initialise stale-when
-		       local-etv global-etv
+		     (( ;;
+		       core-macro integrated-macro
 		       global-macro global-macro! local-macro local-macro! macro
-		       import export library module
+		       module local-etv global-etv
 		       displaced-lexical)
 		      (values type descr ?car))
 		     ((core-object-type-name local-object-type-name global-object-type-name)
@@ -892,74 +886,95 @@
 	   (build-data no-source datum)
 	   (datum-type-signature datum lexenv.run))))
 
-      ((set!)
-       ;;Macro use of SET!; it means EXPR.STX has the format:
-       ;;
-       ;;   (set! ?lhs ?rhs)
-       ;;
-       (chi-set! expr.stx lexenv.run lexenv.expand))
+      ((integrated-macro)
+       (case (syntactic-binding-descriptor.value descr)
+	 ((set!)
+	  ;;Macro use of SET!; it means EXPR.STX has the format:
+	  ;;
+	  ;;   (set! ?lhs ?rhs)
+	  ;;
+	  (chi-set! expr.stx lexenv.run lexenv.expand))
 
-      ((set!/initialise)
-       ;;Macro use of SET!/INITIALISE; it means EXPR.STX has the format:
-       ;;
-       ;;   (set!/initialise ?lhs ?rhs)
-       ;;
-       (chi-set!/initialise expr.stx lexenv.run lexenv.expand))
+	 ((set!/initialise)
+	  ;;Macro use of SET!/INITIALISE; it means EXPR.STX has the format:
+	  ;;
+	  ;;   (set!/initialise ?lhs ?rhs)
+	  ;;
+	  (chi-set!/initialise expr.stx lexenv.run lexenv.expand))
 
-      ((begin)
-       ;;R6RS BEGIN core macro use.  First we check with SYNTAX-MATCH that the syntax
-       ;;is correct, then we build the core language expression.
-       ;;
-       (syntax-match expr.stx ()
-	 ((_ ?body ?body* ...)
-	  (let ((body*.psi (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand)))
-	    (make-psi expr.stx
-	      (build-sequence no-source
-		(map psi.core-expr body*.psi))
-	      (psi.retvals-signature (proper-list->last-item body*.psi)))))
-	 ))
+	 ((begin)
+	  ;;R6RS BEGIN  core macro use.   First we  check with SYNTAX-MATCH  that the
+	  ;;syntax is correct, then we build the core language expression.
+	  ;;
+	  (syntax-match expr.stx ()
+	    ((_ ?body ?body* ...)
+	     (let ((body*.psi (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand)))
+	       (make-psi expr.stx
+		 (build-sequence no-source
+		   (map psi.core-expr body*.psi))
+		 (psi.retvals-signature (proper-list->last-item body*.psi)))))
+	    ))
 
-      ((stale-when)
-       ;;STALE-WHEN macro use.  STALE-WHEN acts like BEGIN, but in addition causes an
-       ;;expression to be registered in  the current stale-when collector.  When such
-       ;;expression evaluates to false: the compiled library is stale with respect to
-       ;;some source file.  See for example the INCLUDE syntax.
-       (syntax-match expr.stx ()
-	 ((_ ?guard ?body ?body* ...)
-	  (begin
-	    (handle-stale-when ?guard lexenv.expand)
-	    (let ((body*.psi (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand)))
-	      (make-psi expr.stx
-		(build-sequence no-source
-		  (map psi.core-expr body*.psi))
-		(psi.retvals-signature (proper-list->last-item body*.psi))))))
-	 ))
+	 ((stale-when)
+	  ;;STALE-WHEN macro use.  STALE-WHEN acts like BEGIN, but in addition causes
+	  ;;an expression to be registered in the current stale-when collector.  When
+	  ;;such expression  evaluates to false:  the compiled library is  stale with
+	  ;;respect to some source file.  See for example the INCLUDE syntax.
+	  (syntax-match expr.stx ()
+	    ((_ ?guard ?body ?body* ...)
+	     (begin
+	       (handle-stale-when ?guard lexenv.expand)
+	       (let ((body*.psi (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand)))
+		 (make-psi expr.stx
+		   (build-sequence no-source
+		     (map psi.core-expr body*.psi))
+		   (psi.retvals-signature (proper-list->last-item body*.psi))))))
+	    ))
 
-      ((let-syntax letrec-syntax)
-       ;;LET-SYNTAX or LETREC-SYNTAX core macro uses.
-       (syntax-match expr.stx ()
-	 ((?key ((?xlhs* ?xrhs*) ...) ?xbody ?xbody* ...)
-	  (unless (valid-bound-ids? ?xlhs*)
-	    (syntax-violation __module_who__ "invalid identifiers" expr.stx))
-	  (let* ((xlab* (map generate-label-gensym ?xlhs*))
-		 (xrib  (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
-		 (xb*   (map (lambda (x)
-			       (let ((in-form (if (eq? type 'let-syntax)
-						  x
-						(push-lexical-contour xrib x))))
-				 (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
-							 lexenv.run)))
-			  ?xrhs*)))
-	    (let ((body*.psi (chi-expr* (map (lambda (x)
-					       (push-lexical-contour xrib x))
-					  (cons ?xbody ?xbody*))
-					(append (map cons xlab* xb*) lexenv.run)
-					(append (map cons xlab* xb*) lexenv.expand))))
-	      (make-psi expr.stx
-		(build-sequence no-source
-		  (map psi.core-expr body*.psi))
-		(psi.retvals-signature (proper-list->last-item body*.psi))))))
-	 ))
+	 ((let-syntax letrec-syntax)
+	  ;;LET-SYNTAX or LETREC-SYNTAX core macro uses.
+	  (syntax-match expr.stx ()
+	    ((?key ((?xlhs* ?xrhs*) ...) ?xbody ?xbody* ...)
+	     (unless (valid-bound-ids? ?xlhs*)
+	       (syntax-violation __module_who__ "invalid identifiers" expr.stx))
+	     (let* ((xlab* (map generate-label-gensym ?xlhs*))
+		    (xrib  (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
+		    (xb*   (map (lambda (x)
+				  (let ((in-form (if (eq? type 'let-syntax)
+						     x
+						   (push-lexical-contour xrib x))))
+				    (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
+							    lexenv.run)))
+			     ?xrhs*)))
+	       (let ((body*.psi (chi-expr* (map (lambda (x)
+						  (push-lexical-contour xrib x))
+					     (cons ?xbody ?xbody*))
+					   (append (map cons xlab* xb*) lexenv.run)
+					   (append (map cons xlab* xb*) lexenv.expand))))
+		 (make-psi expr.stx
+		   (build-sequence no-source
+		     (map psi.core-expr body*.psi))
+		   (psi.retvals-signature (proper-list->last-item body*.psi))))))
+	    ))
+
+	 ((define/std define/typed define/checked define-syntax define-fluid-syntax define-alias module import library)
+	  (stx-error expr.stx
+		     (string-append
+		      (case type
+			((define/std define/typed define/checked)	"a definition")
+			((define-syntax)				"a define-syntax")
+			((define-fluid-syntax)				"a define-fluid-syntax")
+			((define-alias)					"a define-alias")
+			((module)					"a module definition")
+			((library)					"a library definition")
+			((import)					"an import declaration")
+			((export)					"an export declaration")
+			(else						"a non-expression"))
+		      " was found where an expression was expected")))
+
+	 (else
+	  (assertion-violation __module_who__
+	    "internal error, invalid integrated-macro descriptor" expr.stx descr))))
 
       ((enumeration)
        ;;Syntax  use  of  a  previously  defined  enumeration  type.   The  syntactic
@@ -990,21 +1005,6 @@
 
       ((pattern-variable)
        (stx-error expr.stx "reference to pattern variable outside a syntax form"))
-
-      ((define/std define/typed define/checked define-syntax define-fluid-syntax define-alias module import library)
-       (stx-error expr.stx
-		  (string-append
-		   (case type
-		     ((define/std define/typed define/checked)	"a definition")
-		     ((define-syntax)				"a define-syntax")
-		     ((define-fluid-syntax)			"a define-fluid-syntax")
-		     ((define-alias)				"a define-alias")
-		     ((module)					"a module definition")
-		     ((library)					"a library definition")
-		     ((import)					"an import declaration")
-		     ((export)					"an export declaration")
-		     (else					"a non-expression"))
-		   " was found where an expression was expected")))
 
       ((global-mutable global-typed-mutable)
        ;;Imported variable in reference position,  whose binding is assigned at least

@@ -587,16 +587,8 @@
 			     ;;This  function is  used  also to  intern the  built-in
 			     ;;libraries.   So the  types  used by  the boot  image's
 			     ;;syntactic bindings are to be included too.
-			     ((core-prim
-			       $core-prim-typed
-			       library import export
-			       define/std define/typed define/checked
-			       case-define/std case-define/typed case-define/checked
-			       define-syntax define-alias
-			       define-fluid-syntax
-			       let-syntax letrec-syntax begin-for-syntax
-			       module begin set! set!/initialise stale-when
-			       core-macro macro macro!
+			     ((core-prim $core-prim-typed
+			       integrated-macro core-macro macro macro!
 			       $core-rtd $core-rcd $core-scheme-type-descriptor
 			       $core-record-type-name $core-condition-object-type-name
 			       $core-scheme-object-type-name $core-type-annotation)
