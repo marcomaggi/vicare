@@ -1536,8 +1536,6 @@
 					  body*.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
-      (when (bound-id-member? lhs.id kwd*)
-	(synner "cannot redefine keyword"))
       (if (type-signature.only-<untyped>-and-<top>-and-<list>? (lambda-signature.argvals clause-signature))
 	  ;;Only generic type annotations: there is no need to validate the operands,
 	  ;;so generate a single checked function.
@@ -1567,6 +1565,8 @@
 				 qdef-maker
 				 lhs.id standard-formals.stx clause-signature body*.stx
 				 {replacements (or not vector?)} synner)
+      (when (bound-id-member? lhs.id kwd*)
+	(synner "cannot redefine keyword"))
       (let* ((lhs.ots		(make-closure-type-spec (make-case-lambda-signature (list clause-signature))))
 	     (qdef		(qdef-maker input-form.stx lhs.id standard-formals.stx body*.stx lhs.ots))
 	     (lhs.lab		(generate-label-gensym lhs.id))

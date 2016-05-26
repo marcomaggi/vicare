@@ -635,7 +635,7 @@
 ;;;; core syntactic binding descriptors: built-in syntaxes
 
 (define-constant VICARE-CORE-BUILT-IN-SYNTAXES-SYNTACTIC-BINDING-DESCRIPTORS
-  `( ;;;Core macros that can appear only in a body.
+  `( ;;;Core macros that are integrated in the expander.
     (define/std					(define/std))
     (define/typed				(define/typed))
     (define/checked				(define/checked))
@@ -647,9 +647,9 @@
     (define-fluid-syntax			(define-fluid-syntax))
     (module					(module))
     (library					(library))
-    (begin					(begin))
     (import					(import))
     (export					(export))
+    (begin					(begin))
     (set!					(set!))
     (set!/initialise				(set!/initialise))
     (let-syntax					(let-syntax))
