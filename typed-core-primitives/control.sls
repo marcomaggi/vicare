@@ -98,7 +98,7 @@
 (declare-core-primitive dynamic-wind
     (safe)
   (signatures
-   ((<procedure> <procedure> <procedure>)	=> <list>)))
+   ((<thunk> <thunk> <thunk>)	=> <list>)))
 
 ;;; --------------------------------------------------------------------
 

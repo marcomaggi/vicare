@@ -736,7 +736,8 @@
    condition-id			condition-id?
    apply-id			apply-id?
    values-id			values-id?
-   call-with-values-id		call-with-values-id?)
+   call-with-values-id		call-with-values-id?
+   dynamic-wind-id		dynamic-wind-id?)
 
   (let-syntax
       ((declare (syntax-rules ()
@@ -769,6 +770,7 @@
     (declare apply-id			apply-id?			apply)
     (declare values-id			values-id?			values)
     (declare call-with-values-id	call-with-values-id?		call-with-values)
+    (declare dynamic-wind-id		dynamic-wind-id?		dynamic-wind)
     #| end of LET-SYNTAX |# )
 
   #| end of module: SPECIAL-CORE-PRIMITIVES |# )
@@ -1032,6 +1034,8 @@
 	    (chi-call-with-values-application	input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
 	   ((apply-id? rator.stx)
 	    (chi-apply-application		input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	   ((dynamic-wind-id? rator.stx)
+	    (chi-dynamic-wind-application	input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
 	   ;;
 	   (else
 	    (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
@@ -1575,8 +1579,8 @@
   ;;core expression having as type signature the type signature of the application of
   ;;the consumer.
   ;;
-  (let* ((consumer.psi	(cadr rand*.psi))
-	 (consumer.ots	(cadr (type-signature.object-type-specs rands.sig)))
+  (let* ((consumer.psi		(cadr rand*.psi))
+	 (consumer.ots		(cadr (type-signature.object-type-specs rands.sig)))
 	 (application.sig	(if (closure-type-spec? consumer.ots)
 				    (case-lambda-signature.retvals (closure-type-spec.signature consumer.ots))
 				  (begin
@@ -1790,6 +1794,35 @@
 	(cons (car ell) (recur (cdr ell))))))
 
   #| end of module: CHI-APPLY-APPLICATION |# )
+
+
+;;;; special applications: DYNAMIC-WIND
+
+(define* (chi-dynamic-wind-application input-form.stx lexenv.run lexenv.expand
+				       rator.psi rand*.psi rands.sig)
+  ;;The input form has the syntax:
+  ;;
+  ;;   (dynamic-wind ?in-guard ?body ?out-guard)
+  ;;
+  ;;We have already validated  the number and type of the  operands; this function is
+  ;;called both  when the operands's  signature is  an exact match  and when it  is a
+  ;;compatible match.   The argument  RATOR.PSI represents the  expanded DYNAMIC-WIND
+  ;;syntactic identifier.   The argument  RAND*.PSI is  a list  of three  items, each
+  ;;having   a  single   value  type   signature.   The   argument  RANDS.SIG   is  a
+  ;;"<type-signature>" representing the types of the operands.
+  ;;
+  ;;The  application  of  DYNAMIC-WIND  is  special.  We  want  to  generate  a  core
+  ;;expression having as type signature the type signature of the body thunk.
+  ;;
+  (let* ((body-thunk.ots	(cadr (type-signature.object-type-specs rands.sig)))
+	 (application.sig	(if (closure-type-spec? body-thunk.ots)
+				    (case-lambda-signature.retvals (closure-type-spec.signature body-thunk.ots))
+				  (make-type-signature/fully-unspecified))))
+    (make-psi input-form.stx
+      (build-application (syntax-annotation input-form.stx)
+	  (psi.core-expr rator.psi)
+	(map psi.core-expr rand*.psi))
+      application.sig)))
 
 
 ;;;; done

@@ -4476,6 +4476,23 @@
   #| end of parametrise |# )
 
 
+(parametrise ((check-test-name	'dynamic-wind))
+
+  (doit (dynamic-wind
+	    (lambda () 'in)
+	    (lambda () 1)
+	    (lambda () 'out))
+	=> (<positive-fixnum>))
+
+  (doit (dynamic-wind
+	    (lambda () 'in)
+	    (lambda () (values 1 2.3))
+	    (lambda () 'out))
+	=> (<positive-fixnum> <positive-flonum>))
+
+  #| end of PARAMETRISE |# )
+
+
 (parametrise ((check-test-name	'define-in-body))
 
   (doit (internal-body
