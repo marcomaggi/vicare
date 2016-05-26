@@ -913,8 +913,7 @@
 	  ;;VALUES is special because it accepts  any number of arguments of any type
 	  ;;and it  returns a different number  of values depending on  the number of
 	  ;;operands.  So we handle it specially.
-	  (chi-values-application input-form.stx lexenv.run lexenv.expand
-				  rator.psi rand*.psi rands.sig)
+	  (chi-values-application input-form.stx rator.psi rand*.psi rands.sig)
 	(let* ((selected-clause-signature* '())
 	       (state (returnable
 			(fold-left (lambda (state clause-signature)
@@ -1013,29 +1012,29 @@
 	  (cond
 	   ((or (cons-id?          rator.stx)
 		(foldable-cons-id? rator.stx))
-	    (chi-cons-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	    (chi-cons-application input-form.stx rator.psi rand*.psi rands.sig))
 	   ((or (list-id?			rator.stx)
 		(foldable-list-id?		rator.stx)
 		(<nelist>-constructor-id?	rator.stx))
-	    (chi-list-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	    (chi-list-application input-form.stx rator.psi rand*.psi rands.sig))
 	   ((or (vector-id?			rator.stx)
 		(foldable-vector-id?		rator.stx)
 		(<nevector>-constructor-id?	rator.stx))
-	    (chi-vector-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	    (chi-vector-application input-form.stx rator.psi rand*.psi rands.sig))
 	   ;;
-	   (( car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'car))
-	   (( cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'cdr))
-	   (($car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$car))
-	   (($cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$cdr))
+	   (( car-id? rator.stx) (chi-car-application input-form.stx rator.psi rand*.psi rands.sig  'car))
+	   (( cdr-id? rator.stx) (chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig  'cdr))
+	   (($car-id? rator.stx) (chi-car-application input-form.stx rator.psi rand*.psi rands.sig '$car))
+	   (($cdr-id? rator.stx) (chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig '$cdr))
 	   ;;
 	   ((condition-id? rator.stx)
-	    (chi-condition-application		input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	    (chi-condition-application		input-form.stx rator.psi rand*.psi rands.sig))
 	   ((call-with-values-id? rator.stx)
-	    (chi-call-with-values-application	input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	    (chi-call-with-values-application	input-form.stx rator.psi rand*.psi rands.sig))
 	   ((apply-id? rator.stx)
-	    (chi-apply-application		input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	    (chi-apply-application		input-form.stx rator.psi rand*.psi rands.sig))
 	   ((dynamic-wind-id? rator.stx)
-	    (chi-dynamic-wind-application	input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	    (chi-dynamic-wind-application	input-form.stx rator.psi rand*.psi rands.sig))
 	   ;;
 	   (else
 	    (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
@@ -1164,17 +1163,19 @@
     (cond
      ((identifier? rator.stx)
       (cond
-       (( car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'car))
-       (($car-id? rator.stx) (chi-car-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$car))
-       (( cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig  'cdr))
-       (($cdr-id? rator.stx) (chi-cdr-application input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig '$cdr))
+       (( car-id? rator.stx) (chi-car-application input-form.stx rator.psi rand*.psi rands.sig  'car))
+       (($car-id? rator.stx) (chi-car-application input-form.stx rator.psi rand*.psi rands.sig '$car))
+       (( cdr-id? rator.stx) (chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig  'cdr))
+       (($cdr-id? rator.stx) (chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig '$cdr))
        ;;
        ((condition-id? rator.stx)
-	(chi-condition-application		input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	(chi-condition-application		input-form.stx rator.psi rand*.psi rands.sig))
        ((call-with-values-id? rator.stx)
-	(chi-call-with-values-application	input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	(chi-call-with-values-application	input-form.stx rator.psi rand*.psi rands.sig))
        ((apply-id? rator.stx)
-	(chi-apply-application			input-form.stx lexenv.run lexenv.expand rator.psi rand*.psi rands.sig))
+	(chi-apply-application			input-form.stx rator.psi rand*.psi rands.sig))
+       ((dynamic-wind-id? rator.stx)
+	(chi-dynamic-wind-application		input-form.stx rator.psi rand*.psi rands.sig))
        ;;
        (else
 	(default-application-maker))))
@@ -1197,7 +1198,7 @@
 
 ;;;; special applications: CONS, FOLDABLE-CONS
 
-(define (chi-cons-application input-form.stx lexenv.run lexenv.expand
+(define (chi-cons-application input-form.stx
 			      rator.psi rand*.psi rands.sig)
   ;;The input form has the syntax:
   ;;
@@ -1227,7 +1228,7 @@
 
 ;;;; special applications: LIST, FOLDABLE-LIST, <NELIST>-CONSTRUCTOR
 
-(define (chi-list-application input-form.stx lexenv.run lexenv.expand
+(define (chi-list-application input-form.stx
 			      rator.psi rand*.psi rands.sig)
   ;;The input form has the syntax:
   ;;
@@ -1258,8 +1259,8 @@
 (module (chi-car-application)
   (define-module-who chi-car-application)
 
-  (define* (chi-car-application input-form.stx lexenv.run lexenv.expand
-			       rator.psi rand*.psi rands.sig original-prim-name)
+  (define* (chi-car-application input-form.stx
+				rator.psi rand*.psi rands.sig original-prim-name)
     ;;The input form has the syntax:
     ;;
     ;;   (car ?expr)
@@ -1321,7 +1322,7 @@
 (module (chi-cdr-application)
   (define-module-who chi-cdr-application)
 
-  (define (chi-cdr-application input-form.stx lexenv.run lexenv.expand
+  (define (chi-cdr-application input-form.stx
 			       rator.psi rand*.psi rands.sig original-prim-name)
     ;;The input form has the syntax:
     ;;
@@ -1385,7 +1386,7 @@
 
 ;;;; special applications: VECTOR, FOLDABLE-VECTOR, <NEVECTOR>-CONSTRUCTOR
 
-(define (chi-vector-application input-form.stx lexenv.run lexenv.expand
+(define (chi-vector-application input-form.stx
 				rator.psi rand*.psi rands.sig)
   ;;The input form has the syntax:
   ;;
@@ -1442,7 +1443,7 @@
   ;;
   (define-module-who chi-condition-application)
 
-  (define (chi-condition-application input-form.stx lexenv.run lexenv.expand
+  (define (chi-condition-application input-form.stx
 				     rator.psi rand*.psi rands.sig)
     (if (null? rand*.psi)
 	;;No arguments.  Just evaluate "(condition)".
@@ -1523,7 +1524,7 @@
 
 ;;;; special applications: VALUES
 
-(define (chi-values-application input-form.stx lexenv.run lexenv.expand
+(define (chi-values-application input-form.stx
 				rator.psi rand*.psi rands.sig)
   ;;The input form has the syntax:
   ;;
@@ -1561,7 +1562,7 @@
 
 ;;;; special applications: CALL-WITH-VALUES
 
-(define* (chi-call-with-values-application input-form.stx lexenv.run lexenv.expand
+(define* (chi-call-with-values-application input-form.stx
 					   rator.psi rand*.psi rands.sig)
   ;;The input form has the syntax:
   ;;
@@ -1600,7 +1601,7 @@
   (import CLOSURE-APPLICATION-ERRORS SPECIAL-PRIMITIVES)
   (define-module-who chi-apply-application)
 
-  (define (chi-apply-application input-form.stx lexenv.run lexenv.expand
+  (define (chi-apply-application input-form.stx
 				 rator.psi rand*.psi rands.sig)
     ;;The input form is a call to the core primitive APPLY:
     ;;
@@ -1798,7 +1799,7 @@
 
 ;;;; special applications: DYNAMIC-WIND
 
-(define* (chi-dynamic-wind-application input-form.stx lexenv.run lexenv.expand
+(define* (chi-dynamic-wind-application input-form.stx
 				       rator.psi rand*.psi rands.sig)
   ;;The input form has the syntax:
   ;;
