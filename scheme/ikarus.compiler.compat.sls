@@ -22,7 +22,7 @@
     define*				lambda*
     case-define*			case-lambda*
     case-define				define-inline
-    define-syntax-rule			define-syntax*
+    define-syntax-rule
     define-auxiliary-syntaxes		fluid-let-syntax
     brace				__who__
     define-constant			define-inline-constant

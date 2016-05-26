@@ -579,7 +579,13 @@
 
 ;;;; built-in object-types descriptors: definitions
 
-(define-syntax* (define-scheme-type input-form.stx)
+(define-syntax (define-scheme-type input-form.stx)
+  (case-define synner
+    ((message)
+     (syntax-violation (quote define-scheme-type) message input-form.stx #f))
+    ((message subform)
+     (syntax-violation (quote define-scheme-type) message input-form.stx subform)))
+
   (define (main stx)
     (syntax-case stx (methods)
       ((?kwd ?type-name ?parent-name . ?clauses)

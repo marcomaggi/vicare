@@ -844,7 +844,6 @@
 	 (case-define				(macro . case-define))
 ;;;
 	 (define-auxiliary-syntaxes		(macro . define-auxiliary-syntaxes))
-	 (define-syntax*			(macro . define-syntax*))
 	 (define*				(macro . define*))
 	 (case-define*				(macro . case-define*))
 	 (lambda*				(macro . lambda*))
@@ -917,7 +916,12 @@
 ;;sourced in the "ikarus.*" files, where another definition for DEFINE-SCHEME-TYPE is
 ;;present.
 ;;
-(define-syntax* (define-scheme-type input-form.stx)
+(define-syntax (define-scheme-type input-form.stx)
+  (case-define synner
+    ((message)
+     (syntax-violation (quote define-scheme-type) message input-form.stx #f))
+    ((message subform)
+     (syntax-violation (quote define-scheme-type) message input-form.stx subform)))
   (define (main stx)
     (syntax-case stx ()
       ((?kwd ?type-name ?parent-name . ?clauses)
@@ -2065,7 +2069,6 @@
     (case-identifiers				v $language)
     (cond					v r ba se ne)
     (define-syntax				v r ba se ne)
-    (define-syntax*				v $language)
     (define*					v $language)
     (define-fluid-syntax			v $language)
     (define-alias				v $language)

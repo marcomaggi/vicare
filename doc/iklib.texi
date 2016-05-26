@@ -1192,8 +1192,8 @@ In the example above, we can think of @code{(incr 2)} as expanding to:
 @deffn Syntax define-syntax @meta{name}
 @deffnx Syntax define-syntax @meta{name} @meta{transformer}
 @deffnx Syntax define-syntax (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{}
-Like @func{define-syntax} defined by @rnrs{6}, but additionally accepts
-the syntax:
+@value{PRJNAME} extends @func{define-syntax} as defined by @rnrs{6}; it
+additionally accepts the syntax:
 
 @example
 (define-syntax (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{})
@@ -1207,31 +1207,26 @@ and the syntax:
 (define-syntax @meta{name})
 @expansion{} (define-syntax @meta{name} (syntax-rules ()))
 @end example
-@end deffn
 
+Additionally, when the last form is used:
 
-@deffn Syntax define-syntax* @meta{name}
-@deffnx Syntax define-syntax* @meta{name} @meta{transformer}
-@deffnx Syntax define-syntax* (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{}
-Like @func{define-syntax} defined by Vicare.  Additionally, when the
-last form is used: the fluid identifier syntax @code{__who__} is bound
-to @meta{name}; the non-hygienic binding @func{synner} is introduced and
-bound to a function.
+@itemize
+@item
+The fluid identifier syntax @code{__who__} is bound to the quoted
+@meta{name}.
 
-@example
-(define-syntax* (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{})
-@expansion{} (define-syntax* (@meta{name} @meta{arg})
-      (fluid-let-syntax
-          ((__who__ (identifier-syntax (quote @meta{name}))))
-        (letrec
-            ((synner (case-lambda
-                       ((message)
-                        (synner message #f))
-                       ((message subform)
-                        (syntax-violation __who__
-                           message @meta{arg} subform)))))
-          @metao{body} @meta{body} @dots{})))
-@end example
+@item
+The fluid syntax @syntax{__synner__} is bound to a function we can use
+to raise syntax violation exceptions; the function looks as follows:
+
+@lisp
+(case-define synner
+  ((message)
+   (syntax-violation (quote @meta{name}) message @meta{arg} #f))
+  ((message subform)
+   (syntax-violation (quote @meta{name}) message @meta{arg} subform)))
+@end lisp
+@end itemize
 @end deffn
 
 

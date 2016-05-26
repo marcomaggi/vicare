@@ -22,7 +22,6 @@
     case-lambda*			lambda*
     define-auxiliary-syntaxes		let*-syntax
     define-inline			define-syntax-rule
-    define-syntax*
     define-fluid-syntax			fluid-let-syntax
     unwind-protect
     receive				receive-and-return

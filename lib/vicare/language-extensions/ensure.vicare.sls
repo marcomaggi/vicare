@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -43,7 +43,7 @@
 
   (define-auxiliary-syntaxes by else-by)
 
-  (define-syntax* (ensure stx)
+  (define-syntax (ensure stx)
 
     (define (main stx)
       (syntax-case stx (by else-by)
@@ -80,7 +80,7 @@
 	       #,(%process-else-clauses test-id #'?rest))))
 
 	(_
-	 (synner "invalid syntax in ELSE-BY clauses" clause*))))
+	 (__synner__ "invalid syntax in ELSE-BY clauses" clause*))))
 
     (main stx))
 

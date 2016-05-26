@@ -26,7 +26,7 @@
 
 ;;;; syntaxes
 
-(define-syntax* (define-type-annotation stx)
+(define-syntax (define-type-annotation stx)
   ;;Hard-coded built-in type annotations are meant to be equivalent to:
   ;;
   ;;   (define-type ?type-name ?type-annotation)

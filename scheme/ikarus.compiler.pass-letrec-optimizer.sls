@@ -137,7 +137,7 @@
 	     (%map-in-order-with-index func (fxadd1 serial-idx) (cdr ell1) (cdr ell2)))
      '())))
 
-(define-syntax* (define-fold-right stx)
+(define-syntax (define-fold-right stx)
   ;;Define  a  new FOLD-RIGHT  function  with  a  fixed number  of  list
   ;;arguments and a fixed number of return values.  For example, we want
   ;;the definition:
@@ -161,6 +161,11 @@
   (define (%positive-fixnum? obj)
     (and (fixnum?     obj)
 	 (fxpositive? obj)))
+  (case-define synner
+    ((message)
+     (syntax-violation (quote define-fold-right) message stx #f))
+    ((message subform)
+     (syntax-violation (quote define-fold-right) message stx subform)))
   (syntax-case stx (number-of-lists number-of-retvals)
     ((_ ?who
 	(number-of-lists	?num-of-lists)

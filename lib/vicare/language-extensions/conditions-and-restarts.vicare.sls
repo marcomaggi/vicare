@@ -69,7 +69,7 @@
   (import (vicare))
 
 
-(define-syntax* (handler-case stx)
+(define-syntax (handler-case stx)
   ;;Evaluate body forms in a dynamic  environment in which new exception handlers are
   ;;installed;   it  is   capable   of  handling   exceptions   raised  with   RAISE,
   ;;RAISE-CONTINUABLE and SIGNAL.  Basically behave like R6RS's GUARD syntax.
@@ -159,7 +159,7 @@
       (((?no-error ?condition-handler))
        (%no-error-spec? #'?no-error)
        (if no-error-expr
-	   (synner "invalid multiple definition of :no-error clause"
+	   (__synner__ "invalid multiple definition of :no-error clause"
 		   #'(?no-error ?condition-handler))
 	 (begin
 	   (set! no-error-expr #'?condition-handler)
@@ -170,7 +170,7 @@
 	     (%process-clauses var #'?rest)))
 
       ((?clause . ?rest)
-       (synner "invalid clause" #'?clause))))
+       (__synner__ "invalid clause" #'?clause))))
 
   (define (%process-typespec var spec)
     (parse-logic-predicate-syntax spec
@@ -180,7 +180,7 @@
 				       (identifier? #'?tag)
 				       #`(is-a? #,var ?tag))
 				      (_
-				       (synner "invalid typespec syntax" spec))))))
+				       (__synner__ "invalid typespec syntax" spec))))))
 
   (main stx))
 
@@ -200,7 +200,7 @@
     ))
 
 
-(define-syntax* (handler-bind stx)
+(define-syntax (handler-bind stx)
   ;;Evaluate body forms in a dynamic  environment in which new exception handlers are
   ;;installed;   it  is   capable   of  handling   exceptions   raised  with   RAISE,
   ;;RAISE-CONTINUABLE  and  SIGNAL.   Not quite  like  R6RS's  WITH-EXCEPTION-HANDLER
@@ -300,7 +300,7 @@
 				       (identifier? #'?tag)
 				       #`(is-a? #,var ?tag))
 				      (_
-				       (synner "invalid typespec syntax" spec))))))
+				       (__synner__ "invalid typespec syntax" spec))))))
 
   (main stx))
 
@@ -431,7 +431,7 @@
 			    (lambda retvals
 			      (apply restart-point-proc retvals)))))))
 
-(define-syntax* (restart-case stx)
+(define-syntax (restart-case stx)
   ;;Install restart  handlers in the  current dynamic environment, then  evaluate the
   ;;body form.
   ;;
@@ -473,10 +473,10 @@
        (let ((names (syntax->datum #'(?restart-name ...))))
 	 (cond ((%all-symbols? names)
 		=> (lambda (obj)
-		     (synner "expected symbol as restart name" obj)))
+		     (__synner__ "expected symbol as restart name" obj)))
 	       ((%duplicate-symbols? names)
 		=> (lambda (name)
-		     (synner "duplicate restart name" name)))
+		     (__synner__ "duplicate restart name" name)))
 	       (else
 		#'(begin0
 		      (unwinding-call/cc

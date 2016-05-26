@@ -90,8 +90,7 @@
 
 ;;;; quasiquotation
 
-(define-syntax* (iquasiquote input-form.stx)
-
+(define-syntax (iquasiquote input-form.stx)
   (define (main stx)
     (syntax-case stx (iunquote iunquote-splicing)
 
@@ -105,12 +104,12 @@
        #'?expr)
 
       ((_ (iunquote ?expr0 ?expr ...))
-       (synner "invalid multi-operand IUNQUOTE form outside list and vector templates"
-	       #'(iunquote ?expr0 ?expr ...)))
+       (__synner__ "invalid multi-operand IUNQUOTE form outside list and vector templates"
+		   #'(iunquote ?expr0 ?expr ...)))
 
       ((_ (iunquote-splicing ?expr ...))
-       (synner "invalid IUNQUOTE-SPLICING form outside list and vector templates"
-	       #'(iunquote-splicing ?expr ...)))
+       (__synner__ "invalid IUNQUOTE-SPLICING form outside list and vector templates"
+		   #'(iunquote-splicing ?expr ...)))
 
       ((_ (?car . ?cdr))
        (%quasi #'(?car . ?cdr) 0))
@@ -142,7 +141,7 @@
       ;;   (iquasiquote (1 . (iunquote)))
       ;;
       ((iunquote)
-       (synner "invalid IUNQUOTE form in improper tail position" stx))
+       (__synner__ "invalid IUNQUOTE form in improper tail position" stx))
 
       (((iunquote ?input-car-subexpr ...) . ?input-cdr)
        ;;For  coherence  with what  R6RS  specifies  about UNQUOTE:  a  multi-operand
@@ -168,15 +167,15 @@
 		       output-tail.stx))))
 
       (((iunquote ?input-car-subexpr ... . ?input-car-tail) . ?input-cdr)
-       (synner "invalid improper list as IUNQUOTE form"
-	       #'(iunquote ?input-car-subexpr ... . ?input-car-tail)))
+       (__synner__ "invalid improper list as IUNQUOTE form"
+		   #'(iunquote ?input-car-subexpr ... . ?input-car-tail)))
 
       ;;This happens when the input form is:
       ;;
       ;;   (iquasiquote (1 . (iunquote-splicing)))
       ;;
       ((iunquote-splicing)
-       (synner "invalid IUNQUOTE-SPLICING form in improper tail position" stx))
+       (__synner__ "invalid IUNQUOTE-SPLICING form in improper tail position" stx))
 
       ;;This happens when STX appears in improper tail position:
       ;;
@@ -188,7 +187,7 @@
 	 (%quasicons #'(quote iunquote-splicing) (%quasi (list #'?expr) (sub1 nesting-level)))))
 
       ((iunquote-splicing ?input-car-subexpr0 ?input-car-subexpr ...)
-       (synner "invalid multi-operand IUNQUOTE-SPLICING form in improper tail position" stx))
+       (__synner__ "invalid multi-operand IUNQUOTE-SPLICING form in improper tail position" stx))
 
       (((iunquote-splicing ?input-car-subexpr ...) . ?input-cdr)
        ;;For  coherence   with  what   R6RS  specifies  about   UNQUOTE-SPLICING:  an
@@ -217,8 +216,8 @@
 		       output-tail.stx))))
 
       (((iunquote-splicing ?input-car-subexpr ... . ?input-car-tail) . ?input-cdr)
-       (synner "invalid improper list as IUNQUOTE-SPLICING form"
-	       #'(iunquote-splicing ?input-car-subexpr ... . ?input-car-tail)))
+       (__synner__ "invalid improper list as IUNQUOTE-SPLICING form"
+		   #'(iunquote-splicing ?input-car-subexpr ... . ?input-car-tail)))
 
       ((iquasiquote ?expr ...)
        (%quasicons #'(quote iquasiquote) (%quasi #'(?expr ...) (add1 nesting-level))))
@@ -423,8 +422,8 @@
 			    output-tail.stx))))
 
 	   ((iunquote ?input-car-subexpr ... . ?input-car-tail)
-	    (synner "invalid improper list as IUNQUOTE form"
-		    #'(iunquote ?input-car-subexpr ... . ?input-car-tail)))
+	    (__synner__ "invalid improper list as IUNQUOTE form"
+			#'(iunquote ?input-car-subexpr ... . ?input-car-tail)))
 
 	   ((iunquote-splicing ?input-car-subexpr ...)
 	    ;;When the nesting level requires processing of unquoted expressions:
@@ -453,8 +452,8 @@
 			    output-tail.stx))))
 
 	   ((iunquote-splicing ?input-car-subexpr ... . ?input-car-tail)
-	    (synner "invalid improper list as IUNQUOTE-SPLICING form"
-		    #'(iunquote-splicing ?input-car-subexpr ... . ?input-car-tail)))
+	    (__synner__ "invalid improper list as IUNQUOTE-SPLICING form"
+			#'(iunquote-splicing ?input-car-subexpr ... . ?input-car-tail)))
 
 	   ((iquasiquote ?nested-expr ...)
 	    (%quasicons (%quasicons #'(quote iquasiquote) (%quasi #'(?nested-expr ...) (add1 nesting-level)))

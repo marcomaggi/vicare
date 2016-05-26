@@ -448,7 +448,12 @@
   signatures attributes replacements
   foldable effect-free result-true result-false)
 
-(define-syntax* (declare-core-primitive input-form)
+(define-syntax (declare-core-primitive input-form.stx)
+  (case-define synner
+    ((message)
+     (syntax-violation (quote declare-core-primitive) message input-form.stx #f))
+    ((message subform)
+     (syntax-violation (quote declare-core-primitive) message input-form.stx subform)))
 
   (define (main stx)
     (syntax-case stx ()
@@ -488,33 +493,33 @@
 
     (define %parse-rest-clauses
       (case-lambda
-       ((clause*.stx safe?)
-	(%parse-rest-clauses clause*.stx safe? '() '() '()))
-       ((clause*.stx safe? signature* attribute* replacement-prim-name*)
-	(syntax-case clause*.stx (signatures attributes replacements)
-	  (()
-	   (values safe? signature* attribute* replacement-prim-name*))
+	((clause*.stx safe?)
+	 (%parse-rest-clauses clause*.stx safe? '() '() '()))
+	((clause*.stx safe? signature* attribute* replacement-prim-name*)
+	 (syntax-case clause*.stx (signatures attributes replacements)
+	   (()
+	    (values safe? signature* attribute* replacement-prim-name*))
 
-	  (((signatures ?signature ...) . ?other-clause*)
-	   (%parse-rest-clauses #'?other-clause* safe?
-				(append signature* (%parse-signatures-sexp #'(?signature ...)))
-				attribute*
-				replacement-prim-name*))
+	   (((signatures ?signature ...) . ?other-clause*)
+	    (%parse-rest-clauses #'?other-clause* safe?
+				 (append signature* (%parse-signatures-sexp #'(?signature ...)))
+				 attribute*
+				 replacement-prim-name*))
 
-	  (((attributes ?attr-spec ...) . ?other-clause*)
-	   (%parse-rest-clauses #'?other-clause* safe?
-				signature*
-				(append attribute* (%parse-application-attributes-sexp #'(?attr-spec ...)))
-				replacement-prim-name*))
+	   (((attributes ?attr-spec ...) . ?other-clause*)
+	    (%parse-rest-clauses #'?other-clause* safe?
+				 signature*
+				 (append attribute* (%parse-application-attributes-sexp #'(?attr-spec ...)))
+				 replacement-prim-name*))
 
-	  (((replacements ?replacement-prim-name ...) . ?other-clause*)
-	   (%parse-rest-clauses #'?other-clause* safe?
-				signature*
-				attribute*
-				(append replacement-prim-name* (%parse-replacements-sexp #'(?replacement-prim-name ...)))))
+	   (((replacements ?replacement-prim-name ...) . ?other-clause*)
+	    (%parse-rest-clauses #'?other-clause* safe?
+				 signature*
+				 attribute*
+				 (append replacement-prim-name* (%parse-replacements-sexp #'(?replacement-prim-name ...)))))
 
-	  ((?bad-clause . ?other-clause*)
-	   (synner "invalid clause" #'?bad-clause))))))
+	   ((?bad-clause . ?other-clause*)
+	    (synner "invalid clause" #'?bad-clause))))))
 
     #| end of module: %PARSE-CLAUSES |# )
 
@@ -964,10 +969,10 @@
 ;;; --------------------------------------------------------------------
 
   ;;This is the last form in the definition of DECLARE-CORE-PRIMITIVE.
-  (receive-and-return (output-form)
-      (main input-form)
-    #;(debug-print (syntax->datum output-form))
-    (void)))
+  ;; (receive-and-return (output-form)
+  ;;     (main input-form.stx)
+  ;;   (debug-print (syntax->datum output-form)))
+  (main input-form.stx))
 
 
 ;;;Core type signatures

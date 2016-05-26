@@ -1333,44 +1333,6 @@
      (__synner__ "invalid syntax in macro use"))))
 
 
-;;;; non-core macro: DEFINE-SYNTAX*
-
-(define-macro-transformer (define-syntax* input-form.stx)
-  ;;Transformer  function used  to  expand Vicare's  DEFINE-SYNTAX*  macros from  the
-  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
-  ;;syntax object that must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?name)
-     (identifier? ?name)
-     (bless
-      `(define-syntax ,?name
-	 (lambda/std (stx)
-	   (syntax-violation (quote ?name) "invalid syntax use" stx)))))
-
-    ((_ ?name ?expr)
-     (identifier? ?name)
-     (bless
-      `(define-syntax ,?name ,?expr)))
-
-    ((_ (?name ?stx) ?body0 ?body* ...)
-     (and (identifier? ?name)
-	  (identifier? ?stx))
-     (let ((SYNNER (datum->syntax ?name 'synner)))
-       (bless
-	`(define-syntax ,?name
-	   (named-lambda/std ,?name (,?stx)
-	     (letrec/std
-		 ((,SYNNER (named-case-lambda/std ,?name
-			     ((message)
-			      (,SYNNER message #f))
-			     ((message subform)
-			      (syntax-violation __who__ message ,?stx subform)))))
-	       ,?body0 ,@?body*))))))
-    (_
-     (__synner__ "invalid syntax in macro use"))))
-
-
 ;;;; non-core macro: WITH-SYNTAX
 
 (define-macro-transformer (with-syntax input-form.stx)

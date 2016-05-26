@@ -574,14 +574,15 @@
 			(message.id	(make-syntactic-identifier-for-temporary-variable "message"))
 			(subform.id	(make-syntactic-identifier-for-temporary-variable "subform")))
 		    `(named-lambda/std ,?id (,?arg)
-		       (case-define/checked ,synner.id
-			 (({,message.id <string>})
-			  (,synner.id ,message.id #f))
-			 (({,message.id <string>} ,subform.id)
-			  (syntax-violation (quote ,?id) ,message.id ,?arg ,subform.id)))
-		       (fluid-let-syntax
-			   ((__synner__ (identifier-syntax ,synner.id)))
-			 ,?body0 . ,?body*))))))
+		       (letrec/checked
+			   ((,synner.id (case-lambda/checked
+					  (({,message.id <string>})
+					   (syntax-violation (quote ,?id) ,message.id ,?arg #f))
+					  (({,message.id <string>} ,subform.id)
+					   (syntax-violation (quote ,?id) ,message.id ,?arg ,subform.id)))))
+			 (fluid-let-syntax
+			     ((__synner__ (identifier-syntax ,synner.id)))
+			   ,?body0 . ,?body*)))))))
     ((_ ?id)
      (identifier? ?id)
      (values ?id (bless '(syntax-rules ()))))

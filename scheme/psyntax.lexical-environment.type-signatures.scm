@@ -81,7 +81,7 @@
 (define-auxiliary-syntaxes single-value <list>/<list-of-spec> <closure>
   <list-of-spec> <list-spec> <pair-spec>)
 
-(define-syntax* (case-type-signature-full-structure input-form.stx)
+(define-syntax (case-type-signature-full-structure input-form.stx)
   ;;A typical use for an expression used as operand or similar:
   ;;
   ;;  (case-type-signature-full-structure expr.sig
@@ -136,6 +136,12 @@
   ;;     ;;The expression returns zero, two or more values.
   ;;     ?body0 ?body ...))
   ;;
+  (case-define synner
+    ((message)
+     (sys::syntax-violation (quote case-type-signature-full-structure) message input-form.stx #f))
+    ((message subform)
+     (sys::syntax-violation (quote case-type-signature-full-structure) message input-form.stx subform)))
+
   (define (main input-form.stx)
     (sys::syntax-case input-form.stx ()
       ((_ ?signature . ?clause*)
@@ -274,7 +280,7 @@
 
 ;;;; syntax helpers: type annotation specs matching
 
-(define-syntax* (case-type-signature-structure input-form.stx)
+(define-syntax (case-type-signature-structure input-form.stx)
   (define (main input-form.stx)
     (sys::syntax-case input-form.stx ()
       ((_ ?annotation . ?clause*)
