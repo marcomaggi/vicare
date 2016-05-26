@@ -120,7 +120,6 @@ module             library
 begin              import
 export             set!
 stale-when         begin-for-syntax
-eval-for-expand
 @end example
 
 @noindent
@@ -1620,8 +1619,7 @@ Some of these core language syntaxes are: @syntax{define-syntax},
 @syntax{define-alias}, @syntax{define-fluid-syntax}, @syntax{module},
 @syntax{library}, @syntax{begin}, @syntax{import}, @syntax{export},
 @syntax{set!}, @syntax{let-syntax}, @syntax{letrec-syntax},
-@syntax{stale-when}, @syntax{begin-for-syntax},
-@syntax{eval-for-expand}.
+@syntax{stale-when}, @syntax{begin-for-syntax}.
 
 @c ------------------------------------------------------------------------
 

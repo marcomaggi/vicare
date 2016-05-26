@@ -3037,7 +3037,6 @@ context; for example: it is used by the syntaxes @func{is-a?},
 
 
 @deffn Syntax begin-for-syntax @metao{body} @meta{body} @dots{}
-@deffnx Syntax eval-for-expand @metao{body} @meta{body} @dots{}
 Evaluate the @meta{body} forms at expand time; these syntaxes count as
 definitions in a body.  Notice that definitions in the body are visible
 by other code evaluated for expand:

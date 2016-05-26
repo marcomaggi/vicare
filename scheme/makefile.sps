@@ -656,7 +656,6 @@
     (letrec-syntax				(letrec-syntax))
     (stale-when					(stale-when))
     (begin-for-syntax				(begin-for-syntax))
-    (eval-for-expand				(begin-for-syntax))
 
 ;;;Core macros that can appear only in an expression.
     ,@(process-core-macros
@@ -3586,7 +3585,6 @@
     (with-blocked-exceptions			v $language)
     (with-current-dynamic-environment		v $language)
 ;;;
-    (eval-for-expand				v $language)
     (begin-for-syntax				v $language)
 ;;;
     (__who__					v $language)
