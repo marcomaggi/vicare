@@ -24,6 +24,18 @@
   (define-module-who chi-application)
 
 
+;;;; helpers
+
+(define (%psi-rator-is-values? rator.psi)
+  ;;Given a psi object  representing an application operator: return true  if it is a
+  ;;reference to the core primitive VALUES; otherwiser return false.
+  ;;
+  (cond ((core-expr.primref (psi.core-expr rator.psi))
+	 => (lambda (prim-name)
+	      (eq? prim-name 'values)))
+	(else #f)))
+
+
 ;;;; chi procedures: general operator application, nothing already expanded
 
 (define* (chi-application input-form.stx lexenv.run lexenv.expand)
@@ -279,7 +291,6 @@
 	(build-application (syntax-annotation input-form.stx)
 	    rator.core
 	  rand*.core))))
-
   (case-type-signature-full-structure (psi.retvals-signature rator.psi)
     ((<top>)
      ;;The operator expression correctly returns a  single value; it is not specified
@@ -719,63 +730,6 @@
   #| end of module: CHI-CALL-WITH-VALUES-APPLICATION/STX-OPERANDS |# )
 
 
-(module SPECIAL-PRIMITIVES
-  ( ;;
-   cons-id			cons-id?
-   foldable-cons-id		foldable-cons-id?
-   list-id			list-id?
-   foldable-list-id		foldable-list-id?
-   <nelist>-constructor-id	<nelist>-constructor-id?
-   vector-id			vector-id?
-   foldable-vector-id		foldable-vector-id?
-   <nevector>-constructor-id	<nevector>-constructor-id?
-   car-id			car-id?
-   cdr-id			cdr-id?
-   $car-id			$car-id?
-   $cdr-id			$cdr-id?
-   condition-id			condition-id?
-   apply-id			apply-id?
-   values-id			values-id?
-   call-with-values-id		call-with-values-id?
-   dynamic-wind-id		dynamic-wind-id?)
-
-  (let-syntax
-      ((declare (syntax-rules ()
-		  ((_ ?prim-id ?prim-id-pred ?prim-name)
-		   (begin
-		     (define ?prim-id
-		       (let ((memoised #f))
-			 (lambda ()
-			   (or memoised (receive-and-return (id)
-					    (core-prim-id (quote ?prim-name))
-					  (set! memoised id))))))
-		     (define (?prim-id-pred obj)
-		       (and (identifier? obj)
-			    (free-identifier=? obj (?prim-id))))
-		     #| end of BEGIN |# ))
-		  )))
-    (declare cons-id			cons-id?			cons)
-    (declare foldable-cons-id		foldable-cons-id?		foldable-cons)
-    (declare list-id			list-id?			list)
-    (declare foldable-list-id		foldable-list-id?		foldable-list)
-    (declare <nelist>-constructor-id	<nelist>-constructor-id?	<nelist>-constructor)
-    (declare vector-id			vector-id?			vector)
-    (declare foldable-vector-id		foldable-vector-id?		foldable-vector)
-    (declare <nevector>-constructor-id	<nevector>-constructor-id?	<nevector>-constructor)
-    (declare car-id			car-id?				car)
-    (declare cdr-id			cdr-id?				cdr)
-    (declare $car-id			$car-id?			$car)
-    (declare $cdr-id			$cdr-id?			$cdr)
-    (declare condition-id		condition-id?			condition)
-    (declare apply-id			apply-id?			apply)
-    (declare values-id			values-id?			values)
-    (declare call-with-values-id	call-with-values-id?		call-with-values)
-    (declare dynamic-wind-id		dynamic-wind-id?		dynamic-wind)
-    #| end of LET-SYNTAX |# )
-
-  #| end of module: SPECIAL-CORE-PRIMITIVES |# )
-
-
 ;;;; chi procedures: closure object application processing
 
 (module (chi-closure-object-application)
@@ -908,8 +862,7 @@
       ;;argument  RANDS.SIG is  an  instance of  "<type-signature>" representing  the
       ;;operands' types.
       ;;
-      (import SPECIAL-PRIMITIVES)
-      (if (values-id? (psi.input-form rator.psi))
+      (if (%psi-rator-is-values? rator.psi)
 	  ;;VALUES is special because it accepts  any number of arguments of any type
 	  ;;and it  returns a different number  of values depending on  the number of
 	  ;;operands.  So we handle it specially.
@@ -1005,49 +958,53 @@
       ;;closure's    clause     has    return    values    with     type    signature
       ;;APPLICATION-RETVALS.SIG.
       ;;
-      (let ((rator.stx (psi.input-form rator.psi)))
-	(import SPECIAL-PRIMITIVES)
-	(cond
-	 ((identifier? rator.stx)
-	  (cond
-	   ((or (cons-id?          rator.stx)
-		(foldable-cons-id? rator.stx))
-	    (chi-cons-application input-form.stx rator.psi rand*.psi rands.sig))
-	   ((or (list-id?			rator.stx)
-		(foldable-list-id?		rator.stx)
-		(<nelist>-constructor-id?	rator.stx))
-	    (chi-list-application input-form.stx rator.psi rand*.psi rands.sig))
-	   ((or (vector-id?			rator.stx)
-		(foldable-vector-id?		rator.stx)
-		(<nevector>-constructor-id?	rator.stx))
-	    (chi-vector-application input-form.stx rator.psi rand*.psi rands.sig))
-	   ;;
-	   (( car-id? rator.stx) (chi-car-application input-form.stx rator.psi rand*.psi rands.sig  'car))
-	   (( cdr-id? rator.stx) (chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig  'cdr))
-	   (($car-id? rator.stx) (chi-car-application input-form.stx rator.psi rand*.psi rands.sig '$car))
-	   (($cdr-id? rator.stx) (chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig '$cdr))
-	   ;;
-	   ((condition-id? rator.stx)
-	    (chi-condition-application		input-form.stx rator.psi rand*.psi rands.sig))
-	   ((call-with-values-id? rator.stx)
-	    (chi-call-with-values-application	input-form.stx rator.psi rand*.psi rands.sig))
-	   ((apply-id? rator.stx)
-	    (chi-apply-application		input-form.stx rator.psi rand*.psi rands.sig))
-	   ((dynamic-wind-id? rator.stx)
-	    (chi-dynamic-wind-application	input-form.stx rator.psi rand*.psi rands.sig))
-	   ;;
-	   (else
-	    (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
-						  rator.psi rand*.psi rator.stx
-						  rands.sig application-retvals.sig))))
-	 (else
-	  ;;If  we are  here the  rator is  a non-identifier  expression returning  a
-	  ;;closure object with known signature.
-	  (%build-core-expression input-form.stx rator.psi rand*.psi application-retvals.sig)))))
+      (define (%chi-identifier)
+	(%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
+					      rator.psi rand*.psi rands.sig application-retvals.sig))
+      (cond
+       ((identifier? (psi.input-form rator.psi))
+	(cond ((core-expr.primref (psi.core-expr rator.psi))
+	       ;;The operator is a core  primitive reference, PRIM-NAME is the symbol
+	       ;;representing its public name.
+	       => (lambda (prim-name)
+		    (case prim-name
+		      ((cons foldable-cons)
+		       (chi-cons-application input-form.stx rator.psi rand*.psi rands.sig))
+		      ((list foldable-list <nelist>-constructor)
+		       (chi-list-application input-form.stx rator.psi rand*.psi rands.sig))
+		      ((vector foldable-vector <nevector>-constructor)
+		       (chi-vector-application input-form.stx rator.psi rand*.psi rands.sig))
+		      ;;
+		      ((car)	(chi-car-application input-form.stx rator.psi rand*.psi rands.sig  'car))
+		      ((cdr)	(chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig  'cdr))
+		      (($car)	(chi-car-application input-form.stx rator.psi rand*.psi rands.sig '$car))
+		      (($cdr)	(chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig '$cdr))
+		      ;;
+		      ((condition)
+		       (chi-condition-application		input-form.stx rator.psi rand*.psi rands.sig))
+		      ((call-with-values)
+		       (chi-call-with-values-application	input-form.stx rator.psi rand*.psi rands.sig))
+		      ((apply)
+		       (chi-apply-application		input-form.stx rator.psi rand*.psi rands.sig))
+		      ((dynamic-wind)
+		       (chi-dynamic-wind-application	input-form.stx rator.psi rand*.psi rands.sig))
+		      (else
+		       ;;The operator  is a core primitive  reference.  The primitive
+		       ;;is not special.
+		       (%chi-identifier)))))
+	      (else
+	       ;;The operator is  a variable reference to  some non-primitive closure
+	       ;;object.
+	       (%chi-identifier))))
+       (else
+	;;If we are here the rator is a non-identifier expression returning a closure
+	;;object with known signature.
+	(%build-core-expression input-form.stx rator.psi rand*.psi application-retvals.sig))))
 
     (define* (%chi-application-of-identifier-rator input-form.stx lexenv.run lexenv.expand
-						   rator.psi rand*.psi rator.id
+						   rator.psi rand*.psi
 						   rands.sig {application-retvals.sig type-signature?})
+      (define rator.id (psi.input-form rator.psi))
       (define (%build-default-application)
 	(%build-core-expression input-form.stx rator.psi rand*.psi application-retvals.sig))
       (cond ((id->label rator.id)
@@ -1158,27 +1115,42 @@
   (define* (%chi-application-with-compatible-signature input-form.stx lexenv.run lexenv.expand
 						       rator.psi rand*.psi rands.sig
 						       default-application-maker)
-    (import SPECIAL-PRIMITIVES)
-    (define rator.stx (psi.input-form rator.psi))
     (cond
-     ((identifier? rator.stx)
-      (cond
-       (( car-id? rator.stx) (chi-car-application input-form.stx rator.psi rand*.psi rands.sig  'car))
-       (($car-id? rator.stx) (chi-car-application input-form.stx rator.psi rand*.psi rands.sig '$car))
-       (( cdr-id? rator.stx) (chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig  'cdr))
-       (($cdr-id? rator.stx) (chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig '$cdr))
-       ;;
-       ((condition-id? rator.stx)
-	(chi-condition-application		input-form.stx rator.psi rand*.psi rands.sig))
-       ((call-with-values-id? rator.stx)
-	(chi-call-with-values-application	input-form.stx rator.psi rand*.psi rands.sig))
-       ((apply-id? rator.stx)
-	(chi-apply-application			input-form.stx rator.psi rand*.psi rands.sig))
-       ((dynamic-wind-id? rator.stx)
-	(chi-dynamic-wind-application		input-form.stx rator.psi rand*.psi rands.sig))
-       ;;
-       (else
-	(default-application-maker))))
+     ((identifier? (psi.input-form rator.psi))
+      (cond ((core-expr.primref (psi.core-expr rator.psi))
+	     ;;The operator  is a core  primitive reference, PRIM-NAME is  the symbol
+	     ;;representing its public name.
+	     => (lambda (prim-name)
+		  (case prim-name
+		    ;;NOTE We do *not* do the following primitives here:
+		    ;;
+		    ;;  cons foldable-cons
+		    ;;  list foldable-list <nelist>-constructor
+		    ;;  vector foldable-vector <nevector>-constructor
+		    ;;  chi-vector-application
+		    ;;
+		    ;;because they accept operands of  any type, so they always match
+		    ;;exactly if the number of operands is right.
+		    (( car)	(chi-car-application input-form.stx rator.psi rand*.psi rands.sig  'car))
+		    (($car)	(chi-car-application input-form.stx rator.psi rand*.psi rands.sig '$car))
+		    (( cdr)	(chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig  'cdr))
+		    (($cdr)	(chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig '$cdr))
+		    ;;
+		    ((condition)
+		     (chi-condition-application			input-form.stx rator.psi rand*.psi rands.sig))
+		    ((call-with-values)
+		     (chi-call-with-values-application		input-form.stx rator.psi rand*.psi rands.sig))
+		    ((apply)
+		     (chi-apply-application			input-form.stx rator.psi rand*.psi rands.sig))
+		    ((dynamic-wind)
+		     (chi-dynamic-wind-application		input-form.stx rator.psi rand*.psi rands.sig))
+		    (else
+		     ;;The operator is a reference to a non-special core primitive.
+		     (default-application-maker)))))
+	    (else
+	     ;;The operator is an identifier  reference to some non-primitive closure
+	     ;;object.
+	     (default-application-maker))))
      (else
       ;;If we are  here the rator is a non-identifier  expression returning a closure
       ;;object with known signature.
@@ -1598,7 +1570,7 @@
 ;;;; special applications: APPLY
 
 (module (chi-apply-application)
-  (import CLOSURE-APPLICATION-ERRORS SPECIAL-PRIMITIVES)
+  (import CLOSURE-APPLICATION-ERRORS)
   (define-module-who chi-apply-application)
 
   (define (chi-apply-application input-form.stx
@@ -1631,7 +1603,7 @@
 					(%last-rand-specs input-form.stx
 							  (car (last-pair rand*.psi))
 							  (car (last-pair rand*.ots))))))
-      (cond ((values-id? (psi.input-form (car rand*.psi)))
+      (cond ((%psi-rator-is-values? (car rand*.psi))
 	     ;;VALUES is  special because it accepts  any number of arguments  of any
 	     ;;type and  it returns  a different  number of  values depending  on the
 	     ;;number of operands.

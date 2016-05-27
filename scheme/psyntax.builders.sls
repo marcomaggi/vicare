@@ -45,7 +45,7 @@
     build-library-letrec*
 
     build-with-compilation-options
-    void-core-expression?
+    void-core-expression?		core-expr.primref
 
     core-language->sexp)
   (import (rnrs)
@@ -195,6 +195,17 @@
      (build-primref ae 1 name))
     ((_ ae level name)
      `(primitive ,name))))
+
+(define (core-expr.primref obj)
+  ;;If OBJ is the symbolic expression:
+  ;;
+  ;;   (primitive ?prim-name)
+  ;;
+  ;;return ?PRIM-NAME, otherwise return false.
+  ;;
+  (and (pair? obj)
+       (eq? 'primitive (car obj))
+       (cadr obj)))
 
 (define-syntax build-foreign-call
   (syntax-rules ()
