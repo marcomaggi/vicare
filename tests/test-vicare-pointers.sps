@@ -86,9 +86,14 @@
 		   (else
 		    (print-condition E)
 		    E))
-	   (eval (quote ?body) environment-for-assertion-errors
-		 (expander-options strict-r6rs)
-		 (compiler-options strict-r6rs)))
+	   (with-exception-handler
+	       (lambda (E)
+		 (unless (warning? E)
+		   (raise E)))
+	     (lambda ()
+	       (eval (quote ?body) environment-for-assertion-errors
+		     (expander-options strict-r6rs)
+		     (compiler-options strict-r6rs)))))
        => ?result))))
 
 

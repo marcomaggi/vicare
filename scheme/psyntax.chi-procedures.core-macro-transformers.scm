@@ -154,49 +154,6 @@
     input-form.stx))
 
 
-;;;; other helpers
-
-(define (%untyped-lexical-variables.inspect-references caller-who lhs*.id lhs*.des)
-  ;;Given a list of untyped lexical variables' identifiers LHS*.ID, and a list of the
-  ;;correspondig  syntactic bindings'  descriptors LHS*.DES:  check if  the variables
-  ;;where  referenced at  least once.   When the  variable was  never referenced  nor
-  ;;assigned: raise a warning.
-  ;;
-  (when (options::warn-about-unused-lexical-variables)
-    (for-each (lambda (lhs.des lhs.id)
-		(unless (syntactic-binding-descriptor/lexical-var/value.referenced?
-			 (syntactic-binding-descriptor.value lhs.des))
-		  (raise-continuable
-		   (condition (make-warning-unused-lexical-variable)
-			      (make-who-condition caller-who)
-			      (make-message-condition "unused lexical syntactic binding")
-			      (make-syntactic-identifier-condition lhs.id)))))
-      lhs*.des lhs*.id)))
-
-(define* (%typed-lexical-variables.inspect-references caller-who lhs*.id lhs*.lab lexenv)
-  ;;Given  a  list  of  typed  lexical variables'  identifiers  LHS*.ID,  a  list  of
-  ;;associated label gensyms LHS*.LAB, and the lexenv in which the syntactic bindings
-  ;;are established: check if the variables where referenced at least once.  When the
-  ;;variable was never referenced nor assigned: raise a warning.
-  ;;
-  (when (options::warn-about-unused-lexical-variables)
-    (for-each (lambda (lhs.id lhs.lab)
-		(let ((lhs.des (label->syntactic-binding-descriptor lhs.lab lexenv)))
-		  (case (syntactic-binding-descriptor.type lhs.des)
-		    ((lexical-typed)
-		     (let ((lhs.lts (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec lhs.des)))
-		       (unless (lexical-typed-variable-spec.referenced? lhs.lts)
-			 (raise-continuable
-			  (condition (make-warning-unused-lexical-variable)
-				     (make-who-condition caller-who)
-				     (make-message-condition "unused lexical syntactic binding")
-				     (make-syntactic-identifier-condition lhs.id))))))
-		    (else
-		     (assertion-violation __who__
-		       "internal error, cannot resolve label" lhs.id lhs.lab lhs.des)))))
-      lhs*.id lhs*.lab)))
-
-
 ;;;; external modules
 
 (include "psyntax.chi-procedures.type-macro-transformers.scm" #t)

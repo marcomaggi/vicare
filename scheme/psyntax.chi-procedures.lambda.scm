@@ -845,7 +845,7 @@
     ;;Expand  the guts  of a  lambda  clause for  the  case of  formals without  rest
     ;;argument.  Here  we know that  STANDARD-FORMALS.STX and the  corresponding type
     ;;signature are proper lists with equal length.
-    (receive (rib lexenv.run standard-formals*.lex unused-formal*.lab)
+    (receive (rib lexenv.run standard-formals*.lex all*.lab)
 	;;If this function call is for a standard language syntax: we need to convert
 	;;all the types  to "<top>", including the  args and rest types.   This is to
 	;;avoid problems if these bindings are assigned with SET!.
@@ -854,7 +854,11 @@
 				(%topify-list formal*.ots)
 			      formal*.ots)))
 	  (%establish-typed-syntactic-bindings-lhs* standard-formals.stx formal*.ots lexenv.run))
-      (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals*.lex body*.stx rib)))
+      (begin0
+	  (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals*.lex body*.stx rib)
+	(%typed-lexical-variables.inspect-references (syntax-match input-form.stx ()
+						       ((?who . ?stuff)	(syntax->datum ?who)))
+						     standard-formals.stx all*.lab lexenv.run))))
 
   (define (%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand
 						   standard-bindings?
@@ -867,8 +871,10 @@
 	  (improper-list->list-and-rest standard-formals.stx))
 	 ((arg*.ots rest.ots)
 	  (improper-list->list-and-rest (lambda-signature.argvals.specs clause-signature)))
-	 ((rib lexenv.run standard-formals.lex)
-	  (receive (rib lexenv.run all*.lex unused-all*.lab)
+	 ((all*.id)
+	  (cons rest.id arg*.id))
+	 ((rib lexenv.run standard-formals.lex all*.lab)
+	  (receive (rib lexenv.run all*.lex all*.lab)
 	      ;;If this function  call is for a standard language  syntax: we need to
 	      ;;convert all the types to "<top>",  including the args and rest types.
 	      ;;This is to avoid problems if these bindings are assigned with SET!.
@@ -876,10 +882,14 @@
 		     (formal*.ots (if standard-bindings?
 				      (%topify-list formal*.ots)
 				    formal*.ots)))
-		(%establish-typed-syntactic-bindings-lhs* (cons rest.id arg*.id) formal*.ots lexenv.run))
+		(%establish-typed-syntactic-bindings-lhs* all*.id formal*.ots lexenv.run))
 	    ;;Yes, this call to APPEND builds an improper list.
-	    (values rib lexenv.run (append (cdr all*.lex) (car all*.lex))))))
-      (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals.lex body*.stx rib)))
+	    (values rib lexenv.run (append (cdr all*.lex) (car all*.lex)) all*.lab))))
+      (begin0
+	  (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals.lex body*.stx rib)
+	(%typed-lexical-variables.inspect-references (syntax-match input-form.stx ()
+						       ((?who . ?stuff)	(syntax->datum ?who)))
+						     all*.id all*.lab lexenv.run))))
 
   (define (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals.lex body*.stx rib)
     (let* ((body*.stx (push-lexical-contour rib body*.stx))

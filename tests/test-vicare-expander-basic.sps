@@ -62,13 +62,16 @@
 
 ;;;; helpers
 
-(define (%eval sexp)
-  (with-exception-handler
-      (lambda (E)
-	(unless (warning? E)
-	  (raise E)))
-    (lambda ()
-      (eval sexp (environment '(vicare))))))
+(case-define %eval
+  ((sexp)
+   (%eval sexp (environment '(vicare))))
+  ((sexp env)
+   (with-exception-handler
+       (lambda (E)
+	 (unless (warning? E)
+	   (raise E)))
+     (lambda ()
+       (eval sexp env)))))
 
 (define-syntax check-argument-violation
   (syntax-rules (=>)
@@ -323,14 +326,19 @@
 (parametrise ((check-test-name	'deprefix))
 
   (check
-      (eval '(str.length "ciao")
-	    (environment
-	     '(prefix
-	       (deprefix (only (rnrs)
-			       string-length
-			       string-append)
-			 string-)
-	       str.)))
+      (with-exception-handler
+	  (lambda (E)
+	    (unless (warning? E)
+	      (raise E)))
+	(lambda ()
+	  (eval '(str.length "ciao")
+		(environment
+		 '(prefix
+		   (deprefix (only (rnrs)
+				   string-length
+				   string-append)
+			     string-)
+		   str.)))))
     => 4)
 
   #t)
@@ -851,13 +859,13 @@
 		       (syntax->datum (syntax-violation-form E))
 		       (syntax->datum (syntax-violation-subform E))))
 		(else E))
-	(eval '(let ()
-		 (define-syntax (doit stx)
-		   (syntax-case stx ()
-		     ((_ ?id)
-		      (__synner__ "bad syntax"))))
-		 (doit hello))
-	      (environment '(vicare))))
+	(%eval '(let ()
+		  (define-syntax (doit stx)
+		    (syntax-case stx ()
+		      ((_ ?id)
+		       (__synner__ "bad syntax"))))
+		  (doit hello))
+	       (environment '(vicare))))
     => '(doit (doit hello) #f))
 
   (check
@@ -866,13 +874,13 @@
 		       (syntax->datum (syntax-violation-form E))
 		       (syntax->datum (syntax-violation-subform E))))
 		(else E))
-	(eval '(let ()
-		 (define-syntax (doit stx)
-		   (syntax-case stx ()
-		     ((_ ?id)
-		      (__synner__ "bad syntax" #'?id))))
-		 (doit hello))
-	      (environment '(vicare))))
+	(%eval '(let ()
+		  (define-syntax (doit stx)
+		    (syntax-case stx ()
+		      ((_ ?id)
+		       (__synner__ "bad syntax" #'?id))))
+		  (doit hello))
+	       (environment '(vicare))))
     => '(doit (doit hello) hello))
 
   (check	;redefinition  of __WHO__,  __SYNNER__  still  bound to  the
@@ -882,14 +890,14 @@
 		       (syntax->datum (syntax-violation-form E))
 		       (syntax->datum (syntax-violation-subform E))))
 		(else E))
-	(eval '(let ()
-		 (define-syntax (doit stx)
-		   (define __who__ 'other)
-		   (syntax-case stx ()
-		     ((_ ?id)
-		      (__synner__ "bad syntax" #'?id))))
-		 (doit hello))
-	      (environment '(vicare))))
+	(%eval '(let ()
+		  (define-syntax (doit stx)
+		    (define __who__ 'other)
+		    (syntax-case stx ()
+		      ((_ ?id)
+		       (__synner__ "bad syntax" #'?id))))
+		  (doit hello))
+	       (environment '(vicare))))
     => '(doit (doit hello) hello))
 
   (check	;redefinition of WHO and __SYNNER__
@@ -898,16 +906,16 @@
 		       (syntax->datum (syntax-violation-form E))
 		       (syntax->datum (syntax-violation-subform E))))
 		(else E))
-	(eval '(let ()
-		 (define-syntax (doit stx)
-		   (define __who__ 'other)
-		   (define (__synner__ message subform)
-		     (syntax-violation __who__ message subform #f))
-		   (syntax-case stx ()
-		     ((_ ?id)
-		      (__synner__ "bad syntax" #'?id))))
-		 (doit hello))
-	      (environment '(vicare))))
+	(%eval '(let ()
+		  (define-syntax (doit stx)
+		    (define __who__ 'other)
+		    (define (__synner__ message subform)
+		      (syntax-violation __who__ message subform #f))
+		    (syntax-case stx ()
+		      ((_ ?id)
+		       (__synner__ "bad syntax" #'?id))))
+		  (doit hello))
+	       (environment '(vicare))))
     => '(other hello #f))
 
   #t)
@@ -1452,7 +1460,7 @@
       (guard (E ((syntax-violation? E)
   		 (condition-message E))
   		(else E))
-  	(eval '(case-identifiers #'two
+  	(%eval '(case-identifiers #'two
   		 ((a b c)		'symbol)
   		 ((one 123 three)	=> (lambda (N) (vector N)))
   		 (else			=> 'else))
@@ -1698,7 +1706,7 @@
       (guard (E ((syntax-violation? E)
   		 (condition-message E))
   		(else E))
-  	(eval '((splice-first-expand 123))
+  	(%eval '((splice-first-expand 123))
   	      (environment '(vicare))))
     => "expected list as argument of splice-first-expand")
 
@@ -1943,7 +1951,7 @@
       (guard (E ((syntax-violation? E)
 		 #t)
 		(else E))
-	(eval '(letrec-syntax ((b (make-synonym-transformer #'c))
+	(%eval '(letrec-syntax ((b (make-synonym-transformer #'c))
 			       (c (make-synonym-transformer #'b)))
 		 (list b c))
 	      (environment '(vicare))))
@@ -1958,45 +1966,45 @@
 
   (check	;check persistence of bindings
       (begin
-	(eval '(begin
+	(%eval '(begin
 		 (define a 1)
 		 (define b 2))
 	      (interaction-environment))
-	(eval '(list a b)
+	(%eval '(list a b)
 	      (interaction-environment)))
     => '(1 2))
 
   (check	;check persistence of bindings
       (begin
-	(eval '(define c 3)
+	(%eval '(define c 3)
 	      (interaction-environment))
-	(eval 'c
+	(%eval 'c
 	      (interaction-environment)))
     => 3)
 
   (check	;check binding redefinition
       (begin
-	(eval '(define d 3)
+	(%eval '(define d 3)
 	      (interaction-environment))
-	(eval '(define d 4)
+	(%eval '(define d 4)
 	      (interaction-environment))
-	(eval 'd
+	(%eval 'd
 	      (interaction-environment)))
     => 4)
 
   (check	;check binding redefinition
       (begin
-	(eval '(begin
+	(%eval '(begin
 		 (define x 1)
 		 (define y 2)
 		 (define z 3))
 	      (interaction-environment))
-	(eval '(begin
+	(%eval '(begin
 		 (define x 10)
 		 (define y 20)
 		 (define z 30))
 	      (interaction-environment))
-	(eval '(list x y z)
+	(%eval '(list x y z)
 	      (interaction-environment)))
     => '(10 20 30))
 
@@ -2005,76 +2013,76 @@
 
   (check	;check persistence of bindings
       (let ((env (new-interaction-environment)))
-	(eval '(begin
+	(%eval '(begin
 		 (define a 1)
 		 (define b 2))
 	      env)
-	(eval '(list a b)
+	(%eval '(list a b)
 	      env))
     => '(1 2))
 
   (check	;check persistence of bindings
       (let ((env (new-interaction-environment '(rnrs base))))
-	(eval '(begin
+	(%eval '(begin
 		 (define a 1)
 		 (define b 2))
 	      env)
-	(eval '(list a b)
+	(%eval '(list a b)
 	      env))
     => '(1 2))
 
   (check	;check binding redefinition
       (let ((env (new-interaction-environment '(rnrs base))))
-	(eval '(define d 3) env)
-	(eval '(define d 4) env)
-	(eval 'd env))
+	(%eval '(define d 3) env)
+	(%eval '(define d 4) env)
+	(%eval 'd env))
     => 4)
 
   (check	;check binding redefinition
       (let ((env (new-interaction-environment '(rnrs base))))
-	(eval '(begin
+	(%eval '(begin
 		 (define x 1)
 		 (define y 2)
 		 (define z 3))
 	      env)
-	(eval '(begin
+	(%eval '(begin
 		 (define x 10)
 		 (define y 20)
 		 (define z 30))
 	      env)
-	(eval '(list x y z)
+	(%eval '(list x y z)
 	      env))
     => '(10 20 30))
 
   (check	;check binding redefinition
       (let ((env (new-interaction-environment '(rnrs base))))
-	(eval '(begin
+	(%eval '(begin
 		 (define-syntax x (identifier-syntax 1))
 		 (define-syntax y (identifier-syntax 2))
 		 (define-syntax z (identifier-syntax 3)))
 	      env)
-	(eval '(begin
+	(%eval '(begin
 		 (define-syntax x (identifier-syntax 10))
 		 (define-syntax y (identifier-syntax 20))
 		 (define-syntax z (identifier-syntax 30)))
 	      env)
-	(eval '(list x y z)
+	(%eval '(list x y z)
 	      env))
     => '(10 20 30))
 
   (check	;check binding redefinition
       (let ((env (new-interaction-environment '(vicare))))
-	(eval '(begin
+	(%eval '(begin
 		 (define-fluid-syntax x (identifier-syntax 1))
 		 (define-fluid-syntax y (identifier-syntax 2))
 		 (define-fluid-syntax z (identifier-syntax 3)))
 	      env)
-	(eval '(begin
+	(%eval '(begin
 		 (define-fluid-syntax x (identifier-syntax 10))
 		 (define-fluid-syntax y (identifier-syntax 20))
 		 (define-fluid-syntax z (identifier-syntax 30)))
 	      env)
-	(eval '(list x y z)
+	(%eval '(list x y z)
 	      env))
     => '(10 20 30))
 
@@ -2083,8 +2091,8 @@
   ;;
   (check
       (let ((env (new-interaction-environment '(vicare))))
-	(eval '(define display 123) env)
-	(eval 'display env))
+	(%eval '(define display 123) env)
+	(%eval 'display env))
     => 123)
 
 ;;; --------------------------------------------------------------------
@@ -2094,14 +2102,14 @@
   ;;
   (check
       (let ((env (new-interaction-environment '(vicare))))
-	(eval '(begin
+	(%eval '(begin
 		 (begin-for-syntax
 		   (define a 1)
 		   (define a 2))
 		 (define-syntax doit
 		   (lambda (stx) a)))
 	      env)
-	(eval '(doit) env))
+	(%eval '(doit) env))
     => 2)
 
   ;;In  an  interaction  environment  the   top-level  definitions  in  the  body  of
@@ -2109,13 +2117,13 @@
   ;;
   (check
       (let ((env (new-interaction-environment '(vicare))))
-	(eval '(begin
+	(%eval '(begin
 		 (begin-for-syntax
 		   (define display 123))
 		 (define-syntax doit
 		   (lambda (stx) display)))
 	      env)
-	(eval '(doit) env))
+	(%eval '(doit) env))
     => 123)
 
   #t)
@@ -2273,7 +2281,7 @@
 			 (syntax->datum (syntax-violation-form E))))
 		(else
 		 (values E #f)))
-	(eval '(let ()
+	(%eval '(let ()
 		 (begin-for-syntax
 		   (define a 1)
 		   (define a 2))
@@ -2289,7 +2297,7 @@
 			 (syntax->datum (syntax-violation-form E))))
 		(else
 		 (values E #f)))
-	(eval '(let ()
+	(%eval '(let ()
 		 (begin-for-syntax
 		   (define a 1))
 		 (begin-for-syntax
@@ -2306,7 +2314,7 @@
 			 (syntax->datum (syntax-violation-form E))))
 		(else
 		 (values E #f)))
-	(eval '(let ()
+	(%eval '(let ()
 		 (begin-for-syntax
 		   (define-syntax (a stx)
 		     1)
@@ -2324,7 +2332,7 @@
 			 (syntax->datum (syntax-violation-form E))))
 		(else
 		 (values E #f)))
-	(eval '(let ()
+	(%eval '(let ()
 		 (begin-for-syntax
 		   (define-syntax (a stx)
 		     1))

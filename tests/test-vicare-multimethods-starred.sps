@@ -70,7 +70,11 @@
 			       (syntax-violation-subform E)))
 		(syntax->datum (syntax-violation-subform E)))
 	       (else E))
-       . ?body))))
+       (with-exception-handler
+	   (lambda (E)
+	     (unless (warning? E)
+	       (raise E)))
+	 (lambda () . ?body))))))
 
 (define-syntax catch-assertion
   (syntax-rules ()
@@ -81,7 +85,11 @@
 			       (condition-irritants E)))
 		(condition-irritants E))
 	       (else E))
-       . ?body))))
+       (with-exception-handler
+	   (lambda (E)
+	     (unless (warning? E)
+	       (raise E)))
+	 (lambda () . ?body))))))
 
 
 (parameterise ((check-test-name 'errors))
