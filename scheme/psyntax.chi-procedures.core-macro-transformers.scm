@@ -666,7 +666,7 @@
 	     (%build-core-expr input-form.stx lexenv.run lexenv.expand
 			       lhs*.lex (map psi.core-expr rhs*.psi) (push-lexical-contour rib (cons ?body ?body*))
 			       build-let)
-	   (%untyped-lexical-variables.inspect-references __who__ lhs*.id lhs*.des))))
+	   (%warn-about-unused-lexical-variables/untyped __who__ lhs*.id lhs*.des))))
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (identifier? ?recur)
@@ -739,7 +739,7 @@
 		 (%build-core-expr input-form.stx lexenv.run lexenv.expand
 				   (reverse lhs*.lex) (reverse rhs*.core) body*.stx
 				   build-let*)
-	       (%untyped-lexical-variables.inspect-references 'let*/std all-lhs*.id lhs*.des))))))
+	       (%warn-about-unused-lexical-variables/untyped 'let*/std all-lhs*.id lhs*.des))))))
       (_
        (__synner__ "invalid syntax in macro use"))))
 
@@ -784,7 +784,7 @@
 		   (%build-core-expr input-form.stx lexenv.run lexenv.expand
 				     lhs*.lex rhs*.core (push-lexical-contour rib (cons ?body ?body*))
 				     build-let)
-		 (%typed-lexical-variables.inspect-references __who__ lhs*.id lhs*.lab lexenv.run)))))))
+		 (%warn-about-unused-lexical-variables __who__ lhs*.id lhs*.lab lexenv.run)))))))
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (identifier? ?recur)
@@ -871,7 +871,7 @@
 	       (%build-core-expr input-form.stx lexenv.run lexenv.expand
 				 (reverse lhs*.lex) (reverse rhs*.core) body*.stx
 				 build-let*)
-	     (%typed-lexical-variables.inspect-references 'let*/checked all-lhs*.id all-lhs*.lab lexenv.run)))))
+	     (%warn-about-unused-lexical-variables 'let*/checked all-lhs*.id all-lhs*.lab lexenv.run)))))
 
       (_
        (__synner__ "invalid syntax in macro use"))))
@@ -987,7 +987,7 @@
 	     (%build-core-expr input-form.stx lexenv.run lexenv.expand
 			       lhs*.lex (map psi.core-expr rhs*.psi) (push-lexical-contour rib (cons ?body ?body*))
 			       core-lang-builder)
-	   (%untyped-lexical-variables.inspect-references caller-who lhs*.id lhs*.des))))
+	   (%warn-about-unused-lexical-variables/untyped caller-who lhs*.id lhs*.des))))
       (_
        (__synner__ "invalid syntax in macro use"))))
 
@@ -1052,7 +1052,7 @@
 		 (%build-core-expr input-form.stx lexenv.run lexenv.expand
 				   lhs*.out-lex (reverse rhs*.core) (push-lexical-contour rib (cons ?body ?body*))
 				   core-lang-builder)
-	       (%typed-lexical-variables.inspect-references caller-who all-lhs*.id lhs*.lab lexenv.run))))))
+	       (%warn-about-unused-lexical-variables caller-who all-lhs*.id lhs*.lab lexenv.run))))))
 
       (_
        (__synner__ "invalid syntax in macro use"))))
@@ -2139,11 +2139,13 @@
 				  (receive (head*.psi last.psi)
 				      (proper-list->head-and-last consumer*.psi)
 				    (psi.retvals-signature last.psi)))))
-	(make-psi input-form.stx
-	  (build-let no-source
-	      lhs*.lex (list producer.core)
-	    (build-sequence no-source body*.core))
-	  output.sig))))
+	(begin0
+	    (make-psi input-form.stx
+	      (build-let no-source
+		  lhs*.lex (list producer.core)
+		(build-sequence no-source body*.core))
+	      output.sig)
+	  (%warn-about-unused-lexical-variables caller-who (list arg.id) lhs*.lab lexenv.run)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2814,11 +2816,13 @@
 				  (receive (head*.psi last.psi)
 				      (proper-list->head-and-last consumer*.psi)
 				    (psi.retvals-signature last.psi)))))
-	(make-psi input-form.stx
-	  (build-let no-source
-	      lhs*.lex (list producer.core)
-	    (build-sequence no-source body*.core))
-	  output.sig))))
+	(begin0
+	    (make-psi input-form.stx
+	      (build-let no-source
+		  lhs*.lex (list producer.core)
+		(build-sequence no-source body*.core))
+	      output.sig)
+	  (%warn-about-unused-lexical-variables caller-who (list arg.id) lhs*.lab lexenv.run)))))
 
 ;;; --------------------------------------------------------------------
 

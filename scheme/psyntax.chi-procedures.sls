@@ -1600,7 +1600,7 @@
 
 ;;;; unused variable validation
 
-(define (%untyped-lexical-variables.inspect-references caller-who lhs*.id lhs*.des)
+(define (%warn-about-unused-lexical-variables/untyped caller-who lhs*.id lhs*.des)
   ;;Given a list of untyped lexical variables' identifiers LHS*.ID, and a list of the
   ;;correspondig  syntactic bindings'  descriptors LHS*.DES:  check if  the variables
   ;;where  referenced at  least once.   When the  variable was  never referenced  nor
@@ -1617,7 +1617,7 @@
 			      (make-syntactic-identifier-condition lhs.id)))))
       lhs*.des lhs*.id)))
 
-(define* (%typed-lexical-variables.inspect-references caller-who lhs*.id lhs*.lab lexenv)
+(define* (%warn-about-unused-lexical-variables caller-who lhs*.id lhs*.lab lexenv)
   ;;Given  a  list  of  typed  lexical variables'  identifiers  LHS*.ID,  a  list  of
   ;;associated label gensyms LHS*.LAB, and the lexenv in which the syntactic bindings
   ;;are established: check if the variables where referenced at least once.  When the

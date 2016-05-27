@@ -856,7 +856,7 @@
 	  (%establish-typed-syntactic-bindings-lhs* standard-formals.stx formal*.ots lexenv.run))
       (begin0
 	  (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals*.lex body*.stx rib)
-	(%typed-lexical-variables.inspect-references (syntax-match input-form.stx ()
+	(%warn-about-unused-lexical-variables (syntax-match input-form.stx ()
 						       ((?who . ?stuff)	(syntax->datum ?who)))
 						     standard-formals.stx all*.lab lexenv.run))))
 
@@ -887,7 +887,7 @@
 	    (values rib lexenv.run (append (cdr all*.lex) (car all*.lex)) all*.lab))))
       (begin0
 	  (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals.lex body*.stx rib)
-	(%typed-lexical-variables.inspect-references (syntax-match input-form.stx ()
+	(%warn-about-unused-lexical-variables (syntax-match input-form.stx ()
 						       ((?who . ?stuff)	(syntax->datum ?who)))
 						     all*.id all*.lab lexenv.run))))
 
