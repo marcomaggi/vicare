@@ -99,7 +99,8 @@
 		  strict-r6rs-enabled?
 		  warn-about-logic-constants
 		  warn-about-not-returning-expressions
-		  warn-about-compatible-operands-signature-in-procedure-application)
+		  warn-about-compatible-operands-signature-in-procedure-application
+		  warn-about-unused-lexical-variables)
 	    options::)
     (psyntax.builders)
     (psyntax.lexical-environment)
@@ -819,7 +820,7 @@
        ;;
        (let* ((descr.value	(syntactic-binding-descriptor.value descr))
 	      (lex		(syntactic-binding-descriptor/lexical-var/value.lex-name descr.value)))
-	 (syntactic-binding-descriptor/lexical-var/value.referenced? descr.value)
+	 (syntactic-binding-descriptor/lexical-var/value.referenced? descr.value #t)
 	 (make-psi expr.stx
 	   (build-lexical-reference no-source lex)
 	   (make-type-signature/single-top))))
@@ -1226,7 +1227,8 @@
        ;;   (lexical . #<untyped-lexical-var>)
        ;;
        (let ((descr.value (syntactic-binding-descriptor.value descr)))
-	 (syntactic-binding-descriptor/lexical-var/value.assigned? descr.value #t)
+	 (syntactic-binding-descriptor/lexical-var/value.referenced? descr.value #t)
+	 (syntactic-binding-descriptor/lexical-var/value.assigned?   descr.value #t)
 	 (let ((rhs.psi (chi-expr rhs.stx lexenv.run lexenv.expand)))
 	   (make-psi input-form.stx
 		     (build-lexical-assignment no-source
@@ -1258,7 +1260,8 @@
 	     (begin
 	       ;;A typed  lexical binding  used as  LHS of SET!   is assigned  and so
 	       ;;unexportable.  We mark it as such.
-	       (lexical-typed-variable-spec.assigned?-set! lts #t)
+	       (lexical-typed-variable-spec.referenced?-set! lts #t)
+	       (lexical-typed-variable-spec.assigned?-set!   lts #t)
 	       (%generate-rhs-core-expr input-form.stx lexenv.run lexenv.expand
 					caller-who lts.ots rhs.ots lhs.id rhs.psi))))
 	 (make-psi input-form.stx
@@ -1524,7 +1527,7 @@
 		(c (psi.core-expr guard-expr.psi) (stc)))))))
 
 
-(module (%establish-typed-syntactic-bindings-lhs*)
+(define (%establish-typed-syntactic-bindings-lhs* all-lhs*.id lhs*.ots lexenv)
   ;;This function is meant to be used by syntaxes that create new syntactic bindings:
   ;;LAMBDA, NAMED-LAMBDA,  CASE-LAMBDA, NAMED-CASE-LAMBDA,  LET, LETREC,  LETREC*, et
   ;;cetera.  These syntaxes need to create both typed and untyped syntactic bindings.
@@ -1538,7 +1541,8 @@
   ;;entries mapping labels to syntactic binding descriptors.
   ;;
   ;;Return:  the  new  rib;  the  updated  LEXENV;  a  proper  list  of  lex  gensyms
-  ;;representing the core language names of the bindings.
+  ;;representing the  core language  names of  the bindings; a  proper list  of label
+  ;;gensyms.
   ;;
   ;;
   ;;Example, for the LET syntax:
@@ -1566,61 +1570,32 @@
   ;;      (list (<list>-ots) (<fixnum>-ots) (<string>-ots))
   ;;      lexenv.run)
   ;;
-  (define (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv)
-    (receive (typed-var*.id typed-var*.tag typed-var*.lex untyped-var*.id untyped-var*.lex lhs*.lex)
-	(%partition-typed-and-untyped-lhs* lhs*.id lhs*.ots '() '() '() '() '() '())
-      ;;Prepare the UNtyped lexical variables.
-      (let* ((untyped-var*.lab	(map generate-label-gensym   untyped-var*.id))
-	     (lexenv		(lexenv-add-lexical-var-bindings untyped-var*.lab untyped-var*.lex lexenv)))
-	;;Prepare the typed lexical variables.
-	(let* ((typed-var*.lab	  (map generate-label-gensym   typed-var*.id))
-	       (typed-var*.descr  (map make-syntactic-binding-descriptor/lexical-typed-var/from-data
-				    typed-var*.tag typed-var*.lex))
-	       (lexenv            (fold-left (lambda (lexenv lab descr)
-					       (push-entry-on-lexenv lab descr lexenv))
-				    lexenv typed-var*.lab typed-var*.descr))
-	       (rib               (make-rib/from-identifiers-and-labels (append typed-var*.id  untyped-var*.id)
-									(append typed-var*.lab untyped-var*.lab))))
-	  ;;Beware of  the order of  the lex gensyms in  the return values!   It must
-	  ;;match the order of the identifiers in LHS*.ID.
-	  (values rib lexenv lhs*.lex)))))
-
-  (define (%partition-typed-and-untyped-lhs* lhs*.id lhs*.ots
-					     typed-var*.id typed-var*.ots
-					     typed-var*.lex untyped-var*.id untyped-var*.lex
-					     lhs*.lex)
-    ;;Partition the  syntactic bindings into typed  and untyped.  Those having  #f or
-    ;;"<untyped>" as tag are untyped.
-    ;;
+  (let loop ((lhs*.id		all-lhs*.id)
+	     (lhs*.ots		lhs*.ots)
+	     (lhs*.rev-lex	'())
+	     (lhs*.rev-lab	'())
+	     (lexenv		lexenv))
     (if (pair? lhs*.id)
 	(let* ((lhs.id  (car lhs*.id))
 	       (lhs.ots (car lhs*.ots))
-	       (lhs.lex (generate-lexical-gensym lhs.id)))
-	  (if (and lhs.ots
-		   (not (<untyped>-ots? lhs.ots)))
-	      ;;Add a typed lexical variable.
-	      (%partition-typed-and-untyped-lhs* (cdr lhs*.id)
-						 (cdr lhs*.ots)
-						 (cons lhs.id  typed-var*.id)
-						 (cons lhs.ots typed-var*.ots)
-						 (cons lhs.lex typed-var*.lex)
-						 untyped-var*.id
-						 untyped-var*.lex
-						 (cons lhs.lex lhs*.lex))
-	    ;;Add an UNtyped lexical variable.
-	    (%partition-typed-and-untyped-lhs* (cdr lhs*.id)
-					       (cdr lhs*.ots)
-					       typed-var*.id
-					       typed-var*.ots
-					       typed-var*.lex
-					       (cons lhs.id  untyped-var*.id)
-					       (cons lhs.lex untyped-var*.lex)
-					       (cons lhs.lex lhs*.lex))))
-      (values (reverse typed-var*.id)   (reverse typed-var*.ots)   (reverse typed-var*.lex)
-	      (reverse untyped-var*.id) (reverse untyped-var*.lex)
-	      (reverse lhs*.lex))))
-
-  #| end of module |# )
+	       (lhs.lex (generate-lexical-gensym lhs.id))
+	       (lhs.lab (generate-label-gensym   lhs.id))
+	       (lexenv  (let ((lhs.des (if (and lhs.ots (not (<untyped>-ots? lhs.ots)))
+					   ;;Typed binding.
+					   (make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots lhs.lex)
+					 ;;Untyped binding.
+					 (make-syntactic-binding-descriptor/lexical-var lhs.lex))))
+			  (push-entry-on-lexenv lhs.lab lhs.des lexenv))))
+	  (loop (cdr lhs*.id) (cdr lhs*.ots)
+		(cons lhs.lex lhs*.rev-lex)
+		(cons lhs.lab lhs*.rev-lab)
+		lexenv))
+      ;;Beware of the order of the lex and lab gensyms!!!  It must match the order of
+      ;;the identifiers in LHS*.ID.
+      (let* ((lhs*.lex	(reverse lhs*.rev-lex))
+	     (lhs*.lab	(reverse lhs*.rev-lab))
+	     (rib		(make-rib/from-identifiers-and-labels all-lhs*.id lhs*.lab)))
+	(values rib lexenv lhs*.lex lhs*.lab)))))
 
 
 ;;;; chi procedures: external modules

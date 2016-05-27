@@ -550,6 +550,12 @@
   (methods
    (returned-type-signature		condition-returned-type-signature)))
 
+;;; --------------------------------------------------------------------
+
+(define-built-in-condition-type &warning-unused-lexical-variable
+    &warning
+  make-warning-unused-lexical-variable warning-unused-lexical-variable?)
+
 
 ;;;; Vicare specific, compiler stuff
 

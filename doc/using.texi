@@ -489,7 +489,7 @@ Enable all the expander and compiler warnings.
 Enable or disable raising a @condition{warning} exception when an
 operand in a logic expression (@syntax{if} test, @syntax{and},
 @syntax{or}, @dots{}) always returns false or non--false.  By default
-this options is disabled.
+this warning is disabled.
 
 @item -Wnot-returning
 @itemx -Wno-not-returning
@@ -498,7 +498,18 @@ this options is disabled.
 @cindex @option{-Wnot-returning}, command line option
 @cindex @option{-Wno-not-returning}, command line option
 Enable or disable raising a @condition{warning} exception when an
-operand evaluated for its return values is typed as not returning.
+operand evaluated for its return values is typed as not returning.  By
+default this warning is disabled.
+
+@item -Wunused-variables
+@itemx -Wno-unused-variables
+@cindex Command line option @option{-Wunused-variables}
+@cindex Command line option @option{-Wno-unused-variables}
+@cindex @option{-Wunused-variables}, command line option
+@cindex @option{-Wno-unused-variables}, command line option
+Enable or disable raising a @condition{warning} exception when a local
+lexical variable is defined but never used.  By default this warning is
+disabled.
 
 @c ------------------------------------------------------------------------
 

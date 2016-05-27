@@ -29,7 +29,7 @@
     make-lexenv-entry
     lexenv-entry.label
     lexenv-entry.binding-descriptor
-    push-entry-on-lexenv
+    push-entry-on-lexenv			push-entries-on-lexenv
 
     make-syntactic-binding-descriptor
     syntactic-binding-descriptor.type		syntactic-binding-descriptor.type-set!
@@ -550,6 +550,12 @@
     make-expand-time-type-signature-warning
     expand-time-type-signature-warning?
 
+    &warning-unused-lexical-variable
+    &warning-unused-lexical-variable-rtd
+    &warning-unused-lexical-variable-rcd
+    make-warning-unused-lexical-variable
+    warning-unused-lexical-variable?
+
     assertion-error
     syntax-violation/internal-error
     assertion-violation/internal-error
@@ -650,8 +656,13 @@
 ;;
 (define lexenv-entry.binding-descriptor cdr)
 
-(define-syntax-rule (push-entry-on-lexenv ?label ?descr ?lexenv)
-  (cons (make-lexenv-entry ?label ?descr) ?lexenv))
+(define (push-entry-on-lexenv label descr lexenv)
+  (cons (make-lexenv-entry label descr) lexenv))
+
+(define (push-entries-on-lexenv label* descriptors* lexenv)
+  (fold-left (lambda (lexenv lab des)
+	       (push-entry-on-lexenv lab des lexenv))
+    lexenv label* descriptors*))
 
 ;;; --------------------------------------------------------------------
 

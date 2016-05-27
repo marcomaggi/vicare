@@ -180,6 +180,14 @@
 
 ;;; --------------------------------------------------------------------
 
+     &warning-unused-lexical-variable
+     &warning-unused-lexical-variable-rtd
+     &warning-unused-lexical-variable-rcd
+     make-warning-unused-lexical-variable
+     warning-unused-lexical-variable?
+
+;;; --------------------------------------------------------------------
+
      assertion-error
      syntax-violation/internal-error
      assertion-violation/internal-error
@@ -474,6 +482,19 @@
     &error
   make-vicare-scheme-internal-error
   vicare-scheme-internal-error?)
+
+
+;;;; condition object types: warnings
+
+(define-condition-type &warning-unused-lexical-variable
+    &warning
+  make-warning-unused-lexical-variable
+  warning-unused-lexical-variable?)
+
+(define &warning-unused-lexical-variable-rtd
+  (record-type-descriptor &warning-unused-lexical-variable))
+(define &warning-unused-lexical-variable-rcd
+  (record-constructor-descriptor &warning-unused-lexical-variable))
 
 
 ;;;; exception raising functions

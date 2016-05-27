@@ -37,6 +37,7 @@
     warn-about-logic-constants
     warn-about-not-returning-expressions
     warn-about-compatible-operands-signature-in-procedure-application
+    warn-about-unused-lexical-variables
 
     #| end of EXPORT |# )
   (import (rnrs)
@@ -126,17 +127,27 @@
     (lambda (obj)
       (if obj #t #f))))
 
+(define warn-about-unused-lexical-variables
+  ;;When set to true: raise a "&warning" when a lexical variable is defined but never
+  ;;used; otherwise do nothing.
+  ;;
+  (make-parameter #f
+    (lambda (obj)
+      (if obj #t #f))))
+
 ;;; --------------------------------------------------------------------
 
 (define (enable-all-warnings)
   (warn-about-logic-constants #t)
   (warn-about-not-returning-expressions #t)
-  (warn-about-compatible-operands-signature-in-procedure-application #t))
+  (warn-about-compatible-operands-signature-in-procedure-application #t)
+  (warn-about-unused-lexical-variables #t))
 
 (define (disable-all-warnings)
   (warn-about-logic-constants #f)
   (warn-about-not-returning-expressions #f)
-  (warn-about-compatible-operands-signature-in-procedure-application #f))
+  (warn-about-compatible-operands-signature-in-procedure-application #f)
+  (warn-about-unused-lexical-variables #f))
 
 
 ;;;; done

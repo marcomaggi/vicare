@@ -845,7 +845,7 @@
     ;;Expand  the guts  of a  lambda  clause for  the  case of  formals without  rest
     ;;argument.  Here  we know that  STANDARD-FORMALS.STX and the  corresponding type
     ;;signature are proper lists with equal length.
-    (receive (rib lexenv.run standard-formals*.lex)
+    (receive (rib lexenv.run standard-formals*.lex unused-formal*.lab)
 	;;If this function call is for a standard language syntax: we need to convert
 	;;all the types  to "<top>", including the  args and rest types.   This is to
 	;;avoid problems if these bindings are assigned with SET!.
@@ -868,7 +868,7 @@
 	 ((arg*.ots rest.ots)
 	  (improper-list->list-and-rest (lambda-signature.argvals.specs clause-signature)))
 	 ((rib lexenv.run standard-formals.lex)
-	  (receive (rib lexenv.run all*.lex)
+	  (receive (rib lexenv.run all*.lex unused-all*.lab)
 	      ;;If this function  call is for a standard language  syntax: we need to
 	      ;;convert all the types to "<top>",  including the args and rest types.
 	      ;;This is to avoid problems if these bindings are assigned with SET!.

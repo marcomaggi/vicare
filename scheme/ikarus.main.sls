@@ -69,6 +69,7 @@
 		  disable-all-warnings
 		  warn-about-logic-constants
 		  warn-about-not-returning-expressions
+		  warn-about-unused-lexical-variables
 		  expander-language)
 	    psyntax::)
     (prefix (only (psyntax.library-utils)
@@ -554,6 +555,14 @@
 
 	  ((%option= "-Wno-not-returning")
 	   (psyntax::warn-about-not-returning-expressions #f)
+	   (next-option (cdr args) k))
+
+	  ((%option= "-Wunused-variables")
+	   (psyntax::warn-about-unused-lexical-variables #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "-Wno-unused-variables")
+	   (psyntax::warn-about-unused-lexical-variables #f)
 	   (next-option (cdr args) k))
 
 ;;; --------------------------------------------------------------------

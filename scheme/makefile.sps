@@ -4992,7 +4992,13 @@
     (make-returned-type-signature-condition		$expander)
     (returned-type-signature-condition?			$expander)
     (condition-returned-type-signature			$expander)
-
+;;;
+    (&warning-unused-lexical-variable-rtd)
+    (&warning-unused-lexical-variable-rcd)
+    (&warning-unused-lexical-variable			$expander)
+    (make-warning-unused-lexical-variable		$expander)
+    (warning-unused-lexical-variable?			$expander)
+;;;
     ;;These are for internal use in the expander.
     (<expander-options>-rtd)
     (<expander-options>-rcd)

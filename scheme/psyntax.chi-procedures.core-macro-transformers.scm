@@ -154,6 +154,49 @@
     input-form.stx))
 
 
+;;;; other helpers
+
+(define (%untyped-lexical-variables.inspect-references caller-who lhs*.id lhs*.des)
+  ;;Given a list of untyped lexical variables' identifiers LHS*.ID, and a list of the
+  ;;correspondig  syntactic bindings'  descriptors LHS*.DES:  check if  the variables
+  ;;where  referenced at  least once.   When the  variable was  never referenced  nor
+  ;;assigned: raise a warning.
+  ;;
+  (when (options::warn-about-unused-lexical-variables)
+    (for-each (lambda (lhs.des lhs.id)
+		(unless (syntactic-binding-descriptor/lexical-var/value.referenced?
+			 (syntactic-binding-descriptor.value lhs.des))
+		  (raise-continuable
+		   (condition (make-warning-unused-lexical-variable)
+			      (make-who-condition caller-who)
+			      (make-message-condition "unused lexical syntactic binding")
+			      (make-syntactic-identifier-condition lhs.id)))))
+      lhs*.des lhs*.id)))
+
+(define* (%typed-lexical-variables.inspect-references caller-who lhs*.id lhs*.lab lexenv)
+  ;;Given  a  list  of  typed  lexical variables'  identifiers  LHS*.ID,  a  list  of
+  ;;associated label gensyms LHS*.LAB, and the lexenv in which the syntactic bindings
+  ;;are established: check if the variables where referenced at least once.  When the
+  ;;variable was never referenced nor assigned: raise a warning.
+  ;;
+  (when (options::warn-about-unused-lexical-variables)
+    (for-each (lambda (lhs.id lhs.lab)
+		(let ((lhs.des (label->syntactic-binding-descriptor lhs.lab lexenv)))
+		  (case (syntactic-binding-descriptor.type lhs.des)
+		    ((lexical-typed)
+		     (let ((lhs.lts (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec lhs.des)))
+		       (unless (lexical-typed-variable-spec.referenced? lhs.lts)
+			 (raise-continuable
+			  (condition (make-warning-unused-lexical-variable)
+				     (make-who-condition caller-who)
+				     (make-message-condition "unused lexical syntactic binding")
+				     (make-syntactic-identifier-condition lhs.id))))))
+		    (else
+		     (assertion-violation __who__
+		       "internal error, cannot resolve label" lhs.id lhs.lab lhs.des)))))
+      lhs*.id lhs*.lab)))
+
+
 ;;;; external modules
 
 (include "psyntax.chi-procedures.type-macro-transformers.scm" #t)
@@ -659,11 +702,14 @@
 				  ?rhs*))
 	      (lhs*.lab		(map generate-label-gensym   lhs*.id))
 	      (lhs*.lex		(map generate-lexical-gensym lhs*.id))
-	      (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
+	      (lhs*.des		(map make-syntactic-binding-descriptor/lexical-var lhs*.lex))
+	      (lexenv.run	(push-entries-on-lexenv lhs*.lab lhs*.des lexenv.run))
 	      (rib		(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)))
-	 (%build-core-expr input-form.stx lexenv.run lexenv.expand
-			   lhs*.lex (map psi.core-expr rhs*.psi) (push-lexical-contour rib (cons ?body ?body*))
-			   build-let)))
+	 (begin0
+	     (%build-core-expr input-form.stx lexenv.run lexenv.expand
+			       lhs*.lex (map psi.core-expr rhs*.psi) (push-lexical-contour rib (cons ?body ?body*))
+			       build-let)
+	   (%untyped-lexical-variables.inspect-references __who__ lhs*.id lhs*.des))))
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (identifier? ?recur)
@@ -707,30 +753,36 @@
        (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))
 
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       (let loop ((lhs*.id	(syntax-object.parse-standard-list-of-bindings/let-star ?lhs*))
-		  (rhs*.stx	?rhs*)
-		  (lhs*.lex	'())
-		  (rhs*.core	'())
-		  (body*.stx	(cons ?body ?body*))
-		  (lexenv.run	lexenv.run))
-	 (if (pair? lhs*.id)
-	     (let* ((rhs.psi	(chi-expr (car rhs*.stx) lexenv.run lexenv.expand))
-		    (lhs.id	(car lhs*.id))
-		    (lhs.lab	(generate-label-gensym   lhs.id))
-		    (lhs.lex	(generate-lexical-gensym lhs.id))
-		    (lexenv.run	(lexenv-add-lexical-var-binding lhs.lab lhs.lex lexenv.run))
-		    (rib	(make-rib/from-identifiers-and-labels (list lhs.id) (list lhs.lab))))
-	       (loop (cdr lhs*.id)
-		     (map (lambda (rhs.stx)
-			    (push-lexical-contour rib rhs.stx))
-		       (cdr rhs*.stx))
-		     (cons lhs.lex lhs*.lex)
-		     (cons (psi.core-expr rhs.psi) rhs*.core)
-		     (push-lexical-contour rib body*.stx)
-		     lexenv.run))
-	   (%build-core-expr input-form.stx lexenv.run lexenv.expand
-			     (reverse lhs*.lex) (reverse rhs*.core) body*.stx
-			     build-let*))))
+       (let ((all-lhs*.id (syntax-object.parse-standard-list-of-bindings/let-star ?lhs*)))
+	 (let loop ((lhs*.id	all-lhs*.id)
+		    (rhs*.stx	?rhs*)
+		    (lhs*.lex	'())
+		    (lhs*.des	'())
+		    (rhs*.core	'())
+		    (body*.stx	(cons ?body ?body*))
+		    (lexenv.run	lexenv.run))
+	   (if (pair? lhs*.id)
+	       (let* ((rhs.psi		(chi-expr (car rhs*.stx) lexenv.run lexenv.expand))
+		      (lhs.id		(car lhs*.id))
+		      (lhs.lab		(generate-label-gensym   lhs.id))
+		      (lhs.lex		(generate-lexical-gensym lhs.id))
+		      (lhs.des		(make-syntactic-binding-descriptor/lexical-var lhs.lex))
+		      (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.des lexenv.run))
+		      (rib		(make-rib/from-identifiers-and-labels (list lhs.id) (list lhs.lab))))
+		 (loop (cdr lhs*.id)
+		       (map (lambda (rhs.stx)
+			      (push-lexical-contour rib rhs.stx))
+			 (cdr rhs*.stx))
+		       (cons lhs.lex lhs*.lex)
+		       (cons lhs.des lhs*.des)
+		       (cons (psi.core-expr rhs.psi) rhs*.core)
+		       (push-lexical-contour rib body*.stx)
+		       lexenv.run))
+	     (begin0
+		 (%build-core-expr input-form.stx lexenv.run lexenv.expand
+				   (reverse lhs*.lex) (reverse rhs*.core) body*.stx
+				   build-let*)
+	       (%untyped-lexical-variables.inspect-references 'let*/std all-lhs*.id lhs*.des))))))
       (_
        (__synner__ "invalid syntax in macro use"))))
 
@@ -769,11 +821,13 @@
 	       ;;validation.
 	       (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
 						     __who__ lhs*.ots rhs*.psi)
-	     (receive (rib lexenv.run lhs*.lex)
+	     (receive (rib lexenv.run lhs*.lex lhs*.lab)
 		 (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.out-ots lexenv.run)
-	       (%build-core-expr input-form.stx lexenv.run lexenv.expand
-				 lhs*.lex rhs*.core (push-lexical-contour rib (cons ?body ?body*))
-				 build-let))))))
+	       (begin0
+		   (%build-core-expr input-form.stx lexenv.run lexenv.expand
+				     lhs*.lex rhs*.core (push-lexical-contour rib (cons ?body ?body*))
+				     build-let)
+		 (%typed-lexical-variables.inspect-references __who__ lhs*.id lhs*.lab lexenv.run)))))))
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (identifier? ?recur)
@@ -822,7 +876,9 @@
 		  (lhs*.lex	'())
 		  (rhs*.core	'())
 		  (body*.stx	(cons ?body ?body*))
-		  (lexenv.run	lexenv.run))
+		  (lexenv.run	lexenv.run)
+		  (all-lhs*.id	'())
+		  (all-lhs*.lab	'()))
 	 (if (pair? lhs*.stx)
 	     ;;Here the item in the list LHS*.OTS is either:
 	     ;;
@@ -840,7 +896,7 @@
 		     ;;propagation and validation.
 		     (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
 							   __who__ this-lhs*.ots (list rhs.psi))
-		   (receive (rib lexenv.run this-lhs*.lex)
+		   (receive (rib lexenv.run this-lhs*.lex this-lhs*.lab)
 		       (%establish-typed-syntactic-bindings-lhs* this-lhs*.id this-lhs*.out-ots lexenv.run)
 		     (loop
 		      ;;Yes, we push the lexical contour on the LHS, too.  Who knows,
@@ -851,10 +907,15 @@
 		      (cons (car this-lhs*.lex)  lhs*.lex)
 		      (cons (car this-rhs*.core) rhs*.core)
 		      (push-lexical-contour rib body*.stx)
-		      lexenv.run)))))
-	   (%build-core-expr input-form.stx lexenv.run lexenv.expand
-			     (reverse lhs*.lex) (reverse rhs*.core) body*.stx
-			     build-let*))))
+		      lexenv.run
+		      (cons (car this-lhs*.id)  all-lhs*.id)
+		      (cons (car this-lhs*.lab) all-lhs*.lab))))))
+	   (begin0
+	       (%build-core-expr input-form.stx lexenv.run lexenv.expand
+				 (reverse lhs*.lex) (reverse rhs*.core) body*.stx
+				 build-let*)
+	     (%typed-lexical-variables.inspect-references 'let*/checked all-lhs*.id all-lhs*.lab lexenv.run)))))
+
       (_
        (__synner__ "invalid syntax in macro use"))))
 
@@ -911,15 +972,14 @@
     ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
     ;;of the given LEXENV; return a PSI object.
     ;;
-    (%build-output/checked input-form.stx lexenv.run lexenv.expand
-			   __who__ build-letrec))
+    (%build-output/checked input-form.stx lexenv.run lexenv.expand __who__ build-letrec))
 
   (define-core-transformer (letrec/std input-form.stx lexenv.run lexenv.expand)
     ;;Transformer  function used  to expand  LETREC/STD syntaxes  from the  top-level
     ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
     ;;of the given LEXENV; return a PSI object.
     ;;
-    (%build-output/std input-form.stx lexenv.run lexenv.expand build-letrec))
+    (%build-output/std input-form.stx lexenv.run lexenv.expand __who__ build-letrec))
 
 ;;; --------------------------------------------------------------------
 
@@ -937,20 +997,46 @@
     ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
     ;;of the given LEXENV; return a PSI object.
     ;;
-    (%build-output/checked input-form.stx lexenv.run lexenv.expand
-			   __who__ build-letrec*))
+    (%build-output/checked input-form.stx lexenv.run lexenv.expand __who__ build-letrec*))
 
   (define-core-transformer (letrec*/std input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function  used to  expand LETREC*/STD  syntaxes from  the top-level
     ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
     ;;of the given LEXENV; return a PSI object.
     ;;
-    (%build-output/std input-form.stx lexenv.run lexenv.expand build-letrec*))
+    (%build-output/std input-form.stx lexenv.run lexenv.expand __who__ build-letrec*))
 
 ;;; --------------------------------------------------------------------
 
-  (define* (%build-output/checked input-form.stx lexenv.run lexenv.expand
-				  caller-who core-lang-builder)
+  (define* (%build-output/std input-form.stx lexenv.run lexenv.expand caller-who core-lang-builder)
+    (syntax-match input-form.stx ()
+      ((_ () ?body ?body* ...)
+       (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))
+
+      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       (let* ((lhs*.id		(syntax-object.parse-standard-list-of-bindings ?lhs*))
+	      (lhs*.lab		(map generate-label-gensym   lhs*.id))
+	      (lhs*.lex		(map generate-lexical-gensym lhs*.id))
+	      (lhs*.des		(map make-syntactic-binding-descriptor/lexical-var lhs*.lex))
+	      (lexenv.run	(push-entries-on-lexenv lhs*.lab lhs*.des lexenv.run))
+	      (rib		(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab))
+	      ;;NOTE The region  of all the LETREC and LETREC*  bindings includes all
+	      ;;the right-hand sides.  The  new rib is pushed on all  the RHS and the
+	      ;;body.
+	      (rhs*.psi	($map-in-order (lambda (rhs.stx)
+					 (chi-expr (push-lexical-contour rib rhs.stx) lexenv.run lexenv.expand))
+			  ?rhs*)))
+	 (begin0
+	     (%build-core-expr input-form.stx lexenv.run lexenv.expand
+			       lhs*.lex (map psi.core-expr rhs*.psi) (push-lexical-contour rib (cons ?body ?body*))
+			       core-lang-builder)
+	   (%untyped-lexical-variables.inspect-references caller-who lhs*.id lhs*.des))))
+      (_
+       (__synner__ "invalid syntax in macro use"))))
+
+;;; --------------------------------------------------------------------
+
+  (define* (%build-output/checked input-form.stx lexenv.run lexenv.expand caller-who core-lang-builder)
     (syntax-match input-form.stx ()
       ((_ () ?body ?body* ...)
        (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))
@@ -962,11 +1048,11 @@
 	   ;;"<object-type-spec>"  if the  source  code specified  the  type of  this
 	   ;;syntactic binding; false if the source code left the syntactic binding's
 	   ;;type unspecified.
-	   (((lhs*.id lhs*.ots)
+	   (((all-lhs*.id lhs*.ots)
 	     (syntax-object.parse-typed-list-of-bindings ?lhs* (<untyped>-ots)))
-	    ((rib lexenv.run lhs*.out-lex)
-	     (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv.run)))
-	 (let loop ((lhs*.id	lhs*.id)
+	    ((rib lexenv.run lhs*.out-lex lhs*.lab)
+	     (%establish-typed-syntactic-bindings-lhs* all-lhs*.id lhs*.ots lexenv.run)))
+	 (let loop ((lhs*.id	all-lhs*.id)
 		    (lhs*.ots	lhs*.ots)
 		    (lhs*.lex	lhs*.out-lex)
 		    ;;The region of all the  LETREC and LETREC* bindings includes all
@@ -1005,41 +1091,20 @@
 			 (cdr lhs*.lex)
 			 (cdr rhs*.stx)
 			 (cons (car this-rhs*.core) rhs*.core))))
-	     (%build-core-expr input-form.stx lexenv.run lexenv.expand
-			       lhs*.out-lex (reverse rhs*.core) (push-lexical-contour rib (cons ?body ?body*))
-			       core-lang-builder)))))
+	     (begin0
+		 (%build-core-expr input-form.stx lexenv.run lexenv.expand
+				   lhs*.out-lex (reverse rhs*.core) (push-lexical-contour rib (cons ?body ?body*))
+				   core-lang-builder)
+	       (%typed-lexical-variables.inspect-references caller-who all-lhs*.id lhs*.lab lexenv.run))))))
 
-      (_
-       (__synner__ "invalid syntax in macro use"))))
-
-  (define* (%build-output/std input-form.stx lexenv.run lexenv.expand core-lang-builder)
-    (syntax-match input-form.stx ()
-      ((_ () ?body ?body* ...)
-       (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))
-
-      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       (let* ((lhs*.id		(syntax-object.parse-standard-list-of-bindings ?lhs*))
-	      (lhs*.lab		(map generate-label-gensym   lhs*.id))
-	      (lhs*.lex		(map generate-lexical-gensym lhs*.id))
-	      (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
-	      (rib		(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab))
-	      ;;NOTE The region  of all the LETREC and LETREC*  bindings includes all
-	      ;;the right-hand sides.  The  new rib is pushed on all  the RHS and the
-	      ;;body.
-	      (rhs*.psi	($map-in-order (lambda (rhs.stx)
-					 (chi-expr (push-lexical-contour rib rhs.stx) lexenv.run lexenv.expand))
-			  ?rhs*)))
-	 (%build-core-expr input-form.stx lexenv.run lexenv.expand
-			lhs*.lex (map psi.core-expr rhs*.psi) (push-lexical-contour rib (cons ?body ?body*))
-			core-lang-builder)))
       (_
        (__synner__ "invalid syntax in macro use"))))
 
 ;;; --------------------------------------------------------------------
 
   (define (%build-core-expr input-form.stx lexenv.run lexenv.expand
-			 lhs*.lex rhs*.core body*.stx
-			 core-lang-builder)
+			    lhs*.lex rhs*.core body*.stx
+			    core-lang-builder)
     (let* ((body.psi	(chi-internal-body body*.stx lexenv.run lexenv.expand))
 	   (body.core	(psi.core-expr body.psi)))
       ;;Build the LETREC or LETREC* expression in the core language.
@@ -2099,7 +2164,7 @@
   (define (%build-single-value-output input-form.stx lexenv.run lexenv.expand
 				      caller-who return-values?
 				      arg.id producer.core consumer*.stx)
-    (receive (rib lexenv.run lhs*.lex)
+    (receive (rib lexenv.run lhs*.lex lhs*.lab)
 	(%establish-typed-syntactic-bindings-lhs* (list arg.id) (list (<top>-ots)) lexenv.run)
       (let* ((consumer*.stx	(map (lambda (consumer.stx)
 				       (push-lexical-contour rib consumer.stx))
@@ -2774,7 +2839,7 @@
   (define (%build-single-value-output input-form.stx lexenv.run lexenv.expand
 				      caller-who return-values?
 				      arg.id arg.ots producer.core consumer*.stx)
-    (receive (rib lexenv.run lhs*.lex)
+    (receive (rib lexenv.run lhs*.lex lhs*.lab)
 	(%establish-typed-syntactic-bindings-lhs* (list arg.id) (list arg.ots) lexenv.run)
       (let* ((consumer*.stx	(map (lambda (consumer.stx)
 				       (push-lexical-contour rib consumer.stx))
