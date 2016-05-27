@@ -40,7 +40,7 @@
     PSYNTAX-SYNTAX-UTILITIES
     PSYNTAX-TYPE-SYNTAX-OBJECTS
     PSYNTAX-TYPE-SIGNATURES
-    PSYNTAX-TYPE-CALLABLES
+    PSYNTAX-LAMBDA-SIGNATURES
     PSYNTAX-SYNTACTIC-BINDINGS
     PSYNTAX-ADD-MARK
 
@@ -234,6 +234,7 @@
     <lexical-typed-variable-spec>
     make-lexical-typed-variable-spec			lexical-typed-variable-spec?
     lexical-typed-variable-spec.lex
+    lexical-typed-variable-spec.referenced?		lexical-typed-variable-spec.referenced?-set!
     lexical-typed-variable-spec.assigned?		lexical-typed-variable-spec.assigned?-set!
 
     <lexical-closure-variable-spec>
@@ -625,8 +626,8 @@
 (include "psyntax.lexical-environment.object-type-specs.scm"	#t)
 (include "psyntax.lexical-environment.type-signatures.scm"	#t)
 (import PSYNTAX-TYPE-SIGNATURES)
-(include "psyntax.lexical-environment.type-callables.scm"	#t)
-(import PSYNTAX-TYPE-CALLABLES)
+(include "psyntax.lexical-environment.lambda-signatures.scm"	#t)
+(import PSYNTAX-LAMBDA-SIGNATURES)
 (include "psyntax.lexical-environment.type-syntax-objects.scm"	#t)
 
 (include "psyntax.lexical-environment.syntactic-bindings.scm"	#t)

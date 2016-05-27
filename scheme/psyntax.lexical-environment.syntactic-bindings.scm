@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
+;;;Copyright (c) 2010-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
 ;;;this software and associated documentation files  (the "Software"), to deal in the
@@ -23,10 +23,11 @@
 
 (module PSYNTAX-SYNTACTIC-BINDINGS
     (
-;;; local lexical variables, standard variant
+;;; local lexical variables
      make-syntactic-binding-descriptor/lexical-var
      syntactic-binding-descriptor/lexical-var?
      syntactic-binding-descriptor/lexical-var/value.lex-name
+     syntactic-binding-descriptor/lexical-var/value.referenced?
      syntactic-binding-descriptor/lexical-var/value.assigned?
      lexenv-add-lexical-var-binding
      lexenv-add-lexical-var-bindings
@@ -140,7 +141,7 @@
      #| end of exports |# )
 
 (import PSYNTAX-TYPE-SIGNATURES)
-(import PSYNTAX-TYPE-CALLABLES)
+(import PSYNTAX-LAMBDA-SIGNATURES)
 
 
 ;;; helpers
@@ -198,17 +199,29 @@
 
 ;;;; syntactic binding descriptor: lexical variables
 
+(define-struct <untyped-lexical-var>
+  (lex-name
+		;Lexical gensym representing the name  of the lexical variable in the
+		;expanded language forms.
+   referenced?
+		;Boolean, true if this lexical  variable has been referenced at least
+		;once.
+   assigned?
+		;Boolean, true  if this lexical  variable has been assigned  at least
+		;once.
+   ))
+
 (define (make-syntactic-binding-descriptor/lexical-var lex-name)
   ;;Build and return  a syntactic binding descriptor representing  an untyped lexical
-  ;;variable.   The returned  descriptor marks  this variable  as non-assigned;  this
-  ;;state can be  changed later.  LEX-NAME must be a  lexical gensym representing the
-  ;;name of a lexical variable in the expanded language forms.
+  ;;variable.   The returned  descriptor marks  this variable  as non-referenced  and
+  ;;non-assigned; this state can be changed later.  LEX-NAME must be a lexical gensym
+  ;;representing the name of a lexical variable in the expanded language forms.
   ;;
   ;;The returned descriptor has format:
   ;;
-  ;;   (lexical . (?lex-name . #f))
+  ;;   (lexical . #<untyped-lexical-var>)
   ;;
-  (make-syntactic-binding-descriptor lexical (cons lex-name #f)))
+  (make-syntactic-binding-descriptor lexical (make-<untyped-lexical-var> lex-name #f #f)))
 
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/lexical-var?
   lexical)
@@ -221,40 +234,55 @@
   ;;
   ;;   (lexical . ?descriptor-value)
   ;;
-  ;;where ?DESCRIPTOR-VALUE has format:
+  ;;where ?DESCRIPTOR-VALUE  is an  instance of "<untyped-lexical-var>".   This macro
+  ;;returns the lexical gensym representing the variable in the expanded code.
   ;;
-  ;;  (?lex-name . ?mutable)
-  ;;
-  ;;this macro returns  the ?LEX-NAME, a lexical gensym representing  the variable in
-  ;;the expanded code.
-  ;;
-  (car ?descriptor-value))
+  (<untyped-lexical-var>-lex-name ?descriptor-value))
 
-(define-syntax syntactic-binding-descriptor/lexical-var/value.assigned?
-  ;;Accessor  and mutator  for assigned  boolean  in a  lexical variable's  syntactic
+(define-syntax syntactic-binding-descriptor/lexical-var/value.referenced?
+  ;;Accessor and mutator for the referenced boolean in a lexical variable's syntactic
   ;;binding descriptor's value.
   ;;
   ;;A syntactic binding representing a lexical variable has descriptor with format:
   ;;
   ;;   (lexical . ?descriptor-value)
   ;;
-  ;;where ?DESCRIPTOR-VALUE has format:
-  ;;
-  ;;  (?lex-name . ?assigned)
-  ;;
-  ;;The accessor macro returns  the ?ASSIGNED value, which is a  boolean: true if the
-  ;;lexical variable  is assigned at  least once in  the code, otherwise  false.  The
-  ;;mutator macro sets a new ?ASSIGNED value.
+  ;;where ?DESCRIPTOR-VALUE is an  instance of "<untyped-lexical-var>".  The accessor
+  ;;macro returns  the REFERENCED?  field, which  is a boolean:  true if  the lexical
+  ;;variable is referenced  at least once in the code,  otherwise false.  The mutator
+  ;;macro sets a new REFERENCED? field to true.
   ;;
   (syntax-rules ()
     ((_ ?descriptor-value)
-     (cdr ?descriptor-value))
+     (<untyped-lexical-var>-referenced? ?descriptor-value))
     ((_ ?descriptor-value #t)
-     (set-cdr! ?descriptor-value #t))
+     (set-<untyped-lexical-var>-referenced?! ?descriptor-value #t))
     ))
 
+(define-syntax syntactic-binding-descriptor/lexical-var/value.assigned?
+  ;;Accessor and mutator  for the assigned boolean in a  lexical variable's syntactic
+  ;;binding descriptor's value.
+  ;;
+  ;;A syntactic binding representing a lexical variable has descriptor with format:
+  ;;
+  ;;   (lexical . ?descriptor-value)
+  ;;
+  ;;where ?DESCRIPTOR-VALUE is an  instance of "<untyped-lexical-var>".  The accessor
+  ;;macro  returns the  ASSIGNED? field,  which  is a  boolean: true  if the  lexical
+  ;;variable is  assigned at least  once in the  code, otherwise false.   The mutator
+  ;;macro sets a new ASSIGNED? field to true.
+  ;;
+  (syntax-rules ()
+    ((_ ?descriptor-value)
+     (<untyped-lexical-var>-assigned? ?descriptor-value))
+    ((_ ?descriptor-value #t)
+     (set-<untyped-lexical-var>-assigned?! ?descriptor-value #t))
+    ))
+
+;;; --------------------------------------------------------------------
+
 (define (lexenv-add-lexical-var-binding label lex lexenv)
-  ;;Push  on the  LEXENV  a  new entry  representing  a  non-assigned local  variable
+  ;;Push on the LEXENV a new entry representing an untyped lexical variable syntactic
   ;;binding; return the resulting LEXENV.
   ;;
   ;;LABEL must be a  syntactic binding's label gensym.  LEX must  be a lexical gensym

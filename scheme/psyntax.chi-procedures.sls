@@ -119,7 +119,7 @@
   PSYNTAX-SYNTAX-UTILITIES
   PSYNTAX-TYPE-SYNTAX-OBJECTS
   PSYNTAX-TYPE-SIGNATURES
-  PSYNTAX-TYPE-CALLABLES
+  PSYNTAX-LAMBDA-SIGNATURES
   PSYNTAX-SYNTACTIC-BINDINGS)
 
 
@@ -815,9 +815,11 @@
        ;;Reference to  lexical variable; this  means EXPR.STX is an  identifier.  The
        ;;syntactic binding's descriptor DESCR has format:
        ;;
-       ;;   (lexical . (?lex-gensym . ?assigned-bool))
+       ;;   (lexical . #<untyped-lexical-var>)
        ;;
-       (let ((lex (syntactic-binding-descriptor/lexical-var/value.lex-name (syntactic-binding-descriptor.value descr))))
+       (let* ((descr.value	(syntactic-binding-descriptor.value descr))
+	      (lex		(syntactic-binding-descriptor/lexical-var/value.lex-name descr.value)))
+	 (syntactic-binding-descriptor/lexical-var/value.referenced? descr.value)
 	 (make-psi expr.stx
 	   (build-lexical-reference no-source lex)
 	   (make-type-signature/single-top))))
@@ -831,6 +833,7 @@
        (let* ((lts		(syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr))
 	      (variable.lex	(lexical-typed-variable-spec.lex lts))
 	      (variable.ots	(typed-variable-spec.ots         lts)))
+	 (lexical-typed-variable-spec.referenced?-set! lts #t)
 	 (make-psi expr.stx
 	   (build-lexical-reference no-source variable.lex)
 	   (make-type-signature/single-value variable.ots))))
@@ -1220,7 +1223,7 @@
        ;;
        ;;The syntactic binding's descriptor DESCR has format:
        ;;
-       ;;   (lexical . (?lex-gensym . ?assigned-bool))
+       ;;   (lexical . #<untyped-lexical-var>)
        ;;
        (let ((descr.value (syntactic-binding-descriptor.value descr)))
 	 (syntactic-binding-descriptor/lexical-var/value.assigned? descr.value #t)

@@ -21,7 +21,7 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(module PSYNTAX-TYPE-CALLABLES
+(module PSYNTAX-LAMBDA-SIGNATURES
   (<lambda-signature>
    make-lambda-signature			lambda-signature?
    lambda-signature=?

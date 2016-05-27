@@ -28,6 +28,7 @@
 	 <lexical-typed-variable-spec>
 	 make-lexical-typed-variable-spec		lexical-typed-variable-spec?
 	 lexical-typed-variable-spec.lex
+	 lexical-typed-variable-spec.referenced?	lexical-typed-variable-spec.referenced?-set!
 	 lexical-typed-variable-spec.assigned?		lexical-typed-variable-spec.assigned?-set!
 
 	 <lexical-closure-variable-spec>
@@ -75,12 +76,15 @@
   (fields
     (immutable lex		lexical-typed-variable-spec.lex)
 		;The lex gensym of the lexical variable.
+    (mutable   referenced?	lexical-typed-variable-spec.referenced? lexical-typed-variable-spec.referenced?-set!)
+		;Boolean, true if this variable has been referenced at least once.
     (mutable   assigned?	lexical-typed-variable-spec.assigned? lexical-typed-variable-spec.assigned?-set!)
+		;Boolean, true if this variable has been assigned at least once.
     #| end of fields |# )
   (protocol
     (lambda (make-typed-variable-spec)
       (define* (make-lexical-typed-variable-spec {ots object-type-spec?} {lex gensym?})
-	((make-typed-variable-spec ots) lex #f))
+	((make-typed-variable-spec ots) lex #f #f))
       make-lexical-typed-variable-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 
