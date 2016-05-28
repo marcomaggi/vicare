@@ -1508,12 +1508,19 @@
 	   (rhs*.core		(map psi.core-expr rhs*.psi))
 	   (init*.core		(map psi.core-expr init*.psi))
 	   (last-init.psi	(proper-list->last-item init*.psi)))
-      (make-psi input-form.stx
-	(build-letrec* (syntax-annotation input-form.stx)
-	    lhs*.lex rhs*.core
-	  (build-sequence no-source
-	    init*.core))
-	(psi.retvals-signature last-init.psi)))))
+      (begin0
+	  (make-psi input-form.stx
+	    (build-letrec* (syntax-annotation input-form.stx)
+		lhs*.lex rhs*.core
+	      (build-sequence no-source
+		init*.core))
+	    (psi.retvals-signature last-init.psi))
+	;;Warn about unused  variables.  Let's check the  parameter before performing
+	;;costly operations.
+	(when (options::warn-about-unused-lexical-variables)
+	  (let* ((lhs*.id	(map qdef.var-id qdef*))
+		 (lhs*.lab	(map id->label lhs*.id)))
+	    (%warn-about-unused-lexical-variables __who__ lhs*.id lhs*.lab lexenv.run)))))))
 
 
 ;;;; chi procedures: stale-when handling
