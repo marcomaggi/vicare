@@ -538,6 +538,48 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-built-in-condition-type &wrong-number-of-arguments-error
+    &error
+  make-wrong-number-of-arguments-error-condition
+  wrong-number-of-arguments-error-condition?)
+
+(define-built-in-condition-type &maximum-arguments-count
+    &condition
+  make-maximum-arguments-count-condition
+  maximum-arguments-count-condition?
+  (methods
+   (count	condition-maximum-arguments-count)))
+
+(define-built-in-condition-type &minimum-arguments-count
+    &condition
+  make-minimum-arguments-count-condition
+  minimum-arguments-count-condition?
+  (methods
+   (count	condition-minimum-arguments-count)))
+
+(define-built-in-condition-type &given-operands-count
+    &condition
+  make-given-operands-count-condition
+  given-operands-count-condition?
+  (methods
+   (count	condition-given-operands-count)))
+
+(define-built-in-condition-type &procedure-arguments-signatures
+    &condition
+  make-procedure-arguments-signatures-condition
+  procedure-arguments-signatures-condition?
+  (methods
+   (signatures	condition-procedure-arguments-signatures)))
+
+(define-built-in-condition-type &application-operands-signature
+    &condition
+  make-application-operands-signature-condition
+  application-operands-signature-condition?
+  (methods
+   (signature	condition-application-operands-signature)))
+
+;;; --------------------------------------------------------------------
+
 (define-built-in-condition-type &expected-type-signature
     &condition
   make-expected-type-signature-condition expected-type-signature-condition?

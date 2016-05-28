@@ -140,6 +140,50 @@
      condition-application-operand-signature
 
 ;;; --------------------------------------------------------------------
+;;; closure object application stuff
+
+     &wrong-number-of-arguments-error-rtd
+     &wrong-number-of-arguments-error-rcd
+     &wrong-number-of-arguments-error
+     make-wrong-number-of-arguments-error-condition
+     wrong-number-of-arguments-error-condition?
+
+     &maximum-arguments-count-rtd
+     &maximum-arguments-count-rcd
+     &maximum-arguments-count
+     make-maximum-arguments-count-condition
+     maximum-arguments-count-condition?
+     condition-maximum-arguments-count
+
+     &minimum-arguments-count-rtd
+     &minimum-arguments-count-rcd
+     &minimum-arguments-count
+     make-minimum-arguments-count-condition
+     minimum-arguments-count-condition?
+     condition-minimum-arguments-count
+
+     &given-operands-count-rtd
+     &given-operands-count-rcd
+     &given-operands-count
+     make-given-operands-count-condition
+     given-operands-count-condition?
+     condition-given-operands-count
+
+     &procedure-arguments-signatures-rtd
+     &procedure-arguments-signatures-rcd
+     &procedure-arguments-signatures
+     make-procedure-arguments-signatures-condition
+     procedure-arguments-signatures-condition?
+     condition-procedure-arguments-signatures
+
+     &application-operands-signature-rtd
+     &application-operands-signature-rcd
+     &application-operands-signature
+     make-application-operands-signature-condition
+     application-operands-signature-condition?
+     condition-application-operands-signature
+
+;;; --------------------------------------------------------------------
 
      &expected-type-signature
      &expected-type-signature-rtd
@@ -482,6 +526,83 @@
     &error
   make-vicare-scheme-internal-error
   vicare-scheme-internal-error?)
+
+
+;;;; condition object types: closure object application stuff
+
+;;Represents the error: wrong number of operands given to procedure application.
+;;
+(define-condition-type &wrong-number-of-arguments-error
+    &error
+  make-wrong-number-of-arguments-error-condition
+  wrong-number-of-arguments-error-condition?)
+(define &wrong-number-of-arguments-error-rtd
+  (record-type-descriptor &wrong-number-of-arguments-error))
+(define &wrong-number-of-arguments-error-rcd
+  (record-constructor-descriptor &wrong-number-of-arguments-error))
+
+;;Represents the number maximum arguments count a procedure accepts.
+;;
+(define-condition-type &maximum-arguments-count
+    &condition
+  make-maximum-arguments-count-condition
+  maximum-arguments-count-condition?
+  (count	condition-maximum-arguments-count))
+(define &maximum-arguments-count-rtd
+  (record-type-descriptor &maximum-arguments-count))
+(define &maximum-arguments-count-rcd
+  (record-constructor-descriptor &maximum-arguments-count))
+
+;;Represents the number minimum arguments count a procedure accepts.
+;;
+(define-condition-type &minimum-arguments-count
+    &condition
+  make-minimum-arguments-count-condition
+  minimum-arguments-count-condition?
+  (count	condition-minimum-arguments-count))
+(define &minimum-arguments-count-rtd
+  (record-type-descriptor &minimum-arguments-count))
+(define &minimum-arguments-count-rcd
+  (record-constructor-descriptor &minimum-arguments-count))
+
+;;Represents the number operands in a procedure application.
+;;
+(define-condition-type &given-operands-count
+    &condition
+  make-given-operands-count-condition
+  given-operands-count-condition?
+  (count	condition-given-operands-count))
+(define &given-operands-count-rtd
+  (record-type-descriptor &given-operands-count))
+(define &given-operands-count-rcd
+  (record-constructor-descriptor &given-operands-count))
+
+;;Contains a list of "<type-signature>"  instances representing the possible types of
+;;a closure's  arguments.  To be  used to represent  the possible tuples  of accepted
+;;operands in a closure application.
+;;
+(define-condition-type &procedure-arguments-signatures
+    &condition
+  make-procedure-arguments-signatures-condition
+  procedure-arguments-signatures-condition?
+  (signatures		condition-procedure-arguments-signatures))
+(define &procedure-arguments-signatures-rtd
+  (record-type-descriptor &procedure-arguments-signatures))
+(define &procedure-arguments-signatures-rcd
+  (record-constructor-descriptor &procedure-arguments-signatures))
+
+;;Contains an instance  of "<type-signature>" representing the types  of the operands
+;;in a procedure application.
+;;
+(define-condition-type &application-operands-signature
+    &condition
+  make-application-operands-signature-condition
+  application-operands-signature-condition?
+  (signature		condition-application-operands-signature))
+(define &application-operands-signature-rtd
+  (record-type-descriptor &application-operands-signature))
+(define &application-operands-signature-rcd
+  (record-constructor-descriptor &application-operands-signature))
 
 
 ;;;; condition object types: warnings

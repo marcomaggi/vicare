@@ -517,7 +517,48 @@
     make-application-operand-signature-condition
     application-operand-signature-condition?
     condition-application-operand-signature
+;;;
+    &wrong-number-of-arguments-error-rtd
+    &wrong-number-of-arguments-error-rcd
+    &wrong-number-of-arguments-error
+    make-wrong-number-of-arguments-error-condition
+    wrong-number-of-arguments-error-condition?
 
+    &maximum-arguments-count-rtd
+    &maximum-arguments-count-rcd
+    &maximum-arguments-count
+    make-maximum-arguments-count-condition
+    maximum-arguments-count-condition?
+    condition-maximum-arguments-count
+
+    &minimum-arguments-count-rtd
+    &minimum-arguments-count-rcd
+    &minimum-arguments-count
+    make-minimum-arguments-count-condition
+    minimum-arguments-count-condition?
+    condition-minimum-arguments-count
+
+    &given-operands-count-rtd
+    &given-operands-count-rcd
+    &given-operands-count
+    make-given-operands-count-condition
+    given-operands-count-condition?
+    condition-given-operands-count
+
+    &procedure-arguments-signatures-rtd
+    &procedure-arguments-signatures-rcd
+    &procedure-arguments-signatures
+    make-procedure-arguments-signatures-condition
+    procedure-arguments-signatures-condition?
+    condition-procedure-arguments-signatures
+
+    &application-operands-signature-rtd
+    &application-operands-signature-rcd
+    &application-operands-signature
+    make-application-operands-signature-condition
+    application-operands-signature-condition?
+    condition-application-operands-signature
+;;;
     &expected-type-signature
     &expected-type-signature-rtd
     &expected-type-signature-rcd

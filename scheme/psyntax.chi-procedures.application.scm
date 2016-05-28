@@ -101,47 +101,6 @@
    %error-mismatch-between-args-signature-and-operands-signature
    %warning-mismatch-between-args-signature-and-operands-signature)
 
-  (define-condition-type &wrong-number-of-arguments-error
-      &error
-    make-wrong-number-of-arguments-error-condition
-    wrong-number-of-arguments-error-condition?)
-
-  (define-condition-type &maximum-arguments-count
-      &condition
-    make-maximum-arguments-count-condition
-    maximum-arguments-count-condition?
-    (count maximum-arguments-count))
-
-  (define-condition-type &minimum-arguments-count
-      &condition
-    make-minimum-arguments-count-condition
-    minimum-arguments-count-condition?
-    (count minimum-arguments-count))
-
-  (define-condition-type &given-operands-count
-      &condition
-    make-given-operands-count-condition
-    given-operands-count-condition?
-    (count given-operands-count))
-
-  ;;Contains a list of "<type-signature>" instaces representing the possible types of
-  ;;a closure's arguments.   To be used to represent the  possible tuples of accepted
-  ;;arguments in a closure application.
-  ;;
-  (define-condition-type &arguments-signatures
-      &condition
-    make-arguments-signatures-condition
-    arguments-signatures-condition?
-    (signatures		arguments-signatures-condition.signatures))
-
-  (define-condition-type &operands-signature
-      &condition
-    make-operands-signature-condition
-    operands-signature-condition?
-    (operands-signature	operands-signature-condition.operands-signature))
-
-;;; --------------------------------------------------------------------
-
   (define (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
 	    rator.stx rand*.stx maximum-arguments-count given-operands-count)
     (raise-compound-condition-object 'chi-application
@@ -175,31 +134,24 @@
       (condition
 	(make-expand-time-type-signature-violation)
 	(make-syntax-violation input-form.stx rand.stx)
-	(make-operands-signature-condition (list rand.sig)))))
+	(make-application-operands-signature-condition (list rand.sig)))))
 
   (define (%error-mismatch-between-args-signature-and-operands-signature input-form.stx
-	    arguments-signature* operands-signature)
+									 arguments-signature* operands-signature)
     ;;ARGUMENTS-SIGNATURE*   must  be   a   list   of  "<type-signature>"   instances
     ;;representing the closure object's arguments signatures.
     ;;
     ;;OPERANDS-SIGNATURE must  be an  insance of "<type-signature>"  representing the
     ;;signature of the operands, when each operand returns a single value.
     ;;
-    (syntax-match input-form.stx ()
-      ((?rator . ?rand*)
-       (raise-compound-condition-object 'chi-application
-	 "expand-time mismatch between closure object's arguments signatures and operands signature"
-	 input-form.stx
-	 (condition
-	   (make-expand-time-type-signature-violation)
-	   (make-syntax-violation input-form.stx ?rator)
-	   (make-application-operator-expression-condition ?rator)
-	   (make-application-operands-expressions-condition ?rand*)
-	   (make-arguments-signatures-condition arguments-signature*)
-	   (make-operands-signature-condition operands-signature))))))
+    (raise-compound-condition-object 'chi-application
+      "expand-time mismatch between closure object's arguments signatures and operands signature"
+      input-form.stx
+      (condition (make-expand-time-type-signature-violation)
+		 (common input-form.stx arguments-signature* operands-signature))))
 
   (define (%warning-mismatch-between-args-signature-and-operands-signature input-form.stx
-	    arguments-signature* operands-signature)
+									   arguments-signature* operands-signature)
     ;;ARGUMENTS-SIGNATURE*   must  be   a   list   of  "<type-signature>"   instances
     ;;representing the closure object's arguments signatures.
     ;;
@@ -207,18 +159,20 @@
     ;;signature of the operands, when each operand returns a single value.
     ;;
     (when (options::warn-about-compatible-operands-signature-in-procedure-application)
-      (syntax-match input-form.stx ()
-	((?rator . ?rand*)
-	 (raise-compound-condition-object/continuable 'chi-application
-	   "expand-time mismatch between closure object's arguments signatures and operands signature"
-	   input-form.stx
-	   (condition
-	     (make-expand-time-type-signature-warning)
-	     (make-syntax-violation input-form.stx ?rator)
-	     (make-application-operator-expression-condition ?rator)
-	     (make-application-operands-expressions-condition ?rand*)
-	     (make-arguments-signatures-condition arguments-signature*)
-	     (make-operands-signature-condition operands-signature)))))))
+      (raise-compound-condition-object/continuable 'chi-application
+	"expand-time mismatch between closure object's arguments signatures and operands signature"
+	input-form.stx
+	(condition (make-expand-time-type-signature-warning)
+		   (common input-form.stx arguments-signature* operands-signature)))))
+
+  (define (common input-form.stx arguments-signature* operands-signature)
+    (syntax-match input-form.stx ()
+      ((?rator . ?rand*)
+       (condition (make-syntax-violation input-form.stx ?rator)
+		  (make-application-operator-expression-condition ?rator)
+		  (make-application-operands-expressions-condition ?rand*)
+		  (make-procedure-arguments-signatures-condition arguments-signature*)
+		  (make-application-operands-signature-condition operands-signature)))))
 
   #| end of module: CLOSURE-APPLICATION-ERRORS |# )
 
