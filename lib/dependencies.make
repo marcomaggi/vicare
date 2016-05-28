@@ -580,7 +580,7 @@ EXTRA_DIST += lib/vicare/language-extensions/conditions-and-restarts.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/conditions-and-restarts.fasl
 
 lib/vicare/language-extensions/labels.fasl: \
-		lib/vicare/language-extensions/labels.sls \
+		lib/vicare/language-extensions/labels.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -588,9 +588,9 @@ lib_vicare_language_extensions_labels_fasldir = $(bundledlibsdir)/vicare/languag
 lib_vicare_language_extensions_labels_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_labels_fasl_DATA = lib/vicare/language-extensions/labels.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_labels_sls_DATA = lib/vicare/language-extensions/labels.sls
+dist_lib_vicare_language_extensions_labels_sls_DATA = lib/vicare/language-extensions/labels.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/labels.sls
+EXTRA_DIST += lib/vicare/language-extensions/labels.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/labels.fasl
 
 lib/vicare/language-extensions/tracing-syntaxes.fasl: \
