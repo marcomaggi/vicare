@@ -10515,6 +10515,7 @@ Reset to void all the fields of a structure.
 @deffnx {Auxiliary Syntax} fields @meta{field-spec} @dots{}
 @deffnx {Auxiliary Syntax} method
 @deffnx {Auxiliary Syntax} case-method
+@deffnx {Auxiliary Syntax} method/overload
 @deffnx {Auxiliary Syntax} super-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} destructor-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} type-predicate @meta{expr}
@@ -10958,6 +10959,7 @@ the following record--type has a parent defining a hash function:
 
 @cindex @syntax{method}, record--type definition clause
 @cindex @syntax{case-method}, record--type definition clause
+@cindex @syntax{method/overload}, record--type definition clause
 
 
 The syntactic bindings @clause{method} and @clause{case-method} are used
@@ -10966,6 +10968,11 @@ a record type; each can be used any number of times in the same
 @syntax{define-record-type} macro use.  These clauses are accepted by
 @syntax{define-record-type} only when the language is non--strict
 @rnrs{6}.
+
+The syntactic binding @clause{method/overload} is used as clause keyword
+in @syntax{define-record-type} to define methods implemented as
+overloaded functions.  This clause is meant to be used with the typed
+language.
 
 We can think of @clause{method} as acting like @syntax{define} with
 regard to the syntax of arguments to function; the first argument to a
@@ -11007,6 +11014,33 @@ like @syntax{case-define}:
 (method-call on-a O 2)
 (method-call on-a O)            @result{} 2
 @end lisp
+
+The clause @clause{method/overload} is similar to @clause{method}, but
+allows multiple function specialisations linked to the same method name:
+
+@lisp
+(define-record-type alpha
+  (fields a b)
+
+  (method/overload (doit @{O alpha@} @{A <fixnum>@})
+    (list (alpha-a O) (alpha-b O) 'fixnum A))
+
+  (method/overload (doit @{O alpha@} @{A <symbol>@})
+    (list (alpha-a O) (alpha-b O) 'symbol A))
+
+  (method/overload (doit @{O alpha@} @{A <number>@} @{B <number>@})
+    (list (alpha-a O) (alpha-b O) 'numbers A B)))
+
+(define @{O alpha@}
+  (make-alpha 1 2))
+
+(method-call doit O 123)        @result{} (1 2 fixnum 123)
+(method-call doit O 'ciao)      @result{} (1 2 symbol ciao)
+(method-call doit O 3 4)        @result{} (1 2 numbers 3 4)
+@end lisp
+
+Overloaded methods are an expand--time feature: these methods are
+@strong{not} available for late binding.
 
 The syntax @syntax{method-call} searches for a record--type's methods by
 comparing the symbols with @func{eq?} (@strong{not} the syntactic

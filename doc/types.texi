@@ -1405,14 +1405,14 @@ notation}.
 
 The following keyword syntactic bindings are involved in the definition
 and use of methods: @clause{method}, @clause{case-method},
-@syntax{method-call}.  In addition the function
-@func{method-call-late-binding} performs a method call with ``late
-binding'' (run--time dispatching).
+@clause{method/overload}, @syntax{method-call}.  In addition the
+function @func{method-call-late-binding} performs a method call with
+``late binding'' (run--time dispatching).
 
-The keywords @clause{method} and @clause{case-method} are used in
-@syntax{define-record-type} to define methods for a record type
-(@pxref{iklib records defs methods, Record--type methods}).  For
-example:
+The keywords @clause{method}, @clause{case-method} and
+@clause{method/overload} are used in @syntax{define-record-type} to
+define methods for a record type (@pxref{iklib records defs methods,
+Record--type methods}).  For example:
 
 @lisp
 (define-record-type duo
