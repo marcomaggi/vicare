@@ -2473,6 +2473,22 @@ If no matching specialised function is found: a syntax violation is
 raised.
 @end enumerate
 
+It is an error to define two specialised function with the same type
+signature.
+
+We can overload functions only in the same lexical context, the
+following code will create @strong{two} functions:
+
+@lisp
+(define/overload (fun @{O <fixnum>@})
+  ---)
+
+(internal-body
+  (define/overload (fun @{O <string>@})
+    ---)
+  ---)
+@end lisp
+
 
 @deffn Syntax define/overload (@meta{who} . @meta{formals}) . @meta{body}
 @deffnx Syntax define/overload ((brace @meta{who} . @meta{rv-types}) . @meta{formals}) . @meta{body}
