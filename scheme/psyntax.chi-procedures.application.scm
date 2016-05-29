@@ -20,7 +20,9 @@
 ;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(module (chi-application chi-application/psi-first-operand)
+(module (chi-application
+	 chi-application/psi-first-operand
+	 chi-overloaded-function-application)
   (define-module-who chi-application)
 
 
@@ -80,7 +82,7 @@
 						    ?producer ?consumer-stuff))
 
     ((?rator ?rand* ...)
-     ;;The input form is either a common function application like:
+     ;;The input form is a common function application like:
      ;;
      ;;   (list 1 2 3)
      ;;
@@ -340,127 +342,155 @@
 
 ;;;; chi procedures: operator application processing, first operand already expanded
 
-(define* (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-					    rator.stx {first-rand.psi psi?} other-rand*.stx)
-  ;;This is an entry point, not a sub-routine of CHI-APPLICATION.  Expand an operator
-  ;;application form; it is called when the application to process has the format:
-  ;;
-  ;;   (?rator ?first-rand ?other-rand ...)
-  ;;
-  ;;and ?FIRST-RAND has already been expanded.  Here we know that the input form is a
-  ;;special syntax like IS-A?, SLOT-REF, SLOT-SET!, METHOD-CALL; so the operator will
-  ;;expand into a predicate, accessor, mutator or method.
-  ;;
-  (let* ((rator.psi (while-not-expanding-application-first-subform
-		     (chi-expr rator.stx lexenv.run lexenv.expand)))
-	 (rator.sig (psi.retvals-signature rator.psi)))
+(module (chi-application/psi-first-operand)
 
-    (define (%build-default-application)
-      ;;Build a core  language expression to apply  the rator to the  rands; return a
-      ;;PSI  struct.   This is  an  application  form  in standard  (untyped)  Scheme
-      ;;language.  Here we know nothing about the values returned by the application.
-      ;;
-      (let* ((rator.core       (psi.core-expr rator.psi))
-	     (first-rand.core  (psi.core-expr first-rand.psi))
-	     (other-rand*.psi  (chi-expr* other-rand*.stx lexenv.run lexenv.expand))
-	     (other-rand*.core (map psi.core-expr other-rand*.psi)))
-	(make-psi input-form.stx
-	  (build-application (syntax-annotation input-form.stx)
-	      rator.core
-	    (cons first-rand.core other-rand*.core)))))
+  (define* (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+					      rator.stx {first-rand.psi psi?} other-rand*.stx)
+    ;;This  is an  entry  point, not  a sub-routine  of  CHI-APPLICATION.  Expand  an
+    ;;operator application form; it is called when the application to process has the
+    ;;format:
+    ;;
+    ;;   (?rator ?first-rand ?other-rand ...)
+    ;;
+    ;;and ?FIRST-RAND has already been expanded.  Here we know that the input form is
+    ;;a special syntax like IS-A?,  SLOT-REF, SLOT-SET!, METHOD-CALL; so the operator
+    ;;will expand into a predicate, accessor, mutator or method.
+    ;;
+    (define (%no-overloaded-function)
+      (chi-application/psi-first-operand/no-overload input-form.stx lexenv.run lexenv.expand
+						     rator.stx first-rand.psi other-rand*.stx))
+    (if (identifier? rator.stx)
+	(cond ((id->label rator.stx)
+	       => (lambda (rator.lab)
+		    (let ((rator.des (label->syntactic-binding-descriptor rator.lab lexenv.run)))
+		      (case (syntactic-binding-descriptor.type rator.des)
+			(($overloaded-function)
+			 (let ((rator.ofs	(syntactic-binding-descriptor.value rator.des))
+			       (other-rand*.psi	(chi-expr* other-rand*.stx lexenv.run lexenv.expand)))
+			   (chi-overloaded-function-application/psi-rands input-form.stx lexenv.run lexenv.expand
+									  rator.ofs rator.stx (cons first-rand.psi other-rand*.psi))))
+			(else
+			 (%no-overloaded-function))))))
+	      (else
+	       (syntax-violation __who__
+		 "unbound operator identifier" input-form.stx rator.stx)))
+      (%no-overloaded-function)))
 
-    (case-type-signature-full-structure rator.sig
-      ((<top>)
-       ;;The  operator  expression  correctly  returns  a single  value;  it  is  not
-       ;;specified to return a procedure, but  the return value is compatible because
-       ;;"<top>" is the parent of "<procedure>".
-       ;;
-       ;;Return a  procedure application and  we will  see at run-time  what happens;
-       ;;this is standard Scheme behaviour.
-       (%build-default-application))
+  (define (chi-application/psi-first-operand/no-overload input-form.stx lexenv.run lexenv.expand
+							 rator.stx first-rand.psi other-rand*.stx)
+    (let* ((rator.psi (while-not-expanding-application-first-subform
+		       (chi-expr rator.stx lexenv.run lexenv.expand)))
+	   (rator.sig (psi.retvals-signature rator.psi)))
 
-      ((<procedure>)
-       ;;The operator  expression returns  a single  value, marked  as "<procedure>".
-       ;;Good.  There are  no further validations possible at  expand-time.  There is
-       ;;no optimisation possible.
-       (%build-default-application))
+      (define (%build-default-application)
+	;;Build a core language expression to apply  the rator to the rands; return a
+	;;PSI  struct.  This  is an  application  form in  standard (untyped)  Scheme
+	;;language.   Here  we  know  nothing   about  the  values  returned  by  the
+	;;application.
+	;;
+	(let* ((rator.core       (psi.core-expr rator.psi))
+	       (first-rand.core  (psi.core-expr first-rand.psi))
+	       (other-rand*.psi  (chi-expr* other-rand*.stx lexenv.run lexenv.expand))
+	       (other-rand*.core (map psi.core-expr other-rand*.psi)))
+	  (make-psi input-form.stx
+	    (build-application (syntax-annotation input-form.stx)
+		rator.core
+	      (cons first-rand.core other-rand*.core)))))
 
-      ((<closure>)
-       ;;The operator expression returns a  closure object.  Good.  Further signature
-       ;;validations are possible.
-       => (lambda (rator.ots)
-	    (let* ((other-rand*.psi (chi-expr* other-rand*.stx lexenv.run lexenv.expand))
-		   (rand*.psi       (cons first-rand.psi other-rand*.psi)))
-	      (chi-closure-object-application input-form.stx lexenv.run lexenv.expand
-					      rator.psi rator.ots rand*.psi))))
+      (case-type-signature-full-structure rator.sig
+	((<top>)
+	 ;;The  operator  expression  correctly  returns  a single  value;  it  is  not
+	 ;;specified to return a procedure, but  the return value is compatible because
+	 ;;"<top>" is the parent of "<procedure>".
+	 ;;
+	 ;;Return a  procedure application and  we will  see at run-time  what happens;
+	 ;;this is standard Scheme behaviour.
+	 (%build-default-application))
 
-      ((single-value)
-       ;;The operator expression correctly returns a  single value, but such value is
-       ;;not marked as procedure.  Bad.
-       => (lambda (rator.ots)
-	    (let ((common (lambda ()
-			    (condition
-			      (make-who-condition __who__)
-			      (make-message-condition "expression used as operator in application form evaluates to a non-procedure value")
-			      (make-syntax-violation input-form.stx (psi.input-form rator.psi))
-			      (make-application-operator-signature-condition rator.ots)))))
-	      (case-expander-language
-		((typed)
-		 (raise			(condition (make-expand-time-type-signature-violation) (common))))
-		;;According to the standard we must insert a normal rator application
-		;;and raise an exception at run-time.  Raise a warning, then do it.
-		((default)
-		 (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
-		 (%build-default-application))
-		((strict-r6rs)
-		 (%build-default-application))))))
+	((<procedure>)
+	 ;;The operator  expression returns  a single  value, marked  as "<procedure>".
+	 ;;Good.  There are  no further validations possible at  expand-time.  There is
+	 ;;no optimisation possible.
+	 (%build-default-application))
 
-      (<list>/<list-of-spec>
-       ;;The  operator  expression   returns  an  unspecified  number   of  values,  of
-       ;;unspecified type.   Return a normal procedure  application and we will  see at
-       ;;run-time what happens; this is standard Scheme behaviour.
-       (%build-default-application))
+	((<closure>)
+	 ;;The operator expression returns a  closure object.  Good.  Further signature
+	 ;;validations are possible.
+	 => (lambda (rator.ots)
+	      (let* ((other-rand*.psi (chi-expr* other-rand*.stx lexenv.run lexenv.expand))
+		     (rand*.psi       (cons first-rand.psi other-rand*.psi)))
+		(chi-closure-object-application input-form.stx lexenv.run lexenv.expand
+						rator.psi rator.ots rand*.psi))))
 
-      (<no-return>
-       ;;The operator  expression does not  return.  This  is not strictly  wrong.  For
-       ;;example:
-       ;;
-       ;;   ((error #f "bad value") ?rand ...)
-       ;;
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __who__)
-			 (make-message-condition "expression used as operator in application form does not return")
-			 (make-syntax-violation input-form.stx (psi.input-form rator.psi))
-			 (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
-	 (case-expander-language
-	   ((typed)
-	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
-	   ((default)
-	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
-	    (%build-default-application))
-	   ((strict-r6rs)
-	    (%build-default-application)))))
+	((single-value)
+	 ;;The operator expression correctly returns a  single value, but such value is
+	 ;;not marked as procedure.  Bad.
+	 => (lambda (rator.ots)
+	      (let ((common (lambda ()
+			      (condition
+				(make-who-condition __who__)
+				(make-message-condition "expression used as operator in application form evaluates to a non-procedure value")
+				(make-syntax-violation input-form.stx (psi.input-form rator.psi))
+				(make-application-operator-signature-condition rator.ots)))))
+		(case-expander-language
+		  ((typed)
+		   (raise			(condition (make-expand-time-type-signature-violation) (common))))
+		  ;;According to the standard we must insert a normal rator application
+		  ;;and raise an exception at run-time.  Raise a warning, then do it.
+		  ((default)
+		   (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+		   (%build-default-application))
+		  ((strict-r6rs)
+		   (%build-default-application))))))
 
-      (else
-       ;;The rator is declared to evaluate to zero, two or more values.
-       (let ((common (lambda ()
-		       (condition
-			 (make-who-condition __who__)
-			 (make-message-condition "expression used as operator in application form returns multiple values")
-			 (make-syntax-violation input-form.stx (psi.input-form rator.psi))
-			 (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
-	 (case-expander-language
-	   ((typed)
-	    ;;Multiple values are invalid in call context: raise an exception.
-	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
-	   ;;According to  the standard we must  insert a normal rator  application and
-	   ;;raise an exception at run-time.  Raise a warning, then do it.
-	   ((default)
-	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
-	    (%build-default-application))
-	   ((strict-r6rs)
-	    (%build-default-application))))))))
+	(<list>/<list-of-spec>
+	 ;;The  operator  expression   returns  an  unspecified  number   of  values,  of
+	 ;;unspecified type.   Return a normal procedure  application and we will  see at
+	 ;;run-time what happens; this is standard Scheme behaviour.
+	 (%build-default-application))
+
+	(<no-return>
+	 ;;The operator  expression does not  return.  This  is not strictly  wrong.  For
+	 ;;example:
+	 ;;
+	 ;;   ((error #f "bad value") ?rand ...)
+	 ;;
+	 (let ((common (lambda ()
+			 (condition
+			   (make-who-condition __who__)
+			   (make-message-condition "expression used as operator in application form does not return")
+			   (make-syntax-violation input-form.stx (psi.input-form rator.psi))
+			   (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
+	   (case-expander-language
+	     ((typed)
+	      (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	     ((default)
+	      (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	      (%build-default-application))
+	     ((strict-r6rs)
+	      (%build-default-application)))))
+
+	(else
+	 ;;The rator is declared to evaluate to zero, two or more values.
+	 (let ((common (lambda ()
+			 (condition
+			   (make-who-condition __who__)
+			   (make-message-condition "expression used as operator in application form returns multiple values")
+			   (make-syntax-violation input-form.stx (psi.input-form rator.psi))
+			   (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
+	   (case-expander-language
+	     ((typed)
+	      ;;Multiple values are invalid in call context: raise an exception.
+	      (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	     ;;According to  the standard we must  insert a normal rator  application and
+	     ;;raise an exception at run-time.  Raise a warning, then do it.
+	     ((default)
+	      (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	      (%build-default-application))
+	     ((strict-r6rs)
+	      (%build-default-application))))))))
+
+  #| end of module |# )
 
 
 ;;;; chi procedures: special CALL-WITH-VALUES handling
@@ -682,6 +712,88 @@
        (assertion-violation __module_who__ "invalid type signature" producer.sig))))
 
   #| end of module: CHI-CALL-WITH-VALUES-APPLICATION/STX-OPERANDS |# )
+
+
+;;;; chi procedures: overloaded function application
+
+(module (chi-overloaded-function-application
+	 chi-overloaded-function-application/psi-rands)
+  (import CLOSURE-APPLICATION-ERRORS)
+  (define-module-who chi-overloaded-function-application)
+
+  (define* (chi-overloaded-function-application input-form.stx lexenv.run lexenv.expand operator.ofs)
+    (syntax-match input-form.stx ()
+      ((?rator ?rand* ...)
+       (let* ((rand*.stx	?rand*)
+	      (rand*.psi	(chi-expr* rand*.stx lexenv.run lexenv.expand)))
+	 (chi-overloaded-function-application/psi-rands input-form.stx lexenv.run lexenv.expand
+							operator.ofs ?rator rand*.psi)))
+      (_
+       (syntax-violation __who__
+	 "invalid overloaded function application syntax" input-form.stx #f))))
+
+  (define* (chi-overloaded-function-application/psi-rands input-form.stx lexenv.run lexenv.expand
+							  operator.ofs rator.stx rand*.psi)
+    (let ((rands.sig (%validate-operands-for-single-return-value input-form.stx rand*.psi)))
+      (cond ((%search-applicable-function operator.ofs rands.sig)
+	     => (lambda (P)
+		  (let ((spec.id	(car P))
+			(lambda.sig	(cdr P)))
+		    (let ((spec.psi (chi-expr spec.id lexenv.run lexenv.expand)))
+		      (make-psi input-form.stx
+			(build-application (syntax-annotation input-form.stx)
+			    (psi.core-expr spec.psi)
+			  (map psi.core-expr rand*.psi))
+			(lambda-signature.retvals lambda.sig))))))
+	    (else
+	     (raise
+	      (condition
+		(make-expand-time-type-signature-violation)
+		(make-who-condition (syntax->datum rator.stx))
+		(make-message-condition
+		 "no matching specialised function in overloaded function application")
+		(make-syntax-violation input-form.stx #f)
+		(make-application-operand-signature-condition rands.sig)))))))
+
+  (define* (%validate-operands-for-single-return-value input-form.stx rand*.psi)
+    ;;In  the context  of INPUT-FORM.STX  the  RAND*.PSI argument  is a  list of  psi
+    ;;instances  representing  the  already   expanded  operand  expressions  for  an
+    ;;overloaded function application.   Check that such expressions  return a single
+    ;;value.   Return  an  instance   of  "<type-signature>"  representing  the  type
+    ;;signature of the operands.
+    ;;
+    (make-type-signature
+     (map (lambda (rand.psi)
+	    (define rand.sig
+	      (psi.retvals-signature rand.psi))
+	    (case-type-signature-full-structure rand.sig
+	      ((single-value)
+	       ;;Single return value.  Good.
+	       => (lambda (rand.ots) rand.ots))
+	      (else
+	       (raise
+		(condition
+		  (make-expand-time-type-signature-violation)
+		  (make-who-condition __module_who__)
+		  (make-message-condition
+		   "expression used as operand in overloaded function application is not typed to return a single value")
+		  (make-syntax-violation input-form.stx (psi.input-form rand.psi))
+		  (make-application-operand-signature-condition rand.sig))))))
+       rand*.psi)))
+
+  (define (%search-applicable-function operator.ofs rands.sig)
+    (let ((spec*.id		(overloaded-function-spec.id*        operator.ofs))
+	  (spec*.lambda-sig	(overloaded-function-spec.signature* operator.ofs)))
+      (let loop ((spec*.lambda-sig	spec*.lambda-sig)
+		 (spec*.id		spec*.id))
+	(if (pair? spec*.lambda-sig)
+	    (if (let ((spec.formals-sig (lambda-signature.argvals (car spec*.lambda-sig))))
+		  (eq? 'exact-match (type-signature.match-arguments-against-operands spec.formals-sig rands.sig)))
+		(cons (car spec*.id) (car spec*.lambda-sig))
+	      (loop (cdr spec*.lambda-sig) (cdr spec*.id)))
+	  #f))))
+
+  #| end of module: CHI-OVERLOADED-FUNCTION-APPLICATION |# )
 
 
 ;;;; chi procedures: closure object application processing

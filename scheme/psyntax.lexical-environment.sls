@@ -301,7 +301,7 @@
     wrap-source-expression
 
     ;; syntax objects: mapping identifiers to labels and similar
-    id->label
+    id->label					id->label/local
     id->object-type-spec			id->record-type-spec
     id->struct-type-spec			type-annotation->object-type-spec
     make-type-annotation			syntax-object.type-annotation?
@@ -2149,29 +2149,40 @@
 
 ;;;; syntax objects: mapping identifiers to labels
 
-(module (id->label)
+(module (id->label id->label/local)
+
+  (define* (id->label/local {id identifier?})
+    ;;This is like ID->LABEL, but it searches only the first rib in ID.
+    ;;
+    (let ((id.source-name	(identifier->symbol id))
+	  (rib			(car ($<stx>-rib* id)))
+	  (mark*		($<stx>-mark* id))
+	  (fail-kont		(lambda () #f)))
+      (if (rib-sealed/freq rib)
+	  (%search-in-rib/sealed rib id.source-name mark* fail-kont)
+	(%search-in-rib/non-sealed rib id.source-name mark* fail-kont))))
 
   (define* (id->label {id identifier?})
     ;;Given  the syntactic  identifier ID  search its  ribs for  a syntactic  binding
     ;;having the  same source-name  and marks.  If  successful: return  the syntactic
     ;;binding's label gensym; otherwise return false.
     ;;
-    (define id.source-name ($identifier->symbol id))
+    (define id.source-name (identifier->symbol id))
     #;(debug-print __who__ id.source-name)
     (let search ((rib*  ($<stx>-rib* id))
 		 (mark* ($<stx>-mark* id)))
       (and (pair? rib*)
-	   (if (eq? ($car rib*) 'shift)
+	   (if (eq? (car rib*) 'shift)
 	       ;;This is the only  place in the expander where a  symbol "shift" in a
 	       ;;RIB* makes some  difference; a "shift" is pushed on  the RIB* when a
 	       ;;mark is pushed on the MARK*.
 	       ;;
 	       ;;When we  find a "shift" in  RIB*: we skip the  corresponding mark in
 	       ;;MARK*.
-	       (search ($cdr rib*) ($cdr mark*))
-	     (let ((rib ($car rib*)))
+	       (search (cdr rib*) (cdr mark*))
+	     (let ((rib (car rib*)))
 	       (define (search-in-next-rib)
-		 (search ($cdr rib*) mark*))
+		 (search (cdr rib*) mark*))
 	       (if (rib-sealed/freq rib)
 		   (%search-in-rib/sealed rib id.source-name mark* search-in-next-rib)
 		 (%search-in-rib/non-sealed rib id.source-name mark* search-in-next-rib)))))))
@@ -2185,10 +2196,10 @@
 	       (rib.label*       (rib-label* rib)))
       (let-syntax-rules
 	  (((more-tuples?)		(pair? rib.source-name*))
-	   ((loop-to-next-rib-tuple)	(loop ($cdr rib.source-name*) ($cdr rib.mark**) ($cdr rib.label*)))
-	   ((next-rib-source-name)	($car rib.source-name*))
-	   ((next-rib-mark*)		($car rib.mark**))
-	   ((next-rib-label)		($car rib.label*)))
+	   ((loop-to-next-rib-tuple)	(loop (cdr rib.source-name*) (cdr rib.mark**) (cdr rib.label*)))
+	   ((next-rib-source-name)	(car rib.source-name*))
+	   ((next-rib-mark*)		(car rib.mark**))
+	   ((next-rib-label)		(car rib.label*)))
 	(if (more-tuples?)
 	    (if (and (same-name?  id.source-name (next-rib-source-name))
 		     (same-marks? id.mark*       (next-rib-mark*)))
@@ -2203,8 +2214,8 @@
     (let loop ((i    0)
 	       (imax ($vector-length rib.source-name*)))
       (let-syntax-rules
-	  (((more-tuples?)		($fx< i imax))
-	   ((loop-to-next-rib-tuple)	(loop ($fxadd1 i) imax))
+	  (((more-tuples?)		(fx<? i imax))
+	   ((loop-to-next-rib-tuple)	(loop (fxadd1 i) imax))
 	   ((next-rib-source-name)	($vector-ref rib.source-name* i))
 	   ((next-rib-mark*)		($vector-ref rib.mark**       i))
 	   ((next-rib-label)		(receive-and-return (label)
@@ -2253,16 +2264,16 @@
     ;;MARK** and LABEL*, we  just need to increment the freq  in the destination slot
     ;;of A: there is no swapping needed in the freq vector.
     ;;
-    (unless ($fxzero? src.idx)
+    (unless (fxzero? src.idx)
       (let* ((rib.freq* (rib-sealed/freq rib))
 	     (freq      ($vector-ref rib.freq* src.idx))
 	     ;;Search for the leftmost slot, starting from SRC.IDX, that has the same
 	     ;;freq of the slot at SRC.IDX.
 	     (dst.idx   (let loop ((i src.idx))
-			  (if ($fxzero? i)
+			  (if (fxzero? i)
 			      0
-			    (let ((j ($fxsub1 i)))
-			      (if ($fx= freq ($vector-ref rib.freq* j))
+			    (let ((j (fxsub1 i)))
+			      (if (fx= freq ($vector-ref rib.freq* j))
 				  ;;The  freq of  the slot  previous to  I is  equal:
 				  ;;loop.
 				  (loop j)
@@ -2271,8 +2282,8 @@
 				i))))))
 	;;Rather than swapping the slots DST.IDX and SRC.IDX in the frequency vector:
 	;;we just increment the dst slot.
-	($vector-set! rib.freq* dst.idx ($fxadd1 freq))
-	(unless ($fx= dst.idx src.idx)
+	($vector-set! rib.freq* dst.idx (fxadd1 freq))
+	(unless (fx= dst.idx src.idx)
 	  (let ((rib.name*  (rib-name*  rib))
 		(rib.mark** (rib-mark** rib))
 		(rib.label* (rib-label* rib)))

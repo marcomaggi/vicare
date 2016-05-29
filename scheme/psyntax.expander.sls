@@ -1456,7 +1456,7 @@
 
 	      (($core-scheme-object-type-name
 		$core-record-type-name $core-condition-object-type-name
-		$module $fluid $synonym)
+		$module $fluid $synonym $overloaded-function)
 	       ;;We expect LEXENV entries of these types to have the format:
 	       ;;
 	       ;;   (?label . (?type-symbol . ?value))

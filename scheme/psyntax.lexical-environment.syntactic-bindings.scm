@@ -22,123 +22,133 @@
 
 
 (module PSYNTAX-SYNTACTIC-BINDINGS
-    (
+  (
 ;;; local lexical variables
-     make-syntactic-binding-descriptor/lexical-var
-     syntactic-binding-descriptor/lexical-var?
-     syntactic-binding-descriptor/lexical-var/value.lex-name
-     syntactic-binding-descriptor/lexical-var/value.referenced?
-     syntactic-binding-descriptor/lexical-var/value.assigned?
-     lexenv-add-lexical-var-binding
-     lexenv-add-lexical-var-bindings
+   make-syntactic-binding-descriptor/lexical-var
+   syntactic-binding-descriptor/lexical-var?
+   syntactic-binding-descriptor/lexical-var/value.lex-name
+   syntactic-binding-descriptor/lexical-var/value.referenced?
+   syntactic-binding-descriptor/lexical-var/value.assigned?
+   lexenv-add-lexical-var-binding
+   lexenv-add-lexical-var-bindings
 
 ;;; local lexical variables, typed variant
-     make-syntactic-binding-descriptor/lexical-typed-var
-     make-syntactic-binding-descriptor/lexical-typed-var/from-data
-     syntactic-binding-descriptor/lexical-typed-var?
-     syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec
+   make-syntactic-binding-descriptor/lexical-typed-var
+   make-syntactic-binding-descriptor/lexical-typed-var/from-data
+   syntactic-binding-descriptor/lexical-typed-var?
+   syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec
 
-     make-syntactic-binding-descriptor/lexical-closure-var
-     make-syntactic-binding-descriptor/lexical-closure-var/from-data
-     syntactic-binding-descriptor/lexical-closure-var?
-     syntactic-binding-descriptor/lexical-closure-var.typed-variable-spec
+   make-syntactic-binding-descriptor/lexical-closure-var
+   make-syntactic-binding-descriptor/lexical-closure-var/from-data
+   syntactic-binding-descriptor/lexical-closure-var?
+   syntactic-binding-descriptor/lexical-closure-var.typed-variable-spec
 
 ;;; global lexical variables, typed variant
-     make-global-typed-variable-spec-and-maker-core-expr
-     syntactic-binding-descriptor/global-typed-var?
-     syntactic-binding-descriptor/global-typed-var.typed-variable-spec
+   make-global-typed-variable-spec-and-maker-core-expr
+   syntactic-binding-descriptor/global-typed-var?
+   syntactic-binding-descriptor/global-typed-var.typed-variable-spec
 
-     make-global-closure-variable-spec-and-maker-core-expr
-     syntactic-binding-descriptor/global-closure-var?
-     syntactic-binding-descriptor/global-closure-var.typed-variable-spec
+   make-global-closure-variable-spec-and-maker-core-expr
+   syntactic-binding-descriptor/global-closure-var?
+   syntactic-binding-descriptor/global-closure-var.typed-variable-spec
 
 ;;; local macro with non-variable transformer bindings
-     make-syntactic-binding-descriptor/local-macro/non-variable-transformer
-     syntactic-binding-descriptor/local-macro/non-variable-transformer?
+   make-syntactic-binding-descriptor/local-macro/non-variable-transformer
+   syntactic-binding-descriptor/local-macro/non-variable-transformer?
 
 ;;; local macro with variable transformer bindings
-     make-syntactic-binding-descriptor/local-macro/variable-transformer
-     syntactic-binding-descriptor/local-macro/variable-transformer?
+   make-syntactic-binding-descriptor/local-macro/variable-transformer
+   syntactic-binding-descriptor/local-macro/variable-transformer?
 
 ;;; base object-type descriptors
-     make-syntactic-binding-descriptor/object-type-name
-     syntactic-binding-descriptor/object-type-name?
-     syntactic-binding-descriptor/local-object-type.object-type-spec
-     syntactic-binding-descriptor/local-object-type.expanded-expr
-     syntactic-binding-descriptor/global-object-type.library
-     syntactic-binding-descriptor/global-object-type.loc
-     syntactic-binding-descriptor/global-object-type.object-type-spec
-     syntactic-binding-descriptor/core-object-type.object-type-spec
-     syntactic-binding-descriptor/object-type-spec.ots
+   make-syntactic-binding-descriptor/object-type-name
+   syntactic-binding-descriptor/object-type-name?
+   syntactic-binding-descriptor/local-object-type.object-type-spec
+   syntactic-binding-descriptor/local-object-type.expanded-expr
+   syntactic-binding-descriptor/global-object-type.library
+   syntactic-binding-descriptor/global-object-type.loc
+   syntactic-binding-descriptor/global-object-type.object-type-spec
+   syntactic-binding-descriptor/core-object-type.object-type-spec
+   syntactic-binding-descriptor/object-type-spec.ots
 
 ;;; list sub-type binding
-     syntactic-binding-descriptor/list-of-type-name?
+   syntactic-binding-descriptor/list-of-type-name?
 
 ;;; vector sub-type binding
-     syntactic-binding-descriptor/vector-of-type-name?
+   syntactic-binding-descriptor/vector-of-type-name?
 
 ;;; hard-coded core primitive with type signature binding
-     hard-coded-typed-core-prim-binding-descriptor->type-core-prim-binding-descriptor!
-     syntactic-binding-descriptor/hard-coded-typed-core-prim?
+   hard-coded-typed-core-prim-binding-descriptor->type-core-prim-binding-descriptor!
+   syntactic-binding-descriptor/hard-coded-typed-core-prim?
 
 ;;; core primitive with type signature binding
-     syntactic-binding-descriptor/core-prim-typed?
-     syntactic-binding-descriptor/core-prim-typed.core-prim-type-spec
+   syntactic-binding-descriptor/core-prim-typed?
+   syntactic-binding-descriptor/core-prim-typed.core-prim-type-spec
 
 ;;; core primitive without type signature binding
-     syntactic-binding-descriptor/core-prim?
-     syntactic-binding-descriptor/core-prim.public-name
+   syntactic-binding-descriptor/core-prim?
+   syntactic-binding-descriptor/core-prim.public-name
 
 ;;; core built-in object-type descriptor binding
-     hard-coded-core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor!
-     syntactic-binding-descriptor/hard-coded-core-scheme-type-name?
+   hard-coded-core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor!
+   syntactic-binding-descriptor/hard-coded-core-scheme-type-name?
 
 ;;; Vicare struct-type name bindings
-     syntactic-binding-descriptor/struct-type-name?
-     syntactic-binding-descriptor/struct-type-name.type-descriptor
+   syntactic-binding-descriptor/struct-type-name?
+   syntactic-binding-descriptor/struct-type-name.type-descriptor
 
 ;;; usable R6RS record-type descriptor binding
-     syntactic-binding-descriptor/record-type-name?
+   syntactic-binding-descriptor/record-type-name?
 
 ;;; hard-coded core R6RS record-type descriptor binding
-     hard-coded-core-record-type-name-binding-descriptor->core-record-type-name-binding-descriptor!
-     syntactic-binding-descriptor/hard-coded-core-record-type-name?
+   hard-coded-core-record-type-name-binding-descriptor->core-record-type-name-binding-descriptor!
+   syntactic-binding-descriptor/hard-coded-core-record-type-name?
 
 ;;; core R6RS condition object record-type descriptor binding
-     hard-coded-core-condition-object-type-name-binding-descriptor->core-record-type-name-binding-descriptor!
-     syntactic-binding-descriptor/hard-coded-core-condition-object-type-name?
+   hard-coded-core-condition-object-type-name-binding-descriptor->core-record-type-name-binding-descriptor!
+   syntactic-binding-descriptor/hard-coded-core-condition-object-type-name?
 
 ;;; hard-coded type annotation descriptor binding
-     hard-coded-core-type-annotation-symbolic-binding-descriptor->core-type-annotation-binding-descriptor!
-     syntactic-binding-descriptor/hard-coded-type-annotation?
+   hard-coded-core-type-annotation-symbolic-binding-descriptor->core-type-annotation-binding-descriptor!
+   syntactic-binding-descriptor/hard-coded-type-annotation?
 
 ;;; fluid syntax bindings
-     make-syntactic-binding-descriptor/local-global-macro/fluid-syntax
-     syntactic-binding-descriptor/fluid-syntax?
-     syntactic-binding-descriptor/fluid-syntax.fluid-label
+   make-syntactic-binding-descriptor/local-global-macro/fluid-syntax
+   syntactic-binding-descriptor/fluid-syntax?
+   syntactic-binding-descriptor/fluid-syntax.fluid-label
 
 ;;; synonym bindings
-     make-syntactic-binding-descriptor/local-global-macro/synonym-syntax
-     syntactic-binding-descriptor/synonym-syntax?
-     syntactic-binding-descriptor/synonym-syntax.synonym-label
+   make-syntactic-binding-descriptor/local-global-macro/synonym-syntax
+   syntactic-binding-descriptor/synonym-syntax?
+   syntactic-binding-descriptor/synonym-syntax.synonym-label
 
 ;;; local compile-time values bindings
-     make-syntactic-binding-descriptor/local-macro/expand-time-value
-     syntactic-binding-descriptor/local-expand-time-value.object
+   make-syntactic-binding-descriptor/local-macro/expand-time-value
+   syntactic-binding-descriptor/local-expand-time-value.object
 
 ;;; global compile-time values bindings
-     syntactic-binding-descriptor/global-expand-time-value.lib
-     syntactic-binding-descriptor/global-expand-time-value.loc
-     syntactic-binding-descriptor/global-expand-time-value.object
+   syntactic-binding-descriptor/global-expand-time-value.lib
+   syntactic-binding-descriptor/global-expand-time-value.loc
+   syntactic-binding-descriptor/global-expand-time-value.object
 
 ;;; module bindings
-     make-syntactic-binding-descriptor/local-global-macro/module-interface
+   make-syntactic-binding-descriptor/local-global-macro/module-interface
 
 ;;; pattern variable bindings
-     make-syntactic-binding-descriptor/pattern-variable
-     syntactic-binding-descriptor/pattern-variable?
+   make-syntactic-binding-descriptor/pattern-variable
+   syntactic-binding-descriptor/pattern-variable?
 
-     #| end of exports |# )
+;;; overloaded function bindings
+   make-syntactic-binding-descriptor/overloaded-function/from-data
+   syntactic-binding-descriptor/overloaded-function?
+   make-overloaded-function-spec
+   overloaded-function-spec?
+   overloaded-function-spec.name-id
+   overloaded-function-spec.signature*
+   overloaded-function-spec.id*
+   overloaded-function-spec.add-specialised-implementation!
+
+   #| end of exports |# )
 
 (import PSYNTAX-TYPE-SIGNATURES)
 (import PSYNTAX-LAMBDA-SIGNATURES)
@@ -1325,6 +1335,58 @@
 
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/pattern-variable?
   pattern-variable)
+
+
+;;;; syntactic binding descriptor: pattern variable bindings
+
+(define-struct (overloaded-function-spec %make-overloaded-function-spec overloaded-function-spec?)
+  (name-id
+		;A syntactic identifier representing the overloaded function name.
+   signature*
+		;Null or a proper list of "<lambda-signature>" instances representing
+		;the specialised functions' signatures.
+   id*
+		;Null  or  a  proper  list  of syntactic  identifiers  bound  to  the
+		;specialised functions.
+   ))
+
+(define-syntax-rule (overloaded-function-spec.name-id ofs)	(overloaded-function-spec-name-id    ofs))
+(define-syntax-rule (overloaded-function-spec.signature* ofs)	(overloaded-function-spec-signature* ofs))
+(define-syntax-rule (overloaded-function-spec.id* ofs)		(overloaded-function-spec-id*        ofs))
+
+(define* (make-overloaded-function-spec {name.id identifier?})
+  (%make-overloaded-function-spec name.id '() '()))
+
+(define* (make-syntactic-binding-descriptor/overloaded-function/from-data {lhs.ofs overloaded-function-spec?})
+  ;;Build  and  return a  syntactic  binding  descriptor representing  an  overloaded
+  ;;function.
+  ;;
+  ;;The  argument  LHS.OFS  is  the instance  of  "overloaded-function-spec"  mapping
+  ;;specialised functions to arguments signatures.
+  ;;
+  ;;The returned descriptor as format:
+  ;;
+  ;;   ($overloaded-function . #<overloaded-function-spec>)
+  ;;
+  (make-syntactic-binding-descriptor $overloaded-function lhs.ofs))
+
+(define* (overloaded-function-spec.add-specialised-implementation! input-form.stx
+								   {lhs.ofs overloaded-function-spec?}
+								   {spec.lambda-sig lambda-signature?}
+								   {spec.id identifier?})
+  (let ((new-formals.sig (lambda-signature.argvals spec.lambda-sig)))
+    (for-each (lambda (spec.lambda-sig)
+		(when (type-signature=? (lambda-signature.argvals spec.lambda-sig) new-formals.sig)
+		  (raise
+		   (condition (make-who-condition __who__)
+			      (make-message-condition "formals type signature already exists in overloaded function")
+			      (syntax-violation input-form.stx #f)))))
+      (overloaded-function-spec-signature* lhs.ofs)))
+  (set-overloaded-function-spec-signature*! lhs.ofs (cons spec.lambda-sig (overloaded-function-spec-signature* lhs.ofs)))
+  (set-overloaded-function-spec-id*!        lhs.ofs (cons spec.id         (overloaded-function-spec-id*        lhs.ofs))))
+
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/overloaded-function?
+  $overloaded-function)
 
 
 ;;;; done

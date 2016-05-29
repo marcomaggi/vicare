@@ -582,7 +582,7 @@
 			       global-macro global-macro! global-etv
 			       global-object-type-name)
 			      (cons* (car type.value) lib (cdr type.value)))
-			     (($module $fluid $synonym global-mutable)
+			     (($module $fluid $synonym global-mutable $overloaded-function)
 			      type.value)
 			     ;;This  function is  used  also to  intern the  built-in
 			     ;;libraries.   So the  types  used by  the boot  image's

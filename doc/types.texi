@@ -949,6 +949,7 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes assert::       Validating signatures.
 * types syntaxes unsafe-cast::  Casting the type of expressions.
 * types syntaxes case-type::    Branching on type of expression.
+* types syntaxes overloads::    Overloaded functions.
 * types syntaxes operations::   Miscellaneous operations.
 @end menu
 
@@ -2412,6 +2413,79 @@ Examples:
   (else         'else))
 @result{} else
 @end lisp
+@end deffn
+
+@c page
+@node types syntaxes overloads
+@subsection Overloaded functions
+
+
+@cindex Overloaded functions
+@cindex Functions, overloaded
+
+
+Overloaded functions are an expand--time aggregation of functions linked
+to the same name and having different number and type of arguments.  For
+example, in the code:
+
+@lisp
+(define/overload (fun @{O <fixnum>@})
+  (list 'fixnum O))
+
+(define/overload (fun @{O <string>@})
+  (list 'string O))
+
+(define/overload (fun @{A <vector>@} @{B <vector>@})
+  (list 'vectors (vector-append A B)))
+
+(fun 123)               @result{} (fixnum 123)
+(fun "ciao")            @result{} (string "ciao")
+(fun '#(1) '#(2))       @result{} (vectors #(1 2))
+@end lisp
+
+@noindent
+an overloaded function named @var{fun} is defined by the first use of
+@syntax{define/overload}; subsequent uses add new specialisations to the
+same function.  We can use overloaded functions only with the
+``canonical'' function application syntax:
+
+@lisp
+(@meta{fun} @meta{operand} ...)
+@end lisp
+
+@noindent
+using @func{apply} will cause an expand--time syntax violation.
+
+Whenever an overloaded function is applied to a tuple of operands:
+
+@enumerate
+@item
+The expander attempts to determine the type of the operands; if it
+fails an exception is raised.
+
+@item
+Starting with the last registered specialised function: one is searched
+whose type signature matches the type signature of the operands; the
+first found is the one inserted in the code.
+
+@item
+If no matching specialised function is found: a syntax violation is
+raised.
+@end enumerate
+
+
+@deffn Syntax define/overload (@meta{who} . @meta{formals}) . @meta{body}
+@deffnx Syntax define/overload ((brace @meta{who} . @meta{rv-types}) . @meta{formals}) . @meta{body}
+@deffnx {Auxiliary Syntax} brace
+Define a specialisation for the overloaded function @meta{who}.  If this
+is the first specialisation for @meta{who}, also define the overloaded
+function; otherwise define only the specialisation and register it in
+the already existent @meta{who}.
+
+The syntax has the same format of @syntax{define/typed}, it defines a
+function with type annotations for both the arguments and the return
+values.  The function's type signature is used only at expand--time to
+validate the type of the operands used in an application.
 @end deffn
 
 @c page

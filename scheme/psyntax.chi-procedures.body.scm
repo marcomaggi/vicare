@@ -297,6 +297,15 @@
 		  (append qdef* rev-qdef*)
 		  mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
 
+    ((define/overload)
+     ;;The body form is a DEFINE/OVERLOAD core macro use, one among:
+     ;;
+     ;;   (define/overload (?lhs . ?formals) . ?body)
+     ;;
+     ;;it  is meant  to  be an  extension  to R6RS's  DEFINE  syntax supporting  type
+     ;;specifications and overloading.
+     (%expand-internal-definition chi-define/overload))
+
     ((define-syntax)
      ;;The body form is a built-in DEFINE-SYNTAX macro use.  This is what happens:
      ;;
@@ -1012,7 +1021,8 @@
    chi-define/checked
    chi-case-define/std
    chi-case-define/typed
-   chi-case-define/checked)
+   chi-case-define/checked
+   chi-define/overload)
   ;;The facilities of this module are used when the BODY-FORM.STX parsed by CHI-BODY*
   ;;is a  syntax object  representing the  macro use of  a DEFINE  variant; something
   ;;like:
@@ -1780,6 +1790,143 @@
       ))
 
   #| end of module: CHI-CASE-DEFINE/CHECKED |# )
+
+
+;;;; core macros: DEFINE/OVERLOAD
+
+(module (chi-define/overload)
+  ;;The  BODY-FORM.STX  parsed  by  CHI-BODY*  is  a  syntax  object  representing  a
+  ;;DEFINE/OVERLOAD core macro use; one among:
+  ;;
+  ;;   (define/overload (?lhs.id . ?formals) . ?body)
+  ;;   (define/overload ((brace ?lhs.id ?lhs.type) . ?formals) . ?body)
+  ;;
+  ;;When ?LHS.ID  is not  bound in  the local lexical  context rib:  we define  a new
+  ;;overloaded function; otherwise we extend the existent one.
+  ;;
+  ;;We parse  the form and  generate a qualified  right-hand side (QDEF)  object that
+  ;;will  be expanded  later;  this QDEF  represents a  specialised  function in  the
+  ;;overloaded function.   Here we establish:
+  ;;
+  ;;* A  new syntactic binding representing  a typed lexical variable  in the lexical
+  ;;context represented  by the arguments  RIB and  LEXENV.RUN; this variable  is the
+  ;;specialised function.
+  ;;
+  ;;* When defining  a new overloaded function: a new  syntactic binding representing
+  ;;the  overloaded function.   This  is similar  to  a macro,  but  its handling  is
+  ;;integrated in the expander.
+  ;;
+  (define-module-who define/overload)
+
+  (define (chi-define/overload input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
+    (define-synner %synner __module_who__ input-form.stx)
+    (receive (lhs.id input-formals.stx body*.stx)
+	;;From parsing the  syntactic form, we receive the  following values:
+	;;
+	;;* LHS.ID: the overload function's syntactic binding's identifier.
+	;;
+	;;*  INPUT-FORMALS.STX:  a syntax  object  representing  the formals  of  the
+	;;specialised function.
+	;;
+	;;* BODY*.STX:  a list of syntax  objects representing the body  forms of the
+	;;specialised function.
+	(%parse-macro-use input-form.stx %synner)
+      (cond ((id->label/local lhs.id)
+	     ;;A syntactic binding with identifier LHS.ID already exists.
+	     => (lambda (lhs.lab)
+		  (let ((lhs.des (label->syntactic-binding-descriptor lhs.lab lexenv.run)))
+		    (case (syntactic-binding-descriptor.type lhs.des)
+		      (($overloaded-function)
+		       ;;Let's  extend the  existent overloaded  function with  a new
+		       ;;specialised function.
+		       (%extend-existent-overloaded-function input-form.stx rib lexenv.run shadow/redefine-bindings?
+							     lhs.id lhs.des input-formals.stx body*.stx
+							     %synner))
+		      (else
+		       ;;The syntactic binding is not an overloaded function.
+		       (%synner "cannot redefine keyword" lhs.id))))))
+	    (else
+	     ;;No syntactic  binding with identifier  LHS.ID exists.  Let's  define a
+	     ;;new overloaded function.
+	     (%establish-new-overloaded-function input-form.stx rib lexenv.run shadow/redefine-bindings?
+						 lhs.id input-formals.stx body*.stx
+						 %synner)))))
+
+  (define* (%parse-macro-use input-form.stx synner)
+    ;;Syntax parser for Vicare's DEFINE/OVERLOAD syntax uses.
+    ;;
+    (syntax-match input-form.stx (brace)
+      ((_ ((brace ?lhs . ?rv-types) . ?formals) ?body0 ?body* ...)
+       (begin
+	 (unless (identifier? ?lhs)
+	   (synner "expected identifiers as overloaded function name" ?lhs))
+	 (when (null? (syntax->datum ?rv-types))
+	   (synner "invalid syntax for function return values" `(,(brace-id) ,?lhs . ,?rv-types)))
+	 (values ?lhs
+		 `((,(brace-id) ,(underscore-id) . ,?rv-types) . ,?formals) ;input-formals.stx
+		 `(,?body0 . ,?body*))))
+
+      ((_ (?lhs . ?formals) ?body0 ?body* ...)
+       (begin
+	 (unless (identifier? ?lhs)
+	   (synner "expected identifiers as overloaded function name" ?lhs))
+	 (values ?lhs ?formals `(,?body0 . ,?body*))))
+
+      (_
+       (synner "invalid DEFINE/OVERLOAD syntax use"))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%establish-new-overloaded-function input-form.stx rib lexenv.run shadow/redefine-bindings?
+					      lhs.id input-formals.stx body*.stx
+					      synner)
+    (receive (spec.id spec.lambda-sig spec.qdef lexenv.run)
+	(%establish-specialised-implementation input-form.stx rib lexenv.run shadow/redefine-bindings?
+					       lhs.id input-formals.stx body*.stx)
+      (let* ((lhs.ofs		(make-overloaded-function-spec lhs.id))
+	     (lhs.lab		(generate-label-gensym lhs.id))
+	     (lhs.des		(make-syntactic-binding-descriptor/overloaded-function/from-data lhs.ofs))
+	     (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.des lexenv.run)))
+	(overloaded-function-spec.add-specialised-implementation! input-form.stx lhs.ofs spec.lambda-sig spec.id)
+	;;This rib extension  will raise an exception if it  represents an attempt to
+	;;illegally redefine a binding.
+	(extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
+        (values spec.qdef lexenv.run))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%extend-existent-overloaded-function input-form.stx rib lexenv.run shadow/redefine-bindings?
+						lhs.id lhs.des input-formals.stx body*.stx
+						synner)
+    (receive (spec.id spec.lambda-sig spec.qdef lexenv.run)
+	(%establish-specialised-implementation input-form.stx rib lexenv.run shadow/redefine-bindings?
+					       lhs.id input-formals.stx body*.stx)
+      (let ((lhs.ofs	(syntactic-binding-descriptor.value lhs.des)))
+	(overloaded-function-spec.add-specialised-implementation! input-form.stx lhs.ofs spec.lambda-sig spec.id))
+      (values spec.qdef lexenv.run)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%establish-specialised-implementation input-form.stx rib lexenv.run shadow/redefine-bindings?
+						 lhs.id input-formals.stx body*.stx)
+    ;;From parsing the  typed formals we get  2 values: a proper or  improper list of
+    ;;identifiers    representing   the    standard   formals;    an   instance    of
+    ;;"<lambda-signature>".  An exception is raised if an error occurs while parsing.
+    (receive (standard-formals.stx spec.lambda-sig)
+	;;This call will use "<top>" for formals without type annotation.
+	(syntax-object.parse-typed-clambda-clause-formals input-formals.stx)
+      (let* ((spec.id		(datum->syntax lhs.id (gensym (syntax->datum lhs.id))))
+	     (spec.ots		(make-closure-type-spec (make-case-lambda-signature (list spec.lambda-sig))))
+	     (spec.qdef		(make-qdef-typed-defun input-form.stx spec.id standard-formals.stx body*.stx spec.ots))
+	     (spec.lab		(generate-label-gensym spec.id))
+	     (spec.des		(make-syntactic-binding-descriptor/lexical-typed-var/from-data spec.ots (qdef.lex spec.qdef)))
+	     (lexenv.run	(push-entry-on-lexenv spec.lab spec.des lexenv.run)))
+	;;This rib extension  will raise an exception if it  represents an attempt to
+	;;illegally redefine a binding.
+	(extend-rib! rib spec.id spec.lab shadow/redefine-bindings?)
+	(values spec.id spec.lambda-sig spec.qdef lexenv.run))))
+
+  #| end of module: CHI-DEFINE/OVERLOAD |# )
 
 
 ;;;; parsing DEFINE forms: end of module

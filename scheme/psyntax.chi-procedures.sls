@@ -288,6 +288,8 @@
 			       (values 'enumeration descr ?car))
 			      (else
 			       (values 'other #f #f)))))
+		     (($overloaded-function)
+		      (values 'overloaded-function-application descr ?car))
 		     (else
 		      ;;This  case includes  TYPE being:  core-prim, core-prim-typed,
 		      ;;lexical, lexical-typed, global, global-mutable, global-typed,
@@ -875,6 +877,15 @@
 		     (chi-non-core-macro (syntactic-binding-descriptor.value descr)
 					 expr.stx lexenv.run #f))))
 	 (chi-expr exp-e lexenv.run lexenv.expand)))
+
+      ((overloaded-function-application)
+       ;;Overloaded function  application.  The syntactic binding's  descriptor DESCR
+       ;;has format:
+       ;;
+       ;;   ($overloaded-function . #<overloaded-function-spec>)
+       ;;
+       (let ((over.ofs (syntactic-binding-descriptor.value descr)))
+	 (chi-overloaded-function-application expr.stx lexenv.run lexenv.expand over.ofs)))
 
       ((constant)
        ;;Constant; it means EXPR.STX is a self-evaluating datum.

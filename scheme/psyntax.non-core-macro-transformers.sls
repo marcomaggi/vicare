@@ -185,6 +185,7 @@
   (declare custom-printer)
   (declare method)
   (declare case-method)
+  (declare method/overload)
   (declare define-type-descriptors)
   (declare type-predicate)
   (declare catch)
