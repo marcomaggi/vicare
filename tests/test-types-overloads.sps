@@ -51,6 +51,21 @@
 		(fun '#(1) '#(2))))
     => '(fixnum 123) '(string "ciao") '(vectors #(1 2)))
 
+;;; --------------------------------------------------------------------
+
+  ;;No arguments.
+  ;;
+  (check
+      (internal-body
+	(define/overload (fun)
+	  1)
+
+	(define/overload (fun {A <fixnum>})
+	  A)
+
+	(values (fun) (fun 2)))
+    => 1 2)
+
   #t)
 
 
@@ -229,6 +244,22 @@
 		(.doit O 'ciao)
 		(.doit O 3 4)))
     => '(1 2 fixnum 123) '(1 2 symbol ciao) '(1 2 numbers 3 4))
+
+  (check
+      (internal-body
+	(define-record-type <duo>
+	  (fields one two)
+	  (method/overload (doit {O <duo>})
+	    (+ (.one O) (.two O)))
+	  (method/overload (doit {O <duo>} {C <number>})
+	    (* C (+ (.one O) (.two O)))))
+
+	(define O
+	  (new <duo> 1 2))
+
+	(values (.doit O)
+		(.doit O 3)))
+    => 3 9)
 
   #t)
 
