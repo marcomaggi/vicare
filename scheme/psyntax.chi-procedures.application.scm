@@ -650,7 +650,7 @@
        ;;The operand expression will not return.
        (when (options::warn-about-not-returning-expressions)
 	 (raise-continuable
-	  (condition (make-expand-time-type-signature-violation)
+	  (condition (make-expand-time-type-signature-warning)
 		     (make-who-condition __module_who__)
 		     (make-message-condition "expression used as operand in procedure application is typed as not returning")
 		     (make-syntax-violation input-form.stx (psi.input-form producer.psi))
@@ -853,21 +853,23 @@
        (map (lambda (rand.psi)
 	      (define rand.sig
 		(psi.retvals-signature rand.psi))
+	      (define (common-condition-objects message)
+		(condition
+		  (make-who-condition __module_who__)
+		  (make-message-condition message)
+		  (make-syntax-violation input-form.stx (psi.input-form rand.psi))
+		  (make-application-operand-signature-condition rand.sig)))
 	      (define (%handle-error message rv)
-		(%error (lambda ()
-			  (condition
-			    (make-who-condition __module_who__)
-			    (make-message-condition message)
-			    (make-syntax-violation input-form.stx (psi.input-form rand.psi))
-			    (make-application-operand-signature-condition rand.sig)))
-			rv))
+		(%error (lambda () (common-condition-objects message)) rv))
 	      (case-type-signature-full-structure rand.sig
 		(<no-return>
 		 ;;The operand expression will not return.
-		 (if (options::warn-about-not-returning-expressions)
-		     (%handle-error "expression used as operand in procedure application is typed as not returning"
-				    (<top>-ots))
-		   (<top>-ots)))
+		 (when (options::warn-about-not-returning-expressions)
+		   (raise-continuable
+		    (condition (make-expand-time-type-signature-warning)
+			       (common-condition-objects
+				"expression used as operand in procedure application is typed as not returning"))))
+		 (<top>-ots))
 		((<void>)
 		 ;;The expression is marked as returning void.
 		 (%handle-error "expression used as operand in procedure application is typed as returning void"
