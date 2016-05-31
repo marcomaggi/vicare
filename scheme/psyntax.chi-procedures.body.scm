@@ -203,6 +203,8 @@
 			       rev-qdef* mod** kwd* export-spec* rib
 			       mix? shadow/redefine-bindings?
 			       body-form.stx descr kwd)
+  ;;BODY-FORM.STX is the first item in BODY-FORM*.STX.
+  ;;
   (import CHI-DEFINE)
 
   (define-syntax-rule (%expand-internal-definition ?expander-who)
@@ -710,11 +712,14 @@
   ;;This module  is used only by  the function CHI-BODY*, because  a BEGIN-FOR-SYNTAX
   ;;macro use can appear only in a body.
   ;;
-  ;;The input form is a BEGIN-FOR-SYNTAX syntax use.  We expand the expressions using
-  ;;LEXENV.EXPAND as  LEXENV for run-time, much  like what we do  when evaluating the
-  ;;right-hand side of a DEFINE-SYNTAX, but handling the sequence of expressions as a
-  ;;body; then we  build a special core language expression  with global assignments;
-  ;;finally we evaluate the result.
+  ;;The input form is a BEGIN-FOR-SYNTAX syntax use:
+  ;;
+  ;;   (begin-for-expand ?expr0 ?expr ...)
+  ;;
+  ;;We expand the  expressions using LEXENV.EXPAND as LEXENV for  run-time, much like
+  ;;what we do  when evaluating the right-hand side of  a DEFINE-SYNTAX, but handling
+  ;;the sequence  of expressions  as a body;  then we build  a special  core language
+  ;;expression with global assignments; finally we evaluate the result.
   ;;
   ;;When calling CHI-BODY*: the argument SHADOW/REDEFINE-BINDINGS? is honoured.
   ;;
@@ -770,6 +775,13 @@
   (define (chi-begin-for-syntax input-form.stx body-form*.stx lexenv.run lexenv.expand
 				qdef* mod** kwd* export-spec* rib mix?
 				shadow/redefine-bindings?)
+    ;;BODY-FORM.STX is the first item in BODY-FORM*.STX.
+    ;;
+    (define (%go-on lexenv.run lexenv.expand)
+      (chi-body* (cdr body-form*.stx)
+		 lexenv.run lexenv.expand
+		 qdef* mod** kwd* export-spec* rib
+		 mix? shadow/redefine-bindings?))
     (receive (lhs*.lex init*.core rhs*.core lexenv.expand^)
 	(%expand input-form.stx lexenv.expand rib shadow/redefine-bindings?)
       ;;Build an expanded  code expression and evaluate it.
@@ -779,22 +791,19 @@
 						lhs.lex rhs.core))
 					 lhs*.lex rhs*.core)
 				       init*.core))))
-	(unless (void-core-expression? visit-code.core)
-	  (compiler::eval-core (expanded->core visit-code.core)))
 	;;Done!  Push on the LEXENV an entry like:
 	;;
 	;;   (?unused-label . (begin-for-syntax . ?core-code))
 	;;
 	;;then go on with the next body forms.
-	(let ((lexenv.run^ (if (void-core-expression? visit-code.core)
-			       lexenv.run
-			     (cons (cons (gensym "begin-for-syntax-label")
-					 (cons 'begin-for-syntax visit-code.core))
-				   lexenv.run))))
-	  (chi-body* (cdr body-form*.stx)
-		     lexenv.run^ lexenv.expand^
-		     qdef* mod** kwd* export-spec* rib
-		     mix? shadow/redefine-bindings?)))))
+	(if (void-core-expression? visit-code.core)
+	    (%go-on lexenv.run lexenv.expand^)
+	  (begin
+	    (compiler::eval-core (expanded->core visit-code.core))
+	    (let* ((bfs.des	(make-syntactic-binding-descriptor/begin-for-expand visit-code.core))
+		   (bfs.lab	(generate-label-gensym "begin-for-syntax-label"))
+		   (lexenv.run^	(push-entry-on-lexenv bfs.lab bfs.des lexenv.run)))
+	      (%go-on lexenv.run^ lexenv.expand^)))))))
 
   (define (%expand input-form.stx lexenv.expand rib shadow/redefine-bindings?)
     (define rtc

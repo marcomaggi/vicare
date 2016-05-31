@@ -148,6 +148,10 @@
    overloaded-function-spec.id*
    overloaded-function-spec.add-specialised-implementation!
 
+;;; BEGIN-FOR-SYNTAX visit code
+   make-syntactic-binding-descriptor/begin-for-expand
+   syntactic-binding-descriptor/begin-for-syntax?
+
    #| end of exports |# )
 
 (import PSYNTAX-TYPE-SIGNATURES)
@@ -1387,6 +1391,24 @@
 
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/overloaded-function?
   $overloaded-function)
+
+
+;;;; syntactic binding descriptor: BEGIN-FOR-SYNTAX forms
+
+(define* (make-syntactic-binding-descriptor/begin-for-expand visit-code.core)
+  ;;Build and  return a  syntactic binding  descriptor representing  visit code  in a
+  ;;BEGIN-FOR-SYNTAX syntax use.
+  ;;
+  ;;The returned descriptor as format:
+  ;;
+  ;;   (begin-for-syntax . ?visit-code)
+  ;;
+  ;;where ?VISIT-CODE is a core language expression.
+  ;;
+  (make-syntactic-binding-descriptor begin-for-syntax visit-code.core))
+
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/begin-for-syntax?
+  begin-for-syntax)
 
 
 ;;;; done
