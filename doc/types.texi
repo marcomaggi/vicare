@@ -2424,9 +2424,10 @@ Examples:
 @cindex Functions, overloaded
 
 
-Overloaded functions are an expand--time aggregation of functions linked
-to the same name and having different number and type of arguments.  For
-example, in the code:
+An overloaded function is an expand--time object similar to a macro; it
+represents an aggregation of functions linked to the same name and
+having different number and/or type of arguments.  For example, in the
+code:
 
 @lisp
 (define/overload (fun @{O <fixnum>@})
@@ -2444,37 +2445,27 @@ example, in the code:
 @end lisp
 
 @noindent
-an overloaded function named @var{fun} is defined by the first use of
+an overloaded function named @func{fun} is defined by the first use of
 @syntax{define/overload}; subsequent uses add new specialisations to the
-same function.  We can use overloaded functions only with the
-``canonical'' function application syntax:
+same function.
+
+We can use overloaded functions only with the ``canonical'' function
+application syntax:
 
 @lisp
 (@meta{fun} @meta{operand} ...)
 @end lisp
 
 @noindent
-using @func{apply} will cause an expand--time syntax violation.
+using @func{apply} (and, more generally, putting the overloaded
+function's syntactic identifier in reference position) will cause an
+expand--time syntax violation.
 
-Whenever an overloaded function is applied to a tuple of operands:
-
-@enumerate
-@item
-The expander attempts to determine the type of the operands; if it
-fails an exception is raised.
-
-@item
-Starting with the last registered specialised function: one is searched
-whose type signature matches the type signature of the operands; the
-first found is the one inserted in the code.
-
-@item
-If no matching specialised function is found: a syntax violation is
-raised.
-@end enumerate
-
-It is an error to define two specialised function with the same type
-signature.
+It is an error to define two specialised functions with the same formals
+type signature.  Specialised functions are allowed to have different
+type signatures for the returned values, but we should use this feature
+with care; it is suggested not to abuse overloaded functions by adding
+specialised functions that perform unrelated operations.
 
 We can overload functions only in the same lexical context, the
 following code will create @strong{two} functions:
@@ -2487,6 +2478,108 @@ following code will create @strong{two} functions:
   (define/overload (fun @{O <string>@})
     ---)
   ---)
+@end lisp
+
+We can define an overloaded function in a library and then add
+specialised functions in a second library which depends on the first
+one.
+
+We can think of an overloaded function definition:
+
+@lisp
+(define/overload (@meta{over-fun} . @meta{formals}) . @meta{body})
+@end lisp
+
+@noindent
+as expanding to the following pseudo--code:
+
+@lisp
+(define/typed (@meta{spec-fun} . @meta{formals}) . @meta{body})
+(define-syntax @meta{over-fun}
+  (make-overloaded-function (syntax @meta{over-fun})))
+(begin-for-syntax
+  (add-overloaded-function-specialisation!
+     (syntax @meta{over-fun})
+     (syntax @meta{spec-fun})
+     @meta{spec-fun-type-signature}))
+@end lisp
+
+@noindent
+and we can think of an overloaded function application:
+
+@lisp
+(@meta{over-fun} . @meta{operands})
+@end lisp
+
+@noindent
+as expanding to the following:
+
+@lisp
+(@meta{spec-fun} . @meta{operands})
+@end lisp
+
+@noindent
+where @meta{spec-fun} is an internally generated syntactic identifier.
+
+Whenever an overloaded function is applied to a tuple of operands: the
+expander determines the type of the operands, if it fails a syntax
+violation is raised; the set of specialised functions is visited and the
+identifier of the better matching one is inserted in the code; if no
+matching function is found, a syntax violation is raised.
+
+Specialised functions are ranked to select the better matching; the
+ranking algorithm makes use of the same logic used by the syntax
+@syntax{type-signature-super-and-sub?} (@pxref{types syntaxes
+signatures, type-signature-super-and-sub?}).  Ranking works by iterating
+a list of specialised functions:
+
+@enumerate
+@item
+Get the next function from the list.  When there are no more functions:
+if a better matching function was selected, it becomes the one; if no
+matching function was found, a syntax violation is raised.
+
+@item
+If the formals' type signature of the next function is a super--type of
+the operands' type signature: the function is the ``next matching one'',
+otherwise it is discarded and we iterate to step 1.
+
+@item
+If the next matching function is the first in the list: it becomes the
+``current better matching'' and we iterate to step 1.
+
+@item
+If the formals' type signature of the next matching is a sub--type of
+the formals' type signature of the better matching: the next matching
+becomes the new better matching; otherwise the old better matching
+stands.  We iterate to step 1.
+@end enumerate
+
+Here is an example that shows how ranking works:
+
+@lisp
+(define/overload (fun @{O <number>@})
+  `(number ,O))
+
+(define/overload (fun @{O <real>@})
+  `(real ,O))
+
+(define/overload (fun @{O <fixnum>@})
+  `(fixnum ,O))
+
+(fun 1+2i)      @result{} (number 1+2i)
+(fun 3.4)       @result{} (real   3.4)
+(fun 5)         @result{} (fixnum 5)
+@end lisp
+
+@noindent
+notice that only the operands' type signature seen by the expander is
+the one that matters, with the same definitions above:
+
+@lisp
+(fun (cast-signature (<number>) 123))   @result{} (number 123)
+(fun (cast-signature (<real>)   123))   @result{} (real   123)
+(fun (cast-signature (<fixnum>) 123))   @result{} (fixnum 123)
 @end lisp
 
 

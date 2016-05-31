@@ -51,8 +51,6 @@
 		(fun '#(1) '#(2))))
     => '(fixnum 123) '(string "ciao") '(vectors #(1 2)))
 
-;;; --------------------------------------------------------------------
-
   ;;No arguments.
   ;;
   (check
@@ -65,6 +63,42 @@
 
 	(values (fun) (fun 2)))
     => 1 2)
+
+  ;;Specialisations ranking.
+  ;;
+  (check
+      (internal-body
+	(define/overload (fun {O <number>})
+	  `(number ,O))
+
+	(define/overload (fun {O <real>})
+	  `(real ,O))
+
+	(define/overload (fun {O <fixnum>})
+	  `(fixnum ,O))
+
+	(values (fun (cast-signature (<number>) 123))
+		(fun (cast-signature (<real>)   123))
+		(fun (cast-signature (<fixnum>) 123))))
+    => '(number 123) '(real 123) '(fixnum 123))
+
+  ;;Specialisations ranking.
+  ;;
+  (check
+      (internal-body
+	(define/overload (fun {O <number>})
+	  `(number ,O))
+
+	(define/overload (fun {O <real>})
+	  `(real ,O))
+
+	(define/overload (fun {O <fixnum>})
+	  `(fixnum ,O))
+
+	(values (fun 1+2i)
+		(fun 3.4)
+		(fun 5)))
+    => '(number 1+2i) '(real 3.4) '(fixnum 5))
 
   #t)
 

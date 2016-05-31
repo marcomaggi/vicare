@@ -737,14 +737,14 @@
     (let ((rands.sig (%validate-operands-for-single-return-value input-form.stx rand*.psi)))
       (cond ((%search-applicable-function operator.ofs rands.sig)
 	     => (lambda (P)
-		  (let ((spec.id	(car P))
-			(lambda.sig	(cdr P)))
+		  (let ((spec.id		(car P))
+			(spec.lambda-sig	(cdr P)))
 		    (let ((spec.psi (chi-expr spec.id lexenv.run lexenv.expand)))
 		      (make-psi input-form.stx
 			(build-application (syntax-annotation input-form.stx)
 			    (psi.core-expr spec.psi)
 			  (map psi.core-expr rand*.psi))
-			(lambda-signature.retvals lambda.sig))))))
+			(lambda-signature.retvals spec.lambda-sig))))))
 	    (else
 	     (raise
 	      (condition
@@ -782,6 +782,32 @@
        rand*.psi)))
 
   (define (%search-applicable-function operator.ofs rands.sig)
+    (let loop ((selected.id		#f)
+	       (selected.lambda-sig	#f)
+	       (selected.formals-sig	#f)
+	       (spec*.lambda-sig	(overloaded-function-spec.signature* operator.ofs))
+	       (spec*.id		(overloaded-function-spec.id*        operator.ofs)))
+      (cond ((pair? spec*.lambda-sig)
+	     (let* ((prospective.id		(car spec*.id))
+		    (prospective.lambda-sig	(car spec*.lambda-sig))
+		    (prospective.formals-sig	(lambda-signature.argvals prospective.lambda-sig)))
+	       (define (%grab-new-selection)
+		 (loop prospective.id prospective.lambda-sig prospective.formals-sig (cdr spec*.lambda-sig) (cdr spec*.id)))
+	       (define (%keep-old-selection)
+		 (loop    selected.id    selected.lambda-sig    selected.formals-sig (cdr spec*.lambda-sig) (cdr spec*.id)))
+	       (if (eq? 'exact-match (type-signature.match-arguments-against-operands prospective.formals-sig rands.sig))
+		   (if selected.id
+		       (if (type-signature.matching-super-and-sub? (lambda-signature.argvals selected.lambda-sig)
+								   prospective.formals-sig)
+			   (%grab-new-selection)
+			 (%keep-old-selection))
+		     (%grab-new-selection))
+		 (%keep-old-selection))))
+	    (selected.id
+	     (cons selected.id selected.lambda-sig))
+	    (else #f))))
+
+  #;(define (%search-applicable-function operator.ofs rands.sig)
     (let ((spec*.id		(overloaded-function-spec.id*        operator.ofs))
 	  (spec*.lambda-sig	(overloaded-function-spec.signature* operator.ofs)))
       (let loop ((spec*.lambda-sig	spec*.lambda-sig)
