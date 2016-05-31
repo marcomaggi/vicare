@@ -1845,12 +1845,18 @@
 	     => (lambda (lhs.lab)
 		  (let ((lhs.des (label->syntactic-binding-descriptor lhs.lab lexenv.run)))
 		    (case (syntactic-binding-descriptor.type lhs.des)
-		      (($overloaded-function)
+		      ((local-overloaded-function)
 		       ;;Let's  extend the  existent overloaded  function with  a new
 		       ;;specialised function.
-		       (%extend-existent-overloaded-function input-form.stx rib lexenv.run shadow/redefine-bindings?
-							     lhs.id lhs.des input-formals.stx body*.stx
-							     %synner))
+		       (let ((lhs.ofs (syntactic-binding-descriptor.value lhs.des)))
+			 (%extend-existent-overloaded-function input-form.stx rib lexenv.run shadow/redefine-bindings?
+							       lhs.id lhs.ofs input-formals.stx body*.stx
+							       %synner)))
+		      ((global-overloaded-function)
+		       (let ((lhs.ofs (syntactic-binding-descriptor/global-overloaded-function.ofs lhs.des)))
+			 (%extend-existent-overloaded-function input-form.stx rib lexenv.run shadow/redefine-bindings?
+							       lhs.id lhs.ofs input-formals.stx body*.stx
+							       %synner)))
 		      (else
 		       ;;The syntactic binding is not an overloaded function.
 		       (%synner "cannot redefine keyword" lhs.id))))))
@@ -1890,29 +1896,41 @@
 					      lhs.id input-formals.stx body*.stx
 					      synner)
     (receive (spec.id spec.lambda-sig spec.qdef lexenv.run)
+	;;Establish the syntactic binding of the specialised function.
 	(%establish-specialised-implementation input-form.stx rib lexenv.run shadow/redefine-bindings?
 					       lhs.id input-formals.stx body*.stx)
+      ;;Establish the syntactic binding of the overloaded function.
       (let* ((lhs.ofs		(make-overloaded-function-spec lhs.id))
 	     (lhs.lab		(generate-label-gensym lhs.id))
 	     (lhs.des		(make-syntactic-binding-descriptor/overloaded-function/from-data lhs.ofs))
 	     (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.des lexenv.run)))
+	;;Register the  specialised function  in the  overloaded function.   This may
+	;;fail raising an expand-time exception.
 	(overloaded-function-spec.add-specialised-implementation! input-form.stx lhs.ofs spec.lambda-sig spec.id)
-	;;This rib extension  will raise an exception if it  represents an attempt to
-	;;illegally redefine a binding.
-	(extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
-        (values spec.qdef lexenv.run))))
+	;;Generate  the visit  code that  registers the  specialised function  in the
+	;;overloaded function.
+	(let ((lexenv.run (%generate-registration-visit-code lhs.id spec.id spec.lambda-sig lexenv.run)))
+	  ;;This rib extension will raise an exception if it represents an attempt to
+	  ;;illegally redefine a binding.
+	  (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
+	  (values spec.qdef lexenv.run)))))
 
 ;;; --------------------------------------------------------------------
 
   (define (%extend-existent-overloaded-function input-form.stx rib lexenv.run shadow/redefine-bindings?
-						lhs.id lhs.des input-formals.stx body*.stx
+						lhs.id lhs.ofs input-formals.stx body*.stx
 						synner)
     (receive (spec.id spec.lambda-sig spec.qdef lexenv.run)
+	;;Establish the syntactic binding of the specialised function.
 	(%establish-specialised-implementation input-form.stx rib lexenv.run shadow/redefine-bindings?
 					       lhs.id input-formals.stx body*.stx)
-      (let ((lhs.ofs	(syntactic-binding-descriptor.value lhs.des)))
-	(overloaded-function-spec.add-specialised-implementation! input-form.stx lhs.ofs spec.lambda-sig spec.id))
-      (values spec.qdef lexenv.run)))
+      ;;Register the specialised function in  the overloaded function.  This may fail
+      ;;raising an expand-time exception.
+      (overloaded-function-spec.add-specialised-implementation! input-form.stx lhs.ofs spec.lambda-sig spec.id)
+      ;;Generate  the visit  code  that  registers the  specialised  function in  the
+      ;;overloaded function.
+      (let ((lexenv.run (%generate-registration-visit-code lhs.id spec.id spec.lambda-sig lexenv.run)))
+	(values spec.qdef lexenv.run))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1934,6 +1952,19 @@
 	;;illegally redefine a binding.
 	(extend-rib! rib spec.id spec.lab shadow/redefine-bindings?)
 	(values spec.id spec.lambda-sig spec.qdef lexenv.run))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%generate-registration-visit-code lhs.id spec.id spec.lambda-sig lexenv.run)
+    (let* ((bfs.des	(make-syntactic-binding-descriptor/begin-for-expand
+			 (build-application no-source
+			     (build-primref no-source 'overloaded-function-spec.register-specialisation!)
+			   (list (build-data no-source lhs.id)
+				 (build-data no-source spec.id)
+				 (build-data no-source spec.lambda-sig)))))
+	   (bfs.lab	(generate-label-gensym spec.id))
+	   (lexenv.run	(push-entry-on-lexenv bfs.lab bfs.des lexenv.run)))
+      lexenv.run))
 
   #| end of module: CHI-DEFINE/OVERLOAD |# )
 

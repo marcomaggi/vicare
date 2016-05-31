@@ -1454,9 +1454,30 @@
 		       (cons (make-visit-env-entry loc ots expanded-expr)               visit-env)
 		       typed-locs)))
 
+	      ((local-overloaded-function)
+	       ;;The entry from the LEXENV looks like this:
+	       ;;
+	       ;;   (?label . (local-overloaded-function . #<overloaded-function-spec>))
+	       ;;
+	       ;;We add to the GLOBAL-ENV an entry like:
+	       ;;
+	       ;;   (?label . (global-overloaded-function . ?loc))
+	       ;;
+	       ;;and to the VISIT-ENV an entry like:
+	       ;;
+	       ;;   (?loc . (#<overloaded-function-spec> . ?expanded-expr))
+	       ;;
+	       (let* ((ofs		descr.value)
+		      (expanded-expr	(overloaded-function-spec.expanded-expr ofs))
+		      (loc		(generate-storage-location-gensym label)))
+		 (loop (cdr lexenv.run)
+		       (cons (make-global-env-entry label 'global-overloaded-function loc) global-env)
+		       (cons (make-visit-env-entry loc ofs expanded-expr)                  visit-env)
+		       typed-locs)))
+
 	      (($core-scheme-object-type-name
 		$core-record-type-name $core-condition-object-type-name
-		$module $fluid $synonym $overloaded-function)
+		$module $fluid $synonym)
 	       ;;We expect LEXENV entries of these types to have the format:
 	       ;;
 	       ;;   (?label . (?type-symbol . ?value))

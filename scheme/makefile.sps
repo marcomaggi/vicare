@@ -514,9 +514,9 @@
     "psyntax.internal.sls"
     "psyntax.builders.sls"
     "psyntax.special-transformers.sls"
+    "psyntax.library-collectors.sls"
     "psyntax.lexical-environment.sls"
     "psyntax.syntax-utilities.sls"
-    "psyntax.library-collectors.sls"
     "psyntax.import-spec-parser.sls"
     "psyntax.export-spec-parser.sls"
     "psyntax.syntactic-binding-properties.sls"
@@ -5827,6 +5827,8 @@
     (object-type-spec-override-predicate)
     (make-closure-type-spec)
     (set!/initialise)
+    (make-overloaded-function-spec)
+    (overloaded-function-spec.register-specialisation!)
 
     ))
 

@@ -140,13 +140,10 @@
 
 ;;; overloaded function bindings
    make-syntactic-binding-descriptor/overloaded-function/from-data
-   syntactic-binding-descriptor/overloaded-function?
-   make-overloaded-function-spec
-   overloaded-function-spec?
-   overloaded-function-spec.name-id
-   overloaded-function-spec.signature*
-   overloaded-function-spec.id*
-   overloaded-function-spec.add-specialised-implementation!
+   syntactic-binding-descriptor/local-overloaded-function?
+   syntactic-binding-descriptor/local-overloaded-function.ofs
+   syntactic-binding-descriptor/global-overloaded-function?
+   syntactic-binding-descriptor/global-overloaded-function.ofs
 
 ;;; BEGIN-FOR-SYNTAX visit code
    make-syntactic-binding-descriptor/begin-for-expand
@@ -1343,24 +1340,6 @@
 
 ;;;; syntactic binding descriptor: pattern variable bindings
 
-(define-struct (overloaded-function-spec %make-overloaded-function-spec overloaded-function-spec?)
-  (name-id
-		;A syntactic identifier representing the overloaded function name.
-   signature*
-		;Null or a proper list of "<lambda-signature>" instances representing
-		;the specialised functions' signatures.
-   id*
-		;Null  or  a  proper  list  of syntactic  identifiers  bound  to  the
-		;specialised functions.
-   ))
-
-(define-syntax-rule (overloaded-function-spec.name-id ofs)	(overloaded-function-spec-name-id    ofs))
-(define-syntax-rule (overloaded-function-spec.signature* ofs)	(overloaded-function-spec-signature* ofs))
-(define-syntax-rule (overloaded-function-spec.id* ofs)		(overloaded-function-spec-id*        ofs))
-
-(define* (make-overloaded-function-spec {name.id identifier?})
-  (%make-overloaded-function-spec name.id '() '()))
-
 (define* (make-syntactic-binding-descriptor/overloaded-function/from-data {lhs.ofs overloaded-function-spec?})
   ;;Build  and  return a  syntactic  binding  descriptor representing  an  overloaded
   ;;function.
@@ -1370,27 +1349,51 @@
   ;;
   ;;The returned descriptor as format:
   ;;
-  ;;   ($overloaded-function . #<overloaded-function-spec>)
+  ;;   (local-overloaded-function . #<overloaded-function-spec>)
   ;;
-  (make-syntactic-binding-descriptor $overloaded-function lhs.ofs))
+  ;;NOTE  This descriptor  is similar  to the  one of  local macros,  so it  would be
+  ;;possible and more uniform to define it as:
+  ;;
+  ;;   (local-overloaded-function . (#<overloaded-function-spec> . ?expanded-expr))
+  ;;
+  ;;where ?EXPANDED-EXPR is a core  language expression that, compiled and evaluated,
+  ;;rebuilds  an  empty  copy  of "#<overloaded-function-spec>".   But  since  it  is
+  ;;possible to build ?EXPANDED-EXPR from the instance "#<overloaded-function-spec>":
+  ;;we choose the simpler and less memory-consuming descriptor format.  (Marco Maggi;
+  ;;Tue May 31, 2016)
+  ;;
+  (make-syntactic-binding-descriptor local-overloaded-function lhs.ofs))
 
-(define* (overloaded-function-spec.add-specialised-implementation! input-form.stx
-								   {lhs.ofs overloaded-function-spec?}
-								   {spec.lambda-sig lambda-signature?}
-								   {spec.id identifier?})
-  (let ((new-formals.sig (lambda-signature.argvals spec.lambda-sig)))
-    (for-each (lambda (spec.lambda-sig)
-		(when (type-signature=? (lambda-signature.argvals spec.lambda-sig) new-formals.sig)
-		  (raise
-		   (condition (make-who-condition __who__)
-			      (make-message-condition "formals type signature already exists in overloaded function")
-			      (syntax-violation input-form.stx #f)))))
-      (overloaded-function-spec-signature* lhs.ofs)))
-  (set-overloaded-function-spec-signature*! lhs.ofs (cons spec.lambda-sig (overloaded-function-spec-signature* lhs.ofs)))
-  (set-overloaded-function-spec-id*!        lhs.ofs (cons spec.id         (overloaded-function-spec-id*        lhs.ofs))))
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/local-overloaded-function?
+  local-overloaded-function)
 
-(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/overloaded-function?
-  $overloaded-function)
+(define (syntactic-binding-descriptor/local-overloaded-function.ofs descr)
+  (syntactic-binding-descriptor.value descr))
+
+;;; --------------------------------------------------------------------
+
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/global-overloaded-function?
+  global-overloaded-function)
+
+(define* (syntactic-binding-descriptor/global-overloaded-function.ofs descr)
+  ;;We expect the syntactic binding's descriptor to have the format:
+  ;;
+  ;;   (global-overloaded-function . (#<library> . ?loc))
+  ;;
+  ;;where   ?LOC   is   a   storage   location  gensym   holding   an   instance   of
+  ;;"overloaded-function-spec".
+  ;;
+  (let ((loc (cdr (syntactic-binding-descriptor.value descr))))
+    (if (symbol-bound? loc)
+	(receive-and-return (ofs)
+	    (symbol-value loc)
+	  (unless (overloaded-function-spec? ofs)
+	    (assertion-violation __who__
+	      "invalid object in loc gensym's \"value\" slot of \"global-overloaded-function\" syntactic binding's descriptor"
+	      descr)))
+      (assertion-violation __who__
+	"unbound loc gensym of \"global-overloaded-function\" syntactic binding's descriptor"
+	descr))))
 
 
 ;;;; syntactic binding descriptor: BEGIN-FOR-SYNTAX forms

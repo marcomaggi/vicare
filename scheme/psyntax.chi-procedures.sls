@@ -288,8 +288,10 @@
 			       (values 'enumeration descr ?car))
 			      (else
 			       (values 'other #f #f)))))
-		     (($overloaded-function)
-		      (values 'overloaded-function-application descr ?car))
+		     ((local-overloaded-function)
+		      (values 'local-overloaded-function-application descr ?car))
+		     ((global-overloaded-function)
+		      (values 'global-overloaded-function-application descr ?car))
 		     (else
 		      ;;This  case includes  TYPE being:  core-prim, core-prim-typed,
 		      ;;lexical, lexical-typed, global, global-mutable, global-typed,
@@ -878,15 +880,6 @@
 					 expr.stx lexenv.run #f))))
 	 (chi-expr exp-e lexenv.run lexenv.expand)))
 
-      ((overloaded-function-application)
-       ;;Overloaded function  application.  The syntactic binding's  descriptor DESCR
-       ;;has format:
-       ;;
-       ;;   ($overloaded-function . #<overloaded-function-spec>)
-       ;;
-       (let ((over.ofs (syntactic-binding-descriptor.value descr)))
-	 (chi-overloaded-function-application expr.stx lexenv.run lexenv.expand over.ofs)))
-
       ((constant)
        ;;Constant; it means EXPR.STX is a self-evaluating datum.
        (let ((datum descr))
@@ -983,6 +976,24 @@
 	 (else
 	  (assertion-violation __module_who__
 	    "internal error, invalid integrated-macro descriptor" expr.stx descr))))
+
+      ((local-overloaded-function-application)
+       ;;Local overloaded  function application.  The syntactic  binding's descriptor
+       ;;DESCR has format:
+       ;;
+       ;;   (local-overloaded-function . #<overloaded-function-spec>)
+       ;;
+       (let ((over.ofs (syntactic-binding-descriptor/local-overloaded-function.ofs descr)))
+	 (chi-overloaded-function-application expr.stx lexenv.run lexenv.expand over.ofs)))
+
+      ((global-overloaded-function-application)
+       ;;Global overloaded function application.   The syntactic binding's descriptor
+       ;;DESCR has format:
+       ;;
+       ;;   (global-overloaded-function . (#<library> . ?loc))
+       ;;
+       (let ((over.ofs (syntactic-binding-descriptor/global-overloaded-function.ofs descr)))
+	 (chi-overloaded-function-application expr.stx lexenv.run lexenv.expand over.ofs)))
 
       ((enumeration)
        ;;Syntax  use  of  a  previously  defined  enumeration  type.   The  syntactic

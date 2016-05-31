@@ -256,6 +256,14 @@
     core-prim-type-spec.name				core-prim-type-spec.safety
     core-prim-type-spec.replacements
 ;;;
+    make-overloaded-function-spec			overloaded-function-spec?
+    overloaded-function-spec.name-id
+    overloaded-function-spec.signature*
+    overloaded-function-spec.id*
+    overloaded-function-spec.add-specialised-implementation!
+    overloaded-function-spec.register-specialisation!
+    overloaded-function-spec.expanded-expr
+;;;
     ;; lexical environment utilities
     label->syntactic-binding-descriptor
     label->syntactic-binding-descriptor/no-indirection
@@ -630,6 +638,8 @@
     (only (psyntax.special-transformers)
 	  expand-time-value?
 	  expand-time-value-object)
+    (only (psyntax.library-collectors)
+	  inv-collector)
     (only (psyntax.library-manager)
 	  library?
 	  library-name
@@ -678,6 +688,7 @@
 (include "psyntax.lexical-environment.type-syntax-objects.scm"	#t)
 
 (include "psyntax.lexical-environment.syntactic-bindings.scm"	#t)
+(import PSYNTAX-SYNTACTIC-BINDINGS)
 (include "psyntax.lexical-environment.typed-variable-specs.scm"	#t)
 
 
@@ -2850,6 +2861,78 @@
 		   #f)))))
 	(else
 	 (error-unbound-identifier __who__ id))))
+
+
+;;;; overloaded functions
+
+(define-struct (overloaded-function-spec %make-overloaded-function-spec overloaded-function-spec?)
+  (name-id
+		;A syntactic identifier representing the overloaded function name.
+   signature*
+		;Null or a proper list of "<lambda-signature>" instances representing
+		;the specialised functions' signatures.
+   id*
+		;Null  or  a  proper  list  of syntactic  identifiers  bound  to  the
+		;specialised functions.
+   ))
+
+(define-syntax-rule (overloaded-function-spec.name-id ofs)	(overloaded-function-spec-name-id    ofs))
+(define-syntax-rule (overloaded-function-spec.signature* ofs)	(overloaded-function-spec-signature* ofs))
+(define-syntax-rule (overloaded-function-spec.id* ofs)		(overloaded-function-spec-id*        ofs))
+
+(define* (make-overloaded-function-spec {name.id identifier?})
+  (%make-overloaded-function-spec name.id '() '()))
+
+;;; --------------------------------------------------------------------
+
+(define* (overloaded-function-spec.add-specialised-implementation! input-form.stx
+								   {lhs.ofs overloaded-function-spec?}
+								   {spec.lambda-sig lambda-signature?}
+								   {spec.id identifier?})
+  (let ((new-formals.sig (lambda-signature.argvals spec.lambda-sig)))
+    (for-each (lambda (spec.lambda-sig)
+		(when (type-signature=? (lambda-signature.argvals spec.lambda-sig) new-formals.sig)
+		  (raise
+		   (condition (make-who-condition __who__)
+			      (make-message-condition "formals type signature already exists in overloaded function")
+			      (syntax-violation input-form.stx #f)))))
+      (overloaded-function-spec-signature* lhs.ofs)))
+  (set-overloaded-function-spec-signature*! lhs.ofs (cons spec.lambda-sig (overloaded-function-spec-signature* lhs.ofs)))
+  (set-overloaded-function-spec-id*!        lhs.ofs (cons spec.id         (overloaded-function-spec-id*        lhs.ofs))))
+
+(define* (overloaded-function-spec.register-specialisation! lhs.id spec.id spec.lambda-sig)
+  ;;Register a specialisation function in the descriptor of an overloaded function.
+  ;;
+  ;;LHS.ID is the syntactic identifier bound to the overloaded function descriptor.
+  ;;
+  ;;SPEC.ID is the syntactic identifier bound to a specialisation function.
+  ;;
+  ;;SPEC.LAMBDA-SIG  is an  instance  of "<lambda-signature>"  representing the  type
+  ;;signature of the specialisation function.
+  ;;
+  (let ((lhs.ofs (let* ((lhs.lab (id->label/local lhs.id))
+			(lhs.des (label->syntactic-binding-descriptor lhs.lab (current-inferior-lexenv))))
+		   (case (syntactic-binding-descriptor.type lhs.des)
+		     ((local-overloaded-function)
+		      (syntactic-binding-descriptor.value lhs.des))
+		     ((global-overloaded-function)
+		      (syntactic-binding-descriptor/global-overloaded-function.ofs lhs.des))
+		     (else
+		      ;;The syntactic binding is not an overloaded function.
+		      (assertion-violation __who__
+			"invalid syntactic binding's descriptor, expecting overloaded function"
+			lhs.id lhs.des))))))
+    (set-overloaded-function-spec-signature*! lhs.ofs (cons spec.lambda-sig (overloaded-function-spec-signature* lhs.ofs)))
+    (set-overloaded-function-spec-id*!        lhs.ofs (cons spec.id         (overloaded-function-spec-id*        lhs.ofs)))))
+
+(define (overloaded-function-spec.expanded-expr ofs)
+  ;;Build and return a core language  expression that, compiled and evaluated, return
+  ;;an empty copy of the OFS argument.
+  ;;
+  (let ((name.id (overloaded-function-spec.name-id ofs)))
+    (build-application no-source
+	(build-primref no-source 'make-overloaded-function-spec)
+      (list (build-data no-source name.id)))))
 
 
 ;;;; utilities for identifiers

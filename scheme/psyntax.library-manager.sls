@@ -580,9 +580,9 @@
 	       (descr      (case (car type.value)
 			     ((global global-typed global-typed-mutable
 			       global-macro global-macro! global-etv
-			       global-object-type-name)
+			       global-object-type-name global-overloaded-function)
 			      (cons* (car type.value) lib (cdr type.value)))
-			     (($module $fluid $synonym global-mutable $overloaded-function)
+			     (($module $fluid $synonym global-mutable )
 			      type.value)
 			     ;;This  function is  used  also to  intern the  built-in
 			     ;;libraries.   So the  types  used by  the boot  image's

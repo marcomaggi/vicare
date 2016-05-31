@@ -360,20 +360,24 @@
       (chi-application/psi-first-operand/no-overload input-form.stx lexenv.run lexenv.expand
 						     rator.stx first-rand.psi other-rand*.stx))
     (if (identifier? rator.stx)
-	(cond ((id->label rator.stx)
-	       => (lambda (rator.lab)
-		    (let ((rator.des (label->syntactic-binding-descriptor rator.lab lexenv.run)))
-		      (case (syntactic-binding-descriptor.type rator.des)
-			(($overloaded-function)
-			 (let ((rator.ofs	(syntactic-binding-descriptor.value rator.des))
-			       (other-rand*.psi	(chi-expr* other-rand*.stx lexenv.run lexenv.expand)))
-			   (chi-overloaded-function-application/psi-rands input-form.stx lexenv.run lexenv.expand
-									  rator.ofs rator.stx (cons first-rand.psi other-rand*.psi))))
-			(else
-			 (%no-overloaded-function))))))
+	(cond ((cond ((id->label rator.stx)
+		      => (lambda (rator.lab)
+			   (let ((rator.des (label->syntactic-binding-descriptor rator.lab lexenv.run)))
+			     (case (syntactic-binding-descriptor.type rator.des)
+			       ((local-overloaded-function)
+				(syntactic-binding-descriptor/local-overloaded-function.ofs rator.des))
+			       ((global-overloaded-function)
+				(syntactic-binding-descriptor/global-overloaded-function.ofs rator.des))
+			       (else #f)))))
+		     (else
+		      (syntax-violation __who__
+			"unbound operator identifier" input-form.stx rator.stx)))
+	       => (lambda (rator.ofs)
+		    (let ((other-rand*.psi (chi-expr* other-rand*.stx lexenv.run lexenv.expand)))
+		      (chi-overloaded-function-application/psi-rands input-form.stx lexenv.run lexenv.expand
+								     rator.ofs rator.stx (cons first-rand.psi other-rand*.psi)))))
 	      (else
-	       (syntax-violation __who__
-		 "unbound operator identifier" input-form.stx rator.stx)))
+	       (%no-overloaded-function)))
       (%no-overloaded-function)))
 
   (define (chi-application/psi-first-operand/no-overload input-form.stx lexenv.run lexenv.expand
