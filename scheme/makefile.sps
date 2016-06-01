@@ -820,6 +820,7 @@
 	 (custom-printer			(macro . custom-printer))
 	 (define-type-descriptors		(macro . define-type-descriptors))
 	 (strip-angular-parentheses		(macro . strip-angular-parentheses))
+	 (mixins				(macro . mixins))
 	 (define-record-type			(macro . define-record-type))
 	 (type-predicate			(macro . type-predicate))
 	 (method				(macro . method))
