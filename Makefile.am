@@ -475,6 +475,7 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.lexical-environment.lambda-signatures.scm	\
 	scheme/psyntax.lexical-environment.type-syntax-objects.scm	\
 	scheme/psyntax.lexical-environment.condition-objects.scm	\
+	scheme/psyntax.lexical-environment.overloaded-function-specs.sls \
 	scheme/psyntax.syntax-utilities.sls				\
 	scheme/psyntax.syntactic-binding-properties.sls			\
 	scheme/psyntax.library-collectors.sls				\
