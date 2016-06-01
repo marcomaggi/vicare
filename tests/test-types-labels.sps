@@ -1,14 +1,11 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: demo for DEFINE-LABEL parser
+;;;Contents: tests for DEFINE-LABEL
 ;;;Date: Mon Apr 25, 2016
 ;;;
 ;;;Abstract
 ;;;
-;;;	This file demonstrates how to use the facilities of the expander to implement
-;;;	a parser  for the syntax  DEFINE-LABEL.  An adapted  version of this  code is
-;;;	also included in the expander.
 ;;;
 ;;;Copyright (C) 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
