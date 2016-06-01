@@ -585,13 +585,27 @@ lib/vicare/language-extensions/labels.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_labels_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_labels_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_labels_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_labels_fasl_DATA = lib/vicare/language-extensions/labels.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_labels_sls_DATA = lib/vicare/language-extensions/labels.vicare.sls
+dist_lib_vicare_language_extensions_labels_vicare_sls_DATA = lib/vicare/language-extensions/labels.vicare.sls
 endif
 EXTRA_DIST += lib/vicare/language-extensions/labels.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/labels.fasl
+
+lib/vicare/language-extensions/mixins.fasl: \
+		lib/vicare/language-extensions/mixins.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_language_extensions_mixins_fasldir = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_mixins_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+nodist_lib_vicare_language_extensions_mixins_fasl_DATA = lib/vicare/language-extensions/mixins.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_language_extensions_mixins_vicare_sls_DATA = lib/vicare/language-extensions/mixins.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/language-extensions/mixins.vicare.sls
+CLEANFILES += lib/vicare/language-extensions/mixins.fasl
 
 lib/vicare/language-extensions/tracing-syntaxes.fasl: \
 		lib/vicare/language-extensions/tracing-syntaxes.sls \

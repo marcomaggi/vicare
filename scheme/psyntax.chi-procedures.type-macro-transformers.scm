@@ -50,10 +50,9 @@
 
 (define-syntax (with-object-type-syntactic-binding stx)
   (sys::syntax-case stx ()
-    ((_ (?who ?input-form.stx ?type-annotation ?lexenv ?object-type-spec)
+    ((_ (?input-form.stx ?type-annotation ?lexenv ?object-type-spec)
 	. ?body)
-     (and (sys::identifier? (sys::syntax ?who))
-	  (sys::identifier? (sys::syntax ?input-form.stx))
+     (and (sys::identifier? (sys::syntax ?input-form.stx))
 	  (sys::identifier? (sys::syntax ?lexenv))
 	  (sys::identifier? (sys::syntax ?object-type-spec)))
      (sys::syntax
@@ -62,7 +61,7 @@
 				     (type-annotation->object-type-spec type.ann ?lexenv ?type-annotation)
 				   (catch E
 				     (else
-				      (syntax-violation (quote ?who) "invalid type annotation" ?input-form.stx type.ann)))))))
+				      (syntax-violation __who__ "invalid type annotation" ?input-form.stx type.ann)))))))
 	. ?body)))
     ))
 
@@ -85,7 +84,7 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-name ?rand* ...)
-       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-name lexenv.run requested.ots)
+       (with-object-type-syntactic-binding (input-form.stx ?type-name lexenv.run requested.ots)
 	 (cond ((or (list-of-type-spec? requested.ots)
 		    (list-type-spec?    requested.ots))
 		;;LIST and LIST-OF type annotations  have no constructor, but we know
@@ -352,13 +351,13 @@
        ;;   (is-a? _ <string>)
        ;;
        ;;which should expand to the predicate of "<string>".
-       (chi-expr (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation lexenv.run type-annotation.ots)
+       (chi-expr (with-object-type-syntactic-binding (input-form.stx ?type-annotation lexenv.run type-annotation.ots)
 		   (or (object-type-spec.type-predicate-stx type-annotation.ots)
 		       (__synner__ "type annotation has no predicate for run-time use" ?type-annotation)))
 		 lexenv.run lexenv.expand))
 
       ((_ ?expr ?type-annotation)
-       (with-object-type-syntactic-binding (__module_who__ input-form.stx ?type-annotation lexenv.run type-annotation.ots)
+       (with-object-type-syntactic-binding (input-form.stx ?type-annotation lexenv.run type-annotation.ots)
 	 (%expand-to-single-value-predicate input-form.stx lexenv.run lexenv.expand
 					    ?expr ?type-annotation type-annotation.ots __synner__)))
       (_
@@ -549,7 +548,7 @@
        (and (not (underscore-id? ?expr))
 	    (identifier? ?field-name)
 	    (identifier? ?type-id))
-       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run type.ots)
+       (with-object-type-syntactic-binding (input-form.stx ?type-id lexenv.run type.ots)
 	 (%expand-to-object-accessor-application input-form.stx lexenv.run lexenv.expand type.ots ?expr ?field-name)))
 
       ;;Wildcard in place of the subject expression.  It must expand to an expression
@@ -558,7 +557,7 @@
        (and (identifier? ?type-id)
 	    (identifier? ?field-name)
 	    (underscore-id? ?jolly))
-       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run type.ots)
+       (with-object-type-syntactic-binding (input-form.stx ?type-id lexenv.run type.ots)
 	 (%expand-to-object-accessor input-form.stx lexenv.run lexenv.expand type.ots ?field-name)))
 
       ;;Missing type identifier.  Try to retrieve  the type from the signature of the
@@ -649,7 +648,7 @@
        (and (not (underscore-id? ?expr))
 	    (identifier? ?field-name)
 	    (identifier? ?type-id))
-       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run type.ots)
+       (with-object-type-syntactic-binding (input-form.stx ?type-id lexenv.run type.ots)
 	 (%expand-to-object-mutator-application input-form.stx lexenv.run lexenv.expand type.ots ?expr ?field-name ?new-value)))
 
       ;;Wildcard in place of the subject expression.  It must expand to an expression
@@ -659,7 +658,7 @@
 	    (identifier? ?field-name)
 	    (underscore-id? ?jolly1)
 	    (underscore-id? ?jolly2))
-       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run type.ots)
+       (with-object-type-syntactic-binding (input-form.stx ?type-id lexenv.run type.ots)
 	 (%expand-to-object-mutator input-form.stx lexenv.run lexenv.expand type.ots ?field-name)))
 
       ;;Missing type identifier.  Try to retrieve  the type from the signature of the
@@ -1289,7 +1288,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?type-annotation)
-     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation lexenv.run ots)
+     (with-object-type-syntactic-binding (input-form.stx ?type-annotation lexenv.run ots)
        (cond ((object-type-spec.equality-predicate ots)
 	      => (lambda (stx)
 		   (chi-expr stx lexenv.run lexenv.expand)))
@@ -1305,7 +1304,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?type-annotation)
-     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation lexenv.run ots)
+     (with-object-type-syntactic-binding (input-form.stx ?type-annotation lexenv.run ots)
        (cond ((object-type-spec.comparison-procedure ots)
 	      => (lambda (stx)
 		   (chi-expr stx lexenv.run lexenv.expand)))
@@ -1321,7 +1320,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?type-annotation)
-     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation lexenv.run ots)
+     (with-object-type-syntactic-binding (input-form.stx ?type-annotation lexenv.run ots)
        (cond ((object-type-spec.hash-function ots)
 	      => (lambda (stx)
 		   (chi-expr stx lexenv.run lexenv.expand)))
@@ -1367,8 +1366,8 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?type-annotation1 ?type-annotation2)
-     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation1 lexenv.run one.ots)
-       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation2 lexenv.run two.ots)
+     (with-object-type-syntactic-binding (input-form.stx ?type-annotation1 lexenv.run one.ots)
+       (with-object-type-syntactic-binding (input-form.stx ?type-annotation2 lexenv.run two.ots)
 	 (let ((bool (object-type-spec=? one.ots two.ots)))
 	   (make-psi input-form.stx
 	     (build-data no-source bool)
@@ -1385,8 +1384,8 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?super-type-annotation ?sub-type-annotation)
-     (with-object-type-syntactic-binding (__who__ input-form.stx ?super-type-annotation lexenv.run super.ots)
-       (with-object-type-syntactic-binding (__who__ input-form.stx ?sub-type-annotation lexenv.run sub.ots)
+     (with-object-type-syntactic-binding (input-form.stx ?super-type-annotation lexenv.run super.ots)
+       (with-object-type-syntactic-binding (input-form.stx ?sub-type-annotation lexenv.run sub.ots)
 	 (let ((bool (object-type-spec.matching-super-and-sub? super.ots sub.ots)))
 	   (make-psi input-form.stx
 	     (build-data no-source bool)
@@ -1403,8 +1402,8 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?super-type-annotation ?sub-type-annotation)
-     (with-object-type-syntactic-binding (__who__ input-form.stx ?super-type-annotation lexenv.run super.ots)
-       (with-object-type-syntactic-binding (__who__ input-form.stx ?sub-type-annotation lexenv.run sub.ots)
+     (with-object-type-syntactic-binding (input-form.stx ?super-type-annotation lexenv.run super.ots)
+       (with-object-type-syntactic-binding (input-form.stx ?sub-type-annotation lexenv.run sub.ots)
 	 (let ((ots (object-type-spec.common-ancestor super.ots sub.ots)))
 	   (make-psi input-form.stx
 	     (build-data no-source
@@ -1420,7 +1419,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?type-annotation)
-     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation lexenv.run type.ots)
+     (with-object-type-syntactic-binding (input-form.stx ?type-annotation lexenv.run type.ots)
        (let ((name* (map object-type-spec.name (object-type-spec.ancestors-ots* type.ots))))
 	 (make-psi input-form.stx
 	   (build-data no-source name*)
@@ -1435,7 +1434,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?type-annotation)
-     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation lexenv.run type.ots)
+     (with-object-type-syntactic-binding (input-form.stx ?type-annotation lexenv.run type.ots)
        (make-psi input-form.stx
 	 (build-data no-source (object-type-spec.type-annotation type.ots))
 	 (make-type-signature/single-top))))
@@ -1449,8 +1448,8 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?super-type-annotation ?sub-type-annotation)
-     (with-object-type-syntactic-binding (__who__ input-form.stx ?super-type-annotation lexenv.run super.ots)
-       (with-object-type-syntactic-binding (__who__ input-form.stx ?sub-type-annotation lexenv.run sub.ots)
+     (with-object-type-syntactic-binding (input-form.stx ?super-type-annotation lexenv.run super.ots)
+       (with-object-type-syntactic-binding (input-form.stx ?sub-type-annotation lexenv.run sub.ots)
 	 (let ((retval.sym (cond ((object-type-spec.matching-super-and-sub? super.ots sub.ots)
 				  'exact-match)
 				 ((object-type-spec.compatible-super-and-sub? super.ots sub.ots)

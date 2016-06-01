@@ -81,13 +81,24 @@
     foo))
 
 
-(define (%do-define-record input-form.stx namespec clause* synner)
+(define (%do-define-record input-form.stx namespec input-clause*.stx synner)
+  (define clause*.stx
+    (let ((foo (syntax-match namespec ()
+		 ((?foo ?make-foo ?foo?)
+		  (identifier? ?foo)
+		  ?foo)
+		 (?foo
+		  (identifier? ?foo)
+		  ?foo)
+		 (_
+		  (synner "invalid record-type name specification" namespec)))))
+      (%introduce-mixin-clauses foo input-clause*.stx __synner__)))
   (define strip-angular-parentheses?
-    (%get-strip-angular-parentheses clause* synner))
+    (%get-strip-angular-parentheses clause*.stx synner))
   (define-values (foo make-foo foo? foo-for-id-generation)
-    (%parse-full-name-spec namespec strip-angular-parentheses?))
+    (%parse-full-name-spec namespec strip-angular-parentheses? synner))
   (define define-type-descriptors?
-    (%get-define-type-descriptors clause* synner))
+    (%get-define-type-descriptors clause*.stx synner))
   (define foo-rtd (identifier-append foo foo-for-id-generation "-rtd"))
   (define foo-rcd (identifier-append foo foo-for-id-generation "-rcd"))
   (define-values
@@ -120,7 +131,7 @@
 		;A  vector to  be  used as  FIELDS argument  for  the core  primitive
 		;function MAKE-RECORD-TYPE-DESCRIPTOR.
      )
-    (%parse-field-specs foo foo-for-id-generation clause* synner))
+    (%parse-field-specs foo foo-for-id-generation clause*.stx synner))
 
   ;;Code  for  parent  record-type  descriptor  and  parent  record-type  constructor
   ;;descriptor retrieval.
@@ -142,16 +153,16 @@
   ;;PARENT-RCD-DEFINITION: null or  a list holding a DEFINE form  defining the parent
   ;;RCD syntactic binding, the list is spliced in the output.
   (define-values (foo-parent.id parent-rtd.id parent-rcd.id parent-rtd-definition parent-rcd-definition)
-    (%make-parent-rtd+rcd-code clause* foo input-form.stx synner))
+    (%make-parent-rtd+rcd-code clause*.stx foo input-form.stx synner))
 
   ;;FOO-UID is a  symbol representing the record-type  UID; it is a  symbol even when
   ;;the record-type is generative.  GENERATIVE?  can be true or false.
   (define-values (foo-uid generative?)
-    (%get-uid foo clause* synner))
+    (%get-uid foo clause*.stx synner))
 
   ;;Code for default record-constructor descriptor.
   (define foo-rcd-definitions
-    (%make-rcd-definitions clause* foo foo-rtd foo-rcd parent-rcd.id synner))
+    (%make-rcd-definitions clause*.stx foo foo-rtd foo-rcd parent-rcd.id synner))
 
   ;;Code for record maker function.
   (define foo-maker-definitions
@@ -160,14 +171,14 @@
   ;;Code for predicate and optional custom  predicate.  False or a form evaluating to
   ;;the predicate definitions.
   (define foo-predicate-definitions
-    (%make-predicate-definitions clause* foo? foo-rtd synner))
+    (%make-predicate-definitions clause*.stx foo? foo-rtd synner))
 
   ;;This definition is null if there is  no constructor protocol to be used when this
   ;;type is the super-type  of another; otherwise it is a list  holding a DEFINE form
   ;;defining the supertype record-constructor  descriptor syntactic binding, the list
   ;;is spliced in the output.
   (define-values (foo-super-rcd.id super-rcd-definition)
-    (cond ((%make-super-rcd-code clause* foo foo-rtd foo-parent.id parent-rcd.id synner)
+    (cond ((%make-super-rcd-code clause*.stx foo foo-rtd foo-parent.id parent-rcd.id synner)
 	   => (lambda (foo-super-rcd-code)
 		(let ((foo-super-rcd.id (%named-gensym/suffix foo "-super-protocol")))
 		  (values foo-super-rcd.id `((define/typed {,foo-super-rcd.id <record-constructor-descriptor>}
@@ -179,7 +190,7 @@
   ;;a DEFINE  form defining the default  destructor function, the list  is spliced in
   ;;the output.
   (define-values (foo-destructor.id foo-destructor-definition)
-    (cond ((%make-destructor-code clause* foo foo-parent.id parent-rtd.id synner)
+    (cond ((%make-destructor-code clause*.stx foo foo-parent.id parent-rtd.id synner)
 	   => (lambda (foo-destructor-code)
 		(let ((foo-destructor.id (%named-gensym/suffix foo "-destructor")))
 		  (values foo-destructor.id `((define ,foo-destructor.id ,foo-destructor-code))))))
@@ -190,7 +201,7 @@
   ;;holding a DEFINE form defining the equality predicate, the list is spliced in the
   ;;output.
   (define-values (foo-equality-predicate.id foo-equality-predicate-definition)
-    (cond ((%make-equality-predicate-code clause* foo parent-rtd.id synner)
+    (cond ((%make-equality-predicate-code clause*.stx foo parent-rtd.id synner)
 	   => (lambda (foo-equality-predicate-code)
 		(let ((foo-equality-predicate.id (%named-gensym/suffix foo-for-id-generation "-equality-predicate")))
 		  (values foo-equality-predicate.id `((define/typed {,foo-equality-predicate.id <equality-predicate>}
@@ -202,7 +213,7 @@
   ;;list holding a DEFINE form defining the comparison procedure, the list is spliced
   ;;in the output.
   (define-values (foo-comparison-procedure.id foo-comparison-procedure-definition)
-    (cond ((%make-comparison-procedure-code clause* foo parent-rtd.id synner)
+    (cond ((%make-comparison-procedure-code clause*.stx foo parent-rtd.id synner)
 	   => (lambda (foo-comparison-procedure-code)
 		(let ((foo-comparison-procedure.id (%named-gensym/suffix foo-for-id-generation "-comparison-procedure")))
 		  (values foo-comparison-procedure.id `((define/typed {,foo-comparison-procedure.id <comparison-procedure>}
@@ -214,7 +225,7 @@
   ;;holding a  DEFINE form  defining the hash  function, the list  is spliced  in the
   ;;output.
   (define-values (foo-hash-function.id foo-hash-function-definition)
-    (cond ((%make-hash-function-code clause* foo parent-rtd.id synner)
+    (cond ((%make-hash-function-code clause*.stx foo parent-rtd.id synner)
 	   => (lambda (foo-hash-function-code)
 		(let ((foo-hash-function.id (%named-gensym/suffix foo-for-id-generation "-hash-function")))
 		  (values foo-hash-function.id `((define/typed {,foo-hash-function.id <hash-function>}
@@ -224,7 +235,7 @@
 
   ;;Code for methods.
   (define-values (method-name*.sym method-procname*.id method-form*.sexp methods-late-binding-alist)
-    (%parse-method-clauses clause* foo-for-id-generation synner))
+    (%parse-method-clauses clause*.stx foo-for-id-generation synner))
 
   ;;False  or a  symbolic  expression (to  be BLESSed  later)  representing a  Scheme
   ;;expression returning a closure object: the methods-retriever function.
@@ -235,8 +246,8 @@
 
   ;;Null or a list of definitions to build at run-time the record-type descriptor.
   (define foo-rtd-definitions
-    (%make-rtd-definitions foo foo-rtd foo-uid generative? clause* parent-rtd.id fields-vector-spec
-			   foo-destructor.id (%make-custom-printer-code clause* foo synner)
+    (%make-rtd-definitions foo foo-rtd foo-uid generative? clause*.stx parent-rtd.id fields-vector-spec
+			   foo-destructor.id (%make-custom-printer-code clause*.stx foo synner)
 			   foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
 			   methods-retriever-code.sexp synner))
 
@@ -333,7 +344,7 @@
 		    custom-printer type-predicate
 		    equality-predicate comparison-procedure hash-function
 		    define-type-descriptors strip-angular-parentheses
-		    method case-method method/overload))
+		    method case-method method/overload mixins))
 	      (set! cached rv))))))
 
   (define keyword-allowed-multiple-times?
@@ -342,10 +353,35 @@
 	(free-id-member? id (or cached
 				(receive-and-return (rv)
 				    (map core-prim-id
-				      '(method case-method method/overload fields))
+				      '(method case-method method/overload fields mixins))
 				  (set! cached rv)))))))
 
   #| end of module: %VALIDATE-DEFINITION-CLAUSES |# )
+
+
+(define (%introduce-mixin-clauses foo input-clause*.stx synner)
+  (let clause-recur ((input-clause*.stx	input-clause*.stx))
+    (if (pair? input-clause*.stx)
+	(syntax-match (car input-clause*.stx) (mixins)
+	  ((mixins ?mixin-name* ...)
+	   (let mixin-recur ((mixin-name*.id ?mixin-name*))
+	     (if (pair? mixin-name*.id)
+		 (let ((mixin-name.id (car mixin-name*.id)))
+		   (unless (identifier? mixin-name.id)
+		     (synner "expected identifier as mixin name in MIXINS clause" mixin-name.id))
+		   (let ((obj (retrieve-expand-time-value mixin-name.id)))
+		     (syntax-match obj ()
+		       ((?kwd ?mixin-name ?clause* ...)
+			(eq? 'define-mixin (syntax->datum ?kwd))
+			(append (syntax-replace-id ?clause* mixin-name.id foo)
+				(mixin-recur (cdr mixin-name*.id))))
+		       (_
+			(synner "expected mixin name in MIXINS clause" mixin-name.id)))))
+	       (clause-recur (cdr input-clause*.stx)))))
+	  (_
+	   (cons (car input-clause*.stx)
+		 (clause-recur (cdr input-clause*.stx)))))
+      '())))
 
 
 ;;;; basic parsing functions
@@ -365,7 +401,7 @@
 	   `(,?key . ,?rest)
 	 (next id ?clause*))))))
 
-(define (%parse-full-name-spec spec strip-angular-parentheses?)
+(define (%parse-full-name-spec spec strip-angular-parentheses? synner)
   ;;Given a syntax object representing  a full record-type name specification: return
   ;;the syntactic  identifiers: the  type name, the  constructor name,  the predicate
   ;;name, the type name with stripped angular parentheses (if requested).
@@ -383,7 +419,8 @@
 	       (identifier-append ?foo "make-" (syntax->datum foo-for-id-generation))
 	       (identifier-append ?foo foo-for-id-generation "?")
 	       foo-for-id-generation)))
-    ))
+    (_
+     (synner "invalid record-type name specification" spec))))
 
 (define (%get-uid foo clause* synner)
   (let ((clause (%get-clause 'nongenerative clause*)))

@@ -473,6 +473,13 @@
   (attributes
    ((_)				effect-free)))
 
+(declare-core-primitive syntax-replace-id
+    (safe)
+  (signatures
+   ((<syntax-object> <syntactic-identifier> <syntactic-identifier>)		=> (<top>)))
+  (attributes
+   ((_ _ _)			effect-free)))
+
 ;;;
 
 (declare-core-primitive all-identifiers?

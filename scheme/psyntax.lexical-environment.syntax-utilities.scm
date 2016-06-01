@@ -32,6 +32,7 @@
    syntax-vector?		syntax-vector->list
    syntax->vector
    syntax-unwrap		syntax=?
+   syntax-replace-id
 
    parse-logic-predicate-syntax)
 
@@ -242,6 +243,26 @@
 	  (else
 	   (equal? stx1 stx2))))
   (%syntax=? (syntax-unwrap stx1) (syntax-unwrap stx2)))
+
+(define (syntax-replace-id stx src dst)
+  ;;Replace every  occurrence of the identifier  SRC in STX with  the identifier DST.
+  ;;Return the resulting fully unwrapped syntax object.
+  ;;
+  (syntax-match stx ()
+    (()
+     '())
+    ((?car . ?cdr)
+     (cons (syntax-replace-id ?car src dst)
+	   (syntax-replace-id ?cdr src dst)))
+    (#(?item* ...)
+     (list->vector (syntax-replace-id ?item* src dst)))
+    (?atom
+     (identifier? ?atom)
+     (if (free-identifier=? ?atom src)
+	 dst
+       ?atom))
+    (?atom
+     (syntax->datum ?atom))))
 
 
 (case-define parse-logic-predicate-syntax

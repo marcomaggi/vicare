@@ -84,6 +84,7 @@
     syntax-vector?			syntax-vector->list
     syntax->vector
     syntax-unwrap			syntax=?
+    syntax-replace-id
 
     parse-logic-predicate-syntax
 

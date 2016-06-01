@@ -8598,6 +8598,13 @@ care of returning a proper list when the input is a syntax object
 holding a proper list.
 @end defun
 
+
+@defun syntax-replace-id @var{stx} @var{src} @var{dst}
+Replace every occurrence of the identifier @var{src} in @var{stx} with
+the identifier @var{dst}.  Return the resulting fully unwrapped syntax
+object.
+@end defun
+
 @c page
 @node iklib expander utils inspect
 @subsubsection Inspecting syntax objects
