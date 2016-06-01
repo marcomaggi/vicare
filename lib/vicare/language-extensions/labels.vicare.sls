@@ -373,10 +373,10 @@
 		(identifier? #'?method-name)
 		(let ((method-proc.id (identifier-record-field-accessor (.type-name parsed) #'?method-name)))
 		  (values #'?method-name method-proc.id method-proc.id)))
-	       ((brace ?method-name ?rv-type0 ?rv-type ...)
+	       ((brace ?method-name . ?rv-types)
 		(identifier? #'?method-name)
 		(let ((method-proc.id (identifier-record-field-accessor (.type-name parsed) #'?method-name)))
-		  (values #'?method-name method-proc.id #`(brace #,method-proc.id ?rv-type0 ?rv-type ...))))
+		  (values #'?method-name method-proc.id #`(brace #,method-proc.id . ?rv-types))))
 	       (_
 		(synner "invalid method name specification" #'?who)))
 	   (set! (.method* parsed)
