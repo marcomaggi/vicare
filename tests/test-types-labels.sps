@@ -24,7 +24,7 @@
 
 
 #!vicare
-(program (demo-define-label)
+(program (test-types-labels)
   (options typed-language)
   (import (vicare)
     (vicare language-extensions labels)
@@ -32,7 +32,7 @@
     (prefix (vicare expander) expander::))
 
 (check-set-mode! 'report-failed)
-(check-display "*** demo Vicare: DEFINE-LABEL parser\n")
+(check-display "*** test Vicare typed language: DEFINE-LABEL\n")
 
 
 ;;;; helpers
