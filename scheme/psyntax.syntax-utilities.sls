@@ -646,9 +646,15 @@
 			     (syntax-clause-spec-max-number-of-arguments spec))
 		   (synner (let ((min-count (syntax-clause-spec-min-number-of-arguments spec))
 				 (max-count (syntax-clause-spec-max-number-of-arguments spec)))
-			     (if (and (zero? min-count)
-				      (zero? max-count))
-				 "syntax clause must have zero arguments"
+			     (if (= min-count max-count)
+				 (cond ((zero? min-count)
+					"syntax clause must have no arguments")
+				       ((= 1 min-count)
+					"syntax clause must have a single argument")
+				       (else
+					(string-append "syntax clause must have "
+						       (number->string min-count)
+						       " arguments")))
 			       (string-append "syntax clause must have at least "
 					      (number->string min-count)
 					      " arguments and at most "
