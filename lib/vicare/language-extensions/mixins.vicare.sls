@@ -80,8 +80,6 @@
 	(new <syntax-clause-spec> #'equality-predicate		0 1      1 1      '() '())
 	(new <syntax-clause-spec> #'comparison-procedure	0 1      1 1      '() '())
 	(new <syntax-clause-spec> #'hash-function		0 1      1 1      '() '())
-	;;
-	(new <syntax-clause-spec> #'mixins			0 +inf.0 1 +inf.0 '() '())
 	#| end of LIST |# )))
 
 ;;; --------------------------------------------------------------------
@@ -96,15 +94,65 @@
     (define (%parse-clauses type-name.id clauses.stx synner)
       (unless (identifier? type-name.id)
 	(synner "expected identifier as mixin type name" type-name.id))
-      (let ((clause*.stx (reverse
-			  (syntax-clauses-fold-specs (lambda (rev-parsed-clause*.stx {spec <syntax-clause-spec>} args)
-						       (combine type-name.id rev-parsed-clause*.stx spec args synner))
-						     '() ;REV-PARSED-CLAUSE*.STX, list of parsed clauses
-						     CLAUSE-SPEC*
-						     (syntax-clauses-unwrap clauses.stx synner)
-						     synner))))
+      (let* ((clause*.stx (syntax-clauses-unwrap clauses.stx synner))
+	     (clause*.stx (%merge-mixins-clauses type-name.id clause*.stx synner))
+	     (clause*.stx (reverse
+			   (syntax-clauses-fold-specs (lambda (rev-parsed-clause*.stx {spec <syntax-clause-spec>} args)
+							(combine type-name.id rev-parsed-clause*.stx spec args synner))
+						      '() ;REV-PARSED-CLAUSE*.STX, list of parsed clauses
+						      CLAUSE-SPEC* clause*.stx synner))))
 	#`(define-syntax #,type-name.id
 	    (make-expand-time-value (cons* (syntax define-mixin) (syntax #,type-name.id) (syntax #,clause*.stx))))))
+
+;;; --------------------------------------------------------------------
+
+    (module (%merge-mixins-clauses)
+
+      (define (%merge-mixins-clauses type-name.id input-clause*.stx synner)
+	;;The MIXINS clause can be present multiple times.  Each clause must have one
+	;;of the formats:
+	;;
+	;;   (mixins ?mixin-name ...)
+	;;
+	;;NOTE  We  cannot  process  the MIXINS  clauses  with  the  SYNTAX-CLAUSES-*
+	;;facilities because  such facilities change  the order in which  the clauses
+	;;are  processed; instead,  the MIXINS  clauses  need to  be spliced  without
+	;;changing the order.
+	;;
+	(fold-right
+	    (lambda (input-clause.stx parsed-clause*.stx)
+	      (syntax-case input-clause.stx (mixins)
+		((mixins . ?mixins)
+		 (%splice-mixins type-name.id input-clause.stx
+				 #'?mixins parsed-clause*.stx synner))
+
+		(_
+		 (cons input-clause.stx parsed-clause*.stx))))
+	  '() input-clause*.stx))
+
+      (define (%splice-mixins type-name.id input-clause.stx
+			      mixins.stx parsed-clause*.stx synner)
+	(syntax-case mixins.stx ()
+	  ((?mixin-name . ?mixins)
+	   (if (identifier? #'?mixin-name)
+	       (append (%splice-single-mixin type-name.id #'?mixin-name synner)
+		       (%splice-mixins type-name.id input-clause.stx
+				       #'?mixins parsed-clause*.stx synner))
+	     (synner "expected identifier as mixin name in MIXINS clause" input-clause.stx)))
+	  (()
+	   parsed-clause*.stx)
+	  (_
+	   (synner "invalid syntax in MIXINS clause" input-clause.stx))))
+
+      (define (%splice-single-mixin type-name.id mixin-name.id synner)
+	(let ((obj (retrieve-expand-time-value mixin-name.id)))
+	  (syntax-case obj (define-mixin)
+	    ((define-mixin ?mixin-name . ?clauses)
+	     (syntax-replace-id #'?clauses mixin-name.id type-name.id))
+	    (_
+	     (synner "identifier in MIXINS clause is not a mixin name" mixin-name.id)))))
+
+      #| end of module: %MERGE-MIXINS-CLAUSES |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -128,8 +176,6 @@
 	 ((equality-predicate)		%process-clause/equality-predicate)
 	 ((comparison-procedure)	%process-clause/comparison-procedure)
 	 ((hash-function)		%process-clause/hash-function)
-	 ;;
-	 ((mixins)			%process-clause/mixins)
 	 ;;
 	 (else
 	  (assertion-violation __module_who__ "invalid clause spec" spec)))
@@ -474,42 +520,6 @@
       ;;
       (let ((obj (vector-ref (vector-ref args 0) 0)))
 	(cons (list (.keyword spec) obj) rev-parsed-clause*.stx)))
-
-;;; --------------------------------------------------------------------
-
-    (define (%process-clause/mixins type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-      ;;This clause can be present multiple times.   Each clause must have one of the
-      ;;formats:
-      ;;
-      ;;   (mixins ?mixin-name ...)
-      ;;
-      ;;and we expect ARGS to have one of the formats:
-      ;;
-      ;;   #(#(?mixin-name ...) ...)
-      ;;
-      (append
-       (vector-fold-left
-	   (lambda (knil arg)
-	     (reverse
-	      (vector-fold-left
-		  (lambda (knil nested-mixin-name.id)
-		    (if (identifier? nested-mixin-name.id)
-			(let ((obj (retrieve-expand-time-value nested-mixin-name.id)))
-			  (syntax-case obj (define-mixin)
-			    ((define-mixin ?mixin-name . ?clauses)
-			     (let* ((clause*.stx (syntax-replace-id #'?clauses nested-mixin-name.id type-name.id))
-				    (clause*.stx (syntax-clauses-fold-specs
-						  (lambda (rev-parsed-clause*.stx {spec <syntax-clause-spec>} args)
-						    (combine type-name.id rev-parsed-clause*.stx spec args synner))
-						  '() CLAUSE-SPEC* clause*.stx synner))
-				    (clause*.stx (reverse clause*.stx)))
-			       (append knil clause*.stx)))
-			    (_
-			     (synner "expected mixin identifier in MIXINS clause" nested-mixin-name.id))))
-		      (synner "expected identifier as mixin name in MIXINS clause" nested-mixin-name.id)))
-		'() arg)))
-	 '() args)
-       rev-parsed-clause*.stx))
 
 ;;; --------------------------------------------------------------------
 

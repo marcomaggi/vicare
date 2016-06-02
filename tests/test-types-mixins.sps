@@ -648,6 +648,166 @@
 	  (method (doit {O <fluff>})
 	    (display O))))
 
+  ;;Two mixins with fields.
+  ;;
+  (check
+      (internal-body
+	(define-mixin <fields-1>
+	  (fields a)
+	  (fields b))
+
+	(define-mixin <fields-2>
+	  (mixins <fields-1>)
+	  (fields c)
+	  (fields d))
+
+	(get-spec <fields-2>))
+    => '(define-mixin <fields-2>
+	  (fields a b c d)))
+
+  ;;Multiple mixins with fields.
+  ;;
+  (check
+      (internal-body
+	(define-mixin <fields-1>
+	  (fields a b))
+
+	(define-mixin <fields-2>
+	  (mixins <fields-1>)
+	  (fields c d))
+
+	(define-mixin <fields-3>
+	  (mixins <fields-2>)
+	  (fields e f))
+
+	(get-spec <fields-3>))
+    => '(define-mixin <fields-3>
+	  (fields a b c d e f)))
+
+  ;;Two mixins imported with one MIXINS clause.
+  ;;
+  (check
+      (internal-body
+	(define-mixin <stuff-1>
+	  (fields a b)
+	  (method (one) 1))
+
+	(define-mixin <stuff-2>
+	  (fields c d)
+	  (method (two) 2))
+
+	(define-mixin <fluff>
+	  (mixins <stuff-1> <stuff-2>))
+
+	(get-spec <fluff>))
+    => '(define-mixin <fluff>
+	  (fields a b c d)
+	  (method (one) 1)
+	  (method (two) 2)))
+
+  ;;Two mixins imported with two MIXINS clauses.
+  ;;
+  (check
+      (internal-body
+	(define-mixin <stuff-1>
+	  (fields a b)
+	  (method (one) 1))
+
+	(define-mixin <stuff-2>
+	  (fields c d)
+	  (method (two) 2))
+
+	(define-mixin <fluff>
+	  (mixins <stuff-1>)
+	  (mixins <stuff-2>))
+
+	(get-spec <fluff>))
+    => '(define-mixin <fluff>
+	  (fields a b c d)
+	  (method (one) 1)
+	  (method (two) 2)))
+
+  ;;One mixin imported at the beginning of the clauses.
+  ;;
+  (check
+      (internal-body
+	(define-mixin <stuff-1>
+	  (fields a b)
+	  (method (one) 1))
+
+	(define-mixin <stuff-2>
+	  (mixins <stuff-1>)
+	  (fields c d)
+	  (method (two) 2))
+
+	(get-spec <stuff-2>))
+    => '(define-mixin <stuff-2>
+	  (fields a b c d)
+	  (method (one) 1)
+	  (method (two) 2)))
+
+  ;;One mixin imported at the end of the clauses.
+  ;;
+  (check
+      (internal-body
+	(define-mixin <stuff-1>
+	  (fields c d)
+	  (method (two) 2))
+
+	(define-mixin <stuff-2>
+	  (fields a b)
+	  (method (one) 1)
+	  (mixins <stuff-1>))
+
+	(get-spec <stuff-2>))
+    => '(define-mixin <stuff-2>
+	  (fields a b c d)
+	  (method (one) 1)
+	  (method (two) 2)))
+
+  ;;Chain of imported mixins.
+  ;;
+  (check
+      (internal-body
+	(define-mixin <stuff-1>
+	  (fields a b)
+	  (method (one) 1))
+
+	(define-mixin <stuff-2>
+	  (mixins <stuff-1>)
+	  (fields c d)
+	  (method (two) 2))
+
+	(define-mixin <fluff>
+	  (mixins <stuff-2>))
+
+	(get-spec <fluff>))
+    => '(define-mixin <fluff>
+	  (fields a b c d)
+	  (method (one) 1)
+	  (method (two) 2)))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-syntax-violation-subform
+      (define-mixin <stuff>
+	(mixins 123))
+    => (mixins 123))
+
+  ;;Importing twice the same mixin is not an error right now, but it should.
+  ;;
+  (check
+      (internal-body
+	(define-mixin <a>
+	  (fields a))
+
+	(define-mixin <b>
+	  (mixins <a> <a>))
+
+	(get-spec <b>))
+    => '(define-mixin <b>
+	  (fields a a)))
+
   #| end of PARAMETRISE |# )
 
 
@@ -685,6 +845,32 @@
 
 	(define-record-type <alpha>
 	  (mixins <fields-1> <fields-2> <fields-3>))
+
+	(define O
+	  (new <alpha> 1 2 3 4 5 6))
+
+	(values (.a O) (.b O)
+		(.c O) (.d O)
+		(.e O) (.f O)))
+    => 1 2 3 4 5 6)
+
+  ;;Multiple mixins with fields.
+  ;;
+  (check
+      (internal-body
+	(define-mixin <fields-1>
+	  (fields a b))
+
+	(define-mixin <fields-2>
+	  (mixins <fields-1>)
+	  (fields c d))
+
+	(define-mixin <fields-3>
+	  (mixins <fields-2>)
+	  (fields e f))
+
+	(define-record-type <alpha>
+	  (mixins <fields-3>))
 
 	(define O
 	  (new <alpha> 1 2 3 4 5 6))
