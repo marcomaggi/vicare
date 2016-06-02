@@ -113,6 +113,7 @@
 (declare-core-scheme-type-descriptor <ipair>-type-descriptor)
 (declare-core-scheme-type-descriptor <keyword>-type-descriptor)
 (declare-core-scheme-type-descriptor <list>-type-descriptor)
+(declare-core-scheme-type-descriptor <nelist>-type-descriptor)
 ;;
 (declare-core-scheme-type-descriptor <negative-bignum>-type-descriptor)
 (declare-core-scheme-type-descriptor <negative-fixnum>-type-descriptor)
@@ -156,6 +157,7 @@
 (declare-core-scheme-type-descriptor <true>-type-descriptor)
 (declare-core-scheme-type-descriptor <utsname>-type-descriptor)
 (declare-core-scheme-type-descriptor <vector>-type-descriptor)
+(declare-core-scheme-type-descriptor <nevector>-type-descriptor)
 (declare-core-scheme-type-descriptor <void>-type-descriptor)
 (declare-core-scheme-type-descriptor <would-block>-type-descriptor)
 (declare-core-scheme-type-descriptor <zero-fixnum>-type-descriptor)
