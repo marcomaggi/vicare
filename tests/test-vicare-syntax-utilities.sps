@@ -702,7 +702,7 @@
 	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
 								   (b)
 								   (d 789)))))
-    => ("syntax clause must have at least 1 arguments and at most 1 arguments"
+    => ("syntax clause must have a single argument"
 	#'(b) #f))
 
   ;;Too many arguments.
@@ -712,7 +712,7 @@
 	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
 								   (b 8 9)
 								   (d 789)))))
-    => ("syntax clause must have at least 1 arguments and at most 1 arguments"
+    => ("syntax clause must have a single argument"
 	#'(b 8 9) #f))
 
   ;;Missing mutually inclusive.
