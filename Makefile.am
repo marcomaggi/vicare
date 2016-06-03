@@ -425,6 +425,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.numerics.bitwise.misc.sls				\
 	scheme/ikarus.numerics.complex-numbers.sls			\
 	scheme/ikarus.object-utilities.sls				\
+	scheme/ikarus.object-type-descr.sls				\
 	scheme/ikarus.options.sls					\
 	scheme/ikarus.printing-messages.sls				\
 	scheme/ikarus.pairs.sls						\

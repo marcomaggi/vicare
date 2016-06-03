@@ -109,6 +109,38 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-built-in-record-type <stx>
+    <record>
+  #f stx?
+  (methods
+   (expr			stx-expr)
+   (mark*			stx-mark*)
+   (rib*			stx-rib*)
+   (annotated-expr*		stx-annotated-expr*)))
+
+(define-built-in-record-type <syntactic-identifier>
+    <stx>
+  #f syntactic-identifier?
+  (methods
+   (string			identifier->string)
+   (label			syntactic-identifier->label)))
+
+(define-built-in-record-type <syntax-clause-spec>
+    <record>
+  make-syntax-clause-spec syntax-clause-spec?
+  (methods
+   (keyword				syntax-clause-spec-keyword)
+   (min-number-of-occurrences	syntax-clause-spec-min-number-of-occurrences)
+   (max-number-of-occurrences	syntax-clause-spec-max-number-of-occurrences)
+   (min-number-of-arguments		syntax-clause-spec-min-number-of-arguments)
+   (max-number-of-arguments		syntax-clause-spec-max-number-of-arguments)
+   (mutually-inclusive		syntax-clause-spec-mutually-inclusive)
+   (mutually-exclusive		syntax-clause-spec-mutually-exclusive)
+   (custom-data			syntax-clause-spec-custom-data)))
+
+
+;;;; object type specifications
+
 (define-built-in-record-type <object-type-spec>
     <record>
   #f object-type-spec?
@@ -232,14 +264,14 @@
    (item-ots			vector-of-type-spec.item-ots)))
 
 (define-built-in-record-type <hashtable-type-spec>
-    <hashtable>
+    <object-type-spec>
   make-hashtable-type-spec hashtable-type-spec?
   (methods
    (key-ots			hashtable-type-spec.key-ots)
    (value-ots			hashtable-type-spec.value-ots)))
 
 (define-built-in-record-type <alist-type-spec>
-    <list>
+    <object-type-spec>
   make-alist-type-spec alist-type-spec?
   (methods
    (key-ots			alist-type-spec.key-ots)
@@ -282,36 +314,69 @@
    (common-ancestor			type-signature.common-ancestor)
    (union				type-signature.union)))
 
+
+;;;; object type descriptors
+
+(define-built-in-record-type <pair-type-descr>
+    <record>
+  make-pair-type-descr pair-type-descr?
+  (methods
+   (car-des		pair-type-descr.car-des)
+   (cdr-des		pair-type-descr.cdr-des)))
+
+(define-built-in-record-type <pair-of-type-descr>
+    <record>
+  make-pair-of-type-descr pair-of-type-descr?
+  (methods
+   (item-des		pair-of-type-descr.item-des)))
+
+(define-built-in-record-type <list-type-descr>
+    <record>
+  make-list-type-descr list-type-descr?
+  (methods
+   (item-des*		list-type-descr.item-des*)))
+
+(define-built-in-record-type <list-of-type-descr>
+    <record>
+  make-list-of-type-descr list-of-type-descr?
+  (methods
+   (item-des		list-of-type-descr.item-des)))
+
+(define-built-in-record-type <vector-type-descr>
+    <record>
+  make-vector-type-descr vector-type-descr?
+  (methods
+   (item-des*		vector-type-descr.item-des*)))
+
+(define-built-in-record-type <vector-of-type-descr>
+    <record>
+  make-vector-of-type-descr vector-of-type-descr?
+  (methods
+   (item-des		vector-of-type-descr.item-des)))
+
 ;;; --------------------------------------------------------------------
 
-(define-built-in-record-type <stx>
+(define-built-in-record-type <union-type-descr>
     <record>
-  #f stx?
+  make-union-type-descr union-type-descr?
   (methods
-   (expr			stx-expr)
-   (mark*			stx-mark*)
-   (rib*			stx-rib*)
-   (annotated-expr*		stx-annotated-expr*)))
+   (item-des*		union-type-descr.item-des*)))
 
-(define-built-in-record-type <syntactic-identifier>
-    <stx>
-  #f syntactic-identifier?
-  (methods
-   (string			identifier->string)
-   (label			syntactic-identifier->label)))
-
-(define-built-in-record-type <syntax-clause-spec>
+(define-built-in-record-type <intersection-type-descr>
     <record>
-  make-syntax-clause-spec syntax-clause-spec?
+  make-intersection-type-descr intersection-type-descr?
   (methods
-   (keyword				syntax-clause-spec-keyword)
-   (min-number-of-occurrences	syntax-clause-spec-min-number-of-occurrences)
-   (max-number-of-occurrences	syntax-clause-spec-max-number-of-occurrences)
-   (min-number-of-arguments		syntax-clause-spec-min-number-of-arguments)
-   (max-number-of-arguments		syntax-clause-spec-max-number-of-arguments)
-   (mutually-inclusive		syntax-clause-spec-mutually-inclusive)
-   (mutually-exclusive		syntax-clause-spec-mutually-exclusive)
-   (custom-data			syntax-clause-spec-custom-data)))
+   (item-des*		intersection-type-descr.item-des*)))
+
+(define-built-in-record-type <complement-type-descr>
+    <record>
+  make-complement-type-descr complement-type-descr?
+  (methods
+   (item-des		complement-type-descr.item-des)))
+
+
+;;;; done
+
 
 ;;; end of file
 ;; Local Variables:

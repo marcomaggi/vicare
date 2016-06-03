@@ -1,0 +1,1025 @@
+;;;
+;;;Part of: Vicare Scheme
+;;;Contents: object type descriptors
+;;;Date: Thu Jun  2, 2016
+;;;
+;;;Abstract
+;;;
+;;;
+;;;
+;;;Copyright (C) 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
+;;;
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+;;;
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+
+
+#!vicare
+(library (ikarus.object-type-descr)
+  (export
+    <pair-type-descr>-rtd
+    <pair-type-descr>-rcd
+    make-pair-type-descr
+    pair-type-descr?
+    pair-type-descr.car-des
+    pair-type-descr.cdr-des
+
+    <pair-of-type-descr>-rtd
+    <pair-of-type-descr>-rcd
+    make-pair-of-type-descr
+    pair-of-type-descr?
+    pair-of-type-descr.item-des
+
+    <list-type-descr>-rtd
+    <list-type-descr>-rcd
+    make-list-type-descr
+    list-type-descr?
+    list-type-descr.item-des*
+
+    <list-of-type-descr>-rtd
+    <list-of-type-descr>-rcd
+    make-list-of-type-descr
+    list-of-type-descr?
+    list-of-type-descr.item-des
+
+    <vector-type-descr>-rtd
+    <vector-type-descr>-rcd
+    make-vector-type-descr
+    vector-type-descr?
+    vector-type-descr.item-des*
+
+    <vector-of-type-descr>-rtd
+    <vector-of-type-descr>-rcd
+    make-vector-of-type-descr
+    vector-of-type-descr?
+    vector-of-type-descr.item-des
+
+;;; --------------------------------------------------------------------
+
+    <union-type-descr>-rtd
+    <union-type-descr>-rcd
+    make-union-type-descr
+    union-type-descr?
+    union-type-descr.item-des*
+
+    <intersection-type-descr>-rtd
+    <intersection-type-descr>-rcd
+    make-intersection-type-descr
+    intersection-type-descr?
+    intersection-type-descr.item-des*
+
+    <complement-type-descr>-rtd
+    <complement-type-descr>-rcd
+    make-complement-type-descr
+    complement-type-descr?
+    complement-type-descr.item-des
+
+;;; --------------------------------------------------------------------
+
+    object-type-descr=?
+    object-type-descr.ancestry-super-and-sub?
+    object-type-descr.matching-super-and-sub?
+
+    #| end of EXPORTS |# )
+  (import (vicare)
+    (only (ikarus.object-utilities)
+	  scheme-type-descriptor?
+	  scheme-type-descriptor-uids-list
+	  <void>-type-descriptor
+	  <top>-type-descriptor
+	  <record>-type-descriptor
+	  <struct>-type-descriptor
+	  <pair>-type-descriptor
+	  <list>-type-descriptor
+	  <nelist>-type-descriptor
+	  <null>-type-descriptor
+	  <vector>-type-descriptor
+	  <nevector>-type-descriptor
+	  <empty-vector>-type-descriptor)
+    (only (ikarus records procedural)
+	  $rtd-subtype?))
+
+
+;;;; helpers
+
+(define (%list-of-single-item? obj)
+  (and (pair? obj)
+       (null? (cdr obj))))
+
+(define (same-type-descriptor? des1 des2)
+  (or (eq? des1 des2)
+      (and (scheme-type-descriptor? des1)
+	   (scheme-type-descriptor? des2)
+	   (eq? (car (scheme-type-descriptor-uids-list des1))
+		(car (scheme-type-descriptor-uids-list des2))))))
+
+
+;;;; compound type descriptors: pairs
+
+(define-record-type (<pair-type-descr> make-pair-type-descr pair-type-descr?)
+  (fields
+    (immutable car-des		pair-type-descr.car-des)
+    (immutable cdr-des		pair-type-descr.cdr-des)
+    #| end of FIELDS |# ))
+
+(define <pair-type-descr>-rtd
+  (record-type-descriptor <pair-type-descr>))
+
+(define <pair-type-descr>-rcd
+  (record-constructor-descriptor <pair-type-descr>))
+
+
+;;;; compound type descriptors: pairs of
+
+(define-record-type (<pair-of-type-descr> make-pair-of-type-descr pair-of-type-descr?)
+  (fields
+    (immutable item-des		pair-of-type-descr.item-des)
+    #| end of FIELDS |# ))
+
+(define <pair-of-type-descr>-rtd
+  (record-type-descriptor <pair-of-type-descr>))
+
+(define <pair-of-type-descr>-rcd
+  (record-constructor-descriptor <pair-of-type-descr>))
+
+
+;;;; compound type descriptors: lists
+
+(define-record-type (<list-type-descr> %make-list-type-descr list-type-descr?)
+  (fields
+    (immutable item-des*		list-type-descr.item-des*)
+    (mutable memoised-length)
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-record)
+      (lambda (item*.des)
+	(make-record item*.des #f)))))
+
+(define* (make-list-type-descr {item*.des list?})
+  (if (null? item*.des)
+      <null>-type-descriptor
+    (%make-list-type-descr item*.des)))
+
+(define <list-type-descr>-rtd
+  (record-type-descriptor <list-type-descr>))
+
+(define <list-type-descr>-rcd
+  (record-constructor-descriptor <list-type-descr>))
+
+;;; --------------------------------------------------------------------
+
+(define (list-type-descr.length otd)
+  (or (<list-type-descr>-memoised-length otd)
+      (receive-and-return (len)
+	  (length (list-type-descr.item-des* otd))
+	(<list-type-descr>-memoised-length-set! otd len))))
+
+
+;;;; compound type descriptors: lists of
+
+(define-record-type (<list-of-type-descr> make-list-of-type-descr list-of-type-descr?)
+  (fields
+    (immutable item-des		list-of-type-descr.item-des)
+    #| end of FIELDS |# ))
+
+(define <list-of-type-descr>-rtd
+  (record-type-descriptor <list-of-type-descr>))
+
+(define <list-of-type-descr>-rcd
+  (record-constructor-descriptor <list-of-type-descr>))
+
+
+;;;; compound type descriptors: vectors
+
+(define-record-type (<vector-type-descr> %make-vector-type-descr vector-type-descr?)
+  (fields
+    (immutable item-des*		vector-type-descr.item-des*)
+    (mutable memoised-length)
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-record)
+      (lambda (item*.des)
+	(make-record item*.des #f)))))
+
+(define (make-vector-type-descr item*.des)
+  (if (null? item*.des)
+      <empty-vector>-type-descriptor
+    (%make-vector-type-descr item*.des)))
+
+(define <vector-type-descr>-rtd
+  (record-type-descriptor <vector-type-descr>))
+
+(define <vector-type-descr>-rcd
+  (record-constructor-descriptor <vector-type-descr>))
+
+;;; --------------------------------------------------------------------
+
+(define (vector-type-descr.length otd)
+  (or (<vector-type-descr>-memoised-length otd)
+      (receive-and-return (len)
+	  (length (vector-type-descr.item-des* otd))
+	(<vector-type-descr>-memoised-length-set! otd len))))
+
+
+;;;; compound type descriptors: vectors of
+
+(define-record-type (<vector-of-type-descr> make-vector-of-type-descr vector-of-type-descr?)
+  (fields
+    (immutable item-des		vector-of-type-descr.item-des)
+    #| end of FIELDS |# ))
+
+(define <vector-of-type-descr>-rtd
+  (record-type-descriptor <vector-of-type-descr>))
+
+(define <vector-of-type-descr>-rcd
+  (record-constructor-descriptor <vector-of-type-descr>))
+
+
+;;;; compound type descriptors: union
+
+(define-record-type (<union-type-descr> %make-union-type-descr union-type-descr?)
+  (fields
+    (immutable item-des*	union-type-descr.item-des*)
+    #| end of FIELDS |# ))
+
+(define (make-union-type-descr item*.des)
+  (if (%list-of-single-item? item*.des)
+      (car item*.des)
+    (%make-union-type-descr item*.des)))
+
+(define <union-type-descr>-rtd
+  (record-type-descriptor <union-type-descr>))
+
+(define <union-type-descr>-rcd
+  (record-constructor-descriptor <union-type-descr>))
+
+
+;;;; compound type descriptors: intersection
+
+(define-record-type (<intersection-type-descr> %make-intersection-type-descr intersection-type-descr?)
+  (fields
+    (immutable item-des*	intersection-type-descr.item-des*)
+    #| end of FIELDS |# ))
+
+(define (make-intersection-type-descr item*.des)
+  (if (%list-of-single-item? item*.des)
+      (car item*.des)
+    (%make-intersection-type-descr item*.des)))
+
+(define <intersection-type-descr>-rtd
+  (record-type-descriptor <intersection-type-descr>))
+
+(define <intersection-type-descr>-rcd
+  (record-constructor-descriptor <intersection-type-descr>))
+
+
+;;;; compound type descriptors: complement
+
+(define-record-type (<complement-type-descr> make-complement-type-descr complement-type-descr?)
+  (fields
+    (immutable item-des		complement-type-descr.item-des)
+    #| end of FIELDS |# ))
+
+(define <complement-type-descr>-rtd
+  (record-type-descriptor <complement-type-descr>))
+
+(define <complement-type-descr>-rcd
+  (record-constructor-descriptor <complement-type-descr>))
+
+
+;;;; utilities
+
+(define (object-type-descr.pair-type-descr? object.des)
+  (or (same-type-descriptor? object.des <pair>-type-descriptor)
+      (pair-type-descr? object.des)
+      (pair-of-type-descr? object.des)
+      (list-type-descr? object.des)))
+
+;;; --------------------------------------------------------------------
+
+(define (object-type-descr.list-type-descr? object.des)
+  (or (same-type-descriptor? object.des   <list>-type-descriptor)
+      (same-type-descriptor? object.des   <null>-type-descriptor)
+      (same-type-descriptor? object.des <nelist>-type-descriptor)
+      (list-type-descr? object.des)
+      (list-of-type-descr? object.des)
+      (and (pair-type-descr? object.des)
+	   (object-type-descr.list-type-descr? (pair-type-descr.cdr-des object.des)))
+      (and (pair-of-type-descr? object.des)
+	   (object-type-descr.list-type-descr? (pair-of-type-descr.item-des object.des)))))
+
+(define (object-type-descr.nelist-type-descr? object.des)
+  (or (same-type-descriptor? object.des <nelist>-type-descriptor)
+      (list-type-descr? object.des)
+      (and (pair-type-descr? object.des)
+	   (object-type-descr.list-type-descr? (pair-type-descr.cdr-des object.des)))
+      (and (pair-of-type-descr? object.des)
+	   (object-type-descr.list-type-descr? (pair-of-type-descr.item-des object.des)))))
+
+;;; --------------------------------------------------------------------
+
+(define (object-type-descr.vector-type-descr? object.des)
+  (or (same-type-descriptor? object.des   <vector>-type-descriptor)
+      (same-type-descriptor? object.des <nevector>-type-descriptor)
+      (vector-type-descr? object.des)
+      (vector-of-type-descr? object.des)))
+
+(define (object-type-descr.nevector-type-descr? object.des)
+  (or (same-type-descriptor? object.des <nevector>-type-descriptor)
+      (vector-type-descr? object.des)))
+
+
+;;;; type descriptors: equality between super-types and sub-types
+
+(define (object-type-descr=? super.des sub.des)
+  (cond
+   ((scheme-type-descriptor? super.des)
+    (same-type-descriptor? super.des sub.des))
+
+   ((record-type-descriptor? super.des)
+    (and (record-type-descriptor? sub.des)
+	 (eq? (record-type-uid super.des)
+	      (record-type-uid   sub.des))))
+
+   ((struct-type-descriptor? super.des)
+    (and (struct-type-descriptor? sub.des)
+	 (eq? (struct-type-symbol super.des)
+	      (struct-type-symbol   sub.des))))
+
+;;; --------------------------------------------------------------------
+
+   ((pair-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (pair-type-descr? sub.des)
+	     (object-type-descr=? (pair-type-descr.car-des super.des)
+				  (pair-type-descr.car-des   sub.des))
+	     (object-type-descr=? (pair-type-descr.cdr-des super.des)
+				  (pair-type-descr.cdr-des   sub.des)))))
+
+   ((pair-type-descr? sub.des)
+    ;;The case of SUPER.DES being "<top>" has been handled above.
+    (same-type-descriptor? <pair>-type-descriptor super.des))
+
+;;; --------------------------------------------------------------------
+
+   ((pair-of-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (pair-of-type-descr? sub.des)
+	     (object-type-descr=? (pair-of-type-descr.item-des super.des)
+				  (pair-of-type-descr.item-des   sub.des)))))
+
+   ((pair-of-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
+   ((list-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (list-type-descr? sub.des)
+	     (= (list-type-descr.length super.des)
+		(list-type-descr.length   sub.des))
+	     (for-all object-type-descr=?
+	       (list-type-descr.item-des* super.des)
+	       (list-type-descr.item-des*   sub.des)))))
+
+   ((list-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
+   ((list-of-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (list-of-type-descr? sub.des)
+	     (object-type-descr=? (list-of-type-descr.item-des super.des)
+				  (list-of-type-descr.item-des   sub.des)))))
+
+   ((list-of-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
+   ((vector-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (vector-type-descr? sub.des)
+	     (= (vector-type-descr.length super.des)
+		(vector-type-descr.length   sub.des))
+	     (for-all object-type-descr=?
+	       (vector-type-descr.item-des* super.des)
+	       (vector-type-descr.item-des*   sub.des)))))
+
+   ((vector-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
+   ((vector-of-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (vector-of-type-descr? sub.des)
+	     (object-type-descr=? (vector-of-type-descr.item-des super.des)
+				  (vector-of-type-descr.item-des   sub.des)))))
+
+   ((vector-of-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
+   ((union-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (union-type-descr? sub.des)
+	     (for-all (lambda (super-item.des)
+			(exists (lambda (sub-item.des)
+				  (object-type-descr=? super-item.des sub-item.des))
+			  (union-type-descr.item-des* sub.des)))
+	       (union-type-descr.item-des* super.des)))))
+
+   ((intersection-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (intersection-type-descr? sub.des)
+	     (for-all (lambda (super-item.des)
+			(exists (lambda (sub-item.des)
+				  (object-type-descr=? super-item.des sub-item.des))
+			  (intersection-type-descr.item-des* sub.des)))
+	       (intersection-type-descr.item-des* super.des)))))
+
+   ((complement-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (complement-type-descr? sub.des)
+	     (object-type-descr=? (complement-type-descr.item-des super.des)
+				  (complement-type-descr.item-des   sub.des)))))
+
+   ;;The cases in which SUB.DES is a compound type union, intersection or complement:
+   ;;the result is true only is the parent is "<top>".
+
+;;; --------------------------------------------------------------------
+
+   (else #f)))
+
+
+;;;; type descriptors: hierarchy super-types and sub-types
+
+(define (object-type-descr.ancestry-super-and-sub? super.des sub.des)
+  (define-syntax-rule (super-and-sub? A B)
+    (object-type-descr.ancestry-super-and-sub? A B))
+  (cond
+   ((scheme-type-descriptor? super.des)
+    ;;"<top>" is the super-type of all the types.
+    (cond ((same-type-descriptor? super.des <top>-type-descriptor)
+	   (not (same-type-descriptor? sub.des <void>-type-descriptor)))
+
+	  ;;SUPER.DES and SUB.DES are both values of built-in Scheme types.
+	  ((scheme-type-descriptor? sub.des)
+	   (memq (car (scheme-type-descriptor-uids-list super.des))
+		 (scheme-type-descriptor-uids-list sub.des)))
+
+	  ((record-type-descriptor? sub.des)
+	   (or (same-type-descriptor? super.des <record>-type-descriptor)
+	       (same-type-descriptor? super.des <struct>-type-descriptor)
+	       (same-type-descriptor? super.des    <top>-type-descriptor)))
+
+	  ((struct-type-descriptor? sub.des)
+	   (or (same-type-descriptor? super.des <struct>-type-descriptor)
+	       (same-type-descriptor? super.des    <top>-type-descriptor)))
+
+	  ((same-type-descriptor? super.des <pair>-type-descriptor)
+	   (or (pair-type-descr? sub.des)
+	       (pair-of-type-descr? sub.des)))
+
+	  ((same-type-descriptor? super.des <list>-type-descriptor)
+	   (or (list-type-descr? sub.des)
+	       (list-of-type-descr? sub.des)
+	       (same-type-descriptor? sub.des <null>-type-descriptor)))
+
+	  ((same-type-descriptor? super.des <nelist>-type-descriptor)
+	   (list-type-descr? sub.des))
+
+	  ((same-type-descriptor? super.des <vector>-type-descriptor)
+	   (or (vector-type-descr? sub.des)
+	       (vector-of-type-descr? sub.des)
+	       (same-type-descriptor? sub.des <empty-vector>-type-descriptor)))
+
+	  ((same-type-descriptor? super.des <nevector>-type-descriptor)
+	   (vector-type-descr? sub.des))
+
+	  (else #f)))
+
+   ;;SUPER.DES is a record-type descriptor.
+   ((record-type-descriptor? super.des)
+    (cond ((record-type-descriptor? sub.des)
+	   ($rtd-subtype? sub.des super.des))
+	  (else #f)))
+
+   ;;SUPER.DES is a  struct-type descriptor.  SUB.DES matches only if  it is equal to
+   ;;SUPER.DES.
+   ((struct-type-descriptor? super.des)
+    (cond ((struct-type-descriptor? sub.des)
+	   (or (eq? super.des sub.des)
+	       (eq? (struct-type-symbol super.des)
+		    (struct-type-symbol   sub.des))))
+	  (else #f)))
+
+;;; --------------------------------------------------------------------
+
+   ((pair-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (pair-type-descr? sub.des)
+	     (super-and-sub? (pair-type-descr.car-des super.des)
+			     (pair-type-descr.car-des   sub.des))
+	     (super-and-sub? (pair-type-descr.cdr-des super.des)
+			     (pair-type-descr.cdr-des   sub.des)))))
+
+   ((pair-type-descr? sub.des)
+    ;;The case of SUPER.DES being "<top>" has been handled above.
+    (same-type-descriptor? <pair>-type-descriptor super.des))
+
+;;; --------------------------------------------------------------------
+
+   ((pair-of-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (pair-of-type-descr? sub.des)
+	     (super-and-sub? (pair-of-type-descr.item-des super.des)
+			     (pair-of-type-descr.item-des   sub.des)))))
+
+   ((pair-of-type-descr? sub.des)
+    ;;The case of SUPER.DES being "<top>" has been handled above.
+    (same-type-descriptor? <pair>-type-descriptor super.des))
+
+;;; --------------------------------------------------------------------
+
+   ((list-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (list-type-descr? sub.des)
+	     (= (list-type-descr.length super.des)
+		(list-type-descr.length   sub.des))
+	     (for-all object-type-descr.ancestry-super-and-sub?
+	       (list-type-descr.item-des* super.des)
+	       (list-type-descr.item-des*   sub.des)))))
+
+   ((list-type-descr? sub.des)
+    ;;The case of SUPER.DES being "<top>" has been handled above.
+    (or (same-type-descriptor? super.des   <list>-type-descriptor)
+	(same-type-descriptor? super.des <nelist>-type-descriptor)))
+
+;;; --------------------------------------------------------------------
+
+   ((list-of-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (list-of-type-descr? sub.des)
+	     (super-and-sub? (list-of-type-descr.item-des super.des)
+			     (list-of-type-descr.item-des   sub.des)))
+	(same-type-descriptor? sub.des <null>-type-descriptor)))
+
+   ((list-of-type-descr? sub.des)
+    ;;The case of SUPER.DES being "<top>" has been handled above.
+    (same-type-descriptor? <list>-type-descriptor super.des))
+
+;;; --------------------------------------------------------------------
+
+   ((vector-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (vector-type-descr? sub.des)
+	     (= (vector-type-descr.length super.des)
+		(vector-type-descr.length   sub.des))
+	     (for-all object-type-descr.ancestry-super-and-sub?
+	       (vector-type-descr.item-des* super.des)
+	       (vector-type-descr.item-des*   sub.des)))))
+
+   ((vector-type-descr? sub.des)
+    ;;The case of SUPER.DES being "<top>" has been handled above.
+    (or (same-type-descriptor? super.des   <vector>-type-descriptor)
+	(same-type-descriptor? super.des <nevector>-type-descriptor)))
+
+;;; --------------------------------------------------------------------
+
+   ((vector-of-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (vector-of-type-descr? sub.des)
+	     (super-and-sub? (vector-of-type-descr.item-des super.des)
+			     (vector-of-type-descr.item-des   sub.des)))
+	(same-type-descriptor? sub.des <empty-vector>-type-descriptor)))
+
+   ((vector-of-type-descr? sub.des)
+    ;;The case of SUPER.DES being "<top>" has been handled above.
+    (same-type-descriptor? <vector>-type-descriptor super.des))
+
+;;; --------------------------------------------------------------------
+
+   ((union-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (union-type-descr? sub.des)
+	     (for-all (lambda (super-item.des)
+			(exists (lambda (sub-item.des)
+				  (super-and-sub? super-item.des sub-item.des))
+			  (union-type-descr.item-des* sub.des)))
+	       (union-type-descr.item-des* super.des)))))
+
+   ((intersection-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (intersection-type-descr? sub.des)
+	     (for-all (lambda (super-item.des)
+			(exists (lambda (sub-item.des)
+				  (super-and-sub? super-item.des sub-item.des))
+			  (intersection-type-descr.item-des* sub.des)))
+	       (intersection-type-descr.item-des* super.des)))))
+
+   ((complement-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (complement-type-descr? sub.des)
+	     (super-and-sub? (complement-type-descr.item-des super.des)
+			     (complement-type-descr.item-des   sub.des)))))
+
+   ;;The cases in which SUB.DES is a compound type union, intersection or complement:
+   ;;the result is true only is the parent is "<top>".
+
+;;; --------------------------------------------------------------------
+
+   (else #f)))
+
+
+;;;; type descriptors: matching super-types and sub-types
+
+(define (object-type-descr.matching-super-and-sub? super.des sub.des)
+  (define-syntax-rule (super-and-sub? A B)
+    (object-type-descr.matching-super-and-sub? A B))
+  (cond
+   ((scheme-type-descriptor? super.des)
+    ;;"<top>" is the super-type of all the types.
+    (cond ((same-type-descriptor? super.des <top>-type-descriptor))
+
+	  ;;SUPER.DES and SUB.DES are both values of built-in Scheme types.
+	  ((scheme-type-descriptor? sub.des)
+	   (memq (car (scheme-type-descriptor-uids-list super.des))
+		 (scheme-type-descriptor-uids-list sub.des)))
+
+	  ((record-type-descriptor? sub.des)
+	   (or (same-type-descriptor? super.des <record>-type-descriptor)
+	       (same-type-descriptor? super.des <struct>-type-descriptor)
+	       (same-type-descriptor? super.des    <top>-type-descriptor)))
+
+	  ((struct-type-descriptor? sub.des)
+	   (or (same-type-descriptor? super.des <struct>-type-descriptor)
+	       (same-type-descriptor? super.des    <top>-type-descriptor)))
+
+	  ((same-type-descriptor? super.des <pair>-type-descriptor)
+	   (object-type-descr.pair-type-descr? sub.des))
+
+	  ((same-type-descriptor? super.des <list>-type-descriptor)
+	   (object-type-descr.list-type-descr? sub.des))
+
+	  ((same-type-descriptor? super.des <nelist>-type-descriptor)
+	   (object-type-descr.nelist-type-descr? sub.des))
+
+	  ((same-type-descriptor? super.des <vector>-type-descriptor)
+	   (object-type-descr.vector-type-descr? sub.des))
+
+	  ((same-type-descriptor? super.des <nevector>-type-descriptor)
+	   (object-type-descr.nevector-type-descr? sub.des))
+
+	  ((union-type-descr? sub.des)
+	   (exists (lambda (sub-item.des)
+		     (super-and-sub? super.des sub-item.des))
+	     (union-type-descr.item-des* sub.des)))
+
+	  ((intersection-type-descr? sub.des)
+	   (for-all (lambda (sub-item.des)
+		      (super-and-sub? super.des sub-item.des))
+	     (intersection-type-descr.item-des* sub.des)))
+
+	  ((complement-type-descr? sub.des)
+	   (not (super-and-sub? super.des (complement-type-descr.item-des sub.des))))
+
+	  (else #f)))
+
+;;; --------------------------------------------------------------------
+
+   ;;SUPER.DES is a record-type descriptor.
+   ((record-type-descriptor? super.des)
+    (cond ((record-type-descriptor? sub.des)
+	   ($rtd-subtype? sub.des super.des))
+
+	  ((union-type-descr? sub.des)
+	   (exists (lambda (sub-item.des)
+		     (super-and-sub? super.des sub-item.des))
+	     (union-type-descr.item-des* sub.des)))
+
+	  ((intersection-type-descr? sub.des)
+	   (for-all (lambda (sub-item.des)
+		      (super-and-sub? super.des sub-item.des))
+	     (intersection-type-descr.item-des* sub.des)))
+
+	  ((complement-type-descr? sub.des)
+	   (not (super-and-sub? super.des (complement-type-descr.item-des sub.des))))
+
+	  (else #f)))
+
+;;; --------------------------------------------------------------------
+
+   ;;SUPER.DES is a  struct-type descriptor.  SUB.DES matches only if  it is equal to
+   ;;SUPER.DES.
+   ((struct-type-descriptor? super.des)
+    (cond ((struct-type-descriptor? sub.des)
+	   (or (eq? super.des sub.des)
+	       (eq? (struct-type-symbol super.des)
+		    (struct-type-symbol   sub.des))))
+
+	  ((union-type-descr? sub.des)
+	   (exists (lambda (sub-item.des)
+		     (super-and-sub? super.des sub-item.des))
+	     (union-type-descr.item-des* sub.des)))
+
+	  ((intersection-type-descr? sub.des)
+	   (for-all (lambda (sub-item.des)
+		      (super-and-sub? super.des sub-item.des))
+	     (intersection-type-descr.item-des* sub.des)))
+
+	  ((complement-type-descr? sub.des)
+	   (not (super-and-sub? super.des (complement-type-descr.item-des sub.des))))
+
+	  (else #f)))
+
+;;; --------------------------------------------------------------------
+
+   ((pair-type-descr? super.des)
+    (let ((super-car.des (pair-type-descr.car-des super.des))
+	  (super-cdr.des (pair-type-descr.cdr-des super.des)))
+      (cond ((pair-type-descr? sub.des)
+	     (and (super-and-sub? super-car.des (pair-type-descr.car-des sub.des))
+		  (super-and-sub? super-cdr.des (pair-type-descr.cdr-des sub.des))))
+
+	    ((pair-of-type-descr? sub.des)
+	     (let ((sub-item.des (pair-of-type-descr.item-des sub.des)))
+	       (and (super-and-sub? super-car.des sub-item.des)
+		    (super-and-sub? super-cdr.des sub-item.des))))
+
+	    ((list-type-descr? sub.des)
+	     (let ((sub-item*.des (list-type-descr.item-des* sub.des)))
+	       (and (super-and-sub? super-car.des (car sub-item*.des))
+		    (super-and-sub? super-cdr.des (if (pair? (cdr sub-item*.des))
+						      (make-list-type-descr (cdr sub-item*.des))
+						    <null>-type-descriptor)))))
+
+	    ;;No list-of because a list-of may be empty.
+
+	    ((same-type-descriptor? sub.des <nelist>-type-descriptor)
+	     (and (same-type-descriptor? super-car.des <top>-type-descriptor)
+		  (object-type-descr.list-type-descr? super-cdr.des)))
+
+	    ((union-type-descr? sub.des)
+	     (exists (lambda (sub-item.des)
+		       (super-and-sub? super.des sub-item.des))
+	       (union-type-descr.item-des* sub.des)))
+
+	    ((intersection-type-descr? sub.des)
+	     (for-all (lambda (sub-item.des)
+			(super-and-sub? super.des sub-item.des))
+	       (intersection-type-descr.item-des* sub.des)))
+
+	    ((complement-type-descr? sub.des)
+	     (not (super-and-sub? super.des (complement-type-descr.item-des sub.des))))
+
+	    (else #f))))
+
+;;; --------------------------------------------------------------------
+
+   ((pair-of-type-descr? super.des)
+    (let ((super-item.des (pair-of-type-descr.item-des super.des)))
+      (cond ((pair-type-descr? sub.des)
+	     (and (super-and-sub? super-item.des (pair-type-descr.car-des sub.des))
+		  (super-and-sub? super-item.des (pair-type-descr.cdr-des sub.des))))
+
+	    ((pair-of-type-descr? sub.des)
+	     (super-and-sub? super-item.des (pair-of-type-descr.item-des sub.des)))
+
+	    ((list-type-descr? sub.des)
+	     (for-all (lambda (sub-item.des)
+			(super-and-sub? super-item.des sub-item.des))
+	       (list-type-descr.item-des* sub.des)))
+
+	    ((list-of-type-descr? sub.des)
+	     (super-and-sub? super-item.des (list-of-type-descr.item-des sub.des)))
+
+	    ((or (same-type-descriptor? sub.des   <list>-type-descriptor)
+		 (same-type-descriptor? sub.des <nelist>-type-descriptor))
+	     (object-type-descr.list-type-descr? super-item.des))
+
+	    ((union-type-descr? sub.des)
+	     (exists (lambda (sub-item.des)
+		       (super-and-sub? super.des sub-item.des))
+	       (union-type-descr.item-des* sub.des)))
+
+	    ((intersection-type-descr? sub.des)
+	     (for-all (lambda (sub-item.des)
+			(super-and-sub? super.des sub-item.des))
+	       (intersection-type-descr.item-des* sub.des)))
+
+	    ((complement-type-descr? sub.des)
+	     (not (super-and-sub? super.des (complement-type-descr.item-des sub.des))))
+
+	    (else #f))))
+
+;;; --------------------------------------------------------------------
+
+   ((list-type-descr? super.des)
+    (let ((super-item*.des (list-type-descr.item-des* super.des)))
+      (cond ((pair-type-descr? sub.des)
+	     (and (super-and-sub? (car super-item*.des) (pair-type-descr.car-des sub.des))
+		  (super-and-sub? (make-list-type-descr (cdr super-item*.des))
+				  (pair-type-descr.cdr-des sub.des))))
+
+	    ((pair-of-type-descr? sub.des)
+	     (let ((sub-item.des (pair-of-type-descr.item-des sub.des)))
+	       (and (super-and-sub? (car super-item*.des) sub-item.des)
+		    (super-and-sub? (if (pair? (cdr super-item*.des))
+					(make-list-type-descr (cdr super-item*.des))
+				      <null>-type-descriptor)
+				    sub-item.des))))
+
+	    ((list-type-descr? sub.des)
+	     (for-all (lambda (super-item.des sub-item.des)
+			(super-and-sub? super-item.des sub-item.des))
+	       super-item*.des
+	       (list-type-descr.item-des* sub.des)))
+
+	    ;;No list-of because a list-of may be empty.
+
+	    ;; (list <top>)    <nelist> --> match
+	    ;; (list <fixnum>) <nelist> --> no match
+	    ((same-type-descriptor? sub.des <nelist>-type-descriptor)
+	     (and (%list-of-single-item? super-item*.des)
+		  (same-type-descriptor? (car super-item*.des) <top>-type-descriptor)))
+
+	    ((union-type-descr? sub.des)
+	     (exists (lambda (sub-item.des)
+		       (super-and-sub? super.des sub-item.des))
+	       (union-type-descr.item-des* sub.des)))
+
+	    ((intersection-type-descr? sub.des)
+	     (for-all (lambda (sub-item.des)
+			(super-and-sub? super.des sub-item.des))
+	       (intersection-type-descr.item-des* sub.des)))
+
+	    ((complement-type-descr? sub.des)
+	     (not (super-and-sub? super.des (complement-type-descr.item-des sub.des))))
+
+	    (else #f))))
+
+;;; --------------------------------------------------------------------
+
+   ((list-of-type-descr? super.des)
+    (or (same-type-descriptor? sub.des <null>-type-descriptor)
+	(let ((super-item.des (list-of-type-descr.item-des super.des)))
+	  (cond ((pair-type-descr? sub.des)
+		 (and (super-and-sub? super-item.des (pair-type-descr.car-des sub.des))
+		      (super-and-sub? super.des      (pair-type-descr.cdr-des sub.des))))
+
+		((pair-of-type-descr? sub.des)
+		 (let ((sub-item.des (pair-of-type-descr.item-des sub.des)))
+		   (and (super-and-sub? super-item.des sub-item.des)
+			(object-type-descr.list-type-descr? sub-item.des))))
+
+		((list-type-descr? sub.des)
+		 (for-all (lambda (sub-item.des)
+			    (super-and-sub? super-item.des sub-item.des))
+		   (list-type-descr.item-des* sub.des)))
+
+		((list-of-type-descr? sub.des)
+		 (super-and-sub? super-item.des (list-of-type-descr.item-des sub.des)))
+
+		((or (same-type-descriptor? sub.des <nelist>-type-descriptor)
+		     (same-type-descriptor? sub.des   <list>-type-descriptor))
+		 (same-type-descriptor? (list-of-type-descr.item-des super.des)
+					<top>-type-descriptor))
+
+		((union-type-descr? sub.des)
+		 (exists (lambda (sub-item.des)
+			   (super-and-sub? super.des sub-item.des))
+		   (union-type-descr.item-des* sub.des)))
+
+		((intersection-type-descr? sub.des)
+		 (for-all (lambda (sub-item.des)
+			    (super-and-sub? super.des sub-item.des))
+		   (intersection-type-descr.item-des* sub.des)))
+
+		((complement-type-descr? sub.des)
+		 (not (super-and-sub? super.des (complement-type-descr.item-des sub.des))))
+
+		(else #f)))))
+
+;;; --------------------------------------------------------------------
+
+   ((vector-type-descr? super.des)
+    (let ((super-item*.des (vector-type-descr.item-des* super.des)))
+      (cond ((vector-type-descr? sub.des)
+	     (for-all (lambda (super-item.des sub-item.des)
+			(super-and-sub? super-item.des sub-item.des))
+	       super-item*.des
+	       (vector-type-descr.item-des* sub.des)))
+
+	    ;;No vector-of because a vector-of may be empty.
+
+	    ;; (vector <top>)    <nevector> --> match
+	    ;; (vector <fixnum>) <nevector> --> no match
+	    ((same-type-descriptor? sub.des <nevector>-type-descriptor)
+	     (and (%list-of-single-item? super-item*.des)
+		  (same-type-descriptor? (car super-item*.des) <top>-type-descriptor)))
+
+	    ((union-type-descr? sub.des)
+	     (exists (lambda (sub-item.des)
+		       (super-and-sub? super.des sub-item.des))
+	       (union-type-descr.item-des* sub.des)))
+
+	    ((intersection-type-descr? sub.des)
+	     (for-all (lambda (sub-item.des)
+			(super-and-sub? super.des sub-item.des))
+	       (intersection-type-descr.item-des* sub.des)))
+
+	    ((complement-type-descr? sub.des)
+	     (not (super-and-sub? super.des (complement-type-descr.item-des sub.des))))
+
+	    (else #f))))
+
+;;; --------------------------------------------------------------------
+
+   ((vector-of-type-descr? super.des)
+    (or (same-type-descriptor? sub.des <empty-vector>-type-descriptor)
+	(let ((super-item.des (vector-of-type-descr.item-des super.des)))
+	  (cond ((vector-type-descr? sub.des)
+		 (for-all (lambda (sub-item.des)
+			    (super-and-sub? super-item.des sub-item.des))
+		   (vector-type-descr.item-des* sub.des)))
+
+		((vector-of-type-descr? sub.des)
+		 (super-and-sub? super-item.des (vector-of-type-descr.item-des sub.des)))
+
+		((or (same-type-descriptor? sub.des <nevector>-type-descriptor)
+		     (same-type-descriptor? sub.des   <vector>-type-descriptor))
+		 (same-type-descriptor? (vector-of-type-descr.item-des super.des)
+					<top>-type-descriptor))
+
+		((union-type-descr? sub.des)
+		 (exists (lambda (sub-item.des)
+			   (super-and-sub? super.des sub-item.des))
+		   (union-type-descr.item-des* sub.des)))
+
+		((intersection-type-descr? sub.des)
+		 (for-all (lambda (sub-item.des)
+			    (super-and-sub? super.des sub-item.des))
+		   (intersection-type-descr.item-des* sub.des)))
+
+		((complement-type-descr? sub.des)
+		 (not (super-and-sub? super.des (complement-type-descr.item-des sub.des))))
+
+		(else #f)))))
+
+;;; --------------------------------------------------------------------
+
+   ((union-type-descr? super.des)
+    (exists (lambda (super-item.des)
+	      (super-and-sub? super-item.des sub.des))
+      (union-type-descr.item-des* super.des)))
+
+;;; --------------------------------------------------------------------
+
+   ((intersection-type-descr? super.des)
+    (for-all (lambda (super-item.des)
+	       (super-and-sub? super-item.des sub.des))
+      (intersection-type-descr.item-des* super.des)))
+
+;;; --------------------------------------------------------------------
+
+   ((complement-type-descr? super.des)
+    (not (super-and-sub? (complement-type-descr.item-des super.des) sub.des)))
+
+;;; --------------------------------------------------------------------
+
+   (else #f)))
+
+
+;;;; type descriptor signatures
+
+(define-record-type (<descriptors-signature> make-descriptors-signature descriptors-signature?)
+  (fields
+    (immutable descriptors	descriptors-signature.descriptors)
+    #| end of FIELDS |# ))
+
+(define (descriptor-signature.matching-super-and-sub? super.sig sub.sig)
+  (void))
+
+
+;;;; done
+
+#| end of library |# )
+
+;;; end of file
+;; Local Variables:
+;; mode: vicare
+;; coding: utf-8
+;; End:

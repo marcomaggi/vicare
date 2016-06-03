@@ -77,7 +77,7 @@
 /section)
 
 
-;;;; Scheme build-tin object-type descriptors
+;;;; Scheme build-in object-type descriptors
 
 (declare-core-scheme-type-descriptor <bignum>-type-descriptor)
 (declare-core-scheme-type-descriptor <binary-input/output-port>-type-descriptor)
@@ -167,6 +167,159 @@
 (declare-core-scheme-type-descriptor <reader-annotation>-type-descriptor)
 (declare-core-scheme-type-descriptor <scheme-type-descriptor>-type-descriptor)
 (declare-core-scheme-type-descriptor <stats>-type-descriptor)
+
+
+;;;; object type descriptors
+
+(declare-core-primitive make-pair-type-descr
+    (safe)
+  (signatures
+   ((<top> <top>)		=> (<pair-type-descr>))))
+
+(declare-type-predicate pair-type-descr?	<pair-type-descr>)
+
+(declare-core-primitive pair-type-descr.car-des
+    (safe)
+  (signatures
+   ((<pair-type-descr>)		=> (<top>))))
+
+(declare-core-primitive pair-type-descr.cdr-des
+    (safe)
+  (signatures
+   ((<pair-type-descr>)		=> (<top>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive make-pair-of-type-descr
+    (safe)
+  (signatures
+   ((<top>)			=> (<pair-of-type-descr>))))
+
+(declare-type-predicate pair-of-type-descr?	<pair-of-type-descr>)
+
+(declare-core-primitive pair-of-type-descr.item-des
+    (safe)
+  (signatures
+   ((<pair-of-type-descr>)	=> (<top>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive make-list-type-descr
+    (safe)
+  (signatures
+   ((<null>)			=> (<scheme-type-descriptor>))
+   ((<list>)			=> (<list-type-descr>))))
+
+(declare-type-predicate list-type-descr?	<list-type-descr>)
+
+(declare-core-primitive list-type-descr.item-des*
+    (safe)
+  (signatures
+   ((<list-type-descr>)		=> (<list>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive make-list-of-type-descr
+    (safe)
+  (signatures
+   ((<top>)			=> (<list-of-type-descr>))))
+
+(declare-type-predicate list-of-type-descr?	<list-of-type-descr>)
+
+(declare-core-primitive list-of-type-descr.item-des
+    (safe)
+  (signatures
+   ((<list-of-type-descr>)	=> (<top>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive make-vector-type-descr
+    (safe)
+  (signatures
+   ((<null>)			=> (<scheme-type-descriptor>))
+   ((<list>)			=> (<vector-type-descr>))))
+
+(declare-type-predicate vector-type-descr?	<vector-type-descr>)
+
+(declare-core-primitive vector-type-descr.item-des*
+    (safe)
+  (signatures
+   ((<vector-type-descr>)	=> (<list>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive make-vector-of-type-descr
+    (safe)
+  (signatures
+   ((<top>)			=> (<vector-of-type-descr>))))
+
+(declare-type-predicate vector-of-type-descr?	<vector-of-type-descr>)
+
+(declare-core-primitive vector-of-type-descr.item-des
+    (safe)
+  (signatures
+   ((<vector-of-type-descr>)	=> (<top>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive make-union-type-descr
+    (safe)
+  (signatures
+   (((list <top>))		=> (<top>))
+   ((<list>)			=> (<union-type-descr>))))
+
+(declare-type-predicate union-type-descr?	<union-type-descr>)
+
+(declare-core-primitive union-type-descr.item-des*
+    (safe)
+  (signatures
+   ((<union-type-descr>)	=> (<list>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive make-intersection-type-descr
+    (safe)
+  (signatures
+   (((list <top>))		=> (<top>))
+   ((<list>)			=> (<intersection-type-descr>))))
+
+(declare-type-predicate intersection-type-descr?	<intersection-type-descr>)
+
+(declare-core-primitive intersection-type-descr.item-des*
+    (safe)
+  (signatures
+   ((<intersection-type-descr>)		=> (<list>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive make-complement-type-descr
+    (safe)
+  (signatures
+   ((<top>)				=> (<complement-type-descr>))))
+
+(declare-type-predicate complement-type-descr?	<complement-type-descr>)
+
+(declare-core-primitive complement-type-descr.item-des*
+    (safe)
+  (signatures
+   ((<complement-type-descr>)		=> (<top>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive object-type-descr=?
+    (safe)
+  (signatures
+   ((<top> <top>)		=> (<boolean>))))
+
+(declare-core-primitive object-type-descr.ancestry-super-and-sub?
+    (safe)
+  (signatures
+   ((<top> <top>)		=> (<boolean>))))
+
+(declare-core-primitive object-type-descr.matching-super-and-sub?
+    (safe)
+  (signatures
+   ((<top> <top>)		=> (<boolean>))))
 
 
 ;;;; done

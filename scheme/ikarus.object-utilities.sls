@@ -601,24 +601,36 @@
 						     '()))))
 	 (define (%datum->syntax obj)
 	   (datum->syntax #'?type-name obj))
-	 (define (%mk-btd-name type.sym)
+	 (define (%mk-btd-name-id type.sym)
 	   (%datum->syntax (string->symbol (string-append (symbol->string type.sym) "-type-descriptor"))))
+	 (define (%mk-btd-pred-id type.sym)
+	   (%datum->syntax (string->symbol (string-append (symbol->string type.sym) "-type-descriptor?"))))
 	 (putprop type-name.sym 'type-uids-list type-uids-list)
 	 ;;BTD stands for "Built-in Type Descriptor".
 	 (with-syntax
-	     ((BTD-NAME			(%mk-btd-name type-name.sym))
-	      (PARENT-BTD-NAME		(and parent-name.sexp (%mk-btd-name parent-name.sexp)))
+	     ((BTD-NAME			(%mk-btd-name-id type-name.sym))
+	      (PARENT-BTD-NAME		(and parent-name.sexp (%mk-btd-name-id parent-name.sexp)))
 	      (TYPE-PREDICATE		(parsed-specs-type-predicate		parsed-specs))
 	      (EQUALITY-PREDICATE	(parsed-specs-equality-predicate	parsed-specs))
 	      (COMPARISON-PROCEDURE	(parsed-specs-comparison-procedure	parsed-specs))
 	      (HASH-FUNCTION		(parsed-specs-hash-function		parsed-specs))
 	      (TYPE-UIDS-LIST		#`(quote #,(%datum->syntax type-uids-list)))
-	      (RETRIEVER		(%make-methods-retriever-function parsed-specs)))
+	      (RETRIEVER		(%make-methods-retriever-function parsed-specs))
+	      (BTD-PRED			(%mk-btd-pred-id type-name.sym)))
 	   #'(begin
 	       (define BTD-NAME
 		 (make-scheme-type-descriptor (quote ?type-name) PARENT-BTD-NAME
 					      TYPE-PREDICATE EQUALITY-PREDICATE COMPARISON-PROCEDURE HASH-FUNCTION
 					      TYPE-UIDS-LIST RETRIEVER))
+	       ;;NOTE These  are commented out  because I am  not sure that  it makes
+	       ;;sense to have them.  (Marco Maggi; Fri Jun 3, 2016)
+	       ;;
+               ;; (define (BTD-PRED obj)
+               ;;        (or (eq? obj BTD-NAME)
+               ;;            (and (scheme-type-descriptor? obj)
+               ;;                 (eq? (car (scheme-type-descriptor-uids-list BTD-NAME))
+               ;;                      (car (scheme-type-descriptor-uids-list obj))))))
+	       ;; (export BTD-PRED)
 	       (export BTD-NAME)))))
       ))
 
