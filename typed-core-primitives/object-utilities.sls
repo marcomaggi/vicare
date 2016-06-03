@@ -262,6 +262,25 @@
 
 ;;; --------------------------------------------------------------------
 
+(declare-core-primitive make-enumeration-type-descr
+    (safe)
+  (signatures
+   (((list-of <symbol>))		=> (<enumeration-type-descr>))))
+
+(declare-type-predicate enumeration-type-descr?	<enumeration-type-descr>)
+
+(declare-core-primitive enumeration-type-descr.symbol*
+    (safe)
+  (signatures
+   ((<enumeration-type-descr>)		=> ((list-of <symbol>)))))
+
+(declare-core-primitive enumeration-type-descr.length
+    (safe)
+  (signatures
+   ((<enumeration-type-descr>)		=> (<non-negative-exact-integer>))))
+
+;;; --------------------------------------------------------------------
+
 (declare-core-primitive make-union-type-descr
     (safe)
   (signatures

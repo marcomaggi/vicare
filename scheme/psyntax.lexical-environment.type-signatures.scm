@@ -2096,9 +2096,9 @@
    (make-type-signature/single-value (datum-type-annotation datum lexenv))))
 
 (define (datum-type-annotation datum lexenv)
-  ;;Recursive  function.  Build  and return  a  syntax object  representing the  type
-  ;;annotation of DATUM, which must be a Scheme object extracted from a syntax object
-  ;;representing a literal expression.
+  ;;Recursive  function.   Build  and  return  an  instance  of  "<object-type-spec>"
+  ;;representing  the  type annotation  of  DATUM,  which  must  be a  Scheme  object
+  ;;extracted from a syntax object representing a literal expression.
   ;;
   ;;We use a hashtable  to detect circular structures in DATUM; we  put in here pairs
   ;;and vectors.

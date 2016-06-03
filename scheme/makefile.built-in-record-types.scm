@@ -354,6 +354,13 @@
   (methods
    (item-des		vector-of-type-descr.item-des)))
 
+(define-built-in-record-type <enumeration-type-descr>
+    <record>
+  make-enumeration-type-descr enumeration-type-descr?
+  (methods
+   (symbol*		enumeration-type-descr.symbol*)
+   (length		enumeration-type-descr.length)))
+
 ;;; --------------------------------------------------------------------
 
 (define-built-in-record-type <union-type-descr>

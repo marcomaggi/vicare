@@ -402,6 +402,21 @@
 		(make-vector-of-type-descr <fixnum>-type-descriptor))
 
 ;;; --------------------------------------------------------------------
+;;; enumeration
+
+  (doit-true	(make-enumeration-type-descr '(ciao))
+		(make-enumeration-type-descr '(ciao)))
+
+  (doit-false	(make-enumeration-type-descr '(ciao))
+		(make-enumeration-type-descr '(hello)))
+
+  (doit-false	(make-enumeration-type-descr '(ciao hello))
+		(make-enumeration-type-descr '(hello)))
+
+  (doit-false	(make-enumeration-type-descr '(ciao))
+		(make-enumeration-type-descr '(hello ciao)))
+
+;;; --------------------------------------------------------------------
 ;;; union
 
   (doit-false	(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
@@ -676,6 +691,24 @@
 
   (doit-false	(make-vector-of-type-descr <string>-type-descriptor)
 		(make-vector-of-type-descr <fixnum>-type-descriptor))
+
+;;; --------------------------------------------------------------------
+;;; enumeration
+
+  (doit-true	(make-enumeration-type-descr '(ciao))
+		(make-enumeration-type-descr '(ciao)))
+
+  (doit-true	<symbol>-type-descriptor
+		(make-enumeration-type-descr '(ciao)))
+
+  (doit-false	(make-enumeration-type-descr '(ciao))
+		(make-enumeration-type-descr '(hello)))
+
+  (doit-false	(make-enumeration-type-descr '(ciao hello))
+		(make-enumeration-type-descr '(hello)))
+
+  (doit-false	(make-enumeration-type-descr '(ciao))
+		(make-enumeration-type-descr '(hello ciao)))
 
 ;;; --------------------------------------------------------------------
 ;;; union
@@ -1129,6 +1162,24 @@
 
   (doit-false	(make-vector-of-type-descr <string>-type-descriptor)
 		(make-vector-of-type-descr <fixnum>-type-descriptor))
+
+;;; --------------------------------------------------------------------
+;;; enumeration
+
+  (doit-true	(make-enumeration-type-descr '(ciao))
+		(make-enumeration-type-descr '(ciao)))
+
+  (doit-true	<symbol>-type-descriptor
+		(make-enumeration-type-descr '(ciao)))
+
+  (doit-false	(make-enumeration-type-descr '(ciao))
+		(make-enumeration-type-descr '(hello)))
+
+  (doit-false	(make-enumeration-type-descr '(ciao hello))
+		(make-enumeration-type-descr '(hello)))
+
+  (doit-true	(make-enumeration-type-descr '(ciao))
+		(make-enumeration-type-descr '(hello ciao)))
 
 ;;; --------------------------------------------------------------------
 ;;; union

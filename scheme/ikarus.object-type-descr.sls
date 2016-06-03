@@ -63,6 +63,12 @@
     vector-of-type-descr?
     vector-of-type-descr.item-des
 
+    <enumeration-type-descr>-rtd
+    <enumeration-type-descr>-rcd
+    make-enumeration-type-descr
+    enumeration-type-descr?
+    enumeration-type-descr.symbol*
+
 ;;; --------------------------------------------------------------------
 
     <union-type-descr>-rtd
@@ -85,28 +91,129 @@
 
 ;;; --------------------------------------------------------------------
 
+    object-type-descr-of
     object-type-descr=?
     object-type-descr.ancestry-super-and-sub?
     object-type-descr.matching-super-and-sub?
 
     #| end of EXPORTS |# )
-  (import (vicare)
+  (import (except (vicare)
+		  ratnum-positive?
+		  ratnum-negative?
+		  exact-compnum?
+		  zero-compnum?
+		  zero-cflonum?)
     (only (ikarus.object-utilities)
 	  scheme-type-descriptor?
 	  scheme-type-descriptor-uids-list
-	  <void>-type-descriptor
-	  <top>-type-descriptor
-	  <record>-type-descriptor
-	  <struct>-type-descriptor
-	  <pair>-type-descriptor
+	  <bignum>-type-descriptor
+	  <binary-input-port>-type-descriptor
+	  <binary-input/output-port>-type-descriptor
+	  <binary-output-port>-type-descriptor
+	  <boolean>-type-descriptor
+	  <bytevector>-type-descriptor
+	  <empty-bytevector>-type-descriptor
+	  <nebytevector>-type-descriptor
+	  <cflonum>-type-descriptor
+	  <char>-type-descriptor
+	  <code>-type-descriptor
+	  <complex>-type-descriptor
+	  <compnum>-type-descriptor
+	  <compound-condition>-type-descriptor
+	  <condition>-type-descriptor
+	  <empty-string>-type-descriptor
+	  <empty-vector>-type-descriptor
+	  <enum-set>-type-descriptor
+	  <eof>-type-descriptor
+	  <exact-compnum>-type-descriptor
+	  <exact-integer>-type-descriptor
+	  <false>-type-descriptor
+	  <fixnum>-type-descriptor
+	  <flonum>-type-descriptor
+	  <gensym>-type-descriptor
+	  <hashtable-eq>-type-descriptor
+	  <hashtable-equal>-type-descriptor
+	  <hashtable-eqv>-type-descriptor
+	  <hashtable>-type-descriptor
+	  <inexact-compnum>-type-descriptor
+	  <input-port>-type-descriptor
+	  <input/output-port>-type-descriptor
+	  <integer-valued>-type-descriptor
+	  <integer>-type-descriptor
+	  <ipair>-type-descriptor
+	  <keyword>-type-descriptor
 	  <list>-type-descriptor
+	  <memory-block>-type-descriptor
+	  <negative-bignum>-type-descriptor
+	  <negative-fixnum>-type-descriptor
+	  <negative-flonum>-type-descriptor
+	  <negative-ratnum>-type-descriptor
+	  <negative-zero-flonum>-type-descriptor
 	  <nelist>-type-descriptor
-	  <null>-type-descriptor
-	  <vector>-type-descriptor
+	  <nestring>-type-descriptor
 	  <nevector>-type-descriptor
-	  <empty-vector>-type-descriptor)
+	  <no-return>-type-descriptor
+	  <non-zero-cflonum>-type-descriptor
+	  <non-zero-inexact-compnum>-type-descriptor
+	  <null>-type-descriptor
+	  <number>-type-descriptor
+	  <opaque-record>-type-descriptor
+	  <output-port>-type-descriptor
+	  <pair>-type-descriptor
+	  <pointer>-type-descriptor
+	  <port>-type-descriptor
+	  <positive-bignum>-type-descriptor
+	  <positive-fixnum>-type-descriptor
+	  <positive-flonum>-type-descriptor
+	  <positive-ratnum>-type-descriptor
+	  <positive-zero-flonum>-type-descriptor
+	  <procedure>-type-descriptor
+	  <promise>-type-descriptor
+	  <rational-valued>-type-descriptor
+	  <rational>-type-descriptor
+	  <ratnum>-type-descriptor
+	  <reader-annotation>-type-descriptor
+	  <real-valued>-type-descriptor
+	  <real>-type-descriptor
+	  <record-constructor-descriptor>-type-descriptor
+	  <record-type-descriptor>-type-descriptor
+	  <record>-type-descriptor
+	  <scheme-type-descriptor>-type-descriptor
+	  <sentinel>-type-descriptor
+	  <stats>-type-descriptor
+	  <string>-type-descriptor
+	  <struct-type-descriptor>-type-descriptor
+	  <struct>-type-descriptor
+	  <symbol>-type-descriptor
+	  <textual-input-port>-type-descriptor
+	  <textual-input/output-port>-type-descriptor
+	  <textual-output-port>-type-descriptor
+	  <time>-type-descriptor
+	  <untyped>-type-descriptor
+	  <top>-type-descriptor
+	  <transcoder>-type-descriptor
+	  <true>-type-descriptor
+	  <utsname>-type-descriptor
+	  <vector>-type-descriptor
+	  <void>-type-descriptor
+	  <would-block>-type-descriptor
+	  <zero-cflonum>-type-descriptor
+	  <zero-compnum>-type-descriptor
+	  <zero-fixnum>-type-descriptor
+	  <zero-flonum>-type-descriptor)
     (only (ikarus records procedural)
-	  $rtd-subtype?))
+	  $rtd-subtype?)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Jun 3,
+    ;;2016)
+    (only (ikarus ratnums)
+	  ratnum-positive?
+	  ratnum-negative?)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Jun 3,
+    ;;2016)
+    (only (ikarus numerics complex-numbers)
+	  exact-compnum?
+	  zero-compnum?
+	  zero-cflonum?))
 
 
 ;;;; helpers
@@ -242,6 +349,33 @@
 
 (define <vector-of-type-descr>-rcd
   (record-constructor-descriptor <vector-of-type-descr>))
+
+
+;;;; compound type descriptors: symbols enumeration
+
+(define-record-type (<enumeration-type-descr> make-enumeration-type-descr enumeration-type-descr?)
+  (fields
+    (immutable symbol*	enumeration-type-descr.symbol*)
+    (mutable memoised-length)
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-record)
+      (lambda (symbol*)
+	(make-record symbol* #f)))))
+
+(define <enumeration-type-descr>-rtd
+  (record-type-descriptor <enumeration-type-descr>))
+
+(define <enumeration-type-descr>-rcd
+  (record-constructor-descriptor <enumeration-type-descr>))
+
+;;; --------------------------------------------------------------------
+
+(define (enumeration-type-descr.length otd)
+  (or (<enumeration-type-descr>-memoised-length otd)
+      (receive-and-return (len)
+	  (length (enumeration-type-descr.symbol* otd))
+	(<enumeration-type-descr>-memoised-length-set! otd len))))
 
 
 ;;;; compound type descriptors: union
@@ -432,6 +566,25 @@
 
 ;;; --------------------------------------------------------------------
 
+   ((enumeration-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (enumeration-type-descr? sub.des)
+	     (= (enumeration-type-descr.length super.des)
+		(enumeration-type-descr.length   sub.des))
+	     (let ((super*.sym	(enumeration-type-descr.symbol* super.des))
+		   (sub*.sym	(enumeration-type-descr.symbol* sub.des)))
+	       (and (for-all (lambda (super.sym)
+			       (memq super.sym sub*.sym))
+		      super*.sym)
+		    (for-all (lambda (sub.sym)
+			       (memq sub.sym super*.sym))
+		      sub*.sym))))))
+
+   ((enumeration-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
    ((union-type-descr? super.des)
     (or (eq? super.des sub.des)
 	(and (union-type-descr? sub.des)
@@ -508,6 +661,9 @@
 
 	  ((same-type-descriptor? super.des <nevector>-type-descriptor)
 	   (vector-type-descr? sub.des))
+
+	  ((same-type-descriptor? super.des <symbol>-type-descriptor)
+	   (enumeration-type-descr? sub.des))
 
 	  (else #f)))
 
@@ -612,6 +768,25 @@
 
 ;;; --------------------------------------------------------------------
 
+   ((enumeration-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (enumeration-type-descr? sub.des)
+	     (= (enumeration-type-descr.length super.des)
+		(enumeration-type-descr.length   sub.des))
+	     (let ((super*.sym	(enumeration-type-descr.symbol* super.des))
+		   (sub*.sym	(enumeration-type-descr.symbol* sub.des)))
+	       (and (for-all (lambda (super.sym)
+			       (memq super.sym sub*.sym))
+		      super*.sym)
+		    (for-all (lambda (sub.sym)
+			       (memq sub.sym super*.sym))
+		      sub*.sym))))))
+
+   ((enumeration-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
    ((union-type-descr? super.des)
     (or (eq? super.des sub.des)
 	(and (union-type-descr? sub.des)
@@ -682,6 +857,9 @@
 
 	  ((same-type-descriptor? super.des <nevector>-type-descriptor)
 	   (object-type-descr.nevector-type-descr? sub.des))
+
+	  ((same-type-descriptor? super.des <symbol>-type-descriptor)
+	   (enumeration-type-descr? sub.des))
 
 	  ((union-type-descr? sub.des)
 	   (exists (lambda (sub-item.des)
@@ -981,6 +1159,19 @@
 
 ;;; --------------------------------------------------------------------
 
+   ((enumeration-type-descr? super.des)
+    (or (eq? super.des sub.des)
+	(and (enumeration-type-descr? sub.des)
+	     (let ((sub*.sym (enumeration-type-descr.symbol* sub.des)))
+	       (for-all (lambda (super.sym)
+			  (memq super.sym sub*.sym))
+		 (enumeration-type-descr.symbol* super.des))))))
+
+   ((enumeration-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
    ((union-type-descr? super.des)
     (exists (lambda (super-item.des)
 	      (super-and-sub? super-item.des sub.des))
@@ -1001,6 +1192,110 @@
 ;;; --------------------------------------------------------------------
 
    (else #f)))
+
+
+;;;; descriptor of objects
+
+(define (object-type-descr-of datum)
+  ;;Recursive function.  Build and return  an object type descriptor representing the
+  ;;type of datum.
+  ;;
+  ;;We use a hashtable  to detect circular structures in DATUM; we  put in here pairs
+  ;;and vectors.
+  (define table (make-eq-hashtable))
+  (let recur ((datum datum))
+    (cond ((boolean? datum)		(cond (datum
+					       <true>-type-descriptor)
+					      (else
+					       <false>-type-descriptor)))
+	  ((char?    datum)		<char>-type-descriptor)
+	  ((symbol?  datum)		(make-enumeration-type-descr (list datum)))
+	  ((keyword? datum)		<keyword>-type-descriptor)
+
+	  ((fixnum?  datum)		(cond ((fxpositive? datum)
+					       <positive-fixnum>-type-descriptor)
+					      ((fxnegative? datum)
+					       <negative-fixnum>-type-descriptor)
+					      ((fxzero? datum)
+					       <zero-fixnum>-type-descriptor)
+					      (else
+					       ;;This should never happen.
+					       <fixnum>-type-descriptor)))
+
+	  ((flonum?  datum)		(cond ((flpositive? datum)
+					       <positive-flonum>-type-descriptor)
+					      ((flnegative? datum)
+					       <negative-flonum>-type-descriptor)
+					      ((flzero?/positive datum)
+					       <positive-zero-flonum>-type-descriptor)
+					      ((flzero?/negative datum)
+					       <negative-zero-flonum>-type-descriptor)
+					      (else
+					       ;;This  happens  when  the  flonum  is
+					       ;;not-a-number.
+					       <flonum>-type-descriptor)))
+
+	  ((ratnum?  datum)		(cond ((ratnum-positive? datum)
+					       <positive-ratnum>-type-descriptor)
+					      ((ratnum-negative? datum)
+					       <negative-ratnum>-type-descriptor)
+					      (else
+					       ;;This should never happen.
+					       <ratnum>-type-descriptor)))
+	  ((bignum?  datum)		(cond ((bignum-positive? datum)
+					       <positive-bignum>-type-descriptor)
+					      ((bignum-negative? datum)
+					       <negative-bignum>-type-descriptor)
+					      (else
+					       ;;This should never happen.
+					       <bignum>-type-descriptor)))
+	  ((compnum? datum)		(cond ((exact-compnum? datum)
+					       <exact-compnum>-type-descriptor)
+					      ((zero-compnum? datum)
+					       <zero-compnum>-type-descriptor)
+					      (else
+					       <non-zero-inexact-compnum>-type-descriptor)))
+	  ((cflonum? datum)		(cond ((zero-cflonum? datum)
+					       <zero-cflonum>-type-descriptor)
+					      (else
+					       <non-zero-cflonum>-type-descriptor)))
+
+	  ((string?  datum)		(cond ((string-empty? datum)
+					       <empty-string>-type-descriptor)
+					      (else
+					       <nestring>-type-descriptor)))
+
+	  ((null? datum)		<null>-type-descriptor)
+
+	  ((list? datum)		(if (hashtable-ref table datum #f)
+					    <nelist>-type-descriptor
+					  (begin
+					    (let pair-recur ((P datum))
+					      (when (pair? P)
+						(hashtable-set! table P #t)
+						(pair-recur (cdr P))))
+					    (make-list-type-descr (map recur datum)))))
+
+	  ((pair? datum)		(if (hashtable-ref table datum #f)
+					    <pair>-type-descriptor
+					  (begin
+					    (hashtable-set! table datum #t)
+					    (make-pair-type-descr (recur (car datum))
+								  (recur (cdr datum))))))
+
+	  ((vector?  datum)		(cond ((vector-empty? datum)
+					       <empty-vector>-type-descriptor)
+					      (else
+					       (if (hashtable-ref table datum #f)
+						   <nevector>-type-descriptor
+						 (begin
+						   (hashtable-set! table datum #t)
+						   (make-vector-type-descr (map recur (vector->list datum))))))))
+
+	  ((bytevector? datum)		<bytevector>-type-descriptor)
+
+	  ((eq? datum (void))		<void>-type-descriptor)
+	  (else				<top>-type-descriptor))))
 
 
 ;;;; type descriptor signatures
