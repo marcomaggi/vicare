@@ -87,10 +87,14 @@
 (declare-core-scheme-type-descriptor <boolean>-type-descriptor)
 (declare-core-scheme-type-descriptor <bytevector>-type-descriptor)
 (declare-core-scheme-type-descriptor <cflonum>-type-descriptor)
+(declare-core-scheme-type-descriptor <zero-cflonum>-type-descriptor)
+(declare-core-scheme-type-descriptor <non-zero-cflonum>-type-descriptor)
 (declare-core-scheme-type-descriptor <char>-type-descriptor)
 (declare-core-scheme-type-descriptor <code>-type-descriptor)
 (declare-core-scheme-type-descriptor <complex>-type-descriptor)
 (declare-core-scheme-type-descriptor <compnum>-type-descriptor)
+(declare-core-scheme-type-descriptor <zero-compnum>-type-descriptor)
+(declare-core-scheme-type-descriptor <non-zero-inexact-compnum>-type-descriptor)
 (declare-core-scheme-type-descriptor <compound-condition>-type-descriptor)
 (declare-core-scheme-type-descriptor <condition>-type-descriptor)
 (declare-core-scheme-type-descriptor <empty-vector>-type-descriptor)
@@ -144,6 +148,8 @@
 (declare-core-scheme-type-descriptor <record>-type-descriptor)
 (declare-core-scheme-type-descriptor <record-type-descriptor>-type-descriptor)
 (declare-core-scheme-type-descriptor <string>-type-descriptor)
+(declare-core-scheme-type-descriptor <nestring>-type-descriptor)
+(declare-core-scheme-type-descriptor <empty-string>-type-descriptor)
 (declare-core-scheme-type-descriptor <struct>-type-descriptor)
 (declare-core-scheme-type-descriptor <struct-type-descriptor>-type-descriptor)
 (declare-core-scheme-type-descriptor <symbol>-type-descriptor)
@@ -323,7 +329,13 @@
   (signatures
    ((<complement-type-descr>)		=> (<top>))))
 
-;;; --------------------------------------------------------------------
+
+;;;; object type descriptors: utilities
+
+(declare-core-primitive object-type-descr-of
+    (safe)
+  (signatures
+   ((<top>)			=> (<top>))))
 
 (declare-core-primitive object-type-descr=?
     (safe)

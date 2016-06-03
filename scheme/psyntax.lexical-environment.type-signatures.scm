@@ -2190,7 +2190,10 @@
 						   (hashtable-set! table datum #t)
 						   (make-vector-type-spec (map recur (vector->list datum))))))))
 
-	  ((bytevector? datum)		(core-prim-spec '<bytevector> lexenv))
+	  ((bytevector? datum)		(cond ((bytevector-empty? datum)
+					       (core-prim-spec '<empty-bytevector> lexenv))
+					      (else
+					       (core-prim-spec '<nebytevector> lexenv))))
 
 	  ((eq? datum (void))		(<void>-ots))
 	  (else				(<top>-ots)))))

@@ -4219,6 +4219,7 @@
     (complement-type-descr?			v $language)
     (complement-type-descr.item-des		v $language)
 ;;;
+    (object-type-descr-of			v $language)
     (object-type-descr=?			v $language)
     (object-type-descr.ancestry-super-and-sub?	v $language)
     (object-type-descr.matching-super-and-sub?	v $language)

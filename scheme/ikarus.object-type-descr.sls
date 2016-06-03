@@ -1292,7 +1292,10 @@
 						   (hashtable-set! table datum #t)
 						   (make-vector-type-descr (map recur (vector->list datum))))))))
 
-	  ((bytevector? datum)		<bytevector>-type-descriptor)
+	  ((bytevector? datum)		(cond ((bytevector-empty? datum)
+					       <empty-bytevector>-type-descriptor)
+					      (else
+					       <nebytevector>-type-descriptor)))
 
 	  ((eq? datum (void))		<void>-type-descriptor)
 	  (else				<top>-type-descriptor))))

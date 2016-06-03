@@ -159,6 +159,104 @@
 (define beta-rtd	(struct-type-descriptor beta))
 
 
+(parametrise ((check-test-name	'type-of))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?expr => ?expected)
+       (check
+	   (object-type-descr-of ?expr)
+	 (=> object-type-descr=?)
+	 ?expected))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; numbers
+
+  (doit +1			=> <positive-fixnum>-type-descriptor)
+  (doit -1			=> <negative-fixnum>-type-descriptor)
+  (doit  0			=>     <zero-fixnum>-type-descriptor)
+
+  (doit +0.0			=> <positive-zero-flonum>-type-descriptor)
+  (doit -0.0			=> <negative-zero-flonum>-type-descriptor)
+  (doit +1.0			=> <positive-flonum>-type-descriptor)
+  (doit -1.0			=> <negative-flonum>-type-descriptor)
+  (doit +inf.0			=> <positive-flonum>-type-descriptor)
+  (doit -inf.0			=> <negative-flonum>-type-descriptor)
+
+  (doit +1/2			=> <positive-ratnum>-type-descriptor)
+  (doit -1/2			=> <negative-ratnum>-type-descriptor)
+
+  (doit (least-positive-bignum)		=> <positive-bignum>-type-descriptor)
+  (doit (greatest-negative-bignum)	=> <negative-bignum>-type-descriptor)
+
+  (doit 1+2i			=> <exact-compnum>-type-descriptor)
+  (doit 0+0.0i			=> <zero-compnum>-type-descriptor)
+  (doit 1.2+2i			=> <non-zero-inexact-compnum>-type-descriptor)
+
+  (doit 0.0+0.0i		=> <zero-cflonum>-type-descriptor)
+  (doit 1.2+2.3i		=> <non-zero-cflonum>-type-descriptor)
+
+;;; --------------------------------------------------------------------
+;;; characters
+
+  (doit #\c			=> <char>-type-descriptor)
+
+;;; --------------------------------------------------------------------
+;;; booleans
+
+  (doit #t			=> <true>-type-descriptor)
+  (doit #f			=> <false>-type-descriptor)
+
+;;; --------------------------------------------------------------------
+;;; strings
+
+  (doit "ciao"			=> <nestring>-type-descriptor)
+  (doit ""			=> <empty-string>-type-descriptor)
+
+;;; --------------------------------------------------------------------
+;;; enumerations
+
+  (doit 'ciao			=> (make-enumeration-type-descr '(ciao)))
+
+;;; --------------------------------------------------------------------
+;;; keywords
+
+  (doit #:ciao			=> <keyword>-type-descriptor)
+
+;;; --------------------------------------------------------------------
+;;; pairs and lists
+
+  (doit '()			=> <null>-type-descriptor)
+
+  (doit '(1 2)			=> (make-list-type-descr (list <positive-fixnum>-type-descriptor
+							       <positive-fixnum>-type-descriptor)))
+
+  (doit '(1 . 2)		=> (make-pair-type-descr <positive-fixnum>-type-descriptor
+							 <positive-fixnum>-type-descriptor))
+
+  (doit '(1 2 . 3)		=> (make-pair-type-descr <positive-fixnum>-type-descriptor
+							 (make-pair-type-descr <positive-fixnum>-type-descriptor
+									       <positive-fixnum>-type-descriptor)))
+
+;;; --------------------------------------------------------------------
+;;; vectors
+
+  (doit '#(1 2 3)		=> (make-vector-type-descr (list <positive-fixnum>-type-descriptor
+								 <positive-fixnum>-type-descriptor
+								 <positive-fixnum>-type-descriptor)))
+  (doit '#()			=> <empty-vector>-type-descriptor)
+
+
+;;; --------------------------------------------------------------------
+;;; bytevectors
+
+  (doit '#vu8(1 2 3)		=> <nebytevector>-type-descriptor)
+  (doit '#vu8()			=> <empty-bytevector>-type-descriptor)
+
+  #| end of PARAMETRISE |# )
+
+
 (parametrise ((check-test-name	'equality-super-and-sub))
 
   (define-syntax doit-true
