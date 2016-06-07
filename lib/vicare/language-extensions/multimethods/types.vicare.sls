@@ -14,7 +14,7 @@
 ;;;   same list in the sense of EQ?.
 ;;;
 ;;;      (type-unique-identifiers <procedure>)
-;;;      ==> (vicare:scheme-type:<procedure> vicare:scheme-type:<top>)
+;;;      ==> (vicare:core-type:<procedure> vicare:core-type:<top>)
 ;;;
 ;;;   METHOD-LAMBDA -  A syntax which must  work like LAMBDA but  recognise arguments
 ;;;   tagged with types.

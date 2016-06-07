@@ -28,6 +28,8 @@
   (options typed-language)
   (import (vicare)
     (prefix (vicare expander) expander::)
+    (prefix (vicare system type-descriptors)
+	    sys::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -98,28 +100,28 @@
 (parametrise ((check-test-name	'type-descriptor))
 
   (check
-      (scheme-type-descriptor? (type-descriptor <string>))
+      (sys::core-type-descriptor? (type-descriptor <string>))
     => #t)
 
   (check
-      (scheme-type-descriptor-name (type-descriptor <string>))
+      (sys::core-type-descriptor.name (type-descriptor <string>))
     => '<string>)
 
   (let ((btd (type-descriptor <string>)))
 
     (check
-	(scheme-type-descriptor-name (scheme-type-descriptor-parent btd))
+	(sys::core-type-descriptor.name (sys::core-type-descriptor.parent btd))
       => '<top>)
 
     (check
-	(scheme-type-descriptor-uids-list btd)
-      => '(vicare:scheme-type:<string> vicare:scheme-type:<top>))
+	(sys::core-type-descriptor.uids-list btd)
+      => '(vicare:core-type:<string> vicare:core-type:<top>))
 
-    (check-for-true	(procedure? (scheme-type-descriptor-method-retriever btd)))
-    (check-for-true	((scheme-type-descriptor-method-retriever btd) 'length))
+    (check-for-true	(procedure? (sys::core-type-descriptor.method-retriever btd)))
+    (check-for-true	((sys::core-type-descriptor.method-retriever btd) 'length))
 
     (check
-	(((scheme-type-descriptor-method-retriever btd) 'length) "ciao")
+	(((sys::core-type-descriptor.method-retriever btd) 'length) "ciao")
       => 4)
 
     (void))
@@ -127,7 +129,7 @@
 ;;; --------------------------------------------------------------------
 
   (internal-body
-    (define {string-btd <scheme-type-descriptor>}
+    (define {string-btd sys::<core-type-descriptor>}
       (type-descriptor <string>))
 
     (check
@@ -135,12 +137,12 @@
       => '<string>)
 
     (check
-	(scheme-type-descriptor-name (.parent string-btd))
+	(sys::core-type-descriptor.name (.parent string-btd))
       => '<top>)
 
     (check
 	(.uids-list string-btd)
-      => '(vicare:scheme-type:<string> vicare:scheme-type:<top>))
+      => '(vicare:core-type:<string> vicare:core-type:<top>))
 
     (check-for-true	(procedure? (.method-retriever string-btd)))
     (check-for-true	((.method-retriever string-btd) 'length))
@@ -158,44 +160,44 @@
 
   (check
       (type-unique-identifiers <top>)
-    => '(vicare:scheme-type:<top>))
+    => '(vicare:core-type:<top>))
 
   (check
       (type-unique-identifiers <string>)
-    => '(vicare:scheme-type:<string>
-	 vicare:scheme-type:<top>))
+    => '(vicare:core-type:<string>
+	 vicare:core-type:<top>))
 
   (check
       (type-unique-identifiers <condition>)
-    => '(vicare:scheme-type:<condition>
-	 vicare:scheme-type:<record>
-	 vicare:scheme-type:<struct>
-	 vicare:scheme-type:<top>))
+    => '(vicare:core-type:<condition>
+	 vicare:core-type:<record>
+	 vicare:core-type:<struct>
+	 vicare:core-type:<top>))
 
   (check
       (type-unique-identifiers <compound-condition>)
-    => '(vicare:scheme-type:<compound-condition>
-	 vicare:scheme-type:<condition>
-	 vicare:scheme-type:<record>
-	 vicare:scheme-type:<struct>
-	 vicare:scheme-type:<top>))
+    => '(vicare:core-type:<compound-condition>
+	 vicare:core-type:<condition>
+	 vicare:core-type:<record>
+	 vicare:core-type:<struct>
+	 vicare:core-type:<top>))
 
   (check
       (type-unique-identifiers &condition)
-    => '(vicare:scheme-type:&condition
-	 vicare:scheme-type:<condition>
-	 vicare:scheme-type:<record>
-	 vicare:scheme-type:<struct>
-	 vicare:scheme-type:<top>))
+    => '(vicare:core-type:&condition
+	 vicare:core-type:<condition>
+	 vicare:core-type:<record>
+	 vicare:core-type:<struct>
+	 vicare:core-type:<top>))
 
   (check
       (type-unique-identifiers &message)
-    => '(vicare:scheme-type:&message
-	 vicare:scheme-type:&condition
-	 vicare:scheme-type:<condition>
-	 vicare:scheme-type:<record>
-	 vicare:scheme-type:<struct>
-	 vicare:scheme-type:<top>))
+    => '(vicare:core-type:&message
+	 vicare:core-type:&condition
+	 vicare:core-type:<condition>
+	 vicare:core-type:<record>
+	 vicare:core-type:<struct>
+	 vicare:core-type:<top>))
 
 ;;; --------------------------------------------------------------------
 
@@ -206,8 +208,8 @@
 	  (nongenerative yeah))
 	(type-unique-identifiers duo))
     => '(yeah
-	 vicare:scheme-type:<struct>
-	 vicare:scheme-type:<top>))
+	 vicare:core-type:<struct>
+	 vicare:core-type:<top>))
 
 ;;; --------------------------------------------------------------------
 
@@ -218,9 +220,9 @@
 	  (fields one two))
 	(type-unique-identifiers duo))
     => '(duo-1
-	 vicare:scheme-type:<record>
-	 vicare:scheme-type:<struct>
-	 vicare:scheme-type:<top>))
+	 vicare:core-type:<record>
+	 vicare:core-type:<struct>
+	 vicare:core-type:<top>))
 
   (check
       (internal-body
@@ -232,9 +234,9 @@
 	(type-unique-identifiers beta))
     => '(beta-1
 	 alpha-1
-	 vicare:scheme-type:<record>
-	 vicare:scheme-type:<struct>
-	 vicare:scheme-type:<top>))
+	 vicare:core-type:<record>
+	 vicare:core-type:<struct>
+	 vicare:core-type:<top>))
 
   #| end of PARAMETRISE |# )
 

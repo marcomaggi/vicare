@@ -1825,7 +1825,7 @@
   (fields
     (immutable type-descriptor-id	scheme-type-spec.type-descriptor-id)
 		;Syntactic     identifier     bound     to     an     instance     of
-		;"<scheme-type-descriptor>".
+		;"<core-type-descriptor>".
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)

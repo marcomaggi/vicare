@@ -28,102 +28,7 @@
   (options typed-language)
   (import (vicare)
     (vicare checks)
-    (only (psyntax system $all)
-	  <bignum>-type-descriptor
-	  <binary-input-port>-type-descriptor
-	  <binary-input/output-port>-type-descriptor
-	  <binary-output-port>-type-descriptor
-	  <boolean>-type-descriptor
-	  <bytevector>-type-descriptor
-	  <empty-bytevector>-type-descriptor
-	  <nebytevector>-type-descriptor
-	  <cflonum>-type-descriptor
-	  <char>-type-descriptor
-	  <code>-type-descriptor
-	  <complex>-type-descriptor
-	  <compnum>-type-descriptor
-	  <compound-condition>-type-descriptor
-	  <condition>-type-descriptor
-	  <empty-string>-type-descriptor
-	  <empty-vector>-type-descriptor
-	  <enum-set>-type-descriptor
-	  <eof>-type-descriptor
-	  <exact-compnum>-type-descriptor
-	  <exact-integer>-type-descriptor
-	  <false>-type-descriptor
-	  <fixnum>-type-descriptor
-	  <flonum>-type-descriptor
-	  <gensym>-type-descriptor
-	  <hashtable-eq>-type-descriptor
-	  <hashtable-equal>-type-descriptor
-	  <hashtable-eqv>-type-descriptor
-	  <hashtable>-type-descriptor
-	  <inexact-compnum>-type-descriptor
-	  <input-port>-type-descriptor
-	  <input/output-port>-type-descriptor
-	  <integer-valued>-type-descriptor
-	  <integer>-type-descriptor
-	  <ipair>-type-descriptor
-	  <keyword>-type-descriptor
-	  <list>-type-descriptor
-	  <memory-block>-type-descriptor
-	  <negative-bignum>-type-descriptor
-	  <negative-fixnum>-type-descriptor
-	  <negative-flonum>-type-descriptor
-	  <negative-ratnum>-type-descriptor
-	  <negative-zero-flonum>-type-descriptor
-	  <nelist>-type-descriptor
-	  <nestring>-type-descriptor
-	  <nevector>-type-descriptor
-	  <no-return>-type-descriptor
-	  <non-zero-cflonum>-type-descriptor
-	  <non-zero-inexact-compnum>-type-descriptor
-	  <null>-type-descriptor
-	  <number>-type-descriptor
-	  <opaque-record>-type-descriptor
-	  <output-port>-type-descriptor
-	  <pair>-type-descriptor
-	  <pointer>-type-descriptor
-	  <port>-type-descriptor
-	  <positive-bignum>-type-descriptor
-	  <positive-fixnum>-type-descriptor
-	  <positive-flonum>-type-descriptor
-	  <positive-ratnum>-type-descriptor
-	  <positive-zero-flonum>-type-descriptor
-	  <procedure>-type-descriptor
-	  <promise>-type-descriptor
-	  <rational-valued>-type-descriptor
-	  <rational>-type-descriptor
-	  <ratnum>-type-descriptor
-	  <reader-annotation>-type-descriptor
-	  <real-valued>-type-descriptor
-	  <real>-type-descriptor
-	  <record-constructor-descriptor>-type-descriptor
-	  <record-type-descriptor>-type-descriptor
-	  <record>-type-descriptor
-	  <scheme-type-descriptor>-type-descriptor
-	  <sentinel>-type-descriptor
-	  <stats>-type-descriptor
-	  <string>-type-descriptor
-	  <struct-type-descriptor>-type-descriptor
-	  <struct>-type-descriptor
-	  <symbol>-type-descriptor
-	  <textual-input-port>-type-descriptor
-	  <textual-input/output-port>-type-descriptor
-	  <textual-output-port>-type-descriptor
-	  <time>-type-descriptor
-	  <untyped>-type-descriptor
-	  <top>-type-descriptor
-	  <transcoder>-type-descriptor
-	  <true>-type-descriptor
-	  <utsname>-type-descriptor
-	  <vector>-type-descriptor
-	  <void>-type-descriptor
-	  <would-block>-type-descriptor
-	  <zero-cflonum>-type-descriptor
-	  <zero-compnum>-type-descriptor
-	  <zero-fixnum>-type-descriptor
-	  <zero-flonum>-type-descriptor))
+    (vicare system type-descriptors))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare: object type descriptors\n")
@@ -173,46 +78,46 @@
 ;;; --------------------------------------------------------------------
 ;;; numbers
 
-  (doit +1			=> <positive-fixnum>-type-descriptor)
-  (doit -1			=> <negative-fixnum>-type-descriptor)
-  (doit  0			=>     <zero-fixnum>-type-descriptor)
+  (doit +1			=> <positive-fixnum>-ctd)
+  (doit -1			=> <negative-fixnum>-ctd)
+  (doit  0			=>     <zero-fixnum>-ctd)
 
-  (doit +0.0			=> <positive-zero-flonum>-type-descriptor)
-  (doit -0.0			=> <negative-zero-flonum>-type-descriptor)
-  (doit +1.0			=> <positive-flonum>-type-descriptor)
-  (doit -1.0			=> <negative-flonum>-type-descriptor)
-  (doit +inf.0			=> <positive-flonum>-type-descriptor)
-  (doit -inf.0			=> <negative-flonum>-type-descriptor)
+  (doit +0.0			=> <positive-zero-flonum>-ctd)
+  (doit -0.0			=> <negative-zero-flonum>-ctd)
+  (doit +1.0			=> <positive-flonum>-ctd)
+  (doit -1.0			=> <negative-flonum>-ctd)
+  (doit +inf.0			=> <positive-flonum>-ctd)
+  (doit -inf.0			=> <negative-flonum>-ctd)
 
-  (doit +1/2			=> <positive-ratnum>-type-descriptor)
-  (doit -1/2			=> <negative-ratnum>-type-descriptor)
+  (doit +1/2			=> <positive-ratnum>-ctd)
+  (doit -1/2			=> <negative-ratnum>-ctd)
 
-  (doit (least-positive-bignum)		=> <positive-bignum>-type-descriptor)
-  (doit (greatest-negative-bignum)	=> <negative-bignum>-type-descriptor)
+  (doit (least-positive-bignum)		=> <positive-bignum>-ctd)
+  (doit (greatest-negative-bignum)	=> <negative-bignum>-ctd)
 
-  (doit 1+2i			=> <exact-compnum>-type-descriptor)
-  (doit 0+0.0i			=> <zero-compnum>-type-descriptor)
-  (doit 1.2+2i			=> <non-zero-inexact-compnum>-type-descriptor)
+  (doit 1+2i			=> <exact-compnum>-ctd)
+  (doit 0+0.0i			=> <zero-compnum>-ctd)
+  (doit 1.2+2i			=> <non-zero-inexact-compnum>-ctd)
 
-  (doit 0.0+0.0i		=> <zero-cflonum>-type-descriptor)
-  (doit 1.2+2.3i		=> <non-zero-cflonum>-type-descriptor)
+  (doit 0.0+0.0i		=> <zero-cflonum>-ctd)
+  (doit 1.2+2.3i		=> <non-zero-cflonum>-ctd)
 
 ;;; --------------------------------------------------------------------
 ;;; characters
 
-  (doit #\c			=> <char>-type-descriptor)
+  (doit #\c			=> <char>-ctd)
 
 ;;; --------------------------------------------------------------------
 ;;; booleans
 
-  (doit #t			=> <true>-type-descriptor)
-  (doit #f			=> <false>-type-descriptor)
+  (doit #t			=> <true>-ctd)
+  (doit #f			=> <false>-ctd)
 
 ;;; --------------------------------------------------------------------
 ;;; strings
 
-  (doit "ciao"			=> <nestring>-type-descriptor)
-  (doit ""			=> <empty-string>-type-descriptor)
+  (doit "ciao"			=> <nestring>-ctd)
+  (doit ""			=> <empty-string>-ctd)
 
 ;;; --------------------------------------------------------------------
 ;;; enumerations
@@ -222,37 +127,37 @@
 ;;; --------------------------------------------------------------------
 ;;; keywords
 
-  (doit #:ciao			=> <keyword>-type-descriptor)
+  (doit #:ciao			=> <keyword>-ctd)
 
 ;;; --------------------------------------------------------------------
 ;;; pairs and lists
 
-  (doit '()			=> <null>-type-descriptor)
+  (doit '()			=> <null>-ctd)
 
-  (doit '(1 2)			=> (make-list-type-descr (list <positive-fixnum>-type-descriptor
-							       <positive-fixnum>-type-descriptor)))
+  (doit '(1 2)			=> (make-list-type-descr (list <positive-fixnum>-ctd
+							       <positive-fixnum>-ctd)))
 
-  (doit '(1 . 2)		=> (make-pair-type-descr <positive-fixnum>-type-descriptor
-							 <positive-fixnum>-type-descriptor))
+  (doit '(1 . 2)		=> (make-pair-type-descr <positive-fixnum>-ctd
+							 <positive-fixnum>-ctd))
 
-  (doit '(1 2 . 3)		=> (make-pair-type-descr <positive-fixnum>-type-descriptor
-							 (make-pair-type-descr <positive-fixnum>-type-descriptor
-									       <positive-fixnum>-type-descriptor)))
+  (doit '(1 2 . 3)		=> (make-pair-type-descr <positive-fixnum>-ctd
+							 (make-pair-type-descr <positive-fixnum>-ctd
+									       <positive-fixnum>-ctd)))
 
 ;;; --------------------------------------------------------------------
 ;;; vectors
 
-  (doit '#(1 2 3)		=> (make-vector-type-descr (list <positive-fixnum>-type-descriptor
-								 <positive-fixnum>-type-descriptor
-								 <positive-fixnum>-type-descriptor)))
-  (doit '#()			=> <empty-vector>-type-descriptor)
+  (doit '#(1 2 3)		=> (make-vector-type-descr (list <positive-fixnum>-ctd
+								 <positive-fixnum>-ctd
+								 <positive-fixnum>-ctd)))
+  (doit '#()			=> <empty-vector>-ctd)
 
 
 ;;; --------------------------------------------------------------------
 ;;; bytevectors
 
-  (doit '#vu8(1 2 3)		=> <nebytevector>-type-descriptor)
-  (doit '#vu8()			=> <empty-bytevector>-type-descriptor)
+  (doit '#vu8(1 2 3)		=> <nebytevector>-ctd)
+  (doit '#vu8()			=> <empty-bytevector>-ctd)
 
   #| end of PARAMETRISE |# )
 
@@ -276,23 +181,23 @@
 ;;; --------------------------------------------------------------------
 ;;; built-in types
 
-  (doit-true	<top>-type-descriptor		<top>-type-descriptor)
-  (doit-false	<top>-type-descriptor		<number>-type-descriptor)
-  (doit-false	<number>-type-descriptor	<top>-type-descriptor)
+  (doit-true	<top>-ctd		<top>-ctd)
+  (doit-false	<top>-ctd		<number>-ctd)
+  (doit-false	<number>-ctd		<top>-ctd)
 
-  (doit-false	<top>-type-descriptor		<struct>-type-descriptor)
-  (doit-false	<top>-type-descriptor		<record>-type-descriptor)
-  (doit-false	<struct>-type-descriptor	<record>-type-descriptor)
+  (doit-false	<top>-ctd		<struct>-ctd)
+  (doit-false	<top>-ctd		<record>-ctd)
+  (doit-false	<struct>-ctd		<record>-ctd)
 
-  (doit-true	<struct>-type-descriptor	<struct>-type-descriptor)
-  (doit-true	<record>-type-descriptor	<record>-type-descriptor)
+  (doit-true	<struct>-ctd		<struct>-ctd)
+  (doit-true	<record>-ctd		<record>-ctd)
 
-  (doit-false	<list>-type-descriptor		<null>-type-descriptor)
-  (doit-false	<nelist>-type-descriptor	<null>-type-descriptor)
+  (doit-false	<list>-ctd		<null>-ctd)
+  (doit-false	<nelist>-ctd		<null>-ctd)
 
-  (doit-true	<list>-type-descriptor		<list>-type-descriptor)
-  (doit-true	<null>-type-descriptor		<null>-type-descriptor)
-  (doit-true	<nelist>-type-descriptor	<nelist>-type-descriptor)
+  (doit-true	<list>-ctd		<list>-ctd)
+  (doit-true	<null>-ctd		<null>-ctd)
+  (doit-true	<nelist>-ctd		<nelist>-ctd)
 
 ;;; --------------------------------------------------------------------
 ;;; struct-type descriptors
@@ -300,21 +205,21 @@
   (doit-true	alpha-rtd			alpha-rtd)
   (doit-true	beta-rtd			beta-rtd)
 
-  (doit-false	<top>-type-descriptor		alpha-rtd)
-  (doit-false	<struct>-type-descriptor	alpha-rtd)
-  (doit-false	alpha-rtd			<top>-type-descriptor)
-  (doit-false	alpha-rtd			<struct>-type-descriptor)
+  (doit-false	<top>-ctd			alpha-rtd)
+  (doit-false	<struct>-ctd			alpha-rtd)
+  (doit-false	alpha-rtd			<top>-ctd)
+  (doit-false	alpha-rtd			<struct>-ctd)
   (doit-false	alpha-rtd			beta-rtd)
 
 ;;; --------------------------------------------------------------------
 ;;; record-type descriptors
 
-  (doit-false	<top>-type-descriptor		<duo>-rtd)
-  (doit-false	<struct>-type-descriptor	<duo>-rtd)
-  (doit-false	<record>-type-descriptor	<duo>-rtd)
-  (doit-false	<duo>-rtd			<top>-type-descriptor)
-  (doit-false	<duo>-rtd			<struct>-type-descriptor)
-  (doit-false	<duo>-rtd			<record>-type-descriptor)
+  (doit-false	<top>-ctd			<duo>-rtd)
+  (doit-false	<struct>-ctd			<duo>-rtd)
+  (doit-false	<record>-ctd			<duo>-rtd)
+  (doit-false	<duo>-rtd			<top>-ctd)
+  (doit-false	<duo>-rtd			<struct>-ctd)
+  (doit-false	<duo>-rtd			<record>-ctd)
 
   (doit-true	<alpha>-rtd			<alpha>-rtd)
   (doit-true	<beta>-rtd			<beta>-rtd)
@@ -332,172 +237,172 @@
 ;;; --------------------------------------------------------------------
 ;;; pair
 
-  (doit-false	<pair>-type-descriptor
-		(make-pair-type-descr <fixnum>-type-descriptor <flonum>-type-descriptor))
+  (doit-false	<pair>-ctd
+		(make-pair-type-descr <fixnum>-ctd <flonum>-ctd))
 
-  (doit-false	(make-pair-type-descr <top>-type-descriptor <null>-type-descriptor)
-		<pair>-type-descriptor)
+  (doit-false	(make-pair-type-descr <top>-ctd <null>-ctd)
+		<pair>-ctd)
 
-  (doit-true	(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor))
+  (doit-true	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
+		(make-pair-type-descr <fixnum>-ctd <string>-ctd))
 
-  (doit-false	(make-pair-type-descr <number>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor))
+  (doit-false	(make-pair-type-descr <number>-ctd <string>-ctd)
+		(make-pair-type-descr <fixnum>-ctd <string>-ctd))
 
-  (doit-false	(make-pair-type-descr <string>-type-descriptor <number>-type-descriptor)
-		(make-pair-type-descr <string>-type-descriptor <fixnum>-type-descriptor))
+  (doit-false	(make-pair-type-descr <string>-ctd <number>-ctd)
+		(make-pair-type-descr <string>-ctd <fixnum>-ctd))
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <number>-type-descriptor <string>-type-descriptor))
+  (doit-false	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
+		(make-pair-type-descr <number>-ctd <string>-ctd))
 
-  (doit-false	(make-pair-type-descr <string>-type-descriptor <fixnum>-type-descriptor)
-		(make-pair-type-descr <string>-type-descriptor <number>-type-descriptor))
+  (doit-false	(make-pair-type-descr <string>-ctd <fixnum>-ctd)
+		(make-pair-type-descr <string>-ctd <number>-ctd))
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <symbol>-type-descriptor <string>-type-descriptor))
+  (doit-false	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
+		(make-pair-type-descr <symbol>-ctd <string>-ctd))
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <fixnum>-type-descriptor <symbol>-type-descriptor))
+  (doit-false	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
+		(make-pair-type-descr <fixnum>-ctd <symbol>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; pair-of
 
-  (doit-false	<pair>-type-descriptor
-		(make-pair-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	<pair>-ctd
+		(make-pair-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-pair-of-type-descr <fixnum>-type-descriptor)
-		<pair>-type-descriptor)
+  (doit-false	(make-pair-of-type-descr <fixnum>-ctd)
+		<pair>-ctd)
 
-  (doit-true	(make-pair-of-type-descr <fixnum>-type-descriptor)
-		(make-pair-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-pair-of-type-descr <fixnum>-ctd)
+		(make-pair-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-pair-of-type-descr <number>-type-descriptor)
-		(make-pair-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-pair-of-type-descr <number>-ctd)
+		(make-pair-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-pair-of-type-descr <fixnum>-type-descriptor)
-		(make-pair-of-type-descr <number>-type-descriptor))
+  (doit-false	(make-pair-of-type-descr <fixnum>-ctd)
+		(make-pair-of-type-descr <number>-ctd))
 
-  (doit-false	(make-pair-of-type-descr <fixnum>-type-descriptor)
-		(make-pair-of-type-descr <string>-type-descriptor))
+  (doit-false	(make-pair-of-type-descr <fixnum>-ctd)
+		(make-pair-of-type-descr <string>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; list
 
-  (doit-false	<list>-type-descriptor
-		(make-list-type-descr (list <fixnum>-type-descriptor)))
+  (doit-false	<list>-ctd
+		(make-list-type-descr (list <fixnum>-ctd)))
 
-  (doit-false	<nelist>-type-descriptor
-		(make-list-type-descr (list <fixnum>-type-descriptor)))
+  (doit-false	<nelist>-ctd
+		(make-list-type-descr (list <fixnum>-ctd)))
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor))
-		<nelist>-type-descriptor)
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd))
+		<nelist>-ctd)
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor))
-		<null>-type-descriptor)
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd))
+		<null>-ctd)
 
 ;;; list/list
 
-  (doit-true	(make-list-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-list-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor <number>-type-descriptor))
-		(make-list-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd <number>-ctd))
+		(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-list-type-descr (list <fixnum>-type-descriptor <string>-type-descriptor)))
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-list-type-descr (list <fixnum>-ctd <string>-ctd)))
 
 ;;; --------------------------------------------------------------------
 ;;; list-of
 
-  (doit-false	<list>-type-descriptor
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	<list>-ctd
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-false	<nelist>-type-descriptor
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	<nelist>-ctd
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-list-of-type-descr <fixnum>-type-descriptor)
-		<null>-type-descriptor)
+  (doit-false	(make-list-of-type-descr <fixnum>-ctd)
+		<null>-ctd)
 
-  (doit-false	(make-list-of-type-descr <top>-type-descriptor)
-		<nelist>-type-descriptor)
+  (doit-false	(make-list-of-type-descr <top>-ctd)
+		<nelist>-ctd)
 
-  (doit-false	(make-list-of-type-descr <top>-type-descriptor)
-		<list>-type-descriptor)
+  (doit-false	(make-list-of-type-descr <top>-ctd)
+		<list>-ctd)
 
 ;;; list-of/list-of
 
-  (doit-true	(make-list-of-type-descr <fixnum>-type-descriptor)
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-list-of-type-descr <fixnum>-ctd)
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-list-of-type-descr <number>-type-descriptor)
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-list-of-type-descr <number>-ctd)
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-list-of-type-descr <fixnum>-type-descriptor)
-		(make-list-of-type-descr <number>-type-descriptor))
+  (doit-false	(make-list-of-type-descr <fixnum>-ctd)
+		(make-list-of-type-descr <number>-ctd))
 
-  (doit-false	(make-list-of-type-descr <string>-type-descriptor)
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-list-of-type-descr <string>-ctd)
+		(make-list-of-type-descr <fixnum>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; vector
 
-  (doit-false	<vector>-type-descriptor
-		(make-vector-type-descr (list <fixnum>-type-descriptor)))
+  (doit-false	<vector>-ctd
+		(make-vector-type-descr (list <fixnum>-ctd)))
 
-  (doit-false	<nevector>-type-descriptor
-		(make-vector-type-descr (list <fixnum>-type-descriptor)))
+  (doit-false	<nevector>-ctd
+		(make-vector-type-descr (list <fixnum>-ctd)))
 
-  (doit-false	(make-vector-type-descr (list <top>-type-descriptor))
-		<nevector>-type-descriptor)
+  (doit-false	(make-vector-type-descr (list <top>-ctd))
+		<nevector>-ctd)
 
-  (doit-false	(make-vector-type-descr (list <fixnum>-type-descriptor))
-		<nevector>-type-descriptor)
+  (doit-false	(make-vector-type-descr (list <fixnum>-ctd))
+		<nevector>-ctd)
 
-  (doit-false	(make-vector-type-descr (list <fixnum>-type-descriptor))
-		<null>-type-descriptor)
+  (doit-false	(make-vector-type-descr (list <fixnum>-ctd))
+		<null>-ctd)
 
 ;;; vector/vector
 
-  (doit-true	(make-vector-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-vector-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
-  (doit-false	(make-vector-type-descr (list <fixnum>-type-descriptor <number>-type-descriptor))
-		(make-vector-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-false	(make-vector-type-descr (list <fixnum>-ctd <number>-ctd))
+		(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
-  (doit-false	(make-vector-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-vector-type-descr (list <fixnum>-type-descriptor <string>-type-descriptor)))
+  (doit-false	(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-vector-type-descr (list <fixnum>-ctd <string>-ctd)))
 
 ;;; --------------------------------------------------------------------
 ;;; vector-of
 
-  (doit-false	<vector>-type-descriptor
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	<vector>-ctd
+		(make-vector-of-type-descr <fixnum>-ctd))
 
-  (doit-false	<nevector>-type-descriptor
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	<nevector>-ctd
+		(make-vector-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-vector-of-type-descr <fixnum>-type-descriptor)
-		<empty-vector>-type-descriptor)
+  (doit-false	(make-vector-of-type-descr <fixnum>-ctd)
+		<empty-vector>-ctd)
 
-  (doit-false	(make-vector-of-type-descr <top>-type-descriptor)
-		<nevector>-type-descriptor)
+  (doit-false	(make-vector-of-type-descr <top>-ctd)
+		<nevector>-ctd)
 
-  (doit-false	(make-vector-of-type-descr <top>-type-descriptor)
-		<vector>-type-descriptor)
+  (doit-false	(make-vector-of-type-descr <top>-ctd)
+		<vector>-ctd)
 
 ;;; vector-of/vector-of
 
-  (doit-true	(make-vector-of-type-descr <fixnum>-type-descriptor)
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-vector-of-type-descr <fixnum>-ctd)
+		(make-vector-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-vector-of-type-descr <number>-type-descriptor)
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-vector-of-type-descr <number>-ctd)
+		(make-vector-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-vector-of-type-descr <fixnum>-type-descriptor)
-		(make-vector-of-type-descr <number>-type-descriptor))
+  (doit-false	(make-vector-of-type-descr <fixnum>-ctd)
+		(make-vector-of-type-descr <number>-ctd))
 
-  (doit-false	(make-vector-of-type-descr <string>-type-descriptor)
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-vector-of-type-descr <string>-ctd)
+		(make-vector-of-type-descr <fixnum>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; enumeration
@@ -517,44 +422,44 @@
 ;;; --------------------------------------------------------------------
 ;;; union
 
-  (doit-false	(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		<fixnum>-type-descriptor)
+  (doit-false	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		<fixnum>-ctd)
 
-  (doit-false	(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		<flonum>-type-descriptor)
+  (doit-false	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		<flonum>-ctd)
 
-  (doit-false	(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		<string>-type-descriptor)
+  (doit-false	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		<string>-ctd)
 
-  (doit-true	(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
 ;;; --------------------------------------------------------------------
 ;;; intersection
 
-  (doit-false	(make-intersection-type-descr (list <number>-type-descriptor <flonum>-type-descriptor))
-		<flonum>-type-descriptor)
+  (doit-false	(make-intersection-type-descr (list <number>-ctd <flonum>-ctd))
+		<flonum>-ctd)
 
-  (doit-false	(make-intersection-type-descr (list <number>-type-descriptor <flonum>-type-descriptor))
-		<string>-type-descriptor)
+  (doit-false	(make-intersection-type-descr (list <number>-ctd <flonum>-ctd))
+		<string>-ctd)
 
-  (doit-true	(make-intersection-type-descr (list <number>-type-descriptor <flonum>-type-descriptor))
-		(make-intersection-type-descr (list <number>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-intersection-type-descr (list <number>-ctd <flonum>-ctd))
+		(make-intersection-type-descr (list <number>-ctd <flonum>-ctd)))
 
 ;;; --------------------------------------------------------------------
 ;;; complement
 
-  (doit-false	(make-complement-type-descr <flonum>-type-descriptor)
-		<fixnum>-type-descriptor)
+  (doit-false	(make-complement-type-descr <flonum>-ctd)
+		<fixnum>-ctd)
 
-  (doit-false	<fixnum>-type-descriptor
-		(make-complement-type-descr <flonum>-type-descriptor))
+  (doit-false	<fixnum>-ctd
+		(make-complement-type-descr <flonum>-ctd))
 
-  (doit-false	<fixnum>-type-descriptor
-		(make-complement-type-descr <fixnum>-type-descriptor))
+  (doit-false	<fixnum>-ctd
+		(make-complement-type-descr <fixnum>-ctd))
 
-  (doit-true	(make-complement-type-descr <fixnum>-type-descriptor)
-		(make-complement-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-complement-type-descr <fixnum>-ctd)
+		(make-complement-type-descr <fixnum>-ctd))
 
   #| end of PARAMETRISE |# )
 
@@ -578,217 +483,217 @@
 ;;; --------------------------------------------------------------------
 ;;; built-in types
 
-  (doit-true	<top>-type-descriptor		<top>-type-descriptor)
-  (doit-true	<top>-type-descriptor		<number>-type-descriptor)
-  (doit-false	<number>-type-descriptor	<top>-type-descriptor)
+  (doit-true	<top>-ctd		<top>-ctd)
+  (doit-true	<top>-ctd		<number>-ctd)
+  (doit-false	<number>-ctd		<top>-ctd)
 
-  (doit-true	<top>-type-descriptor		<struct>-type-descriptor)
-  (doit-true	<top>-type-descriptor		<record>-type-descriptor)
-  (doit-true	<struct>-type-descriptor	<record>-type-descriptor)
+  (doit-true	<top>-ctd		<struct>-ctd)
+  (doit-true	<top>-ctd		<record>-ctd)
+  (doit-true	<struct>-ctd		<record>-ctd)
 
-  (doit-true	<list>-type-descriptor		<null>-type-descriptor)
-  (doit-false	<nelist>-type-descriptor	<null>-type-descriptor)
+  (doit-true	<list>-ctd		<null>-ctd)
+  (doit-false	<nelist>-ctd		<null>-ctd)
 
-  (doit-true	<vector>-type-descriptor	<empty-vector>-type-descriptor)
-  (doit-false	<nevector>-type-descriptor	<empty-vector>-type-descriptor)
+  (doit-true	<vector>-ctd		<empty-vector>-ctd)
+  (doit-false	<nevector>-ctd		<empty-vector>-ctd)
 
 ;;; --------------------------------------------------------------------
 ;;; struct-type descriptors
 
-  (doit-true	<top>-type-descriptor		alpha-rtd)
-  (doit-true	<struct>-type-descriptor	alpha-rtd)
-  (doit-false	alpha-rtd			<top>-type-descriptor)
-  (doit-false	alpha-rtd			<struct>-type-descriptor)
-  (doit-false	alpha-rtd			beta-rtd)
+  (doit-true	<top>-ctd		alpha-rtd)
+  (doit-true	<struct>-ctd		alpha-rtd)
+  (doit-false	alpha-rtd		<top>-ctd)
+  (doit-false	alpha-rtd		<struct>-ctd)
+  (doit-false	alpha-rtd		beta-rtd)
 
 ;;; --------------------------------------------------------------------
 ;;; record-type descriptors
 
-  (doit-true	<top>-type-descriptor		<duo>-rtd)
-  (doit-true	<struct>-type-descriptor	<duo>-rtd)
-  (doit-true	<record>-type-descriptor	<duo>-rtd)
-  (doit-false	<duo>-rtd			<top>-type-descriptor)
-  (doit-false	<duo>-rtd			<struct>-type-descriptor)
-  (doit-false	<duo>-rtd			<record>-type-descriptor)
+  (doit-true	<top>-ctd		<duo>-rtd)
+  (doit-true	<struct>-ctd		<duo>-rtd)
+  (doit-true	<record>-ctd		<duo>-rtd)
+  (doit-false	<duo>-rtd		<top>-ctd)
+  (doit-false	<duo>-rtd		<struct>-ctd)
+  (doit-false	<duo>-rtd		<record>-ctd)
 
-  (doit-true	<alpha>-rtd			<beta>-rtd)
-  (doit-true	<beta>-rtd			<delta>-rtd)
-  (doit-true	<alpha>-rtd			<delta>-rtd)
-  (doit-false	<beta>-rtd			<alpha>-rtd)
-  (doit-false	<delta>-rtd			<beta>-rtd)
-  (doit-false	<delta>-rtd			<alpha>-rtd)
-  (doit-false	<alpha>-rtd			<duo>-rtd)
-  (doit-false	<duo>-rtd			<alpha>-rtd)
+  (doit-true	<alpha>-rtd		<beta>-rtd)
+  (doit-true	<beta>-rtd		<delta>-rtd)
+  (doit-true	<alpha>-rtd		<delta>-rtd)
+  (doit-false	<beta>-rtd		<alpha>-rtd)
+  (doit-false	<delta>-rtd		<beta>-rtd)
+  (doit-false	<delta>-rtd		<alpha>-rtd)
+  (doit-false	<alpha>-rtd		<duo>-rtd)
+  (doit-false	<duo>-rtd		<alpha>-rtd)
 
 ;;; --------------------------------------------------------------------
 ;;; pair
 
-  (doit-true	<pair>-type-descriptor
-		(make-pair-type-descr <fixnum>-type-descriptor <flonum>-type-descriptor))
+  (doit-true	<pair>-ctd
+		(make-pair-type-descr <fixnum>-ctd <flonum>-ctd))
 
-  (doit-false	(make-pair-type-descr <top>-type-descriptor <null>-type-descriptor)
-		<pair>-type-descriptor)
+  (doit-false	(make-pair-type-descr <top>-ctd <null>-ctd)
+		<pair>-ctd)
 
-  (doit-true	(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor))
+  (doit-true	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
+		(make-pair-type-descr <fixnum>-ctd <string>-ctd))
 
-  (doit-true	(make-pair-type-descr <number>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor))
+  (doit-true	(make-pair-type-descr <number>-ctd <string>-ctd)
+		(make-pair-type-descr <fixnum>-ctd <string>-ctd))
 
-  (doit-true	(make-pair-type-descr <string>-type-descriptor <number>-type-descriptor)
-		(make-pair-type-descr <string>-type-descriptor <fixnum>-type-descriptor))
+  (doit-true	(make-pair-type-descr <string>-ctd <number>-ctd)
+		(make-pair-type-descr <string>-ctd <fixnum>-ctd))
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <number>-type-descriptor <string>-type-descriptor))
+  (doit-false	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
+		(make-pair-type-descr <number>-ctd <string>-ctd))
 
-  (doit-false	(make-pair-type-descr <string>-type-descriptor <fixnum>-type-descriptor)
-		(make-pair-type-descr <string>-type-descriptor <number>-type-descriptor))
+  (doit-false	(make-pair-type-descr <string>-ctd <fixnum>-ctd)
+		(make-pair-type-descr <string>-ctd <number>-ctd))
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <symbol>-type-descriptor <string>-type-descriptor))
+  (doit-false	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
+		(make-pair-type-descr <symbol>-ctd <string>-ctd))
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <fixnum>-type-descriptor <symbol>-type-descriptor))
+  (doit-false	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
+		(make-pair-type-descr <fixnum>-ctd <symbol>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; pair-of
 
-  (doit-true	<pair>-type-descriptor
-		(make-pair-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	<pair>-ctd
+		(make-pair-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-pair-of-type-descr <fixnum>-type-descriptor)
-		<pair>-type-descriptor)
+  (doit-false	(make-pair-of-type-descr <fixnum>-ctd)
+		<pair>-ctd)
 
-  (doit-true	(make-pair-of-type-descr <fixnum>-type-descriptor)
-		(make-pair-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-pair-of-type-descr <fixnum>-ctd)
+		(make-pair-of-type-descr <fixnum>-ctd))
 
-  (doit-true	(make-pair-of-type-descr <number>-type-descriptor)
-		(make-pair-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-pair-of-type-descr <number>-ctd)
+		(make-pair-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-pair-of-type-descr <fixnum>-type-descriptor)
-		(make-pair-of-type-descr <number>-type-descriptor))
+  (doit-false	(make-pair-of-type-descr <fixnum>-ctd)
+		(make-pair-of-type-descr <number>-ctd))
 
-  (doit-false	(make-pair-of-type-descr <fixnum>-type-descriptor)
-		(make-pair-of-type-descr <string>-type-descriptor))
+  (doit-false	(make-pair-of-type-descr <fixnum>-ctd)
+		(make-pair-of-type-descr <string>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; list
 
-  (doit-true	<list>-type-descriptor
-		(make-list-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	<list>-ctd
+		(make-list-type-descr (list <fixnum>-ctd)))
 
-  (doit-true	<nelist>-type-descriptor
-		(make-list-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	<nelist>-ctd
+		(make-list-type-descr (list <fixnum>-ctd)))
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor))
-		<nelist>-type-descriptor)
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd))
+		<nelist>-ctd)
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor))
-		<null>-type-descriptor)
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd))
+		<null>-ctd)
 
 ;;; list/list
 
-  (doit-true	(make-list-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-list-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
-  (doit-true	(make-list-type-descr (list <fixnum>-type-descriptor <number>-type-descriptor))
-		(make-list-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-list-type-descr (list <fixnum>-ctd <number>-ctd))
+		(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-list-type-descr (list <fixnum>-type-descriptor <string>-type-descriptor)))
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-list-type-descr (list <fixnum>-ctd <string>-ctd)))
 
 ;;; --------------------------------------------------------------------
 ;;; list-of
 
-  (doit-true	<list>-type-descriptor
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	<list>-ctd
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-false	<nelist>-type-descriptor
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	<nelist>-ctd
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-true	(make-list-of-type-descr <fixnum>-type-descriptor)
-		<null>-type-descriptor)
+  (doit-true	(make-list-of-type-descr <fixnum>-ctd)
+		<null>-ctd)
 
-  (doit-false	(make-list-of-type-descr <top>-type-descriptor)
-		<nelist>-type-descriptor)
+  (doit-false	(make-list-of-type-descr <top>-ctd)
+		<nelist>-ctd)
 
-  (doit-false	(make-list-of-type-descr <top>-type-descriptor)
-		<list>-type-descriptor)
+  (doit-false	(make-list-of-type-descr <top>-ctd)
+		<list>-ctd)
 
 ;;; list-of/list-of
 
-  (doit-true	(make-list-of-type-descr <fixnum>-type-descriptor)
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-list-of-type-descr <fixnum>-ctd)
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-true	(make-list-of-type-descr <number>-type-descriptor)
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-list-of-type-descr <number>-ctd)
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-list-of-type-descr <fixnum>-type-descriptor)
-		(make-list-of-type-descr <number>-type-descriptor))
+  (doit-false	(make-list-of-type-descr <fixnum>-ctd)
+		(make-list-of-type-descr <number>-ctd))
 
-  (doit-false	(make-list-of-type-descr <string>-type-descriptor)
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-list-of-type-descr <string>-ctd)
+		(make-list-of-type-descr <fixnum>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; vector
 
-  (doit-true	<vector>-type-descriptor
-		(make-vector-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	<vector>-ctd
+		(make-vector-type-descr (list <fixnum>-ctd)))
 
-  (doit-true	<nevector>-type-descriptor
-		(make-vector-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	<nevector>-ctd
+		(make-vector-type-descr (list <fixnum>-ctd)))
 
-  (doit-false	(make-vector-type-descr (list <top>-type-descriptor))
-		<nevector>-type-descriptor)
+  (doit-false	(make-vector-type-descr (list <top>-ctd))
+		<nevector>-ctd)
 
-  (doit-false	(make-vector-type-descr (list <fixnum>-type-descriptor))
-		<nevector>-type-descriptor)
+  (doit-false	(make-vector-type-descr (list <fixnum>-ctd))
+		<nevector>-ctd)
 
-  (doit-false	(make-vector-type-descr (list <fixnum>-type-descriptor))
-		<null>-type-descriptor)
+  (doit-false	(make-vector-type-descr (list <fixnum>-ctd))
+		<null>-ctd)
 
 ;;; vector/vector
 
-  (doit-true	(make-vector-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-vector-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
-  (doit-true	(make-vector-type-descr (list <fixnum>-type-descriptor <number>-type-descriptor))
-		(make-vector-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-vector-type-descr (list <fixnum>-ctd <number>-ctd))
+		(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
-  (doit-false	(make-vector-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-vector-type-descr (list <fixnum>-type-descriptor <string>-type-descriptor)))
+  (doit-false	(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-vector-type-descr (list <fixnum>-ctd <string>-ctd)))
 
 ;;; --------------------------------------------------------------------
 ;;; vector-of
 
-  (doit-true	<vector>-type-descriptor
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	<vector>-ctd
+		(make-vector-of-type-descr <fixnum>-ctd))
 
-  (doit-false	<nevector>-type-descriptor
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	<nevector>-ctd
+		(make-vector-of-type-descr <fixnum>-ctd))
 
-  (doit-true	(make-vector-of-type-descr <fixnum>-type-descriptor)
-		<empty-vector>-type-descriptor)
+  (doit-true	(make-vector-of-type-descr <fixnum>-ctd)
+		<empty-vector>-ctd)
 
-  (doit-false	(make-vector-of-type-descr <top>-type-descriptor)
-		<nevector>-type-descriptor)
+  (doit-false	(make-vector-of-type-descr <top>-ctd)
+		<nevector>-ctd)
 
-  (doit-false	(make-vector-of-type-descr <top>-type-descriptor)
-		<vector>-type-descriptor)
+  (doit-false	(make-vector-of-type-descr <top>-ctd)
+		<vector>-ctd)
 
 ;;; vector-of/vector-of
 
-  (doit-true	(make-vector-of-type-descr <fixnum>-type-descriptor)
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-vector-of-type-descr <fixnum>-ctd)
+		(make-vector-of-type-descr <fixnum>-ctd))
 
-  (doit-true	(make-vector-of-type-descr <number>-type-descriptor)
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-vector-of-type-descr <number>-ctd)
+		(make-vector-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-vector-of-type-descr <fixnum>-type-descriptor)
-		(make-vector-of-type-descr <number>-type-descriptor))
+  (doit-false	(make-vector-of-type-descr <fixnum>-ctd)
+		(make-vector-of-type-descr <number>-ctd))
 
-  (doit-false	(make-vector-of-type-descr <string>-type-descriptor)
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-vector-of-type-descr <string>-ctd)
+		(make-vector-of-type-descr <fixnum>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; enumeration
@@ -796,7 +701,7 @@
   (doit-true	(make-enumeration-type-descr '(ciao))
 		(make-enumeration-type-descr '(ciao)))
 
-  (doit-true	<symbol>-type-descriptor
+  (doit-true	<symbol>-ctd
 		(make-enumeration-type-descr '(ciao)))
 
   (doit-false	(make-enumeration-type-descr '(ciao))
@@ -811,44 +716,44 @@
 ;;; --------------------------------------------------------------------
 ;;; union
 
-  (doit-false	(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		<fixnum>-type-descriptor)
+  (doit-false	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		<fixnum>-ctd)
 
-  (doit-false	(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		<flonum>-type-descriptor)
+  (doit-false	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		<flonum>-ctd)
 
-  (doit-false	(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		<string>-type-descriptor)
+  (doit-false	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		<string>-ctd)
 
-  (doit-true	(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
 ;;; --------------------------------------------------------------------
 ;;; intersection
 
-  (doit-false	(make-intersection-type-descr (list <number>-type-descriptor <flonum>-type-descriptor))
-		<flonum>-type-descriptor)
+  (doit-false	(make-intersection-type-descr (list <number>-ctd <flonum>-ctd))
+		<flonum>-ctd)
 
-  (doit-false	(make-intersection-type-descr (list <number>-type-descriptor <flonum>-type-descriptor))
-		<string>-type-descriptor)
+  (doit-false	(make-intersection-type-descr (list <number>-ctd <flonum>-ctd))
+		<string>-ctd)
 
-  (doit-true	(make-intersection-type-descr (list <number>-type-descriptor <flonum>-type-descriptor))
-		(make-intersection-type-descr (list <number>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-intersection-type-descr (list <number>-ctd <flonum>-ctd))
+		(make-intersection-type-descr (list <number>-ctd <flonum>-ctd)))
 
 ;;; --------------------------------------------------------------------
 ;;; complement
 
-  (doit-false	(make-complement-type-descr <flonum>-type-descriptor)
-		<fixnum>-type-descriptor)
+  (doit-false	(make-complement-type-descr <flonum>-ctd)
+		<fixnum>-ctd)
 
-  (doit-false	<fixnum>-type-descriptor
-		(make-complement-type-descr <flonum>-type-descriptor))
+  (doit-false	<fixnum>-ctd
+		(make-complement-type-descr <flonum>-ctd))
 
-  (doit-false	<fixnum>-type-descriptor
-		(make-complement-type-descr <fixnum>-type-descriptor))
+  (doit-false	<fixnum>-ctd
+		(make-complement-type-descr <fixnum>-ctd))
 
-  (doit-true	(make-complement-type-descr <fixnum>-type-descriptor)
-		(make-complement-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-complement-type-descr <fixnum>-ctd)
+		(make-complement-type-descr <fixnum>-ctd))
 
   #| end of PARAMETRISE |# )
 
@@ -872,394 +777,394 @@
 ;;; --------------------------------------------------------------------
 ;;; built-in types
 
-  (doit-true	<top>-type-descriptor		<top>-type-descriptor)
-  (doit-true	<top>-type-descriptor		<number>-type-descriptor)
-  (doit-false	<number>-type-descriptor	<top>-type-descriptor)
+  (doit-true	<top>-ctd		<top>-ctd)
+  (doit-true	<top>-ctd		<number>-ctd)
+  (doit-false	<number>-ctd		<top>-ctd)
 
-  (doit-true	<top>-type-descriptor		<struct>-type-descriptor)
-  (doit-true	<top>-type-descriptor		<record>-type-descriptor)
-  (doit-true	<struct>-type-descriptor	<record>-type-descriptor)
+  (doit-true	<top>-ctd		<struct>-ctd)
+  (doit-true	<top>-ctd		<record>-ctd)
+  (doit-true	<struct>-ctd		<record>-ctd)
 
-  (doit-true	<list>-type-descriptor		<null>-type-descriptor)
-  (doit-false	<nelist>-type-descriptor	<null>-type-descriptor)
+  (doit-true	<list>-ctd		<null>-ctd)
+  (doit-false	<nelist>-ctd		<null>-ctd)
 
-  (doit-true	<vector>-type-descriptor	<empty-vector>-type-descriptor)
-  (doit-false	<nevector>-type-descriptor	<empty-vector>-type-descriptor)
+  (doit-true	<vector>-ctd		<empty-vector>-ctd)
+  (doit-false	<nevector>-ctd		<empty-vector>-ctd)
 
 ;;; --------------------------------------------------------------------
 ;;; struct-type descriptors
 
-  (doit-true	<top>-type-descriptor		alpha-rtd)
-  (doit-true	<struct>-type-descriptor	alpha-rtd)
-  (doit-false	alpha-rtd			<top>-type-descriptor)
-  (doit-false	alpha-rtd			<struct>-type-descriptor)
-  (doit-false	alpha-rtd			beta-rtd)
+  (doit-true	<top>-ctd		alpha-rtd)
+  (doit-true	<struct>-ctd		alpha-rtd)
+  (doit-false	alpha-rtd		<top>-ctd)
+  (doit-false	alpha-rtd		<struct>-ctd)
+  (doit-false	alpha-rtd		beta-rtd)
 
 ;;; --------------------------------------------------------------------
 ;;; record-type descriptors
 
-  (doit-true	<top>-type-descriptor		<duo>-rtd)
-  (doit-true	<struct>-type-descriptor	<duo>-rtd)
-  (doit-true	<record>-type-descriptor	<duo>-rtd)
-  (doit-false	<duo>-rtd			<top>-type-descriptor)
-  (doit-false	<duo>-rtd			<struct>-type-descriptor)
-  (doit-false	<duo>-rtd			<record>-type-descriptor)
+  (doit-true	<top>-ctd		<duo>-rtd)
+  (doit-true	<struct>-ctd		<duo>-rtd)
+  (doit-true	<record>-ctd		<duo>-rtd)
+  (doit-false	<duo>-rtd		<top>-ctd)
+  (doit-false	<duo>-rtd		<struct>-ctd)
+  (doit-false	<duo>-rtd		<record>-ctd)
 
-  (doit-true	<alpha>-rtd			<beta>-rtd)
-  (doit-true	<beta>-rtd			<delta>-rtd)
-  (doit-true	<alpha>-rtd			<delta>-rtd)
-  (doit-false	<beta>-rtd			<alpha>-rtd)
-  (doit-false	<delta>-rtd			<beta>-rtd)
-  (doit-false	<delta>-rtd			<alpha>-rtd)
-  (doit-false	<alpha>-rtd			<duo>-rtd)
-  (doit-false	<duo>-rtd			<alpha>-rtd)
+  (doit-true	<alpha>-rtd		<beta>-rtd)
+  (doit-true	<beta>-rtd		<delta>-rtd)
+  (doit-true	<alpha>-rtd		<delta>-rtd)
+  (doit-false	<beta>-rtd		<alpha>-rtd)
+  (doit-false	<delta>-rtd		<beta>-rtd)
+  (doit-false	<delta>-rtd		<alpha>-rtd)
+  (doit-false	<alpha>-rtd		<duo>-rtd)
+  (doit-false	<duo>-rtd		<alpha>-rtd)
 
 ;;; --------------------------------------------------------------------
 ;;; pair
 
-  (doit-true	<pair>-type-descriptor
-		(make-pair-type-descr <fixnum>-type-descriptor <flonum>-type-descriptor))
+  (doit-true	<pair>-ctd
+		(make-pair-type-descr <fixnum>-ctd <flonum>-ctd))
 
-  (doit-true	(make-pair-type-descr <top>-type-descriptor <null>-type-descriptor)
-		<nelist>-type-descriptor)
+  (doit-true	(make-pair-type-descr <top>-ctd <null>-ctd)
+		<nelist>-ctd)
 
-  (doit-true	(make-pair-type-descr <top>-type-descriptor <null>-type-descriptor)
-		<nelist>-type-descriptor)
+  (doit-true	(make-pair-type-descr <top>-ctd <null>-ctd)
+		<nelist>-ctd)
 
-  (doit-true	(make-pair-type-descr <top>-type-descriptor <null>-type-descriptor)
-		<nelist>-type-descriptor)
+  (doit-true	(make-pair-type-descr <top>-ctd <null>-ctd)
+		<nelist>-ctd)
 
-  (doit-true	(make-pair-type-descr <top>-type-descriptor <list>-type-descriptor)
-		<nelist>-type-descriptor)
+  (doit-true	(make-pair-type-descr <top>-ctd <list>-ctd)
+		<nelist>-ctd)
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor <list>-type-descriptor)
-		<nelist>-type-descriptor)
+  (doit-false	(make-pair-type-descr <fixnum>-ctd <list>-ctd)
+		<nelist>-ctd)
 
 ;;; pair/pair
 
-  (doit-true	(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor))
+  (doit-true	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
+		(make-pair-type-descr <fixnum>-ctd <string>-ctd))
 
-  (doit-true	(make-pair-type-descr <number>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor))
+  (doit-true	(make-pair-type-descr <number>-ctd <string>-ctd)
+		(make-pair-type-descr <fixnum>-ctd <string>-ctd))
 
-  (doit-true	(make-pair-type-descr <string>-type-descriptor <number>-type-descriptor)
-		(make-pair-type-descr <string>-type-descriptor <fixnum>-type-descriptor))
+  (doit-true	(make-pair-type-descr <string>-ctd <number>-ctd)
+		(make-pair-type-descr <string>-ctd <fixnum>-ctd))
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <number>-type-descriptor <string>-type-descriptor))
+  (doit-false	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
+		(make-pair-type-descr <number>-ctd <string>-ctd))
 
-  (doit-false	(make-pair-type-descr <string>-type-descriptor <fixnum>-type-descriptor)
-		(make-pair-type-descr <string>-type-descriptor <number>-type-descriptor))
+  (doit-false	(make-pair-type-descr <string>-ctd <fixnum>-ctd)
+		(make-pair-type-descr <string>-ctd <number>-ctd))
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <symbol>-type-descriptor <string>-type-descriptor))
+  (doit-false	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
+		(make-pair-type-descr <symbol>-ctd <string>-ctd))
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor)
-		(make-pair-type-descr <fixnum>-type-descriptor <symbol>-type-descriptor))
+  (doit-false	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
+		(make-pair-type-descr <fixnum>-ctd <symbol>-ctd))
 
 ;;; pair/pair-of
 
-  (doit-true	(make-pair-type-descr    <fixnum>-type-descriptor <number>-type-descriptor)
-		(make-pair-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-pair-type-descr    <fixnum>-ctd <number>-ctd)
+		(make-pair-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-pair-type-descr    <string>-type-descriptor <number>-type-descriptor)
-		(make-pair-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-pair-type-descr    <string>-ctd <number>-ctd)
+		(make-pair-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-pair-type-descr    <fixnum>-type-descriptor <string>-type-descriptor)
-		(make-pair-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-pair-type-descr    <fixnum>-ctd <string>-ctd)
+		(make-pair-of-type-descr <fixnum>-ctd))
 
 ;;; pair/list
 
-  (doit-true	(make-pair-type-descr <fixnum>-type-descriptor <null>-type-descriptor)
-		(make-list-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	(make-pair-type-descr <fixnum>-ctd <null>-ctd)
+		(make-list-type-descr (list <fixnum>-ctd)))
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor <flonum>-type-descriptor)
-		(make-list-type-descr (list <fixnum>-type-descriptor)))
+  (doit-false	(make-pair-type-descr <fixnum>-ctd <flonum>-ctd)
+		(make-list-type-descr (list <fixnum>-ctd)))
 
-  (doit-true	(make-pair-type-descr <fixnum>-type-descriptor (make-list-of-type-descr <fixnum>-type-descriptor))
-		(make-list-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	(make-pair-type-descr <fixnum>-ctd (make-list-of-type-descr <fixnum>-ctd))
+		(make-list-type-descr (list <fixnum>-ctd)))
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor (make-list-type-descr (list <fixnum>-type-descriptor)))
-		(make-list-type-descr (list <fixnum>-type-descriptor)))
+  (doit-false	(make-pair-type-descr <fixnum>-ctd (make-list-type-descr (list <fixnum>-ctd)))
+		(make-list-type-descr (list <fixnum>-ctd)))
 
-  (doit-true	(make-pair-type-descr <fixnum>-type-descriptor (make-list-type-descr (list <fixnum>-type-descriptor)))
-		(make-list-type-descr (list <fixnum>-type-descriptor <fixnum>-type-descriptor)))
+  (doit-true	(make-pair-type-descr <fixnum>-ctd (make-list-type-descr (list <fixnum>-ctd)))
+		(make-list-type-descr (list <fixnum>-ctd <fixnum>-ctd)))
 
 ;;; pair/list-of
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor (make-list-of-type-descr <fixnum>-type-descriptor))
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-pair-type-descr <fixnum>-ctd (make-list-of-type-descr <fixnum>-ctd))
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-pair-type-descr <fixnum>-type-descriptor (make-list-type-descr (list <fixnum>-type-descriptor)))
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-pair-type-descr <fixnum>-ctd (make-list-type-descr (list <fixnum>-ctd)))
+		(make-list-of-type-descr <fixnum>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; pair-of
 
-  (doit-true	<pair>-type-descriptor
-		(make-pair-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	<pair>-ctd
+		(make-pair-of-type-descr <fixnum>-ctd))
 
 ;;;
 
-  (doit-true	(make-pair-of-type-descr <null>-type-descriptor)
-		<list>-type-descriptor)
+  (doit-true	(make-pair-of-type-descr <null>-ctd)
+		<list>-ctd)
 
-  (doit-true	(make-pair-of-type-descr <list>-type-descriptor)
-		<list>-type-descriptor)
+  (doit-true	(make-pair-of-type-descr <list>-ctd)
+		<list>-ctd)
 
-  (doit-false	(make-pair-of-type-descr <fixnum>-type-descriptor)
-		<list>-type-descriptor)
+  (doit-false	(make-pair-of-type-descr <fixnum>-ctd)
+		<list>-ctd)
 
 ;;;
 
-  (doit-true	(make-pair-of-type-descr <null>-type-descriptor)
-		<nelist>-type-descriptor)
+  (doit-true	(make-pair-of-type-descr <null>-ctd)
+		<nelist>-ctd)
 
-  (doit-true	(make-pair-of-type-descr <list>-type-descriptor)
-		<nelist>-type-descriptor)
+  (doit-true	(make-pair-of-type-descr <list>-ctd)
+		<nelist>-ctd)
 
-  (doit-false	(make-pair-of-type-descr <fixnum>-type-descriptor)
-		<nelist>-type-descriptor)
+  (doit-false	(make-pair-of-type-descr <fixnum>-ctd)
+		<nelist>-ctd)
 
 ;;; pair-of/pair
 
-  (doit-true	(make-pair-of-type-descr <list>-type-descriptor)
-		(make-pair-type-descr <list>-type-descriptor <list>-type-descriptor))
+  (doit-true	(make-pair-of-type-descr <list>-ctd)
+		(make-pair-type-descr <list>-ctd <list>-ctd))
 
-  (doit-true	(make-pair-of-type-descr (make-union-type-descr (list <number>-type-descriptor <list>-type-descriptor)))
-		(make-pair-type-descr <fixnum>-type-descriptor <list>-type-descriptor))
+  (doit-true	(make-pair-of-type-descr (make-union-type-descr (list <number>-ctd <list>-ctd)))
+		(make-pair-type-descr <fixnum>-ctd <list>-ctd))
 
 ;;; pair-of/pair-of
 
-  (doit-true	(make-pair-of-type-descr <number>-type-descriptor)
-		(make-pair-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-pair-of-type-descr <number>-ctd)
+		(make-pair-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-pair-of-type-descr <number>-type-descriptor)
-		(make-pair-of-type-descr <string>-type-descriptor))
+  (doit-false	(make-pair-of-type-descr <number>-ctd)
+		(make-pair-of-type-descr <string>-ctd))
 
 ;;; pair-of/list
 
-  (doit-true	(make-pair-of-type-descr <list>-type-descriptor)
-		(make-list-type-descr (list <list>-type-descriptor <list>-type-descriptor)))
+  (doit-true	(make-pair-of-type-descr <list>-ctd)
+		(make-list-type-descr (list <list>-ctd <list>-ctd)))
 
-  (doit-true	(make-pair-of-type-descr (make-union-type-descr (list <number>-type-descriptor <list>-type-descriptor)))
-		(make-list-type-descr (list <fixnum>-type-descriptor <list>-type-descriptor)))
+  (doit-true	(make-pair-of-type-descr (make-union-type-descr (list <number>-ctd <list>-ctd)))
+		(make-list-type-descr (list <fixnum>-ctd <list>-ctd)))
 
 ;;; pair-of/list-of
 
-  (doit-true	(make-pair-of-type-descr <number>-type-descriptor)
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-pair-of-type-descr <number>-ctd)
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-pair-of-type-descr <number>-type-descriptor)
-		(make-list-of-type-descr <string>-type-descriptor))
+  (doit-false	(make-pair-of-type-descr <number>-ctd)
+		(make-list-of-type-descr <string>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; list
 
-  (doit-true	<list>-type-descriptor
-		(make-list-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	<list>-ctd
+		(make-list-type-descr (list <fixnum>-ctd)))
 
-  (doit-true	<nelist>-type-descriptor
-		(make-list-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	<nelist>-ctd
+		(make-list-type-descr (list <fixnum>-ctd)))
 
-  (doit-true	(make-list-type-descr (list <top>-type-descriptor))
-		<nelist>-type-descriptor)
+  (doit-true	(make-list-type-descr (list <top>-ctd))
+		<nelist>-ctd)
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor))
-		<nelist>-type-descriptor)
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd))
+		<nelist>-ctd)
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor))
-		<null>-type-descriptor)
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd))
+		<null>-ctd)
 
 ;;; list/pair
 
-  (doit-true	(make-list-type-descr (list <fixnum>-type-descriptor))
-		(make-pair-type-descr <fixnum>-type-descriptor <null>-type-descriptor))
+  (doit-true	(make-list-type-descr (list <fixnum>-ctd))
+		(make-pair-type-descr <fixnum>-ctd <null>-ctd))
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor))
-		(make-pair-type-descr <fixnum>-type-descriptor <string>-type-descriptor))
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd))
+		(make-pair-type-descr <fixnum>-ctd <string>-ctd))
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-pair-type-descr <fixnum>-type-descriptor <null>-type-descriptor))
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-pair-type-descr <fixnum>-ctd <null>-ctd))
 
 ;;; list/pair-of
 
-  (doit-true	(make-list-type-descr (list <null>-type-descriptor))
-		(make-pair-of-type-descr <null>-type-descriptor))
+  (doit-true	(make-list-type-descr (list <null>-ctd))
+		(make-pair-of-type-descr <null>-ctd))
 
-  (doit-true	(make-list-type-descr (list <list>-type-descriptor))
-		(make-pair-of-type-descr <null>-type-descriptor))
+  (doit-true	(make-list-type-descr (list <list>-ctd))
+		(make-pair-of-type-descr <null>-ctd))
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor))
-		(make-pair-of-type-descr <list>-type-descriptor))
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd))
+		(make-pair-of-type-descr <list>-ctd))
 
-  (doit-true	(make-list-type-descr (list (make-list-type-descr (list <flonum>-type-descriptor)) <flonum>-type-descriptor))
-		(make-pair-of-type-descr (make-list-type-descr (list <flonum>-type-descriptor))))
+  (doit-true	(make-list-type-descr (list (make-list-type-descr (list <flonum>-ctd)) <flonum>-ctd))
+		(make-pair-of-type-descr (make-list-type-descr (list <flonum>-ctd))))
 
 ;;; list/list
 
-  (doit-true	(make-list-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-list-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
-  (doit-true	(make-list-type-descr (list <fixnum>-type-descriptor <number>-type-descriptor))
-		(make-list-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-list-type-descr (list <fixnum>-ctd <number>-ctd))
+		(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-list-type-descr (list <fixnum>-type-descriptor <string>-type-descriptor)))
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-list-type-descr (list <fixnum>-ctd <string>-ctd)))
 
 ;;; list/list-of
 
-  (doit-false	(make-list-type-descr (list <fixnum>-type-descriptor))
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-list-type-descr (list <fixnum>-ctd))
+		(make-list-of-type-descr <fixnum>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; list-of
 
-  (doit-true	<list>-type-descriptor
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	<list>-ctd
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-false	<nelist>-type-descriptor
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	<nelist>-ctd
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-true	(make-list-of-type-descr <fixnum>-type-descriptor)
-		<null>-type-descriptor)
+  (doit-true	(make-list-of-type-descr <fixnum>-ctd)
+		<null>-ctd)
 
-  (doit-true	(make-list-of-type-descr <top>-type-descriptor)
-		<nelist>-type-descriptor)
+  (doit-true	(make-list-of-type-descr <top>-ctd)
+		<nelist>-ctd)
 
-  (doit-true	(make-list-of-type-descr <top>-type-descriptor)
-		<list>-type-descriptor)
+  (doit-true	(make-list-of-type-descr <top>-ctd)
+		<list>-ctd)
 
 ;;; list-of/pair
 
-  (doit-true	(make-list-of-type-descr <fixnum>-type-descriptor)
-		(make-pair-type-descr <fixnum>-type-descriptor <null>-type-descriptor))
+  (doit-true	(make-list-of-type-descr <fixnum>-ctd)
+		(make-pair-type-descr <fixnum>-ctd <null>-ctd))
 
-  (doit-true	(make-list-of-type-descr <fixnum>-type-descriptor)
-		(make-pair-type-descr <fixnum>-type-descriptor (make-list-of-type-descr <fixnum>-type-descriptor)))
+  (doit-true	(make-list-of-type-descr <fixnum>-ctd)
+		(make-pair-type-descr <fixnum>-ctd (make-list-of-type-descr <fixnum>-ctd)))
 
-  (doit-true	(make-list-of-type-descr <number>-type-descriptor)
-		(make-pair-type-descr <fixnum>-type-descriptor (make-list-type-descr (list <flonum>-type-descriptor))))
+  (doit-true	(make-list-of-type-descr <number>-ctd)
+		(make-pair-type-descr <fixnum>-ctd (make-list-type-descr (list <flonum>-ctd))))
 
-  (doit-false	(make-list-of-type-descr <number>-type-descriptor)
-		(make-pair-type-descr <fixnum>-type-descriptor (make-list-type-descr (list <string>-type-descriptor))))
+  (doit-false	(make-list-of-type-descr <number>-ctd)
+		(make-pair-type-descr <fixnum>-ctd (make-list-type-descr (list <string>-ctd))))
 
-  (doit-false	(make-list-of-type-descr <number>-type-descriptor)
-		(make-pair-type-descr <string>-type-descriptor <null>-type-descriptor))
+  (doit-false	(make-list-of-type-descr <number>-ctd)
+		(make-pair-type-descr <string>-ctd <null>-ctd))
 
 ;;; list-of/pair-of
 
-  (doit-true	(make-list-of-type-descr <null>-type-descriptor)
-		(make-pair-of-type-descr <null>-type-descriptor))
+  (doit-true	(make-list-of-type-descr <null>-ctd)
+		(make-pair-of-type-descr <null>-ctd))
 
-  (doit-true	(make-list-of-type-descr <list>-type-descriptor)
-		(make-pair-of-type-descr <list>-type-descriptor))
+  (doit-true	(make-list-of-type-descr <list>-ctd)
+		(make-pair-of-type-descr <list>-ctd))
 
-  (doit-false	(make-list-of-type-descr <fixnum>-type-descriptor)
-		(make-pair-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-list-of-type-descr <fixnum>-ctd)
+		(make-pair-of-type-descr <fixnum>-ctd))
 
 ;;; list-of/list
 
-  (doit-true	(make-list-of-type-descr <fixnum>-type-descriptor)
-		(make-list-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	(make-list-of-type-descr <fixnum>-ctd)
+		(make-list-type-descr (list <fixnum>-ctd)))
 
-  (doit-true	(make-list-of-type-descr <number>-type-descriptor)
-		(make-list-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	(make-list-of-type-descr <number>-ctd)
+		(make-list-type-descr (list <fixnum>-ctd)))
 
-  (doit-false	(make-list-of-type-descr <fixnum>-type-descriptor)
-		(make-list-type-descr (list <number>-type-descriptor)))
+  (doit-false	(make-list-of-type-descr <fixnum>-ctd)
+		(make-list-type-descr (list <number>-ctd)))
 
 ;;; list-of/list-of
 
-  (doit-true	(make-list-of-type-descr <fixnum>-type-descriptor)
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-list-of-type-descr <fixnum>-ctd)
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-true	(make-list-of-type-descr <number>-type-descriptor)
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-list-of-type-descr <number>-ctd)
+		(make-list-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-list-of-type-descr <fixnum>-type-descriptor)
-		(make-list-of-type-descr <number>-type-descriptor))
+  (doit-false	(make-list-of-type-descr <fixnum>-ctd)
+		(make-list-of-type-descr <number>-ctd))
 
-  (doit-false	(make-list-of-type-descr <string>-type-descriptor)
-		(make-list-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-list-of-type-descr <string>-ctd)
+		(make-list-of-type-descr <fixnum>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; vector
 
-  (doit-true	<vector>-type-descriptor
-		(make-vector-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	<vector>-ctd
+		(make-vector-type-descr (list <fixnum>-ctd)))
 
-  (doit-true	<nevector>-type-descriptor
-		(make-vector-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	<nevector>-ctd
+		(make-vector-type-descr (list <fixnum>-ctd)))
 
-  (doit-true	(make-vector-type-descr (list <top>-type-descriptor))
-		<nevector>-type-descriptor)
+  (doit-true	(make-vector-type-descr (list <top>-ctd))
+		<nevector>-ctd)
 
-  (doit-false	(make-vector-type-descr (list <fixnum>-type-descriptor))
-		<nevector>-type-descriptor)
+  (doit-false	(make-vector-type-descr (list <fixnum>-ctd))
+		<nevector>-ctd)
 
-  (doit-false	(make-vector-type-descr (list <fixnum>-type-descriptor))
-		<null>-type-descriptor)
+  (doit-false	(make-vector-type-descr (list <fixnum>-ctd))
+		<null>-ctd)
 
 ;;; vector/vector
 
-  (doit-true	(make-vector-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-vector-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
-  (doit-true	(make-vector-type-descr (list <fixnum>-type-descriptor <number>-type-descriptor))
-		(make-vector-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-vector-type-descr (list <fixnum>-ctd <number>-ctd))
+		(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
-  (doit-false	(make-vector-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-vector-type-descr (list <fixnum>-type-descriptor <string>-type-descriptor)))
+  (doit-false	(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-vector-type-descr (list <fixnum>-ctd <string>-ctd)))
 
 ;;; vector/vector-of
 
-  (doit-false	(make-vector-type-descr (list <fixnum>-type-descriptor))
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-vector-type-descr (list <fixnum>-ctd))
+		(make-vector-of-type-descr <fixnum>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; vector-of
 
-  (doit-true	<vector>-type-descriptor
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	<vector>-ctd
+		(make-vector-of-type-descr <fixnum>-ctd))
 
-  (doit-false	<nevector>-type-descriptor
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	<nevector>-ctd
+		(make-vector-of-type-descr <fixnum>-ctd))
 
-  (doit-true	(make-vector-of-type-descr <fixnum>-type-descriptor)
-		<empty-vector>-type-descriptor)
+  (doit-true	(make-vector-of-type-descr <fixnum>-ctd)
+		<empty-vector>-ctd)
 
-  (doit-true	(make-vector-of-type-descr <top>-type-descriptor)
-		<nevector>-type-descriptor)
+  (doit-true	(make-vector-of-type-descr <top>-ctd)
+		<nevector>-ctd)
 
-  (doit-true	(make-vector-of-type-descr <top>-type-descriptor)
-		<vector>-type-descriptor)
+  (doit-true	(make-vector-of-type-descr <top>-ctd)
+		<vector>-ctd)
 
 ;;; vector-of/vector
 
-  (doit-true	(make-vector-of-type-descr <fixnum>-type-descriptor)
-		(make-vector-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	(make-vector-of-type-descr <fixnum>-ctd)
+		(make-vector-type-descr (list <fixnum>-ctd)))
 
-  (doit-true	(make-vector-of-type-descr <number>-type-descriptor)
-		(make-vector-type-descr (list <fixnum>-type-descriptor)))
+  (doit-true	(make-vector-of-type-descr <number>-ctd)
+		(make-vector-type-descr (list <fixnum>-ctd)))
 
-  (doit-false	(make-vector-of-type-descr <fixnum>-type-descriptor)
-		(make-vector-type-descr (list <number>-type-descriptor)))
+  (doit-false	(make-vector-of-type-descr <fixnum>-ctd)
+		(make-vector-type-descr (list <number>-ctd)))
 
 ;;; vector-of/vector-of
 
-  (doit-true	(make-vector-of-type-descr <fixnum>-type-descriptor)
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-vector-of-type-descr <fixnum>-ctd)
+		(make-vector-of-type-descr <fixnum>-ctd))
 
-  (doit-true	(make-vector-of-type-descr <number>-type-descriptor)
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-true	(make-vector-of-type-descr <number>-ctd)
+		(make-vector-of-type-descr <fixnum>-ctd))
 
-  (doit-false	(make-vector-of-type-descr <fixnum>-type-descriptor)
-		(make-vector-of-type-descr <number>-type-descriptor))
+  (doit-false	(make-vector-of-type-descr <fixnum>-ctd)
+		(make-vector-of-type-descr <number>-ctd))
 
-  (doit-false	(make-vector-of-type-descr <string>-type-descriptor)
-		(make-vector-of-type-descr <fixnum>-type-descriptor))
+  (doit-false	(make-vector-of-type-descr <string>-ctd)
+		(make-vector-of-type-descr <fixnum>-ctd))
 
 ;;; --------------------------------------------------------------------
 ;;; enumeration
@@ -1267,7 +1172,7 @@
   (doit-true	(make-enumeration-type-descr '(ciao))
 		(make-enumeration-type-descr '(ciao)))
 
-  (doit-true	<symbol>-type-descriptor
+  (doit-true	<symbol>-ctd
 		(make-enumeration-type-descr '(ciao)))
 
   (doit-false	(make-enumeration-type-descr '(ciao))
@@ -1282,38 +1187,38 @@
 ;;; --------------------------------------------------------------------
 ;;; union
 
-  (doit-true	(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		<fixnum>-type-descriptor)
+  (doit-true	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		<fixnum>-ctd)
 
-  (doit-true	(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		<flonum>-type-descriptor)
+  (doit-true	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		<flonum>-ctd)
 
-  (doit-false	(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		<string>-type-descriptor)
+  (doit-false	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		<string>-ctd)
 
-  (doit-true	(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor))
-		(make-union-type-descr (list <fixnum>-type-descriptor <flonum>-type-descriptor)))
+  (doit-true	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
+		(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd)))
 
 ;;; --------------------------------------------------------------------
 ;;; intersection
 
-  (doit-true	(make-intersection-type-descr (list <number>-type-descriptor <flonum>-type-descriptor))
-		<flonum>-type-descriptor)
+  (doit-true	(make-intersection-type-descr (list <number>-ctd <flonum>-ctd))
+		<flonum>-ctd)
 
-  (doit-false	(make-intersection-type-descr (list <number>-type-descriptor <flonum>-type-descriptor))
-		<string>-type-descriptor)
+  (doit-false	(make-intersection-type-descr (list <number>-ctd <flonum>-ctd))
+		<string>-ctd)
 
 ;;; --------------------------------------------------------------------
 ;;; complement
 
-  (doit-true	(make-complement-type-descr <flonum>-type-descriptor)
-		<fixnum>-type-descriptor)
+  (doit-true	(make-complement-type-descr <flonum>-ctd)
+		<fixnum>-ctd)
 
-  (doit-true	<fixnum>-type-descriptor
-		(make-complement-type-descr <flonum>-type-descriptor))
+  (doit-true	<fixnum>-ctd
+		(make-complement-type-descr <flonum>-ctd))
 
-  (doit-false	<fixnum>-type-descriptor
-		(make-complement-type-descr <fixnum>-type-descriptor))
+  (doit-false	<fixnum>-ctd
+		(make-complement-type-descr <fixnum>-ctd))
 
   #| end of PARAMETRISE |# )
 

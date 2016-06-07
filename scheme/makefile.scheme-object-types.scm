@@ -699,20 +699,6 @@
    (second		time-second)
    (nanosecond		time-nanosecond)))
 
-(define-scheme-type <scheme-type-descriptor>
-    <struct>
-  (predicate scheme-type-descriptor?)
-  (equality-predicate struct=?)
-  (methods
-   (name				scheme-type-descriptor-name)
-   (parent				scheme-type-descriptor-parent)
-   (type-predicate			scheme-type-descriptor-type-predicate)
-   (equality-predicate			scheme-type-descriptor-equality-predicate)
-   (comparison-procedure		scheme-type-descriptor-comparison-procedure)
-   (hash-function			scheme-type-descriptor-hash-function)
-   (uids-list				scheme-type-descriptor-uids-list)
-   (method-retriever			scheme-type-descriptor-method-retriever)))
-
 ;;; --------------------------------------------------------------------
 ;;; unique objects
 

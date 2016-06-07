@@ -1475,7 +1475,7 @@
 		       (cons (make-visit-env-entry loc ofs expanded-expr)                  visit-env)
 		       typed-locs)))
 
-	      (($core-scheme-object-type-name
+	      (($core-type-name $core-type-descriptor $core-rtd $core-rcd
 		$core-record-type-name $core-condition-object-type-name
 		$module $fluid $synonym)
 	       ;;We expect LEXENV entries of these types to have the format:

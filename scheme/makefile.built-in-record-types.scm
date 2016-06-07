@@ -47,7 +47,7 @@
 	 (datum->syntax #'?type-name (string->symbol (apply string-append str*))))
        (with-syntax
 	   ((UID	(datum->syntax #'?kwd (string->symbol
-					       (string-append "vicare:scheme-type:" type-name.str))))
+					       (string-append "vicare:core-type:" type-name.str))))
 	    (TYPE-RTD	(mkid type-name.str "-rtd"))
 	    (TYPE-RCD	(mkid type-name.str "-rcd")))
 	 #'(set-cons! VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
@@ -317,6 +317,42 @@
 
 ;;;; object type descriptors
 
+(define-built-in-record-type <core-type-descriptor>
+    <record>
+  make-core-type-descriptor core-type-descriptor?
+  (methods
+   (name				core-type-descriptor.name)
+   (parent				core-type-descriptor.parent)
+   (type-predicate			core-type-descriptor.type-predicate)
+   (equality-predicate			core-type-descriptor.equality-predicate)
+   (comparison-procedure		core-type-descriptor.comparison-procedure)
+   (hash-function			core-type-descriptor.hash-function)
+   (uids-list				core-type-descriptor.uids-list)
+   (method-retriever			core-type-descriptor.method-retriever)))
+
+;;; --------------------------------------------------------------------
+
+(define-built-in-record-type <descriptors-signature>
+    <record>
+  make-descriptors-signature descriptors-signature?
+  (methods
+   (object-type-descrs		descriptors-signature.object-type-descrs)))
+
+(define-built-in-record-type <lambda-descriptors>
+    <record>
+  make-lambda-descriptors lambda-descriptors?
+  (methods
+   (retvals			lambda-descriptors.retvals)
+   (argvals			lambda-descriptors.argvals)))
+
+(define-built-in-record-type <case-lambda-descriptors>
+    <record>
+  make-case-lambda-descriptors case-lambda-descriptors?
+  (methods
+   (clause-signature*		case-lambda-descriptors.clause-signature*)))
+
+;;; --------------------------------------------------------------------
+
 (define-built-in-record-type <pair-type-descr>
     <record>
   make-pair-type-descr pair-type-descr?
@@ -360,6 +396,21 @@
   (methods
    (symbol*		enumeration-type-descr.symbol*)
    (length		enumeration-type-descr.length)))
+
+(define-built-in-record-type <closure-type-descr>
+    <record>
+  make-closure-type-descr closure-type-descr?
+  (methods
+   (signature		closure-type-descr.signature)))
+
+;;; --------------------------------------------------------------------
+
+(define-built-in-record-type <ancestor-of-type-descr>
+    <record>
+  make-ancestor-of-type-descr ancestor-of-type-descr?
+  (methods
+   (item-des		ancestor-of-type-descr.item-des)
+   (ancestors-des*	ancestor-of-type-descr.ancestors-des*)))
 
 ;;; --------------------------------------------------------------------
 

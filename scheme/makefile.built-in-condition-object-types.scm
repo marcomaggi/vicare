@@ -45,7 +45,7 @@
 	 (datum->syntax #'?type-name (string->symbol (apply string-append str*))))
        (with-syntax
 	   ((UID	(datum->syntax #'?kwd (string->symbol
-					       (string-append "vicare:scheme-type:" type-name.str))))
+					       (string-append "vicare:core-type:" type-name.str))))
 	    (TYPE-RTD	(mkid type-name.str "-rtd"))
 	    (TYPE-RCD	(mkid type-name.str "-rcd")))
 	 #'(set-cons! VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS

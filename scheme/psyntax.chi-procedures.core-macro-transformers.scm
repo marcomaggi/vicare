@@ -3750,6 +3750,8 @@
     ;;* A  record-type descriptor if the  given identifier argument is  a record-type
     ;;  name.
     ;;
+    ;;* A built-in type descriptor (for "<fixnum>", "<string>", et cetera).
+    ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
        (let ((ots (with-exception-handler
@@ -3762,7 +3764,7 @@
 	       ((struct-type-spec? ots)
 		(%make-struct-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
 	       ((scheme-type-spec? ots)
-		(%make-scheme-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
+		(%make-core-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
 	       (else
 		(__synner__ "expected type identifier representing a struct-type name or a record-type name" ?type-id)))))
       (_
@@ -3785,13 +3787,13 @@
 	(psi.core-expr expr.psi)
 	(make-type-signature/single-value (core-prim-spec '<record-type-descriptor> lexenv.run)))))
 
-  (define (%make-scheme-type-descriptor input-form.stx lexenv.run lexenv.expand
-					ots)
+  (define (%make-core-type-descriptor input-form.stx lexenv.run lexenv.expand
+					  ots)
     (let* ((expr.stx (scheme-type-spec.type-descriptor-id ots))
 	   (expr.psi (chi-expr expr.stx lexenv.run lexenv.expand)))
       (make-psi input-form.stx
 	(psi.core-expr expr.psi)
-	(make-type-signature/single-value (core-prim-spec '<scheme-type-descriptor> lexenv.run)))))
+	(make-type-signature/single-value (core-prim-spec '<core-type-descriptor> lexenv.run)))))
 
   #| end of module |# )
 

@@ -31,31 +31,34 @@
 (define (typed-core-primitives.object-utilities)
 
 
-;;;; <scheme-type-descriptor> record, safe procedures
+;;;; <core-type-descriptor> record, safe procedures
 
 (section
 
-(declare-type-predicate scheme-type-descriptor?		<scheme-type-descriptor>)
+(declare-core-rtd <core-type-descriptor>-rtd)
+(declare-core-rcd <core-type-descriptor>-rcd)
 
-(declare-core-primitive scheme-type-descriptor-name
+(declare-type-predicate core-type-descriptor?		<core-type-descriptor>)
+
+(declare-core-primitive core-type-descriptor.name
     (safe)
   (signatures
-   ((<scheme-type-descriptor>)		=> (<symbol>))))
+   ((<core-type-descriptor>)		=> (<symbol>))))
 
-(declare-core-primitive scheme-type-descriptor-parent
+(declare-core-primitive core-type-descriptor.parent
     (safe)
   (signatures
-   ((<scheme-type-descriptor>)		=> ((or <false> <scheme-type-descriptor>)))))
+   ((<core-type-descriptor>)		=> ((or <false> <core-type-descriptor>)))))
 
-(declare-core-primitive scheme-type-descriptor-uids-list
+(declare-core-primitive core-type-descriptor.uids-list
     (safe)
   (signatures
-   ((<scheme-type-descriptor>)		=> ((list-of <symbol>)))))
+   ((<core-type-descriptor>)		=> ((list-of <symbol>)))))
 
-(declare-core-primitive scheme-type-descriptor-method-retriever
+(declare-core-primitive core-type-descriptor.method-retriever
     (safe)
   (signatures
-   ((<scheme-type-descriptor>)		=> (<procedure>))))
+   ((<core-type-descriptor>)		=> (<procedure>))))
 
 /section)
 
@@ -79,103 +82,176 @@
 
 ;;;; Scheme build-in object-type descriptors
 
-(declare-core-scheme-type-descriptor <bignum>-type-descriptor)
-(declare-core-scheme-type-descriptor <binary-input/output-port>-type-descriptor)
-(declare-core-scheme-type-descriptor <binary-input-port>-type-descriptor)
-(declare-core-scheme-type-descriptor <binary-output-port>-type-descriptor)
-(declare-core-scheme-type-descriptor <binary-port>-type-descriptor)
-(declare-core-scheme-type-descriptor <boolean>-type-descriptor)
-(declare-core-scheme-type-descriptor <bytevector>-type-descriptor)
-(declare-core-scheme-type-descriptor <cflonum>-type-descriptor)
-(declare-core-scheme-type-descriptor <zero-cflonum>-type-descriptor)
-(declare-core-scheme-type-descriptor <non-zero-cflonum>-type-descriptor)
-(declare-core-scheme-type-descriptor <char>-type-descriptor)
-(declare-core-scheme-type-descriptor <code>-type-descriptor)
-(declare-core-scheme-type-descriptor <complex>-type-descriptor)
-(declare-core-scheme-type-descriptor <compnum>-type-descriptor)
-(declare-core-scheme-type-descriptor <zero-compnum>-type-descriptor)
-(declare-core-scheme-type-descriptor <non-zero-inexact-compnum>-type-descriptor)
-(declare-core-scheme-type-descriptor <compound-condition>-type-descriptor)
-(declare-core-scheme-type-descriptor <condition>-type-descriptor)
-(declare-core-scheme-type-descriptor <empty-vector>-type-descriptor)
-(declare-core-scheme-type-descriptor <enum-set>-type-descriptor)
-(declare-core-scheme-type-descriptor <eof>-type-descriptor)
-(declare-core-scheme-type-descriptor <exact-compnum>-type-descriptor)
-(declare-core-scheme-type-descriptor <inexact-compnum>-type-descriptor)
-(declare-core-scheme-type-descriptor <exact-integer>-type-descriptor)
-(declare-core-scheme-type-descriptor <false>-type-descriptor)
-(declare-core-scheme-type-descriptor <fixnum>-type-descriptor)
-(declare-core-scheme-type-descriptor <flonum>-type-descriptor)
-(declare-core-scheme-type-descriptor <hashtable-eq>-type-descriptor)
-(declare-core-scheme-type-descriptor <hashtable-equal>-type-descriptor)
-(declare-core-scheme-type-descriptor <hashtable-eqv>-type-descriptor)
-(declare-core-scheme-type-descriptor <hashtable>-type-descriptor)
-(declare-core-scheme-type-descriptor <input/output-port>-type-descriptor)
-(declare-core-scheme-type-descriptor <input-port>-type-descriptor)
-(declare-core-scheme-type-descriptor <integer>-type-descriptor)
-(declare-core-scheme-type-descriptor <integer-valued>-type-descriptor)
-(declare-core-scheme-type-descriptor <ipair>-type-descriptor)
-(declare-core-scheme-type-descriptor <keyword>-type-descriptor)
-(declare-core-scheme-type-descriptor <list>-type-descriptor)
-(declare-core-scheme-type-descriptor <nelist>-type-descriptor)
+(declare-core-type-descriptor <bignum>-ctd)
+(declare-core-type-descriptor <binary-input/output-port>-ctd)
+(declare-core-type-descriptor <binary-input-port>-ctd)
+(declare-core-type-descriptor <binary-output-port>-ctd)
+(declare-core-type-descriptor <binary-port>-ctd)
+(declare-core-type-descriptor <boolean>-ctd)
+(declare-core-type-descriptor <bytevector>-ctd)
+(declare-core-type-descriptor <nebytevector>-ctd)
+(declare-core-type-descriptor <empty-bytevector>-ctd)
+(declare-core-type-descriptor <cflonum>-ctd)
+(declare-core-type-descriptor <zero-cflonum>-ctd)
+(declare-core-type-descriptor <non-zero-cflonum>-ctd)
+(declare-core-type-descriptor <char>-ctd)
+(declare-core-type-descriptor <code>-ctd)
+(declare-core-type-descriptor <complex>-ctd)
+(declare-core-type-descriptor <compnum>-ctd)
+(declare-core-type-descriptor <zero-compnum>-ctd)
+(declare-core-type-descriptor <non-zero-inexact-compnum>-ctd)
+(declare-core-type-descriptor <compound-condition>-ctd)
+(declare-core-type-descriptor <condition>-ctd)
+(declare-core-type-descriptor <empty-vector>-ctd)
+(declare-core-type-descriptor <enum-set>-ctd)
+(declare-core-type-descriptor <eof>-ctd)
+(declare-core-type-descriptor <exact-compnum>-ctd)
+(declare-core-type-descriptor <inexact-compnum>-ctd)
+(declare-core-type-descriptor <exact-integer>-ctd)
+(declare-core-type-descriptor <false>-ctd)
+(declare-core-type-descriptor <fixnum>-ctd)
+(declare-core-type-descriptor <flonum>-ctd)
+(declare-core-type-descriptor <hashtable-eq>-ctd)
+(declare-core-type-descriptor <hashtable-equal>-ctd)
+(declare-core-type-descriptor <hashtable-eqv>-ctd)
+(declare-core-type-descriptor <hashtable>-ctd)
+(declare-core-type-descriptor <input/output-port>-ctd)
+(declare-core-type-descriptor <input-port>-ctd)
+(declare-core-type-descriptor <integer>-ctd)
+(declare-core-type-descriptor <integer-valued>-ctd)
+(declare-core-type-descriptor <ipair>-ctd)
+(declare-core-type-descriptor <keyword>-ctd)
+(declare-core-type-descriptor <list>-ctd)
+(declare-core-type-descriptor <nelist>-ctd)
 ;;
-(declare-core-scheme-type-descriptor <negative-bignum>-type-descriptor)
-(declare-core-scheme-type-descriptor <negative-fixnum>-type-descriptor)
-(declare-core-scheme-type-descriptor <negative-flonum>-type-descriptor)
-(declare-core-scheme-type-descriptor <negative-ratnum>-type-descriptor)
-(declare-core-scheme-type-descriptor <negative-zero-flonum>-type-descriptor)
-(declare-core-scheme-type-descriptor <no-return>-type-descriptor)
-(declare-core-scheme-type-descriptor <null>-type-descriptor)
-(declare-core-scheme-type-descriptor <number>-type-descriptor)
-(declare-core-scheme-type-descriptor <opaque-record>-type-descriptor)
-(declare-core-scheme-type-descriptor <output-port>-type-descriptor)
-(declare-core-scheme-type-descriptor <pair>-type-descriptor)
-(declare-core-scheme-type-descriptor <pointer>-type-descriptor)
-(declare-core-scheme-type-descriptor <port>-type-descriptor)
-(declare-core-scheme-type-descriptor <positive-bignum>-type-descriptor)
-(declare-core-scheme-type-descriptor <positive-fixnum>-type-descriptor)
-(declare-core-scheme-type-descriptor <positive-flonum>-type-descriptor)
-(declare-core-scheme-type-descriptor <positive-ratnum>-type-descriptor)
-(declare-core-scheme-type-descriptor <positive-zero-flonum>-type-descriptor)
-(declare-core-scheme-type-descriptor <procedure>-type-descriptor)
-(declare-core-scheme-type-descriptor <promise>-type-descriptor)
-(declare-core-scheme-type-descriptor <rational>-type-descriptor)
-(declare-core-scheme-type-descriptor <rational-valued>-type-descriptor)
-(declare-core-scheme-type-descriptor <ratnum>-type-descriptor)
-(declare-core-scheme-type-descriptor <real>-type-descriptor)
-(declare-core-scheme-type-descriptor <real-valued>-type-descriptor)
-(declare-core-scheme-type-descriptor <record-constructor-descriptor>-type-descriptor)
-(declare-core-scheme-type-descriptor <record>-type-descriptor)
-(declare-core-scheme-type-descriptor <record-type-descriptor>-type-descriptor)
-(declare-core-scheme-type-descriptor <string>-type-descriptor)
-(declare-core-scheme-type-descriptor <nestring>-type-descriptor)
-(declare-core-scheme-type-descriptor <empty-string>-type-descriptor)
-(declare-core-scheme-type-descriptor <struct>-type-descriptor)
-(declare-core-scheme-type-descriptor <struct-type-descriptor>-type-descriptor)
-(declare-core-scheme-type-descriptor <symbol>-type-descriptor)
-(declare-core-scheme-type-descriptor <gensym>-type-descriptor)
-(declare-core-scheme-type-descriptor <textual-input/output-port>-type-descriptor)
-(declare-core-scheme-type-descriptor <textual-input-port>-type-descriptor)
-(declare-core-scheme-type-descriptor <textual-output-port>-type-descriptor)
-(declare-core-scheme-type-descriptor <textual-port>-type-descriptor)
-(declare-core-scheme-type-descriptor <top>-type-descriptor)
-(declare-core-scheme-type-descriptor <transcoder>-type-descriptor)
-(declare-core-scheme-type-descriptor <true>-type-descriptor)
-(declare-core-scheme-type-descriptor <utsname>-type-descriptor)
-(declare-core-scheme-type-descriptor <vector>-type-descriptor)
-(declare-core-scheme-type-descriptor <nevector>-type-descriptor)
-(declare-core-scheme-type-descriptor <void>-type-descriptor)
-(declare-core-scheme-type-descriptor <would-block>-type-descriptor)
-(declare-core-scheme-type-descriptor <zero-fixnum>-type-descriptor)
+(declare-core-type-descriptor <negative-bignum>-ctd)
+(declare-core-type-descriptor <negative-fixnum>-ctd)
+(declare-core-type-descriptor <negative-flonum>-ctd)
+(declare-core-type-descriptor <negative-ratnum>-ctd)
+(declare-core-type-descriptor <negative-zero-flonum>-ctd)
+(declare-core-type-descriptor <no-return>-ctd)
+(declare-core-type-descriptor <null>-ctd)
+(declare-core-type-descriptor <number>-ctd)
+(declare-core-type-descriptor <opaque-record>-ctd)
+(declare-core-type-descriptor <output-port>-ctd)
+(declare-core-type-descriptor <pair>-ctd)
+(declare-core-type-descriptor <pointer>-ctd)
+(declare-core-type-descriptor <port>-ctd)
+(declare-core-type-descriptor <positive-bignum>-ctd)
+(declare-core-type-descriptor <positive-fixnum>-ctd)
+(declare-core-type-descriptor <positive-flonum>-ctd)
+(declare-core-type-descriptor <positive-ratnum>-ctd)
+(declare-core-type-descriptor <positive-zero-flonum>-ctd)
+(declare-core-type-descriptor <procedure>-ctd)
+(declare-core-type-descriptor <promise>-ctd)
+(declare-core-type-descriptor <rational>-ctd)
+(declare-core-type-descriptor <rational-valued>-ctd)
+(declare-core-type-descriptor <ratnum>-ctd)
+(declare-core-type-descriptor <real>-ctd)
+(declare-core-type-descriptor <real-valued>-ctd)
+(declare-core-type-descriptor <record-constructor-descriptor>-ctd)
+(declare-core-type-descriptor <record>-ctd)
+(declare-core-type-descriptor <record-type-descriptor>-ctd)
+(declare-core-type-descriptor <string>-ctd)
+(declare-core-type-descriptor <nestring>-ctd)
+(declare-core-type-descriptor <empty-string>-ctd)
+(declare-core-type-descriptor <struct>-ctd)
+(declare-core-type-descriptor <struct-type-descriptor>-ctd)
+(declare-core-type-descriptor <symbol>-ctd)
+(declare-core-type-descriptor <gensym>-ctd)
+(declare-core-type-descriptor <textual-input/output-port>-ctd)
+(declare-core-type-descriptor <textual-input-port>-ctd)
+(declare-core-type-descriptor <textual-output-port>-ctd)
+(declare-core-type-descriptor <textual-port>-ctd)
+(declare-core-type-descriptor <top>-ctd)
+(declare-core-type-descriptor <transcoder>-ctd)
+(declare-core-type-descriptor <true>-ctd)
+(declare-core-type-descriptor <utsname>-ctd)
+(declare-core-type-descriptor <vector>-ctd)
+(declare-core-type-descriptor <nevector>-ctd)
+(declare-core-type-descriptor <void>-ctd)
+(declare-core-type-descriptor <would-block>-ctd)
+(declare-core-type-descriptor <zero-fixnum>-ctd)
 ;;
-(declare-core-scheme-type-descriptor <memory-block>-type-descriptor)
-(declare-core-scheme-type-descriptor <time>-type-descriptor)
-(declare-core-scheme-type-descriptor <reader-annotation>-type-descriptor)
-(declare-core-scheme-type-descriptor <scheme-type-descriptor>-type-descriptor)
-(declare-core-scheme-type-descriptor <stats>-type-descriptor)
+(declare-core-type-descriptor <memory-block>-ctd)
+(declare-core-type-descriptor <time>-ctd)
+(declare-core-type-descriptor <reader-annotation>-ctd)
+(declare-core-type-descriptor <core-type-descriptor>-ctd)
+(declare-core-type-descriptor <stats>-ctd)
+
+
+;;;; object-type lambda signatures
+
+(declare-core-rtd <descriptors-signature>-rtd)
+(declare-core-rcd <descriptors-signature>-rcd)
+
+(declare-core-primitive make-descriptors-signature
+    (safe)
+  (signatures
+   ((<top>)				=> (<descriptors-signature>))))
+
+(declare-type-predicate descriptors-signature?	<descriptors-signature>)
+
+(declare-core-primitive descriptors-signature.object-type-descrs
+    (safe)
+  (signatures
+   ((<descriptors-signature>)		=> (<top>))))
+
+(declare-core-primitive descriptors-signature=?
+    (safe)
+  (signatures
+   ((<descriptors-signature> <descriptors-signature>)	=> (<boolean>))))
+
+(declare-core-primitive descriptors-signature.matching-super-and-sub?
+    (safe)
+  (signatures
+   ((<descriptors-signature> <descriptors-signature>)	=> (<boolean>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <lambda-descriptors>-rtd)
+(declare-core-rcd <lambda-descriptors>-rcd)
+
+(declare-core-primitive make-lambda-descriptors
+    (safe)
+  (signatures
+   ((<descriptors-signature> <descriptors-signature>)	=> (<lambda-descriptors>))))
+
+(declare-type-predicate lambda-descriptors?	<lambda-descriptors>)
+
+(declare-core-primitive lambda-descriptors.retvals
+    (safe)
+  (signatures
+   ((<lambda-descriptors>)		=> (<descriptors-signature>))))
+
+(declare-core-primitive lambda-descriptors.argvals
+    (safe)
+  (signatures
+   ((<lambda-descriptors>)		=> (<descriptors-signature>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <case-lambda-descriptors>-rtd)
+(declare-core-rcd <case-lambda-descriptors>-rcd)
+
+(declare-core-primitive make-case-lambda-descriptors
+    (safe)
+  (signatures
+   (((pair <lambda-descriptors> (list-of <lambda-descriptors>)))
+    => (<case-lambda-descriptors>))))
+
+(declare-type-predicate case-lambda-descriptors?	<case-lambda-descriptors>)
+
+(declare-core-primitive case-lambda-descriptors.clause-signature*
+    (safe)
+  (signatures
+   ((<case-lambda-descriptors>)		=> ((pair <lambda-descriptors> (list-of <lambda-descriptors>))))))
 
 
 ;;;; object type descriptors
+
+(declare-core-rtd <pair-type-descr>-rtd)
+(declare-core-rcd <pair-type-descr>-rcd)
 
 (declare-core-primitive make-pair-type-descr
     (safe)
@@ -196,6 +272,9 @@
 
 ;;; --------------------------------------------------------------------
 
+(declare-core-rtd <pair-of-type-descr>-rtd)
+(declare-core-rcd <pair-of-type-descr>-rcd)
+
 (declare-core-primitive make-pair-of-type-descr
     (safe)
   (signatures
@@ -210,10 +289,13 @@
 
 ;;; --------------------------------------------------------------------
 
+(declare-core-rtd <list-type-descr>-rtd)
+(declare-core-rcd <list-type-descr>-rcd)
+
 (declare-core-primitive make-list-type-descr
     (safe)
   (signatures
-   ((<null>)			=> (<scheme-type-descriptor>))
+   ((<null>)			=> (<core-type-descriptor>))
    ((<list>)			=> (<list-type-descr>))))
 
 (declare-type-predicate list-type-descr?	<list-type-descr>)
@@ -224,6 +306,9 @@
    ((<list-type-descr>)		=> (<list>))))
 
 ;;; --------------------------------------------------------------------
+
+(declare-core-rtd <list-of-type-descr>-rtd)
+(declare-core-rcd <list-of-type-descr>-rcd)
 
 (declare-core-primitive make-list-of-type-descr
     (safe)
@@ -239,10 +324,13 @@
 
 ;;; --------------------------------------------------------------------
 
+(declare-core-rtd <vector-type-descr>-rtd)
+(declare-core-rcd <vector-type-descr>-rcd)
+
 (declare-core-primitive make-vector-type-descr
     (safe)
   (signatures
-   ((<null>)			=> (<scheme-type-descriptor>))
+   ((<null>)			=> (<core-type-descriptor>))
    ((<list>)			=> (<vector-type-descr>))))
 
 (declare-type-predicate vector-type-descr?	<vector-type-descr>)
@@ -253,6 +341,9 @@
    ((<vector-type-descr>)	=> (<list>))))
 
 ;;; --------------------------------------------------------------------
+
+(declare-core-rtd <vector-of-type-descr>-rtd)
+(declare-core-rcd <vector-of-type-descr>-rcd)
 
 (declare-core-primitive make-vector-of-type-descr
     (safe)
@@ -267,6 +358,9 @@
    ((<vector-of-type-descr>)	=> (<top>))))
 
 ;;; --------------------------------------------------------------------
+
+(declare-core-rtd <enumeration-type-descr>-rtd)
+(declare-core-rcd <enumeration-type-descr>-rcd)
 
 (declare-core-primitive make-enumeration-type-descr
     (safe)
@@ -287,6 +381,26 @@
 
 ;;; --------------------------------------------------------------------
 
+(declare-core-rtd <closure-type-descr>-rtd)
+(declare-core-rcd <closure-type-descr>-rcd)
+
+(declare-core-primitive make-closure-type-descr
+    (safe)
+  (signatures
+   ((<case-lambda-descriptors>)		=> (<closure-type-descr>))))
+
+(declare-type-predicate closure-type-descr?	<closure-type-descr>)
+
+(declare-core-primitive closure-type-descr.signature
+    (safe)
+  (signatures
+   ((<closure-type-descr>)		=> (<case-lambda-descriptors>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <union-type-descr>-rtd)
+(declare-core-rcd <union-type-descr>-rcd)
+
 (declare-core-primitive make-union-type-descr
     (safe)
   (signatures
@@ -301,6 +415,9 @@
    ((<union-type-descr>)	=> (<list>))))
 
 ;;; --------------------------------------------------------------------
+
+(declare-core-rtd <intersection-type-descr>-rtd)
+(declare-core-rcd <intersection-type-descr>-rcd)
 
 (declare-core-primitive make-intersection-type-descr
     (safe)
@@ -317,6 +434,9 @@
 
 ;;; --------------------------------------------------------------------
 
+(declare-core-rtd <complement-type-descr>-rtd)
+(declare-core-rcd <complement-type-descr>-rcd)
+
 (declare-core-primitive make-complement-type-descr
     (safe)
   (signatures
@@ -324,10 +444,32 @@
 
 (declare-type-predicate complement-type-descr?	<complement-type-descr>)
 
-(declare-core-primitive complement-type-descr.item-des*
+(declare-core-primitive complement-type-descr.item-des
     (safe)
   (signatures
    ((<complement-type-descr>)		=> (<top>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <ancestor-of-type-descr>-rtd)
+(declare-core-rcd <ancestor-of-type-descr>-rcd)
+
+(declare-core-primitive make-ancestor-of-type-descr
+    (safe)
+  (signatures
+   ((<top>)				=> (<ancestor-of-type-descr>))))
+
+(declare-type-predicate ancestor-of-type-descr?		<ancestor-of-type-descr>)
+
+(declare-core-primitive ancestor-of-type-descr.item-des
+    (safe)
+  (signatures
+   ((<ancestor-of-type-descr>)		=> (<top>))))
+
+(declare-core-primitive ancestor-of-type-descr.ancestors-des*
+    (safe)
+  (signatures
+   ((<ancestor-of-type-descr>)		=> (<list>))))
 
 
 ;;;; object type descriptors: utilities
@@ -351,6 +493,16 @@
     (safe)
   (signatures
    ((<top> <top>)		=> (<boolean>))))
+
+(declare-core-primitive object-type-descr.ancestors-des*
+    (safe)
+  (signatures
+   ((<top>)			=> (<list>))))
+
+(declare-core-primitive object-type-descr.parent
+    (safe)
+  (signatures
+   ((<top>)			=> (<top>))))
 
 
 ;;;; done

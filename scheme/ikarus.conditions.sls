@@ -717,7 +717,7 @@
 	  (andmap identifier? #'(?field ...))
 	  (andmap identifier? #'(?accessor ...)))
      (with-syntax
-	 ((UID			(mkname "vicare:scheme-type:" #'?name ""))
+	 ((UID			(mkname "vicare:core-type:" #'?name ""))
 	  (GENERATIVE?		#f)
 	  (RTD			(mkname "" #'?name "-rtd"))
 	  (RCD			(mkname "" #'?name "-rcd"))

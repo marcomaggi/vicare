@@ -34,11 +34,12 @@
     internal-delete
 
     ;; Scheme type descriptor
-    make-scheme-type-descriptor			scheme-type-descriptor?
-    scheme-type-descriptor-name			scheme-type-descriptor-parent
-    scheme-type-descriptor-type-predicate	scheme-type-descriptor-equality-predicate
-    scheme-type-descriptor-comparison-procedure	scheme-type-descriptor-hash-function
-    scheme-type-descriptor-uids-list		scheme-type-descriptor-method-retriever
+    <core-type-descriptor>-rtd			<core-type-descriptor>-rcd
+    make-core-type-descriptor			core-type-descriptor?
+    core-type-descriptor.name			core-type-descriptor.parent
+    core-type-descriptor.type-predicate		core-type-descriptor.equality-predicate
+    core-type-descriptor.comparison-procedure	core-type-descriptor.hash-function
+    core-type-descriptor.uids-list			core-type-descriptor.method-retriever
 
     ;; built-in object-type specification utilities, for internal use
     <top>-constructor			<top>-type-predicate
@@ -63,14 +64,6 @@
     #| end of EXPORT |# )
   (import (except (vicare)
 		  method-call-late-binding
-
-		  ;; Scheme type descriptor
-		  <scheme-type-descriptor>
-		  make-scheme-type-descriptor			scheme-type-descriptor?
-		  scheme-type-descriptor-name			scheme-type-descriptor-parent
-		  scheme-type-descriptor-type-predicate		scheme-type-descriptor-equality-predicate
-		  scheme-type-descriptor-comparison-procedure	scheme-type-descriptor-hash-function
-		  scheme-type-descriptor-uids-list		scheme-type-descriptor-method-retriever
 
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Tue Dec 15, 2015)
@@ -253,24 +246,24 @@
     (case method-name.sym
       ((hash)
        (let loop ((btd btd))
-	 (cond ((scheme-type-descriptor-hash-function btd)
+	 (cond ((core-type-descriptor.hash-function btd)
 		=> %apply-hash-function)
-	       ((scheme-type-descriptor-parent btd)
+	       ((core-type-descriptor.parent btd)
 		=> loop)
 	       (else
 		(%apply-hash-function object-hash)))))
       (else
        (let loop ((btd btd))
-	 (cond ((scheme-type-descriptor-method-retriever btd)
+	 (cond ((core-type-descriptor.method-retriever btd)
 		=> (lambda (method-retriever)
 		     (cond ((method-retriever method-name.sym)
 			    => (lambda (proc)
 				 (apply proc subject args)))
-			   ((scheme-type-descriptor-parent btd)
+			   ((core-type-descriptor.parent btd)
 			    => loop)
 			   (else
 			    (%error-scheme-type-has-no-matching-method)))))
-	       ((scheme-type-descriptor-parent btd)
+	       ((core-type-descriptor.parent btd)
 		=> loop)
 	       (else
 		(%error-scheme-type-has-no-matching-method)))))))
@@ -314,49 +307,49 @@
 	 (%record-object-call ($struct-rtd subject)))
 
 	((string?  subject)	(if (string-empty? subject)
-				    (%built-in-scheme-object-call <empty-string>-type-descriptor)
-				  (%built-in-scheme-object-call <nestring>-type-descriptor)))
+				    (%built-in-scheme-object-call <empty-string>-ctd)
+				  (%built-in-scheme-object-call <nestring>-ctd)))
 	((vector?  subject)	(if (vector-empty? subject)
-				    (%built-in-scheme-object-call <empty-vector>-type-descriptor)
-				  (%built-in-scheme-object-call <nevector>-type-descriptor)))
+				    (%built-in-scheme-object-call <empty-vector>-ctd)
+				  (%built-in-scheme-object-call <nevector>-ctd)))
 	((list?    subject)	(if (pair? subject)
-				    (%built-in-scheme-object-call <nelist>-type-descriptor)
-				  (%built-in-scheme-object-call <null>-type-descriptor)))
-	((pair?    subject)	(%built-in-scheme-object-call <pair>-type-descriptor))
-	((bytevector? subject)	(%built-in-scheme-object-call <bytevector>-type-descriptor))
+				    (%built-in-scheme-object-call <nelist>-ctd)
+				  (%built-in-scheme-object-call <null>-ctd)))
+	((pair?    subject)	(%built-in-scheme-object-call <pair>-ctd))
+	((bytevector? subject)	(%built-in-scheme-object-call <bytevector>-ctd))
 
-	((fixnum?  subject)	(%built-in-scheme-object-call <fixnum>-type-descriptor))
-	((flonum?  subject)	(%built-in-scheme-object-call <flonum>-type-descriptor))
-	((ratnum?  subject)	(%built-in-scheme-object-call <ratnum>-type-descriptor))
-	((bignum?  subject)	(%built-in-scheme-object-call <bignum>-type-descriptor))
-	((compnum? subject)	(%built-in-scheme-object-call <compnum>-type-descriptor))
-	((cflonum? subject)	(%built-in-scheme-object-call <cflonum>-type-descriptor))
+	((fixnum?  subject)	(%built-in-scheme-object-call <fixnum>-ctd))
+	((flonum?  subject)	(%built-in-scheme-object-call <flonum>-ctd))
+	((ratnum?  subject)	(%built-in-scheme-object-call <ratnum>-ctd))
+	((bignum?  subject)	(%built-in-scheme-object-call <bignum>-ctd))
+	((compnum? subject)	(%built-in-scheme-object-call <compnum>-ctd))
+	((cflonum? subject)	(%built-in-scheme-object-call <cflonum>-ctd))
 
 	((port? subject)
-	 (cond ((textual-input/output-port? subject)	(%built-in-scheme-object-call <textual-input/output-port>-type-descriptor))
-	       ((binary-input/output-port?  subject)	(%built-in-scheme-object-call <binary-input/output-port>-type-descriptor))
-	       ((textual-output-port?       subject)	(%built-in-scheme-object-call <textual-output-port>-type-descriptor))
-	       ((binary-output-port?        subject)	(%built-in-scheme-object-call <binary-output-port>-type-descriptor))
-	       ((textual-input-port?        subject)	(%built-in-scheme-object-call <textual-input-port>-type-descriptor))
-	       ((binary-input-port?         subject)	(%built-in-scheme-object-call <binary-input-port>-type-descriptor))
+	 (cond ((textual-input/output-port? subject)	(%built-in-scheme-object-call <textual-input/output-port>-ctd))
+	       ((binary-input/output-port?  subject)	(%built-in-scheme-object-call <binary-input/output-port>-ctd))
+	       ((textual-output-port?       subject)	(%built-in-scheme-object-call <textual-output-port>-ctd))
+	       ((binary-output-port?        subject)	(%built-in-scheme-object-call <binary-output-port>-ctd))
+	       ((textual-input-port?        subject)	(%built-in-scheme-object-call <textual-input-port>-ctd))
+	       ((binary-input-port?         subject)	(%built-in-scheme-object-call <binary-input-port>-ctd))
 	       (else
 		(%error-object-type-has-no-methods-table))))
 
-	((boolean? subject)	(%built-in-scheme-object-call <boolean>-type-descriptor))
-	((char?    subject)	(%built-in-scheme-object-call <char>-type-descriptor))
-	((symbol?  subject)	(%built-in-scheme-object-call <symbol>-type-descriptor))
-	((keyword? subject)	(%built-in-scheme-object-call <keyword>-type-descriptor))
-	((pointer? subject)	(%built-in-scheme-object-call <pointer>-type-descriptor))
-	((transcoder? subject)	(%built-in-scheme-object-call <transcoder>-type-descriptor))
+	((boolean? subject)	(%built-in-scheme-object-call <boolean>-ctd))
+	((char?    subject)	(%built-in-scheme-object-call <char>-ctd))
+	((symbol?  subject)	(%built-in-scheme-object-call <symbol>-ctd))
+	((keyword? subject)	(%built-in-scheme-object-call <keyword>-ctd))
+	((pointer? subject)	(%built-in-scheme-object-call <pointer>-ctd))
+	((transcoder? subject)	(%built-in-scheme-object-call <transcoder>-ctd))
 
 	((struct? subject)	(%struct-object-call (structs::struct-std subject)))
 
 	((eq? subject (void))
-	 (%built-in-scheme-object-call <void>-type-descriptor))
+	 (%built-in-scheme-object-call <void>-ctd))
 	((eq? subject (would-block-object))
-	 (%built-in-scheme-object-call <would-block>-type-descriptor))
+	 (%built-in-scheme-object-call <would-block>-ctd))
 	((eq? subject (eof-object))
-	 (%built-in-scheme-object-call <eof>-type-descriptor))
+	 (%built-in-scheme-object-call <eof>-ctd))
 
 	(else
 	 (%error-object-type-has-no-methods-table))))
@@ -389,28 +382,46 @@
 ;;types: pairs, fixnums, strings, et cetera.  Lexical variables bound to instances of
 ;;this type should be called BTD (as in "built-in type descriptor").
 ;;
-(define-struct (scheme-type-descriptor make-scheme-type-descriptor scheme-type-descriptor?)
-  (name
+(define-record-type (<core-type-descriptor> make-core-type-descriptor core-type-descriptor?)
+  (fields
+    (immutable name			core-type-descriptor.name)
 		;A symbol representing the name of this type.  For example: <string>.
-   parent
+    (immutable parent			core-type-descriptor.parent)
 		;False  if  this  type  has  no  parent;  otherwise  an  instance  of
-		;"scheme-type-descriptor" representing the parent of this type.
-   type-predicate
+		;"core-type-descriptor" representing the parent of this type.
+    (immutable type-predicate		core-type-descriptor.type-predicate)
 		;False or a function implementing the type predicate.
-   equality-predicate
+    (immutable equality-predicate	core-type-descriptor.equality-predicate)
 		;False or a function implementing the equality predicate.
-   comparison-procedure
+    (immutable comparison-procedure	core-type-descriptor.comparison-procedure)
 		;False or a function implementing the comparison procedure.
-   hash-function
+    (immutable hash-function		core-type-descriptor.hash-function)
 		;False or a function implementing the hash function.
-   uids-list
+    (immutable uids-list		core-type-descriptor.uids-list)
 		;A list of symbols representing the  hierarchy of UIDs for this type.
 		;The  first item  in the  list  is the  UID  of this  type, then  the
 		;parent's UID, then the grandparent's UID, et cetera.
-   method-retriever))
+    (immutable method-retriever		core-type-descriptor.method-retriever)
 		;If this  type has methods: a  procedure to be applied  to the method
 		;name  (a symbol)  to  retrieve the  method implementation  function;
 		;otherwise false.
+    #| end of FIELDS |# )
+
+  (custom-printer
+    (lambda (reco port sub-printer)
+      (define-syntax-rule (%display ?obj)
+	(display ?obj port))
+      (%display "#[built-in-type ")
+      (%display (core-type-descriptor.name reco))
+      (%display "]")))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <core-type-descriptor>-rtd
+  (record-type-descriptor <core-type-descriptor>))
+
+(define <core-type-descriptor>-rcd
+  (record-constructor-descriptor <core-type-descriptor>))
 
 
 ;;;; object type helpers: <top>
@@ -595,43 +606,31 @@
 	      ;;
 	      (type-name.sym	(syntax->datum #'?type-name))
 	      (parent-name.sexp	(syntax->datum #'?parent-name))
-	      (type-uid.sym	(string->symbol (string-append "vicare:scheme-type:" (symbol->string type-name.sym))))
+	      (type-uid.sym	(string->symbol (string-append "vicare:core-type:" (symbol->string type-name.sym))))
 	      (type-uids-list	(cons type-uid.sym (if parent-name.sexp
 						       (getprop parent-name.sexp 'type-uids-list)
 						     '()))))
 	 (define (%datum->syntax obj)
 	   (datum->syntax #'?type-name obj))
-	 (define (%mk-btd-name-id type.sym)
-	   (%datum->syntax (string->symbol (string-append (symbol->string type.sym) "-type-descriptor"))))
-	 (define (%mk-btd-pred-id type.sym)
-	   (%datum->syntax (string->symbol (string-append (symbol->string type.sym) "-type-descriptor?"))))
+	 (define (%mk-ctd-name-id type.sym)
+	   (%datum->syntax (string->symbol (string-append (symbol->string type.sym) "-ctd"))))
 	 (putprop type-name.sym 'type-uids-list type-uids-list)
 	 ;;BTD stands for "Built-in Type Descriptor".
 	 (with-syntax
-	     ((BTD-NAME			(%mk-btd-name-id type-name.sym))
-	      (PARENT-BTD-NAME		(and parent-name.sexp (%mk-btd-name-id parent-name.sexp)))
+	     ((CTD-NAME			(%mk-ctd-name-id type-name.sym))
+	      (PARENT-CTD-NAME		(and parent-name.sexp (%mk-ctd-name-id parent-name.sexp)))
 	      (TYPE-PREDICATE		(parsed-specs-type-predicate		parsed-specs))
 	      (EQUALITY-PREDICATE	(parsed-specs-equality-predicate	parsed-specs))
 	      (COMPARISON-PROCEDURE	(parsed-specs-comparison-procedure	parsed-specs))
 	      (HASH-FUNCTION		(parsed-specs-hash-function		parsed-specs))
 	      (TYPE-UIDS-LIST		#`(quote #,(%datum->syntax type-uids-list)))
-	      (RETRIEVER		(%make-methods-retriever-function parsed-specs))
-	      (BTD-PRED			(%mk-btd-pred-id type-name.sym)))
+	      (RETRIEVER		(%make-methods-retriever-function parsed-specs)))
 	   #'(begin
-	       (define BTD-NAME
-		 (make-scheme-type-descriptor (quote ?type-name) PARENT-BTD-NAME
-					      TYPE-PREDICATE EQUALITY-PREDICATE COMPARISON-PROCEDURE HASH-FUNCTION
-					      TYPE-UIDS-LIST RETRIEVER))
-	       ;;NOTE These  are commented out  because I am  not sure that  it makes
-	       ;;sense to have them.  (Marco Maggi; Fri Jun 3, 2016)
-	       ;;
-               ;; (define (BTD-PRED obj)
-               ;;        (or (eq? obj BTD-NAME)
-               ;;            (and (scheme-type-descriptor? obj)
-               ;;                 (eq? (car (scheme-type-descriptor-uids-list BTD-NAME))
-               ;;                      (car (scheme-type-descriptor-uids-list obj))))))
-	       ;; (export BTD-PRED)
-	       (export BTD-NAME)))))
+	       (define CTD-NAME
+		 (make-core-type-descriptor (quote ?type-name) PARENT-CTD-NAME
+					    TYPE-PREDICATE EQUALITY-PREDICATE COMPARISON-PROCEDURE HASH-FUNCTION
+					    TYPE-UIDS-LIST RETRIEVER))
+	       (export CTD-NAME)))))
       ))
 
   (define-constant LIST-OF-CLAUSES
@@ -736,15 +735,6 @@
 
 
 ;;;; done
-
-($set-std-printer! (type-descriptor scheme-type-descriptor)
-		   (lambda (stru port sub-printer)
-		     (define-syntax-rule (%display ?obj)
-		       (display ?obj port))
-		     (%display "#[scheme-type ")
-		     (%display (scheme-type-descriptor-name stru))
-		     (%display "]")))
-
 
 ;; #!vicare
 ;; (define dummy

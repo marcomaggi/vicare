@@ -856,7 +856,7 @@ descriptor.  This alist is called @lexenv{}.
 * expander lexenv rib::         Lexical contours and @rib{} objects.
 * expander lexenv stx::         Wrapped and unwrapped syntax objects.
 * expander lexenv descriptors:: Syntactic binding's descriptors.
-* expander lexenv primitive::   Primitive syntactic bindings.
+* expander lexenv prim::        Primitive syntactic bindings.
 * expander lexenv imported::    Imported syntactic bindings.
 * expander lexenv internal::    Internal syntactic bindings.
 * expander lexenv fluids::      How fluid syntaxes work.
@@ -1352,25 +1352,6 @@ A syntactic binding's descriptor is a pair with the format:
 where @meta{binding-type} is a symbol and the format of
 @meta{binding-value} depends on the binding type.
 
-Possible values for @meta{binding-type} are the symbols:
-
-@example
-integrated-macro core-macro macro macro!
-core-prim core-prim-typed
-global global-mutable global-typed global-typed-mutable
-lexical lexical-typed
-global-macro global-macro! global-etv
-local-macro local-macro! local-etv
-pattern-variable
-core-object-type-name local-object-type-name
-global-object-type-name
-$core-record-type-name $core-rtd $core-rcd
-$core-condition-object-type-name
-$core-scheme-type-descriptor
-$record-type-name $struct-type-name
-$module $fluid $synonym
-@end example
-
 Every syntactic binding has a unique label gensym associated to it;
 during the expansion process, no matter the current lexical context,
 given a label gensym we can retrieve the associated binding descriptor.
@@ -1401,7 +1382,7 @@ syntactic binding by inspecting its @code{value} slot: if
 is imported; otherwise it was established by the code being expanded.
 
 @c page
-@node expander lexenv primitive
+@node expander lexenv prim
 @subsection Primitive syntactic bindings
 
 
@@ -1417,14 +1398,33 @@ Partitions of these bindings are also exported by the library
 and @library{rnrs ---}.
 
 The syntactic bindings established by the boot image have descriptors
-defined in, and only in, the file @file{makefile.sps} in
-@value{PRJNAME}'s source code tree.  Every boot image syntactic binding
-has a label gensym associated to it: the binding's descriptor is stored
-in the @code{value} slot of the label.
+built by @value{PRJNAME}'s package building infrastructure.  Every boot
+image's syntactic binding has a label gensym associated to it: the
+binding's descriptor is stored in the @code{value} slot of the label.
 
-@c ------------------------------------------------------------------------
+@menu
+* expander lexenv prim inspect::     Inspecting descriptors.
+* expander lexenv prim names::       Public names and labels.
+* expander lexenv prim integrated::  Integrated syntaxes.
+* expander lexenv prim cmacros::     Core macros.
+* expander lexenv prim ncmacros::    Non-core macros.
+* expander lexenv prim primitives::  Core primitive functions
+                                     and operations.
+* expander lexenv prim bio::         Core object-type names.
+* expander lexenv prim btd::         Core object-type descriptors.
+* expander lexenv prim records::     Core record-type names.
+* expander lexenv prim conditions::  Core condition-object
+                                     record-type names.
+* expander lexenv prim rtd::         Core record-type descriptors.
+* expander lexenv prim rcd::         Core record-constructor
+                                     descriptors.
+* expander lexenv prim fluids::      Fluid syntaxes.
+@end menu
 
-@subsubheading Inspecting binding descriptors
+@c page
+@node expander lexenv prim inspect
+@subsubsection Inspecting syntactic binding's descriptors
+
 
 We must remember that a syntactic binding's descriptor is a pair with
 format:
@@ -1543,9 +1543,10 @@ we can further inspect @code{&condition-rtd} and @code{&condition-rcd}:
 @end lisp
 @end itemize
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv prim names
+@subsubsection Public names and labels
 
-@subsubheading Public names and labels
 
 If we know the public name of a primitive syntactic binding
 (@func{display}, @syntax{lambda}, @syntax{let}, @condition{condition},
@@ -1599,9 +1600,14 @@ Given the primitive's label gensym we can retrieve the binding type and
 the public name.
 @end itemize
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv prim integrated
+@subsubsection Primitive syntactic bindings: integrated syntax
 
-@subsubheading Primitive binding: integrated syntax
+
+@cindex @code{integrated-macro}, syntactic binding type
+@cindex Syntactic binding types, @code{integrated-macro}
+
 
 Some syntaxes are built into the expander and do not even have an
 internal transformer function.  A syntactic binding representing an
@@ -1622,9 +1628,14 @@ Some of these core language syntaxes are: @syntax{define-syntax},
 @syntax{set!}, @syntax{let-syntax}, @syntax{letrec-syntax},
 @syntax{stale-when}, @syntax{begin-for-syntax}.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv prim cmacros
+@subsubsection Primitive syntactic bindings: core macros
 
-@subsubheading Primitive binding: core macro
+
+@cindex @code{core-macro}, syntactic binding type
+@cindex Syntactic binding types, @code{core-macro}
+
 
 A syntactic binding representing a core syntax with transformer function
 implemented by the expander has descriptor with format:
@@ -1648,9 +1659,14 @@ other syntaxes.  Some of these syntaxes are: @syntax{quote},
 @syntax{syntax-case}, @syntax{syntax}, @syntax{fluid-let-syntax},
 @syntax{internal-body}.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv prim ncmacros
+@subsubsection Primitive syntactic bindings: non--core macros
 
-@subsubheading Primitive binding: non--core macro
+
+@cindex @code{macro}, syntactic binding type
+@cindex Syntactic binding types, @code{macro}
+
 
 A binding representing a non--core syntax with transformer function
 implemented by the expander has descriptor with format:
@@ -1685,9 +1701,14 @@ include
 assert try with-unwind-protection guard
 @end example
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv prim primitives
+@subsubsection Primitive syntactic bindings: core primitive functions and operations
 
-@subsubheading Primitive binding: core primitive
+
+@cindex @code{core-prim}, syntactic binding type
+@cindex Syntactic binding types, @code{core-prim}
+
 
 A syntactic binding representing a core primitive function, or core
 primitive operation, or core primitive record--type descriptor, or core
@@ -1702,12 +1723,122 @@ descriptor with format:
 where @meta{name} is a symbol representing the public name of the core
 primitive.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv prim bio
+@subsubsection Primitive syntactic bindings: core object--type names
 
-@subsubheading Primitive binding: core record--type name
+
+@cindex @code{$core-type-name}, syntactic binding type
+@cindex Syntactic binding types, @code{$core-type-name}
+
+
+A syntactic binding representing the built--in Scheme object types
+defined by the boot image has descriptor with format:
+
+@example
+($core-type-name
+  . (@meta{type-name} @meta{uid-symbol} @meta{parent-name}
+     @meta{constructor-name} @meta{type-predicate-name}
+     @meta{equality-predicate-name} @meta{comparison-procedure-name}
+     @meta{hash-function-name}
+     @meta{type-descriptor-name} @meta{methods-alist}))
+@end example
+
+@noindent
+where the values are:
+
+@table @asis
+@item @meta{type-name}
+A symbol representing the type name.  For example @class{fixnum}.
+
+@item @meta{uid-symbol}
+A unique symbol associated with this object--type.
+
+@item @meta{parent-name}
+A symbol representing the parent type of this type, or @false{} if this
+type has no parent.
+
+@item @meta{constructor-name}
+Either: a symbol representing the public name of this object--type's
+constructor function (for example @class{vector} has @func{vector} as
+constructor); @false{} if this object--type has no constructor; @true{}
+if this object--type has no constructor but the syntax @syntax{new}
+is used to validate an already built value:
+
+@lisp
+(new <fixnum> 1)        @result{} 1
+(new <fixnum> "ciao")   @error{} invalid value
+@end lisp
+
+@item @meta{type-predicate-name}
+A symbol representing the public name of the object--type's type
+predicate function, or @false{} if this type has no type predicate.
+
+@item @meta{equality-predicate-name}
+A symbol representing the public name of the object--type's equality
+predicate function, or @false{} if this type has no equality predicate.
+
+@item @meta{comparison-procedure-name}
+A symbol representing the public name of the object--type's equality
+procedure, or @false{} if this type has no equality procedure.
+
+@item @meta{hash-function-name}
+A symbol representing the public name of the object--type's hash
+function, or @false{} if this type has no hash function.
+
+@item @meta{type-descriptor-name}
+A symbol representing the public name of the object--type's run--time
+type descriptor; for example @class{fixnum} has @code{<fixnum>-ctd}
+(where @samp{ctd} stands for @emph{Core Type Descriptor}).
+
+@item @meta{methods-alist}
+An associative list having symbols as both keys and values:
+
+@example
+((@meta{method-name} . @meta{method-implementation-procedure}) ...)
+@end example
+
+@noindent
+where each key is the name of an object--type's method and each value is
+the public name of the method's implementation procedure.
+@end table
+
+@c page
+@node expander lexenv prim btd
+@subsubsection Primitive syntactic bindings: core object--type descriptors
+
+
+@cindex @code{$core-type-descriptor}, syntactic binding type
+@cindex Syntactic binding types, @code{$core-type-descriptor}
+
+
+A syntactic binding representing a core Scheme object--type descriptor
+name has syntactic binding's descriptor with format:
+
+@example
+($core-type-descriptor . @meta{name})
+@end example
+
+@noindent
+where @meta{name} is a symbol representing the public name of the
+object--type descriptor.
+
+These objects are run--time descriptors for the built--in Scheme object
+types; the type @class{fixnum} has a run--time descriptor named
+@samp{<fixnum>-type-descriptor}, which is used (for example) for late
+bindings of method calls.
+
+@c page
+@node expander lexenv prim records
+@subsubsection Primitive Syntactic bindings: core record--type names
+
+
+@cindex @code{$core-record-type-name}, syntactic binding type
+@cindex Syntactic binding types, @code{$core-record-type-name}
+
 
 A syntactic binding representing @rnrs{6}'s record--type name defined by
-the boot image has descriptor with one of the formats:
+the boot image has descriptor with format:
 
 @example
 ($core-record-type-name
@@ -1756,9 +1887,14 @@ symbols representing the public name of the syntactic identifier to
 which the safe field accessor or mutator is bound.
 @end table
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv prim conditions
+@subsubsection Primitive syntactic bindings: core condition--object record--type names
 
-@subsubheading Primitive binding: core condition object record--type name
+
+@cindex @code{$core-condition-object-type-name}, syntactic binding type
+@cindex Syntactic binding types, @code{$core-condition-object-type-name}
+
 
 A syntactic binding representing @rnrs{6}'s condition object
 record--type name defined by the boot image has descriptor with one of
@@ -1829,29 +1965,14 @@ the following descriptor is generated:
      ((who condition-who))))
 @end example
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv prim rtd
+@subsubsection Primitive syntactic bindings: core record--type descriptors
 
-@subsubheading Primitive binding: core Scheme object--type descriptor
 
-A syntactic binding representing a core Scheme object--type descriptor
-name has syntactic binding's descriptor with format:
+@cindex @code{$core-rtd}, syntactic binding type
+@cindex Syntactic binding types, @code{$core-rtd}
 
-@example
-($core-scheme-type-descriptor . @meta{name})
-@end example
-
-@noindent
-where @meta{name} is a symbol representing the public name of the
-object--type descriptor.
-
-These objects are run--time descriptors for the built--in Scheme object
-types; the type @class{fixnum} has a run--time descriptor named
-@samp{<fixnum>-type-descriptor}, which is used (for example) for late
-bindings of method calls.
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Primitive binding: core record--type descriptor
 
 A syntactic binding representing a core record--type descriptor name has
 syntactic binding's descriptor with format:
@@ -1864,9 +1985,14 @@ syntactic binding's descriptor with format:
 where @meta{name} is a symbol representing the public name of the
 record--type descriptor.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv prim rcd
+@subsubsection Primitive syntactic bindings: core record--constructor descriptors
 
-@subsubheading Primitive binding: core record--constructor descriptor
+
+@cindex @code{$core-rcd}, syntactic binding type
+@cindex Syntactic binding types, @code{$core-rcd}
+
 
 A syntactic binding representing a core record--constructor descriptor
 name has syntactic binding's descriptor with format:
@@ -1879,9 +2005,14 @@ name has syntactic binding's descriptor with format:
 where @meta{name} is a symbol representing the public name of the
 record--constructor descriptor.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv prim fluids
+@subsubsection Primitive syntactic bindings: fluid syntaxes
 
-@subsubheading Primitive binding: fluid syntax
+
+@cindex @code{$fluid}, syntactic binding type
+@cindex Syntactic binding types, @code{$fluid}
+
 
 A syntactic binding representing a fluid syntax defined by the boot
 image has descriptor with format:
@@ -1940,9 +2071,24 @@ associated to their label gensyms in the @rib{} object representing the
 current lexical context.
 @end itemize
 
-@c ------------------------------------------------------------------------
+@menu
+* expander lexenv imported inspect::    Inspecting descriptors.
+* expander lexenv imported variables::  Global variables.
+* expander lexenv imported nvmacros::   Non-variable macros.
+* expander lexenv imported vmacros::    Variable macros.
+* expander lexenv imported etv::        Expand-time values.
+* expander lexenv imported stn::        Struct-type names.
+* expander lexenv imported rtn::        Record-type names.
+* expander lexenv imported modules::    Module interfaces.
+* expander lexenv imported fluids::     Fluid syntaxes.
+* expander lexenv imported synonyms::   Synonym syntaxes.
+* expander lexenv imported examples::   Example library.
+@end menu
 
-@subsubheading Inspecting binding descriptors
+@c page
+@node expander lexenv imported inspect
+@subsubsection Inspecting descriptors
+
 
 We must remember that a syntactic binding's descriptor is a pair with
 format:
@@ -2006,9 +2152,14 @@ and try to expand some code:
 @result{} lex/loc.var
 @end lisp
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv imported variables
+@subsubsection Imported syntactic bindings: global variables
 
-@subsubheading Imported binding: variable
+
+@cindex @code{global}, syntactic binding type
+@cindex Syntactic binding types, @code{global}
+
 
 A syntactic binding representing an imported variable binding has
 descriptor with format:
@@ -2022,9 +2173,14 @@ where: @meta{library} is the @objtype{library} object from which the
 binding is imported; @meta{lex/loc} is the storage location gensym
 containing the variable's value in its @code{value} field.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv imported nvmacros
+@subsubsection Imported syntactic bindings: non--variable macros
 
-@subsubheading Imported binding: non--variable macro
+
+@cindex @code{global-macro}, syntactic binding type
+@cindex Syntactic binding types, @code{global-macro}
+
 
 A syntactic binding representing an imported keyword binding with a
 non--variable transformer has descriptor with format:
@@ -2043,9 +2199,14 @@ Syntactic bindings of this type are established by
 @syntax{define-syntax}, @syntax{let-syntax} and similar when the result
 of evaluating their right--hand side expression is a function.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv imported vmacros
+@subsubsection Imported syntactic bindings: variable macros
 
-@subsubheading Imported binding: variable macro
+
+@cindex @code{global-macro!}, syntactic binding type
+@cindex Syntactic binding types, @code{global-macro!}
+
 
 A syntactic binding representing an imported keyword binding with
 variable transformer has descriptor with format:
@@ -2065,9 +2226,14 @@ Syntactic bindings of this type are established by
 of evaluating their right--hand side expression is the return value of a
 call to @func{make-variable-transformer}.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv imported etv
+@subsubsection Imported syntactic bindings: expand--time values
 
-@subsubheading Imported binding: expand--time value
+
+@cindex @code{global-etv}, syntactic binding type
+@cindex Syntactic binding types, @code{global-etv}
+
 
 A syntactic binding representing an imported keyword binding associated
 to an expand--time value has descriptor with format:
@@ -2087,9 +2253,14 @@ Syntactic bindings of this type are established by
 of evaluating their right--hand side expression is the return value of a
 call to @func{make-expand-time-value}.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv imported stn
+@subsubsection Imported syntactic bindings: struct--type names
 
-@subsubheading Imported binding: struct--type name
+
+@cindex @code{$struct-type-name}, syntactic binding type
+@cindex Syntactic binding types, @code{$struct-type-name}
+
 
 A syntactic binding representing an imported keyword binding associated
 to a @value{PRJNAME}'s struct--type name has descriptor with format:
@@ -2102,9 +2273,14 @@ to a @value{PRJNAME}'s struct--type name has descriptor with format:
 where @meta{struct-type-descriptor} is an instance of
 @class{struct-type-spec}.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv imported rtn
+@subsubsection Imported syntactic bindings: record--type names
 
-@subsubheading Imported binding: @rnrs{6} record--type name
+
+@cindex @code{$record-type-name}, syntactic binding type
+@cindex Syntactic binding types, @code{$record-type-name}
+
 
 A syntactic binding representing a keyword binding imported from a
 library, but not established by the boot image, associated to a
@@ -2121,9 +2297,14 @@ where @meta{record-type-spec} is a record of type
 identifiers bound to the record--type descriptor, the
 record--constructor descriptor and other values.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv imported modules
+@subsubsection Imported syntactic bindings: module interfaces
 
-@subsubheading Imported binding: module interface
+
+@cindex @code{$module}, syntactic binding type
+@cindex Syntactic binding types, @code{$module}
+
 
 A syntactic binding representing an imported keyword binding associated
 to the interface of a @syntax{module} syntax has descriptor with format:
@@ -2139,9 +2320,14 @@ where @meta{module-interface} is a struct of type
 Syntactic bindings of this type are established by uses of the syntax
 @syntax{module}.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv imported fluids
+@subsubsection Imported syntactic bindings: fluid syntaxes
 
-@subsubheading Imported binding: fluid syntax
+
+@cindex @code{$fluid}, syntactic binding type
+@cindex Syntactic binding types, @code{$fluid}
+
 
 A syntactic binding representing an imported keyword binding associated
 to a fluid syntax has descriptor with format:
@@ -2157,9 +2343,14 @@ keyword binding; @ref{expander lexenv fluids, How fluid syntaxes work}.
 Syntactic bindings of this type are established by uses of the syntax
 @syntax{define-fluid-syntax}.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv imported synonyms
+@subsubsection Imported syntactic bindings: synonym syntaxes
 
-@subsubheading Imported binding: synonym syntax
+
+@cindex @code{$synonym}, syntactic binding type
+@cindex Syntactic binding types, @code{$synonym}
+
 
 A syntactic binding representing an imported keyword binding associated
 to a synonym syntax has descriptor with format:
@@ -2177,9 +2368,10 @@ Syntactic bindings of this type are established by
 of evaluating their right--hand side expression is the return value of
 a call to @func{make-synonym-transformer}.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv imported examples
+@subsubsection Example library
 
-@subsubheading Example library
 
 We can use the following example library to toy with imported syntactic
 bindings:
@@ -2289,9 +2481,29 @@ in the @lexenv{}; the difference between them is that top level
 syntactic bindings have the association between the source name and the
 label gensym stored in the top level @rib{} object.
 
-@c ------------------------------------------------------------------------
+@menu
+* expander lexenv internal variables::  Lexical variables.
+* expander lexenv internal nvmacro::    Non-variable macros.
+* expander lexenv internal vmacros::    Variable macros.
+* expander lexenv internal etv::        Expand-time values.
+* expander lexenv internal modules::    Module interfaces.
+* expander lexenv internal pvars::      Pattern variables.
+* expander lexenv internal stn::        Struct-type names.
+* expander lexenv internal rtn::        Record-type names.
+* expander lexenv internal fluids::     Fluid syntaxes.
+* expander lexenv internal synonym::    Synonym syntaxes.
+* expander lexenv internal bfs::        @syntax{begin-for-syntax} code.
+* expander lexenv internal displaced::  Displaced syntactic bindings.
+@end menu
 
-@subsubheading Internal binding: variables
+@c page
+@node expander lexenv internal variables
+@subsubsection Internal syntactic bindings: lexical variables
+
+
+@cindex @code{lexical}, syntactic binding type
+@cindex Syntactic binding types, @code{lexical}
+
 
 A syntactic binding representing a variable binding as created by
 @syntax{let} and similar syntaxes, @syntax{lambda}, @syntax{case-lambda}
@@ -2310,9 +2522,14 @@ is: its value is mutated).
 We want to keep track of assigned variables because we do not want to
 export from a library a mutable variable.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv internal nvmacro
+@subsubsection Internal syntactic bindings: non--variable macros
 
-@subsubheading Internal binding: non--variable macro
+
+@cindex @code{local-macro}, syntactic binding type
+@cindex Syntactic binding types, @code{local-macro}
+
 
 A syntactic binding representing a keyword binding with non--variable
 transformer has descriptor with format:
@@ -2342,9 +2559,14 @@ These syntactic bindings are established by @syntax{define-syntax},
 @syntax{let-syntax} and similar, when their right--hand side evaluates
 to a function.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv internal vmacros
+@subsubsection Internal syntactic bindings: variable macros
 
-@subsubheading Internal binding: variable macro
+
+@cindex @code{local-macro!}, syntactic binding type
+@cindex Syntactic binding types, @code{local-macro!}
+
 
 A syntactic binding representing a keyword binding with variable
 transformer has descriptor with format:
@@ -2374,9 +2596,14 @@ These syntactic bindings are established by @syntax{define-syntax},
 @syntax{let-syntax} and similar, when their right--hand side evaluates
 to the return value of @func{make-variable-transformer}.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv internal etv
+@subsubsection Internal syntactic bindings: expand--time values
 
-@subsubheading Internal binding: expand--time value
+
+@cindex @code{local-etv}, syntactic binding type
+@cindex Syntactic binding types, @code{local-etv}
+
 
 A syntactic binding representing a keyword binding associated to an
 expand--time value has descriptor with format:
@@ -2405,9 +2632,14 @@ These syntactic bindings are established by @syntax{define-syntax},
 @syntax{let-syntax} and similar, when their right--hand side evaluates
 to the return value of @func{make-expand-time-value}.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv internal modules
+@subsubsection Internal syntactic bindings: module interfaces
 
-@subsubheading Internal binding: module interface
+
+@cindex @code{$module}, syntactic binding type
+@cindex Syntactic binding types, @code{$module}
+
 
 A syntactic binding representing a keyword binding associated to the
 interface of a @syntax{module} syntax has descriptor with format:
@@ -2423,9 +2655,14 @@ where @meta{module-interface} is a record of type
 Syntactic bindings of this type are established by uses of the syntax
 @syntax{module}.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv internal pvars
+@subsubsection Internal syntactic bindings: pattern variables
 
-@subsubheading Internal binding: pattern variable
+
+@cindex @code{pattern-variable}, syntactic binding type
+@cindex Syntactic binding types, @code{pattern-variable}
+
 
 A syntactic binding representing a keyword binding associated to a
 pattern variable, as created by @syntax{syntax-case} and
@@ -2454,9 +2691,14 @@ syntactic binding descriptors:
 (((?a ...) ...) ...)    ->  (pattern-variable . (?a . 3))
 @end example
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv internal stn
+@subsubsection Internal syntactic bindings: struct--type names
 
-@subsubheading Internal binding: struct--type name
+
+@cindex @code{$struct-type-name}, syntactic binding type
+@cindex Syntactic binding types, @code{$struct-type-name}
+
 
 A syntactic binding representing a keyword binding associated to a
 @value{PRJNAME}'s struct--type name has descriptor with format:
@@ -2472,9 +2714,14 @@ where @meta{struct-type-spec} is an instance of
 These bindings are established by uses of the syntax
 @syntax{define-struct}.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv internal rtn
+@subsubsection Internal syntactic bindings: record--type names
 
-@subsubheading Internal binding: @rnrs{6} record--type name
+
+@cindex @code{$record-type-name}, syntactic binding type
+@cindex Syntactic binding types, @code{$record-type-name}
+
 
 A syntactic binding representing a keyword binding associated to a
 @rnrs{6}'s record--type name has descriptor with one of the formats:
@@ -2492,9 +2739,14 @@ record--constructor descriptor and other values.
 These syntactic bindings are established by uses of the syntax
 @syntax{define-record-type}, @syntax{define-condition-type} and similar.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv internal fluids
+@subsubsection Internal syntactic bindings: fluid syntaxes
 
-@subsubheading Internal binding: fluid syntax
+
+@cindex @code{$fluid}, syntactic binding type
+@cindex Syntactic binding types, @code{$fluid}
+
 
 A syntactic binding representing a keyword binding associated to a fluid
 syntax has descriptor with format:
@@ -2507,9 +2759,14 @@ syntax has descriptor with format:
 where @meta{fluid-label} is the label gensym associated to the fluid
 syntax.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv internal synonym
+@subsubsection Internal syntactic bindings: synonym syntaxes
 
-@subsubheading Internal binding: synonym syntax
+
+@cindex @code{$synonym}, syntactic binding type
+@cindex Syntactic binding types, @code{$synonym}
+
 
 A syntactic binding representing a keyword binding associated to a
 synonym syntax has descriptor with format:
@@ -2522,9 +2779,14 @@ synonym syntax has descriptor with format:
 where @meta{synonym-label} is the label gensym associated to the aliased
 syntax; @ref{expander lexenv synonyms, How synonym syntaxes work}.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv internal bfs
+@subsubsection Internal syntactic bindings: @syntax{begin-for-syntax} code
 
-@subsubheading Internal binding: @syntax{begin-for-syntax} code
+
+@cindex @code{begin-for-syntax}, syntactic binding type
+@cindex Syntactic binding types, @code{begin-for-syntax}
+
 
 Each use of @syntax{begin-for-syntax} generates expand--time code; when
 this code is defined at the top level: it must become visit code to be
@@ -2540,9 +2802,14 @@ where: @meta{unused-label} is a dummy label gensym which is not bound in
 the current @rib{}; @meta{visit-code} is a full core language expression
 representing the expanded contents of the @syntax{begin-for-syntax} use.
 
-@c ------------------------------------------------------------------------
+@c page
+@node expander lexenv internal displaced
+@subsubsection Internal syntactic bindings: displaced syntactic bindings
 
-@subsubheading Displaced lexical bindings
+
+@cindex @code{displaced-lexical}, syntactic binding type
+@cindex Syntactic binding types, @code{displaced-lexical}
+
 
 These pairs have a format similar to a @lexenv{} entry representing a
 syntactic binding, but they are used to represent a failed search into a

@@ -1036,9 +1036,9 @@
 	  ;;whatever is the expansion of DEFINE-STRUCT.
 	  (let ((uids-list (cons uid (if parent-rtd
 					 (<rtd>-uids-list parent-rtd)
-				       '(vicare:scheme-type:<record>
-					 vicare:scheme-type:<struct>
-					 vicare:scheme-type:<top>)))))
+				       '(vicare:core-type:<record>
+					 vicare:core-type:<struct>
+					 vicare:core-type:<top>)))))
 	    ($struct (type-descriptor <rtd>) name
 		     total-fields-number fields-number first-field-index
 		     parent-rtd sealed? opaque? uid uids-list generative? normalised-fields

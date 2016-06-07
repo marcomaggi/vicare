@@ -590,9 +590,10 @@
 			     (( ;;
 			       core-prim $core-prim-typed
 			       integrated-macro core-macro macro macro!
-			       $core-rtd $core-rcd $core-scheme-type-descriptor
+			       $core-rtd $core-rcd
+			       $core-type-name $core-type-descriptor
 			       $core-record-type-name $core-condition-object-type-name
-			       $core-scheme-object-type-name $core-type-annotation)
+			       $core-type-annotation)
 			      (if system-library?
 				  type.value
 				(assertion-violation who

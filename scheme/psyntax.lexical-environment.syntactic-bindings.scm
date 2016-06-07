@@ -896,7 +896,7 @@
   ;;
   ;;The core descriptor has the format:
   ;;
-  ;;   ($core-scheme-object-type-name . ?hard-coded-sexp)
+  ;;   ($core-type-name . ?hard-coded-sexp)
   ;;
   ;;and ?HARD-CODED-SEXP has the format:
   ;;
@@ -910,7 +910,7 @@
   ;;
   ;;   (core-object-type-name . (#<scheme-type-spec> . ?hard-coded-sexp))
   ;;
-  ;;Syntactic binding descriptors of  type "$core-scheme-object-type-name" are hard-coded in
+  ;;Syntactic binding descriptors of  type "$core-type-name" are hard-coded in
   ;;the boot image  and generated directly by the makefile  at boot image build-time.
   ;;Whenever the function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used to retrieve the
   ;;descriptor from the label: this function is used to convert the descriptor.
@@ -957,7 +957,7 @@
 ;;built-in Scheme object-type name; otherwise return false.
 ;;
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/hard-coded-core-scheme-type-name?
-  $core-scheme-object-type-name)
+  $core-type-name)
 
 
 ;;;; syntactic binding descriptor: Vicare struct-type name bindings

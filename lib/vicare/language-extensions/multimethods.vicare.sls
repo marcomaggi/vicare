@@ -27,15 +27,15 @@
 ;;;
 ;;;	has the following signature:
 ;;;
-;;;	   ((vicare:scheme-type:<complex>
-;;;	     vicare:scheme-type:<number>
-;;;          vicare:scheme-type:<top>)    ;first argument
+;;;	   ((vicare:core-type:<complex>
+;;;	     vicare:core-type:<number>
+;;;          vicare:core-type:<top>)    ;first argument
 ;;;
-;;;         (vicare:scheme-type:<string>
-;;;          vicare:scheme-type:<top>)    ;second argument
+;;;         (vicare:core-type:<string>
+;;;          vicare:core-type:<top>)    ;second argument
 ;;;
-;;;         (vicare:scheme-type:<char>
-;;;          vicare:scheme-type:<top>))   ;third argument
+;;;         (vicare:core-type:<char>
+;;;          vicare:core-type:<top>))   ;third argument
 ;;;
 ;;;
 ;;;Copyright (c) 2010-2014, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>

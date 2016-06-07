@@ -101,7 +101,7 @@
 		  (define-method (a b) #f)
 		  (define-method (a b c) #f)
 		  #f)))
-    => '(((vicare:scheme-type:<top>) (vicare:scheme-type:<top>))))
+    => '(((vicare:core-type:<top>) (vicare:core-type:<top>))))
 
   (check
       (catch-assertion #f
