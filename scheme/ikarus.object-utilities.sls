@@ -411,7 +411,7 @@
     (lambda (reco port sub-printer)
       (define-syntax-rule (%display ?obj)
 	(display ?obj port))
-      (%display "#[core-type ")
+      (%display "#[ctd ")
       (%display (core-type-descriptor.name reco))
       (%display "]")))
 

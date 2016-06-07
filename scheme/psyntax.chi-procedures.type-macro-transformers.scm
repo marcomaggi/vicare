@@ -33,17 +33,27 @@
 	 hash-function-transformer
 	 equality-predicate-transformer
 	 comparison-procedure-transformer
+	 ;;
 	 type-of-transformer
+	 ;;
 	 type-annotation=?-transformer
 	 type-annotation-super-and-sub?-transformer
 	 type-annotation-common-ancestor-transformer
 	 type-annotation-ancestors-transformer
 	 type-annotation-syntax-transformer
 	 type-annotation-matching-transformer
+	 ;;
 	 type-signature-super-and-sub?-transformer
 	 type-signature-common-ancestor-transformer
 	 type-signature-matching-transformer
-	 type-signature-union-transformer)
+	 type-signature-union-transformer
+	 ;;
+	 type-descriptor-parent-transformer
+	 type-descriptor-ancestors-transformer
+	 type-descriptor=?-transformer
+	 type-descriptor-ancestry-super-and-sub?-transformer
+	 type-descriptor-matching-super-and-sub?-transformer
+	 #| end of EXPORTS |# )
 
 
 ;;;; helpers
@@ -1593,6 +1603,111 @@
 	 (build-data no-source
 	   (type-signature.syntax-object sig))
 	 (make-type-signature/single-top))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
+
+
+;;;; module core-macro-transformer:
+;;
+;; TYPE-DESCRIPTOR=?
+;; TYPE-DESCRIPTOR-PARENT
+;; TYPE-DESCRIPTOR-ANCESTORS
+;; TYPE-DESCRIPTOR-ANCESTRY-SUPER-AND-SUB?
+;; TYPE-DESCRIPTOR-MATCHING-SUPER-AND-SUB?
+;;
+
+(define-core-transformer (type-descriptor-parent input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand Vicare's TYPE-DESCRIPTOR-PARENT syntaxes from
+  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
+  ;;the context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?type-annotation)
+     (with-object-type-syntactic-binding (input-form.stx ?type-annotation lexenv.run type.ots)
+       (let ((des.core-expr (object-type-spec.type-descriptor-core-expr type.ots)))
+	 (make-psi input-form.stx
+	   (build-application no-source
+	       (build-primref no-source 'object-type-descr.parent)
+	     (list des.core-expr))
+	   ;;The return value can be false or an instance of "<type-descriptor>".
+	   (make-type-signature/single-value
+	    (make-union-type-spec (list (<false>-ots) (core-prim-spec '<type-descriptor> lexenv.run))))))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
+
+(define-core-transformer (type-descriptor-ancestors input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand Vicare's  TYPE-DESCRIPTOR-ANCESTORS syntaxes
+  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
+  ;;in the context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?type-annotation)
+     (with-object-type-syntactic-binding (input-form.stx ?type-annotation lexenv.run type.ots)
+       (let ((des.core-expr (object-type-spec.type-descriptor-core-expr type.ots)))
+	 (make-psi input-form.stx
+	   (build-application no-source
+	       (build-primref no-source 'object-type-descr.ancestors-des*)
+	     (list des.core-expr))
+	   (make-type-signature/single-value (make-list-of-type-spec (core-prim-spec '<type-descriptor> lexenv.run)))))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
+
+(define-core-transformer (type-descriptor=? input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand Vicare's TYPE-DESCRIPTOR=?  syntaxes from the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?one-type-annotation ?two-type-annotation)
+     (with-object-type-syntactic-binding (input-form.stx ?one-type-annotation lexenv.run one.ots)
+       (with-object-type-syntactic-binding (input-form.stx ?two-type-annotation lexenv.run two.ots)
+	 (let ((one-des.core-expr	(object-type-spec.type-descriptor-core-expr one.ots))
+	       (two-des.core-expr	(object-type-spec.type-descriptor-core-expr two.ots)))
+	   (make-psi input-form.stx
+	     (build-application no-source
+		 (build-primref no-source 'object-type-descr=?)
+	       (list one-des.core-expr two-des.core-expr))
+	     (make-type-signature/single-boolean))))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
+
+(define-core-transformer (type-descriptor-ancestry-super-and-sub? input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer        function         used        to         expand        Vicare's
+  ;;TYPE-DESCRIPTOR-ANCESTRY-SUPER-AND-SUB?   syntaxes from  the  top-level built  in
+  ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
+  ;;LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?super-type-annotation ?sub-type-annotation)
+     (with-object-type-syntactic-binding (input-form.stx ?super-type-annotation lexenv.run super.ots)
+       (with-object-type-syntactic-binding (input-form.stx ?sub-type-annotation lexenv.run sub.ots)
+	 (let ((super-des.core-expr	(object-type-spec.type-descriptor-core-expr super.ots))
+	       (sub-des.core-expr	(object-type-spec.type-descriptor-core-expr sub.ots)))
+	   (make-psi input-form.stx
+	     (build-application no-source
+		 (build-primref no-source 'object-type-descr.ancestry-super-and-sub?)
+	       (list super-des.core-expr sub-des.core-expr))
+	     (make-type-signature/single-boolean))))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
+
+(define-core-transformer (type-descriptor-matching-super-and-sub? input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer        function         used        to         expand        Vicare's
+  ;;TYPE-DESCRIPTOR-MATCHING-SUPER-AND-SUB?   syntaxes from  the  top-level built  in
+  ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
+  ;;LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?super-type-annotation ?sub-type-annotation)
+     (with-object-type-syntactic-binding (input-form.stx ?super-type-annotation lexenv.run super.ots)
+       (with-object-type-syntactic-binding (input-form.stx ?sub-type-annotation lexenv.run sub.ots)
+	 (let ((super-des.core-expr	(object-type-spec.type-descriptor-core-expr super.ots))
+	       (sub-des.core-expr	(object-type-spec.type-descriptor-core-expr sub.ots)))
+	   (make-psi input-form.stx
+	     (build-application no-source
+		 (build-primref no-source 'object-type-descr.matching-super-and-sub?)
+	       (list super-des.core-expr sub-des.core-expr))
+	     (make-type-signature/single-boolean))))))
     (_
      (__synner__ "invalid syntax in macro use"))))
 

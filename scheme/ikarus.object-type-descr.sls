@@ -158,7 +158,8 @@
 	  <null>-ctd				<nelist>-ctd			<list>-ctd	      <pair>-ctd
 	  <empty-vector>-ctd			<nevector>-ctd			<vector>-ctd
 	  <empty-bytevector>-ctd		<nebytevector>-ctd
-	  <condition>-ctd			<compound-condition>-ctd)
+	  <condition>-ctd			<compound-condition>-ctd
+	  <hashtable>-ctd)
     (only (ikarus records procedural)
 	  $rtd-subtype?)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Jun 3,
@@ -217,6 +218,8 @@
 (define-type-descriptor-predicate <struct>-ctd?			<struct>-ctd)
 (define-type-descriptor-predicate <record>-ctd?			<record>-ctd)
 
+(define-type-descriptor-predicate <hashtable>-ctd?		<hashtable>-ctd)
+
 
 ;;;; include files
 
@@ -244,6 +247,7 @@
 ;;;; compound type descriptors: symbols enumeration
 
 (define-record-type (<enumeration-type-descr> make-enumeration-type-descr enumeration-type-descr?)
+  (sealed #t)
   (fields
     (immutable symbol*	enumeration-type-descr.symbol*)
     (mutable memoised-length)
@@ -271,6 +275,7 @@
 ;;;; compound type descriptors: closure
 
 (define-record-type (<closure-type-descr> make-closure-type-descr closure-type-descr?)
+  (sealed #t)
   (fields
     (immutable signature	closure-type-descr.signature)
 		;An  instance of  "<case-lambda-descriptors>"  representing the  type
@@ -337,6 +342,7 @@
 ;;;; compound type descriptors: pairs
 
 (define-record-type (<pair-type-descr> make-pair-type-descr pair-type-descr?)
+  (sealed #t)
   (fields
     (immutable car-des		pair-type-descr.car-des)
     (immutable cdr-des		pair-type-descr.cdr-des)
@@ -352,6 +358,7 @@
 ;;;; compound type descriptors: pairs of
 
 (define-record-type (<pair-of-type-descr> make-pair-of-type-descr pair-of-type-descr?)
+  (sealed #t)
   (fields
     (immutable item-des		pair-of-type-descr.item-des)
     #| end of FIELDS |# ))
@@ -366,6 +373,7 @@
 ;;;; compound type descriptors: lists
 
 (define-record-type (<list-type-descr> %make-list-type-descr list-type-descr?)
+  (sealed #t)
   (fields
     (immutable item-des*		list-type-descr.item-des*)
     (mutable memoised-length)
@@ -398,6 +406,7 @@
 ;;;; compound type descriptors: lists of
 
 (define-record-type (<list-of-type-descr> make-list-of-type-descr list-of-type-descr?)
+  (sealed #t)
   (fields
     (immutable item-des		list-of-type-descr.item-des)
     #| end of FIELDS |# ))
@@ -412,6 +421,7 @@
 ;;;; compound type descriptors: vectors
 
 (define-record-type (<vector-type-descr> %make-vector-type-descr vector-type-descr?)
+  (sealed #t)
   (fields
     (immutable item-des*		vector-type-descr.item-des*)
     (mutable memoised-length)
@@ -444,6 +454,7 @@
 ;;;; compound type descriptors: vectors of
 
 (define-record-type (<vector-of-type-descr> make-vector-of-type-descr vector-of-type-descr?)
+  (sealed #t)
   (fields
     (immutable item-des		vector-of-type-descr.item-des)
     #| end of FIELDS |# ))
@@ -458,6 +469,7 @@
 ;;;; compound type descriptors: union
 
 (define-record-type (<union-type-descr> %make-union-type-descr union-type-descr?)
+  (sealed #t)
   (fields
     (immutable item-des*	union-type-descr.item-des*)
     #| end of FIELDS |# ))
@@ -477,6 +489,7 @@
 ;;;; compound type descriptors: intersection
 
 (define-record-type (<intersection-type-descr> %make-intersection-type-descr intersection-type-descr?)
+  (sealed #t)
   (fields
     (immutable item-des*	intersection-type-descr.item-des*)
     #| end of FIELDS |# ))
@@ -496,6 +509,7 @@
 ;;;; compound type descriptors: complement
 
 (define-record-type (<complement-type-descr> make-complement-type-descr complement-type-descr?)
+  (sealed #t)
   (fields
     (immutable item-des		complement-type-descr.item-des)
     #| end of FIELDS |# ))
@@ -510,6 +524,7 @@
 ;;;; compound type descriptors: ancestor-of
 
 (define-record-type (<ancestor-of-type-descr> make-ancestor-of-type-descr ancestor-of-type-descr?)
+  (sealed #t)
   (fields
     (immutable item-des		ancestor-of-type-descr.item-des)
     (immutable ancestors-des*	ancestor-of-type-descr.ancestors-des*)
@@ -793,6 +808,9 @@
 	  ((<procedure>-ctd? super.des)
 	   (closure-type-descr? sub.des))
 
+	  ((<hashtable>-ctd? super.des)
+	   (hashtable-type-descr? sub.des))
+
 	  (else #f)))
 
    ((record-type-descriptor? super.des)
@@ -927,10 +945,10 @@
 
    ((hashtable-type-descr? super.des)
     (cond ((hashtable-type-descr? sub.des)
-	   (and (object-type-descr=? (hashtable-type-descr.key-des super.des)
-				     (hashtable-type-descr.key-des sub.des))
-		(object-type-descr=? (hashtable-type-descr.val-des super.des)
-				     (hashtable-type-descr.val-des sub.des))))
+	   (and (object-type-descr.ancestry-super-and-sub? (hashtable-type-descr.key-des super.des)
+							   (hashtable-type-descr.key-des sub.des))
+		(object-type-descr.ancestry-super-and-sub? (hashtable-type-descr.val-des super.des)
+							   (hashtable-type-descr.val-des sub.des))))
 	  (else #f)))
 
    ((hashtable-type-descr? sub.des)
@@ -981,7 +999,10 @@
     (cond ((ancestor-of-type-descr? sub.des)
 	   (object-type-descr=? (ancestor-of-type-descr.item-des super.des)
 				(ancestor-of-type-descr.item-des   sub.des)))
-	  (else #f)))
+	  (else
+	   (exists (lambda (ancestor.des)
+		     (object-type-descr=? ancestor.des sub.des))
+	     (ancestor-of-type-descr.ancestors-des* super.des)))))
 
    ((ancestor-of-type-descr? sub.des)
     #f)
@@ -1038,6 +1059,9 @@
 	  ((<symbol>-ctd? super.des)
 	   (enumeration-type-descr? sub.des))
 
+	  ((<hashtable>-ctd? super.des)
+	   (hashtable-type-descr? sub.des))
+
 	  ((union-type-descr? sub.des)
 	   (exists (lambda (sub-item.des)
 		     (super-and-sub? super.des sub-item.des))
@@ -1058,6 +1082,14 @@
    ((record-type-descriptor? super.des)
     (cond ((record-type-descriptor? sub.des)
 	   ($rtd-subtype? sub.des super.des))
+
+	  ((and (record-type-descriptor? super.des)
+		($rtd-subtype? super.des (record-type-descriptor &condition)))
+	   (cond ((compound-condition-type-descr? sub.des)
+		  (exists (lambda (sub-component.des)
+			    ($rtd-subtype? super.des sub-component.des))
+		    (compound-condition-type-descr.component-des* sub.des)))
+		 (else #f)))
 
 	  ((union-type-descr? sub.des)
 	   (exists (lambda (sub-item.des)
@@ -1270,10 +1302,12 @@
    ((vector-type-descr? super.des)
     (let ((super-item*.des (vector-type-descr.item-des* super.des)))
       (cond ((vector-type-descr? sub.des)
-	     (for-all (lambda (super-item.des sub-item.des)
-			(super-and-sub? super-item.des sub-item.des))
-	       super-item*.des
-	       (vector-type-descr.item-des* sub.des)))
+	     (and (= (vector-type-descr.length super.des)
+		     (vector-type-descr.length   sub.des))
+		  (for-all (lambda (super-item.des sub-item.des)
+			     (super-and-sub? super-item.des sub-item.des))
+		    super-item*.des
+		    (vector-type-descr.item-des* sub.des))))
 
 	    ;;No vector-of because a vector-of may be empty.
 
@@ -1334,13 +1368,15 @@
 ;;; --------------------------------------------------------------------
 
    ((compound-condition-type-descr? super.des)
-    (let ((super-component*.des (compound-condition-type-descr.component-des* super.des))
-	  (sub-component*.des   (compound-condition-type-descr.component-des*   sub.des)))
-      (for-all (lambda (super-component.des)
-		 (exists (lambda (sub-component.des)
-			   (object-type-descr.matching-super-and-sub? super-component.des sub-component.des))
-		   sub-component*.des))
-	super-component*.des)))
+    (cond ((compound-condition-type-descr? sub.des)
+	   (let ((super-component*.des (compound-condition-type-descr.component-des* super.des))
+		 (sub-component*.des   (compound-condition-type-descr.component-des*   sub.des)))
+	     (for-all (lambda (super-component.des)
+			(exists (lambda (sub-component.des)
+				  (object-type-descr.matching-super-and-sub? super-component.des sub-component.des))
+			  sub-component*.des))
+	       super-component*.des)))
+	  (else #f)))
 
    ((compound-condition-type-descr? sub.des)
     #f)
@@ -1589,7 +1625,8 @@
 	 (core-type-descriptor.parent object.des))
 
 	((record-type-descriptor? object.des)
-	 (record-type-parent object.des))
+	 (or (record-type-parent object.des)
+	     <record>-ctd))
 
 	((struct-type-descriptor? object.des)
 	 <struct>-ctd)
@@ -1622,6 +1659,9 @@
 	((alist-type-descr? object.des)
 	 <list>-ctd)
 
+	((hashtable-type-descr? object.des)
+	 <hashtable>-ctd)
+
 	(else
 	 <top>-ctd)))
 
@@ -1637,14 +1677,15 @@
 		 (else '()))))
 
 	((record-type-descriptor? object.des)
-	 (let recur ((object.des object.des))
-	   (cond ((record-type-parent object.des)
+	 (let recur ((obj.des object.des))
+	   (cond ((record-type-parent obj.des)
 		  => (lambda (parent.des)
 		       (cons parent.des (recur parent.des))))
 		 (else
-		  (list <record>-ctd
-			<struct>-ctd
-			<top>-ctd)))))
+		  (let ((c* (list <record>-ctd <struct>-ctd <top>-ctd)))
+		    (if ($rtd-subtype? object.des (record-type-descriptor &condition))
+			(cons <condition>-ctd c*)
+		      c*))))))
 
 	((struct-type-descriptor? object.des)
 	 (list <struct>-ctd
@@ -1658,8 +1699,28 @@
 	 (list <symbol>-ctd
 	       <top>-ctd))
 
+	((list-of-type-descr? object.des)
+	 (list <list>-ctd <top>-ctd))
+
+	((list-type-descr? object.des)
+	 (list <nelist>-ctd <list>-ctd <top>-ctd))
+
+	((vector-of-type-descr? object.des)
+	 (list <vector>-ctd <top>-ctd))
+
+	((vector-type-descr? object.des)
+	 (list <nevector>-ctd <vector>-ctd <top>-ctd))
+
+	((or (pair-type-descr?    object.des)
+	     (pair-of-type-descr? object.des))
+	 (list <pair>-ctd <top>-ctd))
+
 	((alist-type-descr? object.des)
 	 (list <list>-ctd
+	       <top>-ctd))
+
+	((hashtable-type-descr? object.des)
+	 (list <hashtable>-ctd
 	       <top>-ctd))
 
 	((compound-condition-type-descr? object.des)
@@ -1776,6 +1837,8 @@
 					       <empty-bytevector>-ctd)
 					      (else
 					       <nebytevector>-ctd)))
+
+	  ((hashtable? datum)		<hashtable>-ctd)
 
 	  ((eq? datum (void))		<void>-ctd)
 	  (else				<top>-ctd))))

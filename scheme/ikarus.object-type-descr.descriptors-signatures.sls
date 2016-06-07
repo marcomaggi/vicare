@@ -55,6 +55,7 @@
 ;;;; object-type descriptor signatures
 
 (define-record-type (<descriptors-signature> make-descriptors-signature descriptors-signature?)
+  (sealed #t)
   (fields
     (immutable object-type-descrs	descriptors-signature.object-type-descrs)
 		;A proper  or improper  list of object-type  descriptors representing
@@ -85,6 +86,7 @@
 ;;;; descriptors signatures for lambda procedures
 
 (define-record-type (<lambda-descriptors> make-lambda-descriptors lambda-descriptors?)
+  (sealed #t)
   (fields
     (immutable retvals	lambda-descriptors.retvals)
 		;An instance of  "<descriptors-signature>" representing the signature
@@ -144,6 +146,7 @@
 ;;;; descriptors signatures for case-lambda procedures
 
 (define-record-type (<case-lambda-descriptors> make-case-lambda-descriptors case-lambda-descriptors?)
+  (sealed #t)
   (fields
     (immutable clause-signature*	case-lambda-descriptors.clause-signature*)
 		;A   list  of   "<lambda-descriptors>"  instances   representing  the
