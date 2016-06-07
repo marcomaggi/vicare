@@ -374,7 +374,7 @@
 
   (define (%validate-type-annotation type-annotation.stx)
     (syntax-case type-annotation.stx
-	(pair list vector pair-of list-of vector-of <no-return> <list>
+	(pair list vector pair-of list-of nelist-of vector-of <no-return> <list>
 	      condition or and not alist hashtable lambda case-lambda =>
 	      enumeration type-predicate equality-predicate comparison-procedure hash-function)
 
@@ -387,6 +387,9 @@
 
       ((list-of ?item-type)
        #`(list-of #,(%validate-type-annotation #'?item-type)))
+
+      ((nelist-of ?item-type)
+       (%validate-type-annotation #'(pair ?item-type (list-of ?item-type))))
 
       ((vector-of ?item-type)
        #`(vector-of #,(%validate-type-annotation #'?item-type)))

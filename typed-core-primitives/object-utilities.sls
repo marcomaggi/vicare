@@ -250,25 +250,125 @@
 
 ;;;; object type descriptors
 
+(declare-core-rtd <compound-condition-type-descr>-rtd)
+(declare-core-rcd <compound-condition-type-descr>-rcd)
+
+(declare-core-primitive make-compound-condition-type-descr
+    (safe)
+  (signatures
+   (((nelist-of <record-type-descriptor>))	=> (<compound-condition-type-descr>))))
+
+(declare-type-predicate compound-condition-type-descr?	<compound-condition-type-descr>)
+
+(declare-core-primitive compound-condition-type-descr.component-des*
+    (safe)
+  (signatures
+   ((<compound-condition-type-descr>)	=> ((nelist-of <record-type-descriptor>)))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <enumeration-type-descr>-rtd)
+(declare-core-rcd <enumeration-type-descr>-rcd)
+
+(declare-core-primitive make-enumeration-type-descr
+    (safe)
+  (signatures
+   (((nelist-of <symbol>))		=> (<enumeration-type-descr>))))
+
+(declare-type-predicate enumeration-type-descr?	<enumeration-type-descr>)
+
+(declare-core-primitive enumeration-type-descr.symbol*
+    (safe)
+  (signatures
+   ((<enumeration-type-descr>)		=> ((nelist-of <symbol>)))))
+
+(declare-core-primitive enumeration-type-descr.length
+    (safe)
+  (signatures
+   ((<enumeration-type-descr>)		=> (<non-negative-exact-integer>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <closure-type-descr>-rtd)
+(declare-core-rcd <closure-type-descr>-rcd)
+
+(declare-core-primitive make-closure-type-descr
+    (safe)
+  (signatures
+   ((<case-lambda-descriptors>)		=> (<closure-type-descr>))))
+
+(declare-type-predicate closure-type-descr?	<closure-type-descr>)
+
+(declare-core-primitive closure-type-descr.signature
+    (safe)
+  (signatures
+   ((<closure-type-descr>)		=> (<case-lambda-descriptors>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <hashtable-type-descr>-rtd)
+(declare-core-rcd <hashtable-type-descr>-rcd)
+
+(declare-core-primitive make-hashtable-type-descr
+    (safe)
+  (signatures
+   ((<type-descriptor> <type-descriptor>)	=> (<hashtable-type-descr>))))
+
+(declare-type-predicate hashtable-type-descr?	<hashtable-type-descr>)
+
+(declare-core-primitive hashtable-type-descr.key-des
+    (safe)
+  (signatures
+   ((<hashtable-type-descr>)			=> (<type-descriptor>))))
+
+(declare-core-primitive hashtable-type-descr.val-des
+    (safe)
+  (signatures
+   ((<hashtable-type-descr>)			=> (<type-descriptor>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <alist-type-descr>-rtd)
+(declare-core-rcd <alist-type-descr>-rcd)
+
+(declare-core-primitive make-alist-type-descr
+    (safe)
+  (signatures
+   ((<type-descriptor> <type-descriptor>)	=> (<alist-type-descr>))))
+
+(declare-type-predicate alist-type-descr?	<alist-type-descr>)
+
+(declare-core-primitive alist-type-descr.key-des
+    (safe)
+  (signatures
+   ((<alist-type-descr>)			=> (<type-descriptor>))))
+
+(declare-core-primitive alist-type-descr.val-des
+    (safe)
+  (signatures
+   ((<alist-type-descr>)			=> (<type-descriptor>))))
+
+;;; --------------------------------------------------------------------
+
 (declare-core-rtd <pair-type-descr>-rtd)
 (declare-core-rcd <pair-type-descr>-rcd)
 
 (declare-core-primitive make-pair-type-descr
     (safe)
   (signatures
-   ((<top> <top>)		=> (<pair-type-descr>))))
+   ((<type-descriptor> <type-descriptor>)		=> (<pair-type-descr>))))
 
 (declare-type-predicate pair-type-descr?	<pair-type-descr>)
 
 (declare-core-primitive pair-type-descr.car-des
     (safe)
   (signatures
-   ((<pair-type-descr>)		=> (<top>))))
+   ((<pair-type-descr>)		=> (<type-descriptor>))))
 
 (declare-core-primitive pair-type-descr.cdr-des
     (safe)
   (signatures
-   ((<pair-type-descr>)		=> (<top>))))
+   ((<pair-type-descr>)		=> (<type-descriptor>))))
 
 ;;; --------------------------------------------------------------------
 
@@ -278,14 +378,14 @@
 (declare-core-primitive make-pair-of-type-descr
     (safe)
   (signatures
-   ((<top>)			=> (<pair-of-type-descr>))))
+   ((<type-descriptor>)			=> (<pair-of-type-descr>))))
 
 (declare-type-predicate pair-of-type-descr?	<pair-of-type-descr>)
 
 (declare-core-primitive pair-of-type-descr.item-des
     (safe)
   (signatures
-   ((<pair-of-type-descr>)	=> (<top>))))
+   ((<pair-of-type-descr>)	=> (<type-descriptor>))))
 
 ;;; --------------------------------------------------------------------
 
@@ -313,14 +413,14 @@
 (declare-core-primitive make-list-of-type-descr
     (safe)
   (signatures
-   ((<top>)			=> (<list-of-type-descr>))))
+   ((<type-descriptor>)			=> (<list-of-type-descr>))))
 
 (declare-type-predicate list-of-type-descr?	<list-of-type-descr>)
 
 (declare-core-primitive list-of-type-descr.item-des
     (safe)
   (signatures
-   ((<list-of-type-descr>)	=> (<top>))))
+   ((<list-of-type-descr>)	=> (<type-descriptor>))))
 
 ;;; --------------------------------------------------------------------
 
@@ -348,53 +448,14 @@
 (declare-core-primitive make-vector-of-type-descr
     (safe)
   (signatures
-   ((<top>)			=> (<vector-of-type-descr>))))
+   ((<type-descriptor>)			=> (<vector-of-type-descr>))))
 
 (declare-type-predicate vector-of-type-descr?	<vector-of-type-descr>)
 
 (declare-core-primitive vector-of-type-descr.item-des
     (safe)
   (signatures
-   ((<vector-of-type-descr>)	=> (<top>))))
-
-;;; --------------------------------------------------------------------
-
-(declare-core-rtd <enumeration-type-descr>-rtd)
-(declare-core-rcd <enumeration-type-descr>-rcd)
-
-(declare-core-primitive make-enumeration-type-descr
-    (safe)
-  (signatures
-   (((list-of <symbol>))		=> (<enumeration-type-descr>))))
-
-(declare-type-predicate enumeration-type-descr?	<enumeration-type-descr>)
-
-(declare-core-primitive enumeration-type-descr.symbol*
-    (safe)
-  (signatures
-   ((<enumeration-type-descr>)		=> ((list-of <symbol>)))))
-
-(declare-core-primitive enumeration-type-descr.length
-    (safe)
-  (signatures
-   ((<enumeration-type-descr>)		=> (<non-negative-exact-integer>))))
-
-;;; --------------------------------------------------------------------
-
-(declare-core-rtd <closure-type-descr>-rtd)
-(declare-core-rcd <closure-type-descr>-rcd)
-
-(declare-core-primitive make-closure-type-descr
-    (safe)
-  (signatures
-   ((<case-lambda-descriptors>)		=> (<closure-type-descr>))))
-
-(declare-type-predicate closure-type-descr?	<closure-type-descr>)
-
-(declare-core-primitive closure-type-descr.signature
-    (safe)
-  (signatures
-   ((<closure-type-descr>)		=> (<case-lambda-descriptors>))))
+   ((<vector-of-type-descr>)	=> (<type-descriptor>))))
 
 ;;; --------------------------------------------------------------------
 
@@ -404,8 +465,8 @@
 (declare-core-primitive make-union-type-descr
     (safe)
   (signatures
-   (((list <top>))		=> (<top>))
-   ((<list>)			=> (<union-type-descr>))))
+   (((list-of <type-descriptor>))	=> (<type-descriptor>))
+   ((<list>)				=> (<union-type-descr>))))
 
 (declare-type-predicate union-type-descr?	<union-type-descr>)
 
@@ -422,8 +483,8 @@
 (declare-core-primitive make-intersection-type-descr
     (safe)
   (signatures
-   (((list <top>))		=> (<top>))
-   ((<list>)			=> (<intersection-type-descr>))))
+   (((list-of <type-descriptor>))	=> (<type-descriptor>))
+   ((<list>)				=> (<intersection-type-descr>))))
 
 (declare-type-predicate intersection-type-descr?	<intersection-type-descr>)
 
@@ -440,14 +501,14 @@
 (declare-core-primitive make-complement-type-descr
     (safe)
   (signatures
-   ((<top>)				=> (<complement-type-descr>))))
+   ((<type-descriptor>)				=> (<complement-type-descr>))))
 
 (declare-type-predicate complement-type-descr?	<complement-type-descr>)
 
 (declare-core-primitive complement-type-descr.item-des
     (safe)
   (signatures
-   ((<complement-type-descr>)		=> (<top>))))
+   ((<complement-type-descr>)		=> (<type-descriptor>))))
 
 ;;; --------------------------------------------------------------------
 
@@ -457,14 +518,14 @@
 (declare-core-primitive make-ancestor-of-type-descr
     (safe)
   (signatures
-   ((<top>)				=> (<ancestor-of-type-descr>))))
+   ((<type-descriptor>)				=> (<ancestor-of-type-descr>))))
 
 (declare-type-predicate ancestor-of-type-descr?		<ancestor-of-type-descr>)
 
 (declare-core-primitive ancestor-of-type-descr.item-des
     (safe)
   (signatures
-   ((<ancestor-of-type-descr>)		=> (<top>))))
+   ((<ancestor-of-type-descr>)		=> (<type-descriptor>))))
 
 (declare-core-primitive ancestor-of-type-descr.ancestors-des*
     (safe)

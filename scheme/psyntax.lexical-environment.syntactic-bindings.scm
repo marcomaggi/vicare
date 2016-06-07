@@ -908,7 +908,7 @@
   ;;
   ;;and the usable descriptor has the format:
   ;;
-  ;;   (core-object-type-name . (#<scheme-type-spec> . ?hard-coded-sexp))
+  ;;   (core-object-type-name . (#<core-type-spec> . ?hard-coded-sexp))
   ;;
   ;;Syntactic binding descriptors of  type "$core-type-name" are hard-coded in
   ;;the boot image  and generated directly by the makefile  at boot image build-time.
@@ -946,10 +946,10 @@
 	     (uids-list		(cons uid.sym (if parent.ots
 						  (object-type-spec.unique-identifiers parent.ots)
 						'())))
-	     (type-name.ots	(make-scheme-type-spec type-name.id uids-list parent.ots
-						       constructor.stx type-predicate.stx
-						       equality-predicate.stx comparison-procedure.stx hash-function.stx
-						       type-descriptor.id methods-table)))
+	     (type-name.ots	(make-core-type-spec type-name.id uids-list parent.ots
+						     constructor.stx type-predicate.stx
+						     equality-predicate.stx comparison-procedure.stx hash-function.stx
+						     type-descriptor.id methods-table)))
 	(set-car! descriptor 'core-object-type-name)
 	(set-cdr! descriptor (cons type-name.ots descr.value))))))
 

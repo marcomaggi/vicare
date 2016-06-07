@@ -121,6 +121,8 @@
     object-type-spec.applicable-method-stx		object-type-spec.applicable-hash-function
     object-type-spec.safe-accessor-stx			object-type-spec.safe-mutator-stx
     object-type-spec.single-value-validator-lambda-stx	object-type-spec.list-validator-lambda-stx
+    object-type-spec.type-descriptor-core-expr
+    expression-expander-for-core-expressions
 
     object-type-spec.matching-super-and-sub?		object-type-spec.compatible-super-and-sub?
     object-type-spec=?
@@ -128,10 +130,10 @@
     object-type-spec.procedure?
     object-type-spec.list-sub-type?			object-type-spec.vector-sub-type?
 
-    <scheme-type-spec>
-    <scheme-type-spec>-rtd				<scheme-type-spec>-rcd
-    make-scheme-type-spec				scheme-type-spec?
-    scheme-type-spec.type-descriptor-id
+    <core-type-spec>
+    <core-type-spec>-rtd				<core-type-spec>-rcd
+    make-core-type-spec					core-type-spec?
+    core-type-spec.type-descriptor-id
 
     <closure-type-spec>
     <closure-type-spec>-rtd				<closure-type-spec>-rcd
@@ -210,12 +212,12 @@
     <hashtable-type-spec>
     <hashtable-type-spec>-rtd				<hashtable-type-spec>-rcd
     make-hashtable-type-spec				hashtable-type-spec?
-    hashtable-type-spec.key-ots				hashtable-type-spec.value-ots
+    hashtable-type-spec.key-ots				hashtable-type-spec.val-ots
 
     <alist-type-spec>
     <alist-type-spec>-rtd				<alist-type-spec>-rcd
     make-alist-type-spec				alist-type-spec?
-    alist-type-spec.key-ots				alist-type-spec.value-ots
+    alist-type-spec.key-ots				alist-type-spec.val-ots
 
     <enumeration-type-spec>
     <enumeration-type-spec>-rtd				<enumeration-type-spec>-rcd
@@ -3080,8 +3082,8 @@
 				   (?ots-retriever)
 				 (set! memoised-ots src-ots)))))
 	      (or (eq? obj src-ots)
-		  (and (scheme-type-spec? obj)
-		       ;;We know that if the type of OBJ is "<scheme-type-spec>", its
+		  (and (core-type-spec? obj)
+		       ;;We know that  if the type of OBJ  is "<core-type-spec>", its
 		       ;;NAME field holds an identifier.
 		       (let ((src-name (or memoised-name
 					   (receive-and-return (src-name)

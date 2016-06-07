@@ -1063,6 +1063,12 @@
 
 ;;; --------------------------------------------------------------------
 
+(define* (chi-expr-for-core-expr expr.stx lexenv.run)
+  ;;This   function    is   used    when   converting   expand-time    instances   of
+  ;;"<object-type-spec>" to run-time instances of "<object-type-descr>".
+  ;;
+  (psi.core-expr (chi-expr expr.stx lexenv.run (make-empty-lexenv))))
+
 (define* (chi-expr-for-type-annotation expr.stx lexenv.run)
   ;;This  function  is used  when  converting  type  annotation syntax  objects  into
   ;;instances  of   "<object-type-spec>".   For  example:  when   processing  TYPE-OF
@@ -1688,6 +1694,7 @@
 ;;;; done
 
 (expression-expander-for-type-annotations chi-expr-for-type-annotation)
+(expression-expander-for-core-expressions chi-expr-for-core-expr)
 
 #| end of library |# )
 

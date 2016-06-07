@@ -1132,31 +1132,25 @@ The following syntactic bindings are exported by the library
 @library{vicare}.
 
 
-@deffn Syntax type-descriptor @meta{type}
-Expand to an expression which, when evaluated, results in:
+@deffn Syntax type-descriptor @meta{type-annotation}
+Expand to an expression which, when evaluated, results in the type
+descriptor of the specified type annotation.
 
-@itemize
-@item
-A struct--type descriptor if the given identifier argument @meta{type}
-is a struct--type name.
+@lisp
+(type-descriptor <fixnum>)
+@expansion{} <fixnum>-ctd
 
-@item
-A record--type descriptor if the given identifier argument @meta{type}
-is a record--type name.
-
-@item
-A Scheme built--in object--type descriptor if the given identifier
-argument @meta{type} is a built--in object--type name.  This descriptor
-is a record of type @class{scheme-type-descriptor}.
-@end itemize
+(type-descriptor (list <fixnum> <flonum>))
+@expansion{} (make-list-type-descr (list <fixnum>-ctd <flonum>-ctd))
+@end lisp
 @end deffn
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Scheme built--in object--type descriptors
+@subsubheading Scheme core object--type descriptors
 
 
-@deftp {Recort-Type} @aclass{scheme-type-descriptor}
+@deftp {Recort-Type} @aclass{core-type-descriptor}
 Type name identifier for records describing Scheme built--in
 object--types.  It has the following immutable fields:
 
@@ -1166,7 +1160,7 @@ A symbol representing the name of this type.  For example:
 @samp{<string>}.
 
 @item parent
-If this type has a parent: an instance of @class{scheme-type-descriptor}
+If this type has a parent: an instance of @class{core-type-descriptor}
 representing the parent of this type; otherwise @false{}.
 
 @item uids-list
@@ -1183,36 +1177,36 @@ If this type has methods: a procedure to be applied to the method name
 @end deftp
 
 
-@defun scheme-type-descriptor? @var{obj}
+@defun core-type-descriptor? @var{obj}
 Return @true{} if @var{obj} is an instance of
-@class{scheme-type-descriptor}; otherwise return @false{}.
+@class{core-type-descriptor}; otherwise return @false{}.
 @end defun
 
 
-@defun scheme-type-descriptor.name @var{btd}
-@defunx scheme-type-descriptor.parent @var{btd}
-@defunx scheme-type-descriptor.uids-list @var{btd}
-@defunx scheme-type-descriptor.method-retriever @var{btd}
-Accessors for the fields of @class{scheme-type-descriptor}.
+@defun core-type-descriptor.name @var{btd}
+@defunx core-type-descriptor.parent @var{btd}
+@defunx core-type-descriptor.uids-list @var{btd}
+@defunx core-type-descriptor.method-retriever @var{btd}
+Accessors for the fields of @class{core-type-descriptor}.
 @end defun
 
 
 Some usage examples:
 
 @lisp
-(define @{string-btd <scheme-type-descriptor>@}
+(define @{string-ctd <core-type-descriptor>@}
   (type-descriptor <string>))
 
-(.name string-btd)
+(.name string-ctd)
 @result{} <string>
 
-(.name (.parent string-btd))
+(.name (.parent string-ctd))
 @result{} <top>
 
-(.uids-list string-btd)
-@result{} (vicare:scheme-type:<string> vicare:scheme-type:<top>)
+(.uids-list string-ctd)
+@result{} (vicare:core-type:<string> vicare:core-type:<top>)
 
-(((.method-retriever string-btd) 'length) "ciao")
+(((.method-retriever string-ctd) 'length) "ciao")
 @result{} 4
 @end lisp
 

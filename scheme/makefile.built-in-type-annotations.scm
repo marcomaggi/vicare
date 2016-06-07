@@ -174,6 +174,15 @@
 ;;       <list-of-syntax-objects>
 ;;       ))
 
+(define-type-annotation <type-descriptor>
+  (or <core-type-descriptor> <struct-type-descriptor>
+      <record-type-descriptor> <record-constructor-descriptor>
+      <pair-type-descr> <pair-of-type-descr>
+      <list-type-descr> <list-of-type-descr>
+      <vector-type-descr> <vector-of-type-descr>
+      <enumeration-type-descr> <closure-type-descr> <ancestor-of-type-descr>
+      <union-type-descr> <intersection-type-descr> <complement-type-descr>))
+
 
 ;;;; done
 

@@ -165,11 +165,11 @@
    (list-sub-type?			object-type-spec.list-sub-type?)
    (vector-sub-type?			object-type-spec.vector-sub-type?)))
 
-(define-built-in-record-type <scheme-type-spec>
+(define-built-in-record-type <core-type-spec>
     <object-type-spec>
-  make-scheme-type-spec scheme-type-spec?
+  make-core-type-spec core-type-spec?
   (methods
-   (type-descriptor-id		scheme-type-spec.type-descriptor-id)))
+   (type-descriptor-id		core-type-spec.type-descriptor-id)))
 
 (define-built-in-record-type <closure-type-spec>
     <object-type-spec>
@@ -268,14 +268,14 @@
   make-hashtable-type-spec hashtable-type-spec?
   (methods
    (key-ots			hashtable-type-spec.key-ots)
-   (value-ots			hashtable-type-spec.value-ots)))
+   (value-ots			hashtable-type-spec.val-ots)))
 
 (define-built-in-record-type <alist-type-spec>
     <object-type-spec>
   make-alist-type-spec alist-type-spec?
   (methods
    (key-ots			alist-type-spec.key-ots)
-   (value-ots			alist-type-spec.value-ots)))
+   (value-ots			alist-type-spec.val-ots)))
 
 (define-built-in-record-type <enumeration-type-spec>
     <object-type-spec>
@@ -353,6 +353,41 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-built-in-record-type <compound-condition-type-descr>
+    <record>
+  make-compound-condition-type-descr compound-condition-type-descr?
+  (methods
+   (component-des*		compound-condition-type-descr.component-des*)))
+
+(define-built-in-record-type <hashtable-type-descr>
+    <record>
+  make-hashtable-type-descr hashtable-type-descr?
+  (methods
+   (key-des			hashtable-type-descr.key-des)
+   (val-des			hashtable-type-descr.val-des)))
+
+(define-built-in-record-type <alist-type-descr>
+    <record>
+  make-alist-type-descr alist-type-descr?
+  (methods
+   (key-des			alist-type-descr.key-des)
+   (val-des			alist-type-descr.val-des)))
+
+(define-built-in-record-type <enumeration-type-descr>
+    <record>
+  make-enumeration-type-descr enumeration-type-descr?
+  (methods
+   (symbol*		enumeration-type-descr.symbol*)
+   (length		enumeration-type-descr.length)))
+
+(define-built-in-record-type <closure-type-descr>
+    <record>
+  make-closure-type-descr closure-type-descr?
+  (methods
+   (signature		closure-type-descr.signature)))
+
+;;; --------------------------------------------------------------------
+
 (define-built-in-record-type <pair-type-descr>
     <record>
   make-pair-type-descr pair-type-descr?
@@ -389,19 +424,6 @@
   make-vector-of-type-descr vector-of-type-descr?
   (methods
    (item-des		vector-of-type-descr.item-des)))
-
-(define-built-in-record-type <enumeration-type-descr>
-    <record>
-  make-enumeration-type-descr enumeration-type-descr?
-  (methods
-   (symbol*		enumeration-type-descr.symbol*)
-   (length		enumeration-type-descr.length)))
-
-(define-built-in-record-type <closure-type-descr>
-    <record>
-  make-closure-type-descr closure-type-descr?
-  (methods
-   (signature		closure-type-descr.signature)))
 
 ;;; --------------------------------------------------------------------
 

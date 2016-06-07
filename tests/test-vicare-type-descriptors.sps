@@ -162,6 +162,165 @@
   #| end of PARAMETRISE |# )
 
 
+(parametrise ((check-test-name	'type-descriptor-syntax))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?type-annotation => ?expected)
+       (check
+	   (type-descriptor ?type-annotation)
+	 (=> object-type-descr=?)
+	 ?expected))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; core
+
+  (doit <fixnum>		=> <fixnum>-ctd)
+  (doit <string>		=> <string>-ctd)
+
+  (doit <vector>		=> <vector>-ctd)
+  (doit <list>			=> <list>-ctd)
+
+;;; --------------------------------------------------------------------
+;;; records
+
+  (doit <alpha>
+	=> (record-type-descriptor <alpha>))
+
+  (doit &who
+	=> (record-type-descriptor &who))
+
+;;; --------------------------------------------------------------------
+;;; structs
+
+  (doit alpha
+	=> (struct-type-descriptor alpha))
+
+;;; --------------------------------------------------------------------
+;;; pairs
+
+  (doit (pair <fixnum> <flonum>)
+	=> (make-pair-type-descr <fixnum>-ctd <flonum>-ctd))
+
+  (doit (pair-of <fixnum>)
+	=> (make-pair-of-type-descr <fixnum>-ctd))
+
+;;; --------------------------------------------------------------------
+;;; lists
+
+  #;(debug-print (expansion-of (type-descriptor (list <fixnum> <flonum>))))
+
+  (doit (list <fixnum> <flonum>)
+	=> (make-list-type-descr (list <fixnum>-ctd <flonum>-ctd)))
+
+  (doit (list-of <fixnum>)
+	=> (make-list-of-type-descr <fixnum>-ctd))
+
+;;; --------------------------------------------------------------------
+;;; vectors
+
+  (doit (vector <fixnum> <flonum>)
+	=> (make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd)))
+
+  (doit (vector-of <fixnum>)
+	=> (make-vector-of-type-descr <fixnum>-ctd))
+
+;;; --------------------------------------------------------------------
+;;; hashtables
+
+  (doit (hashtable <fixnum> <flonum>)
+	=> (make-hashtable-type-descr <fixnum>-ctd <flonum>-ctd))
+
+;;; --------------------------------------------------------------------
+;;; alists
+
+  (doit (alist <fixnum> <flonum>)
+	=> (make-alist-type-descr <fixnum>-ctd <flonum>-ctd))
+
+;;; --------------------------------------------------------------------
+;;; enumerations
+
+  (doit (enumeration ciao hello)
+	=> (make-enumeration-type-descr '(ciao hello)))
+
+;;; --------------------------------------------------------------------
+;;; compound-condition objects
+
+  (doit (condition &who)
+	=> (record-type-descriptor &who))
+
+  (doit (condition &who &message)
+	=> (make-compound-condition-type-descr (list (record-type-descriptor &who)
+						     (record-type-descriptor &message))))
+
+  (doit (condition &who (condition &message &irritants))
+	=> (make-compound-condition-type-descr (list (record-type-descriptor &who)
+						     (record-type-descriptor &message)
+						     (record-type-descriptor &irritants))))
+
+;;; --------------------------------------------------------------------
+;;; closure
+
+  #;(debug-print (expansion-of (type-descriptor (lambda (<fixnum>) => (<string>)))))
+
+  (doit (lambda (<fixnum>) => (<string>))
+	=> (make-closure-type-descr
+	    (make-case-lambda-descriptors
+	     (list (make-lambda-descriptors (make-descriptors-signature (list <string>-ctd))
+					    (make-descriptors-signature (list <fixnum>-ctd)))))))
+
+  (doit (lambda (<fixnum> <string> . <list>) => (<top>))
+	=> (make-closure-type-descr
+	    (make-case-lambda-descriptors
+	     (list (make-lambda-descriptors (make-descriptors-signature (list <top>-ctd))
+					    (make-descriptors-signature (cons* <fixnum>-ctd <string>-ctd <list>-ctd)))))))
+
+  (doit (case-lambda
+	  ((<number>) => (<string>))
+	  ((<number> <non-negative-fixnum>) => (<string>)))
+	=> (make-closure-type-descr
+	    (make-case-lambda-descriptors
+	     (list (make-lambda-descriptors (make-descriptors-signature (list <string>-ctd))
+					    (make-descriptors-signature (list <number>-ctd)))
+		   (make-lambda-descriptors (make-descriptors-signature (list <string>-ctd))
+					    (make-descriptors-signature
+					     (list <number>-ctd (make-union-type-descr (list <zero-fixnum>-ctd
+											     <positive-fixnum>-ctd)))))))))
+
+;;; --------------------------------------------------------------------
+;;; union
+
+  (doit (or <fixnum> <flonum>)
+	=> (make-union-type-descr (list <fixnum>-ctd <flonum>-ctd)))
+
+;;; --------------------------------------------------------------------
+;;; intersection
+
+  (doit (and <fixnum> <flonum>)
+	=> (make-intersection-type-descr (list <fixnum>-ctd <flonum>-ctd)))
+
+;;; --------------------------------------------------------------------
+;;; complement
+
+  (doit (not <fixnum>)
+	=> (make-complement-type-descr <fixnum>-ctd))
+
+;;; --------------------------------------------------------------------
+;;; ancestor-of
+
+  (doit (ancestor-of <fixnum>)
+	=> (make-ancestor-of-type-descr <fixnum>-ctd))
+
+;;; --------------------------------------------------------------------
+;;; ancestor-of
+
+  (doit (ancestor-of <fixnum>)
+	=> (make-ancestor-of-type-descr <fixnum>-ctd))
+
+  #| end of PARAMETRISE |# )
+
+
 (parametrise ((check-test-name	'equality-super-and-sub))
 
   (define-syntax doit-true

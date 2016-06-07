@@ -42,6 +42,28 @@
 
 ;;; --------------------------------------------------------------------
 
+    <compound-condition-type-descr>-rtd		<compound-condition-type-descr>-rcd
+    make-compound-condition-type-descr		compound-condition-type-descr?
+    compound-condition-type-descr.component-des*
+
+    <hashtable-type-descr>-rtd			<hashtable-type-descr>-rcd
+    make-hashtable-type-descr			hashtable-type-descr?
+    hashtable-type-descr.key-des		hashtable-type-descr.val-des
+
+    <alist-type-descr>-rtd			<alist-type-descr>-rcd
+    make-alist-type-descr			alist-type-descr?
+    alist-type-descr.key-des			alist-type-descr.val-des
+
+    <enumeration-type-descr>-rtd		<enumeration-type-descr>-rcd
+    make-enumeration-type-descr			enumeration-type-descr?
+    enumeration-type-descr.symbol*
+
+    <closure-type-descr>-rtd			<closure-type-descr>-rcd
+    make-closure-type-descr			closure-type-descr?
+    closure-type-descr.signature
+
+;;; --------------------------------------------------------------------
+
     <pair-type-descr>-rtd			<pair-type-descr>-rcd
     make-pair-type-descr			pair-type-descr?
     pair-type-descr.car-des			pair-type-descr.cdr-des
@@ -65,14 +87,6 @@
     <vector-of-type-descr>-rtd			<vector-of-type-descr>-rcd
     make-vector-of-type-descr			vector-of-type-descr?
     vector-of-type-descr.item-des
-
-    <enumeration-type-descr>-rtd		<enumeration-type-descr>-rcd
-    make-enumeration-type-descr			enumeration-type-descr?
-    enumeration-type-descr.symbol*
-
-    <closure-type-descr>-rtd			<closure-type-descr>-rcd
-    make-closure-type-descr			closure-type-descr?
-    closure-type-descr.signature
 
 ;;; --------------------------------------------------------------------
 
@@ -143,7 +157,8 @@
 	  <empty-string>-ctd			<nestring>-ctd
 	  <null>-ctd				<nelist>-ctd			<list>-ctd	      <pair>-ctd
 	  <empty-vector>-ctd			<nevector>-ctd			<vector>-ctd
-	  <empty-bytevector>-ctd		<nebytevector>-ctd)
+	  <empty-bytevector>-ctd		<nebytevector>-ctd
+	  <condition>-ctd			<compound-condition>-ctd)
     (only (ikarus records procedural)
 	  $rtd-subtype?)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Jun 3,
@@ -206,6 +221,117 @@
 ;;;; include files
 
 (include "ikarus.object-type-descr.descriptors-signatures.sls"	#t)
+
+
+;;;; compound type descriptors: compound condition-object types
+
+(define-record-type (<compound-condition-type-descr> make-compound-condition-type-descr compound-condition-type-descr?)
+  (sealed #t)
+  (fields
+    (immutable component-ots*		compound-condition-type-descr.component-des*)
+		;A list of instances of "<record-type-descr>" describing the types of
+		;component condition objects.
+    #| end of FIELDS |# )
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <compound-condition-type-descr>-rtd
+  (record-type-descriptor <compound-condition-type-descr>))
+
+(define <compound-condition-type-descr>-rcd
+  (record-constructor-descriptor <compound-condition-type-descr>))
+
+
+;;;; compound type descriptors: symbols enumeration
+
+(define-record-type (<enumeration-type-descr> make-enumeration-type-descr enumeration-type-descr?)
+  (fields
+    (immutable symbol*	enumeration-type-descr.symbol*)
+    (mutable memoised-length)
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-record)
+      (lambda (symbol*)
+	(make-record symbol* #f)))))
+
+(define <enumeration-type-descr>-rtd
+  (record-type-descriptor <enumeration-type-descr>))
+
+(define <enumeration-type-descr>-rcd
+  (record-constructor-descriptor <enumeration-type-descr>))
+
+;;; --------------------------------------------------------------------
+
+(define (enumeration-type-descr.length otd)
+  (or (<enumeration-type-descr>-memoised-length otd)
+      (receive-and-return (len)
+	  (length (enumeration-type-descr.symbol* otd))
+	(<enumeration-type-descr>-memoised-length-set! otd len))))
+
+
+;;;; compound type descriptors: closure
+
+(define-record-type (<closure-type-descr> make-closure-type-descr closure-type-descr?)
+  (fields
+    (immutable signature	closure-type-descr.signature)
+		;An  instance of  "<case-lambda-descriptors>"  representing the  type
+		;signatures of the clauses.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-record)
+      (lambda* ({signature case-lambda-descriptors?})
+	(make-record signature)))))
+
+(define <closure-type-descr>-rtd
+  (record-type-descriptor <closure-type-descr>))
+
+(define <closure-type-descr>-rcd
+  (record-constructor-descriptor <closure-type-descr>))
+
+;;; --------------------------------------------------------------------
+
+(define* (closure-type-descr=? {D1 closure-type-descr?} {D2 closure-type-descr?})
+  (case-lambda-descriptors=? (closure-type-descr.signature D1)
+			     (closure-type-descr.signature D2)))
+
+(define* (closure-type-descr.match-super-and-sub {D1 closure-type-descr?} {D2 closure-type-descr?})
+  (case-lambda-descriptors.match-super-and-sub (closure-type-descr.signature D1)
+					       (closure-type-descr.signature D2)))
+
+
+;;;; compound type descriptors: hashtables
+
+(define-record-type (<hashtable-type-descr> make-hashtable-type-descr hashtable-type-descr?)
+  (sealed #t)
+  (fields
+    (immutable key-des			hashtable-type-descr.key-des)
+		;An instance of "<object-type-descr>" describing the type of keys.
+    (immutable val-des			hashtable-type-descr.val-des)
+		;An instance of "<object-type-descr>" describing the type of values.
+    #| end of FIELDS |# ))
+
+(define <hashtable-type-descr>-rtd
+  (record-type-descriptor <hashtable-type-descr>))
+
+(define <hashtable-type-descr>-rcd
+  (record-constructor-descriptor <hashtable-type-descr>))
+
+
+;;;; compound type descriptors: alists
+
+(define-record-type (<alist-type-descr> make-alist-type-descr alist-type-descr?)
+  (sealed #t)
+  (fields
+    (immutable key-des			alist-type-descr.key-des)
+		;An instance of "<object-type-descr>" describing the type of keys.
+    (immutable val-des			alist-type-descr.val-des)
+		;An instance of "<object-type-descr>" describing the type of values.
+    #| end of FIELDS |# ))
+
+(define <alist-type-descr>-rtd
+  (record-type-descriptor <alist-type-descr>))
+
+(define <alist-type-descr>-rcd
+  (record-constructor-descriptor <alist-type-descr>))
 
 
 ;;;; compound type descriptors: pairs
@@ -327,63 +453,6 @@
 
 (define <vector-of-type-descr>-rcd
   (record-constructor-descriptor <vector-of-type-descr>))
-
-
-;;;; compound type descriptors: symbols enumeration
-
-(define-record-type (<enumeration-type-descr> make-enumeration-type-descr enumeration-type-descr?)
-  (fields
-    (immutable symbol*	enumeration-type-descr.symbol*)
-    (mutable memoised-length)
-    #| end of FIELDS |# )
-  (protocol
-    (lambda (make-record)
-      (lambda (symbol*)
-	(make-record symbol* #f)))))
-
-(define <enumeration-type-descr>-rtd
-  (record-type-descriptor <enumeration-type-descr>))
-
-(define <enumeration-type-descr>-rcd
-  (record-constructor-descriptor <enumeration-type-descr>))
-
-;;; --------------------------------------------------------------------
-
-(define (enumeration-type-descr.length otd)
-  (or (<enumeration-type-descr>-memoised-length otd)
-      (receive-and-return (len)
-	  (length (enumeration-type-descr.symbol* otd))
-	(<enumeration-type-descr>-memoised-length-set! otd len))))
-
-
-;;;; compound type descriptors: closure
-
-(define-record-type (<closure-type-descr> make-closure-type-descr closure-type-descr?)
-  (fields
-    (immutable signature	closure-type-descr.signature)
-		;An  instance of  "<case-lambda-descriptors>"  representing the  type
-		;signatures of the clauses.
-    #| end of FIELDS |# )
-  (protocol
-    (lambda (make-record)
-      (lambda* ({signature case-lambda-descriptors?})
-	(make-record signature)))))
-
-(define <closure-type-descr>-rtd
-  (record-type-descriptor <closure-type-descr>))
-
-(define <closure-type-descr>-rcd
-  (record-constructor-descriptor <closure-type-descr>))
-
-;;; --------------------------------------------------------------------
-
-(define* (closure-type-descr=? {D1 closure-type-descr?} {D2 closure-type-descr?})
-  (case-lambda-descriptors=? (closure-type-descr.signature D1)
-			     (closure-type-descr.signature D2)))
-
-(define* (closure-type-descr.match-super-and-sub {D1 closure-type-descr?} {D2 closure-type-descr?})
-  (case-lambda-descriptors.match-super-and-sub (closure-type-descr.signature D1)
-					       (closure-type-descr.signature D2)))
 
 
 ;;;; compound type descriptors: union
@@ -561,6 +630,25 @@
 
 ;;; --------------------------------------------------------------------
 
+   ((compound-condition-type-descr? super.des)
+    (let ((super-component*.des (compound-condition-type-descr.component-des* super.des))
+	  (sub-component*.des   (compound-condition-type-descr.component-des*   sub.des)))
+      (and (for-all (lambda (super-component.des)
+		      (exists (lambda (sub-component.des)
+				(object-type-descr=? super-component.des sub-component.des))
+			sub-component*.des))
+	     super-component*.des)
+	   (for-all (lambda (super-component.des)
+		      (exists (lambda (sub-component.des)
+				(object-type-descr=? super-component.des sub-component.des))
+			sub-component*.des))
+	     super-component*.des))))
+
+   ((compound-condition-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
    ((enumeration-type-descr? super.des)
     (and (enumeration-type-descr? sub.des)
 	 (= (enumeration-type-descr.length super.des)
@@ -589,6 +677,32 @@
 
 ;;; --------------------------------------------------------------------
 
+   ((hashtable-type-descr? super.des)
+    (cond ((hashtable-type-descr? sub.des)
+	   (and (object-type-descr=? (hashtable-type-descr.key-des super.des)
+				     (hashtable-type-descr.key-des sub.des))
+		(object-type-descr=? (hashtable-type-descr.val-des super.des)
+				     (hashtable-type-descr.val-des sub.des))))
+	  (else #f)))
+
+   ((hashtable-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
+   ((alist-type-descr? super.des)
+    (cond ((alist-type-descr? sub.des)
+	   (and (object-type-descr=? (alist-type-descr.key-des super.des)
+				     (alist-type-descr.key-des sub.des))
+		(object-type-descr=? (alist-type-descr.val-des super.des)
+				     (alist-type-descr.val-des sub.des))))
+	  (else #f)))
+
+   ((alist-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
    ((union-type-descr? super.des)
     (and (union-type-descr? sub.des)
 	 (for-all (lambda (super-item.des)
@@ -612,6 +726,17 @@
 
    ;;The cases in which SUB.DES is a compound type union, intersection or complement:
    ;;the result is true only is the parent is "<top>".
+
+;;; --------------------------------------------------------------------
+
+   ((ancestor-of-type-descr? super.des)
+    (cond ((ancestor-of-type-descr? sub.des)
+	   (object-type-descr=? (ancestor-of-type-descr.item-des super.des)
+				(ancestor-of-type-descr.item-des   sub.des)))
+	  (else #f)))
+
+   ((ancestor-of-type-descr? sub.des)
+    #f)
 
 ;;; --------------------------------------------------------------------
 
@@ -649,7 +774,8 @@
 
 	  ((<list>-ctd? super.des)
 	   (or (list-type-descr?    sub.des)
-	       (list-of-type-descr? sub.des)))
+	       (list-of-type-descr? sub.des)
+	       (alist-type-descr?   sub.des)))
 
 	  ((<nelist>-ctd? super.des)
 	   (list-type-descr? sub.des))
@@ -752,6 +878,25 @@
 
 ;;; --------------------------------------------------------------------
 
+   ((compound-condition-type-descr? super.des)
+    (let ((super-component*.des (compound-condition-type-descr.component-des* super.des))
+	  (sub-component*.des   (compound-condition-type-descr.component-des*   sub.des)))
+      (and (for-all (lambda (super-component.des)
+		      (exists (lambda (sub-component.des)
+				(object-type-descr=? super-component.des sub-component.des))
+			sub-component*.des))
+	     super-component*.des)
+	   (for-all (lambda (super-component.des)
+		      (exists (lambda (sub-component.des)
+				(object-type-descr=? super-component.des sub-component.des))
+			sub-component*.des))
+	     super-component*.des))))
+
+   ((compound-condition-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
    ((enumeration-type-descr? super.des)
     (and (enumeration-type-descr? sub.des)
 	 (= (enumeration-type-descr.length super.des)
@@ -780,6 +925,32 @@
 
 ;;; --------------------------------------------------------------------
 
+   ((hashtable-type-descr? super.des)
+    (cond ((hashtable-type-descr? sub.des)
+	   (and (object-type-descr=? (hashtable-type-descr.key-des super.des)
+				     (hashtable-type-descr.key-des sub.des))
+		(object-type-descr=? (hashtable-type-descr.val-des super.des)
+				     (hashtable-type-descr.val-des sub.des))))
+	  (else #f)))
+
+   ((hashtable-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
+   ((alist-type-descr? super.des)
+    (cond ((alist-type-descr? sub.des)
+	   (and (object-type-descr=? (alist-type-descr.key-des super.des)
+				     (alist-type-descr.key-des sub.des))
+		(object-type-descr=? (alist-type-descr.val-des super.des)
+				     (alist-type-descr.val-des sub.des))))
+	  (else #f)))
+
+   ((alist-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
    ((union-type-descr? super.des)
     (and (union-type-descr? sub.des)
 	 (for-all (lambda (super-item.des)
@@ -803,6 +974,17 @@
 
    ;;The cases in which SUB.DES is a compound type union, intersection or complement:
    ;;the result is true only is the parent is "<top>".
+
+;;; --------------------------------------------------------------------
+
+   ((ancestor-of-type-descr? super.des)
+    (cond ((ancestor-of-type-descr? sub.des)
+	   (object-type-descr=? (ancestor-of-type-descr.item-des super.des)
+				(ancestor-of-type-descr.item-des   sub.des)))
+	  (else #f)))
+
+   ((ancestor-of-type-descr? sub.des)
+    #f)
 
 ;;; --------------------------------------------------------------------
 
@@ -840,7 +1022,8 @@
 
 	  ((<list>-ctd? super.des)
 	   (or (list-type-descr?    sub.des)
-	       (list-of-type-descr? sub.des)))
+	       (list-of-type-descr? sub.des)
+	       (alist-type-descr?   sub.des)))
 
 	  ((<nelist>-ctd? super.des)
 	   (list-type-descr? sub.des))
@@ -1150,6 +1333,20 @@
 
 ;;; --------------------------------------------------------------------
 
+   ((compound-condition-type-descr? super.des)
+    (let ((super-component*.des (compound-condition-type-descr.component-des* super.des))
+	  (sub-component*.des   (compound-condition-type-descr.component-des*   sub.des)))
+      (for-all (lambda (super-component.des)
+		 (exists (lambda (sub-component.des)
+			   (object-type-descr.matching-super-and-sub? super-component.des sub-component.des))
+		   sub-component*.des))
+	super-component*.des)))
+
+   ((compound-condition-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
    ((enumeration-type-descr? super.des)
     (or (eq? super.des sub.des)
 	(and (enumeration-type-descr? sub.des)
@@ -1169,6 +1366,32 @@
 	  (else #f)))
 
    ((closure-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
+   ((hashtable-type-descr? super.des)
+    (cond ((hashtable-type-descr? sub.des)
+	   (and (object-type-descr.matching-super-and-sub? (hashtable-type-descr.key-des super.des)
+							   (hashtable-type-descr.key-des sub.des))
+		(object-type-descr.matching-super-and-sub? (hashtable-type-descr.val-des super.des)
+							   (hashtable-type-descr.val-des sub.des))))
+	  (else #f)))
+
+   ((hashtable-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
+   ((alist-type-descr? super.des)
+    (cond ((alist-type-descr? sub.des)
+	   (and (object-type-descr.matching-super-and-sub? (alist-type-descr.key-des super.des)
+							   (alist-type-descr.key-des sub.des))
+		(object-type-descr.matching-super-and-sub? (alist-type-descr.val-des super.des)
+							   (alist-type-descr.val-des sub.des))))
+	  (else #f)))
+
+   ((alist-type-descr? sub.des)
     #f)
 
 ;;; --------------------------------------------------------------------
@@ -1197,6 +1420,20 @@
     (not (super-and-sub? (complement-type-descr.item-des super.des) sub.des)))
 
    ((complement-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
+   ((ancestor-of-type-descr? super.des)
+    (cond ((ancestor-of-type-descr? sub.des)
+	   (object-type-descr=? (ancestor-of-type-descr.item-des super.des)
+				(ancestor-of-type-descr.item-des   sub.des)))
+	  (else
+	   (exists (lambda (ancestor.des)
+		     (object-type-descr=? ancestor.des sub.des))
+	     (ancestor-of-type-descr.ancestors-des* super.des)))))
+
+   ((ancestor-of-type-descr? sub.des)
     #f)
 
 ;;; --------------------------------------------------------------------
@@ -1379,6 +1616,12 @@
 	     (pair-of-type-descr? object.des))
 	 <pair>-ctd)
 
+	((compound-condition-type-descr? object.des)
+	 <compound-condition>-ctd)
+
+	((alist-type-descr? object.des)
+	 <list>-ctd)
+
 	(else
 	 <top>-ctd)))
 
@@ -1409,6 +1652,21 @@
 
 	((closure-type-descr? object.des)
 	 (list <procedure>-ctd
+	       <top>-ctd))
+
+	((enumeration-type-descr? object.des)
+	 (list <symbol>-ctd
+	       <top>-ctd))
+
+	((alist-type-descr? object.des)
+	 (list <list>-ctd
+	       <top>-ctd))
+
+	((compound-condition-type-descr? object.des)
+	 (list <compound-condition>-ctd
+	       <condition>-ctd
+	       <record>-ctd
+	       <struct>-ctd
 	       <top>-ctd))
 
 	(else

@@ -3724,16 +3724,13 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
-       (let* ((rts       (with-exception-handler
-			     (lambda (E)
-			       (raise (condition E (make-syntax-violation input-form.stx ?type-id))))
-			   (lambda ()
-			     (id->record-type-spec ?type-id lexenv.run))))
-	      (expr.stx  (record-type-spec.rcd-id rts))
-	      (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
-	 (make-psi input-form.stx
-	   (psi.core-expr expr.psi)
-	   (make-type-signature/single-value (core-prim-spec '<record-constructor-descriptor> lexenv.run)))))
+       (let* ((rts (with-exception-handler
+		       (lambda (E)
+			 (raise (condition E (make-syntax-violation input-form.stx ?type-id))))
+		     (lambda ()
+		       (id->record-type-spec ?type-id lexenv.run)))))
+	 (%make-record-constructor-descriptor input-form.stx lexenv.run lexenv.expand
+					      rts)))
       (_
        (__synner__ "invalid syntax in macro use"))))
 
@@ -3742,31 +3739,21 @@
     ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
     ;;of the given LEXENV; return a PSI object.
     ;;
-    ;;The result must be an expression evaluating to:
-    ;;
-    ;;* A  struct-type descriptor if the  given identifier argument is  a struct-type
-    ;;  name.
-    ;;
-    ;;* A  record-type descriptor if the  given identifier argument is  a record-type
-    ;;  name.
-    ;;
-    ;;* A built-in type descriptor (for "<fixnum>", "<string>", et cetera).
-    ;;
     (syntax-match input-form.stx ()
-      ((_ ?type-id)
+      ((_ ?type-annotation)
        (let ((ots (with-exception-handler
 		      (lambda (E)
-			(raise (condition E (make-syntax-violation input-form.stx ?type-id))))
+			(raise (condition E (make-syntax-violation input-form.stx ?type-annotation))))
 		    (lambda ()
-		      (id->object-type-spec ?type-id lexenv.run)))))
+		      (type-annotation->object-type-spec ?type-annotation lexenv.run)))))
 	 (cond ((record-type-spec? ots)
 		(%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
 	       ((struct-type-spec? ots)
 		(%make-struct-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
-	       ((scheme-type-spec? ots)
-		(%make-core-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
+	       ((core-type-spec? ots)
+		(%make-core-type-descriptor   input-form.stx lexenv.run lexenv.expand ots))
 	       (else
-		(__synner__ "expected type identifier representing a struct-type name or a record-type name" ?type-id)))))
+		(%make-ann-type-descriptor    input-form.stx lexenv.run lexenv.expand ots)))))
       (_
        (__synner__ "invalid syntax in macro use"))))
 
@@ -3787,13 +3774,26 @@
 	(psi.core-expr expr.psi)
 	(make-type-signature/single-value (core-prim-spec '<record-type-descriptor> lexenv.run)))))
 
+  (define (%make-record-constructor-descriptor input-form.stx lexenv.run lexenv.expand
+					       rts)
+    (let* ((expr.stx  (record-type-spec.rcd-id rts))
+	   (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
+      (make-psi input-form.stx
+	(psi.core-expr expr.psi)
+	(make-type-signature/single-value (core-prim-spec '<record-constructor-descriptor> lexenv.run)))))
+
   (define (%make-core-type-descriptor input-form.stx lexenv.run lexenv.expand
 					  ots)
-    (let* ((expr.stx (scheme-type-spec.type-descriptor-id ots))
+    (let* ((expr.stx (core-type-spec.type-descriptor-id ots))
 	   (expr.psi (chi-expr expr.stx lexenv.run lexenv.expand)))
       (make-psi input-form.stx
 	(psi.core-expr expr.psi)
 	(make-type-signature/single-value (core-prim-spec '<core-type-descriptor> lexenv.run)))))
+
+  (define (%make-ann-type-descriptor input-form.stx lexenv.run lexenv.expand type.ots)
+    (make-psi input-form.stx
+      (object-type-spec.type-descriptor-core-expr type.ots)
+      (make-type-signature/single-value (core-prim-spec '<type-descriptor> lexenv.run))))
 
   #| end of module |# )
 

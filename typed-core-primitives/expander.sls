@@ -721,8 +721,8 @@
 (declare-core-rtd <record-type-spec>-rtd)
 (declare-core-rcd <record-type-spec>-rcd)
 
-(declare-core-rtd <scheme-type-spec>-rtd)
-(declare-core-rcd <scheme-type-spec>-rcd)
+(declare-core-rtd <core-type-spec>-rtd)
+(declare-core-rcd <core-type-spec>-rcd)
 
 (declare-core-rtd <struct-type-spec>-rtd)
 (declare-core-rcd <struct-type-spec>-rcd)

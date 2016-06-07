@@ -27,7 +27,7 @@
 ;;
 ;;   <object-type-spec>
 ;;           |
-;;           |------------> <scheme-type-spec>
+;;           |------------> <core-type-spec>
 ;;           |
 ;;           |------------> <struct-type-spec>
 ;;           |
@@ -67,8 +67,8 @@
 ;;hierarchy of Scheme-level object-types.
 ;;
 ;;All   the  built-in   Scheme  object   types  are   represented  by   instances  of
-;;"<scheme-type-spec>".  So  "<top>", "<fixnum>", "<string>", "<list>"  et cetera are
-;;represented by instances of "<scheme-type-spec>".
+;;"<core-type-spec>".  So  "<top>", "<fixnum>", "<string>", "<list>"  et cetera are
+;;represented by instances of "<core-type-spec>".
 ;;
 ;;The hierarchy of list types is as follows:
 ;;
@@ -121,8 +121,10 @@
 	 object-type-spec.equality-predicate		object-type-spec.comparison-procedure
 	 object-type-spec.hash-function			object-type-spec.applicable-hash-function
 	 object-type-spec.applicable-method-stx		object-type-spec.ancestors-ots*
+	 object-type-spec.type-descriptor-core-expr
 	 object-type-spec.single-value-validator-lambda-stx
 	 object-type-spec.list-validator-lambda-stx
+	 expression-expander-for-core-expressions
 
 	 object-type-spec.matching-super-and-sub?	object-type-spec.compatible-super-and-sub?
 	 object-type-spec=?
@@ -130,10 +132,10 @@
 	 object-type-spec.list-sub-type?		object-type-spec.vector-sub-type?
 	 object-type-specs-delete-duplicates
 
-	 <scheme-type-spec>
-	 <scheme-type-spec>-rtd				<scheme-type-spec>-rcd
-	 make-scheme-type-spec				scheme-type-spec?
-	 scheme-type-spec.type-descriptor-id
+	 <core-type-spec>
+	 <core-type-spec>-rtd				<core-type-spec>-rcd
+	 make-core-type-spec				core-type-spec?
+	 core-type-spec.type-descriptor-id
 
 	 <closure-type-spec>
 	 <closure-type-spec>-rtd			<closure-type-spec>-rcd
@@ -201,12 +203,12 @@
 	 <hashtable-type-spec>
 	 <hashtable-type-spec>-rtd			<hashtable-type-spec>-rcd
 	 make-hashtable-type-spec			hashtable-type-spec?
-	 hashtable-type-spec.key-ots			hashtable-type-spec.value-ots
+	 hashtable-type-spec.key-ots			hashtable-type-spec.val-ots
 
 	 <alist-type-spec>
 	 <alist-type-spec>-rtd				<alist-type-spec>-rcd
 	 make-alist-type-spec				alist-type-spec?
-	 alist-type-spec.key-ots			alist-type-spec.value-ots
+	 alist-type-spec.key-ots			alist-type-spec.val-ots
 
 	 <enumeration-type-spec>
 	 <enumeration-type-spec>-rtd			<enumeration-type-spec>-rcd
@@ -583,8 +585,8 @@
 	;;because "<top>"  or "<untyped>"  as sub-type  may match  or not,  we cannot
 	;;establish it here.
 
-	((and (or (scheme-type-spec? super.ots) (record-type-spec? super.ots) (struct-type-spec? super.ots))
-	      (or (scheme-type-spec?   sub.ots) (record-type-spec?   sub.ots) (struct-type-spec?   sub.ots)))
+	((and (or (core-type-spec? super.ots) (record-type-spec? super.ots) (struct-type-spec? super.ots))
+	      (or (core-type-spec?   sub.ots) (record-type-spec?   sub.ots) (struct-type-spec?   sub.ots)))
 	 ;;If we are here we know that we have to search for matching identifiers, so
 	 ;;we loop locally.
 	 (let recur ((sub.ots sub.ots))
@@ -842,7 +844,7 @@
 ;;; list type specifications
 
 	((<list>-ots? super.ots)
-	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<scheme-type-spec>" have
+	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<core-type-spec>" have
 	 ;;already been handled above, with the exception of "<null>".
 	 (cond ((or (<null>-ots?        sub.ots)
 		    (list-of-type-spec? sub.ots)
@@ -856,7 +858,7 @@
 	       (else #f)))
 
 	((<nelist>-ots? super.ots)
-	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<scheme-type-spec>" have
+	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<core-type-spec>" have
 	 ;;already been handled above.
 	 (cond ((list-type-spec? sub.ots))
 	       ((pair-type-spec? sub.ots)
@@ -898,7 +900,7 @@
 		       (object-type-spec.matching-super-and-sub? (make-null-or-list-type-spec (cdr super-item*.ots)) sub-item.ots))))
 	       ((alist-type-spec? sub.ots)
 		(let ((sub-key.ots   (alist-type-spec.key-ots   sub.ots))
-		      (sub-value.ots (alist-type-spec.value-ots sub.ots)))
+		      (sub-value.ots (alist-type-spec.val-ots sub.ots)))
 		  (for-all (lambda (super-item.ots)
 			     (cond ((pair-type-spec? super-item.ots)
 				    ;; (type-super-and-sub? (list (pair <symbol> <number>) ...)
@@ -948,13 +950,13 @@
 			 (and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots  super-item.ots)
 									(alist-type-spec.key-ots sub.ots))
 			      (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots    super-item.ots)
-									(alist-type-spec.value-ots sub.ots))))
+									(alist-type-spec.val-ots sub.ots))))
 			((pair-of-type-spec? super-item.ots)
 			 ;; (type-super-and-sub? (list-of (pair-of (or <symbol> <number>)))
 			 ;;                      (alist <symbol> <number>))
 			 (let ((super-super-item.ots (pair-of-type-spec.item-ots super-item.ots)))
 			   (and (object-type-spec.matching-super-and-sub? super-super-item.ots (alist-type-spec.key-ots   sub.ots))
-				(object-type-spec.matching-super-and-sub? super-super-item.ots (alist-type-spec.value-ots sub.ots)))))
+				(object-type-spec.matching-super-and-sub? super-super-item.ots (alist-type-spec.val-ots sub.ots)))))
 			(else #f))))
 	       ;;No PAIR-OF  types here: a  LIST-OF type annotation does  not specify
 	       ;;the number of items, while  PAIR-OF annotations specify at least one
@@ -970,13 +972,13 @@
 ;;; vector type specifications
 
 	((<vector>-ots? super.ots)
-	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<scheme-type-spec>" have
+	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<core-type-spec>" have
 	 ;;already been handled above.
 	 (or (vector-of-type-spec? sub.ots)
 	     (vector-type-spec?    sub.ots)))
 
 	((<nevector>-ots? super.ots)
-	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<scheme-type-spec>" have
+	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<core-type-spec>" have
 	 ;;already been handled above.
 	 (vector-type-spec? sub.ots))
 
@@ -1105,8 +1107,8 @@
 	 (cond ((hashtable-type-spec? sub.ots)
 		(and (object-type-spec.matching-super-and-sub? (hashtable-type-spec.key-ots super.ots)
 							       (hashtable-type-spec.key-ots sub.ots))
-		     (object-type-spec.matching-super-and-sub? (hashtable-type-spec.value-ots super.ots)
-							       (hashtable-type-spec.value-ots sub.ots))))
+		     (object-type-spec.matching-super-and-sub? (hashtable-type-spec.val-ots super.ots)
+							       (hashtable-type-spec.val-ots sub.ots))))
 	       (else #f)))
 
 	((hashtable-type-spec? sub.ots)
@@ -1119,8 +1121,8 @@
 	 (cond ((alist-type-spec? sub.ots)
 		(and (object-type-spec.matching-super-and-sub? (alist-type-spec.key-ots super.ots)
 							       (alist-type-spec.key-ots sub.ots))
-		     (object-type-spec.matching-super-and-sub? (alist-type-spec.value-ots super.ots)
-							       (alist-type-spec.value-ots sub.ots))))
+		     (object-type-spec.matching-super-and-sub? (alist-type-spec.val-ots super.ots)
+							       (alist-type-spec.val-ots sub.ots))))
 	       ((list-of-type-spec? sub.ots)
 		(let ((sub-item.ots (list-of-type-spec.item-ots sub.ots)))
 		  (cond ((pair-type-spec? sub-item.ots)
@@ -1128,18 +1130,18 @@
 			 ;;                      (list-of (pair <symbol> <number>)))
 			 (and (object-type-spec.matching-super-and-sub? (alist-type-spec.key-ots   super.ots)
 									(pair-type-spec.car-ots    sub-item.ots))
-			      (object-type-spec.matching-super-and-sub? (alist-type-spec.value-ots super.ots)
+			      (object-type-spec.matching-super-and-sub? (alist-type-spec.val-ots super.ots)
 									(pair-type-spec.cdr-ots    sub-item.ots))))
 			((pair-of-type-spec? sub-item.ots)
 			 ;; (type-super-and-sub? (alist <symbol> <number>)
 			 ;;                      (list-of (pair-of (or <symbol> <number>))))
 			 (let ((sub-sub-item.ots (pair-of-type-spec.item-ots sub-item.ots)))
 			   (and (object-type-spec.matching-super-and-sub? (alist-type-spec.key-ots   super.ots) sub-sub-item.ots)
-				(object-type-spec.matching-super-and-sub? (alist-type-spec.value-ots super.ots) sub-sub-item.ots))))
+				(object-type-spec.matching-super-and-sub? (alist-type-spec.val-ots super.ots) sub-sub-item.ots))))
 			(else #f))))
 	       ((list-type-spec? sub.ots)
 		(let ((super-key.ots   (alist-type-spec.key-ots   super.ots))
-		      (super-value.ots (alist-type-spec.value-ots super.ots)))
+		      (super-value.ots (alist-type-spec.val-ots super.ots)))
 		  (for-all (lambda (sub-item.ots)
 			     (cond ((pair-type-spec? sub-item.ots)
 				    ;; (type-super-and-sub? (alist <symbol> <number>)
@@ -1483,7 +1485,7 @@
 
 (define ($object-type-spec=? ots1 ots2)
   (cond ((or (eq? ots1 ots2)
-	     (and (or (and (scheme-type-spec? ots1) (scheme-type-spec? ots2))
+	     (and (or (and (core-type-spec? ots1) (core-type-spec? ots2))
 		      (and (record-type-spec? ots1) (record-type-spec? ots2))
 		      (and (struct-type-spec? ots1) (struct-type-spec? ots2)))
 		  (free-identifier=? (object-type-spec.name ots1)
@@ -1634,8 +1636,8 @@
 (define ($alist-type-spec=? ots1 ots2)
   (and ($object-type-spec=? (alist-type-spec.key-ots ots1)
 			    (alist-type-spec.key-ots ots2))
-       ($object-type-spec=? (alist-type-spec.value-ots ots1)
-			    (alist-type-spec.value-ots ots2))))
+       ($object-type-spec=? (alist-type-spec.val-ots ots1)
+			    (alist-type-spec.val-ots ots2))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1730,6 +1732,212 @@
   (%compare-super-with-sub-and-its-parents (<vector>-ots) ots))
 
 
+;;;; basic object-type specification: type descriptors
+
+(define expression-expander-for-core-expressions
+  (make-parameter (lambda (stx)
+		    (assertion-violation 'expression-expander-for-core-expressions
+		      "parameter not initialised"))))
+
+(module (object-type-spec.type-descriptor-core-expr)
+
+  (define* (object-type-spec.type-descriptor-core-expr {type.ots object-type-spec?})
+    ;;Given an object-type specification: build and return a core language expression
+    ;;
+    (define-syntax-rule (stx-expr-to-core-expr ?expr)
+      ((expression-expander-for-core-expressions) ?expr (current-inferior-lexenv)))
+    (cond
+     ((core-type-spec? type.ots)
+      (stx-expr-to-core-expr (core-type-spec.type-descriptor-id type.ots)))
+
+     ((record-type-spec? type.ots)
+      (stx-expr-to-core-expr (record-type-spec.rtd-id type.ots)))
+
+     ((struct-type-spec? type.ots)
+      (let* ((std (struct-type-spec.std type.ots)))
+	(build-data no-source std)))
+
+;;; --------------------------------------------------------------------
+
+     ((pair-type-spec? type.ots)
+      (let ((car-des.core-expr	(object-type-spec.type-descriptor-core-expr (pair-type-spec.car-ots type.ots)))
+	    (cdr-des.core-expr	(object-type-spec.type-descriptor-core-expr (pair-type-spec.cdr-ots type.ots))))
+	(build-application no-source
+	    (build-primref no-source 'make-pair-type-descr)
+	  (list car-des.core-expr
+		cdr-des.core-expr))))
+
+     ((pair-of-type-spec? type.ots)
+      (let ((item-des.core-expr	(object-type-spec.type-descriptor-core-expr (pair-of-type-spec.item-ots type.ots))))
+	(build-application no-source
+	    (build-primref no-source 'make-pair-of-type-descr)
+	  (list item-des.core-expr))))
+
+;;; --------------------------------------------------------------------
+
+     ((list-type-spec? type.ots)
+      (let ((item-des*.core-expr	(map object-type-spec.type-descriptor-core-expr (list-type-spec.item-ots* type.ots))))
+	(build-application no-source
+	    (build-primref no-source 'make-list-type-descr)
+	  (list (build-application no-source
+		    (build-primref no-source 'list)
+		  item-des*.core-expr)))))
+
+     ((list-of-type-spec? type.ots)
+      (let ((item-des.core-expr	(object-type-spec.type-descriptor-core-expr (list-of-type-spec.item-ots type.ots))))
+	(build-application no-source
+	    (build-primref no-source 'make-list-of-type-descr)
+	  (list item-des.core-expr))))
+
+;;; --------------------------------------------------------------------
+
+     ((vector-type-spec? type.ots)
+      (let ((item-des*.core-expr	(map object-type-spec.type-descriptor-core-expr (vector-type-spec.item-ots* type.ots))))
+	(build-application no-source
+	    (build-primref no-source 'make-vector-type-descr)
+	  (list (build-application no-source
+		    (build-primref no-source 'list)
+		  item-des*.core-expr)))))
+
+     ((vector-of-type-spec? type.ots)
+      (let ((item-des.core-expr	(object-type-spec.type-descriptor-core-expr (vector-of-type-spec.item-ots type.ots))))
+	(build-application no-source
+	    (build-primref no-source 'make-vector-of-type-descr)
+	  (list item-des.core-expr))))
+
+;;; --------------------------------------------------------------------
+
+     ((closure-type-spec? type.ots)
+      (build-application no-source
+	  (build-primref no-source 'make-closure-type-descr)
+	(list (case-lambda-signature.type-descriptor-core-expr (closure-type-spec.signature type.ots)))))
+
+;;; --------------------------------------------------------------------
+
+     ((compound-condition-type-spec? type.ots)
+      (build-application no-source
+	  (build-primref no-source 'make-compound-condition-type-descr)
+	(list (build-application no-source
+		  (build-primref no-source 'list)
+		(map object-type-spec.type-descriptor-core-expr
+		  (compound-condition-type-spec.component-ots* type.ots))))))
+
+;;; --------------------------------------------------------------------
+
+     ((union-type-spec? type.ots)
+      (build-application no-source
+	  (build-primref no-source 'make-union-type-descr)
+	(list (build-application no-source
+		  (build-primref no-source 'list)
+		(map object-type-spec.type-descriptor-core-expr (union-type-spec.component-ots* type.ots))))))
+
+     ((intersection-type-spec? type.ots)
+      (build-application no-source
+	  (build-primref no-source 'make-intersection-type-descr)
+	(list (build-application no-source
+		  (build-primref no-source 'list)
+		(map object-type-spec.type-descriptor-core-expr (intersection-type-spec.component-ots* type.ots))))))
+
+     ((complement-type-spec? type.ots)
+      (build-application no-source
+	  (build-primref no-source 'make-complement-type-descr)
+	(list (object-type-spec.type-descriptor-core-expr (complement-type-spec.item-ots type.ots)))))
+
+;;; --------------------------------------------------------------------
+
+     ((ancestor-of-type-spec? type.ots)
+      (build-application no-source
+	  (build-primref no-source 'make-ancestor-of-type-descr)
+	(list (object-type-spec.type-descriptor-core-expr (ancestor-of-type-spec.item-ots type.ots)))))
+
+;;; --------------------------------------------------------------------
+
+     ((enumeration-type-spec? type.ots)
+      (build-application no-source
+	  (build-primref no-source 'make-enumeration-type-descr)
+	(list (build-data no-source (enumeration-type-spec.symbol* type.ots)))))
+
+;;; --------------------------------------------------------------------
+
+     ((hashtable-type-spec? type.ots)
+      (let ((key-des.core-expr	(object-type-spec.type-descriptor-core-expr (hashtable-type-spec.key-ots type.ots)))
+	    (val-des.core-expr	(object-type-spec.type-descriptor-core-expr (hashtable-type-spec.val-ots type.ots))))
+	(build-application no-source
+	    (build-primref no-source 'make-hashtable-type-descr)
+	  (list key-des.core-expr val-des.core-expr))))
+
+;;; --------------------------------------------------------------------
+
+     ((alist-type-spec? type.ots)
+      (let ((key-des.core-expr	(object-type-spec.type-descriptor-core-expr (alist-type-spec.key-ots type.ots)))
+	    (val-des.core-expr	(object-type-spec.type-descriptor-core-expr (alist-type-spec.val-ots type.ots))))
+	(build-application no-source
+	    (build-primref no-source 'make-alist-type-descr)
+	  (list key-des.core-expr val-des.core-expr))))
+
+;;; --------------------------------------------------------------------
+
+     ((label-type-spec? type.ots)
+      (object-type-spec.type-descriptor-core-expr (object-type-spec.parent-ots type.ots)))
+
+;;; --------------------------------------------------------------------
+
+     (else
+      (assertion-violation __who__ "unknown object type specification" type.ots))))
+
+;;; --------------------------------------------------------------------
+
+  (define* (case-lambda-signature.type-descriptor-core-expr {sig case-lambda-signature?})
+    ;;Given  a  case-lambda  signature  object  build  and  return  a  core  language
+    ;;expression that,  compiled and  evaluated, returns  the associated  instance of
+    ;;"<case-lambda-descriptors>".
+    ;;
+    (build-application no-source
+	(build-primref no-source 'make-case-lambda-descriptors)
+      (list (build-application no-source
+		(build-primref no-source 'list)
+	      (map lambda-signature.type-descriptor-core-expr
+		(case-lambda-signature.clause-signature* sig))))))
+
+  (define* (lambda-signature.type-descriptor-core-expr {sig lambda-signature?})
+    ;;Given a  lambda signature object  build and  return a core  language expression
+    ;;that,   compiled   and   evaluated,   returns  the   associated   instance   of
+    ;;"<lambda-descriptors>".
+    ;;
+    (build-application no-source
+	(build-primref no-source 'make-lambda-descriptors)
+      (list (type-signature.type-descriptor-core-expr (lambda-signature.retvals sig))
+	    (type-signature.type-descriptor-core-expr (lambda-signature.argvals sig)))))
+
+  (define* (type-signature.type-descriptor-core-expr {sig type-signature?})
+    ;;Given a type signature object build and return a core language expression that,
+    ;;compiled    and    evaluated,    returns    the    associated    instance    of
+    ;;"<descriptors-signature>".
+    ;;
+    ;;As example, for a type signature:
+    ;;
+    ;;   (<fixnum> <string> . <list>)
+    ;;
+    ;;we build a core language expression equivalent to:
+    ;;
+    ;;   (make-descriptors-signature (cons* <fixnum>-ctd <string>-ctd <list>-ctd))
+    ;;
+    (build-application no-source
+	(build-primref no-source 'make-descriptors-signature)
+      (list (build-application no-source
+		(build-primref no-source 'cons*)
+	      (let recur ((specs (type-signature.object-type-specs sig)))
+		(cond ((pair? specs)
+		       (cons (object-type-spec.type-descriptor-core-expr (car specs))
+			     (recur (cdr specs))))
+		      ((null? specs)
+		       (list (build-data no-source '())))
+		      (else
+		       (list (object-type-spec.type-descriptor-core-expr specs)))))))))
+
+  #| end of module: OBJECT-TYPE-SPEC.TYPE-DESCRIPTOR-CORE-EXPR |# )
+
+
 ;;;; basic object-type specification: validating
 
 (define* (object-type-spec.single-value-validator-lambda-stx {type.ots object-type-spec?} return-values?)
@@ -1819,46 +2027,46 @@
 ;;Scheme  objects,  not  records,  not  structs.  Instances  of  this  type  are  the
 ;;object-type specifications for: <fixnum>, <flonum>, <string>, <list>, ...
 ;;
-(define-record-type (<scheme-type-spec> make-scheme-type-spec scheme-type-spec?)
-  (nongenerative *4*vicare:expander:<scheme-type-spec>)
+(define-record-type (<core-type-spec> make-core-type-spec core-type-spec?)
+  (nongenerative *4*vicare:expander:<core-type-spec>)
   (parent <object-type-spec>)
   (fields
-    (immutable type-descriptor-id	scheme-type-spec.type-descriptor-id)
+    (immutable type-descriptor-id	core-type-spec.type-descriptor-id)
 		;Syntactic     identifier     bound     to     an     instance     of
 		;"<core-type-descriptor>".
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
-      (define* (make-scheme-type-spec {name identifier?} uids-list
-				      {parent.ots (or not scheme-type-spec?)}
+      (define* (make-core-type-spec {name identifier?} uids-list
+				      {parent.ots (or not core-type-spec?)}
 				      constructor.stx type-predicate.stx
 				      equality-predicate.id comparison-procedure.id hash-function.id
 				      type-descriptor.id methods-table)
 	(let ((destructor.stx	#f)
 	      (accessors-table	'())
 	      (mutators-table	'()))
-	  ((make-object-type-spec name uids-list parent.ots scheme-type-spec.type-annotation-maker
+	  ((make-object-type-spec name uids-list parent.ots core-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx type-predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
 	   type-descriptor.id)))
-      make-scheme-type-spec))
+      make-core-type-spec))
   (custom-printer
     (lambda (S port sub-printer)
-      (display "#[scheme-type-spec " port)
+      (display "#[core-type-spec " port)
       (display (object-type-spec.name S) port)
       (display "]" port)))
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <scheme-type-spec>-rtd
-  (record-type-descriptor <scheme-type-spec>))
+(define <core-type-spec>-rtd
+  (record-type-descriptor <core-type-spec>))
 
-(define <scheme-type-spec>-rcd
-  (record-constructor-descriptor <scheme-type-spec>))
+(define <core-type-spec>-rcd
+  (record-constructor-descriptor <core-type-spec>))
 
 ;;; --------------------------------------------------------------------
 
-(define (scheme-type-spec.type-annotation-maker ots)
+(define (core-type-spec.type-annotation-maker ots)
   (object-type-spec.name ots))
 
 
@@ -3430,7 +3638,7 @@
   (fields
     (immutable key-ots			hashtable-type-spec.key-ots)
 		;An instance of "<object-type-spec>" describing the type of keys.
-    (immutable value-ots		hashtable-type-spec.value-ots)
+    (immutable val-ots			hashtable-type-spec.val-ots)
 		;An instance of "<object-type-spec>" describing the type of values.
     #| end of FIELDS |# )
   (protocol
@@ -3491,12 +3699,12 @@
 (define (make-hashtable-type-name ots)
   (list (hashtable-id)
 	(object-type-spec.name (hashtable-type-spec.key-ots   ots))
-	(object-type-spec.name (hashtable-type-spec.value-ots ots))))
+	(object-type-spec.name (hashtable-type-spec.val-ots ots))))
 
 (define (hashtable-type-spec.type-annotation-maker ots)
   (list (hashtable-id)
-	(object-type-spec.type-annotation (hashtable-type-spec.key-ots   ots))
-	(object-type-spec.type-annotation (hashtable-type-spec.value-ots ots))))
+	(object-type-spec.type-annotation (hashtable-type-spec.key-ots ots))
+	(object-type-spec.type-annotation (hashtable-type-spec.val-ots ots))))
 
 
 ;;;; alist object spec
@@ -3511,7 +3719,7 @@
   (fields
     (immutable key-ots			alist-type-spec.key-ots)
 		;An instance of "<object-type-spec>" describing the type of keys.
-    (immutable value-ots		alist-type-spec.value-ots)
+    (immutable val-ots			alist-type-spec.val-ots)
 		;An instance of "<object-type-spec>" describing the type of values.
     #| end of FIELDS |# )
   (protocol
@@ -3572,18 +3780,18 @@
 (define (make-alist-type-name ots)
   (list (alist-id)
 	(object-type-spec.name (alist-type-spec.key-ots   ots))
-	(object-type-spec.name (alist-type-spec.value-ots ots))))
+	(object-type-spec.name (alist-type-spec.val-ots ots))))
 
 (define (alist-type-spec.type-annotation-maker ots)
   (list (alist-id)
 	(object-type-spec.type-annotation (alist-type-spec.key-ots   ots))
-	(object-type-spec.type-annotation (alist-type-spec.value-ots ots))))
+	(object-type-spec.type-annotation (alist-type-spec.val-ots ots))))
 
 (define (make-alist-type-predicate ots)
   ;;FIXME The generated  predicate can be made more efficient  by iterating only once
   ;;through the spine of the list.  (Marco Maggi; Mon Apr 4, 2016)
   (let ((key-pred.stx	(object-type-spec.type-predicate-stx (alist-type-spec.key-ots   ots)))
-	(value-pred.stx	(object-type-spec.type-predicate-stx (alist-type-spec.value-ots ots)))
+	(value-pred.stx	(object-type-spec.type-predicate-stx (alist-type-spec.val-ots ots)))
 	(obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
 	(P.sym		(make-syntactic-identifier-for-temporary-variable "P")))
     (bless
