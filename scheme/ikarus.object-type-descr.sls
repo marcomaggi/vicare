@@ -110,14 +110,6 @@
 
 ;;; --------------------------------------------------------------------
 
-    <null>-ctd?
-    <nelist>-ctd?				<list>-ctd?
-    <empty-vector>-ctd?
-    <nevector>-ctd?				<vector>-ctd?
-    <pair>-ctd?					<procedure>-ctd?
-
-;;; --------------------------------------------------------------------
-
     object-type-descr-of
     object-type-descr=?
     object-type-descr.ancestry-super-and-sub?
