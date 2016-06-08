@@ -383,6 +383,8 @@
 ;;this type should be called BTD (as in "built-in type descriptor").
 ;;
 (define-record-type (<core-type-descriptor> make-core-type-descriptor core-type-descriptor?)
+  (nongenerative vicare:descriptors:<core-type-descriptor>)
+  (sealed #t)
   (fields
     (immutable name			core-type-descriptor.name)
 		;A symbol representing the name of this type.  For example: <string>.

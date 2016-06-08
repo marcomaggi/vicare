@@ -1549,6 +1549,9 @@
   (doit-false	(pair <fixnum> <string>)
 		(pair <fixnum> <symbol>))
 
+  (doit-false	(pair <fixnum> <null>)
+		(list <fixnum>))
+
 ;;; --------------------------------------------------------------------
 ;;; pair-of
 

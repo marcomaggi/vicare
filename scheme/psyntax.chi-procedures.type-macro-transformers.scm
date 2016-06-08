@@ -1001,7 +1001,7 @@
 						(raise
 						 (condition (make-who-condition caller-who)
 							    (make-message-condition message)
-							    (make-syntax-violation input-form.stx)
+							    (make-syntax-violation input-form.stx #f)
 							    (make-syntax-violation asrt.stx subform)))))))
 	   (asrt.sig	(type-signature.untyped-to-top asrt.sig))
 	   (expr.psi	(chi-expr expr.stx lexenv.run lexenv.expand))

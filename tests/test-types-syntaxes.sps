@@ -121,7 +121,9 @@
     (check-for-true	((sys::core-type-descriptor.method-retriever btd) 'length))
 
     (check
-	(((sys::core-type-descriptor.method-retriever btd) 'length) "ciao")
+	(let* ((retriever (sys::core-type-descriptor.method-retriever btd))
+	       ({strlen <procedure>} (retriever 'length)))
+	  (strlen "ciao"))
       => 4)
 
     (void))
@@ -148,7 +150,9 @@
     (check-for-true	((.method-retriever string-btd) 'length))
 
     (check
-	(((.method-retriever string-btd) 'length) "ciao")
+	(let* ((retriever (sys::core-type-descriptor.method-retriever string-btd))
+	       ({strlen <procedure>} (retriever 'length)))
+	  (strlen "ciao"))
       => 4)
 
     (void))

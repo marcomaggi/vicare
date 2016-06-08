@@ -78,6 +78,14 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{CLOS}
 @end macro
 
+@macro ctdname{NAME}
+@code{@aclass{\NAME\}-ctd}
+@end macro
+
+@macro actdname{NAME}
+@aclass{\NAME\}-ctd
+@end macro
+
 @macro oop{}
 @acronym{OOP}
 @end macro
@@ -92,6 +100,10 @@ Revised^6 Report on the algorithmic language Scheme
 
 @macro ffi{}
 @acronym{FFI}
+@end macro
+
+@macro braces{STUFF}
+@{\STUFF\@}
 @end macro
 
 @macro class{NAME}

@@ -58,7 +58,7 @@
 (declare-core-primitive core-type-descriptor.method-retriever
     (safe)
   (signatures
-   ((<core-type-descriptor>)		=> (<procedure>))))
+   ((<core-type-descriptor>)		=> ((lambda (<symbol>) => ((or <false> <procedure>)))))))
 
 /section)
 

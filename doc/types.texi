@@ -9,7 +9,8 @@ leave the type of variables unspecified.
 
 @menu
 * types intro::                 Introduction to the typed language.
-* types annotations::           Type annotations.
+* types ann::                   Type annotations.
+* types descr::                 Type descriptors.
 * types syntaxes::              Type-exploiting syntaxes.
 * types built-in::              Built-in object types.
 * types void::                  Handling of void values.
@@ -335,35 +336,40 @@ the follow program is @strong{not} correct:
 and will cause an expand--time syntax violation.
 
 @c page
-@node types annotations
+@node types ann
 @section Type annotations
 
 Type annotations are special syntaxes that make use of the @func{brace}
-syntax (@pxref{iklib syntaxes misc, brace}) as follows:
+syntax to associate a type specification to a lexical syntax
+(@pxref{iklib syntaxes misc, brace}).  It works as follows:
 
 @lisp
-(define (brace O <fixnum>)
+(define (brace O @aclass{fixnum})
   123)
 @end lisp
 
 @noindent
-to use the extensions in a friendly manner we need to put the reader in
-@samp{#!vicare} mode, this way @func{brace} can be inserted using actual
-brace characters:
+in which the variable @samp{O} is defined as having type @class{fixnum}.
+
+@quotation
+@strong{NOTE} To use the extensions in a friendly manner we need to put
+the reader in @samp{#!vicare} mode, this way @func{brace} can be
+inserted using actual brace characters:
 
 @lisp
 #!vicare
-(define @{O <fixnum>@}
+(define @braces{O @aclass{fixnum}}
   123)
 @end lisp
+@end quotation
 
 @menu
-* types annotations inserting:: Inserting type annotations.
-* types annotations syntaxes::  The syntax of type annotations.
+* types ann inserting::         Inserting type annotations.
+* types ann syntaxes::          The syntax of type annotations.
 @end menu
 
 @c page
-@node types annotations inserting
+@node types ann inserting
 @subsection Inserting type annotations
 
 
@@ -373,9 +379,9 @@ braces and appending a type syntax.  With @syntax{let}--like syntaxes we
 can do:
 
 @lisp
-(let ((@{a <fixnum>@} 1)
-      (@{b <string>@} "ciao")
-      (@{c <symbol>@} 'hello))
+(let ((@{a @aclass{fixnum}@} 1)
+      (@{b @aclass{string}@} "ciao")
+      (@{c @aclass{symbol}@} 'hello))
   (list a b c))
 @end lisp
 
@@ -383,13 +389,13 @@ can do:
 with @syntax{lambda} and @syntax{case-lambda} syntaxes we can do:
 
 @lisp
-(lambda (@{a <fixnum>@} @{b <string>@})
+(lambda (@{a @aclass{fixnum}@} @{b @aclass{string}@})
   (list a b))
 
 (case-lambda
-  ((@{a <fixnum>@} @{b <string>@})
+  ((@{a @aclass{fixnum}@} @{b @aclass{string}@})
    (list a b))
-  ((@{a <fixnum>@} @{b <string>@} @{c <symbol>@})
+  ((@{a @aclass{fixnum}@} @{b @aclass{string}@} @{c @aclass{symbol}@})
    (list a b c)))
 @end lisp
 
@@ -397,13 +403,13 @@ with @syntax{lambda} and @syntax{case-lambda} syntaxes we can do:
 with @syntax{define} and @syntax{case-define} syntaxes we can do:
 
 @lisp
-(define (fun1 @{a <fixnum>@} @{b <string>@})
+(define (fun1 @{a @aclass{fixnum}@} @{b @aclass{string}@})
   (list a b))
 
 (case-define fun2
-  ((@{a <fixnum>@} @{b <string>@})
+  ((@{a @aclass{fixnum}@} @{b @aclass{string}@})
    (list a b))
-  ((@{a <fixnum>@} @{b <string>@} @{c <symbol>@})
+  ((@{a @aclass{fixnum}@} @{b @aclass{string}@} @{c @aclass{symbol}@})
    (list a b c)))
 @end lisp
 
@@ -416,23 +422,23 @@ syntactic binding can be annotated only with the type identifier
 example:
 
 @lisp
-((lambda (@{a <fixnum>@} @{b <string>@} . @{rest (list-of <symbol>)@})
+((lambda (@{a @aclass{fixnum}@} @{b @aclass{string}@} . @{rest (list-of @aclass{symbol})@})
    (vector a b rest))
  1 "ciao" 'x 'y 'z)
 @result{} #(1 "ciao" (x y z))
 
-((lambda @{args <list>@} args)
+((lambda @{args @aclass{list}@} args)
  1 2 3)
 @result{} (1 2 3)
 
-(receive (@{a <fixnum>@} @{b <string>@} . @{rest <list>@})
+(receive (@{a @aclass{fixnum}@} @{b @aclass{string}@} . @{rest @aclass{list}@})
     (values 1 "ciao" 'x 'y 'z)
   rest)
 @result{} (x y z)
 @end lisp
 
 @c page
-@node types annotations syntaxes
+@node types ann syntaxes
 @subsection The syntax of type annotations
 
 
@@ -923,6 +929,288 @@ zero, but with empty lexical environment for the other phases:
 @end deftp
 
 @c page
+@node types descr
+@section Type descriptors
+
+
+@cindex @library{vicare system type-descriptors}, library
+@cindex Library @library{vicare system type-descriptors}
+
+
+Type descriptors are run--time objects that ``describe'' the
+characteristics of object--types.  For example @rnrs{6} record--type
+descriptors, @rnrs{6} record--constructor descriptors, @value{PRJNAME}'s
+struct descriptors are all special cases of type descriptors.
+
+Every expand-time type annotation has a corresponding run--time type
+descriptor.  Usually we do not have to deal with type descriptors; so
+most of the syntactic bindings are exported by the library
+@library{vicare system type-descriptors}, while the public @api{} is
+exported by @library{vicare}.
+
+@menu
+* types descr retrieving::      Retrieving type descriptors.
+* types descr core::            Core object-type descriptors.
+* types descr relations::       Relations between type descriptors.
+@end menu
+
+@c page
+@node types descr retrieving
+@subsection Retrieving type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
+
+@deffn Syntax type-descriptor @meta{type-annotation}
+Expand to an expression which, compiled and evaluated, results in the
+type descriptor of the specified type annotation.
+
+@lisp
+(type-descriptor @aclass{fixnum})
+@expansion{} @actdname{fixnum}
+
+(type-descriptor (list @aclass{fixnum} @aclass{flonum}))
+@expansion{} (make-list-type-descr (list @actdname{fixnum} @actdname{flonum}))
+@end lisp
+
+Internally, first an expand--time type specification is built; then the
+type descriptor is built from the specification.
+@end deffn
+
+@c page
+@node types descr core
+@subsection Core object--type descriptors
+
+
+Core object--type descriptors gather the run--time characteristics of
+object--types like fixnums and strings; for every core object--type
+there is an already defined type descriptor, bound to a syntactic
+binding exported by the library @library{vicare system
+type-descriptors}.
+
+Such syntactic binding have name derived from the type name by appending
+@samp{-ctd} (where @samp{ctd} stands for Core Type Descriptor).  So the
+type name @class{fixnum} has the associated type descriptor
+@ctdname{fixnum}, the type name @class{string} has the associated type
+descriptor @ctdname{string}, et cetera.
+
+Some usage examples:
+
+@lisp
+(import (only (vicare system type-descriptors)
+              @actdname{string}))
+
+(type-descriptor @aclass{string})         @result{} @actdname{string}
+(.name @actdname{string})               @result{} @aclass{string}
+(.parent @actdname{string})             @result{} @actdname{top}
+
+(.uids-list @actdname{string})
+@result{} (vicare:core-type:@aclass{string} vicare:core-type:@aclass{top})
+
+(let* ((retriever (.method-retriever <string>-ctd))
+       (strlen    (retriever 'length)))
+  (strlen "ciao"))
+@result{} 4
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{core-type-descriptor}
+Type name for objects describing core object--types.  It has the
+following immutable fields:
+
+@table @code
+@item name
+A symbol representing the name of this type.  For example:
+@samp{@aclass{string}}.
+
+@item parent
+If this type has a parent: an instance of @class{core-type-descriptor}
+representing the parent of this type; otherwise @false{}.
+
+@item type-predicate
+@false{} or a function implementing the type predicate.
+
+@item equality-predicate
+@false{} or a function implementing the equality predicate.
+
+@item comparison-procedure
+@false{} or a function implementing the comparison procedure.
+
+@item hash-function
+@false{} or a function implementing the hash function.
+
+@item uids-list
+A list of symbols representing the hierarchy of unique identifiers
+(@uid{}s) for this type.  The first item in the list is the @uid{} of
+this type, then the parent's @uid{}, then the grandparent's @uid{}, et
+cetera.
+
+@item method-retriever
+If this type has methods: a procedure to be applied to the method name
+(a symbol) to retrieve the method implementation function; otherwise
+@false{}.
+@end table
+@end deftp
+
+
+@defun core-type-descriptor? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{core-type-descriptor}; otherwise return @false{}.
+@end defun
+
+
+@defun core-type-descriptor.name @var{ctd}
+@defunx core-type-descriptor.parent @var{ctd}
+@defunx core-type-descriptor.uids-list @var{ctd}
+@defunx core-type-descriptor.type-predicate @var{ctd}
+@defunx core-type-descriptor.equality-predicate @var{ctd}
+@defunx core-type-descriptor.comparison-procedure @var{ctd}
+@defunx core-type-descriptor.hash-function @var{ctd}
+@defunx core-type-descriptor.method-retriever @var{ctd}
+Accessors for the fields of @class{core-type-descriptor}.
+@end defun
+
+@c page
+@node types descr relations
+@subsection Relations between type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
+
+@deffn Syntax type-descriptor-parent @meta{type-annotation}
+Expand to an expression which, compiled and evaluated, returns the type
+descriptor of the parent of the specified type annotation.
+
+@lisp
+(type-descriptor-parent @aclass{fixnum})
+@result{} @actdname{fixnum}
+
+(type-descriptor-parent (pair @aclass{fixnum} @aclass{flonum}))
+@result{} @actdname{pair}
+
+(define-record-type alpha)
+
+(type-descriptor-parent alpha)  @result{} @actdname{record}
+
+(define-record-type beta
+  (parent alpha))
+
+(type-descriptor-parent beta)
+@expansion{} (record-type-descriptor alpha)
+@end lisp
+@end deffn
+
+
+@deffn Syntax type-descriptor-ancestors @meta{type-annotation}
+Expand to an expression which, compiled and evaluated, returns the list
+of type descriptors representing the ancestors of the specified type
+annotation.  The descriptor of the annotation itself is @strong{not}
+included.
+
+@lisp
+(type-descriptor-ancestors @aclass{top})
+@result{} ()
+
+(type-descriptor-ancestors @aclass{string})
+@result{} (@actdname{top})
+
+(type-descriptor-ancestors @aclass{record})
+@result{} (@actdname{struct} @actdname{top})
+
+(type-descriptor-ancestors @aclass{nelist})
+@result{} (@actdname{list} @actdname{top})
+@end lisp
+@end deffn
+
+
+@deffn Syntax type-descriptor=? @metai{type-annotation} @metaii{type-annotation}
+Expand to an expression which, compiled and evaluated, returns @true{}
+if the type descriptors associated to the specified type annotations are
+equal; otherwise it returns @false{}.
+
+@lisp
+(type-descriptor=? @aclass{top} @aclass{top})
+@result{} #t
+
+(type-descriptor=? @aclass{top} @aclass{number})
+@result{} #f
+
+(type-descriptor=? (pair @aclass{fixnum} @aclass{string})
+                   (pair @aclass{fixnum} @aclass{string}))
+@result{} #t
+@end lisp
+@end deffn
+
+
+@deffn Syntax type-descriptor-ancestry-super-and-sub? @metai{type-annotation} @metaii{type-annotation}
+Expand to an expression which, compiled and evaluated, returns @true{}
+if the type descriptor associated to @metai{type-annotation} is an
+ancestor of the type descriptor associated to @metaii{type-annotation};
+otherwise it returns @false{}.
+
+@lisp
+(type-descriptor-ancestry-super-and-sub?
+   @aclass{top} @aclass{top})
+@result{} #t
+
+(type-descriptor-ancestry-super-and-sub?
+   @aclass{top} @aclass{number})
+@result{} #t
+
+(type-descriptor-ancestry-super-and-sub?
+   @aclass{number} @aclass{top})
+@result{} #t
+
+(type-descriptor-ancestry-super-and-sub?
+   @aclass{pair} (pair @aclass{fixnum} @aclass{flonum}))
+@result{} #t
+
+(type-descriptor-ancestry-super-and-sub?
+   (pair-of @aclass{number}) (pair-of @aclass{fixnum}))
+@result{} #t
+
+;;pair is not an ancestor of list
+(type-descriptor-ancestry-super-and-sub?
+   (pair @aclass{fixnum} @aclass{null}) (list @aclass{fixnum}))
+@result{} #f
+@end lisp
+@end deffn
+
+
+@deffn Syntax type-descriptor-matching-super-and-sub? @metai{type-annotation} @metaii{type-annotation}
+Expand to an expression which, compiled and evaluated, returns @true{}
+if the type descriptor associated to @metai{type-annotation} is a
+matching super--type of the type descriptor associated to
+@metaii{type-annotation}; otherwise it returns @false{}.
+
+@lisp
+(type-descriptor-matching-super-and-sub?
+   @aclass{top} @aclass{top})
+@result{} #t
+
+(type-descriptor-matching-super-and-sub?
+   @aclass{top} @aclass{number})
+@result{} #t
+
+(type-descriptor-matching-super-and-sub?
+   @aclass{number} @aclass{top})
+@result{} #t
+
+;;this pair is a matching super-type of this list
+(type-descriptor-matching-super-and-sub?
+   (pair @aclass{fixnum} @aclass{null}) (list @aclass{fixnum}))
+@result{} #t
+@end lisp
+@end deffn
+
+@c page
 @node types syntaxes
 @section Type--exploiting syntaxes
 
@@ -939,7 +1227,6 @@ Scheme source code reader in @code{#!vicare} mode.
 @menu
 * types syntaxes type-of::      Determining the type of expressions.
 * types syntaxes defining::     Defining type annotations.
-* types syntaxes descriptors::  Retrieving type descriptors.
 * types syntaxes new-and-del::  Constructors and destructors.
 * types syntaxes predicates::   Predicate syntaxes.
 * types syntaxes slots::        Slot getter and setter syntaxes.
@@ -1122,93 +1409,6 @@ It is equivalent to:
   (type-annotation @meta{annotation}))
 @end lisp
 @end deffn
-
-@c page
-@node types syntaxes descriptors
-@subsection Retrieving type descriptors
-
-
-The following syntactic bindings are exported by the library
-@library{vicare}.
-
-
-@deffn Syntax type-descriptor @meta{type-annotation}
-Expand to an expression which, when evaluated, results in the type
-descriptor of the specified type annotation.
-
-@lisp
-(type-descriptor <fixnum>)
-@expansion{} <fixnum>-ctd
-
-(type-descriptor (list <fixnum> <flonum>))
-@expansion{} (make-list-type-descr (list <fixnum>-ctd <flonum>-ctd))
-@end lisp
-@end deffn
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Scheme core object--type descriptors
-
-
-@deftp {Recort-Type} @aclass{core-type-descriptor}
-Type name identifier for records describing Scheme built--in
-object--types.  It has the following immutable fields:
-
-@table @code
-@item name
-A symbol representing the name of this type.  For example:
-@samp{<string>}.
-
-@item parent
-If this type has a parent: an instance of @class{core-type-descriptor}
-representing the parent of this type; otherwise @false{}.
-
-@item uids-list
-A list of symbols representing the hierarchy of unique identifiers
-(@uid{}s) for this type.  The first item in the list is the @uid{} of
-this type, then the parent's @uid{}, then the grandparent's @uid{}, et
-cetera.
-
-@item method-retriever
-If this type has methods: a procedure to be applied to the method name
-(a symbol) to retrieve the method implementation function; otherwise
-@false{}.
-@end table
-@end deftp
-
-
-@defun core-type-descriptor? @var{obj}
-Return @true{} if @var{obj} is an instance of
-@class{core-type-descriptor}; otherwise return @false{}.
-@end defun
-
-
-@defun core-type-descriptor.name @var{btd}
-@defunx core-type-descriptor.parent @var{btd}
-@defunx core-type-descriptor.uids-list @var{btd}
-@defunx core-type-descriptor.method-retriever @var{btd}
-Accessors for the fields of @class{core-type-descriptor}.
-@end defun
-
-
-Some usage examples:
-
-@lisp
-(define @{string-ctd <core-type-descriptor>@}
-  (type-descriptor <string>))
-
-(.name string-ctd)
-@result{} <string>
-
-(.name (.parent string-ctd))
-@result{} <top>
-
-(.uids-list string-ctd)
-@result{} (vicare:core-type:<string> vicare:core-type:<top>)
-
-(((.method-retriever string-ctd) 'length) "ciao")
-@result{} 4
-@end lisp
 
 @c page
 @node types syntaxes new-and-del
@@ -2691,7 +2891,7 @@ et cetera.
 @subsection The conventional parent of all the types
 
 
-@deftp {Built--in Type} @aclass{top}
+@deftp {Core Type} @aclass{top}
 The conventional parent of all the types.
 @end deftp
 
@@ -2726,7 +2926,7 @@ should use the sentinel value (@pxref{iklib sentinel, The sentinel
 object}).
 
 
-@deftp {Built--in Type} @aclass{void}
+@deftp {Core Type} @aclass{void}
 The type of the void object.  @class{void} has no parent type.  The
 union and intersection between @class{void} and any other type is
 @class{void} itself.
@@ -2748,7 +2948,7 @@ is void; otherwise return @false{}.
 @subsection Type of boolean values
 
 
-@deftp {Built--in Type} @aclass{boolean}
+@deftp {Core Type} @aclass{boolean}
 @deftpx {Parent Type} @aclass{top}
 Type of the boolean values @true{} and @false{}.
 @end deftp
@@ -2766,14 +2966,14 @@ The type predicate is @func{boolean?}.  Return @true{} if @var{obj} is
 
 @c ------------------------------------------------------------------------
 
-@deftp {Built--in Type} @aclass{true}
+@deftp {Core Type} @aclass{true}
 @deftpx {Parent Type} @aclass{boolean}
 Type of the boolean value @true{}.  There is no constructor.  There is
 no predicate.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{false}
+@deftp {Core Type} @aclass{false}
 @deftpx {Parent Type} @aclass{boolean}
 Type of the boolean value @false{}.  There is no constructor.  There is
 no predicate.
@@ -2784,7 +2984,7 @@ no predicate.
 @subsection Type of character values
 
 
-@deftp {Built--in Type} @aclass{char}
+@deftp {Core Type} @aclass{char}
 @deftpx {Parent Type} @aclass{top}
 Type of character values.
 @end deftp
@@ -2825,7 +3025,7 @@ Apply @func{char->fixnum} to the instance.
 @subsection Type of symbol values
 
 
-@deftp {Built--in Type} @aclass{symbol}
+@deftp {Core Type} @aclass{symbol}
 @deftpx {Parent Type} @aclass{top}
 Type of symbol values (including gensyms).
 @end deftp
@@ -2890,7 +3090,7 @@ Apply @func{property-list} to the instance.
 @subsection Type of gensym values
 
 
-@deftp {Built--in Type} @aclass{gensym}
+@deftp {Core Type} @aclass{gensym}
 @deftpx {Parent Type} @aclass{symbol}
 Type of gensym values.
 @end deftp
@@ -2913,7 +3113,7 @@ gensym object; otherwise return @false{}.
 @subsection Type of keyword values
 
 
-@deftp {Built--in Type} @aclass{keyword}
+@deftp {Core Type} @aclass{keyword}
 @deftpx {Parent Type} @aclass{top}
 Type of keyword values.
 @end deftp
@@ -2949,7 +3149,7 @@ Apply @func{keyword-hash} to the instance.
 @subsection Type of pointer values
 
 
-@deftp {Built--in Type} @aclass{pointer}
+@deftp {Core Type} @aclass{pointer}
 @deftpx {Parent Type} @class{top}
 Type of pointer values.
 @end deftp
@@ -3035,7 +3235,7 @@ Apply @func{pointer-hash} to the instance.
 @subsection Type of transcoder values
 
 
-@deftp {Built--in Type} @aclass{transcoder}
+@deftp {Core Type} @aclass{transcoder}
 @deftpx {Parent Type} @aclass{top}
 Type of transcoder values.
 @end deftp
@@ -3073,7 +3273,7 @@ Apply @func{transcoder-error-handling-mode} to the instance.
 @subsection Type of procedures values
 
 
-@deftp {Built--in Type} @aclass{procedure}
+@deftp {Core Type} @aclass{procedure}
 @deftpx {Parent Type} @aclass{top}
 Type of closure object values.  There is no constructor.
 @end deftp
@@ -3207,7 +3407,7 @@ specified type.  The definition of this type is equivalent to:
 @subsubsection Type of number values
 
 
-@deftp {Built--in Type} @aclass{number}
+@deftp {Core Type} @aclass{number}
 @deftpx {Parent Type} @aclass{top}
 Type of numeric values.  There is no constructor.  The type predicate is
 @func{number?}.
@@ -3218,7 +3418,7 @@ Type of numeric values.  There is no constructor.  The type predicate is
 @subsubsection Type of complex values
 
 
-@deftp {Built--in Type} @aclass{complex}
+@deftp {Core Type} @aclass{complex}
 @deftpx {Parent Type} @aclass{number}
 Type of complex numbers.  The constructor is @func{make-rectangular}.
 The type predicate is @func{complex?}.
@@ -3229,7 +3429,7 @@ The type predicate is @func{complex?}.
 @subsubsection Type of real--valued values
 
 
-@deftp {Built--in Type} @aclass{real-valued}
+@deftp {Core Type} @aclass{real-valued}
 @deftpx {Parent Type} @aclass{complex}
 Type of real--valued values.  There is no constructor.  The type
 predicate is @func{real-valued?}.
@@ -3240,7 +3440,7 @@ predicate is @func{real-valued?}.
 @subsubsection Type of real values
 
 
-@deftp {Built--in Type} @aclass{real}
+@deftp {Core Type} @aclass{real}
 @deftpx {Parent Type} @aclass{real-valued}
 Type of real values.  There is no constructor.  The type predicate is
 @func{real?}.
@@ -3251,7 +3451,7 @@ Type of real values.  There is no constructor.  The type predicate is
 @subsubsection Type of rational--valued values
 
 
-@deftp {Built--in Type} @aclass{rational-valued}
+@deftp {Core Type} @aclass{rational-valued}
 @deftpx {Parent Type} @aclass{real}
 Type of rational--valued values.  There is no constructor.  The type
 predicate is @func{rational-valued?}.
@@ -3262,14 +3462,14 @@ predicate is @func{rational-valued?}.
 @subsubsection Type of rational values
 
 
-@deftp {Built--in Type} @aclass{rational}
+@deftp {Core Type} @aclass{rational}
 @deftpx {Parent Type} @aclass{rational-valued}
 Type of rational values.  There is no constructor.  The type predicate
 is @func{rational?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{exact-rational}
+@deftp {Core Type} @aclass{exact-rational}
 Type of exact rational values.  Its definition is equivalent to:
 
 @lisp
@@ -3283,7 +3483,7 @@ Type of exact rational values.  Its definition is equivalent to:
 @subsubsection Type of integer--valued values
 
 
-@deftp {Built--in Type} @aclass{integer-valued}
+@deftp {Core Type} @aclass{integer-valued}
 @deftpx {Parent Type} @aclass{rational-valued}
 Type of integer--valued values.  There is no constructor.  The type
 predicate is @func{integer-valued?}.
@@ -3298,7 +3498,7 @@ Notice that @class{integer} is a @class{rational}, not a
 @class{integer-valued}.
 
 
-@deftp {Built--in Type} @aclass{integer}
+@deftp {Core Type} @aclass{integer}
 @deftpx {Parent Type} @aclass{rational}
 Type of integer values.  There is no constructor.  The type predicate is
 @func{integer?}.
@@ -3309,14 +3509,14 @@ Type of integer values.  There is no constructor.  The type predicate is
 @subsubsection Type of exact--integer values
 
 
-@deftp {Built--in Type} @aclass{exact-integer}
+@deftp {Core Type} @aclass{exact-integer}
 @deftpx {Parent Type} @aclass{integer}
 Type of exact integers.  There is no constructor.  The type predicate is
 @func{exact-integer?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{non-negative-exact-integer}
+@deftp {Core Type} @aclass{non-negative-exact-integer}
 Type of non--negative exact integers.  Its definition is equivalent to:
 
 @lisp
@@ -3326,7 +3526,7 @@ Type of non--negative exact integers.  Its definition is equivalent to:
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{positive-exact-integer}
+@deftp {Core Type} @aclass{positive-exact-integer}
 Type of positive exact integers.  Its definition is equivalent to:
 
 @lisp
@@ -3336,7 +3536,7 @@ Type of positive exact integers.  Its definition is equivalent to:
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{negative-exact-integer}
+@deftp {Core Type} @aclass{negative-exact-integer}
 Type of negative exact integers.  Its definition is equivalent to:
 
 @lisp
@@ -3350,35 +3550,35 @@ Type of negative exact integers.  Its definition is equivalent to:
 @subsubsection Type of fixnum values
 
 
-@deftp {Built--in Type} @aclass{fixnum}
+@deftp {Core Type} @aclass{fixnum}
 @deftpx {Parent Type} @aclass{exact-integer}
 Type of fixnum values.  There is no constructor.  The type predicate is
 @func{fixnum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{positive-fixnum}
+@deftp {Core Type} @aclass{positive-fixnum}
 @deftpx {Parent Type} @aclass{fixnum}
 Type of positive fixnum values.  There is no constructor.  The type
 predicate is @func{positive-fixnum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{negative-fixnum}
+@deftp {Core Type} @aclass{negative-fixnum}
 @deftpx {Parent Type} @aclass{fixnum}
 Type of negative fixnum values.  There is no constructor.  The type
 predicate is @func{negative-fixnum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{zero-fixnum}
+@deftp {Core Type} @aclass{zero-fixnum}
 @deftpx {Parent Type} @aclass{fixnum}
 Type of the zero fixnum value.  There is no constructor.  The type
 predicate is @func{zero-fixnum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{non-negative-fixnum}
+@deftp {Core Type} @aclass{non-negative-fixnum}
 Type of non--negative fixnum values.  Its definition is equivalent to:
 
 @lisp
@@ -3388,7 +3588,7 @@ Type of non--negative fixnum values.  Its definition is equivalent to:
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{non-positive-fixnum}
+@deftp {Core Type} @aclass{non-positive-fixnum}
 Type of non--positive fixnum values.  Its definition is equivalent to:
 
 @lisp
@@ -3402,21 +3602,21 @@ Type of non--positive fixnum values.  Its definition is equivalent to:
 @subsubsection Type of bignum values
 
 
-@deftp {Built--in Type} @aclass{bignum}
+@deftp {Core Type} @aclass{bignum}
 @deftpx {Parent Type} @aclass{exact-integer}
 Type of bignum values.  There is no constructor.  The type predicate is
 @func{bignum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{positive-bignum}
+@deftp {Core Type} @aclass{positive-bignum}
 @deftpx {Parent Type} @aclass{bignum}
 Type of positive bignum values.  There is no constructor.  The type
 predicate is @func{positive-bignum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{negative-bignum}
+@deftp {Core Type} @aclass{negative-bignum}
 @deftpx {Parent Type} @aclass{bignum}
 Type of negative bignum values.  There is no constructor.  The type
 predicate is @func{negative-bignum?}.
@@ -3427,7 +3627,7 @@ predicate is @func{negative-bignum?}.
 @subsubsection Type of flonum values
 
 
-@deftp {Built--in Type} @aclass{flonum}
+@deftp {Core Type} @aclass{flonum}
 @deftpx {Parent Type} @aclass{real}
 Type of flonum values.  There is no constructor.  The type predicate is
 @func{flonum?}.
@@ -3438,21 +3638,21 @@ Type of flonum values.  There is no constructor.  The type predicate is
 @subsubheading Zero flonums
 
 
-@deftp {Built--in Type} @aclass{zero-flonum}
+@deftp {Core Type} @aclass{zero-flonum}
 @deftpx {Parent Type} @aclass{flonum}
 Type of zero flonum values.  There is no constructor.  The type
 predicate is @func{zero-flonum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{positive-zero-flonum}
+@deftp {Core Type} @aclass{positive-zero-flonum}
 @deftpx {Parent Type} @aclass{zero-flonum}
 Type of positive zero flonum values.  There is no constructor.  The type
 predicate is @func{positive-zero-flonum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{negative-zero-flonum}
+@deftp {Core Type} @aclass{negative-zero-flonum}
 @deftpx {Parent Type} @aclass{zero-flonum}
 Type of negative zero flonum values.  There is no constructor.  The type
 predicate is @func{negative-zero-flonum?}.
@@ -3462,14 +3662,14 @@ predicate is @func{negative-zero-flonum?}.
 
 @subsubheading Positive and non--positive flonums
 
-@deftp {Built--in Type} @aclass{positive-flonum}
+@deftp {Core Type} @aclass{positive-flonum}
 @deftpx {Parent Type} @aclass{flonum}
 Type of positive flonum values.  There is no constructor.  The type
 predicate is @func{positive-flonum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{non-positive-flonum}
+@deftp {Core Type} @aclass{non-positive-flonum}
 @deftpx {Parent Type} @aclass{flonum}
 Type of non--positive flonum values.  This type definition is equivalent
 to:
@@ -3484,14 +3684,14 @@ to:
 
 @subsubheading Negative and non--negative flonums
 
-@deftp {Built--in Type} @aclass{negative-flonum}
+@deftp {Core Type} @aclass{negative-flonum}
 @deftpx {Parent Type} @aclass{flonum}
 Type of negative flonum values.  There is no constructor.  The type
 predicate is @func{negative-flonum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{non-negative-flonum}
+@deftp {Core Type} @aclass{non-negative-flonum}
 @deftpx {Parent Type} @aclass{flonum}
 Type of non--negative flonum values.  This type definition is equivalent
 to:
@@ -3507,21 +3707,21 @@ to:
 @subsubsection Type of ratnum values
 
 
-@deftp {Built--in Type} @aclass{ratnum}
+@deftp {Core Type} @aclass{ratnum}
 @deftpx {Parent Type} @aclass{rational}
 Type of ratnum values.  There is no constructor.  The type predicate is
 @func{ratnum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{positive-ratnum}
+@deftp {Core Type} @aclass{positive-ratnum}
 @deftpx {Parent Type} @aclass{ratnum}
 Type of positive ratnum values.  There is no constructor.  The type
 predicate is @func{positive-ratnum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{negative-ratnum}
+@deftp {Core Type} @aclass{negative-ratnum}
 @deftpx {Parent Type} @aclass{ratnum}
 Type of negative ratnum values.  There is no constructor.  The type
 predicate is @func{negative-ratnum?}.
@@ -3532,28 +3732,28 @@ predicate is @func{negative-ratnum?}.
 @subsubsection Type of compnum values
 
 
-@deftp {Built--in Type} @aclass{compnum}
+@deftp {Core Type} @aclass{compnum}
 @deftpx {Parent Type} @aclass{complex}
 Type of compnum values.  There is no constructor.  The type predicate is
 @func{compnum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{exact-compnum}
+@deftp {Core Type} @aclass{exact-compnum}
 @deftpx {Parent Type} @aclass{compnum}
 Type of compnum values having exact real and imaginary parts.  There is
 no constructor.  The type predicate is @func{exact-compnum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{inexact-compnum}
+@deftp {Core Type} @aclass{inexact-compnum}
 @deftpx {Parent Type} @aclass{compnum}
 Type of compnum values having inexact real and imaginary parts.  There
 is no constructor.  The type predicate is @func{inexact-compnum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{zero-compnum}
+@deftp {Core Type} @aclass{zero-compnum}
 @deftpx {Parent Type} @aclass{inexact-compnum}
 Type of compnum values having both the real part and imaginary part
 equal to zero.  There is no constructor.  The type predicate is
@@ -3581,7 +3781,7 @@ with the imaginary part always inexact.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{non-zero-inexact-compnum}
+@deftp {Core Type} @aclass{non-zero-inexact-compnum}
 @deftpx {Parent Type} @aclass{inexact-compnum}
 Type of inexact compnum values having either the real part or imaginary
 part different from zero.  There is no constructor.  The type predicate
@@ -3589,7 +3789,7 @@ is @func{non-zero-inexact-cflonum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{non-zero-compnum}
+@deftp {Core Type} @aclass{non-zero-compnum}
 Type of compnum values having either the real part or imaginary part
 different from zero.  Its definition is equivalent to:
 
@@ -3604,14 +3804,14 @@ different from zero.  Its definition is equivalent to:
 @subsubsection Type of cflonum values
 
 
-@deftp {Built--in Type} @aclass{cflonum}
+@deftp {Core Type} @aclass{cflonum}
 @deftpx {Parent Type} @aclass{complex}
 Type of cflonum values.  There is no constructor.  The type predicate is
 @func{cflonum?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{zero-cflonum}
+@deftp {Core Type} @aclass{zero-cflonum}
 @deftpx {Parent Type} @aclass{cflonum}
 Type of cflonum values having both the real part and imaginary part
 equal to zero.  There is no constructor.  The type predicate is
@@ -3619,7 +3819,7 @@ equal to zero.  There is no constructor.  The type predicate is
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{non-zero-cflonum}
+@deftp {Core Type} @aclass{non-zero-cflonum}
 @deftpx {Parent Type} @aclass{cflonum}
 Type of cflonum values having either the real part or imaginary part
 different from zero.  There is no constructor.  The type predicate is
@@ -3631,7 +3831,7 @@ different from zero.  There is no constructor.  The type predicate is
 @subsubsection Type of byte values
 
 
-@deftp {Built--in Type} @class{byte}
+@deftp {Core Type} @class{byte}
 @deftpx {Parent Type} @aclass{fixnum}
 Type of byte values.  A ``byte'' is a fixnum in the range @math{[-128,
 127]}.
@@ -3654,7 +3854,7 @@ is a byte value; otherwise return @false{}.
 @subsubsection Type of octet values
 
 
-@deftp {Built--in Type} @class{octet}
+@deftp {Core Type} @class{octet}
 @deftpx {Parent Type} @aclass{non-negative-fixnum}
 Type of octet values.  An ``octet'' is a fixnum in the range @math{[0,
 255]}.  There is no constructor.
@@ -3677,7 +3877,7 @@ is a octet value; otherwise return @false{}.
 @subsubsection Exactness of values
 
 
-@deftp {Built--in Type} @class{exact}
+@deftp {Core Type} @class{exact}
 Type of exact numeric values.  Its definition is equivalent to:
 
 @lisp
@@ -3687,7 +3887,7 @@ Type of exact numeric values.  Its definition is equivalent to:
 @end deftp
 
 
-@deftp {Built--in Type} @class{inexact}
+@deftp {Core Type} @class{inexact}
 Type of inexact numeric values.  Its definition is equivalent to:
 
 @lisp
@@ -3701,7 +3901,7 @@ Type of inexact numeric values.  Its definition is equivalent to:
 @subsubsection Sign of numeric values
 
 
-@deftp {Built--in Type} @class{positive}
+@deftp {Core Type} @class{positive}
 Type of positive numeric values.  Its definition is equivalent to:
 
 @lisp
@@ -3712,7 +3912,7 @@ Type of positive numeric values.  Its definition is equivalent to:
 @end deftp
 
 
-@deftp {Built--in Type} @class{negative}
+@deftp {Core Type} @class{negative}
 Type of negative numeric values.  Its definition is equivalent to:
 
 @lisp
@@ -3723,7 +3923,7 @@ Type of negative numeric values.  Its definition is equivalent to:
 @end deftp
 
 
-@deftp {Built--in Type} @class{non-negative}
+@deftp {Core Type} @class{non-negative}
 Type of non--negative numeric values.  Its definition is equivalent to:
 
 @lisp
@@ -3734,7 +3934,7 @@ Type of non--negative numeric values.  Its definition is equivalent to:
 @end deftp
 
 
-@deftp {Built--in Type} @class{non-positive}
+@deftp {Core Type} @class{non-positive}
 Type of non--positive numeric values.  Its definition is equivalent to:
 
 @lisp
@@ -3745,7 +3945,7 @@ Type of non--positive numeric values.  Its definition is equivalent to:
 @end deftp
 
 
-@deftp {Built--in Type} @class{zero}
+@deftp {Core Type} @class{zero}
 Type of zero numeric values.  Its definition is equivalent to:
 
 @lisp
@@ -3771,7 +3971,7 @@ Type of zero numeric values.  Its definition is equivalent to:
 @subsubsection Base string type
 
 
-@deftp {Built--in Type} @class{string}
+@deftp {Core Type} @class{string}
 @deftpx {Parent Type} @aclass{top}
 Type of string values.
 @end deftp
@@ -4053,7 +4253,7 @@ Apply @func{string-hash} to the instance.
 @subsubsection Empty string type
 
 
-@deftp {Built--in Type} @aclass{empty-string}
+@deftp {Core Type} @aclass{empty-string}
 @deftpx {Parent Type} @aclass{string}
 Type of empty string values.
 @end deftp
@@ -4063,7 +4263,7 @@ Type of empty string values.
 @subsubsection Non--empty string type
 
 
-@deftp {Built--in Type} @aclass{nestring}
+@deftp {Core Type} @aclass{nestring}
 @deftpx {Parent Type} @aclass{string}
 Type of non--empty string values.
 @end deftp
@@ -4097,7 +4297,7 @@ Apply @func{string-set!} to the instance and the arguments.
 @subsubsection Base vector type
 
 
-@deftp {Built--in Type} @aclass{vector}
+@deftp {Core Type} @aclass{vector}
 @deftpx {Parent Type} @aclass{top}
 Type of vector values.
 @end deftp
@@ -4214,7 +4414,7 @@ Apply @func{vector->list} to the instance.
 @subsubsection Empty vector type
 
 
-@deftp {Built--in Type} @aclass{empty-vector}
+@deftp {Core Type} @aclass{empty-vector}
 @deftpx {Parent Type} @aclass{vector}
 Type of empty vector values.
 @end deftp
@@ -4224,7 +4424,7 @@ Type of empty vector values.
 @subsubsection Non--empty vector type
 
 
-@deftp {Built--in Type} @aclass{nevector}
+@deftp {Core Type} @aclass{nevector}
 @deftpx {Parent Type} @aclass{vector}
 Type of non--empty vector values.
 @end deftp
@@ -4258,7 +4458,7 @@ Apply @func{vector-set!} to the instance and the arguments.
 @subsubsection Base type of list objects
 
 
-@deftp {Built--in Type} @aclass{list}
+@deftp {Core Type} @aclass{list}
 @deftpx {Parent Type} @aclass{top}
 Type of lists, whatever their structure.  The fact that a list structure
 is non--empty, non--circular, proper or improper must be checked at
@@ -4282,7 +4482,7 @@ or a proper list object; otherwise return @false{}.
 @subsubsection Type of empty lists
 
 
-@deftp {Built--in Type} @aclass{null}
+@deftp {Core Type} @aclass{null}
 @deftpx {Parent Type} @aclass{list}
 Type of the null object.
 
@@ -4305,7 +4505,7 @@ null; otherwise return @false{}.
 @subsubsection Type of non--empty list objects
 
 
-@deftp {Built--in Type} @aclass{nelist}
+@deftp {Core Type} @aclass{nelist}
 @deftpx {Parent Type} @aclass{list}
 Type of non--empty lists, whatever their structure.  The fact that a
 list structure is non--circular, proper or improper must be checked at
@@ -4338,7 +4538,7 @@ Apply @func{cdr} to the type instance.
 @subsection Type of pair objects
 
 
-@deftp {Built--in Type} @aclass{pair}
+@deftp {Core Type} @aclass{pair}
 @deftpx {Parent Type} @aclass{list}
 Type of pair objects.
 @end deftp
@@ -4370,7 +4570,7 @@ Apply @func{cdr} to the type instance.
 @subsection Type of immutable pair objects
 
 
-@deftp {Built--in Type} @aclass{ipair}
+@deftp {Core Type} @aclass{ipair}
 @deftpx {Parent Type} @aclass{record}
 Type of immutable pair objects.
 @end deftp
@@ -4402,20 +4602,20 @@ Apply @func{icdr} to the type instance.
 @subsection Type of bytevector objects
 
 
-@deftp {Built--in Type} @aclass{bytevector}
+@deftp {Core Type} @aclass{bytevector}
 @deftpx {Parent Type} @aclass{top}
 Type of bytevector objects.  The constructor is @func{make-bytevector}.
 The type predicate is @func{bytevector?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{empty-bytevector}
+@deftp {Core Type} @aclass{empty-bytevector}
 @deftpx {Parent Type} @aclass{bytevector}
 Type of empty bytevector objects.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{nebytevector}
+@deftp {Core Type} @aclass{nebytevector}
 @deftpx {Parent Type} @aclass{bytevector}
 Type of non--empty bytevector objects.
 @end deftp
@@ -4425,28 +4625,28 @@ Type of non--empty bytevector objects.
 @subsection Type of hashtable objects
 
 
-@deftp {Built--in Type} @aclass{hashtable}
+@deftp {Core Type} @aclass{hashtable}
 @deftpx {Parent Type} @aclass{top}
 Base type for hashtable objects.  There is no constructor.  The type
 predicate is @func{hashtable?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{hashtable-eq}
+@deftp {Core Type} @aclass{hashtable-eq}
 @deftpx {Parent Type} @aclass{hashtable}
 Type of @func{eq?} hashtables.  The constructor is
 @func{make-eq-hashtable}.  There type predicate is @func{hashtable-eq?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{hashtable-eqv}
+@deftp {Core Type} @aclass{hashtable-eqv}
 @deftpx {Parent Type} @aclass{hashtable}
 Type of @func{eqv?} hashtables.  The constructor is
 @func{make-eqv-hashtable}.  There type predicate is @func{hashtable-eqv?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{hashtable-equal}
+@deftp {Core Type} @aclass{hashtable-equal}
 @deftpx {Parent Type} @aclass{hashtable}
 Type of @func{equal?} hashtables.  The constructor is
 @func{make-hashtable}.  There type predicate is @func{hashtable-equiv?}.
@@ -4457,14 +4657,14 @@ Type of @func{equal?} hashtables.  The constructor is
 @subsection Type of struct objects
 
 
-@deftp {Built--in Type} @aclass{struct}
+@deftp {Core Type} @aclass{struct}
 @deftpx {Parent Type} @aclass{top}
 Type of struct objects.  There is no constructor.  The type predicate is
 @func{struct?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{struct-type-descriptor}
+@deftp {Core Type} @aclass{struct-type-descriptor}
 @deftpx {Parent Type} @aclass{struct}
 Type of struct--type descriptor objects.  The constructor is
 @func{make-struct-type}.  The type descriptor is
@@ -4476,14 +4676,14 @@ Type of struct--type descriptor objects.  The constructor is
 @subsection Type of record objects
 
 
-@deftp {Built--in Type} @aclass{record}
+@deftp {Core Type} @aclass{record}
 @deftpx {Parent Type} @aclass{struct}
 Type of record objects.  There is no constructor.  The type predicate is
 @func{record?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{record-type-descriptor}
+@deftp {Core Type} @aclass{record-type-descriptor}
 @deftpx {Parent Type} @aclass{struct}
 Type of record--type descriptor objects.  The constructor is
 @func{make-record-type-descriptor}.  The type predicate is
@@ -4491,7 +4691,7 @@ Type of record--type descriptor objects.  The constructor is
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{record-constructor-descriptor}
+@deftp {Core Type} @aclass{record-constructor-descriptor}
 @deftpx {Parent Type} @aclass{struct}
 Type of record--constructor descriptor objects.  The constructor is
 @func{make-record-constructor-descriptor}.  The type predicate is
@@ -4503,14 +4703,14 @@ Type of record--constructor descriptor objects.  The constructor is
 @subsection Type of condition objects
 
 
-@deftp {Built--in Type} @aclass{condition}
+@deftp {Core Type} @aclass{condition}
 @deftpx {Parent Type} @aclass{record}
 Type of condition objects.  There is no constructor.  The type predicate
 is @func{condition?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{compound-condition}
+@deftp {Core Type} @aclass{compound-condition}
 @deftpx {Parent Type} @aclass{condition}
 Type of compound condition objects.  The constructor is
 @func{condition}.  The type predicate is @func{compound-condition?}.
@@ -4542,35 +4742,35 @@ Apply @func{print-condition} to the instance.
 @subsubsection Base port types
 
 
-@deftp {Built--in Type} @aclass{port}
+@deftp {Core Type} @aclass{port}
 @deftpx {Parent Type} @aclass{top}
 Base type for input, output and input/output ports.  There is no
 constructor.  The type predicate is @func{port?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{input-port}
+@deftp {Core Type} @aclass{input-port}
 @deftpx {Parent Type} @aclass{port}
 Base type for input ports.  There is no constructor.  The type predicate
 is @func{input-port?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{output-port}
+@deftp {Core Type} @aclass{output-port}
 @deftpx {Parent Type} @aclass{port}
 Base type for output ports.  There is no constructor.  The type
 predicate is @func{output-port?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{input/output-port}
+@deftp {Core Type} @aclass{input/output-port}
 @deftpx {Parent Type} @aclass{port}
 Base type for input/output ports.  There is no constructor.  The type
 predicate is @func{input/output-port?}.
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{textual-port}
+@deftp {Core Type} @aclass{textual-port}
 Type of textual ports.  Its definition is equivalent to:
 
 @lisp
@@ -4582,7 +4782,7 @@ Type of textual ports.  Its definition is equivalent to:
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{binary-port}
+@deftp {Core Type} @aclass{binary-port}
 Type of binary ports.  Its definition is equivalent to:
 
 @lisp
@@ -4598,7 +4798,7 @@ Type of binary ports.  Its definition is equivalent to:
 @subsubsection Textual input port types
 
 
-@deftp {Built--in Type} @aclass{textual-input-port}
+@deftp {Core Type} @aclass{textual-input-port}
 @deftpx {Parent Type} @aclass{input-port}
 Type of textual input ports.  There is no constructor.  The type
 predicate is @func{textual-input-port?}.
@@ -4609,7 +4809,7 @@ predicate is @func{textual-input-port?}.
 @subsubsection Textual output port types
 
 
-@deftp {Built--in Type} @aclass{textual-output-port}
+@deftp {Core Type} @aclass{textual-output-port}
 @deftpx {Parent Type} @aclass{output-port}
 Type of textual output port.  There is no constructor.  The type
 predicate is @func{textual-output-port?}.
@@ -4620,7 +4820,7 @@ predicate is @func{textual-output-port?}.
 @subsubsection Textual input/output port types
 
 
-@deftp {Built--in Type} @aclass{textual-input/output-port}
+@deftp {Core Type} @aclass{textual-input/output-port}
 @deftpx {Parent Type} @aclass{input/output-port}
 Type of textual input/output ports.  There is no constructor.  The type
 predicate is @func{textual-input/output-port?}.
@@ -4631,7 +4831,7 @@ predicate is @func{textual-input/output-port?}.
 @subsubsection Binary input port types
 
 
-@deftp {Built--in Type} @aclass{binary-input-port}
+@deftp {Core Type} @aclass{binary-input-port}
 @deftpx {Parent Type} @aclass{input-port}
 Type of binary input ports.  There is no constructor.  The type
 predicate is @func{binary-input-port?}.
@@ -4642,7 +4842,7 @@ predicate is @func{binary-input-port?}.
 @subsubsection Binary output port types
 
 
-@deftp {Built--in Type} @aclass{binary-output-port}
+@deftp {Core Type} @aclass{binary-output-port}
 @deftpx {Parent Type} @aclass{output-port}
 Type of binary output ports.  There is no constructor.  The type
 predicate is @func{binary-output-port?}.
@@ -4653,7 +4853,7 @@ predicate is @func{binary-output-port?}.
 @subsubsection Binary input/output port types
 
 
-@deftp {Built--in Type} @aclass{binary-input/output-port}
+@deftp {Core Type} @aclass{binary-input/output-port}
 @deftpx {Parent Type} @aclass{input/output-port}
 Type of binary input/output ports.  There is no constructor.  The type
 predicate is @func{binary-input/output-port?}.
@@ -5014,6 +5214,5 @@ following function definition:
 (define (<vec>-destructor @{O <vec>@})
   `(deleted ,O))
 @end lisp
-
 
 @c end of file
