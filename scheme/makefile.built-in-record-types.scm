@@ -405,7 +405,8 @@
     <record>
   make-list-type-descr list-type-descr?
   (methods
-   (item-des*		list-type-descr.item-des*)))
+   (item-des*		list-type-descr.item-des*)
+   (length		list-type-descr.length)))
 
 (define-built-in-record-type <list-of-type-descr>
     <record>
@@ -417,7 +418,8 @@
     <record>
   make-vector-type-descr vector-type-descr?
   (methods
-   (item-des*		vector-type-descr.item-des*)))
+   (item-des*		vector-type-descr.item-des*)
+   (length		vector-type-descr.length)))
 
 (define-built-in-record-type <vector-of-type-descr>
     <record>

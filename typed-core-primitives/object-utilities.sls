@@ -405,6 +405,11 @@
   (signatures
    ((<list-type-descr>)		=> (<list>))))
 
+(declare-core-primitive list-type-descr.length
+    (safe)
+  (signatures
+   ((<list-type-descr>)		=> (<non-negative-exact-integer>))))
+
 ;;; --------------------------------------------------------------------
 
 (declare-core-rtd <list-of-type-descr>-rtd)
@@ -439,6 +444,11 @@
     (safe)
   (signatures
    ((<vector-type-descr>)	=> (<list>))))
+
+(declare-core-primitive vector-type-descr.length
+    (safe)
+  (signatures
+   ((<vector-type-descr>)	=> (<non-negative-exact-integer>))))
 
 ;;; --------------------------------------------------------------------
 

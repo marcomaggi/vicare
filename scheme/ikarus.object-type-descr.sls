@@ -223,7 +223,7 @@
 (define-record-type (<compound-condition-type-descr> make-compound-condition-type-descr compound-condition-type-descr?)
   (sealed #t)
   (fields
-    (immutable component-ots*		compound-condition-type-descr.component-des*)
+    (immutable component-des*		compound-condition-type-descr.component-des*)
 		;A list of instances of "<record-type-descr>" describing the types of
 		;component condition objects.
     #| end of FIELDS |# )

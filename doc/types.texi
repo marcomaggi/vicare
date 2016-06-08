@@ -951,6 +951,7 @@ exported by @library{vicare}.
 @menu
 * types descr retrieving::      Retrieving type descriptors.
 * types descr core::            Core object-type descriptors.
+* types descr compound::        Compound object-type descriptors.
 * types descr relations::       Relations between type descriptors.
 @end menu
 
@@ -1073,6 +1074,584 @@ Return @true{} if @var{obj} is an instance of
 @defunx core-type-descriptor.hash-function @var{ctd}
 @defunx core-type-descriptor.method-retriever @var{ctd}
 Accessors for the fields of @class{core-type-descriptor}.
+@end defun
+
+@c page
+@node types descr compound
+@subsection Compound object-type descriptors
+
+
+@menu
+* types descr compound pair::      Pair type descriptors.
+* types descr compound pair-of::   Pair-of type descriptors.
+* types descr compound list::      List type descriptors.
+* types descr compound list-of::   List-of type descriptors.
+* types descr compound vector::    Vector type descriptors.
+* types descr compound vector-of:: Vector-of type descriptors.
+* types descr compound condobj::   Condition-object type descriptors.
+* types descr compound enum::      Enumeration type descriptors.
+* types descr compound hashtable:: Hashtable type descriptors.
+* types descr compound alist::     Association list type descriptors.
+* types descr compound closure::   Closure object type descriptors.
+* types descr compound union::     Union type descriptors.
+* types descr compound intersect:: Intersection type descriptors.
+* types descr compound complem::   Complement type descriptors.
+* types descr compound ancestor::  Ancestor-of type descriptors.
+@end menu
+
+@c page
+@node types descr compound pair
+@subsubsection Pair type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{pair-type-descr}
+Name of type descriptors for pairs of heterogeneous values.  It has the
+following fields:
+
+@table @code
+@item car-des
+A type descriptor describing the type of the car.
+
+@item cdr-des
+A type descriptor describing the type of the cdr.
+@end table
+@end deftp
+
+
+@defun make-pair-type-descr @var{car-des} @var{cdr-des}
+Build and return a new instance of @class{pair-type-descr}.
+@end defun
+
+
+@defun pair-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of @class{pair-type-descr};
+otherwise return @false{}.
+@end defun
+
+
+@defun pair-type-descr.car-des @var{des}
+@defunx pair-type-descr.cdr-des @var{des}
+Accessors for the fields of @class{pair-type-descr} instances.
+@end defun
+
+@c page
+@node types descr compound pair-of
+@subsubsection Pair-of type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{pair-of-type-descr}
+Name of type descriptors for pairs of homogeneous values.  It has the
+following fields:
+
+@table @code
+@item item-des
+A type descriptor describing the type of the car and cdr.
+@end table
+@end deftp
+
+
+@defun make-pair-of-type-descr @var{item-des}
+Build and return a new instance of @class{pair-of-type-descr}.
+@end defun
+
+
+@defun pair-of-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{pair-of-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun pair-of-type-descr.item-des @var{des}
+Accessor for the field of @class{pair-of-type-descr} instances.
+@end defun
+
+@c page
+@node types descr compound list
+@subsubsection List type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{list-type-descr}
+Name of type descriptors for lists of heterogeneous values.  It has the
+following fields:
+
+@table @code
+@item item-des*
+A list of type descriptors describing the types of the items.
+@end table
+@end deftp
+
+
+@defun make-list-type-descr @var{des-list}
+Build and return a new instance of @class{list-type-descr}.
+@end defun
+
+
+@defun list-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{list-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun list-type-descr.item-des* @var{des}
+Accessor for the field of @class{list-type-descr} instances.
+@end defun
+
+
+@defun list-type-descr.length @var{des}
+Return the length of the list, a non--negative exact integer.
+@end defun
+
+@c page
+@node types descr compound list-of
+@subsubsection List-of type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{list-of-type-descr}
+Name of type descriptors for lists of homogeneous values.  It has the
+following fields:
+
+@table @code
+@item item-des
+A type descriptor describing the type of the items.
+@end table
+@end deftp
+
+
+@defun make-list-of-type-descr @var{item-des}
+Build and return a new instance of @class{list-of-type-descr}.
+@end defun
+
+
+@defun list-of-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{list-of-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun list-of-type-descr.item-des @var{des}
+Accessor for the field of @class{list-of-type-descr} instances.
+@end defun
+
+@c page
+@node types descr compound vector
+@subsubsection Vector type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{vector-type-descr}
+Name of type descriptors for vectors of heterogeneous values.  It has
+the following fields:
+
+@table @code
+@item item-des*
+A list of type descriptors describing the types of the items.
+@end table
+@end deftp
+
+
+@defun make-vector-type-descr @var{des-list}
+Build and return a new instance of @class{vector-type-descr}.
+@end defun
+
+
+@defun vector-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{vector-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun vector-type-descr.item-des* @var{des}
+Accessor for the field of @class{vector-type-descr} instances.
+@end defun
+
+
+@defun vector-type-descr.length @var{des}
+Return the length of the vector, a non--negative exact integer.
+@end defun
+
+@c page
+@node types descr compound vector-of
+@subsubsection Vector-of type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{vector-of-type-descr}
+Name of type descriptors for vectors of homogeneous values.  It has the
+following fields:
+
+@table @code
+@item item-des
+A type descriptor describing the type of the items.
+@end table
+@end deftp
+
+
+@defun make-vector-of-type-descr @var{item-des}
+Build and return a new instance of @class{vector-of-type-descr}.
+@end defun
+
+
+@defun vector-of-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{vector-of-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun vector-of-type-descr.item-des @var{des}
+Accessor for the field of @class{vector-of-type-descr} instances.
+@end defun
+
+@c page
+@node types descr compound condobj
+@subsubsection Condition-object type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{compound-condition-type-descr}
+Name of type descriptors for compound condition objects.  It has the
+following fields:
+
+@table @code
+@item component-des*
+A list of type descriptors describing the types of the component
+condition objects.
+@end table
+@end deftp
+
+
+@defun make-compound-condition-type-descr @var{des-list}
+Build and return a new instance of
+@class{compound-condition-type-descr}.
+@end defun
+
+
+@defun compound-condition-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{compound-condition-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun compound-condition-type-descr.component-des* @var{des}
+Accessor for the field of @class{compound-condition-type-descr}
+instances.
+@end defun
+
+@c page
+@node types descr compound enum
+@subsubsection Enumeration type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{enumeration-type-descr}
+Name of type descriptors for symbols enumerations.  It has the following
+fields:
+
+@table @code
+@item symbol*
+A list of symbols representing the enumerated items.
+@end table
+@end deftp
+
+
+@defun make-enumeration-type-descr @var{symbols}
+Build and return a new instance of @class{enumeration-type-descr}.
+@end defun
+
+
+@defun enumeration-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{enumeration-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun enumeration-type-descr.symbols* @var{des}
+Accessor for the field of @class{enumeration-type-descr} instances.
+@end defun
+
+@c page
+@node types descr compound hashtable
+@subsubsection Hashtable type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{hashtable-type-descr}
+Name of type descriptors for hashtables.  It has the following fields:
+
+@table @code
+@item key-des
+A type descriptor describing the type of the keys.
+
+@item val-des
+A type descriptor describing the type of the values.
+@end table
+@end deftp
+
+
+@defun make-hashtable-type-descr @var{key-des} @var{val-des}
+Build and return a new instance of @class{hashtable-type-descr}.
+@end defun
+
+
+@defun hashtable-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{hashtable-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun hashtable-type-descr.key-des @var{des}
+@defunx hashtable-type-descr.val-des @var{des}
+Accessors for the fields of @class{hashtable-type-descr} instances.
+@end defun
+
+@c page
+@node types descr compound alist
+@subsubsection Association list type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{alist-type-descr}
+Name of type descriptors for association lists.  It has the following
+fields:
+
+@table @code
+@item key-des
+A type descriptor describing the type of the keys.
+
+@item val-des
+A type descriptor describing the type of the values.
+@end table
+@end deftp
+
+
+@defun make-alist-type-descr @var{key-des} @var{val-des}
+Build and return a new instance of @class{alist-type-descr}.
+@end defun
+
+
+@defun alist-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{alist-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun alist-type-descr.key-des @var{des}
+@defunx alist-type-descr.val-des @var{des}
+Accessors for the fields of @class{alist-type-descr} instances.
+@end defun
+
+@c page
+@node types descr compound closure
+@subsubsection Closure object type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{closure-type-descr}
+Name of type descriptors for closure objects.  It has the following
+fields:
+
+@table @code
+@item signature
+An instance of @class{case-lambda-descriptors} representing the type
+signatures of the closure's clauses.
+@end table
+@end deftp
+
+
+@defun make-closure-type-descr @var{signature}
+Build and return a new instance of @class{closure-type-descr}.
+@end defun
+
+
+@defun closure-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{closure-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun closure-type-descr.signature @var{des}
+Accessor for the field of @class{closure-type-descr} instances.
+@end defun
+
+@c page
+@node types descr compound union
+@subsubsection Union type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{union-type-descr}
+Name of type descriptors for unions of type descriptors.  It has the
+following fields:
+
+@table @code
+@item item-des*
+A list of type descriptors describing the types of the components.
+@end table
+@end deftp
+
+
+@defun make-union-type-descr @var{des-list}
+Build and return a new instance of @class{union-type-descr}.
+@end defun
+
+
+@defun union-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{union-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun union-type-descr.item-des* @var{des}
+Accessor for the field of @class{union-type-descr} instances.
+@end defun
+
+@c page
+@node types descr compound intersect
+@subsubsection Intersection type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{intersection-type-descr}
+Name of type descriptors for intersections of type descriptors.  It has
+the following fields:
+
+@table @code
+@item item-des*
+A list of type descriptors describing the types of the components.
+@end table
+@end deftp
+
+
+@defun make-intersection-type-descr @var{des-list}
+Build and return a new instance of @class{intersection-type-descr}.
+@end defun
+
+
+@defun intersection-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{intersection-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun intersection-type-descr.item-des* @var{des}
+Accessor for the field of @class{intersection-type-descr} instances.
+@end defun
+
+@c page
+@node types descr compound complem
+@subsubsection Complement type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{complement-type-descr}
+Name of type descriptors for the complement of a type descriptor.  It
+has the following fields:
+
+@table @code
+@item item-des
+The type descriptor to be complemented.
+@end table
+@end deftp
+
+
+@defun make-complement-type-descr @var{des}
+Build and return a new instance of @class{complement-type-descr}.
+@end defun
+
+
+@defun complement-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{complement-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun complement-type-descr.item-des @var{des}
+Accessor for the field of @class{complement-type-descr} instances.
+@end defun
+
+@c page
+@node types descr compound ancestor
+@subsubsection Ancestor-of type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{ancestor-of-type-descr}
+Name of type descriptors representing the ancestors of a type
+descriptor.  It has the following fields:
+
+@table @code
+@item item-des
+The type descriptor of which we describe the ancestors.
+
+@item ancestors-des*
+List of type descriptors representing the ancestors.  The head of the
+list is the parent type descriptor.
+@end table
+@end deftp
+
+
+@defun make-ancestor-of-type-descr @var{des}
+Build and return a new instance of @class{ancestor-of-type-descr}.
+@end defun
+
+
+@defun ancestor-of-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{ancestor-of-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun ancestor-of-type-descr.item-des @var{des}
+@defunx ancestor-of-type-descr.ancestors-des* @var{des}
+Accessors for the fields of @class{ancestor-of-type-descr} instances.
 @end defun
 
 @c page
