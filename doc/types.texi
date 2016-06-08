@@ -952,6 +952,7 @@ exported by @library{vicare}.
 * types descr retrieving::      Retrieving type descriptors.
 * types descr core::            Core object-type descriptors.
 * types descr compound::        Compound object-type descriptors.
+* types descr signatures::      Type descriptor signatures.
 * types descr relations::       Relations between type descriptors.
 @end menu
 
@@ -1652,6 +1653,130 @@ Return @true{} if @var{obj} is an instance of
 @defun ancestor-of-type-descr.item-des @var{des}
 @defunx ancestor-of-type-descr.ancestors-des* @var{des}
 Accessors for the fields of @class{ancestor-of-type-descr} instances.
+@end defun
+
+@c page
+@node types descr signatures
+@subsection Type descriptor signatures
+
+
+@menu
+* types descr signatures descriptors::  Descriptors signatures.
+* types descr signatures lambda::       Lambda signature descriptors.
+* types descr signatures case-lambda::  Case-lambda signature descriptors.
+@end menu
+
+@c page
+@node types descr signatures descriptors
+@subsubsection Descriptors signatures
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{descriptors-signature}
+Name of descriptors representing tuples of values signatures.  It has
+the following fields:
+
+@table @code
+@item object-type-descrs
+A proper or improper list of type descriptors representing the
+signatures of lambda formals.
+@end table
+@end deftp
+
+
+@defun make-descriptors-signature @var{descriptors}
+Build and return a new instance of @class{descriptors-signature}.
+@end defun
+
+
+@defun descriptors-signature? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{descriptors-signature}; otherwise return @false{}.
+@end defun
+
+
+@defun descriptors-signature.object-type-descrs @var{des}
+Accessor for the field of @class{descriptors-signature} instances.
+@end defun
+
+@c page
+@node types descr signatures lambda
+@subsubsection Lambda signature descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{lambda-descriptors}
+Name of descriptors the type signature of single lambda clauses.  It has
+the following fields:
+
+@table @code
+@item retvals
+An instance of @class{descriptors-signature} representing the types of
+values returned by this lambda clause.
+
+@item argvals
+An instance of @class{descriptors-signature} representing the types of
+arguments expected by this lambda clause.
+@end table
+@end deftp
+
+
+@defun make-lambda-descriptors @var{descriptors}
+Build and return a new instance of @class{lambda-descriptors}.
+@end defun
+
+
+@defun lambda-descriptors? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{lambda-descriptors}; otherwise return @false{}.
+@end defun
+
+
+@defun lambda-descriptors.retvals @var{des}
+@defunx lambda-descriptors.argvals @var{des}
+Accessors for the fields of @class{lambda-descriptors} instances.
+@end defun
+
+@c page
+@node types descr signatures case-lambda
+@subsubsection Case-lambda signature descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{case-lambda-descriptors}
+Name of descriptors representing the type signature of a tuple of lambda
+clauses.  It has the following fields:
+
+@table @code
+@item clause-signature*
+A list of @class{lambda-descriptors} representing the type signatures of
+the clauses.
+@end table
+@end deftp
+
+
+@defun make-case-lambda-descriptors @var{descriptors}
+Build and return a new instance of @class{case-lambda-descriptors}.
+@end defun
+
+
+@defun case-lambda-descriptors? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{case-lambda-descriptors}; otherwise return @false{}.
+@end defun
+
+
+@defun case-lambda-descriptors.clause-signature* @var{des}
+Accessor for the field of @class{case-lambda-descriptors} instances.
 @end defun
 
 @c page
