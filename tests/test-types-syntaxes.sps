@@ -1299,7 +1299,7 @@
 
   (doit ((not (ancestor-of <fixnum>)))
 	(<zero>)
-	=> exact-match)
+	=> possible-match)
 
   (void))
 

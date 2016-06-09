@@ -251,6 +251,7 @@
 	 syntax-object.type-annotation?
 	 type-annotation->object-type-spec
 	 expression-expander-for-type-annotations
+	 type-signature.type-descriptor-core-expr
 
 	 #| end of export list |# )
 
@@ -565,637 +566,638 @@
   ;; (debug-print __who__
   ;; 	       (object-type-spec.name super.ots)
   ;; 	       (object-type-spec.name sub.ots))
-  (cond ((eq? super.ots sub.ots))
+  (cond
+   ((eq? super.ots sub.ots))
 
-	((<untyped>-ots? super.ots)
-	 (not (or (<void>-ots?            sub.ots)
-		  (<no-return>-ots?       sub.ots))))
+   ((<untyped>-ots? super.ots)
+    (not (or (<void>-ots?            sub.ots)
+	     (<no-return>-ots?       sub.ots))))
 
-	((<top>-ots? super.ots)
-	 ;;Fast track: "<top>" is the super-type of all the types.
-	 (not (or (<void>-ots?            sub.ots)
-		  (<no-return>-ots?       sub.ots)
-		  (ancestor-of-type-spec? sub.ots))))
+   ((<top>-ots? super.ots)
+    ;;Fast track: "<top>" is the super-type of all the types.
+    (not (or (<void>-ots?            sub.ots)
+	     (<no-return>-ots?       sub.ots)
+	     (ancestor-of-type-spec? sub.ots))))
 
-	;;NOTE We do *not* insert here a branch like:
-	;;
-	;;   ((<top>-ots?     sub.ots) . ?body)
-	;;   ((<untyped>-ots? sub.ots) . ?body)
-	;;
-	;;because "<top>"  or "<untyped>"  as sub-type  may match  or not,  we cannot
-	;;establish it here.
+   ;;NOTE We do *not* insert here a branch like:
+   ;;
+   ;;   ((<top>-ots?     sub.ots) . ?body)
+   ;;   ((<untyped>-ots? sub.ots) . ?body)
+   ;;
+   ;;because "<top>" or "<untyped>" as sub-type may match or not, we cannot establish
+   ;;it here.
 
-	((and (or (core-type-spec? super.ots) (record-type-spec? super.ots) (struct-type-spec? super.ots))
-	      (or (core-type-spec?   sub.ots) (record-type-spec?   sub.ots) (struct-type-spec?   sub.ots)))
-	 ;;If we are here we know that we have to search for matching identifiers, so
-	 ;;we loop locally.
-	 (let recur ((sub.ots sub.ots))
-	   ;; (debug-print 'direct-matching
-	   ;; 		super.ots
-	   ;; 		sub.ots
-	   ;; 		(object-type-spec.name super.ots)
-	   ;; 		(object-type-spec.name sub.ots)
-	   ;; 		(free-identifier=? (object-type-spec.name super.ots)
-	   ;; 				   (object-type-spec.name sub.ots)))
-	   (cond ((free-identifier=? (object-type-spec.name super.ots)
-				     (object-type-spec.name   sub.ots)))
-		 ((object-type-spec.parent-ots sub.ots)
-		  => (lambda (sub-parent.ots)
-		       (or (eq? super.ots sub-parent.ots)
-			   (recur sub-parent.ots))))
-		 (else #f))))
+   ((and (or (core-type-spec? super.ots) (record-type-spec? super.ots) (struct-type-spec? super.ots))
+	 (or (core-type-spec?   sub.ots) (record-type-spec?   sub.ots) (struct-type-spec?   sub.ots)))
+    ;;If we are here  we know that we have to search for  matching identifiers, so we
+    ;;loop locally.
+    (let recur ((sub.ots sub.ots))
+      ;; (debug-print 'direct-matching
+      ;; 		super.ots
+      ;; 		sub.ots
+      ;; 		(object-type-spec.name super.ots)
+      ;; 		(object-type-spec.name sub.ots)
+      ;; 		(free-identifier=? (object-type-spec.name super.ots)
+      ;; 				   (object-type-spec.name sub.ots)))
+      (cond ((free-identifier=? (object-type-spec.name super.ots)
+				(object-type-spec.name   sub.ots)))
+	    ((object-type-spec.parent-ots sub.ots)
+	     => (lambda (sub-parent.ots)
+		  (or (eq? super.ots sub-parent.ots)
+		      (recur sub-parent.ots))))
+	    (else #f))))
 
 ;;; --------------------------------------------------------------------
 ;;; We want to do labels before unions
 
-	((label-type-spec? super.ots)
-	 (if (label-type-spec.with-type-predicate? super.ots)
-	     ;;A label  with predicate used  as super-type  must never match:  it can
-	     ;;only be  compatible.  This  is because  we want  to apply  the label's
-	     ;;predicate to validate the value.
-	     #f
-	   ;;A label without  predicate use as super-type is an  alias for its parent
-	   ;;type annotation: it matches if its parent matches.
-	   (object-type-spec.matching-super-and-sub? (object-type-spec.parent-ots super.ots)
-						     sub.ots)))
+   ((label-type-spec? super.ots)
+    (if (label-type-spec.with-type-predicate? super.ots)
+	;;A label with predicate used as super-type  must never match: it can only be
+	;;compatible.  This  is because  we want  to apply  the label's  predicate to
+	;;validate the value.
+	#f
+      ;;A label without predicate  use as super-type is an alias  for its parent type
+      ;;annotation: it matches if its parent matches.
+      (object-type-spec.matching-super-and-sub? (object-type-spec.parent-ots super.ots)
+						sub.ots)))
 
-	((label-type-spec? sub.ots)
-	 ;;A sub-type label matches its parent and its parent's ancectors.
-	 (object-type-spec.matching-super-and-sub? super.ots
-						   (object-type-spec.parent-ots sub.ots)))
+   ((label-type-spec? sub.ots)
+    ;;A sub-type label matches its parent and its parent's ancectors.
+    (object-type-spec.matching-super-and-sub? super.ots
+					      (object-type-spec.parent-ots sub.ots)))
 
 ;;; --------------------------------------------------------------------
 ;;; We really want to do the unions first.
 
-	((union-type-spec? super.ots)
-	 (cond ((union-type-spec? sub.ots)
-		;;Every sub-component must match a super-component.
-		;;
-		;; (type-super-and-sub? (or <number> <vector>)
-		;;                      (or <fixnum> (vector-of <string>)))
-		;; => #t
-		;;
-		(for-all (lambda (sub-component.ots)
-			   (exists (lambda (super-component.ots)
-				     (object-type-spec.matching-super-and-sub? super-component.ots sub-component.ots))
-			     (union-type-spec.component-ots* super.ots)))
-		  (union-type-spec.component-ots* sub.ots)))
-	       (else
-		;; (type-super-and-sub? (or <number> <string>) <string>) => #t
-		;; (type-super-and-sub? (or <number> <string>) <fixnum>) => #t
-		(exists (lambda (super-component.ots)
-			  (object-type-spec.matching-super-and-sub? super-component.ots sub.ots))
-		  (union-type-spec.component-ots* super.ots)))))
+   ((union-type-spec? super.ots)
+    (cond ((union-type-spec? sub.ots)
+	   ;;Every sub-component must match a super-component.
+	   ;;
+	   ;; (type-super-and-sub? (or <number> <vector>)
+	   ;;                      (or <fixnum> (vector-of <string>)))
+	   ;; => #t
+	   ;;
+	   (for-all (lambda (sub-component.ots)
+		      (exists (lambda (super-component.ots)
+				(object-type-spec.matching-super-and-sub? super-component.ots sub-component.ots))
+			(union-type-spec.component-ots* super.ots)))
+	     (union-type-spec.component-ots* sub.ots)))
+	  (else
+	   ;; (type-super-and-sub? (or <number> <string>) <string>) => #t
+	   ;; (type-super-and-sub? (or <number> <string>) <fixnum>) => #t
+	   (exists (lambda (super-component.ots)
+		     (object-type-spec.matching-super-and-sub? super-component.ots sub.ots))
+	     (union-type-spec.component-ots* super.ots)))))
 
-	((union-type-spec? sub.ots)
-	 (let ((sub-component-ots* (union-type-spec.component-ots* sub.ots)))
-	   (cond ((ancestor-of-type-spec? super.ots)
-		  (exists (lambda (super-component.ots)
-			    (exists (lambda (sub-component.ots)
-				      ($object-type-spec=? super-component.ots sub-component.ots))
-			      sub-component-ots*))
-		    (ancestor-of-type-spec.component-ots* super.ots)))
-		 (else
-		  (for-all (lambda (sub-component.ots)
-			     (object-type-spec.matching-super-and-sub? super.ots sub-component.ots))
-		    sub-component-ots*)))))
+   ((union-type-spec? sub.ots)
+    (let ((sub-component-ots* (union-type-spec.component-ots* sub.ots)))
+      (cond ((ancestor-of-type-spec? super.ots)
+	     (exists (lambda (super-component.ots)
+		       (exists (lambda (sub-component.ots)
+				 ($object-type-spec=? super-component.ots sub-component.ots))
+			 sub-component-ots*))
+	       (ancestor-of-type-spec.component-ots* super.ots)))
+	    (else
+	     (for-all (lambda (sub-component.ots)
+			(object-type-spec.matching-super-and-sub? super.ots sub-component.ots))
+	       sub-component-ots*)))))
 
 ;;; --------------------------------------------------------------------
 ;;; We really want to do the intersections first.
 
-	((intersection-type-spec? super.ots)
-	 (cond ((intersection-type-spec? sub.ots)
-		;;Every sub-component must match every super-component.
-		;;
-		;; (type-super-and-sub? (and <number> <positive>)
-		;;                      (and <positive-fixnum>
-		;;                           <positive-ratnum>))
-		;; => #t
-		(for-all (lambda (super-component.ots)
-			   (for-all (lambda (sub-component.ots)
-				      (object-type-spec.matching-super-and-sub? super-component.ots sub-component.ots))
-			     (intersection-type-spec.component-ots* sub.ots)))
-		  (intersection-type-spec.component-ots* super.ots)))
-	       (else
-		;; (type-super-and-sub? (and <exact> <positive>) <positive-fixnum>) => #t
-		(for-all (lambda (super-component.ots)
-			   (object-type-spec.matching-super-and-sub? super-component.ots sub.ots))
-		  (intersection-type-spec.component-ots* super.ots)))))
+   ((intersection-type-spec? super.ots)
+    (cond ((intersection-type-spec? sub.ots)
+	   ;;Every sub-component must match every super-component.
+	   ;;
+	   ;; (type-super-and-sub? (and <number> <positive>)
+	   ;;                      (and <positive-fixnum>
+	   ;;                           <positive-ratnum>))
+	   ;; => #t
+	   (for-all (lambda (super-component.ots)
+		      (for-all (lambda (sub-component.ots)
+				 (object-type-spec.matching-super-and-sub? super-component.ots sub-component.ots))
+			(intersection-type-spec.component-ots* sub.ots)))
+	     (intersection-type-spec.component-ots* super.ots)))
+	  (else
+	   ;; (type-super-and-sub? (and <exact> <positive>) <positive-fixnum>) => #t
+	   (for-all (lambda (super-component.ots)
+		      (object-type-spec.matching-super-and-sub? super-component.ots sub.ots))
+	     (intersection-type-spec.component-ots* super.ots)))))
 
-	((intersection-type-spec? sub.ots)
-	 (let ((sub-component-ots* (intersection-type-spec.component-ots* sub.ots)))
-	   (cond ((ancestor-of-type-spec? super.ots)
-		  (exists (lambda (super-component.ots)
-			    (for-all (lambda (sub-component.ots)
-				       ($object-type-spec=? super-component.ots sub-component.ots))
-			      sub-component-ots*))
-		    (ancestor-of-type-spec.component-ots* super.ots)))
-		 (else
-		  (for-all (lambda (sub-component.ots)
-			     (object-type-spec.matching-super-and-sub? super.ots sub-component.ots))
-		    sub-component-ots*)))))
+   ((intersection-type-spec? sub.ots)
+    (let ((sub-component-ots* (intersection-type-spec.component-ots* sub.ots)))
+      (cond ((ancestor-of-type-spec? super.ots)
+	     (exists (lambda (super-component.ots)
+		       (for-all (lambda (sub-component.ots)
+				  ($object-type-spec=? super-component.ots sub-component.ots))
+			 sub-component-ots*))
+	       (ancestor-of-type-spec.component-ots* super.ots)))
+	    (else
+	     (for-all (lambda (sub-component.ots)
+			(object-type-spec.matching-super-and-sub? super.ots sub-component.ots))
+	       sub-component-ots*)))))
 
 ;;; --------------------------------------------------------------------
 ;;; We really want to do the complements first.
 
-	((complement-type-spec? super.ots)
-	 (let ((super-item.ots (complement-type-spec.item-ots super.ots)))
-	   (cond ((ancestor-of-type-spec? super-item.ots)
-		  (not (object-type-spec.matching-super-and-sub? super-item.ots sub.ots)))
-		 ((complement-type-spec? sub.ots)
-		  ;;If something is not a "<number>", for sure it is not a "<fixnum>":
-		  ;;
-		  ;; (type-super-and-sub? (not <fixnum>)
-		  ;;                      (not <number>)) => #t
-		  ;;
-		  ;; (type-super-and-sub? (not <number>)
-		  ;;                      (not <string>)) => #f
-		  ;;
-		  (object-type-spec.matching-super-and-sub? (complement-type-spec.item-ots sub.ots) super-item.ots))
-		 (else
-		  ;; (type-super-and-sub? (not <string>) <fixnum>) => #t
-		  ;; (type-super-and-sub? (not <fixnum>) <exact-integer>) => #t
-		  (and (not (object-type-spec.matching-super-and-sub? super-item.ots sub.ots))
-		       (not (object-type-spec.matching-super-and-sub? sub.ots super-item.ots)))))))
+   ((complement-type-spec? super.ots)
+    (let ((super-item.ots (complement-type-spec.item-ots super.ots)))
+      (cond ((ancestor-of-type-spec? super-item.ots)
+	     (not (object-type-spec.matching-super-and-sub? super-item.ots sub.ots)))
+	    ((complement-type-spec? sub.ots)
+	     ;;If something is not a "<number>", for sure it is not a "<fixnum>":
+	     ;;
+	     ;; (type-super-and-sub? (not <fixnum>)
+	     ;;                      (not <number>)) => #t
+	     ;;
+	     ;; (type-super-and-sub? (not <number>)
+	     ;;                      (not <string>)) => #f
+	     ;;
+	     (object-type-spec.matching-super-and-sub? (complement-type-spec.item-ots sub.ots) super-item.ots))
+	    (else
+	     ;; (type-super-and-sub? (not <string>) <fixnum>) => #t
+	     ;; (type-super-and-sub? (not <fixnum>) <exact-integer>) => #t
+	     (and (not (object-type-spec.matching-super-and-sub? super-item.ots sub.ots))
+		  (not (object-type-spec.matching-super-and-sub? sub.ots super-item.ots)))))))
 
-	((complement-type-spec? sub.ots)
-	 #f)
+   ((complement-type-spec? sub.ots)
+    #f)
 
 ;;; --------------------------------------------------------------------
 ;;; We really want to do the ancestors first.
 
-	((ancestor-of-type-spec? super.ots)
-	 (let ((super-component-ots* (ancestor-of-type-spec.component-ots* super.ots)))
-	   (cond ((union-type-spec? sub.ots)
-		  ;;This case is already done above, in the union stuff.
-		  (let ((sub-component-ots* (union-type-spec.component-ots* sub.ots)))
-		    (exists (lambda (super-component.ots)
-			      (exists (lambda (sub-component.ots)
-					($object-type-spec=? super-component.ots sub-component.ots))
-				sub-component-ots*))
-		      super-component-ots*)))
-		 ((intersection-type-spec? sub.ots)
-		  ;;This case is already done above, in the intersection stuff.
-		  (let ((sub-component-ots* (intersection-type-spec.component-ots* sub.ots)))
-		    (exists (lambda (super-component.ots)
-			      (for-all (lambda (sub-component.ots)
-					 ($object-type-spec=? super-component.ots sub-component.ots))
-				sub-component-ots*))
-		      super-component-ots*)))
-		 (else
-		  (exists (lambda (super-component.ots)
-			    ($object-type-spec=? super-component.ots sub.ots))
-		    super-component-ots*)))))
+   ((ancestor-of-type-spec? super.ots)
+    (let ((super-component-ots* (ancestor-of-type-spec.component-ots* super.ots)))
+      (cond ((union-type-spec? sub.ots)
+	     ;;This case is already done above, in the union stuff.
+	     (let ((sub-component-ots* (union-type-spec.component-ots* sub.ots)))
+	       (exists (lambda (super-component.ots)
+			 (exists (lambda (sub-component.ots)
+				   ($object-type-spec=? super-component.ots sub-component.ots))
+			   sub-component-ots*))
+		 super-component-ots*)))
+	    ((intersection-type-spec? sub.ots)
+	     ;;This case is already done above, in the intersection stuff.
+	     (let ((sub-component-ots* (intersection-type-spec.component-ots* sub.ots)))
+	       (exists (lambda (super-component.ots)
+			 (for-all (lambda (sub-component.ots)
+				    ($object-type-spec=? super-component.ots sub-component.ots))
+			   sub-component-ots*))
+		 super-component-ots*)))
+	    (else
+	     (exists (lambda (super-component.ots)
+		       ($object-type-spec=? super-component.ots sub.ots))
+	       super-component-ots*)))))
 
-	((ancestor-of-type-spec? sub.ots)
-	 (exists (lambda (sub-component.ots)
-		   ($object-type-spec=? super.ots sub-component.ots))
-	   (ancestor-of-type-spec.component-ots* sub.ots)))
+   ((ancestor-of-type-spec? sub.ots)
+    (exists (lambda (sub-component.ots)
+	      ($object-type-spec=? super.ots sub-component.ots))
+      (ancestor-of-type-spec.component-ots* sub.ots)))
 
 ;;; --------------------------------------------------------------------
 ;;; empty lists
 
-	((<null>-ots? sub.ots)
-	 ;;Special case:  we consider "<null>" as  sub-type of "<list>" and  of types
-	 ;;represented by  "<list-of-type-spec>".  We need to  remember that "<null>"
-	 ;;cannot be sub-typed.
-	 (or (list-of-type-spec? super.ots)
-	     (<list>-ots?        super.ots)
-	     (<null>-ots?        super.ots)
-	     (alist-type-spec?   super.ots)))
+   ((<null>-ots? sub.ots)
+    ;;Special case:  we consider "<null>" as  sub-type of "<list>" and  of types
+    ;;represented by  "<list-of-type-spec>".  We need to  remember that "<null>"
+    ;;cannot be sub-typed.
+    (or (list-of-type-spec? super.ots)
+	(<list>-ots?        super.ots)
+	(<null>-ots?        super.ots)
+	(alist-type-spec?   super.ots)))
 
-	((<null>-ots? super.ots)
-	 ;;This matches only if SUB.OTS is itself "<null>".  But such case is handled
-	 ;;above, so here we just return false.
-	 #f)
+   ((<null>-ots? super.ots)
+    ;;This matches only if SUB.OTS is itself "<null>".  But such case is handled
+    ;;above, so here we just return false.
+    #f)
 
 ;;; --------------------------------------------------------------------
 ;;; empty vectors
 
-	((<empty-vector>-ots? sub.ots)
-	 ;;Special case: we  consider "<empty-vector>" as sub-type  of "<vector>" and
-	 ;;the  types represented  by "<vector-of-type-spec>".   We need  to remember
-	 ;;that "<empty-vector>" cannot be sub-typed.
-	 (or (vector-of-type-spec? super.ots)
-	     (<vector>-ots?        super.ots)
-	     (<empty-vector>-ots?  super.ots)))
+   ((<empty-vector>-ots? sub.ots)
+    ;;Special case: we  consider "<empty-vector>" as sub-type  of "<vector>" and
+    ;;the  types represented  by "<vector-of-type-spec>".   We need  to remember
+    ;;that "<empty-vector>" cannot be sub-typed.
+    (or (vector-of-type-spec? super.ots)
+	(<vector>-ots?        super.ots)
+	(<empty-vector>-ots?  super.ots)))
 
-	((<empty-vector>-ots? super.ots)
-	 ;;This matches only if SUB.OTS is itself "<empty-vector>".  But such case is
-	 ;;handled above, so here we just return false.
-	 #f)
+   ((<empty-vector>-ots? super.ots)
+    ;;This matches only if SUB.OTS is itself "<empty-vector>".  But such case is
+    ;;handled above, so here we just return false.
+    #f)
 
 ;;; --------------------------------------------------------------------
 ;;; pair type specifications
 
-	((<pair>-ots? super.ots)
-	 (or (<pair>-ots?        sub.ots)
-	     (pair-type-spec?    sub.ots)
-	     (pair-of-type-spec? sub.ots)
-	     (<nelist>-ots?      sub.ots)
-	     (list-type-spec?    sub.ots)))
+   ((<pair>-ots? super.ots)
+    (or (<pair>-ots?        sub.ots)
+	(pair-type-spec?    sub.ots)
+	(pair-of-type-spec? sub.ots)
+	(<nelist>-ots?      sub.ots)
+	(list-type-spec?    sub.ots)))
 
-	((pair-type-spec? super.ots)
-	 (cond ((pair-type-spec? sub.ots)
-		;; (type-super-and-sub? (pair <number> <number>) (pair <fixnum> <flonum>)) => #t
-		(and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots super.ots)
-							       (pair-type-spec.car-ots sub.ots))
-		     (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots super.ots)
-							       (pair-type-spec.cdr-ots sub.ots))))
-	       ((pair-of-type-spec? sub.ots)
-		;; (type-super-and-sub? (pair <number> <number>) (pair-of <fixnum>)) => #t
-		(let ((sub-item.ots (pair-of-type-spec.item-ots sub.ots)))
-		  (and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots super.ots) sub-item.ots)
-		       (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots super.ots) sub-item.ots))))
-	       ((list-type-spec? sub.ots)
-		;; (type-super-and-sub? (pair <number> <null>) (list <number>)) => #t
-		(let ((sub-item*.ots (list-type-spec.item-ots* sub.ots)))
-		  (and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots super.ots)
-								 (car sub-item*.ots))
-		       (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots super.ots)
-								 (make-null-or-list-type-spec (cdr sub-item*.ots))))))
-	       ;;No LIST-OF type here: a LIST-OF type annotation does not specify the
-	       ;;number  of items,  while a  PAIR annotation  specifies at  least one
-	       ;;item.
-	       (else #f)))
+   ((pair-type-spec? super.ots)
+    (cond ((pair-type-spec? sub.ots)
+	   ;; (type-super-and-sub? (pair <number> <number>) (pair <fixnum> <flonum>)) => #t
+	   (and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots super.ots)
+							  (pair-type-spec.car-ots sub.ots))
+		(object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots super.ots)
+							  (pair-type-spec.cdr-ots sub.ots))))
+	  ((pair-of-type-spec? sub.ots)
+	   ;; (type-super-and-sub? (pair <number> <number>) (pair-of <fixnum>)) => #t
+	   (let ((sub-item.ots (pair-of-type-spec.item-ots sub.ots)))
+	     (and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots super.ots) sub-item.ots)
+		  (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots super.ots) sub-item.ots))))
+	  ((list-type-spec? sub.ots)
+	   ;; (type-super-and-sub? (pair <number> <null>) (list <number>)) => #t
+	   (let ((sub-item*.ots (list-type-spec.item-ots* sub.ots)))
+	     (and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots super.ots)
+							    (car sub-item*.ots))
+		  (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots super.ots)
+							    (make-null-or-list-type-spec (cdr sub-item*.ots))))))
+	  ;;No LIST-OF type here: a LIST-OF type annotation does not specify the
+	  ;;number  of items,  while a  PAIR annotation  specifies at  least one
+	  ;;item.
+	  (else #f)))
 
-	((pair-of-type-spec? super.ots)
-	 (cond ((pair-of-type-spec? sub.ots)
-		;; (type-super-and-sub? (pair-of <number>) (pair-of <fixnum>))
-		(object-type-spec.matching-super-and-sub? (pair-of-type-spec.item-ots super.ots)
-							  (pair-of-type-spec.item-ots sub.ots)))
-	       ((pair-type-spec? sub.ots)
-		;; (type-super-and-sub? (pair-of <number>) (pair <fixnum> <fixnum>))
-		(let ((super-item.ots (pair-of-type-spec.item-ots super.ots)))
-		  (and (object-type-spec.matching-super-and-sub? super-item.ots (pair-type-spec.car-ots sub.ots))
-		       (object-type-spec.matching-super-and-sub? super-item.ots (pair-type-spec.cdr-ots sub.ots)))))
-	       ((list-type-spec? sub.ots)
-		;; (type-super-and-sub? (pair-of (or <number> <null>)) (list <fixnum>))
-		(let ((super-item.ots	(pair-of-type-spec.item-ots super.ots))
-		      (sub-item*.ots	(list-type-spec.item-ots* sub.ots)))
-		  (and (object-type-spec.matching-super-and-sub? super-item.ots (car sub-item*.ots))
-		       (object-type-spec.matching-super-and-sub? super-item.ots (make-null-or-list-type-spec (cdr sub-item*.ots))))))
-	       ;;No LIST-OF type here: a LIST-OF type annotation does not specify the
-	       ;;number of items,  while a PAIR-OF annotation specifies  at least one
-	       ;;item.
-	       (else #f)))
+   ((pair-of-type-spec? super.ots)
+    (cond ((pair-of-type-spec? sub.ots)
+	   ;; (type-super-and-sub? (pair-of <number>) (pair-of <fixnum>))
+	   (object-type-spec.matching-super-and-sub? (pair-of-type-spec.item-ots super.ots)
+						     (pair-of-type-spec.item-ots sub.ots)))
+	  ((pair-type-spec? sub.ots)
+	   ;; (type-super-and-sub? (pair-of <number>) (pair <fixnum> <fixnum>))
+	   (let ((super-item.ots (pair-of-type-spec.item-ots super.ots)))
+	     (and (object-type-spec.matching-super-and-sub? super-item.ots (pair-type-spec.car-ots sub.ots))
+		  (object-type-spec.matching-super-and-sub? super-item.ots (pair-type-spec.cdr-ots sub.ots)))))
+	  ((list-type-spec? sub.ots)
+	   ;; (type-super-and-sub? (pair-of (or <number> <null>)) (list <fixnum>))
+	   (let ((super-item.ots	(pair-of-type-spec.item-ots super.ots))
+		 (sub-item*.ots	(list-type-spec.item-ots* sub.ots)))
+	     (and (object-type-spec.matching-super-and-sub? super-item.ots (car sub-item*.ots))
+		  (object-type-spec.matching-super-and-sub? super-item.ots (make-null-or-list-type-spec (cdr sub-item*.ots))))))
+	  ;;No LIST-OF type here: a LIST-OF type annotation does not specify the
+	  ;;number of items,  while a PAIR-OF annotation specifies  at least one
+	  ;;item.
+	  (else #f)))
 
 ;;; --------------------------------------------------------------------
 ;;; list type specifications
 
-	((<list>-ots? super.ots)
-	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<core-type-spec>" have
-	 ;;already been handled above, with the exception of "<null>".
-	 (cond ((or (<null>-ots?        sub.ots)
-		    (list-of-type-spec? sub.ots)
-		    (list-type-spec?    sub.ots)))
-	       ((pair-type-spec? sub.ots)
-		;;This matches if the cdr is a list.
-		(object-type-spec.matching-super-and-sub? (<list>-ots) (pair-type-spec.cdr-ots sub.ots)))
-	       ((pair-of-type-spec? sub.ots)
-		;;This matches if the item is a list.
-		(object-type-spec.matching-super-and-sub? (<list>-ots) (pair-of-type-spec.item-ots sub.ots)))
-	       (else #f)))
+   ((<list>-ots? super.ots)
+    ;;Notice  that the  cases in  which SUB.OTS  is a  "<core-type-spec>" have
+    ;;already been handled above, with the exception of "<null>".
+    (cond ((or (<null>-ots?        sub.ots)
+	       (list-of-type-spec? sub.ots)
+	       (list-type-spec?    sub.ots)))
+	  ((pair-type-spec? sub.ots)
+	   ;;This matches if the cdr is a list.
+	   (object-type-spec.matching-super-and-sub? (<list>-ots) (pair-type-spec.cdr-ots sub.ots)))
+	  ((pair-of-type-spec? sub.ots)
+	   ;;This matches if the item is a list.
+	   (object-type-spec.matching-super-and-sub? (<list>-ots) (pair-of-type-spec.item-ots sub.ots)))
+	  (else #f)))
 
-	((<nelist>-ots? super.ots)
-	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<core-type-spec>" have
-	 ;;already been handled above.
-	 (cond ((list-type-spec? sub.ots))
-	       ((pair-type-spec? sub.ots)
-		;;This matches if the cdr is a list.
-		(object-type-spec.matching-super-and-sub? (<list>-ots) (pair-type-spec.cdr-ots sub.ots)))
-	       ((pair-of-type-spec? sub.ots)
-		;;This matches if the item is a list.
-		(object-type-spec.matching-super-and-sub? (<list>-ots) (pair-of-type-spec.item-ots sub.ots)))
-	       (else #f)))
+   ((<nelist>-ots? super.ots)
+    ;;Notice  that the  cases in  which SUB.OTS  is a  "<core-type-spec>" have
+    ;;already been handled above.
+    (cond ((list-type-spec? sub.ots))
+	  ((pair-type-spec? sub.ots)
+	   ;;This matches if the cdr is a list.
+	   (object-type-spec.matching-super-and-sub? (<list>-ots) (pair-type-spec.cdr-ots sub.ots)))
+	  ((pair-of-type-spec? sub.ots)
+	   ;;This matches if the item is a list.
+	   (object-type-spec.matching-super-and-sub? (<list>-ots) (pair-of-type-spec.item-ots sub.ots)))
+	  (else #f)))
 
-	((list-type-spec? super.ots)
-	 ;;SUPER.OTS is a non-empty list holding a known and fixed number of items of
-	 ;;known type.
-	 (cond ((list-type-spec? sub.ots)
-		;;We want the following:
-		;;
-		;;   (type-super-and-sub? (list <number>) (list <fixnum>))	=> #t
-		;;
-		(and (= (list-type-spec.length super.ots)
-			(list-type-spec.length sub.ots))
-		     (for-all object-type-spec.matching-super-and-sub?
-		       (list-type-spec.item-ots* super.ots)
-		       (list-type-spec.item-ots* sub.ots))))
-	       ((pair-type-spec? sub.ots)
-		;;We want:
-		;;
-		;;   (type-super-and-sub? (list <fixnum>) (pair <fixnum> <null>)) => #t
-		;;
-		(let ((super-item*.ots (list-type-spec.item-ots* super.ots)))
-		  (and (object-type-spec.matching-super-and-sub? (car super-item*.ots)
-								 (pair-type-spec.car-ots sub.ots))
-		       (object-type-spec.matching-super-and-sub? (make-null-or-list-type-spec (cdr super-item*.ots))
-								 (pair-type-spec.cdr-ots sub.ots)))))
-	       ((pair-of-type-spec? sub.ots)
-		;; (type-super-and-sub? (list <null>) (pair-of <null>)) => #t
-		(let ((super-item*.ots	(list-type-spec.item-ots*   super.ots))
-		      (sub-item.ots	(pair-of-type-spec.item-ots sub.ots)))
-		  (and (object-type-spec.matching-super-and-sub? (car super-item*.ots) sub-item.ots)
-		       (object-type-spec.matching-super-and-sub? (make-null-or-list-type-spec (cdr super-item*.ots)) sub-item.ots))))
-	       ((alist-type-spec? sub.ots)
-		(let ((sub-key.ots   (alist-type-spec.key-ots   sub.ots))
-		      (sub-value.ots (alist-type-spec.val-ots sub.ots)))
-		  (for-all (lambda (super-item.ots)
-			     (cond ((pair-type-spec? super-item.ots)
-				    ;; (type-super-and-sub? (list (pair <symbol> <number>) ...)
-				    ;;                      (alist <symbol> <number>))
-				    (and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots super-item.ots)
-										   sub-key.ots)
-					 (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots super-item.ots)
-										   sub-value.ots)))
-				   ((pair-of-type-spec? super-item.ots)
-				    ;; (type-super-and-sub? (alist <symbol> <number>)
-				    ;;                      (list (pair-of (or <symbol> <number>)) ...))
-				    (let ((super-super-item.ots (pair-of-type-spec.item-ots super-item.ots)))
-				      (and (object-type-spec.matching-super-and-sub? sub-key.ots   super-super-item.ots)
-					   (object-type-spec.matching-super-and-sub? sub-value.ots super-super-item.ots))))
-				   (else #f)))
-		    (list-type-spec.item-ots* super.ots))))
-	       (else #f)))
+   ((list-type-spec? super.ots)
+    ;;SUPER.OTS is a non-empty list holding a known and fixed number of items of
+    ;;known type.
+    (cond ((list-type-spec? sub.ots)
+	   ;;We want the following:
+	   ;;
+	   ;;   (type-super-and-sub? (list <number>) (list <fixnum>))	=> #t
+	   ;;
+	   (and (= (list-type-spec.length super.ots)
+		   (list-type-spec.length sub.ots))
+		(for-all object-type-spec.matching-super-and-sub?
+		  (list-type-spec.item-ots* super.ots)
+		  (list-type-spec.item-ots* sub.ots))))
+	  ((pair-type-spec? sub.ots)
+	   ;;We want:
+	   ;;
+	   ;;   (type-super-and-sub? (list <fixnum>) (pair <fixnum> <null>)) => #t
+	   ;;
+	   (let ((super-item*.ots (list-type-spec.item-ots* super.ots)))
+	     (and (object-type-spec.matching-super-and-sub? (car super-item*.ots)
+							    (pair-type-spec.car-ots sub.ots))
+		  (object-type-spec.matching-super-and-sub? (make-null-or-list-type-spec (cdr super-item*.ots))
+							    (pair-type-spec.cdr-ots sub.ots)))))
+	  ((pair-of-type-spec? sub.ots)
+	   ;; (type-super-and-sub? (list <null>) (pair-of <null>)) => #t
+	   (let ((super-item*.ots	(list-type-spec.item-ots*   super.ots))
+		 (sub-item.ots	(pair-of-type-spec.item-ots sub.ots)))
+	     (and (object-type-spec.matching-super-and-sub? (car super-item*.ots) sub-item.ots)
+		  (object-type-spec.matching-super-and-sub? (make-null-or-list-type-spec (cdr super-item*.ots)) sub-item.ots))))
+	  ((alist-type-spec? sub.ots)
+	   (let ((sub-key.ots   (alist-type-spec.key-ots   sub.ots))
+		 (sub-value.ots (alist-type-spec.val-ots sub.ots)))
+	     (for-all (lambda (super-item.ots)
+			(cond ((pair-type-spec? super-item.ots)
+			       ;; (type-super-and-sub? (list (pair <symbol> <number>) ...)
+			       ;;                      (alist <symbol> <number>))
+			       (and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots super-item.ots)
+									      sub-key.ots)
+				    (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots super-item.ots)
+									      sub-value.ots)))
+			      ((pair-of-type-spec? super-item.ots)
+			       ;; (type-super-and-sub? (alist <symbol> <number>)
+			       ;;                      (list (pair-of (or <symbol> <number>)) ...))
+			       (let ((super-super-item.ots (pair-of-type-spec.item-ots super-item.ots)))
+				 (and (object-type-spec.matching-super-and-sub? sub-key.ots   super-super-item.ots)
+				      (object-type-spec.matching-super-and-sub? sub-value.ots super-super-item.ots))))
+			      (else #f)))
+	       (list-type-spec.item-ots* super.ots))))
+	  (else #f)))
 
-	((list-of-type-spec? super.ots)
-	 ;;SUPER.OTS is a  possibly empty list holding an unknown  number of items of
-	 ;;known type.
-	 (cond ((list-of-type-spec? sub.ots)
-		;; (type-super-and-sub? (list-of <number>) (list-of <fixnum>)) => #t
-		(object-type-spec.matching-super-and-sub? (list-of-type-spec.item-ots super.ots)
-							  (list-of-type-spec.item-ots sub.ots)))
-	       ((list-type-spec? sub.ots)
-		;; (type-super-and-sub? (list-of <fixnum>) (list <fixnum>)) => #t
-		;; (type-super-and-sub? (list-of <number>) (list <fixnum> <flonum>)) => #t
-		(let ((super-item.ots (list-of-type-spec.item-ots super.ots)))
-		  (for-all (lambda (sub-item.ots)
-			     (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
-		    (list-type-spec.item-ots* sub.ots))))
-	       ((pair-type-spec? sub.ots)
-		;; (type-super-and-sub? (list-of <fixnum>)
-		;;                      (pair <fixnum> (list-of <fixnum>)))
-		;; => #t
-		(let ((super-item.ots	(list-of-type-spec.item-ots super.ots))
-		      (sub-car.ots	(pair-type-spec.car-ots     sub.ots))
-		      (sub-cdr.ots	(pair-type-spec.cdr-ots     sub.ots)))
-		  (and (object-type-spec.matching-super-and-sub? super-item.ots sub-car.ots)
-		       (object-type-spec.matching-super-and-sub? super.ots      sub-cdr.ots))))
-	       ((alist-type-spec? sub.ots)
-		(let ((super-item.ots (list-of-type-spec.item-ots super.ots)))
-		  (cond ((pair-type-spec? super-item.ots)
-			 ;; (type-super-and-sub? (list-of (pair <symbol> <number>))
-			 ;;                      (alist <symbol> <number>))
-			 (and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots  super-item.ots)
-									(alist-type-spec.key-ots sub.ots))
-			      (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots    super-item.ots)
-									(alist-type-spec.val-ots sub.ots))))
-			((pair-of-type-spec? super-item.ots)
-			 ;; (type-super-and-sub? (list-of (pair-of (or <symbol> <number>)))
-			 ;;                      (alist <symbol> <number>))
-			 (let ((super-super-item.ots (pair-of-type-spec.item-ots super-item.ots)))
-			   (and (object-type-spec.matching-super-and-sub? super-super-item.ots (alist-type-spec.key-ots   sub.ots))
-				(object-type-spec.matching-super-and-sub? super-super-item.ots (alist-type-spec.val-ots sub.ots)))))
-			(else #f))))
-	       ;;No PAIR-OF  types here: a  LIST-OF type annotation does  not specify
-	       ;;the number of items, while  PAIR-OF annotations specify at least one
-	       ;;item.  Notice that:
-	       ;;
-	       ;;   (type-super-and-sub? (list-of <fixnum>)
-	       ;;                        (pair-of (or <fixnum> <null>)))
-	       ;;   => #f
-	       ;;
-	       (else #f)))
+   ((list-of-type-spec? super.ots)
+    ;;SUPER.OTS is a  possibly empty list holding an unknown  number of items of
+    ;;known type.
+    (cond ((list-of-type-spec? sub.ots)
+	   ;; (type-super-and-sub? (list-of <number>) (list-of <fixnum>)) => #t
+	   (object-type-spec.matching-super-and-sub? (list-of-type-spec.item-ots super.ots)
+						     (list-of-type-spec.item-ots sub.ots)))
+	  ((list-type-spec? sub.ots)
+	   ;; (type-super-and-sub? (list-of <fixnum>) (list <fixnum>)) => #t
+	   ;; (type-super-and-sub? (list-of <number>) (list <fixnum> <flonum>)) => #t
+	   (let ((super-item.ots (list-of-type-spec.item-ots super.ots)))
+	     (for-all (lambda (sub-item.ots)
+			(object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
+	       (list-type-spec.item-ots* sub.ots))))
+	  ((pair-type-spec? sub.ots)
+	   ;; (type-super-and-sub? (list-of <fixnum>)
+	   ;;                      (pair <fixnum> (list-of <fixnum>)))
+	   ;; => #t
+	   (let ((super-item.ots	(list-of-type-spec.item-ots super.ots))
+		 (sub-car.ots	(pair-type-spec.car-ots     sub.ots))
+		 (sub-cdr.ots	(pair-type-spec.cdr-ots     sub.ots)))
+	     (and (object-type-spec.matching-super-and-sub? super-item.ots sub-car.ots)
+		  (object-type-spec.matching-super-and-sub? super.ots      sub-cdr.ots))))
+	  ((alist-type-spec? sub.ots)
+	   (let ((super-item.ots (list-of-type-spec.item-ots super.ots)))
+	     (cond ((pair-type-spec? super-item.ots)
+		    ;; (type-super-and-sub? (list-of (pair <symbol> <number>))
+		    ;;                      (alist <symbol> <number>))
+		    (and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots  super-item.ots)
+								   (alist-type-spec.key-ots sub.ots))
+			 (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots    super-item.ots)
+								   (alist-type-spec.val-ots sub.ots))))
+		   ((pair-of-type-spec? super-item.ots)
+		    ;; (type-super-and-sub? (list-of (pair-of (or <symbol> <number>)))
+		    ;;                      (alist <symbol> <number>))
+		    (let ((super-super-item.ots (pair-of-type-spec.item-ots super-item.ots)))
+		      (and (object-type-spec.matching-super-and-sub? super-super-item.ots (alist-type-spec.key-ots   sub.ots))
+			   (object-type-spec.matching-super-and-sub? super-super-item.ots (alist-type-spec.val-ots sub.ots)))))
+		   (else #f))))
+	  ;;No PAIR-OF  types here: a  LIST-OF type annotation does  not specify
+	  ;;the number of items, while  PAIR-OF annotations specify at least one
+	  ;;item.  Notice that:
+	  ;;
+	  ;;   (type-super-and-sub? (list-of <fixnum>)
+	  ;;                        (pair-of (or <fixnum> <null>)))
+	  ;;   => #f
+	  ;;
+	  (else #f)))
 
 ;;; --------------------------------------------------------------------
 ;;; vector type specifications
 
-	((<vector>-ots? super.ots)
-	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<core-type-spec>" have
-	 ;;already been handled above.
-	 (or (vector-of-type-spec? sub.ots)
-	     (vector-type-spec?    sub.ots)))
+   ((<vector>-ots? super.ots)
+    ;;Notice  that the  cases in  which SUB.OTS  is a  "<core-type-spec>" have
+    ;;already been handled above.
+    (or (vector-of-type-spec? sub.ots)
+	(vector-type-spec?    sub.ots)))
 
-	((<nevector>-ots? super.ots)
-	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<core-type-spec>" have
-	 ;;already been handled above.
-	 (vector-type-spec? sub.ots))
+   ((<nevector>-ots? super.ots)
+    ;;Notice  that the  cases in  which SUB.OTS  is a  "<core-type-spec>" have
+    ;;already been handled above.
+    (vector-type-spec? sub.ots))
 
-	((vector-type-spec? super.ots)
-	 (cond ((vector-type-spec? sub.ots)
-		;; (type-super-and-sub? (vector <number>) (vector <fixnum>)) => #t
-		(and (= (vector-type-spec.length super.ots)
-			(vector-type-spec.length sub.ots))
-		     (for-all object-type-spec.matching-super-and-sub?
-		       (vector-type-spec.item-ots* super.ots)
-		       (vector-type-spec.item-ots* sub.ots))))
-	       ;;No "(vector-of  ?type)" case here:  the "(vector ?type0  ?type ...)"
-	       ;;type annotation  specifies at  least one  item, whiel  the VECTOR-OF
-	       ;;annoation does not specify a length.
-	       (else #f)))
+   ((vector-type-spec? super.ots)
+    (cond ((vector-type-spec? sub.ots)
+	   ;; (type-super-and-sub? (vector <number>) (vector <fixnum>)) => #t
+	   (and (= (vector-type-spec.length super.ots)
+		   (vector-type-spec.length sub.ots))
+		(for-all object-type-spec.matching-super-and-sub?
+		  (vector-type-spec.item-ots* super.ots)
+		  (vector-type-spec.item-ots* sub.ots))))
+	  ;;No "(vector-of  ?type)" case here:  the "(vector ?type0  ?type ...)"
+	  ;;type annotation  specifies at  least one  item, whiel  the VECTOR-OF
+	  ;;annoation does not specify a length.
+	  (else #f)))
 
-	((vector-of-type-spec? super.ots)
-	 (cond ((vector-of-type-spec? sub.ots)
-		;; (type-super-and-sub? (vector-of <number>) (vector-of <fixnum>)) => #t
-		(object-type-spec.matching-super-and-sub? (vector-of-type-spec.item-ots super.ots)
-							  (vector-of-type-spec.item-ots sub.ots)))
-	       ((vector-type-spec? sub.ots)
-		;; (type-super-and-sub? (vector-of <fixnum>) (vector <fixnum>)) => #t
-		;; (type-super-and-sub? (vector-of <number>) (vector <fixnum> <flonum>)) => #t
-		(let ((super-item.ots (vector-of-type-spec.item-ots super.ots)))
-		  (for-all (lambda (sub-item.ots)
-			     (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
-		    (vector-type-spec.item-ots* sub.ots))))
-	       (else #f)))
+   ((vector-of-type-spec? super.ots)
+    (cond ((vector-of-type-spec? sub.ots)
+	   ;; (type-super-and-sub? (vector-of <number>) (vector-of <fixnum>)) => #t
+	   (object-type-spec.matching-super-and-sub? (vector-of-type-spec.item-ots super.ots)
+						     (vector-of-type-spec.item-ots sub.ots)))
+	  ((vector-type-spec? sub.ots)
+	   ;; (type-super-and-sub? (vector-of <fixnum>) (vector <fixnum>)) => #t
+	   ;; (type-super-and-sub? (vector-of <number>) (vector <fixnum> <flonum>)) => #t
+	   (let ((super-item.ots (vector-of-type-spec.item-ots super.ots)))
+	     (for-all (lambda (sub-item.ots)
+			(object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
+	       (vector-type-spec.item-ots* sub.ots))))
+	  (else #f)))
 
 ;;; --------------------------------------------------------------------
 ;;; condition-object type specifications
 
-	((compound-condition-type-spec? super.ots)
-	 (cond ((compound-condition-type-spec? sub.ots)
-		;;This is the case:
-		;;
-		;;   (is-a? (condition (make-who-condition 'ciao)
-		;;                     (make-message-condition "ciao"))
-		;;          (condition &who &message))
-		;;
-		;;every condition-object  type in  the super must  be present  in the
-		;;sub.   Remember  that  all  the component  OTSs  are  instances  of
-		;;"<record-type-spec>"  representing   a  Scheme-level   sub-type  of
-		;;"&condition".
-		(let ((sub-component*.ots (compound-condition-type-spec.component-ots* sub.ots)))
-		  (for-all (lambda (super-component.ots)
-			     (exists (lambda (sub-component.ots)
-				       (%compare-super-with-sub-and-its-parents super-component.ots sub-component.ots))
-			       sub-component*.ots))
-		    (compound-condition-type-spec.component-ots* super.ots))))
-	       (else #f)))
+   ((compound-condition-type-spec? super.ots)
+    (cond ((compound-condition-type-spec? sub.ots)
+	   ;;This is the case:
+	   ;;
+	   ;;   (is-a? (condition (make-who-condition 'ciao)
+	   ;;                     (make-message-condition "ciao"))
+	   ;;          (condition &who &message))
+	   ;;
+	   ;;every condition-object  type in  the super must  be present  in the
+	   ;;sub.   Remember  that  all  the component  OTSs  are  instances  of
+	   ;;"<record-type-spec>"  representing   a  Scheme-level   sub-type  of
+	   ;;"&condition".
+	   (let ((sub-component*.ots (compound-condition-type-spec.component-ots* sub.ots)))
+	     (for-all (lambda (super-component.ots)
+			(exists (lambda (sub-component.ots)
+				  (%compare-super-with-sub-and-its-parents super-component.ots sub-component.ots))
+			  sub-component*.ots))
+	       (compound-condition-type-spec.component-ots* super.ots))))
+	  (else #f)))
 
-	((<compound-condition>-ots? super.ots)
-	 ;;This is the case:
-	 ;;
-	 ;;   (is-a? ?expr <compound-condition>)
-	 ;;
-	 ;;we want a match, for example, in the following cases:
-	 ;;
-	 ;;   (is-a? (condition) <compound-condition>)
-	 ;;   => #t
-	 ;;
-	 ;;   (is-a? (condition (make-who-condition 'ciao)
-	 ;;                     (make-message-condition "ciao"))
-	 ;;          <compound-condition>)
-	 ;;   => #t
-	 ;;
-	 (%compare-super-with-sub-and-its-parents (<compound-condition>-ots) super.ots))
+   ((<compound-condition>-ots? super.ots)
+    ;;This is the case:
+    ;;
+    ;;   (is-a? ?expr <compound-condition>)
+    ;;
+    ;;we want a match, for example, in the following cases:
+    ;;
+    ;;   (is-a? (condition) <compound-condition>)
+    ;;   => #t
+    ;;
+    ;;   (is-a? (condition (make-who-condition 'ciao)
+    ;;                     (make-message-condition "ciao"))
+    ;;          <compound-condition>)
+    ;;   => #t
+    ;;
+    (%compare-super-with-sub-and-its-parents (<compound-condition>-ots) super.ots))
 
-	((simple-condition-object-type-spec? super.ots)
-	 (cond ((compound-condition-type-spec? sub.ots)
-		;;This is the case:
-		;;
-		;;   (is-a? (condition (make-who-condition 'ciao)
-		;;                     (make-message-condition "ciao"))
-		;;          &who)
-		;;   => #t
-		;;
-		;;   (is-a? (condition (make-who-condition 'ciao)
-		;;                     (make-message-condition "ciao"))
-		;;          &irritants)
-		;;   => #f
-		;;
-		(let ((sub-component*.ots (compound-condition-type-spec.component-ots* sub.ots)))
-		  (exists (lambda (sub-component.ots)
-			    (%compare-super-with-sub-and-its-parents super.ots sub-component.ots))
-		    sub-component*.ots)))
-	       ((simple-condition-object-type-spec? sub.ots)
-		;;This is the case:
-		;;
-		;;   (is-a? (make-who-condition 'ciao) &who)		=> #t
-		;;   (is-a? (make-who-condition 'ciao) &message)	=> #f
-		;;
-		(%compare-super-with-sub-and-its-parents super.ots sub.ots))
-	       (else #f)))
+   ((simple-condition-object-type-spec? super.ots)
+    (cond ((compound-condition-type-spec? sub.ots)
+	   ;;This is the case:
+	   ;;
+	   ;;   (is-a? (condition (make-who-condition 'ciao)
+	   ;;                     (make-message-condition "ciao"))
+	   ;;          &who)
+	   ;;   => #t
+	   ;;
+	   ;;   (is-a? (condition (make-who-condition 'ciao)
+	   ;;                     (make-message-condition "ciao"))
+	   ;;          &irritants)
+	   ;;   => #f
+	   ;;
+	   (let ((sub-component*.ots (compound-condition-type-spec.component-ots* sub.ots)))
+	     (exists (lambda (sub-component.ots)
+		       (%compare-super-with-sub-and-its-parents super.ots sub-component.ots))
+	       sub-component*.ots)))
+	  ((simple-condition-object-type-spec? sub.ots)
+	   ;;This is the case:
+	   ;;
+	   ;;   (is-a? (make-who-condition 'ciao) &who)		=> #t
+	   ;;   (is-a? (make-who-condition 'ciao) &message)	=> #f
+	   ;;
+	   (%compare-super-with-sub-and-its-parents super.ots sub.ots))
+	  (else #f)))
 
 ;;; --------------------------------------------------------------------
 ;;; closure type specifications
 
-	((closure-type-spec? super.ots)
-	 (cond ((closure-type-spec? sub.ots)
-		;;For every  super-type signature there  must be a  matching sub-type
-		;;signature; so that the sub can  be used everywhere the super can be
-		;;used.  It does not matter if  the sub has clauses with non-matching
-		;;signatures.
-		(for-all (lambda (super.clause-signature)
-			   (exists (lambda (sub.clause-signature)
-				     (and (type-signature.matching-super-and-sub?
-					   (lambda-signature.argvals super.clause-signature)
-					   (lambda-signature.argvals sub.clause-signature))
-					  (type-signature.matching-super-and-sub?
-					   (lambda-signature.retvals super.clause-signature)
-					   (lambda-signature.retvals sub.clause-signature))))
-			     (case-lambda-signature.clause-signature* (closure-type-spec.signature sub.ots))))
-		  (case-lambda-signature.clause-signature* (closure-type-spec.signature super.ots))))
-	       (else #f)))
+   ((closure-type-spec? super.ots)
+    (cond ((closure-type-spec? sub.ots)
+	   ;;For every  super-type signature there  must be a  matching sub-type
+	   ;;signature; so that the sub can  be used everywhere the super can be
+	   ;;used.  It does not matter if  the sub has clauses with non-matching
+	   ;;signatures.
+	   (for-all (lambda (super.clause-signature)
+		      (exists (lambda (sub.clause-signature)
+				(and (type-signature.matching-super-and-sub?
+				      (lambda-signature.argvals super.clause-signature)
+				      (lambda-signature.argvals sub.clause-signature))
+				     (type-signature.matching-super-and-sub?
+				      (lambda-signature.retvals super.clause-signature)
+				      (lambda-signature.retvals sub.clause-signature))))
+			(case-lambda-signature.clause-signature* (closure-type-spec.signature sub.ots))))
+	     (case-lambda-signature.clause-signature* (closure-type-spec.signature super.ots))))
+	  (else #f)))
 
-	((closure-type-spec? sub.ots)
-	 (<procedure>-ots? super.ots))
+   ((closure-type-spec? sub.ots)
+    (<procedure>-ots? super.ots))
 
 ;;; --------------------------------------------------------------------
 ;;; hashtables
 
-	((hashtable-type-spec? super.ots)
-	 (cond ((hashtable-type-spec? sub.ots)
-		(and (object-type-spec.matching-super-and-sub? (hashtable-type-spec.key-ots super.ots)
-							       (hashtable-type-spec.key-ots sub.ots))
-		     (object-type-spec.matching-super-and-sub? (hashtable-type-spec.val-ots super.ots)
-							       (hashtable-type-spec.val-ots sub.ots))))
-	       (else #f)))
+   ((hashtable-type-spec? super.ots)
+    (cond ((hashtable-type-spec? sub.ots)
+	   (and (object-type-spec.matching-super-and-sub? (hashtable-type-spec.key-ots super.ots)
+							  (hashtable-type-spec.key-ots sub.ots))
+		(object-type-spec.matching-super-and-sub? (hashtable-type-spec.val-ots super.ots)
+							  (hashtable-type-spec.val-ots sub.ots))))
+	  (else #f)))
 
-	((hashtable-type-spec? sub.ots)
-	 (<hashtable>-ots? super.ots))
+   ((hashtable-type-spec? sub.ots)
+    (<hashtable>-ots? super.ots))
 
 ;;; --------------------------------------------------------------------
 ;;; alists
 
-	((alist-type-spec? super.ots)
-	 (cond ((alist-type-spec? sub.ots)
-		(and (object-type-spec.matching-super-and-sub? (alist-type-spec.key-ots super.ots)
-							       (alist-type-spec.key-ots sub.ots))
-		     (object-type-spec.matching-super-and-sub? (alist-type-spec.val-ots super.ots)
-							       (alist-type-spec.val-ots sub.ots))))
-	       ((list-of-type-spec? sub.ots)
-		(let ((sub-item.ots (list-of-type-spec.item-ots sub.ots)))
-		  (cond ((pair-type-spec? sub-item.ots)
-			 ;; (type-super-and-sub? (alist <symbol> <number>)
-			 ;;                      (list-of (pair <symbol> <number>)))
-			 (and (object-type-spec.matching-super-and-sub? (alist-type-spec.key-ots   super.ots)
-									(pair-type-spec.car-ots    sub-item.ots))
-			      (object-type-spec.matching-super-and-sub? (alist-type-spec.val-ots super.ots)
-									(pair-type-spec.cdr-ots    sub-item.ots))))
-			((pair-of-type-spec? sub-item.ots)
-			 ;; (type-super-and-sub? (alist <symbol> <number>)
-			 ;;                      (list-of (pair-of (or <symbol> <number>))))
-			 (let ((sub-sub-item.ots (pair-of-type-spec.item-ots sub-item.ots)))
-			   (and (object-type-spec.matching-super-and-sub? (alist-type-spec.key-ots   super.ots) sub-sub-item.ots)
-				(object-type-spec.matching-super-and-sub? (alist-type-spec.val-ots super.ots) sub-sub-item.ots))))
-			(else #f))))
-	       ((list-type-spec? sub.ots)
-		(let ((super-key.ots   (alist-type-spec.key-ots   super.ots))
-		      (super-value.ots (alist-type-spec.val-ots super.ots)))
-		  (for-all (lambda (sub-item.ots)
-			     (cond ((pair-type-spec? sub-item.ots)
-				    ;; (type-super-and-sub? (alist <symbol> <number>)
-				    ;;                      (list (pair <symbol> <number>) ...))
-				    (and (object-type-spec.matching-super-and-sub? super-key.ots
-										   (pair-type-spec.car-ots sub-item.ots))
-					 (object-type-spec.matching-super-and-sub? super-value.ots
-										   (pair-type-spec.cdr-ots sub-item.ots))))
-				   ((pair-of-type-spec? sub-item.ots)
-				    ;; (type-super-and-sub? (alist <symbol> <number>)
-				    ;;                      (list (pair-of (or <symbol> <number>)) ...))
-				    (let ((sub-sub-item.ots (pair-of-type-spec.item-ots sub-item.ots)))
-				      (and (object-type-spec.matching-super-and-sub? super-key.ots   sub-sub-item.ots)
-					   (object-type-spec.matching-super-and-sub? super-value.ots sub-sub-item.ots))))
-				   (else #f)))
-		    (list-type-spec.item-ots* sub.ots))))
-	       (else #f)))
+   ((alist-type-spec? super.ots)
+    (cond ((alist-type-spec? sub.ots)
+	   (and (object-type-spec.matching-super-and-sub? (alist-type-spec.key-ots super.ots)
+							  (alist-type-spec.key-ots sub.ots))
+		(object-type-spec.matching-super-and-sub? (alist-type-spec.val-ots super.ots)
+							  (alist-type-spec.val-ots sub.ots))))
+	  ((list-of-type-spec? sub.ots)
+	   (let ((sub-item.ots (list-of-type-spec.item-ots sub.ots)))
+	     (cond ((pair-type-spec? sub-item.ots)
+		    ;; (type-super-and-sub? (alist <symbol> <number>)
+		    ;;                      (list-of (pair <symbol> <number>)))
+		    (and (object-type-spec.matching-super-and-sub? (alist-type-spec.key-ots   super.ots)
+								   (pair-type-spec.car-ots    sub-item.ots))
+			 (object-type-spec.matching-super-and-sub? (alist-type-spec.val-ots super.ots)
+								   (pair-type-spec.cdr-ots    sub-item.ots))))
+		   ((pair-of-type-spec? sub-item.ots)
+		    ;; (type-super-and-sub? (alist <symbol> <number>)
+		    ;;                      (list-of (pair-of (or <symbol> <number>))))
+		    (let ((sub-sub-item.ots (pair-of-type-spec.item-ots sub-item.ots)))
+		      (and (object-type-spec.matching-super-and-sub? (alist-type-spec.key-ots   super.ots) sub-sub-item.ots)
+			   (object-type-spec.matching-super-and-sub? (alist-type-spec.val-ots super.ots) sub-sub-item.ots))))
+		   (else #f))))
+	  ((list-type-spec? sub.ots)
+	   (let ((super-key.ots   (alist-type-spec.key-ots   super.ots))
+		 (super-value.ots (alist-type-spec.val-ots super.ots)))
+	     (for-all (lambda (sub-item.ots)
+			(cond ((pair-type-spec? sub-item.ots)
+			       ;; (type-super-and-sub? (alist <symbol> <number>)
+			       ;;                      (list (pair <symbol> <number>) ...))
+			       (and (object-type-spec.matching-super-and-sub? super-key.ots
+									      (pair-type-spec.car-ots sub-item.ots))
+				    (object-type-spec.matching-super-and-sub? super-value.ots
+									      (pair-type-spec.cdr-ots sub-item.ots))))
+			      ((pair-of-type-spec? sub-item.ots)
+			       ;; (type-super-and-sub? (alist <symbol> <number>)
+			       ;;                      (list (pair-of (or <symbol> <number>)) ...))
+			       (let ((sub-sub-item.ots (pair-of-type-spec.item-ots sub-item.ots)))
+				 (and (object-type-spec.matching-super-and-sub? super-key.ots   sub-sub-item.ots)
+				      (object-type-spec.matching-super-and-sub? super-value.ots sub-sub-item.ots))))
+			      (else #f)))
+	       (list-type-spec.item-ots* sub.ots))))
+	  (else #f)))
 
 ;;; --------------------------------------------------------------------
 ;;; enumerations
 
-	((enumeration-type-spec? super.ots)
-	 (cond ((enumeration-type-spec? sub.ots)
-		(list-of-symbols.subset? (enumeration-type-spec.symbol* sub.ots)
-					 (enumeration-type-spec.symbol* super.ots)))
-	       (else #f)))
+   ((enumeration-type-spec? super.ots)
+    (cond ((enumeration-type-spec? sub.ots)
+	   (list-of-symbols.subset? (enumeration-type-spec.symbol* sub.ots)
+				    (enumeration-type-spec.symbol* super.ots)))
+	  (else #f)))
 
 ;;; --------------------------------------------------------------------
 ;;; left-overs for SUB.OTS
 
-	((or (<list>-ots?        sub.ots)
-	     (<nelist>-ots?      sub.ots)
-	     (list-type-spec?    sub.ots)
-	     (list-of-type-spec? sub.ots))
-	 ;;All the cases of SUPER.OTS that match have been handled above.
-	 #f)
+   ((or (<list>-ots?        sub.ots)
+	(<nelist>-ots?      sub.ots)
+	(list-type-spec?    sub.ots)
+	(list-of-type-spec? sub.ots))
+    ;;All the cases of SUPER.OTS that match have been handled above.
+    #f)
 
-	((or (<vector>-ots?        sub.ots)
-	     (vector-of-type-spec? sub.ots)
-	     (vector-type-spec?    sub.ots))
-	 ;;All the cases of SUPER.OTS that match have been handled above.
-	 #f)
+   ((or (<vector>-ots?        sub.ots)
+	(vector-of-type-spec? sub.ots)
+	(vector-type-spec?    sub.ots))
+    ;;All the cases of SUPER.OTS that match have been handled above.
+    #f)
 
-	((alist-type-spec? sub.ots)
-	 (or (<list>-ots?   super.ots)
-	     (<nelist>-ots? super.ots)))
+   ((alist-type-spec? sub.ots)
+    (or (<list>-ots?   super.ots)
+	(<nelist>-ots? super.ots)))
 
 ;;; --------------------------------------------------------------------
 
-	((object-type-spec.parent-ots sub.ots)
-	 => (lambda (sub-parent.ots)
-	      (object-type-spec.matching-super-and-sub? super.ots sub-parent.ots)))
+   ((object-type-spec.parent-ots sub.ots)
+    => (lambda (sub-parent.ots)
+	 (object-type-spec.matching-super-and-sub? super.ots sub-parent.ots)))
 
-	(else #f)))
+   (else #f)))
 
 (define (%compare-super-with-sub-and-its-parents super.ots sub.ots)
   ;;Recursive function.  Search SUPER.OTS  in the hierarchy  of SUB.OTS:  return true
@@ -1739,7 +1741,8 @@
 		    (assertion-violation 'expression-expander-for-core-expressions
 		      "parameter not initialised"))))
 
-(module (object-type-spec.type-descriptor-core-expr)
+(module (object-type-spec.type-descriptor-core-expr
+	 type-signature.type-descriptor-core-expr)
 
   (define* (object-type-spec.type-descriptor-core-expr {type.ots object-type-spec?})
     ;;Given an object-type specification: build and return a core language expression

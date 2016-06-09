@@ -172,6 +172,7 @@
 (declare-core-type-descriptor <void>-ctd)
 (declare-core-type-descriptor <would-block>-ctd)
 (declare-core-type-descriptor <zero-fixnum>-ctd)
+(declare-core-type-descriptor <zero-flonum>-ctd)
 ;;
 (declare-core-type-descriptor <memory-block>-ctd)
 (declare-core-type-descriptor <time>-ctd)

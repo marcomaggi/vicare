@@ -1476,7 +1476,7 @@
 ;;;; module core-macro-transformer:
 ;;
 ;; TYPE-SIGNATURE-SUPER-AND-SUB?
-;; TYPE-SIGNATURE-MACHING
+;; TYPE-SIGNATURE-MATCHING
 ;; TYPE-SIGNATURE-UNION
 ;; TYPE-SIGNATURE-COMMON-ANCESTOR
 ;;
@@ -1539,7 +1539,7 @@
 	    (sym	(type-signature.match-arguments-against-operands super.sig sub.sig)))
        (make-psi input-form.stx
 	 (build-data no-source sym)
-	 (make-type-signature/single-value (core-prim-spec '<symbol> lexenv.run)))))
+	 (make-type-signature/single-value (make-enumeration-type-spec (list sym))))))
     (_
      (__synner__ "invalid syntax in macro use"))))
 
@@ -1708,6 +1708,42 @@
 		 (build-primref no-source 'object-type-descr.matching-super-and-sub?)
 	       (list super-des.core-expr sub-des.core-expr))
 	     (make-type-signature/single-boolean))))))
+    (_
+     (__synner__ "invalid syntax in macro use"))))
+
+
+;;;; module core-macro-transformer: descriptors-signature-matching
+
+(define-core-transformer (descriptors-signature-matching input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used  to  expand  Vicare's  DESCRIPTORS-SIGNATURE-MATCHING
+  ;;syntaxes  from the  top-level built  in  environment.  Expand  the syntax  object
+  ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?super-signature ?sub-signature)
+     (let ((super.sig	(let ((synner (lambda (message subform)
+					(raise
+					 (condition (make-who-condition __who__)
+						    (make-message-condition
+						     (string-append "invalid super signature argument: " message))
+						    (make-syntax-violation input-form.stx #f)
+						    (make-syntax-violation ?super-signature subform))))))
+			  (make-type-signature (syntax-object->type-signature-specs ?super-signature lexenv.run synner))))
+	   (sub.sig	(let ((synner (lambda (message subform)
+					(raise
+					 (condition (make-who-condition __who__)
+						    (make-message-condition
+						     (string-append "invalid sub signature argument: " message))
+						    (make-syntax-violation input-form.stx #f)
+						    (make-syntax-violation ?sub-signature subform))))))
+			  (make-type-signature (syntax-object->type-signature-specs ?sub-signature lexenv.run synner)))))
+       (let ((super-des.core-expr	(type-signature.type-descriptor-core-expr super.sig))
+	     (sub-des.core-expr		(type-signature.type-descriptor-core-expr sub.sig)))
+	 (make-psi input-form.stx
+	   (build-application no-source
+	       (build-primref no-source 'descriptors-signature.match-formals-against-operands)
+	     (list super-des.core-expr sub-des.core-expr))
+	   (make-type-signature/single-value (make-enumeration-type-spec '(exact-match possible-match no-match)))))))
     (_
      (__synner__ "invalid syntax in macro use"))))
 

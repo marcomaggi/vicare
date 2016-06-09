@@ -108,6 +108,7 @@
     type-signature.min-count				type-signature.max-count
     type-signature.min-and-max-counts
     type-signature.common-ancestor			type-signature.union
+    type-signature.type-descriptor-core-expr
 
     ;; object types specifications
     <object-type-spec>

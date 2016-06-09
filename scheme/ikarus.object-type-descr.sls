@@ -180,6 +180,36 @@
 	   (eq? (car (core-type-descriptor.uids-list des1))
 		(car (core-type-descriptor.uids-list des2))))))
 
+(define (simple-condition-type-descr? des)
+  (and (record-type-descriptor? des)
+       ($rtd-subtype? des (record-type-descriptor &condition))))
+
+(define (core-uids-list.super-and-sub? super.des sub.des)
+  (memq (car (core-type-descriptor.uids-list super.des))
+	(core-type-descriptor.uids-list sub.des)))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax cond-with-predicates
+  (syntax-rules (else)
+    ((_ ?expr (?pred . ?body) ... (else . ?else-body))
+     (let ((X ?expr))
+       (cond ((?pred X) . ?body)
+	     ...
+	     (else . ?else-body))))
+    ((_ ?expr (?pred . ?body) ...)
+     (let ((X ?expr))
+       (cond ((?pred X) . ?body)
+	     ...)))
+    ))
+
+(define-syntax or-with-predicates
+  (syntax-rules ()
+    ((_ ?expr ?pred ...)
+     (let ((X ?expr))
+       (or (?pred X) ...)))
+    ))
+
 (define-syntax define-type-descriptor-predicate
   (syntax-rules ()
     ((_ ?who ?descr)
@@ -211,6 +241,8 @@
 (define-type-descriptor-predicate <record>-ctd?			<record>-ctd)
 
 (define-type-descriptor-predicate <hashtable>-ctd?		<hashtable>-ctd)
+(define-type-descriptor-predicate <condition>-ctd?		<condition>-ctd)
+(define-type-descriptor-predicate <compound-condition>-ctd?	<compound-condition>-ctd)
 
 
 ;;;; include files
@@ -221,6 +253,7 @@
 ;;;; compound type descriptors: compound condition-object types
 
 (define-record-type (<compound-condition-type-descr> make-compound-condition-type-descr compound-condition-type-descr?)
+  (nongenerative vicare:descriptors:<compound-condition-type-descr>)
   (sealed #t)
   (fields
     (immutable component-des*		compound-condition-type-descr.component-des*)
@@ -235,10 +268,19 @@
 (define <compound-condition-type-descr>-rcd
   (record-constructor-descriptor <compound-condition-type-descr>))
 
+;;; --------------------------------------------------------------------
+
+(define (compound-condition-type-descr.exists compound-condition.des proc)
+  (exists proc (compound-condition-type-descr.component-des* compound-condition.des)))
+
+(define (compound-condition-type-descr.for-all compound-condition.des proc)
+  (for-all proc (compound-condition-type-descr.component-des* compound-condition.des)))
+
 
 ;;;; compound type descriptors: symbols enumeration
 
 (define-record-type (<enumeration-type-descr> make-enumeration-type-descr enumeration-type-descr?)
+  (nongenerative vicare:descriptors:<enumeration-type-descr>)
   (sealed #t)
   (fields
     (immutable symbol*	enumeration-type-descr.symbol*)
@@ -267,6 +309,7 @@
 ;;;; compound type descriptors: closure
 
 (define-record-type (<closure-type-descr> make-closure-type-descr closure-type-descr?)
+  (nongenerative vicare:descriptors:<closure-type-descr>)
   (sealed #t)
   (fields
     (immutable signature	closure-type-descr.signature)
@@ -298,6 +341,7 @@
 ;;;; compound type descriptors: hashtables
 
 (define-record-type (<hashtable-type-descr> make-hashtable-type-descr hashtable-type-descr?)
+  (nongenerative vicare:descriptors:<hashtable-type-descr>)
   (sealed #t)
   (fields
     (immutable key-des			hashtable-type-descr.key-des)
@@ -316,6 +360,7 @@
 ;;;; compound type descriptors: alists
 
 (define-record-type (<alist-type-descr> make-alist-type-descr alist-type-descr?)
+  (nongenerative vicare:descriptors:<alist-type-descr>)
   (sealed #t)
   (fields
     (immutable key-des			alist-type-descr.key-des)
@@ -334,6 +379,7 @@
 ;;;; compound type descriptors: pairs
 
 (define-record-type (<pair-type-descr> make-pair-type-descr pair-type-descr?)
+  (nongenerative vicare:descriptors:<pair-type-descr>)
   (sealed #t)
   (fields
     (immutable car-des		pair-type-descr.car-des)
@@ -350,6 +396,7 @@
 ;;;; compound type descriptors: pairs of
 
 (define-record-type (<pair-of-type-descr> make-pair-of-type-descr pair-of-type-descr?)
+  (nongenerative vicare:descriptors:<pair-of-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des		pair-of-type-descr.item-des)
@@ -365,6 +412,7 @@
 ;;;; compound type descriptors: lists
 
 (define-record-type (<list-type-descr> %make-list-type-descr list-type-descr?)
+  (nongenerative vicare:descriptors:<list-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des*		list-type-descr.item-des*)
@@ -398,6 +446,7 @@
 ;;;; compound type descriptors: lists of
 
 (define-record-type (<list-of-type-descr> make-list-of-type-descr list-of-type-descr?)
+  (nongenerative vicare:descriptors:<list-of-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des		list-of-type-descr.item-des)
@@ -413,6 +462,7 @@
 ;;;; compound type descriptors: vectors
 
 (define-record-type (<vector-type-descr> %make-vector-type-descr vector-type-descr?)
+  (nongenerative vicare:descriptors:<vector-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des*		vector-type-descr.item-des*)
@@ -446,6 +496,7 @@
 ;;;; compound type descriptors: vectors of
 
 (define-record-type (<vector-of-type-descr> make-vector-of-type-descr vector-of-type-descr?)
+  (nongenerative vicare:descriptors:<vector-of-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des		vector-of-type-descr.item-des)
@@ -461,6 +512,7 @@
 ;;;; compound type descriptors: union
 
 (define-record-type (<union-type-descr> %make-union-type-descr union-type-descr?)
+  (nongenerative vicare:descriptors:<union-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des*	union-type-descr.item-des*)
@@ -477,10 +529,19 @@
 (define <union-type-descr>-rcd
   (record-constructor-descriptor <union-type-descr>))
 
+;;; --------------------------------------------------------------------
+
+(define (union-type-descr.exists union.des proc)
+  (exists proc (union-type-descr.item-des* union.des)))
+
+(define (union-type-descr.for-all union.des proc)
+  (for-all proc (union-type-descr.item-des* union.des)))
+
 
 ;;;; compound type descriptors: intersection
 
 (define-record-type (<intersection-type-descr> %make-intersection-type-descr intersection-type-descr?)
+  (nongenerative vicare:descriptors:<intersection-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des*	intersection-type-descr.item-des*)
@@ -497,10 +558,19 @@
 (define <intersection-type-descr>-rcd
   (record-constructor-descriptor <intersection-type-descr>))
 
+;;; --------------------------------------------------------------------
+
+(define (intersection-type-descr.exists intersection.des proc)
+  (exists proc (intersection-type-descr.item-des* intersection.des)))
+
+(define (intersection-type-descr.for-all intersection.des proc)
+  (for-all proc (intersection-type-descr.item-des* intersection.des)))
+
 
 ;;;; compound type descriptors: complement
 
 (define-record-type (<complement-type-descr> make-complement-type-descr complement-type-descr?)
+  (nongenerative vicare:descriptors:<complement-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des		complement-type-descr.item-des)
@@ -512,10 +582,16 @@
 (define <complement-type-descr>-rcd
   (record-constructor-descriptor <complement-type-descr>))
 
+;;; --------------------------------------------------------------------
+
+(define (complement-type-descr.not complement.des proc)
+  (not (proc (complement-type-descr.item-des complement.des))))
+
 
 ;;;; compound type descriptors: ancestor-of
 
 (define-record-type (<ancestor-of-type-descr> make-ancestor-of-type-descr ancestor-of-type-descr?)
+  (nongenerative vicare:descriptors:<ancestor-of-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des		ancestor-of-type-descr.item-des)
@@ -531,6 +607,13 @@
 
 (define <ancestor-of-type-descr>-rcd
   (record-constructor-descriptor <ancestor-of-type-descr>))
+
+;;; --------------------------------------------------------------------
+
+(define (ancestor-of-type-descr.exists ancestor-of.des item.des)
+  (exists (lambda (ancestor.des)
+	    (object-type-descr=? ancestor.des item.des))
+    (ancestor-of-type-descr.ancestors-des* ancestor-of.des)))
 
 
 ;;;; utilities
@@ -1013,113 +1096,135 @@
    ((eq? super.des sub.des))
 
    ((core-type-descriptor? super.des)
-    (cond ((<top>-ctd? super.des)
-	   ;;"<top>" is the super-type of all the types, but "<void>".
-	   (not (<void>-ctd? sub.des)))
+    (if (core-type-descriptor? sub.des)
+	;;We do this case first because it is the most likely.
+	(core-uids-list.super-and-sub? super.des sub.des)
+      ;;In this continuation we know that SUB.DES is *not* a core type descriptor.
+      (cond-with-predicates super.des
+	;;"<top>" is the super-type of all the types, but "<void>" and "<no-return>".
+	(<top>-ctd?			(and (not (<void>-ctd?      sub.des))
+					     (not (<no-return>-ctd? sub.des))))
+	(<pair>-ctd?			(or-with-predicates sub.des pair-type-descr? pair-of-type-descr?))
+	(<list>-ctd?			(or-with-predicates sub.des list-type-descr? list-of-type-descr? alist-type-descr?))
+	(<nelist>-ctd?			(list-type-descr? sub.des))
+	(<vector>-ctd?			(or-with-predicates sub.des vector-type-descr? vector-of-type-descr?))
+	(<nevector>-ctd?		(vector-type-descr? sub.des))
+	(<symbol>-ctd?			(enumeration-type-descr? sub.des))
+	(<hashtable>-ctd?		(hashtable-type-descr? sub.des))
+	(<condition>-ctd?		(or-with-predicates sub.des
+					  compound-condition-type-descr?
+					  simple-condition-type-descr?
+					  <condition>-ctd?))
+	(<compound-condition>-ctd?	(or-with-predicates sub.des
+					  compound-condition-type-descr?
+					  <compound-condition>-ctd?))
+	(<record>-ctd?			(or-with-predicates sub.des
+					  ;;The   record-type   case   includes   the
+					  ;;condition object-type case.
+					  record-type-descriptor?
+					  compound-condition-type-descr?))
+	(<struct>-ctd?			(or-with-predicates sub.des
+					  ;;The   record-type   case   includes   the
+					  ;;condition object-type case.
+					  record-type-descriptor?
+					  compound-condition-type-descr?
+					  struct-type-descriptor?))
+	(<void>-ctd?			#f)
+	(<no-return>-ctd?		#f)
+	(else
+	 (cond-with-predicates sub.des
+	   ;;For an  exact match:  every descriptor  in the SUB.DES  union must  be a
+	   ;;sub-type of the super-type SUPER.DES.
+	   (union-type-descr?		(union-type-descr.for-all sub.des (lambda (sub-item.des)
+									    (super-and-sub? super.des sub-item.des))))
+	   (intersection-type-descr?	(intersection-type-descr.for-all sub.des (lambda (sub-item.des)
+										   (super-and-sub? super.des sub-item.des))))
+	   (complement-type-descr?	#f)
+	   (ancestor-of-type-descr?	(for-all (lambda (ancestor.des)
+						   (super-and-sub? super.des ancestor.des))
+					  (ancestor-of-type-descr.ancestors-des* sub.des)))
+	   (else			#f))))))
 
-	  ;;SUPER.DES and SUB.DES are both values of built-in Scheme types.
-	  ((core-type-descriptor? sub.des)
-	   (memq (car (core-type-descriptor.uids-list super.des))
-		 (core-type-descriptor.uids-list sub.des)))
+   ((core-type-descriptor? sub.des)
+    (cond-with-predicates super.des
+      (ancestor-of-type-descr?		(ancestor-of-type-descr.exists super.des sub.des))
+      (union-type-descr?		(union-type-descr.exists super.des (lambda (super-item.des)
+									     (super-and-sub? super-item.des sub.des))))
 
-	  ((record-type-descriptor? sub.des)
-	   (or (<record>-ctd? super.des)
-	       (<struct>-ctd? super.des)))
-
-	  ((struct-type-descriptor? sub.des)
-	   (<struct>-ctd? super.des))
-
-	  ((<pair>-ctd? super.des)
-	   (or (pair-type-descr?    sub.des)
-	       (pair-of-type-descr? sub.des)))
-
-	  ((<list>-ctd? super.des)
-	   (or (list-type-descr?    sub.des)
-	       (list-of-type-descr? sub.des)
-	       (alist-type-descr?   sub.des)))
-
-	  ((<nelist>-ctd? super.des)
-	   (list-type-descr? sub.des))
-
-	  ((<vector>-ctd? super.des)
-	   (or (vector-type-descr?    sub.des)
-	       (vector-of-type-descr? sub.des)))
-
-	  ((<nevector>-ctd? super.des)
-	   (vector-type-descr? sub.des))
-
-	  ((<symbol>-ctd? super.des)
-	   (enumeration-type-descr? sub.des))
-
-	  ((<hashtable>-ctd? super.des)
-	   (hashtable-type-descr? sub.des))
-
-	  ((union-type-descr? sub.des)
-	   (exists (lambda (sub-item.des)
-		     (super-and-sub? super.des sub-item.des))
-	     (union-type-descr.item-des* sub.des)))
-
-	  ((intersection-type-descr? sub.des)
-	   (for-all (lambda (sub-item.des)
-		      (super-and-sub? super.des sub-item.des))
-	     (intersection-type-descr.item-des* sub.des)))
-
-	  ((complement-type-descr? sub.des)
-	   (not (super-and-sub? super.des (complement-type-descr.item-des sub.des))))
-
-	  (else #f)))
+      (intersection-type-descr?		(intersection-type-descr.for-all super.des (lambda (super-item.des)
+										     (super-and-sub? super-item.des sub.des))))
+      (complement-type-descr?		(let ((super-item.des (complement-type-descr.item-des super.des)))
+					  (cond
+					   ;;(super-and-sub? (not <string>) <top>) => #f
+					   ((super-and-sub? sub.des super-item.des)
+					    #f)
+					   (else
+					    ;;(super-and-sub? (not <fixnum>) <flonum>) => #t
+					    ;;(super-and-sub? (not <struct>) <record>) => #t
+					    (not (super-and-sub? super-item.des sub.des))))))
+      ;;Special case: (super-and-sub? (list <top> <null>) <pair>)
+      (list-type-descr?			(and (<list>-ctd? sub.des)
+					     (= 2 (list-type-descr.length super.des))
+					     (let ((item*.des (list-type-descr.item-des* super.des)))
+					       (<top>-ctd?  (car  item*.des))
+					       (<null>-ctd? (cadr item*.des)))))
+      ;;Special case: (super-and-sub? (list-of <top>) <list>)
+      ;;Special case: (super-and-sub? (list-of <top>) <nelist>)
+      ;;Special case: (super-and-sub? (list-of ?type) <null>)
+      (list-of-type-descr?		(or (and (or-with-predicates sub.des <list>-ctd? <nelist>-ctd?)
+						 (<top>-ctd? (list-of-type-descr.item-des super.des)))
+					    (<null>-ctd? sub.des)))
+      ;;Special case: (super-and-sub? (vector-of <top>) <vector>)
+      ;;Special case: (super-and-sub? (vector-of <top>) <nevector>)
+      ;;Special case: (super-and-sub? (vector-of ?type) <empty-vector>)
+      (vector-of-type-descr?		(or (and (or-with-predicates sub.des <vector>-ctd? <nevector>-ctd?)
+						 (<top>-ctd? (vector-of-type-descr.item-des super.des)))
+					    (<empty-vector>-ctd? sub.des)))
+      ;;Special case: (super-and-sub? (pair <top> <top>) <pair>)
+      ;;Special case: (super-and-sub? (pair <top> <list>) <nelist>)
+      (pair-type-descr?			(or (and (<pair>-ctd? sub.des)
+						 (<top>-ctd? (pair-type-descr.car-des super.des))
+						 (<top>-ctd? (pair-type-descr.cdr-des super.des)))
+					    (and (<nelist>-ctd? sub.des)
+						 (<top>-ctd?  (pair-type-descr.car-des super.des))
+						 (<list>-ctd? (pair-type-descr.cdr-des super.des)))))
+      ;;Special case: (super-and-sub? (pair-of <top>) <pair>)
+      (pair-of-type-descr?		(and (<pair>-ctd? sub.des)
+					     (<top>-ctd? (pair-of-type-descr.item-des super.des))))
+      (else				#f)))
 
 ;;; --------------------------------------------------------------------
 
    ((record-type-descriptor? super.des)
-    (cond ((record-type-descriptor? sub.des)
-	   ($rtd-subtype? sub.des super.des))
-
-	  ((and (record-type-descriptor? super.des)
-		($rtd-subtype? super.des (record-type-descriptor &condition)))
-	   (cond ((compound-condition-type-descr? sub.des)
-		  (exists (lambda (sub-component.des)
-			    ($rtd-subtype? super.des sub-component.des))
-		    (compound-condition-type-descr.component-des* sub.des)))
-		 (else #f)))
-
-	  ((union-type-descr? sub.des)
-	   (exists (lambda (sub-item.des)
-		     (super-and-sub? super.des sub-item.des))
-	     (union-type-descr.item-des* sub.des)))
-
-	  ((intersection-type-descr? sub.des)
-	   (for-all (lambda (sub-item.des)
-		      (super-and-sub? super.des sub-item.des))
-	     (intersection-type-descr.item-des* sub.des)))
-
-	  ((complement-type-descr? sub.des)
-	   (not (super-and-sub? super.des (complement-type-descr.item-des sub.des))))
-
-	  (else #f)))
+    (cond-with-predicates sub.des
+      ;;This branch includes the case of SUPER.DES and SUB.DES being simple condition
+      ;;object types.
+      (record-type-descriptor?			($rtd-subtype? sub.des super.des))
+      ;;(super-and-sub? &who (condition &who &irritants)) => #t
+      (compound-condition-type-descr?		(and (simple-condition-type-descr? super.des)
+						     (compound-condition-type-descr.exists sub.des
+											   (lambda (sub-item.des)
+											     (super-and-sub? super.des sub-item.des)))))
+      (union-type-descr?			(union-type-descr.for-all sub.des (lambda (sub-item.des)
+										    (super-and-sub? super.des sub-item.des))))
+      (intersection-type-descr?			(intersection-type-descr.for-all sub.des (lambda (sub-item.des)
+											   (super-and-sub? super.des sub-item.des))))
+      (complement-type-descr?			#f)
+      (ancestor-of-type-descr?			(ancestor-of-type-descr.exists sub.des super.des))
+      (else					#f)))
 
 ;;; --------------------------------------------------------------------
 
    ((struct-type-descriptor? super.des)
-    (cond ((struct-type-descriptor? sub.des)
-	   (or (eq? super.des sub.des)
-	       (eq? (struct-type-symbol super.des)
-		    (struct-type-symbol   sub.des))))
-
-	  ((union-type-descr? sub.des)
-	   (exists (lambda (sub-item.des)
-		     (super-and-sub? super.des sub-item.des))
-	     (union-type-descr.item-des* sub.des)))
-
-	  ((intersection-type-descr? sub.des)
-	   (for-all (lambda (sub-item.des)
-		      (super-and-sub? super.des sub-item.des))
-	     (intersection-type-descr.item-des* sub.des)))
-
-	  ((complement-type-descr? sub.des)
-	   (not (super-and-sub? super.des (complement-type-descr.item-des sub.des))))
-
-	  (else #f)))
+    (cond-with-predicates sub.des
+      (struct-type-descriptor?			(eq? (struct-type-symbol super.des) (struct-type-symbol sub.des)))
+      (union-type-descr?			(union-type-descr.for-all sub.des (lambda (sub-item.des)
+										    (super-and-sub? super.des sub-item.des))))
+      (intersection-type-descr?			(intersection-type-descr.for-all sub.des (lambda (sub-item.des)
+											   (super-and-sub? super.des sub-item.des))))
+      (complement-type-descr?			#f)
+      (ancestor-of-type-descr?			(ancestor-of-type-descr.exists sub.des super.des))
+      (else					#f)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1425,27 +1530,72 @@
 ;;; --------------------------------------------------------------------
 
    ((union-type-descr? super.des)
-    (exists (lambda (super-item.des)
-	      (super-and-sub? super-item.des sub.des))
-      (union-type-descr.item-des* super.des)))
+    (cond ((union-type-descr? sub.des)
+	   (let ((super-item*.des (union-type-descr.item-des* super.des))
+		 (sub-item*.des   (union-type-descr.item-des* super.des)))
+	     (for-all (lambda (super-item.des)
+			(exists (lambda (sub-item.des)
+				  (object-type-descr.matching-super-and-sub? super-item.des sub-item.des))
+			  sub-item*.des))
+	       super-item*.des)))
+	  (else
+	   (exists (lambda (super-item.des)
+		     (super-and-sub? super-item.des sub.des))
+	     (union-type-descr.item-des* super.des)))))
 
    ((union-type-descr? sub.des)
-    #f)
+    (cond ((ancestor-of-type-descr? super.des)
+	   (let ((super-component*.des	(ancestor-of-type-descr.ancestors-des* super.des))
+		 (sub-component*.des	(union-type-descr.item-des* sub.des)))
+	     (exists (lambda (super-component.des)
+		       (for-all (lambda (sub-component.des)
+				  (object-type-descr=? super-component.des sub-component.des))
+			 sub-component*.des))
+	       super-component*.des)))
+	  (else #f)))
 
 ;;; --------------------------------------------------------------------
 
    ((intersection-type-descr? super.des)
-    (for-all (lambda (super-item.des)
-	       (super-and-sub? super-item.des sub.des))
-      (intersection-type-descr.item-des* super.des)))
+    (cond ((intersection-type-descr? sub.des)
+	   (let ((super-item*.des (intersection-type-descr.item-des* super.des))
+		 (sub-item*.des   (intersection-type-descr.item-des* super.des)))
+	     (for-all (lambda (super-item.des)
+			(for-all (lambda (sub-item.des)
+				   (object-type-descr.matching-super-and-sub? super-item.des sub-item.des))
+			  sub-item*.des))
+	       super-item*.des)))
+	  (else
+	   (for-all (lambda (super-item.des)
+		      (super-and-sub? super-item.des sub.des))
+	     (intersection-type-descr.item-des* super.des)))))
 
    ((intersection-type-descr? sub.des)
-    #f)
+    (cond ((ancestor-of-type-descr? super.des)
+	   (let ((super-component*.des	(ancestor-of-type-descr.ancestors-des* super.des))
+		 (sub-component*.des	(intersection-type-descr.item-des* sub.des)))
+	     (exists (lambda (super-component.des)
+		       (for-all (lambda (sub-component.des)
+				  (object-type-descr=? super-component.des sub-component.des))
+			 sub-component*.des))
+	       super-component*.des)))
+	  (else #f)))
 
 ;;; --------------------------------------------------------------------
 
    ((complement-type-descr? super.des)
-    (not (super-and-sub? (complement-type-descr.item-des super.des) sub.des)))
+    (let ((super-item.des (complement-type-descr.item-des super.des)))
+      (cond
+       ;;(super-and-sub? (not <struct>) (not <record>)) => #t
+       ((complement-type-descr? sub.des)
+	(super-and-sub? super-item.des (complement-type-descr.item-des sub.des)))
+       ;;(super-and-sub? (not <string>) <top>) => #f
+       ((super-and-sub? sub.des super-item.des)
+	#f)
+       (else
+	;;(super-and-sub? (not <fixnum>) <flonum>) => #t
+	;;(super-and-sub? (not <struct>) <record>) => #t
+	(not (super-and-sub? super-item.des sub.des))))))
 
    ((complement-type-descr? sub.des)
     #f)
@@ -1454,8 +1604,10 @@
 
    ((ancestor-of-type-descr? super.des)
     (cond ((ancestor-of-type-descr? sub.des)
-	   (object-type-descr=? (ancestor-of-type-descr.item-des super.des)
-				(ancestor-of-type-descr.item-des   sub.des)))
+	   ;;(super-and-sub? (ancestor-of <record>) (ancestor-of <struct>)) => #t
+	   ;;(super-and-sub? (ancestor-of <struct>) (ancestor-of <record>)) => #f
+	   (object-type-descr=? (ancestor-of-type-descr.item-des sub.des)
+				(ancestor-of-type-descr.item-des super.des)))
 	  (else
 	   (exists (lambda (ancestor.des)
 		     (object-type-descr=? ancestor.des sub.des))
@@ -1608,7 +1760,7 @@
 	(else #f)))
 
 
-;;;; object-type descriptors: ancestry
+;;;; object-type descriptors: parent
 
 (define (object-type-descr.parent object.des)
   ;;Return false or an object-type descriptor which is the parent of OBJECT.DES.
@@ -1656,6 +1808,9 @@
 
 	(else
 	 <top>-ctd)))
+
+
+;;;; object-type descriptors: ancestry
 
 (define (object-type-descr.ancestors-des* object.des)
   ;;Return a (possibly  empty) list of type descriptors representing  the ancestry of

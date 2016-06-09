@@ -934,7 +934,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-time.sps					\
 	tests/test-vicare-try.sps					\
 	tests/test-vicare-type-descriptors.sps				\
-	tests/test-vicare-descriptors-signatures.sps			\
 	tests/test-vicare-quotations.sps				\
 	tests/test-vicare-ratnums.sps					\
 	tests/test-vicare-reader.sps					\
