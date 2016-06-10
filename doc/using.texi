@@ -535,7 +535,7 @@ least exact multiple of @math{4096} greater than @var{num-of-bytes}.
 @item -O0
 @cindex Command line option @option{-O}
 @cindex @option{-O}, command line option
-Disable the of the compiler's source optimiser.
+Disable the use of the compiler's source optimiser.
 
 @item -O1
 @itemx -O2
