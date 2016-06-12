@@ -518,27 +518,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-scheme-type <hashtable>
-    <top>
-  (predicate hashtable?))
-
-(define-scheme-type <hashtable-eq>
-    <hashtable>
-  (constructor make-eq-hashtable)
-  (predicate hashtable-eq?))
-
-(define-scheme-type <hashtable-eqv>
-    <hashtable>
-  (constructor make-eqv-hashtable)
-  (predicate hashtable-eqv?))
-
-(define-scheme-type <hashtable-equal>
-    <hashtable>
-  (constructor make-hashtable)
-  (predicate hashtable-equiv?))
-
-;;; --------------------------------------------------------------------
-
 (define-scheme-type <code>
     <top>
   (predicate code?))
@@ -585,6 +564,27 @@
   (predicate always-false)
   (equality-predicate record=?)
   (hash-function record-hash))
+
+;;; --------------------------------------------------------------------
+
+(define-scheme-type <hashtable>
+    <struct>
+  (predicate hashtable?))
+
+(define-scheme-type <hashtable-eq>
+    <hashtable>
+  (constructor make-eq-hashtable)
+  (predicate hashtable-eq?))
+
+(define-scheme-type <hashtable-eqv>
+    <hashtable>
+  (constructor make-eqv-hashtable)
+  (predicate hashtable-eqv?))
+
+(define-scheme-type <hashtable-equal>
+    <hashtable>
+  (constructor make-hashtable)
+  (predicate hashtable-equiv?))
 
 ;;; --------------------------------------------------------------------
 

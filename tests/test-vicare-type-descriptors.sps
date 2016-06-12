@@ -1164,680 +1164,6 @@
   #| end of PARAMETRISE |# )
 
 
-(parametrise ((check-test-name	'ancestry-super-and-sub-proc))
-
-  (define-syntax doit-true
-    (syntax-rules ()
-      ((_ ?super ?sub)
-       (check-for-true
-	(object-type-descr.ancestry-super-and-sub? ?super ?sub)))
-      ))
-
-  (define-syntax doit-false
-    (syntax-rules ()
-      ((_ ?super ?sub)
-       (check-for-false
-	(object-type-descr.ancestry-super-and-sub? ?super ?sub)))
-      ))
-
-;;; --------------------------------------------------------------------
-;;; built-in types
-
-  (doit-true	<top>-ctd		<top>-ctd)
-  (doit-true	<top>-ctd		<number>-ctd)
-  (doit-false	<number>-ctd		<top>-ctd)
-
-  (doit-true	<top>-ctd		<struct>-ctd)
-  (doit-true	<top>-ctd		<record>-ctd)
-  (doit-true	<struct>-ctd		<record>-ctd)
-
-  (doit-true	<list>-ctd		<null>-ctd)
-  (doit-false	<nelist>-ctd		<null>-ctd)
-
-  (doit-true	<vector>-ctd		<empty-vector>-ctd)
-  (doit-false	<nevector>-ctd		<empty-vector>-ctd)
-
-;;; --------------------------------------------------------------------
-;;; struct-type descriptors
-
-  (doit-true	<top>-ctd		alpha-rtd)
-  (doit-true	<struct>-ctd		alpha-rtd)
-  (doit-false	alpha-rtd		<top>-ctd)
-  (doit-false	alpha-rtd		<struct>-ctd)
-  (doit-false	alpha-rtd		beta-rtd)
-
-;;; --------------------------------------------------------------------
-;;; record-type descriptors
-
-  (doit-true	<top>-ctd		<duo>-rtd)
-  (doit-true	<struct>-ctd		<duo>-rtd)
-  (doit-true	<record>-ctd		<duo>-rtd)
-  (doit-false	<duo>-rtd		<top>-ctd)
-  (doit-false	<duo>-rtd		<struct>-ctd)
-  (doit-false	<duo>-rtd		<record>-ctd)
-
-  (doit-true	<alpha>-rtd		<beta>-rtd)
-  (doit-true	<beta>-rtd		<delta>-rtd)
-  (doit-true	<alpha>-rtd		<delta>-rtd)
-  (doit-false	<beta>-rtd		<alpha>-rtd)
-  (doit-false	<delta>-rtd		<beta>-rtd)
-  (doit-false	<delta>-rtd		<alpha>-rtd)
-  (doit-false	<alpha>-rtd		<duo>-rtd)
-  (doit-false	<duo>-rtd		<alpha>-rtd)
-
-;;; --------------------------------------------------------------------
-;;; pair
-
-  (doit-true	<pair>-ctd
-		(make-pair-type-descr <fixnum>-ctd <flonum>-ctd))
-
-  (doit-false	(make-pair-type-descr <top>-ctd <null>-ctd)
-		<pair>-ctd)
-
-  (doit-true	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
-		(make-pair-type-descr <fixnum>-ctd <string>-ctd))
-
-  (doit-true	(make-pair-type-descr <number>-ctd <string>-ctd)
-		(make-pair-type-descr <fixnum>-ctd <string>-ctd))
-
-  (doit-true	(make-pair-type-descr <string>-ctd <number>-ctd)
-		(make-pair-type-descr <string>-ctd <fixnum>-ctd))
-
-  (doit-false	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
-		(make-pair-type-descr <number>-ctd <string>-ctd))
-
-  (doit-false	(make-pair-type-descr <string>-ctd <fixnum>-ctd)
-		(make-pair-type-descr <string>-ctd <number>-ctd))
-
-  (doit-false	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
-		(make-pair-type-descr <symbol>-ctd <string>-ctd))
-
-  (doit-false	(make-pair-type-descr <fixnum>-ctd <string>-ctd)
-		(make-pair-type-descr <fixnum>-ctd <symbol>-ctd))
-
-;;; --------------------------------------------------------------------
-;;; pair-of
-
-  (doit-true	<pair>-ctd
-		(make-pair-of-type-descr <fixnum>-ctd))
-
-  (doit-false	(make-pair-of-type-descr <fixnum>-ctd)
-		<pair>-ctd)
-
-  (doit-true	(make-pair-of-type-descr <fixnum>-ctd)
-		(make-pair-of-type-descr <fixnum>-ctd))
-
-  (doit-true	(make-pair-of-type-descr <number>-ctd)
-		(make-pair-of-type-descr <fixnum>-ctd))
-
-  (doit-false	(make-pair-of-type-descr <fixnum>-ctd)
-		(make-pair-of-type-descr <number>-ctd))
-
-  (doit-false	(make-pair-of-type-descr <fixnum>-ctd)
-		(make-pair-of-type-descr <string>-ctd))
-
-;;; --------------------------------------------------------------------
-;;; list
-
-  (doit-true	<list>-ctd
-		(make-list-type-descr (list <fixnum>-ctd)))
-
-  (doit-true	<nelist>-ctd
-		(make-list-type-descr (list <fixnum>-ctd)))
-
-  (doit-false	(make-list-type-descr (list <fixnum>-ctd))
-		<nelist>-ctd)
-
-  (doit-false	(make-list-type-descr (list <fixnum>-ctd))
-		<null>-ctd)
-
-;;; list/list
-
-  (doit-true	(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd))
-		(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd)))
-
-  (doit-true	(make-list-type-descr (list <fixnum>-ctd <number>-ctd))
-		(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd)))
-
-  (doit-false	(make-list-type-descr (list <fixnum>-ctd <flonum>-ctd))
-		(make-list-type-descr (list <fixnum>-ctd <string>-ctd)))
-
-;;; --------------------------------------------------------------------
-;;; list-of
-
-  (doit-true	<list>-ctd
-		(make-list-of-type-descr <fixnum>-ctd))
-
-  (doit-false	<nelist>-ctd
-		(make-list-of-type-descr <fixnum>-ctd))
-
-  (doit-true	(make-list-of-type-descr <fixnum>-ctd)
-		<null>-ctd)
-
-  (doit-false	(make-list-of-type-descr <top>-ctd)
-		<nelist>-ctd)
-
-  (doit-false	(make-list-of-type-descr <top>-ctd)
-		<list>-ctd)
-
-;;; list-of/list-of
-
-  (doit-true	(make-list-of-type-descr <fixnum>-ctd)
-		(make-list-of-type-descr <fixnum>-ctd))
-
-  (doit-true	(make-list-of-type-descr <number>-ctd)
-		(make-list-of-type-descr <fixnum>-ctd))
-
-  (doit-false	(make-list-of-type-descr <fixnum>-ctd)
-		(make-list-of-type-descr <number>-ctd))
-
-  (doit-false	(make-list-of-type-descr <string>-ctd)
-		(make-list-of-type-descr <fixnum>-ctd))
-
-;;; --------------------------------------------------------------------
-;;; vector
-
-  (doit-true	<vector>-ctd
-		(make-vector-type-descr (list <fixnum>-ctd)))
-
-  (doit-true	<nevector>-ctd
-		(make-vector-type-descr (list <fixnum>-ctd)))
-
-  (doit-false	(make-vector-type-descr (list <top>-ctd))
-		<nevector>-ctd)
-
-  (doit-false	(make-vector-type-descr (list <fixnum>-ctd))
-		<nevector>-ctd)
-
-  (doit-false	(make-vector-type-descr (list <fixnum>-ctd))
-		<null>-ctd)
-
-;;; vector/vector
-
-  (doit-true	(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd))
-		(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd)))
-
-  (doit-true	(make-vector-type-descr (list <fixnum>-ctd <number>-ctd))
-		(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd)))
-
-  (doit-false	(make-vector-type-descr (list <fixnum>-ctd <flonum>-ctd))
-		(make-vector-type-descr (list <fixnum>-ctd <string>-ctd)))
-
-;;; --------------------------------------------------------------------
-;;; vector-of
-
-  (doit-true	<vector>-ctd
-		(make-vector-of-type-descr <fixnum>-ctd))
-
-  (doit-false	<nevector>-ctd
-		(make-vector-of-type-descr <fixnum>-ctd))
-
-  (doit-true	(make-vector-of-type-descr <fixnum>-ctd)
-		<empty-vector>-ctd)
-
-  (doit-false	(make-vector-of-type-descr <top>-ctd)
-		<nevector>-ctd)
-
-  (doit-false	(make-vector-of-type-descr <top>-ctd)
-		<vector>-ctd)
-
-;;; vector-of/vector-of
-
-  (doit-true	(make-vector-of-type-descr <fixnum>-ctd)
-		(make-vector-of-type-descr <fixnum>-ctd))
-
-  (doit-true	(make-vector-of-type-descr <number>-ctd)
-		(make-vector-of-type-descr <fixnum>-ctd))
-
-  (doit-false	(make-vector-of-type-descr <fixnum>-ctd)
-		(make-vector-of-type-descr <number>-ctd))
-
-  (doit-false	(make-vector-of-type-descr <string>-ctd)
-		(make-vector-of-type-descr <fixnum>-ctd))
-
-;;; --------------------------------------------------------------------
-;;; enumeration
-
-  (doit-true	(make-enumeration-type-descr '(ciao))
-		(make-enumeration-type-descr '(ciao)))
-
-  (doit-true	<symbol>-ctd
-		(make-enumeration-type-descr '(ciao)))
-
-  (doit-false	(make-enumeration-type-descr '(ciao))
-		(make-enumeration-type-descr '(hello)))
-
-  (doit-false	(make-enumeration-type-descr '(ciao hello))
-		(make-enumeration-type-descr '(hello)))
-
-  (doit-false	(make-enumeration-type-descr '(ciao))
-		(make-enumeration-type-descr '(hello ciao)))
-
-;;; --------------------------------------------------------------------
-;;; union
-
-  (doit-false	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
-		<fixnum>-ctd)
-
-  (doit-false	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
-		<flonum>-ctd)
-
-  (doit-false	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
-		<string>-ctd)
-
-  (doit-true	(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd))
-		(make-union-type-descr (list <fixnum>-ctd <flonum>-ctd)))
-
-;;; --------------------------------------------------------------------
-;;; intersection
-
-  (doit-false	(make-intersection-type-descr (list <number>-ctd <flonum>-ctd))
-		<flonum>-ctd)
-
-  (doit-false	(make-intersection-type-descr (list <number>-ctd <flonum>-ctd))
-		<string>-ctd)
-
-  (doit-true	(make-intersection-type-descr (list <number>-ctd <flonum>-ctd))
-		(make-intersection-type-descr (list <number>-ctd <flonum>-ctd)))
-
-;;; --------------------------------------------------------------------
-;;; complement
-
-  (doit-false	(make-complement-type-descr <flonum>-ctd)
-		<fixnum>-ctd)
-
-  (doit-false	<fixnum>-ctd
-		(make-complement-type-descr <flonum>-ctd))
-
-  (doit-false	<fixnum>-ctd
-		(make-complement-type-descr <fixnum>-ctd))
-
-  (doit-true	(make-complement-type-descr <fixnum>-ctd)
-		(make-complement-type-descr <fixnum>-ctd))
-
-  #| end of PARAMETRISE |# )
-
-
-(parametrise ((check-test-name	'ancestry-super-and-sub-syntax))
-
-  (define-syntax doit-true
-    (syntax-rules ()
-      ((_ ?super ?sub)
-       (check-for-true
-	(type-descriptor-ancestry-super-and-sub? ?super ?sub)))
-      ))
-
-  (define-syntax doit-false
-    (syntax-rules ()
-      ((_ ?super ?sub)
-       (check-for-false
-	(type-descriptor-ancestry-super-and-sub? ?super ?sub)))
-      ))
-
-;;; --------------------------------------------------------------------
-;;; built-in types
-
-  (doit-true	<top>			<top>)
-  (doit-true	<top>			<number>)
-  (doit-false	<number>		<top>)
-
-  (doit-true	<top>			<struct>)
-  (doit-true	<top>			<record>)
-  (doit-true	<struct>		<record>)
-
-  (doit-true	<list>			<null>)
-  (doit-false	<nelist>		<null>)
-
-  (doit-true	<vector>		<empty-vector>)
-  (doit-false	<nevector>		<empty-vector>)
-
-;;; --------------------------------------------------------------------
-;;; struct-type descriptors
-
-  (doit-true	<top>			alpha)
-  (doit-true	<struct>		alpha)
-  (doit-false	alpha			<top>)
-  (doit-false	alpha			<struct>)
-  (doit-false	alpha			beta)
-
-;;; --------------------------------------------------------------------
-;;; record-type descriptors
-
-  (doit-true	<top>			<duo>)
-  (doit-true	<struct>		<duo>)
-  (doit-true	<record>		<duo>)
-  (doit-false	<duo>			<top>)
-  (doit-false	<duo>			<struct>)
-  (doit-false	<duo>			<record>)
-
-  (doit-true	<alpha>			<beta>)
-  (doit-true	<beta>			<delta>)
-  (doit-true	<alpha>			<delta>)
-  (doit-false	<beta>			<alpha>)
-  (doit-false	<delta>			<beta>)
-  (doit-false	<delta>			<alpha>)
-  (doit-false	<alpha>			<duo>)
-  (doit-false	<duo>			<alpha>)
-
-;;; --------------------------------------------------------------------
-;;; pair
-
-  (doit-true	<pair>
-		(pair <fixnum> <flonum>))
-
-  (doit-false	(pair <top> <null>)
-		<pair>)
-
-  (doit-true	(pair <fixnum> <string>)
-		(pair <fixnum> <string>))
-
-  (doit-true	(pair <number> <string>)
-		(pair <fixnum> <string>))
-
-  (doit-true	(pair <string> <number>)
-		(pair <string> <fixnum>))
-
-  (doit-false	(pair <fixnum> <string>)
-		(pair <number> <string>))
-
-  (doit-false	(pair <string> <fixnum>)
-		(pair <string> <number>))
-
-  (doit-false	(pair <fixnum> <string>)
-		(pair <symbol> <string>))
-
-  (doit-false	(pair <fixnum> <string>)
-		(pair <fixnum> <symbol>))
-
-  (doit-false	(pair <fixnum> <null>)
-		(list <fixnum>))
-
-;;; --------------------------------------------------------------------
-;;; pair-of
-
-  (doit-true	<pair>
-		(pair-of <fixnum>))
-
-  (doit-false	(pair-of <fixnum>)
-		<pair>)
-
-  (doit-true	(pair-of <fixnum>)
-		(pair-of <fixnum>))
-
-  (doit-true	(pair-of <number>)
-		(pair-of <fixnum>))
-
-  (doit-false	(pair-of <fixnum>)
-		(pair-of <number>))
-
-  (doit-false	(pair-of <fixnum>)
-		(pair-of <string>))
-
-;;; --------------------------------------------------------------------
-;;; list
-
-  (doit-true	<list>
-		(list <fixnum>))
-
-  (doit-true	<nelist>
-		(list <fixnum>))
-
-  (doit-false	(list <fixnum>)
-		<nelist>)
-
-  (doit-false	(list <fixnum>)
-		<null>)
-
-;;; list/list
-
-  (doit-true	(list <fixnum> <flonum>)
-		(list <fixnum> <flonum>))
-
-  (doit-true	(list <fixnum> <number>)
-		(list <fixnum> <flonum>))
-
-  (doit-false	(list <fixnum> <flonum>)
-		(list <fixnum> <string>))
-
-;;; --------------------------------------------------------------------
-;;; list-of
-
-  (doit-true	<list>
-		(list-of <fixnum>))
-
-  (doit-false	<nelist>
-		(list-of <fixnum>))
-
-  (doit-true	(list-of <fixnum>)
-		<null>)
-
-  (doit-false	(list-of <top>)
-		<nelist>)
-
-  (doit-false	(list-of <top>)
-		<list>)
-
-;;; list-of/list-of
-
-  (doit-true	(list-of <fixnum>)
-		(list-of <fixnum>))
-
-  (doit-true	(list-of <number>)
-		(list-of <fixnum>))
-
-  (doit-false	(list-of <fixnum>)
-		(list-of <number>))
-
-  (doit-false	(list-of <string>)
-		(list-of <fixnum>))
-
-;;; --------------------------------------------------------------------
-;;; vector
-
-  (doit-true	<vector>
-		(vector <fixnum>))
-
-  (doit-true	<nevector>
-		(vector <fixnum>))
-
-  (doit-false	(vector <top>)
-		<nevector>)
-
-  (doit-false	(vector <fixnum>)
-		<nevector>)
-
-  (doit-false	(vector <fixnum>)
-		<null>)
-
-;;; vector/vector
-
-  (doit-true	(vector <fixnum> <flonum>)
-		(vector <fixnum> <flonum>))
-
-  (doit-true	(vector <fixnum> <number>)
-		(vector <fixnum> <flonum>))
-
-  (doit-false	(vector <fixnum> <flonum>)
-		(vector <fixnum> <string>))
-
-;;; --------------------------------------------------------------------
-;;; vector-of
-
-  (doit-true	<vector>
-		(vector-of <fixnum>))
-
-  (doit-false	<nevector>
-		(vector-of <fixnum>))
-
-  (doit-true	(vector-of <fixnum>)
-		<empty-vector>)
-
-  (doit-false	(vector-of <top>)
-		<nevector>)
-
-  (doit-false	(vector-of <top>)
-		<vector>)
-
-;;; vector-of/vector-of
-
-  (doit-true	(vector-of <fixnum>)
-		(vector-of <fixnum>))
-
-  (doit-true	(vector-of <number>)
-		(vector-of <fixnum>))
-
-  (doit-false	(vector-of <fixnum>)
-		(vector-of <number>))
-
-  (doit-false	(vector-of <string>)
-		(vector-of <fixnum>))
-
-;;; --------------------------------------------------------------------
-;;; compound condition-objects
-
-  (doit-true	(condition &who)
-		(condition &who))
-
-  (doit-true	(condition &condition)
-		(condition &who))
-
-  (doit-false	(condition &who)
-		(condition &who &irritants))
-
-  (doit-true	(condition &who &irritants)
-		(condition &who &irritants))
-
-  (doit-true	(condition &irritants &who)
-		(condition &who &irritants))
-
-  (doit-false	(condition &who)
-		(condition &who (condition &irritants)))
-
-  (doit-true	(condition &who (condition &irritants))
-		(condition &who (condition &irritants)))
-
-  (doit-true	(condition &irritants (condition &who))
-		(condition (condition &who) &irritants))
-
-;;; --------------------------------------------------------------------
-;;; enumeration
-
-  (doit-true	(enumeration ciao)
-		(enumeration ciao))
-
-  (doit-true	<symbol>
-		(enumeration ciao))
-
-  (doit-false	(enumeration ciao)
-		(enumeration hello))
-
-  (doit-false	(enumeration ciao hello)
-		(enumeration hello))
-
-  (doit-false	(enumeration ciao)
-		(enumeration hello ciao))
-
-;;; --------------------------------------------------------------------
-;;; hashtable
-
-  (doit-true	<top>
-		(hashtable <fixnum> <fixnum>))
-
-  (doit-true	<hashtable>
-		(hashtable <fixnum> <fixnum>))
-
-  (doit-true	(hashtable <fixnum> <fixnum>)
-		(hashtable <fixnum> <fixnum>))
-
-  (doit-false	(hashtable <fixnum> <fixnum>)
-		(hashtable <fixnum> <string>))
-
-  (doit-false	(hashtable <fixnum> <fixnum>)
-		(hashtable <string> <fixnum>))
-
-  (doit-true	(hashtable <fixnum> <fixnum>)
-		(hashtable <positive-fixnum> <fixnum>))
-
-  (doit-true	(hashtable <fixnum> <fixnum>)
-		(hashtable <fixnum> <positive-fixnum>))
-
-;;; --------------------------------------------------------------------
-;;; alist
-
-  (doit-true	(alist <fixnum> <fixnum>)
-		(alist <fixnum> <fixnum>))
-
-  (doit-false	(alist <fixnum> <fixnum>)
-		(alist <fixnum> <string>))
-
-  (doit-false	(alist <fixnum> <fixnum>)
-		(alist <string> <fixnum>))
-
-;;; --------------------------------------------------------------------
-;;; union
-
-  (doit-false	(or <fixnum> <flonum>)
-		<fixnum>)
-
-  (doit-false	(or <fixnum> <flonum>)
-		<flonum>)
-
-  (doit-false	(or <fixnum> <flonum>)
-		<string>)
-
-  (doit-true	(or <fixnum> <flonum>)
-		(or <fixnum> <flonum>))
-
-;;; --------------------------------------------------------------------
-;;; intersection
-
-  ;;This  results into  true because  the intersection  is simplified  into a  single
-  ;;"<flonum>".
-  ;;
-  (doit-true	(and <number> <flonum>)
-		<flonum>)
-
-  (doit-false	(and <number> <flonum>)
-		<string>)
-
-  (doit-true	(and <number> <flonum>)
-		(and <number> <flonum>))
-
-;;; --------------------------------------------------------------------
-;;; complement
-
-  (doit-false	(not <flonum>)
-		<fixnum>)
-
-  (doit-false	<fixnum>
-		(not <flonum>))
-
-  (doit-false	<fixnum>
-		(not <fixnum>))
-
-  (doit-true	(not <fixnum>)
-		(not <fixnum>))
-
-;;; --------------------------------------------------------------------
-;;; ancestor-of
-
-  (doit-true	(ancestor-of <fixnum>)
-		(ancestor-of <fixnum>))
-
-  (doit-false	(ancestor-of <fixnum>)
-		(ancestor-of <positive-fixnum>))
-
-  (doit-false	(ancestor-of <fixnum>)			<fixnum>)
-  (doit-true	(ancestor-of <fixnum>)			<exact-integer>)
-  (doit-true	(ancestor-of <fixnum>)			<integer>)
-  (doit-true	(ancestor-of <fixnum>)			<real>)
-  (doit-true	(ancestor-of <fixnum>)			<complex>)
-  (doit-true	(ancestor-of <fixnum>)			<number>)
-  (doit-true	(ancestor-of <fixnum>)			<top>)
-
-  #| end of PARAMETRISE |# )
-
-
 (parametrise ((check-test-name	'matching-super-and-sub-proc))
 
   (define-syntax doit-true
@@ -2242,7 +1568,7 @@
       ))
 
 ;;; --------------------------------------------------------------------
-;;; built-in types
+;;; core types as super-types
 
   (doit-true	<top>			<top>)
   (doit-true	<top>			<number>)
@@ -2259,11 +1585,178 @@
   (doit-true	<top>			<record>)
   (doit-true	<struct>		<record>)
 
-  (doit-true	<list>			<null>)
-  (doit-false	<nelist>		<null>)
+  (doit-true	<pair>			<pair>)
+  (doit-false	<pair>			<list>)
+  (doit-false	<pair>			<null>)
+  (doit-true	<pair>			<nelist>)
+  (doit-true	<pair>			(pair <fixnum> <flonum>))
+  (doit-true	<pair>			(pair-of <fixnum>))
+  (doit-true	<pair>			(list <fixnum> <flonum>))
+  (doit-false	<pair>			(list-of <fixnum>))
+  (doit-true	<pair>			(nelist-of <fixnum>))
+  (doit-false	<pair>			(alist <fixnum> <flonum>))
 
+  (doit-false	<list>			<pair>)
+  (doit-true	<list>			<list>)
+  (doit-true	<list>			<null>)
+  (doit-true	<list>			<nelist>)
+  (doit-false	<list>			(pair <fixnum> <flonum>))
+  (doit-true	<list>			(pair <fixnum> <null>))
+  (doit-false	<list>			(pair-of <fixnum>))
+  (doit-false	<list>			(pair-of <null>))
+  (doit-true	<list>			(list <fixnum> <flonum>))
+  (doit-true	<list>			(list-of <fixnum>))
+  (doit-true	<list>			(nelist-of <fixnum>))
+  (doit-true	<list>			(alist <fixnum> <flonum>))
+
+  (doit-false	<nelist>		<pair>)
+  (doit-false	<nelist>		<list>)
+  (doit-false	<nelist>		<null>)
+  (doit-true	<nelist>		<nelist>)
+  (doit-false	<nelist>		(pair <fixnum> <flonum>))
+  (doit-true	<nelist>		(pair <fixnum> <null>))
+  (doit-false	<nelist>		(pair-of <fixnum>))
+  (doit-false	<nelist>		(pair-of <null>))
+  (doit-true	<nelist>		(list <fixnum> <flonum>))
+  (doit-false	<nelist>		(list-of <fixnum>))
+  (doit-true	<nelist>		(nelist-of <fixnum>))
+  (doit-false	<nelist>		(alist <fixnum> <flonum>))
+
+  (doit-false	<null>			<pair>)
+  (doit-false	<null>			<list>)
+  (doit-true	<null>			<null>)
+  (doit-false	<null>			<nelist>)
+  (doit-false	<null>			(pair <fixnum> <flonum>))
+  (doit-false	<null>			(pair <fixnum> <null>))
+  (doit-false	<null>			(pair-of <fixnum>))
+  (doit-false	<null>			(pair-of <null>))
+  (doit-false	<null>			(list <fixnum> <flonum>))
+  (doit-false	<null>			(list-of <fixnum>))
+  (doit-false	<null>			(nelist-of <fixnum>))
+  (doit-false	<null>			(alist <fixnum> <flonum>))
+
+  (doit-true	<vector>		<vector>)
+  (doit-true	<vector>		<nevector>)
   (doit-true	<vector>		<empty-vector>)
+  (doit-true	<vector>		(vector-of <fixnum>))
+  (doit-true	<vector>		(vector <fixnum> <flonum>))
+  #;(doit-true	<vector>		(nevector-of <fixnum>))
+
+  (doit-false	<nevector>		<vector>)
+  (doit-true	<nevector>		<nevector>)
   (doit-false	<nevector>		<empty-vector>)
+  (doit-false	<nevector>		(vector-of <fixnum>))
+  (doit-true	<nevector>		(vector <fixnum> <flonum>))
+  #;(doit-true	<nevector>		(nevector-of <fixnum>))
+
+  (doit-false	<empty-vector>		<vector>)
+  (doit-false	<empty-vector>		<nevector>)
+  (doit-true	<empty-vector>		<empty-vector>)
+  (doit-false	<empty-vector>		(vector-of <fixnum>))
+  (doit-false	<empty-vector>		(vector <fixnum> <flonum>))
+  #;(doit-false	<empty-vector>		(nevector-of <fixnum>))
+
+  (doit-true	<symbol>		<symbol>)
+  (doit-true	<symbol>		<gensym>)
+  (doit-true	<symbol>		(enumeration ciao))
+  (doit-true	<symbol>		(enumeration ciao hello))
+  (doit-false	<symbol>		<string>)
+
+  (doit-false	<gensym>		<symbol>)
+  (doit-true	<gensym>		<gensym>)
+  (doit-false	<gensym>		(enumeration ciao))
+  (doit-false	<gensym>		(enumeration ciao hello))
+  (doit-false	<symbol>		<string>)
+
+  (doit-false	<struct>		<top>)
+  (doit-true	<struct>		<struct>)
+  (doit-true	<struct>		<record>)
+  (doit-true	<struct>		alpha)
+  (doit-true	<struct>		beta)
+  (doit-true	<struct>		<alpha>)
+  (doit-true	<struct>		<beta>)
+  (doit-false	<struct>		<string>)
+  (doit-true	<struct>		<condition>)
+  (doit-true	<struct>		<compound-condition>)
+  (doit-true	<struct>		&condition)
+  (doit-true	<struct>		&who)
+  (doit-true	<struct>		(condition &who))
+  (doit-true	<struct>		(condition &who &irritants))
+  (doit-true	<struct>		(condition &who (condition &irritants)))
+
+  (doit-true	<hashtable>		<hashtable>)
+  (doit-true	<hashtable>		(hashtable <fixnum> <flonum>))
+  (doit-false	<hashtable>		<record>)
+  (doit-false	<hashtable>		<struct>)
+
+  (doit-false	<record>		<top>)
+  (doit-false	<record>		<struct>)
+  (doit-true	<record>		<record>)
+  (doit-false	<record>		alpha)
+  (doit-false	<record>		beta)
+  (doit-true	<record>		<alpha>)
+  (doit-true	<record>		<beta>)
+  (doit-false	<record>		<string>)
+  (doit-true	<record>		<condition>)
+  (doit-true	<record>		<compound-condition>)
+  (doit-true	<record>		&condition)
+  (doit-true	<record>		&who)
+  (doit-true	<record>		(condition &who))
+  (doit-true	<record>		(condition &who &irritants))
+  (doit-true	<record>		(condition &who (condition &irritants)))
+
+  (doit-true	<condition>		<condition>)
+  (doit-true	<condition>		<compound-condition>)
+  (doit-true	<condition>		&condition)
+  (doit-true	<condition>		&who)
+  (doit-false	<condition>		<record>)
+  (doit-false	<condition>		<struct>)
+  (doit-true	<condition>		(condition &who))
+  (doit-true	<condition>		(condition &who &irritants))
+  (doit-true	<condition>		(condition &who (condition &irritants)))
+
+  (doit-false	<compound-condition>	<condition>)
+  (doit-true	<compound-condition>	<compound-condition>)
+  (doit-false	<compound-condition>	&condition)
+  (doit-false	<compound-condition>	&who)
+  (doit-false	<compound-condition>	<record>)
+  (doit-false	<compound-condition>	<struct>)
+  (doit-false	<compound-condition>	(condition &who))
+  (doit-true	<compound-condition>	(condition &who &irritants))
+  (doit-true	<compound-condition>	(condition &who (condition &irritants)))
+
+  (doit-true	<top>			(or <fixnum> <flonum>))
+  (doit-false	<fixnum>		(or <fixnum> <flonum>))
+  (doit-false	<flonum>		(or <fixnum> <flonum>))
+
+  (doit-true	<top>			(and <positive-fixnum> <zero-fixnum>))
+  (doit-true	<fixnum>		(and <positive-fixnum> <zero-fixnum>))
+  (doit-false	<positive-fixnum>	(and <positive-fixnum> <zero-fixnum>))
+  (doit-false	<zero-fixnum>		(and <positive-fixnum> <zero-fixnum>))
+  (doit-false	<flonum>		(and <positive-fixnum> <zero-fixnum>))
+
+  (doit-false	<top>			(not <top>))
+  (doit-false	<top>			(not <fixnum>))
+  (doit-false	<top>			(not <void>))
+  (doit-false	<top>			(not <no-return>))
+  ;;
+  (doit-false	<void>			(not <no-return>))
+  (doit-false	<void>			(not <top>))
+  (doit-false	<void>			(not <void>))
+  (doit-false	<void>			(not <fixnum>))
+  ;;
+  (doit-false	<no-return>		(not <no-return>))
+  (doit-false	<no-return>		(not <void>))
+  (doit-false	<no-return>		(not <top>))
+  (doit-false	<no-return>		(not <fixnum>))
+  ;;
+  (doit-false	<fixnum>		(not <string>))
+
+  (doit-false	<top>			(ancestor-of <top>))
+  (doit-true	<top>			(ancestor-of <fixnum>))
+  (doit-false	<fixnum>		(ancestor-of <fixnum>))
+  (doit-false	<positive-fixnum>	(ancestor-of <fixnum>))
+  (doit-false	<fixnum>		(ancestor-of <positive-fixnum>))
 
 ;;; --------------------------------------------------------------------
 ;;; struct-type descriptors

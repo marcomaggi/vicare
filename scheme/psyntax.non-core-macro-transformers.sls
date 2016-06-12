@@ -197,6 +197,7 @@
   (declare list-of)
   (declare nelist-of)
   (declare vector-of)
+  (declare nevector-of)
   (declare hashtable)
   (declare alist)
   (declare parent-of)

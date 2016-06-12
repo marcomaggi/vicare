@@ -551,12 +551,17 @@
   (signatures
    ((<top>)			=> (<top>))))
 
-(declare-core-primitive object-type-descr=?
+(declare-core-primitive object-type-descr.parent
     (safe)
   (signatures
-   ((<top> <top>)		=> (<boolean>))))
+   ((<top>)			=> (<top>))))
 
-(declare-core-primitive object-type-descr.ancestry-super-and-sub?
+(declare-core-primitive object-type-descr.ancestors-des*
+    (safe)
+  (signatures
+   ((<top>)			=> (<list>))))
+
+(declare-core-primitive object-type-descr=?
     (safe)
   (signatures
    ((<top> <top>)		=> (<boolean>))))
@@ -566,15 +571,10 @@
   (signatures
    ((<top> <top>)		=> (<boolean>))))
 
-(declare-core-primitive object-type-descr.ancestors-des*
+(declare-core-primitive object-type-descr.matching-formal-and-operand
     (safe)
   (signatures
-   ((<top>)			=> (<list>))))
-
-(declare-core-primitive object-type-descr.parent
-    (safe)
-  (signatures
-   ((<top>)			=> (<top>))))
+   ((<top> <top>)		=> ((enumeration exact-match possible-match no-match)))))
 
 
 ;;;; done

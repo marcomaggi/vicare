@@ -290,7 +290,7 @@
 	=> <void>)
 
   (doit (type-annotation-syntax (not <void>))
-	=> <void>)
+	=> (not <void>))
 
   #| end of PARAMETRISE |# )
 
@@ -1299,7 +1299,7 @@
 
   (doit ((not (ancestor-of <fixnum>)))
 	(<zero>)
-	=> possible-match)
+	=> exact-match)
 
   (void))
 

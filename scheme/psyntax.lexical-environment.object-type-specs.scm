@@ -3973,7 +3973,7 @@
      (let ((synner (lambda (message subform)
 		     (syntax-violation __who__ message input-form.stx subform))))
        (make-type-signature (syntax-object->type-signature-specs type.ann lexenv synner))))
-   (syntax-match stx (pair list vector pair-of list-of nelist-of vector-of
+   (syntax-match stx (pair list vector pair-of list-of nelist-of vector-of nevector-of
 			   hashtable alist condition enumeration
 			   or and not lambda case-lambda => parent-of ancestor-of
 			   type-predicate equality-predicate comparison-procedure hash-function
@@ -4006,6 +4006,9 @@
 
      ((vector-of ?item-type)
       (recur ?item-type))
+
+     ;; ((nevector-of ?item-type)
+     ;;  (recur ?item-type))
 
      ((hashtable ?key-type ?value-type)
       (and (recur ?key-type)
@@ -4102,7 +4105,7 @@
      (let ((synner (lambda (message subform)
 		     (syntax-violation __who__ message annotation.stx subform))))
        (make-type-signature (syntax-object->type-signature-specs type.ann lexenv synner))))
-   (syntax-match annotation.stx (pair list vector pair-of list-of nelist-of vector-of
+   (syntax-match annotation.stx (pair list vector pair-of list-of nelist-of vector-of nevector-of
 				      hashtable alist condition enumeration
 				      or and not lambda case-lambda => parent-of ancestor-of
 				      type-predicate equality-predicate comparison-procedure hash-function
@@ -4151,6 +4154,10 @@
      ((vector-of ?item-type)
       (make-vector-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
 				name.stx))
+
+     ;; ((nevector-of ?item-type)
+     ;;  (let ((type.ots (type-annotation->object-type-spec ?item-type lexenv)))
+     ;; 	(make-vector-type-spec type.ots name.stx)))
 
      ((hashtable ?key-type ?value-type)
       (make-hashtable-type-spec (type-annotation->object-type-spec ?key-type)
@@ -4235,9 +4242,7 @@
 
      ((not ?item-type)
       (let ((item.ots (type-annotation->object-type-spec ?item-type lexenv)))
-	(if (<void>-ots? item.ots)
-	    (<void>-ots)
-	  (make-complement-type-spec item.ots))))
+	(make-complement-type-spec item.ots)))
 
      ((parent-of ?type)
       (or (object-type-spec.parent-ots (type-annotation->object-type-spec ?type lexenv))

@@ -1853,41 +1853,6 @@ equal; otherwise it returns @false{}.
 @end deffn
 
 
-@deffn Syntax type-descriptor-ancestry-super-and-sub? @metai{type-annotation} @metaii{type-annotation}
-Expand to an expression which, compiled and evaluated, returns @true{}
-if the type descriptor associated to @metai{type-annotation} is an
-ancestor of the type descriptor associated to @metaii{type-annotation};
-otherwise it returns @false{}.
-
-@lisp
-(type-descriptor-ancestry-super-and-sub?
-   @aclass{top} @aclass{top})
-@result{} #t
-
-(type-descriptor-ancestry-super-and-sub?
-   @aclass{top} @aclass{number})
-@result{} #t
-
-(type-descriptor-ancestry-super-and-sub?
-   @aclass{number} @aclass{top})
-@result{} #t
-
-(type-descriptor-ancestry-super-and-sub?
-   @aclass{pair} (pair @aclass{fixnum} @aclass{flonum}))
-@result{} #t
-
-(type-descriptor-ancestry-super-and-sub?
-   (pair-of @aclass{number}) (pair-of @aclass{fixnum}))
-@result{} #t
-
-;;pair is not an ancestor of list
-(type-descriptor-ancestry-super-and-sub?
-   (pair @aclass{fixnum} @aclass{null}) (list @aclass{fixnum}))
-@result{} #f
-@end lisp
-@end deffn
-
-
 @deffn Syntax type-descriptor-matching-super-and-sub? @metai{type-annotation} @metaii{type-annotation}
 Expand to an expression which, compiled and evaluated, returns @true{}
 if the type descriptor associated to @metai{type-annotation} is a
@@ -1912,6 +1877,30 @@ matching super--type of the type descriptor associated to
    (pair @aclass{fixnum} @aclass{null}) (list @aclass{fixnum}))
 @result{} #t
 @end lisp
+@end deffn
+
+
+@deffn Syntax type-descriptor-matching @metai{type-annotation} @metaii{type-annotation}
+Expand to an expression which, compiled and evaluated, matches the
+arguments as if: the descriptor associated to @metai{type-annotation} is
+the type of a formal argument requested by a closure object; the type
+descriptor associated to @metaii{type-annotation} is the type of the
+operand given to a closure object application.
+
+Expand to a quoted symbol:
+
+@table @code
+@item exact-match
+If there is an exact match between the argument's and operand's
+annotations.
+
+@item possible-match
+If there is a possible match between the argument's and operand's
+annotations; the operand must be further validated at run--time.
+
+@item no-match
+If there is no match between the argument's and operand's annotations.
+@end table
 @end deffn
 
 @c page

@@ -478,7 +478,7 @@
 	 (%synner type.stx)))))
   (define (%synner subform)
     (synner "invalid syntax object as type signature" subform))
-  (syntax-match input-signature.stx (<no-return> <null> <list> <nelist> list-of list pair nelist-of enumeration)
+  (syntax-match input-signature.stx (<no-return> <null> <list> <nelist> list-of list pair nelist-of)
     (<no-return>
      (<no-return>-ots))
 
@@ -526,14 +526,11 @@
      ;;This is good: an empty type signature means no values.
      '())
 
-    ((enumeration . ?stuff)
-     (%synner #f))
-
     ((?car . ?cdr)
      ;;INPUT-SIGNATURE.STX must be a proper or improper list of type annotations.
      (cons (ta->ots ?car)
 	   (let recur ((stx ?cdr))
-	     (syntax-match stx (<no-return> <null> <list> <nelist> list-of list pair nelist-of enumeration)
+	     (syntax-match stx (<no-return> <null> <list> <nelist> list-of list pair nelist-of)
 	       ((list-of ?type)
 		(make-list-of-type-spec (ta->ots ?type)))
 
@@ -552,9 +549,6 @@
 	       ((nelist-of ?type)
 		(let ((type.ots (ta->ots ?type)))
 		  (make-pair-type-spec type.ots (make-list-of-type-spec type.ots))))
-
-	       ((enumeration . ?stuff)
-		(%synner #f))
 
 	       ((?car . ?cdr)
 		(cons (ta->ots ?car) (recur ?cdr)))
