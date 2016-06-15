@@ -120,7 +120,7 @@
 	 object-type-spec.safe-accessor-stx		object-type-spec.safe-mutator-stx
 	 object-type-spec.equality-predicate		object-type-spec.comparison-procedure
 	 object-type-spec.hash-function			object-type-spec.applicable-hash-function
-	 object-type-spec.applicable-method-stx		object-type-spec.ancestors-ots*
+	 object-type-spec.applicable-method-stx		object-type-spec.ancestor-ots*
 	 object-type-spec.type-descriptor-core-expr
 	 object-type-spec.single-value-validator-lambda-stx
 	 object-type-spec.list-validator-lambda-stx
@@ -220,12 +220,12 @@
 	 <union-type-spec>
 	 <union-type-spec>-rtd				<union-type-spec>-rcd
 	 make-union-type-spec				union-of-type-specs
-	 union-type-spec?				union-type-spec.component-ots*
+	 union-type-spec?				union-type-spec.item-ots*
 
 	 <intersection-type-spec>
 	 <intersection-type-spec>-rtd			<intersection-type-spec>-rcd
 	 make-intersection-type-spec			intersection-of-type-specs
-	 intersection-type-spec?			intersection-type-spec.component-ots*
+	 intersection-type-spec?			intersection-type-spec.item-ots*
 
 	 <complement-type-spec>
 	 <complement-type-spec>-rtd			<complement-type-spec>-rcd
@@ -237,7 +237,7 @@
 	 <ancestor-of-type-spec>
 	 <ancestor-of-type-spec>-rtd			<ancestor-of-type-spec>-rcd
 	 make-ancestor-of-type-spec			ancestor-of-type-spec?
-	 ancestor-of-type-spec.item-ots			ancestor-of-type-spec.component-ots*
+	 ancestor-of-type-spec.item-ots			ancestor-of-type-spec.ancestor-ots*
 
 	 ;;;
 
@@ -257,6 +257,20 @@
 
   (import (only (vicare language-extensions syntaxes)
 		define-equality/sorting-predicate))
+
+
+;;;; helpers
+
+(define (object-type-spec.list-type-spec? object.ots)
+  (or (<list>-ots? object.ots)
+      (<null>-ots? object.ots)
+      (<nelist>-ots? object.ots)
+      (list-type-spec? object.ots)
+      (list-of-type-spec? object.ots)
+      (and (pair-type-spec? object.ots)
+	   (object-type-spec.list-type-spec? (pair-type-spec.cdr-ots object.ots)))
+      (and (pair-of-type-spec? object.ots)
+	   (object-type-spec.list-type-spec? (pair-of-type-spec.item-ots object.ots)))))
 
 
 ;;;; basic object-type specification
@@ -464,7 +478,7 @@
 	 => object-type-spec.applicable-hash-function)
 	(else #f)))
 
-(define* (object-type-spec.ancestors-ots* {ots object-type-spec?})
+(define* (object-type-spec.ancestor-ots* {ots object-type-spec?})
   ;;Return the,  possibly empty, list of  "<object-type-spec>" instances representing
   ;;the ancestors list of OTS.  OTS itself is *not* included in the list.
   ;;
@@ -475,7 +489,7 @@
   ;;
   (cond ((object-type-spec.parent-ots ots)
 	 => (lambda (parent.ots)
-	      (cons parent.ots (object-type-spec.ancestors-ots* parent.ots))))
+	      (cons parent.ots (object-type-spec.ancestor-ots* parent.ots))))
 	(else '())))
 
 (module (object-type-spec.safe-accessor-stx
@@ -640,23 +654,23 @@
 	   (for-all (lambda (sub-component.ots)
 		      (exists (lambda (super-component.ots)
 				(object-type-spec.matching-super-and-sub? super-component.ots sub-component.ots))
-			(union-type-spec.component-ots* super.ots)))
-	     (union-type-spec.component-ots* sub.ots)))
+			(union-type-spec.item-ots* super.ots)))
+	     (union-type-spec.item-ots* sub.ots)))
 	  (else
 	   ;; (type-super-and-sub? (or <number> <string>) <string>) => #t
 	   ;; (type-super-and-sub? (or <number> <string>) <fixnum>) => #t
 	   (exists (lambda (super-component.ots)
 		     (object-type-spec.matching-super-and-sub? super-component.ots sub.ots))
-	     (union-type-spec.component-ots* super.ots)))))
+	     (union-type-spec.item-ots* super.ots)))))
 
    ((union-type-spec? sub.ots)
-    (let ((sub-component-ots* (union-type-spec.component-ots* sub.ots)))
+    (let ((sub-component-ots* (union-type-spec.item-ots* sub.ots)))
       (cond ((ancestor-of-type-spec? super.ots)
 	     (exists (lambda (super-component.ots)
 		       (exists (lambda (sub-component.ots)
 				 ($object-type-spec=? super-component.ots sub-component.ots))
 			 sub-component-ots*))
-	       (ancestor-of-type-spec.component-ots* super.ots)))
+	       (ancestor-of-type-spec.ancestor-ots* super.ots)))
 	    (else
 	     (for-all (lambda (sub-component.ots)
 			(object-type-spec.matching-super-and-sub? super.ots sub-component.ots))
@@ -676,22 +690,22 @@
 	   (for-all (lambda (super-component.ots)
 		      (for-all (lambda (sub-component.ots)
 				 (object-type-spec.matching-super-and-sub? super-component.ots sub-component.ots))
-			(intersection-type-spec.component-ots* sub.ots)))
-	     (intersection-type-spec.component-ots* super.ots)))
+			(intersection-type-spec.item-ots* sub.ots)))
+	     (intersection-type-spec.item-ots* super.ots)))
 	  (else
 	   ;; (type-super-and-sub? (and <exact> <positive>) <positive-fixnum>) => #t
 	   (for-all (lambda (super-component.ots)
 		      (object-type-spec.matching-super-and-sub? super-component.ots sub.ots))
-	     (intersection-type-spec.component-ots* super.ots)))))
+	     (intersection-type-spec.item-ots* super.ots)))))
 
    ((intersection-type-spec? sub.ots)
-    (let ((sub-component-ots* (intersection-type-spec.component-ots* sub.ots)))
+    (let ((sub-component-ots* (intersection-type-spec.item-ots* sub.ots)))
       (cond ((ancestor-of-type-spec? super.ots)
 	     (exists (lambda (super-component.ots)
 		       (for-all (lambda (sub-component.ots)
 				  ($object-type-spec=? super-component.ots sub-component.ots))
 			 sub-component-ots*))
-	       (ancestor-of-type-spec.component-ots* super.ots)))
+	       (ancestor-of-type-spec.ancestor-ots* super.ots)))
 	    (else
 	     (for-all (lambda (sub-component.ots)
 			(object-type-spec.matching-super-and-sub? super.ots sub-component.ots))
@@ -727,10 +741,10 @@
 ;;; We really want to do the ancestors first.
 
    ((ancestor-of-type-spec? super.ots)
-    (let ((super-component-ots* (ancestor-of-type-spec.component-ots* super.ots)))
+    (let ((super-component-ots* (ancestor-of-type-spec.ancestor-ots* super.ots)))
       (cond ((union-type-spec? sub.ots)
 	     ;;This case is already done above, in the union stuff.
-	     (let ((sub-component-ots* (union-type-spec.component-ots* sub.ots)))
+	     (let ((sub-component-ots* (union-type-spec.item-ots* sub.ots)))
 	       (exists (lambda (super-component.ots)
 			 (exists (lambda (sub-component.ots)
 				   ($object-type-spec=? super-component.ots sub-component.ots))
@@ -738,7 +752,7 @@
 		 super-component-ots*)))
 	    ((intersection-type-spec? sub.ots)
 	     ;;This case is already done above, in the intersection stuff.
-	     (let ((sub-component-ots* (intersection-type-spec.component-ots* sub.ots)))
+	     (let ((sub-component-ots* (intersection-type-spec.item-ots* sub.ots)))
 	       (exists (lambda (super-component.ots)
 			 (for-all (lambda (sub-component.ots)
 				    ($object-type-spec=? super-component.ots sub-component.ots))
@@ -752,7 +766,7 @@
    ((ancestor-of-type-spec? sub.ots)
     (exists (lambda (sub-component.ots)
 	      ($object-type-spec=? super.ots sub-component.ots))
-      (ancestor-of-type-spec.component-ots* sub.ots)))
+      (ancestor-of-type-spec.ancestor-ots* sub.ots)))
 
 ;;; --------------------------------------------------------------------
 ;;; empty lists
@@ -1266,7 +1280,7 @@
 	      ;; 		(object-type-spec.name component-sub.ots)
 	      ;; 		(object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
 	      (%matching-or-compatible? super.ots component-sub.ots))
-      (union-type-spec.component-ots* sub.ots)))
+      (union-type-spec.item-ots* sub.ots)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1280,7 +1294,7 @@
     ;;
     (for-all (lambda (super-component.ots)
 	       (%matching-or-compatible? super-component.ots sub.ots))
-      (intersection-type-spec.component-ots* super.ots)))
+      (intersection-type-spec.item-ots* super.ots)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1656,8 +1670,8 @@
   ($union-type-spec=? ots1 ots2))
 
 (define ($union-type-spec=? ots1 ots2)
-  (let ((component-ots1* (union-type-spec.component-ots* ots1))
-	(component-ots2* (union-type-spec.component-ots* ots2)))
+  (let ((component-ots1* (union-type-spec.item-ots* ots1))
+	(component-ots2* (union-type-spec.item-ots* ots2)))
     (and (for-all (lambda (component-ots1)
 		    (exists (lambda (component-ots2)
 			      ($object-type-spec=? component-ots1 component-ots2))
@@ -1675,8 +1689,8 @@
   ($intersection-type-spec=? ots1 ots2))
 
 (define ($intersection-type-spec=? ots1 ots2)
-  (let ((component-ots1* (intersection-type-spec.component-ots* ots1))
-	(component-ots2* (intersection-type-spec.component-ots* ots2)))
+  (let ((component-ots1* (intersection-type-spec.item-ots* ots1))
+	(component-ots2* (intersection-type-spec.item-ots* ots2)))
     (and (for-all (lambda (component-ots1)
 		    (exists (lambda (component-ots2)
 			      ($object-type-spec=? component-ots1 component-ots2))
@@ -1832,14 +1846,14 @@
 	  (build-primref no-source 'make-union-type-descr)
 	(list (build-application no-source
 		  (build-primref no-source 'list)
-		(map object-type-spec.type-descriptor-core-expr (union-type-spec.component-ots* type.ots))))))
+		(map object-type-spec.type-descriptor-core-expr (union-type-spec.item-ots* type.ots))))))
 
      ((intersection-type-spec? type.ots)
       (build-application no-source
 	  (build-primref no-source 'make-intersection-type-descr)
 	(list (build-application no-source
 		  (build-primref no-source 'list)
-		(map object-type-spec.type-descriptor-core-expr (intersection-type-spec.component-ots* type.ots))))))
+		(map object-type-spec.type-descriptor-core-expr (intersection-type-spec.item-ots* type.ots))))))
 
      ((complement-type-spec? type.ots)
       (build-application no-source
@@ -2322,6 +2336,14 @@
 			(,pred.sym ,obj.sym))
 	       (list ,@component-pred*.stx)))))))
 
+;;; --------------------------------------------------------------------
+
+(define* (compound-condition-type-spec.exists {compound-condition.ots compound-condition-type-spec?} {proc procedure?})
+  (exists proc (compound-condition-type-spec.component-ots* compound-condition.ots)))
+
+(define* (compound-condition-type-spec.for-all {compound-condition.ots compound-condition-type-spec?} {proc procedure?})
+  (for-all proc (compound-condition-type-spec.component-ots* compound-condition.ots)))
+
 
 ;;;; union object spec
 ;;
@@ -2333,7 +2355,7 @@
   (parent <object-type-spec>)
   (sealed #t)
   (fields
-    (immutable component-ots*		union-type-spec.component-ots*)
+    (immutable item-ots*		union-type-spec.item-ots*)
 		;A list of instances  of "<object-type-spec>" describing the optional
 		;types.
     (mutable memoised-length		union-type-spec.memoised-length union-type-spec.memoised-length-set!)
@@ -2381,10 +2403,10 @@
 
 (define (union-type-spec.type-annotation-maker ots)
   (cons (core-prim-id 'or)
-	(map object-type-spec.name (union-type-spec.component-ots* ots))))
+	(map object-type-spec.name (union-type-spec.item-ots* ots))))
 
 (define (make-union-type-predicate ots)
-  (let* ((component-type*.ots (union-type-spec.component-ots* ots))
+  (let* ((component-type*.ots (union-type-spec.item-ots* ots))
 	 (component-pred*.stx (map object-type-spec.type-predicate-stx component-type*.ots)))
     (for-each (lambda (type.ots pred.stx)
 		(unless pred.stx
@@ -2445,7 +2467,7 @@
   (define (%splice-component-specs component-type*.ots)
     (fold-right (lambda (component.ots knil)
 		  (cond ((union-type-spec? component.ots)
-			 (append (union-type-spec.component-ots* component.ots)
+			 (append (union-type-spec.item-ots* component.ots)
 				 knil))
 			(else
 			 (cons component.ots knil))))
@@ -2581,15 +2603,23 @@
   (let ((mem (union-type-spec.memoised-length union.ots)))
     (if (void-object? mem)
 	(receive-and-return (len)
-	    (length (union-type-spec.component-ots* union.ots))
+	    (length (union-type-spec.item-ots* union.ots))
 	  (union-type-spec.memoised-length-set! union.ots len))
       mem)))
 
 (define (union-type-spec.common-ancestor ots)
-  (let ((component.ots* (union-type-spec.component-ots* ots)))
+  (let ((component.ots* (union-type-spec.item-ots* ots)))
     (fold-left object-type-spec.common-ancestor
       (car component.ots*)
       (cdr component.ots*))))
+
+;;; --------------------------------------------------------------------
+
+(define (union-type-spec.exists union.ots proc)
+  (exists proc (union-type-spec.item-ots* union.ots)))
+
+(define (union-type-spec.for-all union.ots proc)
+  (for-all proc (union-type-spec.item-ots* union.ots)))
 
 
 ;;;; intersection object spec
@@ -2602,7 +2632,7 @@
   (parent <object-type-spec>)
   (sealed #t)
   (fields
-    (immutable component-ots*		intersection-type-spec.component-ots*)
+    (immutable item-ots*		intersection-type-spec.item-ots*)
 		;A list of instances  of "<object-type-spec>" describing the optional
 		;types.
     (mutable memoised-length		intersection-type-spec.memoised-length intersection-type-spec.memoised-length-set!)
@@ -2651,10 +2681,10 @@
 
 (define (intersection-type-spec.type-annotation-maker ots)
   (cons (core-prim-id 'and)
-	(map object-type-spec.name (intersection-type-spec.component-ots* ots))))
+	(map object-type-spec.name (intersection-type-spec.item-ots* ots))))
 
 (define (make-intersection-type-predicate ots)
-  (let* ((component-type*.ots (intersection-type-spec.component-ots* ots))
+  (let* ((component-type*.ots (intersection-type-spec.item-ots* ots))
 	 (component-pred*.stx (map object-type-spec.type-predicate-stx component-type*.ots)))
     (for-each (lambda (type.ots pred.stx)
 		(unless pred.stx
@@ -2698,7 +2728,7 @@
   (define (%splice-component-specs component-type*.ots)
     (fold-right (lambda (component.ots knil)
 		  (cond ((intersection-type-spec? component.ots)
-			 (append (intersection-type-spec.component-ots* component.ots)
+			 (append (intersection-type-spec.item-ots* component.ots)
 				 knil))
 			(else
 			 (cons component.ots knil))))
@@ -2748,15 +2778,23 @@
   (let ((mem (intersection-type-spec.memoised-length intersection.ots)))
     (if (void-object? mem)
 	(receive-and-return (len)
-	    (length (intersection-type-spec.component-ots* intersection.ots))
+	    (length (intersection-type-spec.item-ots* intersection.ots))
 	  (intersection-type-spec.memoised-length-set! intersection.ots len))
       mem)))
 
 (define (intersection-type-spec.common-ancestor ots)
-  (let ((component.ots* (intersection-type-spec.component-ots* ots)))
+  (let ((component.ots* (intersection-type-spec.item-ots* ots)))
     (fold-left object-type-spec.common-ancestor
       (car component.ots*)
       (cdr component.ots*))))
+
+;;; --------------------------------------------------------------------
+
+(define (intersection-type-spec.exists intersection.ots proc)
+  (exists proc (intersection-type-spec.item-ots* intersection.ots)))
+
+(define (intersection-type-spec.for-all intersection.ots proc)
+  (for-all proc (intersection-type-spec.item-ots* intersection.ots)))
 
 
 ;;;; complement object spec
@@ -2831,6 +2869,12 @@
        `(lambda (,obj.sym)
 	  (not (,item-pred.stx ,obj.sym)))))))
 
+;;; --------------------------------------------------------------------
+
+(define* (complement-type-spec.not {complement.ots complement-type-spec?} {proc procedure?})
+  (not (proc (complement-type-spec.item-ots complement.ots))))
+
+
 
 ;;;; ancestor-of object spec
 ;;
@@ -2843,7 +2887,7 @@
   (sealed #t)
   (fields
     (immutable item-ots			ancestor-of-type-spec.item-ots)
-    (immutable component-ots*		ancestor-of-type-spec.component-ots*)
+    (immutable ancestor-ots*		ancestor-of-type-spec.ancestor-ots*)
 		;A list of instances  of "<object-type-spec>" describing the optional
 		;types.
     #| end of FIELDS |# )
@@ -2852,7 +2896,7 @@
     (lambda (make-object-type-spec)
       (define* (make-ancestor-of-type-spec {type.ots object-type-spec?})
 	(let* ((name			make-ancestor-of-type-name)
-	       (ancestor*.ots		(object-type-spec.ancestors-ots* type.ots))
+	       (ancestor*.ots		(object-type-spec.ancestor-ots* type.ots))
 	       (parent.ots		(<top>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
@@ -2897,7 +2941,7 @@
 	(object-type-spec.type-annotation (ancestor-of-type-spec.item-ots ots))))
 
 (define (make-ancestor-of-predicate ots)
-  (let* ((ancestor*.ots		(ancestor-of-type-spec.component-ots* ots))
+  (let* ((ancestor*.ots		(ancestor-of-type-spec.ancestor-ots* ots))
 	 (pred*.stx		(map object-type-spec.type-predicate-stx ancestor*.ots)))
     (for-each (lambda (ancestor.ots pred.stx)
 		(unless pred.stx
@@ -2912,6 +2956,14 @@
 	  (exists (lambda (,pred.sym)
 		    (,pred.sym ,obj.sym))
 	    (list ,@pred*.stx)))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (ancestor-of-type-spec.exists {ancestor-of.ots ancestor-of-type-spec?} {proc procedure?})
+  (exists  proc (ancestor-of-type-spec.ancestor-ots* ancestor-of.ots)))
+
+(define* (ancestor-of-type-spec.for-all {ancestor-of.ots ancestor-of-type-spec?} {proc procedure?})
+  (for-all proc (ancestor-of-type-spec.ancestor-ots* ancestor-of.ots)))
 
 
 ;;;; closure object signature spec
@@ -3128,6 +3180,10 @@
 			      (pair-type-spec.cdr-ots pair.ots))
 	(pair-type-spec.memoised-homogeneous?-set! pair.ots bool)))))
 
+(define (pair-type-spec?/list ots)
+  (and (pair-type-spec? ots)
+       (object-type-spec.list-type-spec? (pair-type-spec.cdr-ots ots))))
+
 
 ;;;; homogeneous pair object spec
 ;;
@@ -3339,6 +3395,12 @@
 (define* (list-type-spec.list-of-single-item? {list.ots list-type-spec?})
   (= 1 (list-type-spec.length list.ots)))
 
+(define* (list-type-spec.exists {ots list-type-spec?} {proc procedure?})
+  (exists proc (list-type-spec.item-ots* ots)))
+
+(define* (list-type-spec.for-all {ots list-type-spec?} {proc procedure?})
+  (for-all proc (list-type-spec.item-ots* ots)))
+
 
 ;;;; homogeneous list object spec
 ;;
@@ -3544,6 +3606,12 @@
 	    (length (vector-type-spec.item-ots* vector.ots))
 	  (vector-type-spec.memoised-length-set! vector.ots len))
       mem)))
+
+(define* (vector-type-spec.exists {ots vector-type-spec?} {proc procedure?})
+  (exists proc (vector-type-spec.item-ots* ots)))
+
+(define* (vector-type-spec.for-all {ots vector-type-spec?} {proc procedure?})
+  (for-all proc (vector-type-spec.item-ots* ots)))
 
 
 ;;;; homogeneous vector object spec
@@ -3823,6 +3891,7 @@
   (fields
     (immutable symbol*			enumeration-type-spec.symbol*)
 		;An proper list of symbols representing the enumeration universe.
+    (mutable memoised-length)
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
@@ -3849,7 +3918,7 @@
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
-	   symbol*)))
+	   symbol* #f)))
 
       make-enumeration-type-spec))
 
@@ -3886,6 +3955,12 @@
 
 (define* (enumeration-type-spec.member? {ots enumeration-type-spec?} {sym symbol?})
   (memq sym (enumeration-type-spec.symbol* ots)))
+
+(define* (enumeration-type-spec.length {ots enumeration-type-spec?})
+  (or (<enumeration-type-spec>-memoised-length ots)
+      (receive-and-return (len)
+	  (length (enumeration-type-spec.symbol* ots))
+	(<enumeration-type-spec>-memoised-length-set! ots len))))
 
 
 ;;;; label spec

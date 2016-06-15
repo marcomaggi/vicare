@@ -538,7 +538,7 @@
   (signatures
    ((<ancestor-of-type-descr>)		=> (<type-descriptor>))))
 
-(declare-core-primitive ancestor-of-type-descr.ancestors-des*
+(declare-core-primitive ancestor-of-type-descr.ancestor-des*
     (safe)
   (signatures
    ((<ancestor-of-type-descr>)		=> (<list>))))
@@ -546,35 +546,49 @@
 
 ;;;; object type descriptors: utilities
 
-(declare-core-primitive object-type-descr-of
+(declare-core-primitive type-descriptor-of
     (safe)
   (signatures
-   ((<top>)			=> (<top>))))
+   ((<top>)					=> (<type-descriptor>))))
 
 (declare-core-primitive object-type-descr.parent
     (safe)
   (signatures
-   ((<top>)			=> (<top>))))
+   ((<core-type-descriptor>)			=> ((or <false> <core-type-descriptor>)))
+   ((<pair-type-descriptor>)			=> (<core-type-descriptor>))
+   ((<pair-of-type-descriptor>)			=> (<core-type-descriptor>))
+   ((<list-type-descriptor>)			=> (<core-type-descriptor>))
+   ((<list-of-type-descriptor>)			=> (<core-type-descriptor>))
+   ((<vector-type-descriptor>)			=> (<core-type-descriptor>))
+   ((<vector-of-type-descriptor>)		=> (<core-type-descriptor>))
+   ((<hashtable-type-descriptor>)		=> (<core-type-descriptor>))
+   ((<alist-type-descriptor>)			=> (<core-type-descriptor>))
+   ((<enumeration-type-descriptor>)		=> (<core-type-descriptor>))
+   ((<union-type-descriptor>)			=> (<core-type-descriptor>))
+   ((<intersection-type-descriptor>)		=> (<core-type-descriptor>))
+   ((<complement-type-descriptor>)		=> (<core-type-descriptor>))
+   ((<ancestor-of-type-descriptor>)		=> (<core-type-descriptor>))
+   ((<type-descriptor>)				=> ((or <false> <type-descriptor>)))))
 
-(declare-core-primitive object-type-descr.ancestors-des*
+(declare-core-primitive object-type-descr.ancestor-des*
     (safe)
   (signatures
-   ((<top>)			=> (<list>))))
+   ((<type-descriptor>)				=> ((list-of <type-descriptor>)))))
 
 (declare-core-primitive object-type-descr=?
     (safe)
   (signatures
-   ((<top> <top>)		=> (<boolean>))))
+   ((<type-descriptor> <type-descriptor>)	=> (<boolean>))))
 
 (declare-core-primitive object-type-descr.matching-super-and-sub?
     (safe)
   (signatures
-   ((<top> <top>)		=> (<boolean>))))
+   ((<type-descriptor> <type-descriptor>)	=> (<boolean>))))
 
 (declare-core-primitive object-type-descr.matching-formal-and-operand
     (safe)
   (signatures
-   ((<top> <top>)		=> ((enumeration exact-match possible-match no-match)))))
+   ((<type-descriptor> <type-descriptor>)	=> ((enumeration exact-match possible-match no-match)))))
 
 
 ;;;; done

@@ -1430,7 +1430,7 @@
   (syntax-match input-form.stx ()
     ((_ ?type-annotation)
      (with-object-type-syntactic-binding (input-form.stx ?type-annotation lexenv.run type.ots)
-       (let ((name* (map object-type-spec.name (object-type-spec.ancestors-ots* type.ots))))
+       (let ((name* (map object-type-spec.name (object-type-spec.ancestor-ots* type.ots))))
 	 (make-psi input-form.stx
 	   (build-data no-source name*)
 	   (make-type-signature/single-list)))))
@@ -1646,7 +1646,7 @@
        (let ((des.core-expr (object-type-spec.type-descriptor-core-expr type.ots)))
 	 (make-psi input-form.stx
 	   (build-application no-source
-	       (build-primref no-source 'object-type-descr.ancestors-des*)
+	       (build-primref no-source 'object-type-descr.ancestor-des*)
 	     (list des.core-expr))
 	   (make-type-signature/single-value (make-list-of-type-spec (core-prim-spec '<type-descriptor> lexenv.run)))))))
     (_

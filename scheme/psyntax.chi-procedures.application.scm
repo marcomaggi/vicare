@@ -1565,7 +1565,7 @@
 			       (compound-condition-type-spec?		item.ots)
 			       (<compound-condition>-ots?		item.ots)
 			       (<condition>-ots?			item.ots)))
-		  (union-type-spec.component-ots* rand.ots)))
+		  (union-type-spec.item-ots* rand.ots)))
 	   (punt))
 
 	  ((and (intersection-type-spec? rand.ots)
@@ -1574,7 +1574,7 @@
 			       (compound-condition-type-spec?		item.ots)
 			       (<compound-condition>-ots?		item.ots)
 			       (<condition>-ots?			item.ots)))
-		  (intersection-type-spec.component-ots* rand.ots)))
+		  (intersection-type-spec.item-ots* rand.ots)))
 	   (punt))
 
 	  ((or (<compound-condition>-ots? rand.ots)

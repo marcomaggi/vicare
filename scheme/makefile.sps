@@ -4169,7 +4169,7 @@
     (make-ancestor-of-type-descr		$type-descriptors)
     (ancestor-of-type-descr?			$type-descriptors)
     (ancestor-of-type-descr.item-des		$type-descriptors)
-    (ancestor-of-type-descr.ancestors-des*	$type-descriptors)
+    (ancestor-of-type-descr.ancestor-des*	$type-descriptors)
 ;;;
     (<union-type-descr>-rtd)
     (<union-type-descr>-rcd)
@@ -4192,10 +4192,10 @@
     (complement-type-descr?			$type-descriptors)
     (complement-type-descr.item-des		$type-descriptors)
 ;;;
-    (object-type-descr-of				$type-descriptors)
+    (type-descriptor-of					$type-descriptors)
     (object-type-descr=?				$type-descriptors)
     (object-type-descr.parent				$type-descriptors)
-    (object-type-descr.ancestors-des*			$type-descriptors)
+    (object-type-descr.ancestor-des*			$type-descriptors)
     (object-type-descr.matching-super-and-sub?		$type-descriptors)
     (object-type-descr.compatible-super-and-sub?	$type-descriptors)
     (object-type-descr.matching-formal-and-operand	$type-descriptors)
@@ -4911,7 +4911,7 @@
     (make-union-type-spec)
     (union-of-type-specs				$expander)
     (union-type-spec?					$expander)
-    (union-type-spec.component-ots*			$expander)
+    (union-type-spec.item-ots*				$expander)
 
     (<intersection-type-spec>-rtd)
     (<intersection-type-spec>-rcd)
@@ -4919,7 +4919,7 @@
     (make-intersection-type-spec)
     (make-intersection-type-spec/maybe)
     (intersection-type-spec?				$expander)
-    (intersection-type-spec.component-ots*		$expander)
+    (intersection-type-spec.item-ots*			$expander)
 
     (<complement-type-spec>-rtd)
     (<complement-type-spec>-rcd)
@@ -4934,7 +4934,7 @@
     (make-ancestor-of-type-spec)
     (ancestor-of-type-spec?				$expander)
     (ancestor-of-type-spec.item-ots			$expander)
-    (ancestor-of-type-spec.component-ots*		$expander)
+    (ancestor-of-type-spec.ancestor-ots*		$expander)
 
     (<pair-type-spec>-rtd)
     (<pair-type-spec>-rcd)

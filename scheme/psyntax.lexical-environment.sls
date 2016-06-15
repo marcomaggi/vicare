@@ -127,7 +127,7 @@
 
     object-type-spec.matching-super-and-sub?		object-type-spec.compatible-super-and-sub?
     object-type-spec=?
-    object-type-spec.common-ancestor			object-type-spec.ancestors-ots*
+    object-type-spec.common-ancestor			object-type-spec.ancestor-ots*
     object-type-spec.procedure?
     object-type-spec.list-sub-type?			object-type-spec.vector-sub-type?
 
@@ -162,12 +162,12 @@
     <union-type-spec>
     <union-type-spec>-rtd				<union-type-spec>-rcd
     make-union-type-spec				union-of-type-specs
-    union-type-spec?					union-type-spec.component-ots*
+    union-type-spec?					union-type-spec.item-ots*
 
     <intersection-type-spec>
     <intersection-type-spec>-rtd			<intersection-type-spec>-rcd
     make-intersection-type-spec				intersection-of-type-specs
-    intersection-type-spec?				intersection-type-spec.component-ots*
+    intersection-type-spec?				intersection-type-spec.item-ots*
 
     <complement-type-spec>
     <complement-type-spec>-rtd				<complement-type-spec>-rcd
@@ -177,7 +177,7 @@
     <ancestor-of-type-spec>
     <ancestor-of-type-spec>-rtd				<ancestor-of-type-spec>-rcd
     make-ancestor-of-type-spec				ancestor-of-type-spec?
-    ancestor-of-type-spec.item-ots			ancestor-of-type-spec.component-ots*
+    ancestor-of-type-spec.item-ots			ancestor-of-type-spec.ancestor-ots*
 ;;;
     <pair-type-spec>
     <pair-type-spec>-rtd				<pair-type-spec>-rcd

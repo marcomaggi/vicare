@@ -70,7 +70,7 @@
     (syntax-rules (=>)
       ((_ ?expr => ?expected)
        (check
-	   (object-type-descr-of ?expr)
+	   (type-descriptor-of ?expr)
 	 (=> object-type-descr=?)
 	 ?expected))
       ))
@@ -1338,7 +1338,7 @@
 
 ;;; pair-of/list-of
 
-  (doit-true	(make-pair-of-type-descr <number>-ctd)
+  (doit-false	(make-pair-of-type-descr <number>-ctd)
 		(make-list-of-type-descr <fixnum>-ctd))
 
   (doit-false	(make-pair-of-type-descr <number>-ctd)
@@ -1499,20 +1499,13 @@
 ;;; --------------------------------------------------------------------
 ;;; enumeration
 
-  (doit-true	(make-enumeration-type-descr '(ciao))
-		(make-enumeration-type-descr '(ciao)))
+  (doit-true	<symbol>-ctd	(make-enumeration-type-descr '(ciao)))
+  (doit-false	(make-enumeration-type-descr '(ciao))	<symbol>-ctd)
 
-  (doit-true	<symbol>-ctd
-		(make-enumeration-type-descr '(ciao)))
-
-  (doit-false	(make-enumeration-type-descr '(ciao))
-		(make-enumeration-type-descr '(hello)))
-
-  (doit-false	(make-enumeration-type-descr '(ciao hello))
-		(make-enumeration-type-descr '(hello)))
-
-  (doit-true	(make-enumeration-type-descr '(ciao))
-		(make-enumeration-type-descr '(hello ciao)))
+  (doit-true	(make-enumeration-type-descr '(ciao))		(make-enumeration-type-descr '(ciao)))
+  (doit-false	(make-enumeration-type-descr '(ciao))		(make-enumeration-type-descr '(hello)))
+  (doit-false	(make-enumeration-type-descr '(ciao))		(make-enumeration-type-descr '(hello ciao)))
+  (doit-true	(make-enumeration-type-descr '(ciao hello))	(make-enumeration-type-descr '(hello)))
 
 ;;; --------------------------------------------------------------------
 ;;; union
@@ -1541,9 +1534,9 @@
 ;;; --------------------------------------------------------------------
 ;;; complement
 
-  (doit-true	(make-complement-type-descr <flonum>-ctd)		<fixnum>-ctd)
+  (doit-false	(make-complement-type-descr <flonum>-ctd)		<fixnum>-ctd)
   (doit-false	(make-complement-type-descr <exact-integer>-ctd)	<fixnum>-ctd)
-  (doit-true	(make-complement-type-descr <exact-integer>-ctd)	<flonum>-ctd)
+  (doit-false	(make-complement-type-descr <exact-integer>-ctd)	<flonum>-ctd)
 
   (doit-false	<fixnum>-ctd		(make-complement-type-descr <flonum>-ctd))
   (doit-false	<fixnum>-ctd		(make-complement-type-descr <fixnum>-ctd))
@@ -1753,7 +1746,9 @@
   (doit-false	<fixnum>		(not <string>))
 
   (doit-false	<top>			(ancestor-of <top>))
-  (doit-true	<top>			(ancestor-of <fixnum>))
+  (doit-false	<top>			(ancestor-of <fixnum>))
+  (doit-false	<number>		(ancestor-of <fixnum>))
+  (doit-false	<integer>		(ancestor-of <fixnum>))
   (doit-false	<fixnum>		(ancestor-of <fixnum>))
   (doit-false	<positive-fixnum>	(ancestor-of <fixnum>))
   (doit-false	<fixnum>		(ancestor-of <positive-fixnum>))
@@ -1821,7 +1816,7 @@
   (doit-true	<pair>			(pair <fixnum> <flonum>))
 
   (doit-false	(pair <top> <null>)	<list>)
-  (doit-false	(pair <top> <list>)	<list>)
+  (doit-true	(pair <top> <list>)	<list>)
   (doit-false	(pair <top> <null>)	<nelist>)
   (doit-true	(pair <top> <list>)	<nelist>)
 
@@ -1914,7 +1909,7 @@
 
 ;;; pair-of/list-of
 
-  (doit-true	(pair-of <number>)		(list-of <fixnum>))
+  (doit-false	(pair-of <number>)		(list-of <fixnum>))
   (doit-false	(pair-of <number>)		(list-of <string>))
 
 ;;; --------------------------------------------------------------------
@@ -2003,7 +1998,7 @@
   (doit-true	<nevector>			(vector <fixnum>))
   (doit-false	(vector <top>)			<nevector>)
   (doit-false	(vector <fixnum>)		<nevector>)
-  (doit-false	(vector <fixnum>)		<null>)
+  (doit-false	(vector <fixnum>)		<empty-vector>)
 
 ;;; vector/vector
 
@@ -2064,8 +2059,8 @@
 
   (doit-true	(enumeration ciao)		(enumeration ciao))
   (doit-false	(enumeration ciao)		(enumeration hello))
-  (doit-false	(enumeration ciao hello)	(enumeration hello))
-  (doit-true	(enumeration ciao)		(enumeration hello ciao))
+  (doit-true	(enumeration ciao hello)	(enumeration hello))
+  (doit-false	(enumeration ciao)		(enumeration hello ciao))
 
 ;;; --------------------------------------------------------------------
 ;;; hashtable
@@ -2100,17 +2095,11 @@
 ;;; --------------------------------------------------------------------
 ;;; union
 
-  (doit-true	(or <fixnum> <flonum>)
-		<fixnum>)
+  (doit-true	(or <fixnum> <flonum>)		<fixnum>)
+  (doit-true	(or <fixnum> <flonum>)		<flonum>)
+  (doit-false	(or <fixnum> <flonum>)		<string>)
 
-  (doit-true	(or <fixnum> <flonum>)
-		<flonum>)
-
-  (doit-false	(or <fixnum> <flonum>)
-		<string>)
-
-  (doit-true	(or <fixnum> <flonum>)
-		(or <fixnum> <flonum>))
+  (doit-true	(or <fixnum> <flonum>)		(or <fixnum> <flonum>))
 
 ;;; --------------------------------------------------------------------
 ;;; intersection
@@ -2125,8 +2114,7 @@
 ;;; complement
 
   (doit-false	(not <string>)		<top>)
-
-  (doit-true	(not <flonum>)		<fixnum>)
+  (doit-false	(not <flonum>)		<fixnum>)
   (doit-false	(not <flonum>)		<flonum>)
   (doit-false	(not <flonum>)		<positive-flonum>)
 
@@ -2136,11 +2124,9 @@
 ;;; --------------------------------------------------------------------
 ;;; ancestor-of
 
-  (doit-true	(ancestor-of <fixnum>)
-		(ancestor-of <fixnum>))
-
-  (doit-false	(ancestor-of <fixnum>)
-		(ancestor-of <positive-fixnum>))
+  (doit-true	(ancestor-of <fixnum>)	(ancestor-of <exact-integer>))
+  (doit-true	(ancestor-of <fixnum>)	(ancestor-of <fixnum>))
+  (doit-false	(ancestor-of <fixnum>)	(ancestor-of <positive-fixnum>))
 
   (doit-false	(ancestor-of <fixnum>)			<fixnum>)
   (doit-true	(ancestor-of <fixnum>)			<exact-integer>)
@@ -2149,6 +2135,724 @@
   (doit-true	(ancestor-of <fixnum>)			<complex>)
   (doit-true	(ancestor-of <fixnum>)			<number>)
   (doit-true	(ancestor-of <fixnum>)			<top>)
+
+  #| end of PARAMETRISE |# )
+
+
+(parametrise ((check-test-name	'matching-formal-and-operand))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?super ?sub => ?expected)
+       (check
+	   (type-descriptor-matching ?super ?sub)
+	 => (quote ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; core types as super-types
+
+  (doit	<top>			<top>				=> exact-match)
+  (doit	<top>			<number>			=> exact-match)
+  (doit	<number>		<top>				=> possible-match)
+
+  (doit	<top>			<void>				=> no-match)
+  (doit	<top>			<no-return>			=> no-match)
+  (doit	<void>			<void>				=> exact-match)
+  (doit	<no-return>		<no-return>			=> exact-match)
+  (doit	<void>			<top>				=> no-match)
+  (doit	<no-return>		<top>				=> no-match)
+
+  (doit	<top>			<struct>			=> exact-match)
+  (doit	<top>			<record>			=> exact-match)
+  (doit	<struct>		<record>			=> exact-match)
+
+  (doit	<pair>			<pair>				=> exact-match)
+  (doit	<pair>			<list>				=> possible-match)
+  (doit	<pair>			<null>				=> no-match)
+  (doit	<pair>			<nelist>			=> exact-match)
+  (doit	<pair>			(pair <fixnum> <flonum>)	=> exact-match)
+  (doit	<pair>			(pair-of <fixnum>)		=> exact-match)
+  (doit	<pair>			(list <fixnum> <flonum>)	=> exact-match)
+  (doit	<pair>			(list-of <fixnum>)		=> possible-match)
+  (doit	<pair>			(nelist-of <fixnum>)		=> exact-match)
+  (doit	<pair>			(alist <fixnum> <flonum>)	=> possible-match)
+
+  (doit	<list>			<pair>				=> possible-match)
+  (doit	<list>			<list>				=> exact-match)
+  (doit	<list>			<null>				=> exact-match)
+  (doit	<list>			<nelist>			=> exact-match)
+  (doit	<list>			(pair <fixnum> <flonum>)	=> no-match)
+  (doit	<list>			(pair <fixnum> <null>)		=> exact-match)
+  (doit	<list>			(pair-of <fixnum>)		=> no-match)
+  (doit	<list>			(pair-of <null>)		=> no-match)
+  (doit	<list>			(list <fixnum> <flonum>)	=> exact-match)
+  (doit	<list>			(list-of <fixnum>)		=> exact-match)
+  (doit	<list>			(nelist-of <fixnum>)		=> exact-match)
+  (doit	<list>			(alist <fixnum> <flonum>)	=> exact-match)
+
+  (doit	<nelist>		<pair>				=> possible-match)
+  (doit	<nelist>		<list>				=> possible-match)
+  (doit	<nelist>		<null>				=> no-match)
+  (doit	<nelist>		<nelist>			=> exact-match)
+  (doit	<nelist>		(pair <fixnum> <flonum>)	=> no-match)
+  (doit	<nelist>		(pair <fixnum> <null>)		=> exact-match)
+  (doit	<nelist>		(pair-of <fixnum>)		=> no-match)
+  (doit	<nelist>		(pair-of <null>)		=> no-match)
+  (doit	<nelist>		(list <fixnum> <flonum>)	=> exact-match)
+  (doit	<nelist>		(list-of <fixnum>)		=> possible-match)
+  (doit	<nelist>		(nelist-of <fixnum>)		=> exact-match)
+  (doit	<nelist>		(alist <fixnum> <flonum>)	=> possible-match)
+
+  (doit	<null>			<pair>				=> no-match)
+  (doit	<null>			<list>				=> possible-match)
+  (doit	<null>			<null>				=> exact-match)
+  (doit	<null>			<nelist>			=> no-match)
+  (doit	<null>			(pair <fixnum> <flonum>)	=> no-match)
+  (doit	<null>			(pair <fixnum> <null>)		=> no-match)
+  (doit	<null>			(pair-of <fixnum>)		=> no-match)
+  (doit	<null>			(pair-of <null>)		=> no-match)
+  (doit	<null>			(list <fixnum> <flonum>)	=> no-match)
+  (doit	<null>			(list-of <fixnum>)		=> possible-match)
+  (doit	<null>			(nelist-of <fixnum>)		=> no-match)
+  (doit	<null>			(alist <fixnum> <flonum>)	=> possible-match)
+
+  (doit	<vector>		<vector>			=> exact-match)
+  (doit	<vector>		<nevector>			=> exact-match)
+  (doit	<vector>		<empty-vector>			=> exact-match)
+  (doit	<vector>		(vector-of <fixnum>)		=> exact-match)
+  (doit	<vector>		(vector <fixnum> <flonum>)	=> exact-match)
+  #;(doit-true	<vector>		(nevector-of <fixnum>))
+
+  (doit	<nevector>		<vector>			=> possible-match)
+  (doit	<nevector>		<nevector>			=> exact-match)
+  (doit	<nevector>		<empty-vector>			=> no-match)
+  (doit	<nevector>		(vector-of <fixnum>)		=> possible-match)
+  (doit	<nevector>		(vector <fixnum> <flonum>)	=> exact-match)
+  #;(doit-true	<nevector>		(nevector-of <fixnum>))
+
+  (doit	<empty-vector>		<vector>			=> possible-match)
+  (doit	<empty-vector>		<nevector>			=> no-match)
+  (doit	<empty-vector>		<empty-vector>			=> exact-match)
+  (doit	<empty-vector>		(vector-of <fixnum>)		=> possible-match)
+  (doit	<empty-vector>		(vector <fixnum> <flonum>)	=> no-match)
+  #;(doit-false	<empty-vector>		(nevector-of <fixnum>))
+
+  (doit	<symbol>		<symbol>			=> exact-match)
+  (doit	<symbol>		<gensym>			=> exact-match)
+  (doit	<symbol>		(enumeration ciao)		=> exact-match)
+  (doit	<symbol>		(enumeration ciao hello)	=> exact-match)
+  (doit	<symbol>		<string>			=> no-match)
+
+  (doit	<gensym>		<symbol>			=> possible-match)
+  (doit	<gensym>		<gensym>			=> exact-match)
+  (doit	<gensym>		(enumeration ciao)		=> no-match)
+  (doit	<gensym>		(enumeration ciao hello)	=> no-match)
+  (doit	<symbol>		<string>			=> no-match)
+
+  (doit	<struct>		<top>				=> possible-match)
+  (doit	<struct>		<struct>			=> exact-match)
+  (doit	<struct>		<record>			=> exact-match)
+  (doit	<struct>		alpha				=> exact-match)
+  (doit	<struct>		beta				=> exact-match)
+  (doit	<struct>		<alpha>				=> exact-match)
+  (doit	<struct>		<beta>				=> exact-match)
+  (doit	<struct>		<string>			=> no-match)
+  (doit	<struct>		<condition>			=> exact-match)
+  (doit	<struct>		<compound-condition>		=> exact-match)
+  (doit	<struct>		&condition			=> exact-match)
+  (doit	<struct>		&who				=> exact-match)
+  (doit	<struct>		(condition &who)		=> exact-match)
+  (doit	<struct>		(condition &who &irritants)	=> exact-match)
+  (doit	<struct>		(condition &who (condition &irritants))	=> exact-match)
+
+  (doit	<hashtable>		<top>				=> possible-match)
+  (doit	<hashtable>		<struct>			=> possible-match)
+  (doit	<hashtable>		<record>			=> no-match)
+  (doit	<hashtable>		<hashtable>			=> exact-match)
+  (doit	<hashtable>		(hashtable <fixnum> <flonum>)	=> exact-match)
+
+  (doit	<record>		<top>				=> possible-match)
+  (doit	<record>		<struct>			=> possible-match)
+  (doit	<record>		<record>			=> exact-match)
+  (doit	<record>		alpha				=> no-match)
+  (doit	<record>		beta				=> no-match)
+  (doit	<record>		<alpha>				=> exact-match)
+  (doit	<record>		<beta>				=> exact-match)
+  (doit	<record>		<string>			=> no-match)
+  (doit	<record>		<condition>			=> exact-match)
+  (doit	<record>		<compound-condition>		=> exact-match)
+  (doit	<record>		&condition			=> exact-match)
+  (doit	<record>		&who				=> exact-match)
+  (doit	<record>		(condition &who)		=> exact-match)
+  (doit	<record>		(condition &who &irritants)	=> exact-match)
+  (doit	<record>		(condition &who (condition &irritants))	=> exact-match)
+
+  (doit	<condition>		<top>				=> possible-match)
+  (doit	<condition>		<struct>			=> possible-match)
+  (doit	<condition>		<record>			=> possible-match)
+  (doit	<condition>		<condition>			=> exact-match)
+  (doit	<condition>		<compound-condition>		=> exact-match)
+  (doit	<condition>		&condition			=> exact-match)
+  (doit	<condition>		&who				=> exact-match)
+  (doit	<condition>		(condition &who)		=> exact-match)
+  (doit	<condition>		(condition &who &irritants)	=> exact-match)
+  (doit	<condition>		(condition &who (condition &irritants))	=> exact-match)
+
+  (doit	<compound-condition>	<top>				=> possible-match)
+  (doit	<compound-condition>	<struct>			=> possible-match)
+  (doit	<compound-condition>	<record>			=> possible-match)
+  (doit	<compound-condition>	<condition>			=> possible-match)
+  (doit	<compound-condition>	<compound-condition>		=> exact-match)
+  (doit	<compound-condition>	&condition			=> no-match)
+  (doit	<compound-condition>	&who				=> no-match)
+  (doit	<compound-condition>	(condition &who)		=> no-match)
+  (doit	<compound-condition>	(condition &who &irritants)	=> exact-match)
+  (doit	<compound-condition>	(condition &who (condition &irritants))	=> exact-match)
+
+  (doit	<top>			(or <fixnum> <flonum>)		=> exact-match)
+  (doit	<fixnum>		(or <fixnum> <flonum>)		=> possible-match)
+  (doit	<flonum>		(or <fixnum> <flonum>)		=> possible-match)
+
+  (doit	<top>			(and <positive-fixnum> <zero-fixnum>)	=> exact-match)
+  (doit	<fixnum>		(and <positive-fixnum> <zero-fixnum>)	=> exact-match)
+  (doit	<positive-fixnum>	(and <positive-fixnum> <zero-fixnum>)	=> no-match)
+  (doit	<zero-fixnum>		(and <positive-fixnum> <zero-fixnum>)	=> no-match)
+  (doit	<flonum>		(and <positive-fixnum> <zero-fixnum>)	=> no-match)
+
+  (doit	<top>			(not <top>)		=> no-match)
+  (doit	<top>			(not <fixnum>)		=> possible-match)
+  (doit	<top>			(not <void>)		=> possible-match)
+  (doit	<top>			(not <no-return>)	=> possible-match)
+  (doit (not <fixnum>)		<top>			=> possible-match)
+  (doit (not <top>)		<top>			=> no-match)
+  (doit (not <void>)		<top>			=> possible-match)
+  (doit (not <no-return>)	<top>			=> possible-match)
+  ;;
+  (doit	<void>			(not <no-return>)	=> possible-match)
+  (doit	<void>			(not <top>)		=> possible-match)
+  (doit	<void>			(not <void>)		=> no-match)
+  (doit	<void>			(not <fixnum>)		=> possible-match)
+  (doit (not <fixnum>)		<void>			=> possible-match)
+  (doit (not <top>)		<void>			=> possible-match)
+  (doit (not <void>)		<void>			=> no-match)
+  (doit (not <no-return>)	<void>			=> possible-match)
+  ;;
+  (doit	<no-return>		(not <no-return>)	=> no-match)
+  (doit	<no-return>		(not <void>)		=> possible-match)
+  (doit	<no-return>		(not <top>)		=> possible-match)
+  (doit	<no-return>		(not <fixnum>)		=> possible-match)
+  (doit (not <fixnum>)		<no-return>		=> possible-match)
+  (doit (not <top>)		<no-return>		=> possible-match)
+  (doit (not <void>)		<no-return>		=> possible-match)
+  (doit (not <no-return>)	<no-return>		=> no-match)
+  ;;
+  (doit	<top>			(not <fixnum>)		=> possible-match)
+  (doit	<exact-integer>		(not <fixnum>)		=> possible-match)
+  (doit	<fixnum>		(not <fixnum>)		=> no-match)
+  (doit	<positive-fixnum>	(not <fixnum>)		=> possible-match)
+  (doit	<bignum>		(not <fixnum>)		=> possible-match)
+  (doit	<string>		(not <string>)		=> no-match)
+  (doit	<fixnum>		(not <string>)		=> possible-match)
+  (doit (not <fixnum>)		<fixnum>		=> no-match)
+  (doit (not <fixnum>)		<positive-fixnum>	=> no-match)
+  (doit (not <fixnum>)		<exact-integer>		=> possible-match)
+  (doit (not <fixnum>)		<string>		=> possible-match)
+
+  (doit	<top>			(ancestor-of <top>)		=> no-match)
+  (begin
+    (doit <top>			(ancestor-of <fixnum>)		=> possible-match)
+    (doit <number>		(ancestor-of <fixnum>)		=> possible-match)
+    (doit <integer>		(ancestor-of <fixnum>)		=> possible-match)
+    (doit <exact-integer>	(ancestor-of <fixnum>)		=> possible-match)
+    (doit <fixnum>		(ancestor-of <fixnum>)		=> no-match)
+    (doit <positive-fixnum>	(ancestor-of <fixnum>)		=> no-match))
+  (doit	<fixnum>		(ancestor-of <positive-fixnum>)	=> possible-match)
+
+;;; --------------------------------------------------------------------
+;;; struct-type descriptors
+
+  (doit	<top>			alpha			=> exact-match)
+  (doit	<struct>		alpha			=> exact-match)
+  (doit	alpha			<top>			=> possible-match)
+  (doit	alpha			<struct>		=> possible-match)
+  (doit	alpha			beta			=> no-match)
+
+  (doit	alpha			(or alpha <struct>)	=> possible-match)
+  (doit	alpha			(or alpha beta)		=> possible-match)
+  (doit	(or alpha <struct>)	alpha			=> exact-match)
+  (doit	(or alpha beta)		alpha			=> exact-match)
+
+  (doit	alpha			(and alpha <struct>)	=> exact-match)
+  (doit	alpha			(and alpha beta)	=> no-match)
+  (doit (and alpha <struct>)	alpha			=> exact-match)
+  (doit (and alpha beta)	alpha			=> no-match)
+
+  (doit	alpha			(not <top>)		=> possible-match)
+  (doit	alpha			(not <fixnum>)		=> possible-match)
+  (doit	alpha			(not alpha)		=> no-match)
+  (doit	alpha			(not beta)		=> possible-match)
+
+  (doit (not <top>)		alpha			=> no-match)
+  (doit (not alpha)		alpha			=> no-match)
+  (doit (not <fixnum>)		alpha			=> exact-match)
+  (doit (not beta)		alpha			=> exact-match)
+
+  (doit	alpha			(ancestor-of <top>)	=> no-match)
+  (doit	alpha			(ancestor-of <struct>)	=> no-match)
+  (doit	alpha			(ancestor-of alpha)	=> no-match)
+  (doit	alpha			(ancestor-of beta)	=> no-match)
+
+  (doit (ancestor-of <top>)	alpha			=> no-match)
+  (doit (ancestor-of <struct>)	alpha			=> no-match)
+  (doit (ancestor-of alpha)	alpha			=> no-match)
+  (doit (ancestor-of beta)	alpha			=> no-match)
+
+;;; --------------------------------------------------------------------
+;;; record-type descriptors
+
+  (doit	<duo>			<top>			=> possible-match)
+  (doit	<duo>			<struct>		=> possible-match)
+  (doit	<duo>			<record>		=> possible-match)
+  (doit	<top>			<duo>			=> exact-match)
+  (doit	<struct>		<duo>			=> exact-match)
+  (doit	<record>		<duo>			=> exact-match)
+
+  (doit	<alpha>			<beta>			=> exact-match)
+  (doit	<beta>			<delta>			=> exact-match)
+  (doit	<alpha>			<delta>			=> exact-match)
+  (doit	<beta>			<alpha>			=> possible-match)
+  (doit	<delta>			<beta>			=> possible-match)
+  (doit	<delta>			<alpha>			=> possible-match)
+  (doit	<alpha>			<duo>			=> no-match)
+  (doit	<duo>			<alpha>			=> no-match)
+
+  (doit (not <top>)		<alpha>			=> no-match)
+  (doit (not <alpha>)		<alpha>			=> no-match)
+  (doit (not <beta>)		<alpha>			=> possible-match)
+  (doit (not <duo>)		<alpha>			=> exact-match)
+  (doit (not <fixnum>)		<alpha>			=> exact-match)
+
+  (doit <alpha>			(not <top>)		=> possible-match)
+  (doit <alpha>			(not <alpha>)		=> no-match)
+  (doit <alpha>			(not <beta>)		=> possible-match)
+  (doit <alpha>			(not <fixnum>)		=> possible-match)
+  (doit <alpha>			(not <duo>)		=> possible-match)
+
+  (begin
+    (doit (not <alpha>)		<duo>			=> exact-match)
+    (doit (not <alpha>)		<alpha>			=> no-match)
+    (doit (not <alpha>)		<beta>			=> no-match)
+    (doit (not <alpha>)		<delta>			=> no-match)
+    ;;
+    (doit (not <beta>)		<duo>			=> exact-match)
+    (doit (not <beta>)		<alpha>			=> possible-match)
+    (doit (not <beta>)		<beta>			=> no-match)
+    (doit (not <beta>)		<delta>			=> no-match)
+    ;;
+    (doit (not <delta>)		<duo>			=> exact-match)
+    (doit (not <delta>)		<alpha>			=> possible-match)
+    (doit (not <delta>)		<beta>			=> possible-match)
+    (doit (not <delta>)		<delta>			=> no-match))
+
+  (begin
+    (doit (ancestor-of <top>)		<alpha>			=> no-match)
+    (doit (ancestor-of <struct>)	<alpha>			=> no-match)
+    (doit (ancestor-of <record>)	<alpha>			=> no-match)
+    (doit (ancestor-of <alpha>)		<alpha>			=> no-match)
+    (doit (ancestor-of <beta>)		<alpha>			=> exact-match)
+    (doit (ancestor-of <fixnum>)	<alpha>			=> no-match)
+    ;;
+    (doit <alpha>			(ancestor-of <top>)	=> no-match)
+    (doit <alpha>			(ancestor-of <struct>)	=> no-match)
+    (doit <alpha>			(ancestor-of <record>)	=> no-match)
+    (doit <alpha>			(ancestor-of <alpha>)	=> no-match)
+    (doit <alpha>			(ancestor-of <beta>)	=> possible-match)
+    (doit <alpha>			(ancestor-of <fixnum>)	=> no-match))
+
+  (begin
+    (doit (ancestor-of <alpha>)	(ancestor-of <alpha>)	=> exact-match)
+    (doit (ancestor-of <alpha>)	(ancestor-of <beta>)	=> possible-match)
+    (doit (ancestor-of <alpha>)	(ancestor-of <delta>)	=> possible-match)
+    (doit (ancestor-of <alpha>)	(ancestor-of <duo>)	=> no-match)
+    ;;
+    (doit (ancestor-of <beta>)	(ancestor-of <alpha>)	=> exact-match)
+    (doit (ancestor-of <beta>)	(ancestor-of <beta>)	=> exact-match)
+    (doit (ancestor-of <beta>)	(ancestor-of <delta>)	=> possible-match)
+    (doit (ancestor-of <beta>)	(ancestor-of <duo>)	=> no-match)
+    ;;
+    (doit (ancestor-of <delta>)	(ancestor-of <alpha>)	=> exact-match)
+    (doit (ancestor-of <delta>)	(ancestor-of <beta>)	=> exact-match)
+    (doit (ancestor-of <delta>)	(ancestor-of <delta>)	=> exact-match)
+    (doit (ancestor-of <delta>)	(ancestor-of <duo>)	=> no-match)
+    ;;
+    (doit (ancestor-of <duo>)	(ancestor-of <alpha>)	=> no-match)
+    (doit (ancestor-of <duo>)	(ancestor-of <beta>)	=> no-match)
+    (doit (ancestor-of <duo>)	(ancestor-of <delta>)	=> no-match)
+    (doit (ancestor-of <duo>)	(ancestor-of <duo>)	=> exact-match))
+
+;;; --------------------------------------------------------------------
+;;; simple condition type descriptors
+
+  (doit	&condition		<top>			=> possible-match)
+  (doit	&condition		<struct>		=> possible-match)
+  (doit	&condition		<record>		=> possible-match)
+  (doit	&condition		<condition>		=> possible-match)
+  (doit	&condition		<compound-condition>	=> no-match)
+
+  (doit	<top>			&condition		=> exact-match)
+  (doit	<struct>		&condition		=> exact-match)
+  (doit	<record>		&condition		=> exact-match)
+  (doit	<condition>		&condition		=> exact-match)
+  (doit	<compound-condition>	&condition		=> no-match)
+  (doit	&condition		&condition		=> exact-match)
+
+  (doit	<top>			&who			=> exact-match)
+  (doit	<struct>		&who			=> exact-match)
+  (doit	<record>		&who			=> exact-match)
+  (doit	<condition>		&who			=> exact-match)
+  (doit	&condition		&who			=> exact-match)
+  (doit	<compound-condition>	&who			=> no-match)
+
+;;; --------------------------------------------------------------------
+;;; pair
+
+  (doit	<pair>			(pair <fixnum> <flonum>)	=> exact-match)
+
+  (doit	(pair <top> <null>)	<list>			=> possible-match)
+  (doit	(pair <top> <list>)	<list>			=> exact-match)
+  (doit	(pair <top> <null>)	<nelist>		=> possible-match)
+  (doit	(pair <top> <list>)	<nelist>		=> exact-match)
+
+  (doit	(pair <fixnum> <list>)	<list>			=> possible-match)
+  (doit	(pair <fixnum> <list>)	<nelist>		=> possible-match)
+
+;;; pair/pair
+
+  (doit	(pair <fixnum> <string>) (pair <fixnum> <string>)	=> exact-match)
+  (doit	(pair <number> <string>) (pair <fixnum> <string>)	=> exact-match)
+
+  (doit	(pair <string> <number>) (pair <string> <fixnum>)	=> exact-match)
+
+  (doit	(pair <fixnum> <string>) (pair <number> <string>)	=> possible-match)
+
+  (doit	(pair <string> <fixnum>) (pair <string> <number>)	=> possible-match)
+  (doit	(pair <fixnum> <string>) (pair <symbol> <string>)	=> no-match)
+
+  (doit	(pair <fixnum> <string>) (pair <fixnum> <symbol>)	=> no-match)
+
+;;; pair/pair-of
+
+  (doit	(pair <fixnum> <number>) (pair-of <fixnum>)		=> exact-match)
+  (doit	(pair <string> <number>) (pair-of <fixnum>)		=> no-match)
+  (doit	(pair <fixnum> <string>) (pair-of <fixnum>)		=> no-match)
+
+;;; pair/list
+
+  (doit	(pair <fixnum> <null>)			(list <fixnum>)		=> exact-match)
+  (doit	(pair <fixnum> <flonum>)		(list <fixnum>)		=> no-match)
+  (doit	(pair <fixnum> (list-of <fixnum>))	(list <fixnum>)		=> exact-match)
+  (doit	(pair <fixnum> (list <fixnum>))		(list <fixnum>)		=> no-match)
+  (doit	(pair <fixnum> (list <fixnum>))		(list <fixnum> <fixnum>) => exact-match)
+
+;;; pair/list-of
+
+  (doit	(pair <fixnum> (list-of <fixnum>))	(list-of <fixnum>)	=> possible-match)
+  (doit	(pair <fixnum> (list <fixnum>))		(list-of <fixnum>)	=> possible-match)
+
+;;; --------------------------------------------------------------------
+;;; pair-of
+
+  (doit	<pair>			(pair-of <fixnum>)	=> exact-match)
+
+;;;
+
+  (doit	(pair-of <null>)	<list>			=> no-match)
+  (doit	(pair-of <list>)	<list>			=> no-match)
+  (doit	(pair-of <fixnum>)	<list>			=> no-match)
+
+  (doit	(pair-of <null>)	<nelist>		=> no-match)
+  (doit	(pair-of <list>)	<nelist>		=> no-match)
+  (doit	(pair-of <fixnum>)	<nelist>		=> no-match)
+
+  (doit	(pair-of <null>)	<null>			=> no-match)
+  (doit	(pair-of <list>)	<null>			=> no-match)
+  (doit	(pair-of <fixnum>)	<null>			=> no-match)
+
+;;; pair-of/pair
+
+  (doit	(pair-of <list>)		(pair <list> <list>)	=> exact-match)
+  (doit	(pair-of (or <number> <list>))	(pair <fixnum> <list>)	=> exact-match)
+
+;;; pair-of/pair-of
+
+  (doit	(pair-of <number>)		(pair-of <fixnum>)	=> exact-match)
+  (doit	(pair-of <number>)		(pair-of <string>)	=> no-match)
+
+;;; pair-of/list
+
+  (doit	(pair-of <list>)		(list <list> <list>)	=> exact-match)
+  (doit	(pair-of (or <number> <list>))	(list <fixnum> <list>)	=> exact-match)
+
+;;; pair-of/list-of
+
+  (doit	(pair-of <number>)		(list-of <fixnum>)	=> no-match)
+  (doit	(pair-of <number>)		(list-of <string>)	=> no-match)
+
+;;; --------------------------------------------------------------------
+;;; list
+
+  (doit	<list>			(list <fixnum>)		=> exact-match)
+  (doit	<nelist>		(list <fixnum>)		=> exact-match)
+
+  (doit	(list <top>)		<pair>			=> exact-match)
+  (doit	(list <top>)		<list>			=> possible-match)
+  (doit	(list <top>)		<nelist>		=> possible-match)
+  (doit	(list <top>)		<null>			=> no-match)
+
+  (doit	(list <fixnum>)		<list>			=> possible-match)
+  (doit	(list <fixnum>)		<nelist>		=> possible-match)
+  (doit	(list <fixnum>)		<null>			=> no-match)
+
+;;; list/pair
+
+  (doit	(list <fixnum>)			(pair <fixnum> <null>)		=> exact-match)
+  (doit	(list <fixnum>)			(pair <fixnum> <string>)	=> no-match)
+  (doit	(list <fixnum> <flonum>)	(pair <fixnum> <null>)		=> no-match)
+
+;;; list/pair-of
+
+  (doit	(list <null>)			(pair-of <null>)		=> exact-match)
+  (doit	(list <list>)			(pair-of <null>)		=> exact-match)
+  (doit	(list <fixnum>)			(pair-of <list>)		=> no-match)
+
+  (doit	(list (list <flonum>) <flonum>)	(pair-of (list <flonum>))	=> exact-match)
+
+;;; list/list
+
+  (doit	(list <fixnum> <flonum>)	(list <fixnum> <flonum>)	=> exact-match)
+  (doit	(list <fixnum> <number>)	(list <fixnum> <flonum>)	=> exact-match)
+  (doit	(list <fixnum> <flonum>)	(list <fixnum> <string>)	=> no-match)
+
+;;; list/list-of
+
+  (doit	(list <fixnum>)			(list-of <top>)			=> possible-match)
+  (doit	(list <fixnum>)			(list-of <exact-integer>)	=> possible-match)
+  (doit	(list <fixnum>)			(list-of <fixnum>)		=> possible-match)
+  (doit	(list <fixnum>)			(list-of <string>)		=> no-match)
+
+;;; --------------------------------------------------------------------
+;;; list-of
+
+  (doit	<list>			(list-of <fixnum>)		=> exact-match)
+  (doit	<nelist>		(list-of <fixnum>)		=> possible-match)
+
+  (doit	(list-of <top>)		<list>				=> exact-match)
+  (doit	(list-of <top>)		<nelist>			=> exact-match)
+  (doit	(list-of <top>)		<null>				=> exact-match)
+
+  (doit	(list-of <fixnum>)	<list>				=> possible-match)
+  (doit	(list-of <fixnum>)	<nelist>			=> possible-match)
+  (doit	(list-of <fixnum>)	<null>				=> exact-match)
+
+;;; list-of/pair
+
+  (doit	(list-of <fixnum>)		(pair <fixnum> <null>)			=> exact-match)
+  (doit	(list-of <fixnum>)		(pair <fixnum> (list-of <fixnum>))	=> exact-match)
+  (doit	(list-of <number>)		(pair <fixnum> (list <flonum>))		=> exact-match)
+  (doit	(list-of <number>)		(pair <fixnum> (list <string>))		=> no-match)
+  (doit	(list-of <number>)		(pair <string> <null>)			=> no-match)
+
+;;; list-of/pair-of
+
+  (doit	(list-of <null>)		(pair-of <null>)	=> exact-match)
+  (doit	(list-of <list>)		(pair-of <list>)	=> exact-match)
+  (doit	(list-of <fixnum>)		(pair-of <fixnum>)	=> no-match)
+
+;;; list-of/list
+
+  (doit	(list-of <fixnum>)		(list <fixnum>)		=> exact-match)
+  (doit	(list-of <number>)		(list <fixnum>)		=> exact-match)
+  (doit	(list-of <fixnum>)		(list <number>)		=> possible-match)
+
+;;; list-of/list-of
+
+  (doit	(list-of <fixnum>)		(list-of <fixnum>)	=> exact-match)
+  (doit	(list-of <number>)		(list-of <fixnum>)	=> exact-match)
+  (doit	(list-of <fixnum>)		(list-of <number>)	=> possible-match)
+  (doit	(list-of <string>)		(list-of <fixnum>)	=> no-match)
+
+;;; --------------------------------------------------------------------
+;;; vector
+
+  (doit	<vector>			(vector <fixnum>)	=> exact-match)
+  (doit	<nevector>			(vector <fixnum>)	=> exact-match)
+  (doit	(vector <top>)			<nevector>		=> possible-match)
+  (doit	(vector <fixnum>)		<nevector>		=> possible-match)
+  (doit	(vector <fixnum>)		<empty-vector>		=> no-match)
+
+;;; vector/vector
+
+  (doit	(vector <fixnum> <flonum>)	(vector <fixnum> <flonum>)	=> exact-match)
+  (doit	(vector <fixnum> <number>)	(vector <fixnum> <flonum>)	=> exact-match)
+  (doit	(vector <fixnum> <flonum>)	(vector <number> <number>)	=> possible-match)
+  (doit	(vector <fixnum> <flonum>)	(vector <fixnum> <string>)	=> no-match)
+
+;;; vector/vector-of
+
+  (doit	(vector <fixnum>)		(vector-of <top>)		=> possible-match)
+  (doit	(vector <fixnum>)		(vector-of <integer>)		=> possible-match)
+  (doit	(vector <fixnum>)		(vector-of <fixnum>)		=> possible-match)
+  (doit	(vector <fixnum>)		(vector-of <string>)		=> no-match)
+
+;;; --------------------------------------------------------------------
+;;; vector-of
+
+  (doit	<vector>			(vector-of <fixnum>)	=> exact-match)
+  (doit	<nevector>			(vector-of <fixnum>)	=> possible-match)
+  (doit	<empty-vector>			(vector-of <fixnum>)	=> possible-match)
+
+  (doit	(vector-of <top>)		<vector>		=> exact-match)
+  (doit	(vector-of <top>)		<nevector>		=> exact-match)
+  (doit	(vector-of <top>)		<empty-vector>		=> exact-match)
+
+  (doit	(vector-of <fixnum>)		<vector>		=> possible-match)
+  (doit	(vector-of <fixnum>)		<nevector>		=> possible-match)
+  (doit	(vector-of <fixnum>)		<empty-vector>		=> exact-match)
+
+;;; vector-of/vector
+
+  (doit	(vector-of <fixnum>)		(vector <fixnum>)	=> exact-match)
+  (doit	(vector-of <number>)		(vector <fixnum>)	=> exact-match)
+  (doit	(vector-of <fixnum>)		(vector <number>)	=> possible-match)
+  (doit	(vector-of <fixnum>)		(vector <string>)	=> no-match)
+
+;;; vector-of/vector-of
+
+  (doit	(vector-of <fixnum>)		(vector-of <fixnum>)	=> exact-match)
+  (doit	(vector-of <number>)		(vector-of <fixnum>)	=> exact-match)
+  (doit	(vector-of <fixnum>)		(vector-of <number>)	=> possible-match)
+  (doit	(vector-of <string>)		(vector-of <fixnum>)	=> no-match)
+
+;;; --------------------------------------------------------------------
+;;; compound condition-objects
+
+  (doit &who	(condition &who)					=> exact-match)
+  (doit &who	(condition &who &message)				=> exact-match)
+  (doit &who	(condition (condition &who) &message)			=> exact-match)
+  (doit &who	(condition (condition (condition &who)) &message)	=> exact-match)
+  (doit &who	(condition (condition (condition &who)))		=> exact-match)
+
+  (doit	(condition &condition)		(condition &who)		=> exact-match)
+  (doit	(condition &condition)		(condition &who &irritants)	=> exact-match)
+  (doit	(condition &who)		(condition &who)		=> exact-match)
+  (doit	(condition &who)		(condition &condition)		=> possible-match)
+  (doit	(condition &who)		(condition &who &irritants)	=> exact-match)
+  (doit	(condition &who &irritants)	(condition &who)		=> possible-match)
+  (doit	(condition &who &irritants)	(condition &who &irritants)	=> exact-match)
+  (doit	(condition &irritants &who)	(condition &who &irritants)	=> exact-match)
+  (doit	(condition &who &irritants)	(condition &who &message)	=> no-match)
+
+  (doit	(condition &who (condition &irritants))		(condition &who (condition &irritants))	      => exact-match)
+  (doit	(condition &irritants (condition &who))		(condition (condition &who) &irritants)	      => exact-match)
+
+;;; --------------------------------------------------------------------
+;;; enumeration
+
+  (doit	<symbol>			(enumeration ciao)		=> exact-match)
+  (doit	(enumeration ciao)		<symbol>			=> possible-match)
+
+  (doit	(enumeration ciao)		(enumeration ciao)		=> exact-match)
+  (doit	(enumeration ciao)		(enumeration hello)		=> no-match)
+  (doit	(enumeration ciao hello)	(enumeration hello)		=> exact-match)
+  (doit	(enumeration ciao)		(enumeration hello ciao)	=> possible-match)
+
+;;; --------------------------------------------------------------------
+;;; hashtable
+
+  (doit <top>		(hashtable <fixnum> <flonum>)		=> exact-match)
+  (doit <struct>	(hashtable <fixnum> <flonum>)		=> exact-match)
+  (doit <record>	(hashtable <fixnum> <flonum>)		=> no-match)
+  (doit (hashtable <fixnum> <flonum>)		<top>		=> possible-match)
+  (doit (hashtable <fixnum> <flonum>)		<struct>	=> possible-match)
+  (doit (hashtable <fixnum> <flonum>)		<record>	=> no-match)
+
+  (doit	(hashtable <fixnum> <fixnum>) (hashtable <fixnum> <fixnum>)		=> exact-match)
+  (doit	(hashtable <fixnum> <fixnum>) (hashtable <fixnum> <string>)		=> no-match)
+  (doit	(hashtable <fixnum> <fixnum>) (hashtable <string> <fixnum>)		=> no-match)
+  (doit	(hashtable <fixnum> <fixnum>) (hashtable <positive-fixnum> <fixnum>)	=> exact-match)
+  (doit	(hashtable <fixnum> <fixnum>) (hashtable <fixnum> <positive-fixnum>)	=> exact-match)
+
+;;; --------------------------------------------------------------------
+;;; alist
+
+  (doit	<top>		(alist <fixnum> <fixnum>)	=> exact-match)
+  (doit	<list>		(alist <fixnum> <fixnum>)	=> exact-match)
+  (doit	<null>		(alist <fixnum> <fixnum>)	=> possible-match)
+  (doit	<nelist>	(alist <fixnum> <fixnum>)	=> possible-match)
+
+  (doit	(alist <fixnum> <fixnum>)	<top>		=> possible-match)
+  (doit	(alist <fixnum> <fixnum>)	<list>		=> possible-match)
+  (doit	(alist <fixnum> <fixnum>)	<null>		=> exact-match)
+  (doit	(alist <fixnum> <fixnum>)	<nelist>	=> possible-match)
+
+  (doit	(alist <fixnum> <fixnum>) (alist <fixnum> <fixnum>)	=> exact-match)
+  (doit	(alist <fixnum> <fixnum>) (alist <fixnum> <string>)	=> no-match)
+  (doit	(alist <fixnum> <fixnum>) (alist <string> <fixnum>)	=> no-match)
+
+;;; --------------------------------------------------------------------
+;;; union
+
+  (doit	(or <fixnum> <flonum>)	<fixnum>	=> exact-match)
+  (doit	(or <fixnum> <flonum>)	<flonum>	=> exact-match)
+  (doit	(or <fixnum> <flonum>)	<string>	=> no-match)
+
+  (doit	(or <fixnum> <flonum>)	(or <fixnum> <flonum>)	=> exact-match)
+
+;;; --------------------------------------------------------------------
+;;; intersection
+
+  (doit	(and <number> <flonum>)	<flonum>	=> exact-match)
+  (doit	(and <number> <flonum>)	<string>	=> no-match)
+
+  (doit (and (not <fixnum>) (not <string>))	<vector>	=> possible-match)
+
+;;; --------------------------------------------------------------------
+;;; complement
+
+  (doit	(not <string>)		<top>			=> possible-match)
+
+  (doit	(not <flonum>)		<fixnum>		=> possible-match)
+  (doit	(not <flonum>)		<flonum>		=> no-match)
+  (doit	(not <flonum>)		<positive-flonum>	=> no-match)
+
+  (doit	<fixnum>		(not <flonum>)		=> possible-match)
+  (doit	<fixnum>		(not <fixnum>)		=> no-match)
+
+  (doit (not <number>)		(not <fixnum>)		=> exact-match)
+  (doit (not <fixnum>)		(not <number>)		=> possible-match)
+  (doit (not <string>)		(not <number>)		=> possible-match)
+
+  (doit	(not (ancestor-of <fixnum>))	<fixnum>		=> exact-match)
+  (doit	(not (ancestor-of <fixnum>))	<positive-fixnum>	=> exact-match)
+  (doit	(not (ancestor-of <fixnum>))	<bignum>		=> exact-match)
+  (doit	(not (ancestor-of <fixnum>))	<exact-integer>		=> no-match)
+  (doit	(not (ancestor-of <fixnum>))	<number>		=> no-match)
+  (doit	(not (ancestor-of <fixnum>))	<top>			=> no-match)
+
+;;; --------------------------------------------------------------------
+;;; ancestor-of
+
+  (doit	(ancestor-of <fixnum>)	(ancestor-of <fixnum>)		=> exact-match)
+  (doit	(ancestor-of <fixnum>)	(ancestor-of <positive-fixnum>)	=> possible-match)
+
+  (doit	(ancestor-of <fixnum>)			<fixnum>	=> no-match)
+  (doit	(ancestor-of <fixnum>)			<exact-integer>	=> exact-match)
+  (doit	(ancestor-of <fixnum>)			<integer>	=> exact-match)
+  (doit	(ancestor-of <fixnum>)			<real>		=> exact-match)
+  (doit	(ancestor-of <fixnum>)			<complex>	=> exact-match)
+  (doit	(ancestor-of <fixnum>)			<number>	=> exact-match)
+  (doit	(ancestor-of <fixnum>)			<top>		=> exact-match)
 
   #| end of PARAMETRISE |# )
 
@@ -2200,173 +2904,86 @@
 
 ;;;
 
-  (doit ((not <fixnum>))
-	(<positive-fixnum>)
-	=> no-match)
-
-  (doit ((not <fixnum>))
-	(<fixnum>)
-	=> no-match)
+  (doit ((not <fixnum>))		(<positive-fixnum>)	=> no-match)
+  (doit ((not <fixnum>))		(<fixnum>)		=> no-match)
 
   ;;"<exact-integer>" is an ancestor of "<fixnum>".
   ;;
-  (doit ((not <fixnum>))
-	(<exact-integer>)
-	=> possible-match)
-
-  (doit ((not <fixnum>))
-	(<bignum>)
-	=> exact-match)
+  (doit ((not <fixnum>))		(<exact-integer>)	=> possible-match)
+  (doit ((not <fixnum>))		(<bignum>)		=> possible-match)
 
 ;;; --------------------------------------------------------------------
-;;; type intersection
+;;; type complement
 
-  (doit ((not <fixnum>))
-	(<vector>)
-	=> exact-match)
-
-  (doit ((not <fixnum>))
-	(<exact-integer>)
-	=> possible-match)
-
-  (doit ((not <string>))
-	(<vector>)
-	=> exact-match)
-
-  (doit ((not <string>))
-	(<exact-integer>)
-	=> exact-match)
+  ;; preamble
+  (doit ((not <fixnum>))		(<vector>)		=> possible-match)
+  (doit ((not <fixnum>))		(<exact-integer>)	=> possible-match)
+  (doit ((not <string>))		(<vector>)		=> possible-match)
+  (doit ((not <string>))		(<exact-integer>)	=> possible-match)
 
   (begin
-    (doit ((and (not <fixnum>)
-		(not <string>)))
-	  (<vector>)
-	  => exact-match)
-
-    (doit ((and (not <fixnum>)
-		(not <string>)))
-	  (<fixnum>)
-	  => no-match)
-
-    (doit ((and (not <fixnum>)
-		(not <string>)))
-	  (<string>)
-	  => no-match)
-
-    (doit ((and (not <fixnum>)
-		(not <string>)))
-	  (<positive-fixnum>)
-	  => no-match)
-
+    (doit ((and (not <fixnum>) (not <string>)))		(<vector>)		=> possible-match)
+    (doit ((and (not <fixnum>) (not <string>)))		(<fixnum>)		=> no-match)
+    (doit ((and (not <fixnum>) (not <string>)))		(<string>)		=> no-match)
+    (doit ((and (not <fixnum>) (not <string>)))		(<positive-fixnum>)	=> no-match)
     ;;"<exact-integer>" is an ancestor of "<fixnum>".
-    ;;
-    (doit ((and (not <fixnum>)
-		(not <string>)))
-	  (<exact-integer>)
-	  => possible-match)
+    (doit ((and (not <fixnum>) (not <string>)))		(<exact-integer>)	=> possible-match)
     #| end of BEGIN |# )
 
   (internal-body
     (define-type <it>
       (and (not <fixnum>)
 	   (not <string>)))
-
-    (doit (<it>)
-	  (<vector>)
-	  => exact-match)
-
-    (doit (<it>)
-	  (<fixnum>)
-	  => no-match)
-
-    (doit (<it>)
-	  (<string>)
-	  => no-match)
-
-    (doit (<it>)
-	  (<positive-fixnum>)
-	  => no-match)
-
+    (doit (<it>)		(<vector>)		=> possible-match)
+    (doit (<it>)		(<fixnum>)		=> no-match)
+    (doit (<it>)		(<string>)		=> no-match)
+    (doit (<it>)		(<positive-fixnum>)	=> no-match)
+    (doit (<it>)		(<nestring>)		=> no-match)
     ;;"<exact-integer>" is an ancestor of "<fixnum>".
-    ;;
-    (doit (<it>)
-	  (<exact-integer>)
-	  => possible-match)
+    (doit (<it>)		(<exact-integer>)	=> possible-match)
+    (doit (<it>)		(<top>)			=> possible-match)
     #| end of INTERNAL-BODY |# )
 
 ;;; --------------------------------------------------------------------
 ;;; ancestor-of
 
-  (doit ((ancestor-of &condition))
-	(<condition>)
-	=> exact-match)
+  ;;The ancestors of &condition are: <condition>, <record>, <struct>, <top>.
+  ;;
+  (doit ((ancestor-of &condition))	(&condition)		=> no-match)
+  (doit ((ancestor-of &condition))	(<condition>)		=> exact-match)
+  (doit ((ancestor-of &condition))	(<record>)		=> exact-match)
+  (doit ((ancestor-of &condition))	(<struct>)		=> exact-match)
+  (doit ((ancestor-of &condition))	(<top>)			=> exact-match)
 
-  (doit ((ancestor-of &condition))
-	(<record>)
-	=> exact-match)
+  (doit ((ancestor-of &condition))	(<fixnum>)		=> no-match)
 
-  (doit ((ancestor-of &condition))
-	(<struct>)
-	=> exact-match)
-
-  (doit ((ancestor-of &condition))
-	(<top>)
-	=> exact-match)
-
-  (doit ((ancestor-of &condition))
-	(<fixnum>)
-	=> no-match)
-
-  (doit ((ancestor-of &condition))
-	(&condition)
-	=> no-match)
-
-  (doit ((ancestor-of &condition))
-	(&who)
-	=> no-match)
-
-  (doit ((ancestor-of &condition))
-	((condition &who &message))
-	=> no-match)
-
-  (doit ((ancestor-of &who))
-	((condition &who &message))
-	=> no-match)
+  (doit ((ancestor-of &condition))	(&who)				=> no-match)
+  (doit ((ancestor-of &condition))	((condition &who &message))	=> no-match)
+  (doit ((ancestor-of &who))		((condition &who &message))	=> no-match)
 
 ;;; complement
 
-  (doit ((not (ancestor-of &condition)))
-	(&condition)
-	=> exact-match)
+  ;;The ancestors of &condition are: <condition>, <record>, <struct>, <top>.
 
-  (doit ((not (ancestor-of &condition)))
-	(<condition>)
-	=> no-match)
-
-  (doit ((not (ancestor-of &condition)))
-	(<record>)
-	=> no-match)
-
-  (doit ((not (ancestor-of &condition)))
-	(<struct>)
-	=> no-match)
-
-  (doit ((not (ancestor-of &condition)))
-	(<top>)
-	=> no-match)
+  (doit ((not (ancestor-of &condition)))	(<fixnum>)		=> exact-match)
+  (doit ((not (ancestor-of &condition)))	(&condition)		=> exact-match)
+  (doit ((not (ancestor-of &condition)))	(<condition>)		=> no-match)
+  (doit ((not (ancestor-of &condition)))	(<record>)		=> no-match)
+  (doit ((not (ancestor-of &condition)))	(<struct>)		=> no-match)
+  (doit ((not (ancestor-of &condition)))	(<top>)			=> no-match)
 
 ;;;
 
-  (doit (<fixnum>)
-	(<zero>)
-	=> possible-match)
-  (doit ((ancestor-of <fixnum>))
-	(<zero>)
-	=> no-match)
+  (doit (<fixnum>)				(<zero>)		=> possible-match)
+  (doit ((ancestor-of <fixnum>))		(<zero>)		=> no-match)
 
-  (doit ((not (ancestor-of <fixnum>)))
-	(<zero>)
-	=> possible-match)
+  ;;The ancestors of <fixnum> are: <exact-integer>, ..., <number>, <top>.
+  ;;
+  ;;The specification of  <zero> is the union  between: <zero-fixnum>, <zero-flonum>,
+  ;;<zero-compnum>, <zero-cflonum>.
+  ;;
+  ;;So none of the components of <zero> is equal to an ancestor of <fixnum>.
+  (doit ((not (ancestor-of <fixnum>)))		(<zero>)		=> exact-match)
 
   (void))
 

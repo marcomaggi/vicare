@@ -981,6 +981,16 @@ Internally, first an expand--time type specification is built; then the
 type descriptor is built from the specification.
 @end deffn
 
+
+@defun type-descriptor-of @var{obj}
+Return the type descriptor of @var{obj}.
+
+@lisp
+(type-descriptor-of +1)         @result{} @actdname{positive-fixnum}
+(type-descriptor-of "ciao")     @result{} @actdname{nestring}
+@end lisp
+@end defun
+
 @c page
 @node types descr core
 @subsection Core object--type descriptors
@@ -1632,7 +1642,7 @@ descriptor.  It has the following fields:
 @item item-des
 The type descriptor of which we describe the ancestors.
 
-@item ancestors-des*
+@item ancestor-des*
 List of type descriptors representing the ancestors.  The head of the
 list is the parent type descriptor.
 @end table
@@ -1651,7 +1661,7 @@ Return @true{} if @var{obj} is an instance of
 
 
 @defun ancestor-of-type-descr.item-des @var{des}
-@defunx ancestor-of-type-descr.ancestors-des* @var{des}
+@defunx ancestor-of-type-descr.ancestor-des* @var{des}
 Accessors for the fields of @class{ancestor-of-type-descr} instances.
 @end defun
 
@@ -3553,8 +3563,9 @@ representing the types of built--in objects: fixnum, strings, vectors,
 et cetera.
 
 @menu
-* types built-in top::          The conventional parent of all the types.
 * types built-in void::         Type of the void object.
+* types built-in no-return::    Type of non-returning expressions.
+* types built-in top::          The conventional parent of all the types.
 * types built-in booleans::     Type of boolean objects.
 * types built-in chars::        Type of character objects.
 * types built-in symbols::      Type of symbol objects.
@@ -3580,43 +3591,47 @@ et cetera.
 @end menu
 
 @c page
-@node types built-in top
-@subsection The conventional parent of all the types
+@node types built-in no-return
+@subsection Type of non-returning expressions
 
 
-@deftp {Core Type} @aclass{top}
-The conventional parent of all the types.
+The expressions that raise a non--continuable exception have type
+@class{no-return}:
+
+@lisp
+(type-of (error #f "wrong"))
+@result{} #[signature (<no-return>)]
+@end lisp
+
+We must never use @class{no-return} in a type signature.
+@class{no-return} is removed from union and intersection type
+annotations:
+
+@lisp
+(type-annotation (and <no-return> <fixnum>))
+@result{} #[core-type-spec #[type (<fixnum>)]]
+
+(type-annotation (or  <no-return> <fixnum>))
+@result{} #[core-type-spec #[type (<fixnum>)]]
+@end lisp
+
+
+@deftp {Core Type} @aclass{no-return}
+The type of non--returning expressions.
 @end deftp
-
-
-@defop Constructor @class{top} new @aclass{top} @var{obj}
-Return @var{obj} itself.
-@end defop
-
-
-@defop {Type predicate} @class{top} is-a? @var{obj} @aclass{top}
-Always return @true{}.
-@end defop
-
-
-@deftypemethod @class{top} @aclass{non-negative-fixnum} hash @var{self}
-Compute and return a hash value for @var{self}.  When the object--type
-does not define a specialised hash function: @func{object-hash} is
-applied to @var{self}.
-@end deftypemethod
 
 @c page
 @node types built-in void
 @subsection The type of the void value
 
 
-The type @class{void} is the type of the void object.  We should never
-use @class{void} in a type annotation, because the only legitimate use
-of the void object is as single return value of functions returning
-``unspecified values'' (under @value{PRJNAME} returning a single value
-is faster than returning zero values).  If we need a unique value: we
-should use the sentinel value (@pxref{iklib sentinel, The sentinel
-object}).
+The type @class{void} is the type of the void object returned by
+@func{void}.  We should never use @class{void} in a type annotation,
+because the only legitimate use of the void object is as single return
+value of functions returning ``unspecified values'' (under
+@value{PRJNAME} returning a single value is faster than returning zero
+values).  If we need a unique value: we should use the sentinel value
+(@pxref{iklib sentinel, The sentinel object}).
 
 
 @deftp {Core Type} @aclass{void}
@@ -3635,6 +3650,33 @@ Return the void object.
 The type predicate is @func{void-object?}.  Return @true{} if @var{obj}
 is void; otherwise return @false{}.
 @end defop
+
+@c page
+@node types built-in top
+@subsection The conventional parent of all the types
+
+
+@deftp {Core Type} @aclass{top}
+The conventional parent of all the types, with the exception of
+@class{void} and @class{no-return}.
+@end deftp
+
+
+@defop Constructor @class{top} new @aclass{top} @var{obj}
+Return @var{obj} itself.
+@end defop
+
+
+@defop {Type predicate} @class{top} is-a? @var{obj} @aclass{top}
+Always return @true{}.
+@end defop
+
+
+@deftypemethod @class{top} @aclass{non-negative-fixnum} hash @var{self}
+Compute and return a hash value for @var{self}.  When the object--type
+does not define a specialised hash function: @func{object-hash} is
+applied to @var{self}.
+@end deftypemethod
 
 @c page
 @node types built-in booleans

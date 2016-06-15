@@ -203,13 +203,13 @@
     <object-type-spec>
   make-union-type-spec union-type-spec?
   (methods
-   (component-ots*		union-type-spec.component-ots*)))
+   (item-ots*			union-type-spec.item-ots*)))
 
 (define-built-in-record-type <intersection-type-spec>
     <object-type-spec>
   make-intersection-type-spec intersection-type-spec?
   (methods
-   (component-ots*		intersection-type-spec.component-ots*)))
+   (item-ots*			intersection-type-spec.item-ots*)))
 
 (define-built-in-record-type <complement-type-spec>
     <object-type-spec>
@@ -222,7 +222,7 @@
   make-ancestor-of-type-spec ancestor-of-type-spec?
   (methods
    (item-ots			ancestor-of-type-spec.item-ots)
-   (component-ots*		ancestor-of-type-spec.component-ots*)))
+   (ancestor-ots*		ancestor-of-type-spec.ancestor-ots*)))
 
 ;;; --------------------------------------------------------------------
 
