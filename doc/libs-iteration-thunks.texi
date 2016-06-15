@@ -4,6 +4,8 @@
 
 @cindex Library @library{vicare containers iteration-thunks}
 @cindex @library{vicare containers iteration-thunks}, library
+@cindex Iteration thunks
+@cindex Iterators, iteration thunks
 
 
 The library @library{vicare containers iteration-thunks} implements some
