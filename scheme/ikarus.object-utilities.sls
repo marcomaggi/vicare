@@ -29,6 +29,12 @@
   (export
     method-call-late-binding
     internal-delete
+    ;; overloaded functions: late binding
+    make-overloaded-function-descriptor
+    overloaded-function-descriptor?
+    overloaded-function-descriptor-register!
+    overloaded-function-descriptor-select-matching-entry
+    overloaded-function-late-binding
     #| end of EXPORT |# )
   (import (except (vicare)
 		  method-call-late-binding
@@ -75,7 +81,15 @@
 		  ;;FIXME To be uncommented at  the next boot image rotation.  (Marco
 		  ;;Maggi; Tue Dec 15, 2015)
 		  #;record-type-method-retriever)
-	    system::))
+	    system::)
+    (prefix (only (ikarus.object-type-descr)
+		  closure-type-descr?
+		  closure-type-descr.signature
+		  case-lambda-descriptors.match-super-and-sub
+		  case-lambda-descriptors.match-formals-against-operands
+		  make-descriptors-signature
+		  type-descriptor-of)
+	    td::))
 
 
 ;;;; helpers for object-type method calls
@@ -240,6 +254,50 @@
 	(else
 	 (assertion-violation 'delete
 	   "unknown method to destroy object" obj))))
+
+
+;;;; overloaded functions: late binding
+
+(define-struct overloaded-function-descriptor
+  (table
+		;An alist  having an  instance of <closure-type-descr>  as key  and a
+		;procedure as value.
+   ))
+
+(define* (overloaded-function-descriptor-register! {over.des		overloaded-function-descriptor?}
+						   {closure.des		td::closure-type-descr?}
+						   {implementation	procedure?})
+  (set-overloaded-function-descriptor-table! over.des
+					     (cons (cons closure.des implementation)
+						   (overloaded-function-descriptor-table over.des))))
+
+(define* (overloaded-function-descriptor-select-matching-entry {over.des overloaded-function-descriptor?} operand*)
+  (let ((rands.sig (td::make-descriptors-signature (map td::type-descriptor-of operand*))))
+    (fold-left
+	(lambda (selected-entry entry)
+	  ;;ENTRY is  a pair having  an instance of  <closure-type-descr> as
+	  ;;car and a  procedure as cdr.  SELECTED-ENTRY is false  or a pair
+	  ;;with the same format of ENTRY.
+	  (let ((clambda.des (td::closure-type-descr.signature (car entry))))
+	    (if (eq? 'exact-match (td::case-lambda-descriptors.match-formals-against-operands clambda.des rands.sig))
+		(if selected-entry
+		    (if (eq? 'exact-match (td::case-lambda-descriptors.match-super-and-sub
+					   (td::closure-type-descr.signature (car selected-entry))
+					   clambda.des))
+			entry
+		      selected-entry)
+		  entry)
+	      selected-entry)))
+      #f (overloaded-function-descriptor-table over.des))))
+
+(define* (overloaded-function-late-binding {over.des overloaded-function-descriptor?} . operand*)
+  (cond ((overloaded-function-descriptor-select-matching-entry over.des operand*)
+	 => (lambda (entry)
+	      (apply (cdr entry) operand*)))
+	(else
+	 (assertion-violation __who__
+	   "no function matching the operands in overloaded function application"
+	   over.des operand*))))
 
 
 ;;;; done

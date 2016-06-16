@@ -245,6 +245,11 @@
   (signatures
    ((<descriptors-signature> <descriptors-signature>)	=> (<boolean>))))
 
+(declare-core-primitive descriptors-signature.match-formals-against-operands
+    (safe)
+  (signatures
+   ((<descriptors-signature> <descriptors-signature>)	=> ((enumeration exact-match possible-match no-match)))))
+
 ;;; --------------------------------------------------------------------
 
 (declare-core-rtd <lambda-descriptors>-rtd)
@@ -267,6 +272,21 @@
   (signatures
    ((<lambda-descriptors>)		=> (<descriptors-signature>))))
 
+(declare-core-primitive lambda-descriptors=?
+    (safe)
+  (signatures
+   ((<lambda-descriptors> <lambda-descriptors>)	=> (<boolean>))))
+
+(declare-core-primitive lambda-descriptors.match-super-and-sub
+    (safe)
+  (signatures
+   ((<lambda-descriptors> <lambda-descriptors>)	=> ((enumeration exact-match possible-match no-match)))))
+
+(declare-core-primitive lambda-descriptors.match-formals-against-operands
+    (safe)
+  (signatures
+   ((<lambda-descriptors> <descriptors-signature>)	=> ((enumeration exact-match possible-match no-match)))))
+
 ;;; --------------------------------------------------------------------
 
 (declare-core-rtd <case-lambda-descriptors>-rtd)
@@ -283,7 +303,22 @@
 (declare-core-primitive case-lambda-descriptors.clause-signature*
     (safe)
   (signatures
-   ((<case-lambda-descriptors>)		=> ((pair <lambda-descriptors> (list-of <lambda-descriptors>))))))
+   ((<case-lambda-descriptors>)		=> ((nelist-of <lambda-descriptors>)))))
+
+(declare-core-primitive case-lambda-descriptors=?
+    (safe)
+  (signatures
+   ((<case-lambda-descriptors> <case-lambda-descriptors>)	=> (<boolean>))))
+
+(declare-core-primitive case-lambda-descriptors.match-super-and-sub
+    (safe)
+  (signatures
+   ((<case-lambda-descriptors> <case-lambda-descriptors>)	=> ((enumeration exact-match possible-match no-match)))))
+
+(declare-core-primitive case-lambda-descriptors.match-formals-against-operands
+    (safe)
+  (signatures
+   ((<case-lambda-descriptors> <descriptors-signature>)	=> ((enumeration exact-match possible-match no-match)))))
 
 
 ;;;; object type descriptors

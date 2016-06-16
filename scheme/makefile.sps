@@ -4071,27 +4071,43 @@
 ;;; --------------------------------------------------------------------
 ;;; object type descriptors
 
+    (<descriptors-signature>-rtd)
+    (<descriptors-signature>-rcd)
+    (<descriptors-signature>					$type-descriptors)
+    (make-descriptors-signature					$type-descriptors)
+    (descriptors-signature?					$type-descriptors)
+    (descriptors-signature.object-type-descrs			$type-descriptors)
+    (descriptors-signature.matching-super-and-sub?		$type-descriptors)
+    (descriptors-signature.compatible-super-and-sub?		$type-descriptors)
+    (descriptors-signature.match-formals-against-operands	$type-descriptors)
+;;;
     (<lambda-descriptors>-rtd)
     (<lambda-descriptors>-rcd)
-    (<lambda-descriptors>			$type-descriptors)
-    (make-lambda-descriptors			$type-descriptors)
-    (lambda-descriptors?			$type-descriptors)
-    (lambda-descriptors.retvals			$type-descriptors)
-    (lambda-descriptors.argvals			$type-descriptors)
-
+    (<lambda-descriptors>					$type-descriptors)
+    (make-lambda-descriptors					$type-descriptors)
+    (lambda-descriptors?					$type-descriptors)
+    (lambda-descriptors.retvals					$type-descriptors)
+    (lambda-descriptors.argvals					$type-descriptors)
+    (lambda-descriptors=?					$type-descriptors)
+    (lambda-descriptors.match-super-and-sub			$type-descriptors)
+    (lambda-descriptors.match-formals-against-operands		$type-descriptors)
+;;;
     (<case-lambda-descriptors>-rtd)
     (<case-lambda-descriptors>-rcd)
-    (<case-lambda-descriptors>			$type-descriptors)
-    (make-case-lambda-descriptors		$type-descriptors)
-    (case-lambda-descriptors?			$type-descriptors)
-    (case-lambda-descriptors.clause-signature*	$type-descriptors)
+    (<case-lambda-descriptors>					$type-descriptors)
+    (make-case-lambda-descriptors				$type-descriptors)
+    (case-lambda-descriptors?					$type-descriptors)
+    (case-lambda-descriptors.clause-signature*			$type-descriptors)
+    (case-lambda-descriptors=?					$type-descriptors)
+    (case-lambda-descriptors.match-super-and-sub		$type-descriptors)
+    (case-lambda-descriptors.match-formals-against-operands	$type-descriptors)
 ;;;
     (<compound-condition-type-descr>-rtd)
     (<compound-condition-type-descr>-rcd)
-    (<compound-condition-type-descr>		$type-descriptors)
-    (make-compound-condition-type-descr		$type-descriptors)
-    (compound-condition-type-descr?		$type-descriptors)
-    (compound-condition-type-descr.component-des* $type-descriptors)
+    (<compound-condition-type-descr>			$type-descriptors)
+    (make-compound-condition-type-descr			$type-descriptors)
+    (compound-condition-type-descr?			$type-descriptors)
+    (compound-condition-type-descr.component-des*	$type-descriptors)
 
     (<hashtable-type-descr>-rtd)
     (<hashtable-type-descr>-rcd)
@@ -4203,17 +4219,15 @@
     (object-type-descr.matching-super-and-sub?		$type-descriptors)
     (object-type-descr.compatible-super-and-sub?	$type-descriptors)
     (object-type-descr.matching-formal-and-operand	$type-descriptors)
-;;;
-    (descriptors-signature.matching-super-and-sub?		$type-descriptors)
-    (descriptors-signature.compatible-super-and-sub?		$type-descriptors)
-    (descriptors-signature.match-formals-against-operands	$type-descriptors)
-;;;
-    (<descriptors-signature>-rtd)
-    (<descriptors-signature>-rcd)
-    (<descriptors-signature>			$type-descriptors)
-    (make-descriptors-signature			$type-descriptors)
-    (descriptors-signature?			$type-descriptors)
-    (descriptors-signature.object-type-descrs	$type-descriptors)
+
+;;; --------------------------------------------------------------------
+;;; overloaded functions: late binding
+
+    (make-overloaded-function-descriptor	$type-descriptors)
+    (overloaded-function-descriptor?		$type-descriptors)
+    (overloaded-function-descriptor-register!	$type-descriptors)
+    (overloaded-function-descriptor-select-matching-entry $type-descriptors)
+    (overloaded-function-late-binding		$type-descriptors)
 
 ;;; --------------------------------------------------------------------
 ;;; keywords

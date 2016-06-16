@@ -31,23 +31,26 @@
      make-descriptors-signature			descriptors-signature?
      descriptors-signature.object-type-descrs
      descriptors-signature=?
+     descriptors-signature.matching-super-and-sub?
+     descriptors-signature.compatible-super-and-sub?
+     descriptors-signature.match-formals-against-operands
 
      <lambda-descriptors>
      <lambda-descriptors>-rtd			<lambda-descriptors>-rcd
      make-lambda-descriptors			lambda-descriptors?
      lambda-descriptors.retvals			lambda-descriptors.argvals
-     lambda-descriptors=?			lambda-descriptors.match-super-and-sub
+     lambda-descriptors=?
+     lambda-descriptors.match-super-and-sub
+     lambda-descriptors.match-formals-against-operands
      not-empty-list-of-lambda-descriptors?
 
      <case-lambda-descriptors>
      <case-lambda-descriptors>-rtd		<case-lambda-descriptors>-rcd
      make-case-lambda-descriptors		case-lambda-descriptors?
      case-lambda-descriptors.clause-signature*
-     case-lambda-descriptors=?			case-lambda-descriptors.match-super-and-sub
-
-     descriptors-signature.matching-super-and-sub?
-     descriptors-signature.compatible-super-and-sub?
-     descriptors-signature.match-formals-against-operands
+     case-lambda-descriptors=?
+     case-lambda-descriptors.match-super-and-sub
+     case-lambda-descriptors.match-formals-against-operands
 
      #| end of exports |# )
 
@@ -142,6 +145,9 @@
       (else
        'no-match))))
 
+(define* (lambda-descriptors.match-formals-against-operands {formals.des lambda-descriptors?} {operands.des descriptors-signature?})
+  (descriptors-signature.match-formals-against-operands (lambda-descriptors.argvals formals.des) operands.des))
+
 
 ;;;; descriptors signatures for case-lambda procedures
 
@@ -221,6 +227,20 @@
 		((possible-match)	'possible-match)
 		(else			(return 'no-match)))))
 	'exact-match super.clause*))))
+
+;;; --------------------------------------------------------------------
+
+(define* (case-lambda-descriptors.match-formals-against-operands {formals.des case-lambda-descriptors?} {operands.des descriptors-signature?})
+  (returnable
+    (fold-left (lambda (state formals.clause-des)
+		 (case (lambda-descriptors.match-formals-against-operands formals.clause-des operands.des)
+		   ((exact-match)
+		    (return 'exact-match))
+		   ((possible-match)
+		    'possible-match)
+		   (else
+		    state)))
+      'no-match (case-lambda-descriptors.clause-signature* formals.des))))
 
 
 ;;;; syntax helpers: object-type descriptors matching

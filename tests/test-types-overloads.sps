@@ -298,6 +298,127 @@
   #t)
 
 
+(parametrise ((check-test-name	'late-binding-demo))
+
+  (import (prefix (only (vicare system type-descriptors)
+			closure-type-descr?
+			closure-type-descr.signature
+			case-lambda-descriptors.match-super-and-sub
+			case-lambda-descriptors.match-formals-against-operands
+			make-descriptors-signature
+			type-descriptor-of)
+		  td::))
+
+  (define-struct overloaded-function-descriptor
+    (table
+		;An alist  having an  instance of <closure-type-descr>  as key  and a
+		;procedure as value.
+     ))
+
+  (define* (overloaded-function-descriptor-register! {over.des		overloaded-function-descriptor?}
+						     {closure.des	td::closure-type-descr?}
+						     {implementation	procedure?})
+    (set-overloaded-function-descriptor-table! over.des
+					       (cons (cons closure.des implementation)
+						     (overloaded-function-descriptor-table over.des))))
+
+  (define* (overloaded-function-descriptor-select-matching-entry {over.des overloaded-function-descriptor?} operand*)
+    (let ((rands.sig (td::make-descriptors-signature (map td::type-descriptor-of operand*))))
+      (fold-left
+	  (lambda (selected-entry entry)
+	    ;;ENTRY is  a pair having  an instance of  <closure-type-descr> as
+	    ;;car and a  procedure as cdr.  SELECTED-ENTRY is false  or a pair
+	    ;;with the same format of ENTRY.
+	    (let ((clambda.des (td::closure-type-descr.signature (car entry))))
+	      (if (eq? 'exact-match (td::case-lambda-descriptors.match-formals-against-operands clambda.des rands.sig))
+		  (if selected-entry
+		      (if (eq? 'exact-match (td::case-lambda-descriptors.match-super-and-sub
+					     (td::closure-type-descr.signature (car selected-entry))
+					     clambda.des))
+			  entry
+			selected-entry)
+		    entry)
+		selected-entry)))
+	#f (overloaded-function-descriptor-table over.des))))
+
+  (define* (overloaded-function-late-binding {over.des overloaded-function-descriptor?} . operand*)
+    (cond ((overloaded-function-descriptor-select-matching-entry over.des operand*)
+	   => (lambda (entry)
+		(apply (cdr entry) operand*)))
+	  (else
+	   (assertion-violation __who__
+	     "no function matching the operands in overloaded function application"
+	     over.des operand*))))
+
+;;; --------------------------------------------------------------------
+
+  (define (doit-string {O <string>})
+    (list 'string O))
+
+  (define (doit-fixnum {O <fixnum>})
+    (list 'fixnum O))
+
+  (define doit-string.des
+    (type-descriptor (lambda (<string>) => (<list>))))
+
+  (define doit-fixnum.des
+    (type-descriptor (lambda (<fixnum>) => (<list>))))
+
+  (define ofd
+    (receive-and-return (ofd)
+	(make-overloaded-function-descriptor (list (cons doit-string.des doit-string)))
+      (overloaded-function-descriptor-register! ofd doit-fixnum.des doit-fixnum)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (overloaded-function-late-binding ofd "ciao")
+    => '(string "ciao"))
+
+  (check
+      (overloaded-function-late-binding ofd 123)
+    => '(fixnum 123))
+
+  #| end of PARAMETRISE |# )
+
+
+(parametrise ((check-test-name	'late-binding-raw))
+
+  (import (only (vicare system type-descriptors)
+		make-overloaded-function-descriptor
+		overloaded-function-descriptor-register!
+		overloaded-function-late-binding))
+
+  (define (doit-string {O <string>})
+    (list 'string O))
+
+  (define (doit-fixnum {O <fixnum>})
+    (list 'fixnum O))
+
+  (define doit-string.des
+    (type-descriptor (lambda (<string>) => (<list>))))
+
+  (define doit-fixnum.des
+    (type-descriptor (lambda (<fixnum>) => (<list>))))
+
+  (define ofd
+    (receive-and-return (ofd)
+	(make-overloaded-function-descriptor (list (cons doit-string.des doit-string)))
+      (overloaded-function-descriptor-register! ofd doit-fixnum.des doit-fixnum)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (overloaded-function-late-binding ofd "ciao")
+    => '(string "ciao"))
+
+  (check
+      (overloaded-function-late-binding ofd 123)
+    => '(fixnum 123))
+
+  #| end of PARAMETRISE |# )
+
+
 ;;;; done
 
 (check-report)

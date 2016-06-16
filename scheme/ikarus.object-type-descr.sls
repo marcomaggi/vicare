@@ -28,17 +28,27 @@
 (library (ikarus.object-type-descr)
   (export
 
+    <descriptors-signature>-rtd			<descriptors-signature>-rcd
+    make-descriptors-signature			descriptors-signature?
+    descriptors-signature.object-type-descrs
+    descriptors-signature=?
+    descriptors-signature.matching-super-and-sub?
+    descriptors-signature.compatible-super-and-sub?
+    descriptors-signature.match-formals-against-operands
+
     <lambda-descriptors>-rtd			<lambda-descriptors>-rcd
     make-lambda-descriptors			lambda-descriptors?
     lambda-descriptors.retvals			lambda-descriptors.argvals
+    lambda-descriptors=?
+    lambda-descriptors.match-super-and-sub
+    lambda-descriptors.match-formals-against-operands
 
     <case-lambda-descriptors>-rtd		<case-lambda-descriptors>-rcd
     make-case-lambda-descriptors		case-lambda-descriptors?
     case-lambda-descriptors.clause-signature*
-
-    <descriptors-signature>-rtd			<descriptors-signature>-rcd
-    make-descriptors-signature			descriptors-signature?
-    descriptors-signature.object-type-descrs
+    case-lambda-descriptors=?
+    case-lambda-descriptors.match-super-and-sub
+    case-lambda-descriptors.match-formals-against-operands
 
 ;;; --------------------------------------------------------------------
 
@@ -117,11 +127,6 @@
     object-type-descr.matching-super-and-sub?
     object-type-descr.compatible-super-and-sub?
     object-type-descr.matching-formal-and-operand
-
-    descriptors-signature=?
-    descriptors-signature.matching-super-and-sub?
-    descriptors-signature.compatible-super-and-sub?
-    descriptors-signature.match-formals-against-operands
 
     #| end of EXPORTS |# )
   (import (except (vicare)
