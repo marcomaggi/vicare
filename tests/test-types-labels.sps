@@ -28,6 +28,7 @@
   (options typed-language)
   (import (vicare)
     (vicare language-extensions labels)
+    (vicare language-extensions mixins)
     (vicare checks)
     (prefix (vicare expander) expander::))
 
@@ -398,6 +399,30 @@
       => '(999 ((destroyed #(1 2)))))
 
     #| end of INTERNAL-BODY |# )
+
+  #| end of PARAMETRISE |# )
+
+
+(parametrise ((check-test-name	'mixins))
+
+  (check
+      (internal-body
+	(define-mixin <stuff>
+	  (method (pussy {O <stuff>})
+	    (list 'pussy (.name O))))
+
+	(define-label <peluche>
+	  (parent (list <symbol>))
+	  (method (name {O <peluche>})
+	    (car O))
+	  (mixins <stuff>))
+
+	(define {O <peluche>}
+	  '(cat))
+
+	(values (.name  O)
+		(.pussy O)))
+    => 'cat '(pussy cat))
 
   #| end of PARAMETRISE |# )
 

@@ -39,7 +39,8 @@
     method
     case-method
     nongenerative)
-  (import (vicare))
+  (import (vicare)
+    (vicare language-extensions mixins (0 4)))
 
 
 (define-syntax define-label
@@ -115,112 +116,167 @@
     (define (main stx synner)
       (syntax-case stx ()
 	((_ ?type-name . ?clauses)
-	 (let ((type-name.id	#'?type-name))
-	   (unless (identifier? type-name.id)
-	     (synner "expected identifier as label type name" type-name.id))
-	   (let* (({parsed <parsed-clauses>} (syntax-clauses-fold-specs
-					      (lambda (parsed spec args)
-						(combine type-name.id parsed spec args synner)
-						parsed)
-					      (new <parsed-clauses> type-name.id) CLAUSE-SPEC*
-					      (syntax-clauses-unwrap #'?clauses synner) synner))
-		  (parent.stx (.parent parsed)))
-	     (with-syntax
-		 ((UID (or (.uid parsed)
-			   (datum->syntax type-name.id (gensym (syntax->datum type-name.id)))))
-		  ((CONSTRUCTOR-ID CONSTRUCTOR-DEF ...)
-		   (let ((clause*.stx (.constructor parsed)))
-		     (if (null? clause*.stx)
-			 '(#f)
-		       (let ((clause*.stx (map (lambda (clause.stx)
-						 (cons (cons #'(brace _ ?type-name) (car clause.stx))
-						       (cdr clause.stx)))
-					    (reverse clause*.stx))))
-			 (with-syntax
-			     ((FUNC (identifier-record-field-accessor type-name.id #'constructor)))
-			   (list #'(syntax FUNC)
-				 #`(case-define/checked FUNC . #,(reverse clause*.stx))))))))
-
-		  ((DESTRUCTOR-ID DESTRUCTOR-DEF ...)
-		   (cond ((.destructor parsed)
-			  => (lambda (clause.stx)
-			       (with-syntax
-				   ((FUNC (identifier-record-field-accessor type-name.id #'destructor)))
-				 (list #'(syntax FUNC)
-				       #`(case-define/checked FUNC #,clause.stx)))))
-			 (else '(#f))))
-
-		  ((TYPE-PREDICATE-ID TYPE-PREDICATE-DEF ...)
-		   (cond ((.type-predicate parsed)
-			  => (lambda (stx)
-			       (with-syntax
-				   ((FUNC (identifier-record-field-accessor type-name.id #'type-predicate)))
-				 (list #'(syntax FUNC)
-				       ;;NOTE  We  do   *not*  use  a  TYPE-PREDICATE
-				       ;;annotation here because, at present,
-				       #`(define/typed {FUNC (type-predicate ?type-name)}
-					   (#,stx (is-a? _ #,parent.stx)))))))
-			 (else
-			  (list #f))))
-
-		  ((EQUALITY-PREDICATE-ID EQUALITY-PREDICATE-DEF ...)
-		   (cond ((.equality-predicate parsed)
-			  => (lambda (stx)
-			       (with-syntax
-				   ((FUNC (identifier-record-field-accessor type-name.id #'equality-predicate)))
-				 (list #'(syntax FUNC)
-				       #`(define/typed {FUNC (equality-predicate ?type-name)}
-					   (#,stx (equality-predicate #,parent.stx)))))))
-			 (else
-			  (list #f))))
-
-		  ((COMPARISON-PROCEDURE-ID COMPARISON-PROCEDURE-DEF ...)
-		   (cond ((.comparison-procedure parsed)
-			  => (lambda (stx)
-			       (with-syntax
-				   ((FUNC (identifier-record-field-accessor type-name.id #'comparison-procedure)))
-				 (list #'(syntax FUNC)
-				       #`(define/typed {FUNC (comparison-procedure ?type-name)}
-					   (#,stx (comparison-procedure #,parent.stx)))))))
-			 (else
-			  (list #f))))
-
-		  ((HASH-FUNCTION-ID HASH-FUNCTION-DEF ...)
-		   (cond ((.hash-function parsed)
-			  => (lambda (stx)
-			       (with-syntax
-				   ((FUNC (identifier-record-field-accessor type-name.id #'hash-function)))
-				 (list #'(syntax FUNC)
-				       #`(define/typed {FUNC (hash-function ?type-name)}
-					   (#,stx (hash-function #,parent.stx)))))))
-			 (else
-			  (list #f))))
-
-		  ((#(METHOD-NAME METHOD-PROC METHOD-DEFINITION) ...)
-		   (.method* parsed)))
-	       #`(module (?type-name)
-		   (define-syntax ?type-name
-		     (make-label-type-spec
-		      (syntax ?type-name)
-		      (quote UID)
-		      (syntax #,parent.stx)
-		      CONSTRUCTOR-ID
-		      DESTRUCTOR-ID
-		      TYPE-PREDICATE-ID
-		      EQUALITY-PREDICATE-ID
-		      COMPARISON-PROCEDURE-ID
-		      HASH-FUNCTION-ID
-		      ;;This methods table must be an alist.
-		      (list (cons (quote METHOD-NAME) (syntax METHOD-PROC)) ...)))
-		   CONSTRUCTOR-DEF		...
-		   DESTRUCTOR-DEF		...
-		   TYPE-PREDICATE-DEF		...
-		   EQUALITY-PREDICATE-DEF	...
-		   COMPARISON-PROCEDURE-DEF	...
-		   HASH-FUNCTION-DEF		...
-		   METHOD-DEFINITION		...)))))
+	 (if (identifier? #'?type-name)
+	     (%parse-clauses #'?type-name #'?clauses synner)
+	   (synner "expected identifier as label type name" #'?type-name)))
 	(_
 	 (synner "invalid DEFINE-LABEL syntax use"))))
+
+    (define (%parse-clauses type-name.id clauses.stx synner)
+      (let* ((clause*.stx	(syntax-clauses-unwrap clauses.stx synner))
+	     (clause*.stx	(%merge-mixins-clauses type-name.id clause*.stx synner))
+	     ({parsed <parsed-clauses>} (syntax-clauses-fold-specs
+					 (lambda (parsed spec args)
+					   (combine type-name.id parsed spec args synner)
+					   parsed)
+					 (new <parsed-clauses> type-name.id) CLAUSE-SPEC*
+					 clause*.stx synner))
+	     (parent.stx	(.parent parsed)))
+	(with-syntax
+	    ((TYPE-NAME type-name.id))
+	  (with-syntax
+	      ((UID (or (.uid parsed)
+			(datum->syntax type-name.id (gensym (syntax->datum type-name.id)))))
+	       ((CONSTRUCTOR-ID CONSTRUCTOR-DEF ...)
+		(let ((clause*.stx (.constructor parsed)))
+		  (if (null? clause*.stx)
+		      '(#f)
+		    (let ((clause*.stx (map (lambda (clause.stx)
+					      (cons (cons #'(brace _ TYPE-NAME) (car clause.stx))
+						    (cdr clause.stx)))
+					 (reverse clause*.stx))))
+		      (with-syntax
+			  ((FUNC (identifier-record-field-accessor type-name.id #'constructor)))
+			(list #'(syntax FUNC)
+			      #`(case-define/checked FUNC . #,(reverse clause*.stx))))))))
+
+	       ((DESTRUCTOR-ID DESTRUCTOR-DEF ...)
+		(cond ((.destructor parsed)
+		       => (lambda (clause.stx)
+			    (with-syntax
+				((FUNC (identifier-record-field-accessor type-name.id #'destructor)))
+			      (list #'(syntax FUNC)
+				    #`(case-define/checked FUNC #,clause.stx)))))
+		      (else '(#f))))
+
+	       ((TYPE-PREDICATE-ID TYPE-PREDICATE-DEF ...)
+		(cond ((.type-predicate parsed)
+		       => (lambda (stx)
+			    (with-syntax
+				((FUNC (identifier-record-field-accessor type-name.id #'type-predicate)))
+			      (list #'(syntax FUNC)
+				    ;;NOTE  We  do   *not*  use  a  TYPE-PREDICATE
+				    ;;annotation here because, at present,
+				    #`(define/typed {FUNC (type-predicate TYPE-NAME)}
+					(#,stx (is-a? _ #,parent.stx)))))))
+		      (else
+		       (list #f))))
+
+	       ((EQUALITY-PREDICATE-ID EQUALITY-PREDICATE-DEF ...)
+		(cond ((.equality-predicate parsed)
+		       => (lambda (stx)
+			    (with-syntax
+				((FUNC (identifier-record-field-accessor type-name.id #'equality-predicate)))
+			      (list #'(syntax FUNC)
+				    #`(define/typed {FUNC (equality-predicate TYPE-NAME)}
+					(#,stx (equality-predicate #,parent.stx)))))))
+		      (else
+		       (list #f))))
+
+	       ((COMPARISON-PROCEDURE-ID COMPARISON-PROCEDURE-DEF ...)
+		(cond ((.comparison-procedure parsed)
+		       => (lambda (stx)
+			    (with-syntax
+				((FUNC (identifier-record-field-accessor type-name.id #'comparison-procedure)))
+			      (list #'(syntax FUNC)
+				    #`(define/typed {FUNC (comparison-procedure TYPE-NAME)}
+					(#,stx (comparison-procedure #,parent.stx)))))))
+		      (else
+		       (list #f))))
+
+	       ((HASH-FUNCTION-ID HASH-FUNCTION-DEF ...)
+		(cond ((.hash-function parsed)
+		       => (lambda (stx)
+			    (with-syntax
+				((FUNC (identifier-record-field-accessor type-name.id #'hash-function)))
+			      (list #'(syntax FUNC)
+				    #`(define/typed {FUNC (hash-function TYPE-NAME)}
+					(#,stx (hash-function #,parent.stx)))))))
+		      (else
+		       (list #f))))
+
+	       ((#(METHOD-NAME METHOD-PROC METHOD-DEFINITION) ...)
+		(.method* parsed)))
+	    #`(module (TYPE-NAME)
+		(define-syntax TYPE-NAME
+		  (make-label-type-spec
+		   (syntax TYPE-NAME)
+		   (quote UID)
+		   (syntax #,parent.stx)
+		   CONSTRUCTOR-ID
+		   DESTRUCTOR-ID
+		   TYPE-PREDICATE-ID
+		   EQUALITY-PREDICATE-ID
+		   COMPARISON-PROCEDURE-ID
+		   HASH-FUNCTION-ID
+		   ;;This methods table must be an alist.
+		   (list (cons (quote METHOD-NAME) (syntax METHOD-PROC)) ...)))
+		CONSTRUCTOR-DEF			...
+		DESTRUCTOR-DEF			...
+		TYPE-PREDICATE-DEF		...
+		EQUALITY-PREDICATE-DEF		...
+		COMPARISON-PROCEDURE-DEF	...
+		HASH-FUNCTION-DEF		...
+		METHOD-DEFINITION		...)))))
+
+;;; --------------------------------------------------------------------
+
+    (module (%merge-mixins-clauses)
+
+      (define (%merge-mixins-clauses type-name.id input-clause*.stx synner)
+	;;The MIXINS clause can be present multiple times.  Each clause must have one
+	;;of the formats:
+	;;
+	;;   (mixins ?mixin-name ...)
+	;;
+	;;NOTE  We  cannot  process  the MIXINS  clauses  with  the  SYNTAX-CLAUSES-*
+	;;facilities because  such facilities change  the order in which  the clauses
+	;;are  processed; instead,  the MIXINS  clauses  need to  be spliced  without
+	;;changing the order.
+	;;
+	(fold-right
+	    (lambda (input-clause.stx parsed-clause*.stx)
+	      (syntax-case input-clause.stx (mixins)
+		((mixins . ?mixins)
+		 (%splice-mixins type-name.id input-clause.stx #'?mixins parsed-clause*.stx synner))
+		(_
+		 (cons input-clause.stx parsed-clause*.stx))))
+	  '() input-clause*.stx))
+
+      (define (%splice-mixins type-name.id input-clause.stx
+			      mixins.stx parsed-clause*.stx synner)
+	(syntax-case mixins.stx ()
+	  ((?mixin-name . ?mixins)
+	   (if (identifier? #'?mixin-name)
+	       (append (%splice-single-mixin type-name.id #'?mixin-name synner)
+		       (%splice-mixins type-name.id input-clause.stx #'?mixins parsed-clause*.stx synner))
+	     (synner "expected identifier as mixin name in MIXINS clause" input-clause.stx)))
+	  (()
+	   parsed-clause*.stx)
+	  (_
+	   (synner "invalid syntax in MIXINS clause" input-clause.stx))))
+
+      (define (%splice-single-mixin type-name.id mixin-name.id synner)
+	(let ((obj (retrieve-expand-time-value mixin-name.id)))
+	  (syntax-case obj (define-mixin)
+	    ((define-mixin ?mixin-name . ?clauses)
+	     (syntax-replace-id #'?clauses mixin-name.id type-name.id))
+	    (_
+	     (synner "identifier in MIXINS clause is not a mixin name" mixin-name.id)))))
+
+      #| end of module: %MERGE-MIXINS-CLAUSES |# )
+
+;;; --------------------------------------------------------------------
 
     (define (combine type-name.id {parsed <parsed-clauses>} {spec <syntax-clause-spec>} args synner)
       (case-identifiers (.keyword spec)

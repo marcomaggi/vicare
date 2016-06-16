@@ -581,6 +581,7 @@ CLEANFILES += lib/vicare/language-extensions/conditions-and-restarts.fasl
 
 lib/vicare/language-extensions/labels.fasl: \
 		lib/vicare/language-extensions/labels.vicare.sls \
+		lib/vicare/language-extensions/mixins.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 

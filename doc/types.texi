@@ -5737,6 +5737,7 @@ The following syntactic bindings are exported by the library
 @deffnx {Auxiliary Syntax} hash-function
 @deffnx {Auxiliary Syntax} method
 @deffnx {Auxiliary Syntax} case-method
+@deffnx {Auxiliary Syntax} mixins
 Define a new label type.  @meta{type-name} must be a syntactic
 identifier representing the label name.
 
@@ -5750,6 +5751,7 @@ The following clauses can be used in the same way they are used in
 parent type-predicate
 equality-predicate comparison-procedure hash-function
 method case-method
+mixins
 @end lisp
 
 The clause @clause{constructor} may appear zero, one or more times;
@@ -5948,6 +5950,30 @@ following function definition:
 @lisp
 (define (<vec>-destructor @{O <vec>@})
   `(deleted ,O))
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Example of mixin
+
+Here we show how to include mixin clauses in a label definition:
+
+@lisp
+(define-mixin <stuff>
+  (method (pussy @{O <stuff>@})
+    (list 'pussy (.name O))))
+
+(define-label <peluche>
+  (parent (list <symbol>))
+  (method (name @{O <peluche>@})
+    (car O))
+  (mixins <stuff>))
+
+(define @{O <peluche>@}
+  '(cat))
+
+(.name  O)      @result{} cat
+(.pussy O)      @result{} (pussy cat)
 @end lisp
 
 @c end of file
