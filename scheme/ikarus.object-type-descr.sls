@@ -182,7 +182,7 @@
 (define ($simple-condition-type-descr? des)
   ($rtd-subtype? des (record-type-descriptor &condition)))
 
-(define (core-uids-list.super-and-sub? super.des sub.des)
+(define (core-type-descriptor.super-and-sub? super.des sub.des)
   (memq (car (core-type-descriptor.uids-list super.des))
 	(core-type-descriptor.uids-list sub.des)))
 
@@ -800,7 +800,13 @@
   ;;Recursive function.   Search SUPER.DES in  the hierarchy of SUB.DES:  return true
   ;;when found, false otherwise.
   ;;
-  (cond ((object-type-descr=? super.des sub.des))
+  (cond ((eq? super.des sub.des))
+	((core-type-descriptor? super.des)
+	 (and (core-type-descriptor? sub.des)
+	      (core-type-descriptor.super-and-sub? super.des sub.des)))
+	((core-type-descriptor? sub.des)
+	 #f)
+	((object-type-descr=? super.des sub.des))
 	((object-type-descr.parent sub.des)
 	 => (lambda (sub-parent.des)
 	      (object-type-descr.parent-and-child? super.des sub-parent.des)))
@@ -1073,7 +1079,7 @@
 		  (<no-return>-ctd?	#f)
 		  (else			#t)))
 	       ((core-type-descriptor=? super.des sub.des))
-	       ((core-uids-list.super-and-sub? super.des sub.des))
+	       ((core-type-descriptor.super-and-sub? super.des sub.des))
 	       ((<pair>-ctd? super.des)
 		(<nelist>-ctd? sub.des))
 	       (else #f)))
