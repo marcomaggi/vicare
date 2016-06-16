@@ -130,7 +130,7 @@
 		  exact-compnum?
 		  zero-compnum?
 		  zero-cflonum?)
-    (only (ikarus.object-utilities)
+    (only (ikarus.core-type-descr)
 	  core-type-descriptor?
 	  core-type-descriptor=?
 	  core-type-descriptor.uids-list
