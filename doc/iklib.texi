@@ -10532,6 +10532,7 @@ Reset to void all the fields of a structure.
 @deffnx {Auxiliary Syntax} hash-function @meta{expr}
 @deffnx {Auxiliary Syntax} define-type-descriptors
 @deffnx {Auxiliary Syntax} strip-angular-parentheses
+@deffnx {Auxiliary Syntax} mixins @meta{mixin-name} @dots{}
 Defined by @rnrs{6}.  Define a new @rnrs{6} record type; @ref{stdlib
 records syntactic layer, define-record-type}.  This syntax supports some
 @value{PRJNAME} extensions.
@@ -10567,6 +10568,7 @@ concatenated in the order in which they are given.  Example:
 * iklib records defs methods::     Record-type methods.
 * iklib records defs descriptors:: Defining type descriptors.
 * iklib records defs angular::     Stripping angular parentheses.
+* iklib records defs mixins::      Mixins.
 @end menu
 
 @c page
@@ -11222,6 +11224,25 @@ and using @clause{strip-angular-parentheses}:
 (alpha-b O)     @result{} 20
 (alpha-c O)     @result{} 30
 @end lisp
+
+@c page
+@node iklib records defs mixins
+@subsubsection Mixins
+
+
+@cindex @syntax{mixins}, record--type definition clause
+
+
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
+
+@lisp
+(mixins @metao{mixin-name} @meta{mixin-name} ...)
+@end lisp
+
+@noindent
+causes the listed mixins to be included in the record--type definition,
+@ref{types mixins, Sharing object--type definition clauses}.
 
 @c page
 @node iklib records predicates

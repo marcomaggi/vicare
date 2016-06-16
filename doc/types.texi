@@ -14,6 +14,7 @@ leave the type of variables unspecified.
 * types syntaxes::              Type-exploiting syntaxes.
 * types built-in::              Built-in object types.
 * types void::                  Handling of void values.
+* types mixins::                Sharing object-type definition clauses.
 * types labels::                Sub-typing with labels.
 @end menu
 
@@ -5696,6 +5697,123 @@ as operands.
 @item
 The syntax @syntax{set!} cannot be used as operand.
 @end itemize
+
+@c page
+@node types mixins
+@section Sharing object--type definition clauses
+
+
+@cindex Library @library{vicare language-extensions mixins}
+@cindex @library{vicare language-extensions mixins}, library
+
+
+@dfn{Mixins} are a way to add definition clauses to record--types and
+labels.  Let's consider this situation:
+
+@example
+(define-record-type <alpha>
+  (fields a))
+
+(define-record-type <beta>
+  (fields b))
+
+(define-record-type <delta>
+  (parent <alpha>)
+  (fields v)
+  (method (doit @{O <delta>@})
+    (+ 1 (.v O))))
+
+(define-record-type <gamma>
+  (parent <beta>)
+  (fields v)
+  (method (doit @{O <gamma>@})
+    (+ 1 (.v O))))
+@end example
+
+@noindent
+the definitions of @class{delta} and @class{gamma} share some clauses;
+both of them already have a parent class and multiple inheritance is not
+supported by @value{PRJNAME}.  Is it possible to write the shared
+clauses only once and attach them to the record--type definitions?  Yes,
+with mixins.  The example above is equivalent to the following:
+
+@example
+(define-record-type <alpha>
+  (field a))
+
+(define-record-type <beta>
+  (field b))
+
+(define-mixin <stuff>
+  (field v)
+  (method (doit @{O <stuff>@})
+    (+ 1 (.v O))))
+
+(define-record-type <delta>
+  (parent <alpha>)
+  (mixins <stuff>))
+
+(define-record-type <gamma>
+  (parent <beta>)
+  (mixins <stuff>))
+@end example
+
+@noindent
+the syntax use of @syntax{define-mixin} associates a set of clauses to
+the identifier @class{stuff}; when the @clause{mixins} clause is used in
+the body of a record--type definition:
+
+@enumerate
+@item
+The clauses associated to the selected mixin identifier are retrieved as
+syntax object.
+
+@item
+All the instances of the identifier @class{stuff} are substituted with
+the identifier of the enclosing record--type; @class{delta} and
+@class{gamma} in the example.
+
+@item
+The resulting clauses are added to the enclosing definition.
+@end enumerate
+
+
+@deffn {Auxiliary Syntax} mixins @meta{mixin-name} @dots{}
+Compose the enclosing record--type, label or mixin definition with the
+given list of mixins.  This clause can be used multiple times.
+
+The syntactic identifiers @meta{mixin-name} are used to reference the
+mixins to be imported.  The clauses are included in the same order in
+which the @meta{mixin-name} identifiers are present in the
+@clause{mixins} clause and in the same place in which the
+@clause{mixins} clause is present in the enclosing definition.
+
+It is a syntax violation if a mixin identifier name is not already
+associated to a set of clauses at the time the receiving definition is
+expanded.
+@end deffn
+
+
+@deffn Syntax define-mixin @meta{mixin-name} @metao{clause} @meta{clause} ...
+Associate a set of mixin clauses to the identifier @meta{mixin-name},
+which can be later referenced by a @clause{mixins} clause in the body of
+a class or label definition.
+
+The @clause{mixins} clause can be used in the body of a mixin
+definition; the result is that the clauses of the selected mixins are
+added to the definition of the current mixin.
+
+The following clauses are accepted in the body of a
+@syntax{define-mixin}:
+
+@lisp
+define-type-descriptors strip-angular-parentheses
+nongenerative sealed opaque protocol super-protocol fields
+method case-method method/overload
+custom-printer type-predicate equality-predicate
+comparison-procedure hash-function
+@end lisp
+@end deffn
 
 @c page
 @node types labels
