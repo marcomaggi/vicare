@@ -2615,7 +2615,7 @@
 	(%error-mismatch "mismatching number of arguments in type signatures"))
       ;;If we are here  the number of produced values matches  the number of expected
       ;;values.
-      (case (type-signature.match-arguments-against-operands cleared-formals.sig producer.sig)
+      (case (type-signature.match-formals-against-operands cleared-formals.sig producer.sig)
 	((exact-match)
 	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 					   caller-who return-values?
@@ -2754,7 +2754,7 @@
 				  standard-formals.stx formals.sig cleared-formals.sig
 				  producer.psi producer.sig consumer*.stx
 				  %error-mismatch %mk-propagated-signature)
-      (case (type-signature.match-arguments-against-operands cleared-formals.sig producer.sig)
+      (case (type-signature.match-formals-against-operands cleared-formals.sig producer.sig)
 	((exact-match)
 	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 					   caller-who return-values?

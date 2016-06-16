@@ -942,7 +942,7 @@
 ;;; --------------------------------------------------------------------
 ;;; operations
 
-(declare-core-primitive type-signature.match-arguments-against-operands
+(declare-core-primitive type-signature.match-formals-against-operands
     (safe)
   (signatures
    ((<type-signature> <type-signature>)		=> (<symbol>))))

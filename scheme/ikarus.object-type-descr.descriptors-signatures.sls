@@ -174,22 +174,53 @@
 		 clause-signature2*))
       (case-lambda-descriptors.clause-signature* D1))))
 
-(define* (case-lambda-descriptors.match-super-and-sub {D1 case-lambda-descriptors?} {D2 case-lambda-descriptors?})
-  (let ((clause-signature1* (case-lambda-descriptors.clause-signature* D1))
-	(clause-signature2* (case-lambda-descriptors.clause-signature* D2)))
+(define* (case-lambda-descriptors.match-super-and-sub {super.des case-lambda-descriptors?} {sub.des case-lambda-descriptors?})
+  ;;For every clause in the super there must be a matching clause in the sub.
+  ;;
+  ;;Examples:
+  ;;
+  ;;   (type-descriptor-matching-super-and-sub?
+  ;;     (lambda (<fixnum>) => (<string>))
+  ;;     (case-lambda
+  ;;       ((<fixnum>) => (<string>))
+  ;;       ((<flonum>) => (<string>))))		=> #t
+  ;;
+  ;;   (type-descriptor-matching-super-and-sub?
+  ;;     (case-lambda
+  ;;       ((<fixnum>) => (<string>))
+  ;;       ((<flonum>) => (<string>)))
+  ;;     (lambda (<fixnum>) => (<string>)))		=> #f
+  ;;
+  ;;   (type-descriptor-matching-super-and-sub?
+  ;;     (case-lambda
+  ;;       ((<fixnum>) => (<string>))
+  ;;       ((<flonum>) => (<string>)))
+  ;;     (lambda (<flonum>) => (<string>)))		=> #f
+  ;;
+  (let ((super.clause*	(case-lambda-descriptors.clause-signature* super.des))
+	(sub.clause*	(case-lambda-descriptors.clause-signature* sub.des)))
     (returnable
-      (fold-left (lambda (state clause-signature1)
-		   (fold-left
-		       (lambda (state clause-signature2)
-			 (case (lambda-descriptors.match-super-and-sub clause-signature1 clause-signature2)
-			   ;;Found an exactly matching clause: return now.
-			   ((exact-match)	(return 'exact-match))
-			   ;;Found a possibly matching clause: set the state.
-			   ((possible-match)	'possible-match)
-			   ;;This clause does not match: keep the previous state.
-			   (else		state)))
-		     state clause-signature2*))
-	'no-match clause-signature1*))))
+      (fold-left
+	  (lambda (outer-state super.clause)
+	    (let ((inner-state (returnable
+				 (fold-left
+				     (lambda (inner-state sub.clause)
+				       (case (lambda-descriptors.match-super-and-sub super.clause sub.clause)
+					 ;;Found an  exactly matching  clause: return
+					 ;;now.
+					 ((exact-match)		(return 'exact-match))
+					 ;;Found a possibly  matching clause: set the
+					 ;;state.
+					 ((possible-match)	'possible-match)
+					 ;;This  clause  does  not  match:  keep  the
+					 ;;previous state.
+					 (else			inner-state)))
+				   'no-match sub.clause*))))
+	      (case inner-state
+		((exact-match)		outer-state)
+		((possible-match)	'possible-match)
+		(else			(return 'no-match)))))
+	'exact-match super.clause*))))
 
 
 ;;;; syntax helpers: object-type descriptors matching

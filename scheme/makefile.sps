@@ -3932,6 +3932,7 @@
     (core-type-descriptor.method-retriever	$type-descriptors)
     (core-type-descriptor=?			$type-descriptors)
     (core-type-descriptor.ancestor-des*		$type-descriptors)
+    (core-type-descriptor.super-and-sub?	$type-descriptors)
 
     ;;scheme-type descriptors
     (<bignum>-ctd				$type-descriptors)
@@ -5030,7 +5031,7 @@
     (type-signature.single-top-tag?			$expander)
     (type-signature.single-type-or-fully-untyped?	$expander)
     (type-signature.no-return?				$expander)
-    (type-signature.match-arguments-against-operands	$expander)
+    (type-signature.match-formals-against-operands	$expander)
     (type-signature.min-count				$expander)
     (type-signature.max-count				$expander)
     (type-signature.min-and-max-counts			$expander)

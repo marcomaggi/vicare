@@ -136,6 +136,7 @@
 	  core-type-descriptor.uids-list
 	  core-type-descriptor.parent
 	  core-type-descriptor.ancestor-des*
+	  core-type-descriptor.super-and-sub?
 	  ;;;
 	  <void>-ctd				<top>-ctd			<no-return>-ctd
 	  <true>-ctd				<false>-ctd
@@ -181,10 +182,6 @@
 
 (define ($simple-condition-type-descr? des)
   ($rtd-subtype? des (record-type-descriptor &condition)))
-
-(define (core-type-descriptor.super-and-sub? super.des sub.des)
-  (memq (car (core-type-descriptor.uids-list super.des))
-	(core-type-descriptor.uids-list sub.des)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1230,6 +1227,7 @@
       ;;The record-type case includes the condition object-type case.
       (<struct>-ctd?			(or-with-predicates sub.des
 					  record-type-descriptor? compound-condition-type-descr? hashtable-type-descr? struct-type-descriptor?))
+      (<procedure>-ctd?			(closure-type-descr? sub.des))
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
 

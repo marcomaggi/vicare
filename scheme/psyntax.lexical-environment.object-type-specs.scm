@@ -1101,16 +1101,7 @@
 	   ;;signature; so that the sub can  be used everywhere the super can be
 	   ;;used.  It does not matter if  the sub has clauses with non-matching
 	   ;;signatures.
-	   (for-all (lambda (super.clause-signature)
-		      (exists (lambda (sub.clause-signature)
-				(and (type-signature.matching-super-and-sub?
-				      (lambda-signature.argvals super.clause-signature)
-				      (lambda-signature.argvals sub.clause-signature))
-				     (type-signature.matching-super-and-sub?
-				      (lambda-signature.retvals super.clause-signature)
-				      (lambda-signature.retvals sub.clause-signature))))
-			(case-lambda-signature.clause-signature* (closure-type-spec.signature sub.ots))))
-	     (case-lambda-signature.clause-signature* (closure-type-spec.signature super.ots))))
+	   (eq? 'exact-match (closure-type-spec.match-super-and-sub super.ots sub.ots)))
 	  (else #f)))
 
    ((closure-type-spec? sub.ots)
@@ -3069,6 +3060,12 @@
 	      clause-signature))
        (case-lambda-signature.clause-signature* (closure-type-spec.signature closure.ots))
        retvals*.new-sig))))
+
+;;; --------------------------------------------------------------------
+
+(define* (closure-type-spec.match-super-and-sub {S1 closure-type-spec?} {S2 closure-type-spec?})
+  (case-lambda-signature.match-super-and-sub (closure-type-spec.signature S1)
+					     (closure-type-spec.signature S2)))
 
 
 ;;;; heterogeneous pair object spec

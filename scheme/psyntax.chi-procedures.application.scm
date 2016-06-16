@@ -544,7 +544,7 @@
 					    (<no-return>
 					     'no-return)
 					    (else
-					     (type-signature.match-arguments-against-operands clear-argvals.sig producer-retvals.sig))))))
+					     (type-signature.match-formals-against-operands clear-argvals.sig producer-retvals.sig))))))
       (case match-symbol
 	((exact-match)
 	 ;;Here we use CHI-LAMBDA/TYPED/PARSED-FORMALS.
@@ -799,7 +799,7 @@
 		 (loop prospective.id prospective.lambda-sig prospective.formals-sig (cdr spec*.lambda-sig) (cdr spec*.id)))
 	       (define (%keep-old-selection)
 		 (loop    selected.id    selected.lambda-sig    selected.formals-sig (cdr spec*.lambda-sig) (cdr spec*.id)))
-	       (if (eq? 'exact-match (type-signature.match-arguments-against-operands prospective.formals-sig rands.sig))
+	       (if (eq? 'exact-match (type-signature.match-formals-against-operands prospective.formals-sig rands.sig))
 		   (if selected.id
 		       (if (type-signature.matching-super-and-sub? (lambda-signature.argvals selected.lambda-sig)
 								   prospective.formals-sig)
@@ -818,7 +818,7 @@
 		 (spec*.id		spec*.id))
 	(if (pair? spec*.lambda-sig)
 	    (if (let ((spec.formals-sig (lambda-signature.argvals (car spec*.lambda-sig))))
-		  (eq? 'exact-match (type-signature.match-arguments-against-operands spec.formals-sig rands.sig)))
+		  (eq? 'exact-match (type-signature.match-formals-against-operands spec.formals-sig rands.sig)))
 		(cons (car spec*.id) (car spec*.lambda-sig))
 	      (loop (cdr spec*.lambda-sig) (cdr spec*.id)))
 	  #f))))
@@ -969,7 +969,7 @@
 	       (state (returnable
 			(fold-left (lambda (state clause-signature)
 				     (let ((args.sig (lambda-signature.argvals clause-signature)))
-				       (case (type-signature.match-arguments-against-operands args.sig rands.sig)
+				       (case (type-signature.match-formals-against-operands args.sig rands.sig)
 					 ((exact-match)
 					  (set! selected-clause-signature* (list clause-signature))
 					  (return 'exact-match))
@@ -1185,7 +1185,7 @@
 		(let ((repl.clambda-sig (closure-type-spec.signature repl.ots)))
 		  (cond ((exists (lambda (clause-signature)
 				   (let ((args.sig (lambda-signature.argvals clause-signature)))
-				     (if (eq? 'exact-match (type-signature.match-arguments-against-operands args.sig rands.sig))
+				     (if (eq? 'exact-match (type-signature.match-formals-against-operands args.sig rands.sig))
 					 (lambda-signature.retvals clause-signature)
 				       #f)))
 			   (case-lambda-signature.clause-signature* repl.clambda-sig))
@@ -1799,7 +1799,7 @@
 	   (state (returnable
 		    (fold-left (lambda (state clause-signature)
 				 (let ((formals.sig (lambda-signature.argvals clause-signature)))
-				   (case (type-signature.match-arguments-against-operands formals.sig proc-rands.sig)
+				   (case (type-signature.match-formals-against-operands formals.sig proc-rands.sig)
 				     ((exact-match)
 				      (set! selected-clause-signature* (list clause-signature))
 				      (return 'exact-match))

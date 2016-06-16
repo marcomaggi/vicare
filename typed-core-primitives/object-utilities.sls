@@ -92,6 +92,11 @@
   (signatures
    ((<core-type-descriptor>)		=> ((list-of <core-type-descriptor>)))))
 
+(declare-core-primitive core-type-descriptor.super-and-sub?
+    (safe)
+  (signatures
+   ((<core-type-descriptor> <core-type-descriptor>)	=> (<boolean>))))
+
 /section)
 
 

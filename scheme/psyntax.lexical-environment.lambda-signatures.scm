@@ -29,12 +29,13 @@
    lambda-signature.argvals			lambda-signature.argvals.specs
    lambda-signature.fully-unspecified?		lambda-signature.only-<untyped>-and-<list>?
    lambda-signature.untyped-to-top
+   lambda-signature.match-super-and-sub
 
    <case-lambda-signature>
    make-case-lambda-signature			case-lambda-signature?
    case-lambda-signature=?
    case-lambda-signature.retvals		case-lambda-signature.clause-signature*
-   case-lambda-signature.min-and-max-argvals
+   case-lambda-signature.min-and-max-argvals	case-lambda-signature.match-super-and-sub
 
    #| end of exports |# )
 
@@ -119,6 +120,31 @@
   (type-signature.untyped-to-top! (lambda-signature.retvals lambda-signature))
   (type-signature.untyped-to-top! (lambda-signature.argvals lambda-signature)))
 
+;;; --------------------------------------------------------------------
+
+(define* (lambda-signature.match-super-and-sub {S1 lambda-signature?} {S2 lambda-signature?})
+  (let ((retvals-state (type-signature.match-formals-against-operands (lambda-signature.retvals S1)
+								      (lambda-signature.retvals S2)))
+	(argvals-state (type-signature.match-formals-against-operands (lambda-signature.argvals S1)
+								      (lambda-signature.argvals S2))))
+    (case retvals-state
+      ((exact-match)
+       (case argvals-state
+	 ((exact-match)
+	  'exact-match)
+	 ((possible-match)
+	  'possible-match)
+	 (else
+	  'no-match)))
+      ((possible-match)
+       (case argvals-state
+	 ((exact-match possible-match)
+	  'possible-match)
+	 (else
+	  'no-match)))
+      (else
+       'no-match))))
+
 
 ;;;; type definition: applicable object signatures
 
@@ -146,6 +172,8 @@
 	(case-lambda-signature.clause-signature* S))
       (display "]" port)))
   #| end of DEFINE-RECORD-TYPE |# )
+
+;;; --------------------------------------------------------------------
 
 (define* (case-lambda-signature=? {sig1 case-lambda-signature?} {sig2 case-lambda-signature?})
   (let ((csig1* (case-lambda-signature.clause-signature* sig1))
@@ -223,6 +251,56 @@
 				     cnd)))
 		 (map lambda-signature.retvals (case-lambda-signature.clause-signature* sig)))
 	(case-lambda-signature.memoised-retvals-set! sig retvals.sig))))
+
+;;; --------------------------------------------------------------------
+
+(define* (case-lambda-signature.match-super-and-sub {super.sig case-lambda-signature?} {sub.sig case-lambda-signature?})
+  ;;For every clause in the super there must be a matching clause in the sub.
+  ;;
+  ;;Examples:
+  ;;
+  ;;   (type-annotation-super-and-sub?
+  ;;     (lambda (<fixnum>) => (<string>))
+  ;;     (case-lambda
+  ;;       ((<fixnum>) => (<string>))
+  ;;       ((<flonum>) => (<string>))))		=> #t
+  ;;
+  ;;   (type-annotation-super-and-sub?
+  ;;     (case-lambda
+  ;;       ((<fixnum>) => (<string>))
+  ;;       ((<flonum>) => (<string>)))
+  ;;     (lambda (<fixnum>) => (<string>)))		=> #f
+  ;;
+  ;;   (type-annotation-super-and-sub?
+  ;;     (case-lambda
+  ;;       ((<fixnum>) => (<string>))
+  ;;       ((<flonum>) => (<string>)))
+  ;;     (lambda (<flonum>) => (<string>)))		=> #f
+  ;;
+  (let ((super.clause*	(case-lambda-signature.clause-signature* super.sig))
+	(sub.clause*	(case-lambda-signature.clause-signature* sub.sig)))
+    (returnable
+      (fold-left
+	  (lambda (outer-state super.clause)
+	    (let ((inner-state (returnable
+				 (fold-left
+				     (lambda (inner-state sub.clause)
+				       (case (lambda-signature.match-super-and-sub super.clause sub.clause)
+					 ;;Found an  exactly matching  clause: return
+					 ;;now.
+					 ((exact-match)		(return 'exact-match))
+					 ;;Found a possibly  matching clause: set the
+					 ;;state.
+					 ((possible-match)	'possible-match)
+					 ;;This  clause  does  not  match:  keep  the
+					 ;;previous state.
+					 (else			inner-state)))
+				   'no-match sub.clause*))))
+	      (case inner-state
+		((exact-match)		outer-state)
+		((possible-match)	'possible-match)
+		(else			(return 'no-match)))))
+	'exact-match super.clause*))))
 
 
 ;;;; done

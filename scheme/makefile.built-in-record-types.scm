@@ -307,7 +307,7 @@
    (single-top-tag?			type-signature.single-top-tag?)
    (single-type-or-fully-untyped?	type-signature.single-type-or-fully-untyped?)
    (no-return?				type-signature.no-return?)
-   (match-arguments-against-operands	type-signature.match-arguments-against-operands)
+   (match-formals-against-operands	type-signature.match-formals-against-operands)
    (min-count				type-signature.min-count)
    (max-count				type-signature.max-count)
    (min-and-max-counts			type-signature.min-and-max-counts)

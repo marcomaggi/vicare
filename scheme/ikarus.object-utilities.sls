@@ -41,6 +41,7 @@
     core-type-descriptor.comparison-procedure	core-type-descriptor.hash-function
     core-type-descriptor.uids-list		core-type-descriptor.method-retriever
     core-type-descriptor=?			core-type-descriptor.ancestor-des*
+    core-type-descriptor.super-and-sub?
 
     ;; built-in object-type specification utilities, for internal use
     <top>-constructor			<top>-type-predicate
@@ -432,6 +433,10 @@
   (or (eq? des1 des2)
       (eq? (core-type-descriptor.name des1)
 	   (core-type-descriptor.name des2))))
+
+(define* (core-type-descriptor.super-and-sub? {super.des core-type-descriptor?} {sub.des core-type-descriptor?})
+  (memq (car (core-type-descriptor.uids-list super.des))
+	(core-type-descriptor.uids-list sub.des)))
 
 (define* (core-type-descriptor.ancestor-des* {des core-type-descriptor?})
   (let recur ((des des))

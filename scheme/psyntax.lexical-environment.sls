@@ -104,7 +104,7 @@
     type-signature.matching-super-and-sub?		type-signature.compatible-super-and-sub?
     type-signature.single-type?				type-signature.single-top-tag?
     type-signature.single-type-or-fully-untyped?	type-signature.no-return?
-    type-signature.match-arguments-against-operands
+    type-signature.match-formals-against-operands
     type-signature.min-count				type-signature.max-count
     type-signature.min-and-max-counts
     type-signature.common-ancestor			type-signature.union

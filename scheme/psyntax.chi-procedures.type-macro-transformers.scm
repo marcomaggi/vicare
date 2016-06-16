@@ -1536,7 +1536,7 @@
 						    (make-syntax-violation input-form.stx #f)
 						    (make-syntax-violation ?sub-signature subform))))))
 			  (make-type-signature (syntax-object->type-signature-specs ?sub-signature lexenv.run synner))))
-	    (sym	(type-signature.match-arguments-against-operands super.sig sub.sig)))
+	    (sym	(type-signature.match-formals-against-operands super.sig sub.sig)))
        (make-psi input-form.stx
 	 (build-data no-source sym)
 	 (make-type-signature/single-value (make-enumeration-type-spec (list sym))))))

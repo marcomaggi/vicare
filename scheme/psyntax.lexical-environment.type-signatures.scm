@@ -57,7 +57,7 @@
    type-signature.only-<untyped>-and-<list>?
    type-signature.only-<untyped>-and-<top>-and-<list>?
 
-   type-signature.match-arguments-against-operands	type-signature.type-propagation
+   type-signature.match-formals-against-operands	type-signature.type-propagation
 
 ;;; accessors
    type-signature.min-count				type-signature.max-count
@@ -1218,10 +1218,10 @@
 
 ;;;; matching: arguments and operands
 
-(module (type-signature.match-arguments-against-operands)
-  (define-module-who type-signature.match-arguments-against-operands)
+(module (type-signature.match-formals-against-operands)
+  (define-module-who type-signature.match-formals-against-operands)
 
-  (define* (type-signature.match-arguments-against-operands formals.sig operands.sig)
+  (define* (type-signature.match-formals-against-operands formals.sig operands.sig)
     ;;In the context of a closure object application to fixed operands:
     ;;
     ;;   (?operator ?operand ...)
@@ -1523,7 +1523,7 @@
 
     #| end of module: %MATCH-FORMALS-LIST-OF-AGAINST-OPERANDS |# )
 
-  #| end of module: TYPE-SIGNATURE.MATCH-ARGUMENTS-AGAINST-OPERANDS |# )
+  #| end of module: TYPE-SIGNATURE.MATCH-FORMALS-AGAINST-OPERANDS |# )
 
 
 ;;;; matching: common ancestor
