@@ -497,7 +497,7 @@
 ;;; misc
 
   (doit (enumeration ciao)		=> (list <symbol>-ctd <top>-ctd))
-  (doit (hashtable <fixnum> <flonum>)	=> (list <hashtable>-ctd <top>-ctd))
+  (doit (hashtable <fixnum> <flonum>)	=> (list <hashtable>-ctd <struct>-ctd <top>-ctd))
   (doit (alist <fixnum> <flonum>)	=> (list <list>-ctd <top>-ctd))
 
   #| end of PARAMETRISE |# )

@@ -50,6 +50,26 @@
   (signatures
    ((<core-type-descriptor>)		=> ((or <false> <core-type-descriptor>)))))
 
+(declare-core-primitive core-type-descriptor.type-predicate
+    (safe)
+  (signatures
+   ((<core-type-descriptor>)		=> (<type-predicate>))))
+
+(declare-core-primitive core-type-descriptor.equality-predicate
+    (safe)
+  (signatures
+   ((<core-type-descriptor>)		=> (<equality-predicate>))))
+
+(declare-core-primitive core-type-descriptor.comparison-procedure
+    (safe)
+  (signatures
+   ((<core-type-descriptor>)		=> (<comparison-procedure>))))
+
+(declare-core-primitive core-type-descriptor.hash-function
+    (safe)
+  (signatures
+   ((<core-type-descriptor>)		=> (<hash-function>))))
+
 (declare-core-primitive core-type-descriptor.uids-list
     (safe)
   (signatures
@@ -59,6 +79,18 @@
     (safe)
   (signatures
    ((<core-type-descriptor>)		=> ((lambda (<symbol>) => ((or <false> <procedure>)))))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive core-type-descriptor=?
+    (safe)
+  (signatures
+   ((<core-type-descriptor> <core-type-descriptor>)	=> (<boolean>))))
+
+(declare-core-primitive core-type-descriptor.ancestor-des*
+    (safe)
+  (signatures
+   ((<core-type-descriptor>)		=> ((list-of <core-type-descriptor>)))))
 
 /section)
 
