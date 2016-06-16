@@ -38,6 +38,7 @@
     hash-function
     method
     case-method
+    method/overload
     nongenerative)
   (import (vicare)
     (vicare language-extensions mixins (0 4)))
@@ -64,6 +65,7 @@
 	(new <syntax-clause-spec> #'hash-function		0 1      1 1      '() '())
 	(new <syntax-clause-spec> #'method			0 +inf.0 2 +inf.0 '() '())
 	(new <syntax-clause-spec> #'case-method			0 +inf.0 2 +inf.0 '() '())
+	(new <syntax-clause-spec> #'method/overload		0 +inf.0 2 +inf.0 '() '())
 	(new <syntax-clause-spec> #'nongenerative		0 1      1 1      '() '())
 	#| end of LIST |# )))
 
@@ -308,6 +310,20 @@
 			    (%process-case-method-spec parsed arg synner))
 	   args))
 
+	((method/overload)
+	 ;;This clause  can be present multiple  times.  Each input clause  must have
+	 ;;the format:
+	 ;;
+	 ;;   (method/overload (?who . ?args) . ?body)
+	 ;;
+	 ;;and we expect ARGS to have the format:
+	 ;;
+	 ;;   #(#((?who . ?args) . ?body) ...)
+	 ;;
+	 (vector-for-each (lambda (arg)
+			    (%process-method-overload-spec parsed arg synner))
+	   args))
+
 	((parent)
 	 ;;The input clause must have the format:
 	 ;;
@@ -461,6 +477,37 @@
 		     (.method* parsed))))
 	(#(?stuff ...)
 	 (synner "invalid method specification" #'(case-method ?stuff ...)))))
+
+    (define (%process-method-overload-spec {parsed <parsed-clauses>} spec synner)
+      ;;The METHOD/OVERLOAD clause can be  present multiple times.  Each input clause
+      ;;must have the format:
+      ;;
+      ;;   (method/overload (?who . ?args) . ?body)
+      ;;
+      ;;and we expect SPEC to have the format:
+      ;;
+      ;;   #((?who . ?args) . ?body)
+      ;;
+      (syntax-case spec ()
+	(#((?who . ?args) ?body0 ?body ...)
+	 (receive (method-name.id method-proc.id method-who.stx)
+	     (syntax-case #'?who (brace)
+	       (?method-name
+		(identifier? #'?method-name)
+		(let ((method-proc.id (identifier-record-field-accessor (.type-name parsed) #'?method-name)))
+		  (values #'?method-name method-proc.id method-proc.id)))
+	       ((brace ?method-name . ?rv-types)
+		(identifier? #'?method-name)
+		(let ((method-proc.id (identifier-record-field-accessor (.type-name parsed) #'?method-name)))
+		  (values #'?method-name method-proc.id #`(brace #,method-proc.id . ?rv-types))))
+	       (_
+		(synner "invalid method name specification" #'?who)))
+	   (set! (.method* parsed)
+		 (cons (vector method-name.id method-proc.id
+			       #`(define/overload (#,method-who.stx . ?args) ?body0 ?body ...))
+		       (.method* parsed)))))
+	(#(?stuff ...)
+	 (synner "invalid method specification" #'(method ?stuff ...)))))
 
     (lambda (input-form.stx)
       (case-define synner

@@ -427,6 +427,27 @@
   #| end of PARAMETRISE |# )
 
 
+(parametrise ((check-test-name	'overloads))
+
+  (check
+      (internal-body
+	(define-label <peluche>
+	  (parent (list <symbol>))
+	  (method/overload (name {O <peluche>})
+	    (car O))
+	  (method/overload (name {O <peluche>} {attr <symbol>})
+	    (list attr (car O))))
+
+	(define {O <peluche>}
+	  '(cat))
+
+	(values (.name O)
+		(.name O 'pussy)))
+    => 'cat '(pussy cat))
+
+  #| end of PARAMETRISE |# )
+
+
 (parametrise ((check-test-name	'misc-operations))
 
   (define-label <my-fixnum>

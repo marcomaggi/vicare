@@ -5737,6 +5737,7 @@ The following syntactic bindings are exported by the library
 @deffnx {Auxiliary Syntax} hash-function
 @deffnx {Auxiliary Syntax} method
 @deffnx {Auxiliary Syntax} case-method
+@deffnx {Auxiliary Syntax} method/overload
 @deffnx {Auxiliary Syntax} mixins
 Define a new label type.  @meta{type-name} must be a syntactic
 identifier representing the label name.
@@ -5750,7 +5751,7 @@ The following clauses can be used in the same way they are used in
 @lisp
 parent type-predicate
 equality-predicate comparison-procedure hash-function
-method case-method
+method case-method method/overload
 mixins
 @end lisp
 
