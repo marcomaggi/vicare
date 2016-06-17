@@ -3322,10 +3322,9 @@ Examples:
 @cindex Functions, overloaded
 
 
-An overloaded function is an expand--time object similar to a macro; it
-represents an aggregation of functions linked to the same name and
-having different number and/or type of arguments.  For example, in the
-code:
+An overloaded function represents an aggregation of functions linked to
+the same name and having different number and/or type of arguments.  For
+example, in the code:
 
 @lisp
 (define/overload (fun @{O <fixnum>@})
@@ -3382,60 +3381,57 @@ We can define an overloaded function in a library and then add
 specialised functions in a second library which depends on the first
 one.
 
-We can think of an overloaded function definition:
+Whenever an overloaded function is applied to a tuple of operands: first
+expand--time early binding is attempted; if it fails, run--time late
+binding is attempted.  At expand--time:
 
-@lisp
-(define/overload (@meta{over-fun} . @meta{formals}) . @meta{body})
-@end lisp
+@enumerate
+@item
+The expander determines the type of the operands, if it fails a syntax
+violation is raised.
 
-@noindent
-as expanding to the following pseudo--code:
+@item
+The set of specialised functions is visited and the identifier of the
+better matching one is inserted in the code to be applied to the
+operands.  The return values of the specialised function will become the
+return values of the overloaded function application.
 
-@lisp
-(define/typed (@meta{spec-fun} . @meta{formals}) . @meta{body})
-(define-syntax @meta{over-fun}
-  (make-overloaded-function (syntax @meta{over-fun})))
-(begin-for-syntax
-  (add-overloaded-function-specialisation!
-     (syntax @meta{over-fun})
-     (syntax @meta{spec-fun})
-     @meta{spec-fun-type-signature}))
-@end lisp
-
-@noindent
-and we can think of an overloaded function application:
-
-@lisp
-(@meta{over-fun} . @meta{operands})
-@end lisp
+@item
+If no matching function is found: code performing late binding is
+inserted.  If the option @option{-Woverloaded-function-late-binding} was
+used: a @condition{warning} exception is raised signalling failure in
+early binding.
+@end enumerate
 
 @noindent
-as expanding to the following:
+At run--time:
 
-@lisp
-(@meta{spec-fun} . @meta{operands})
-@end lisp
+@enumerate
+@item
+The type of the operands is determined using @func{type-descriptor-of},
+@ref{types descr retrieving, type-descriptor-of}.
 
-@noindent
-where @meta{spec-fun} is an internally generated syntactic identifier.
+@item
+The set of specialised functions is visited and the better matching one
+is applied to the operands.  The return values of the specialised
+function become the return values of the overloaded function
+application.
 
-Whenever an overloaded function is applied to a tuple of operands: the
-expander determines the type of the operands, if it fails a syntax
-violation is raised; the set of specialised functions is visited and the
-identifier of the better matching one is inserted in the code; if no
-matching function is found, a syntax violation is raised.
+@item
+If no matching function is found: an exception is raised with type
+@condition{overloaded-function-late-binding-error}, @ref{iklib
+conditions late-bind overload}.
+@end enumerate
 
-Specialised functions are ranked to select the better matching; the
-ranking algorithm makes use of the same logic used by the syntax
-@syntax{type-signature-super-and-sub?} (@pxref{types syntaxes
-signatures, type-signature-super-and-sub?}).  Ranking works by iterating
-a list of specialised functions:
+Specialised functions are ranked to select the better matching.  At both
+expand--time and run--time, ranking works by iterating a list of
+specialised functions:
 
 @enumerate
 @item
 Get the next function from the list.  When there are no more functions:
 if a better matching function was selected, it becomes the one; if no
-matching function was found, a syntax violation is raised.
+matching function was found, perform the default action.
 
 @item
 If the formals' type signature of the next function is a super--type of
@@ -3471,8 +3467,8 @@ Here is an example that shows how ranking works:
 @end lisp
 
 @noindent
-notice that only the operands' type signature seen by the expander is
-the one that matters, with the same definitions above:
+notice that, at expand--time, only the operands' type signature seen by
+the expander is the one that matters, with the same definitions above:
 
 @lisp
 (fun (cast-signature (<number>) 123))   @result{} (number 123)
