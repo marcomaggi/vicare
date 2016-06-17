@@ -386,7 +386,7 @@
 
   (import (only (vicare system type-descriptors)
 		make-overloaded-function-descriptor
-		overloaded-function-descriptor-register!
+		overloaded-function-descriptor.register!
 		overloaded-function-late-binding))
 
   (define (doit-string {O <string>})
@@ -404,7 +404,7 @@
   (define ofd
     (receive-and-return (ofd)
 	(make-overloaded-function-descriptor (list (cons doit-string.des doit-string)))
-      (overloaded-function-descriptor-register! ofd doit-fixnum.des doit-fixnum)))
+      (overloaded-function-descriptor.register! ofd doit-fixnum.des doit-fixnum)))
 
 ;;; --------------------------------------------------------------------
 
@@ -415,6 +415,57 @@
   (check
       (overloaded-function-late-binding ofd 123)
     => '(fixnum 123))
+
+  #| end of PARAMETRISE |# )
+
+
+(parametrise ((check-test-name	'late-binding-syntax))
+
+  (check
+      (internal-body
+	(define/overload (doit {O <string>})
+	  (list 'string O))
+
+	(define/overload (doit {O <fixnum>})
+	  (list 'fixnum O))
+
+	(values (doit (cast-signature (<top>) "ciao"))
+		(doit (cast-signature (<top>) 123))))
+    => '(string "ciao") '(fixnum 123))
+
+  (check
+      (internal-body
+	(define/overload (doit {O <string>})
+	  (list 'string O))
+
+	(define/overload (doit {O <fixnum>})
+	  (list 'fixnum O))
+
+	(define (call-it {obj <top>})
+	  (doit obj))
+
+	(values (call-it "ciao")
+		(call-it 123)))
+    => '(string "ciao") '(fixnum 123))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (internal-body
+     (define/overload (doit {O <string>})
+       (list 'string O))
+
+     (define/overload (doit {O <fixnum>})
+       (list 'fixnum O))
+
+     (try
+	 (doit 'hello)
+       (catch E
+	 ((&overloaded-function-late-binding-error)
+	  (when #f
+	    (debug-print (condition-message E)))
+	  #t)
+	 (else E)))))
 
   #| end of PARAMETRISE |# )
 

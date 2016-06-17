@@ -478,7 +478,22 @@ Select which algorithm to use when optimising @syntax{letrec} and
 @item -Wall
 @cindex Command line option @option{-Wall}
 @cindex @option{-Wall}, command line option
-Enable all the expander and compiler warnings.
+Enable all the expander and compiler common warnings.  It is equivalent
+to using the following options:
+
+@example
+-Wlogic-constants -Wnot-returning -Wunused-variables
+@end example
+
+@item -Wextra
+@cindex Command line option @option{-Wextra}
+@cindex @option{-Wextra}, command line option
+Enable all the expander and compiler extra warnings.  It is equivalent
+to using the following options:
+
+@example
+-Woverloaded-function-late-binding
+@end example
 
 @item -Wlogic-constants
 @itemx -Wno-logic-constants
@@ -510,6 +525,17 @@ default this warning is disabled.
 Enable or disable raising a @condition{warning} exception when a local
 lexical variable is defined but never used.  By default this warning is
 disabled.
+
+@item -Woverloaded-function-late-binding
+@itemx -Wno-overloaded-function-late-binding
+@cindex Command line option @option{-Woverloaded-function-late-binding}
+@cindex Command line option @option{-Wno-overloaded-function-late-binding}
+@cindex @option{-Woverloaded-function-late-binding}, command line option
+@cindex @option{-Wno-overloaded-function-late-binding}, command line option
+Enable or disable raising a @condition{warning} exception when an
+overloaded function has to default to late binding because the early
+binding code was unable to find a matching specialised function.  By
+default this warning is disabled.
 
 @c ------------------------------------------------------------------------
 

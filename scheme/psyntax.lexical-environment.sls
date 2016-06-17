@@ -261,9 +261,8 @@
     core-prim-type-spec.replacements
 ;;;
     make-overloaded-function-spec			overloaded-function-spec?
-    overloaded-function-spec.name-id
-    overloaded-function-spec.signature*
-    overloaded-function-spec.id*
+    overloaded-function-spec.name-id			overloaded-function-spec.ofd-id
+    overloaded-function-spec.signature*			overloaded-function-spec.id*
     overloaded-function-spec.add-specialised-implementation!
     overloaded-function-spec.register-specialisation!
     overloaded-function-spec.expanded-expr

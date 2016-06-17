@@ -137,6 +137,10 @@
 (declare-core-rtd &no-nans-rtd)
 (declare-core-rtd &non-continuable-rtd)
 (declare-core-rtd &non-reinstatable-rtd)
+(declare-core-rtd &late-binding-error-rtd)
+(declare-core-rtd &method-late-binding-error-rtd)
+(declare-core-rtd &overloaded-function-late-binding-error-rtd)
+;;;
 (declare-core-rtd &one-based-return-value-index-rtd)
 (declare-core-rtd &out-of-memory-error-rtd)
 (declare-core-rtd &procedure-argument-violation-rtd)
@@ -216,6 +220,10 @@
 (declare-core-rcd &no-nans-rcd)
 (declare-core-rcd &non-continuable-rcd)
 (declare-core-rcd &non-reinstatable-rcd)
+(declare-core-rcd &late-binding-error-rcd)
+(declare-core-rcd &method-late-binding-error-rcd)
+(declare-core-rcd &overloaded-function-late-binding-error-rcd)
+;;;
 (declare-core-rcd &one-based-return-value-index-rcd)
 (declare-core-rcd &out-of-memory-error-rcd)
 (declare-core-rcd &procedure-argument-violation-rcd)
@@ -289,6 +297,9 @@
   (declare make-violation				&violation)
   (declare make-warning					&warning)
   (declare make-non-reinstatable-violation		&non-reinstatable)
+  (declare make-late-binding-error			&late-binding-error)
+  (declare make-method-late-binding-error		&method-late-binding-error)
+  (declare make-overloaded-function-late-binding-error	&overloaded-function-late-binding-error)
   #| end of LET-SYNTAX |# )
 
 (declare-core-primitive make-who-condition
@@ -590,6 +601,9 @@
 (declare-condition-type-predicate who-condition?			&who)
 (declare-condition-type-predicate non-reinstatable-violation?		&non-reinstatable)
 (declare-condition-type-predicate failed-expression-condition?		&failed-expression)
+(declare-condition-type-predicate late-binding-error?			&late-binding-error)
+(declare-condition-type-predicate method-late-binding-error?		&method-late-binding-error)
+(declare-condition-type-predicate overloaded-function-late-binding-error?	&overloaded-function-late-binding-error)
 
 (declare-condition-type-predicate procedure-signature-argument-violation?	&procedure-signature-argument-violation)
 (declare-condition-type-predicate procedure-signature-return-value-violation?	&procedure-signature-return-value-violation)

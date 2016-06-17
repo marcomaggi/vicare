@@ -30,10 +30,12 @@
     method-call-late-binding
     internal-delete
     ;; overloaded functions: late binding
+    <overloaded-function-descriptor>-rtd
+    <overloaded-function-descriptor>-rcd
     make-overloaded-function-descriptor
     overloaded-function-descriptor?
-    overloaded-function-descriptor-register!
-    overloaded-function-descriptor-select-matching-entry
+    overloaded-function-descriptor.register!
+    overloaded-function-descriptor.select-matching-entry
     overloaded-function-late-binding
     #| end of EXPORT |# )
   (import (except (vicare)
@@ -44,6 +46,8 @@
 		  struct-std
 		  record-type-method-retriever
 		  record-type-hash-function
+		  make-method-late-binding-error
+		  make-overloaded-function-late-binding-error
 		  #| end of EXCEPT |# )
     (only (ikarus.core-type-descr)
 	  core-type-descriptor.parent
@@ -64,6 +68,11 @@
     (only (vicare system $structs)
 	  $struct-rtd
 	  $set-std-printer!)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Jun 17,
+    ;;2016)
+    (only (ikarus conditions)
+	  make-method-late-binding-error
+	  make-overloaded-function-late-binding-error)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
     ;;2015)
     (prefix (only (ikarus structs)
@@ -104,7 +113,11 @@
   ;;null or a list of method arguments.
   ;;
   (define (%error message)
-    (error 'method-call-late-binding message method-name.sym subject args))
+    (raise
+     (condition (make-method-late-binding-error)
+		(make-who-condition 'method-call-late-binding)
+		(make-message-condition message)
+		(make-irritants-condition (list method-name.sym subject args)))))
   (define (%error-object-type-has-no-methods-table)
     (%error "object type has no methods table"))
   (define (%error-record-type-has-no-matching-method)
@@ -258,20 +271,31 @@
 
 ;;;; overloaded functions: late binding
 
-(define-struct overloaded-function-descriptor
-  (table
+(define-record-type (<overloaded-function-descriptor> make-overloaded-function-descriptor overloaded-function-descriptor?)
+  (nongenerative vicare:system:<overloaded-function-descriptor>)
+  (sealed #t)
+  (fields
+    (mutable table		overloaded-function-descriptor.table overloaded-function-descriptor.table-set!)
 		;An alist  having an  instance of <closure-type-descr>  as key  and a
 		;procedure as value.
-   ))
+    #| end of FIELDS |# ))
 
-(define* (overloaded-function-descriptor-register! {over.des		overloaded-function-descriptor?}
+(define <overloaded-function-descriptor>-rtd
+  (record-type-descriptor <overloaded-function-descriptor>))
+
+(define <overloaded-function-descriptor>-rcd
+  (record-constructor-descriptor <overloaded-function-descriptor>))
+
+;;; --------------------------------------------------------------------
+
+(define* (overloaded-function-descriptor.register! {over.des		overloaded-function-descriptor?}
 						   {closure.des		td::closure-type-descr?}
 						   {implementation	procedure?})
-  (set-overloaded-function-descriptor-table! over.des
+  (overloaded-function-descriptor.table-set! over.des
 					     (cons (cons closure.des implementation)
-						   (overloaded-function-descriptor-table over.des))))
+						   (overloaded-function-descriptor.table over.des))))
 
-(define* (overloaded-function-descriptor-select-matching-entry {over.des overloaded-function-descriptor?} operand*)
+(define* (overloaded-function-descriptor.select-matching-entry {over.des overloaded-function-descriptor?} operand*)
   (let ((rands.sig (td::make-descriptors-signature (map td::type-descriptor-of operand*))))
     (fold-left
 	(lambda (selected-entry entry)
@@ -288,16 +312,18 @@
 		      selected-entry)
 		  entry)
 	      selected-entry)))
-      #f (overloaded-function-descriptor-table over.des))))
+      #f (overloaded-function-descriptor.table over.des))))
 
 (define* (overloaded-function-late-binding {over.des overloaded-function-descriptor?} . operand*)
-  (cond ((overloaded-function-descriptor-select-matching-entry over.des operand*)
+  (cond ((overloaded-function-descriptor.select-matching-entry over.des operand*)
 	 => (lambda (entry)
 	      (apply (cdr entry) operand*)))
 	(else
-	 (assertion-violation __who__
-	   "no function matching the operands in overloaded function application"
-	   over.des operand*))))
+	 (raise
+	  (condition (make-overloaded-function-late-binding-error)
+		     (make-who-condition __who__)
+		     (make-message-condition "no function matching the operands in overloaded function application")
+		     (make-irritants-condition (list over.des operand*)))))))
 
 
 ;;;; done

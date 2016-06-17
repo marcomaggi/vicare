@@ -663,6 +663,36 @@
    ((<type-descriptor> <type-descriptor>)	=> ((enumeration exact-match possible-match no-match)))))
 
 
+;;;; overloaded functions descriptors
+
+(declare-core-rtd <overloaded-function-descriptor>-rtd)
+(declare-core-rcd <overloaded-function-descriptor>-rcd)
+
+(declare-core-primitive make-overloaded-function-descriptor
+    (safe)
+  (signatures
+   #;(((alist <closure-type-descr> <procedure>))		=> (<overloaded-function-descriptor>))
+   ((<list>)					=> (<overloaded-function-descriptor>))))
+
+(declare-type-predicate overloaded-function-descriptor?		<overloaded-function-descriptor>)
+
+(declare-core-primitive overloaded-function-descriptor.register!
+    (safe)
+  (signatures
+   ((<overloaded-function-descriptor> <closure-type-descr> <procedure>)
+    => (<void>))))
+
+(declare-core-primitive overloaded-function-descriptor.select-matching-entry
+    (safe)
+  (signatures
+   ((<overloaded-function-descriptor> <list>)		=> ((or <false> (pair <closure-type-descr> <procedure>))))))
+
+(declare-core-primitive overloaded-function-late-binding
+    (safe)
+  (signatures
+   ((<overloaded-function-descriptor> . <list>)		=> <list>)))
+
+
 ;;;; done
 
 #| end of define |# )

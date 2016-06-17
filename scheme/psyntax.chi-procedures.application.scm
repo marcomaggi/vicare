@@ -750,14 +750,29 @@
 			  (map psi.core-expr rand*.psi))
 			(lambda-signature.retvals spec.lambda-sig))))))
 	    (else
-	     (raise
-	      (condition
-		(make-expand-time-type-signature-violation)
-		(make-who-condition (syntax->datum rator.stx))
-		(make-message-condition
-		 "no matching specialised function in overloaded function application")
-		(make-syntax-violation input-form.stx #f)
-		(make-application-operand-signature-condition rands.sig)))))))
+	     (when (options::warn-about-overloaded-function-late-binding)
+	       (raise-continuable
+		(condition (make-expand-time-type-signature-warning)
+			   (make-who-condition (syntax->datum rator.stx))
+			   (make-message-condition
+			    "no matching specialised function in overloaded function application")
+			   (make-syntax-violation input-form.stx #f)
+			   (make-application-operand-signature-condition rands.sig))))
+	     ;;When no matching specialisation is found at expand-time, we default to
+	     ;;late binding by inserting the expression:
+	     ;;
+	     ;;   (overloaded-function-late-binding ?ofd ?rand ...)
+	     ;;
+	     ;;where  ?OFD  is  the  syntactic   identifier  bound  to  the  run-time
+	     ;;overloaded function descriptor.
+	     (let* ((ofd.id	(overloaded-function-spec.ofd-id operator.ofs))
+		    (ofd.psi	(chi-expr ofd.id lexenv.run lexenv.expand)))
+	       (make-psi input-form.stx
+		 (build-application (syntax-annotation input-form.stx)
+		     (build-primref no-source 'overloaded-function-late-binding)
+		   (cons (psi.core-expr ofd.psi)
+			 (map psi.core-expr rand*.psi)))
+		 (make-type-signature/fully-unspecified)))))))
 
   (define* (%validate-operands-for-single-return-value input-form.stx rand*.psi)
     ;;In  the context  of INPUT-FORM.STX  the  RAND*.PSI argument  is a  list of  psi

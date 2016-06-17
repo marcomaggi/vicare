@@ -284,12 +284,12 @@
       ,@foo-comparison-procedure-definition
       ,@foo-hash-function-definition
       (define-syntax ,foo ,foo-syntactic-binding-form)
-      ,@method-form*.sexp
       ,@foo-rtd-definitions
       ,@foo-rcd-definitions
       ,@foo-maker-definitions
       ,@foo-predicate-definitions
       ,@super-rcd-definition
+      ,@method-form*.sexp
       ,@(%make-unsafe-accessor+mutator-code foo foo-rtd
 					    field-name*.sym field-relative-idx* field-type*.ann
 					    unsafe-field-accessor* unsafe-field-mutator*)
@@ -1424,9 +1424,9 @@
   ;;
   (if (or (pair? methods-late-binding-alist)
 	  (pair? field-name*.sym))
-      (let ((field-name.sym (make-syntactic-identifier-for-temporary-variable "field-name")))
-	`(lambda/typed ({_ (or <false> <procedure>)} {,field-name.sym <symbol>})
-	   (case ,field-name.sym
+      (let ((method-name.sym (make-syntactic-identifier-for-temporary-variable "method-name")))
+	`(lambda/typed ({_ (or <false> <procedure>)} {,method-name.sym <symbol>})
+	   (case ,method-name.sym
 	     ;;First the methods...
 	     ,@(map (lambda (P)
 		      (let ((name	(car P))

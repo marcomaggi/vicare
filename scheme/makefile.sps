@@ -3043,6 +3043,22 @@
     (non-reinstatable-violation?		v $language)
     (non-reinstatable-violation			v $language)
 ;;;
+    (&late-binding-error-rtd)
+    (&late-binding-error-rcd)
+    (&late-binding-error				v $language)
+    (make-late-binding-error				v $language)
+    (late-binding-error?				v $language)
+    (&method-late-binding-error-rtd)
+    (&method-late-binding-error-rcd)
+    (&method-late-binding-error				v $language)
+    (make-method-late-binding-error			v $language)
+    (method-late-binding-error?				v $language)
+    (&overloaded-function-late-binding-error-rtd)
+    (&overloaded-function-late-binding-error-rcd)
+    (&overloaded-function-late-binding-error		v $language)
+    (make-overloaded-function-late-binding-error	v $language)
+    (overloaded-function-late-binding-error?		v $language)
+;;;
     (lookahead-char				v r ip)
     (lookahead-u8				v r ip)
     (lookahead-two-u8				v $language)
@@ -4223,10 +4239,13 @@
 ;;; --------------------------------------------------------------------
 ;;; overloaded functions: late binding
 
+    (<overloaded-function-descriptor>-rtd)
+    (<overloaded-function-descriptor>-rcd)
+    (<overloaded-function-descriptor>		$type-descriptors)
     (make-overloaded-function-descriptor	$type-descriptors)
     (overloaded-function-descriptor?		$type-descriptors)
-    (overloaded-function-descriptor-register!	$type-descriptors)
-    (overloaded-function-descriptor-select-matching-entry $type-descriptors)
+    (overloaded-function-descriptor.register!	$type-descriptors)
+    (overloaded-function-descriptor.select-matching-entry $type-descriptors)
     (overloaded-function-late-binding		$type-descriptors)
 
 ;;; --------------------------------------------------------------------

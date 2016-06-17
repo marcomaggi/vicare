@@ -100,7 +100,8 @@
 		  warn-about-logic-constants
 		  warn-about-not-returning-expressions
 		  warn-about-compatible-operands-signature-in-procedure-application
-		  warn-about-unused-lexical-variables)
+		  warn-about-unused-lexical-variables
+		  warn-about-overloaded-function-late-binding)
 	    options::)
     (psyntax.builders)
     (psyntax.lexical-environment)

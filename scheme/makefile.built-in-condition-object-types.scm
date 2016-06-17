@@ -281,6 +281,21 @@
     &violation
   make-non-reinstatable-violation non-reinstatable-violation?)
 
+;;; --------------------------------------------------------------------
+;;; late binding errors
+
+(define-built-in-condition-type &late-binding-error
+    &error
+  make-late-binding-error late-binding-error?)
+
+(define-built-in-condition-type &method-late-binding-error
+    &late-binding-error
+  make-method-late-binding-error method-late-binding-error?)
+
+(define-built-in-condition-type &overloaded-function-late-binding-error
+    &late-binding-error
+  make-overloaded-function-late-binding-error overloaded-function-late-binding-error?)
+
 
 ;;; Vicare specific, encoding and decoding
 

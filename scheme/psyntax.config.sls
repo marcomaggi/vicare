@@ -34,10 +34,13 @@
     strict-r6rs-enabled?
     enable-all-warnings
     disable-all-warnings
+    enable-extra-warnings
+    disable-extra-warnings
     warn-about-logic-constants
     warn-about-not-returning-expressions
     warn-about-compatible-operands-signature-in-procedure-application
     warn-about-unused-lexical-variables
+    warn-about-overloaded-function-late-binding
 
     #| end of EXPORT |# )
   (import (rnrs)
@@ -136,6 +139,18 @@
       (if obj #t #f))))
 
 ;;; --------------------------------------------------------------------
+;;; extra warnings
+
+(define warn-about-overloaded-function-late-binding
+  ;;When set to true:  raise a "&warning" when an overloaded  function has to default
+  ;;to late  binding because  the early binding  code was unable  to find  a matching
+  ;;specialised function; otherwise do nothing.
+  ;;
+  (make-parameter #f
+    (lambda (obj)
+      (if obj #t #f))))
+
+;;; --------------------------------------------------------------------
 
 (define (enable-all-warnings)
   (warn-about-logic-constants #t)
@@ -148,6 +163,14 @@
   (warn-about-not-returning-expressions #f)
   (warn-about-compatible-operands-signature-in-procedure-application #f)
   (warn-about-unused-lexical-variables #f))
+
+;;; --------------------------------------------------------------------
+
+(define (enable-extra-warnings)
+  (warn-about-overloaded-function-late-binding #t))
+
+(define (disable-extra-warnings)
+  (warn-about-overloaded-function-late-binding #f))
 
 
 ;;;; done

@@ -67,9 +67,12 @@
     (prefix (only (psyntax.config)
 		  enable-all-warnings
 		  disable-all-warnings
+		  enable-extra-warnings
+		  disable-extra-warnings
 		  warn-about-logic-constants
 		  warn-about-not-returning-expressions
 		  warn-about-unused-lexical-variables
+		  warn-about-overloaded-function-late-binding
 		  expander-language)
 	    psyntax::)
     (prefix (only (psyntax.library-utils)
@@ -536,7 +539,8 @@
 	   (options::print-verbose-messages? #f)
 	   (next-option (cdr args) k))
 
-;;;
+;;; all warnings
+
 	  ((%option= "-Wall")
 	   (psyntax::enable-all-warnings)
 	   (next-option (cdr args) k))
@@ -563,6 +567,20 @@
 
 	  ((%option= "-Wno-unused-variables")
 	   (psyntax::warn-about-unused-lexical-variables #f)
+	   (next-option (cdr args) k))
+
+;;; extra warnings
+
+	  ((%option= "-Wextra")
+	   (psyntax::enable-extra-warnings)
+	   (next-option (cdr args) k))
+
+	  ((%option= "-Woverloaded-function-late-binding")
+	   (psyntax::warn-about-overloaded-function-late-binding #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "-Wno-overloaded-function-late-binding")
+	   (psyntax::warn-about-overloaded-function-late-binding #f)
 	   (next-option (cdr args) k))
 
 ;;; --------------------------------------------------------------------

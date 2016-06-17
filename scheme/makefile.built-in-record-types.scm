@@ -457,6 +457,16 @@
    (item-des		complement-type-descr.item-des)))
 
 
+;;;; built-in record types: overloaded functions descriptors
+
+(define-built-in-record-type <overloaded-function-descriptor>
+    <record>
+  make-overloaded-function-descriptor overloaded-function-descriptor?
+  (methods
+   (register!			overloaded-function-descriptor.register!)
+   (select-matching-entry	overloaded-function-descriptor.select-matching-entry)))
+
+
 ;;;; done
 
 

@@ -175,6 +175,22 @@
     non-reinstatable-violation?
     non-reinstatable-violation
 
+    ;; late binding errors
+    &late-binding-error-rtd
+    &late-binding-error-rcd
+    make-late-binding-error
+    late-binding-error?
+
+    &method-late-binding-error-rtd
+    &method-late-binding-error-rcd
+    make-method-late-binding-error
+    method-late-binding-error?
+
+    &overloaded-function-late-binding-error-rtd
+    &overloaded-function-late-binding-error-rcd
+    make-overloaded-function-late-binding-error
+    overloaded-function-late-binding-error?
+
     ;; string encoding and decoding
     ;;&string-encoding
     &string-encoding-rtd
@@ -509,6 +525,24 @@
 		  make-non-reinstatable-violation
 		  non-reinstatable-violation?
 		  non-reinstatable-violation
+
+		  &late-binding-error-rtd
+		  &late-binding-error-rcd
+		  &late-binding-error
+		  make-late-binding-error
+		  late-binding-error?
+
+		  &method-late-binding-error-rtd
+		  &method-late-binding-error-rcd
+		  &method-late-binding-error
+		  make-method-late-binding-error
+		  method-late-binding-error?
+
+		  &overloaded-function-late-binding-error-rtd
+		  &overloaded-function-late-binding-error-rcd
+		  &overloaded-function-late-binding-error
+		  make-overloaded-function-late-binding-error
+		  overloaded-function-late-binding-error?
 
 		  ;; string encoding and decoding
 		  &string-encoding
@@ -1227,6 +1261,20 @@
 (define (non-reinstatable-violation who message . irritants)
   (raise-non-continuable-standard-condition who
     message irritants (make-non-reinstatable-violation)))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &late-binding-error
+    &error
+  make-late-binding-error late-binding-error?)
+
+(define-condition-type &method-late-binding-error
+    &late-binding-error
+  make-method-late-binding-error method-late-binding-error?)
+
+(define-condition-type &overloaded-function-late-binding-error
+    &late-binding-error
+  make-overloaded-function-late-binding-error overloaded-function-late-binding-error?)
 
 
 ;;; Vicare specific condition types: string encoding and decoding

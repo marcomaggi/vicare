@@ -21,9 +21,12 @@
 ;;;; overloaded functions
 
 
-(module (overloaded-function-spec
+(module (<overloaded-function-spec>
+	 <overloaded-function-spec>-rtd
+	 <overloaded-function-spec>-rcd
 	 make-overloaded-function-spec	overloaded-function-spec?
 	 overloaded-function-spec.name-id
+	 overloaded-function-spec.ofd-id
 	 overloaded-function-spec.signature*
 	 overloaded-function-spec.id*
 	 overloaded-function-spec.add-specialised-implementation!
@@ -32,30 +35,48 @@
 	 #| end of exports |# )
 
 
-(define-struct (overloaded-function-spec %make-overloaded-function-spec overloaded-function-spec?)
-  (name-id
+;;;; type definitions
+
+(define-record-type (<overloaded-function-spec> make-overloaded-function-spec overloaded-function-spec?)
+  (nongenerative vicare:expander:<overloaded-function-spec>)
+  (sealed #t)
+  (fields
+    (immutable name-id		overloaded-function-spec.name-id)
 		;A syntactic identifier representing the overloaded function name.
-   signature*
+    (immutable ofd.id		overloaded-function-spec.ofd-id)
+		;The    syntactic   identifier    bound    to    the   instance    of
+		;"<overloaded-function-descriptor>" holding run-time informations for
+		;this overloaded function.  It is used for late binding.
+    (mutable   signature*	overloaded-function-spec.signature* overloaded-function-spec.signature*-set!)
 		;Null or a proper list of "<lambda-signature>" instances representing
 		;the specialised functions' signatures.
-   id*
+    (mutable   id*		overloaded-function-spec.id* overloaded-function-spec.id*-set!)
 		;Null  or  a  proper  list  of syntactic  identifiers  bound  to  the
 		;specialised functions.
-   ))
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-record)
+      (lambda* ({name.id identifier?} {ofd.id identifier?})
+	(make-record name.id ofd.id '() '()))))
+  #| end of DEFINE-RECORD-TYPE |# )
 
-(define-syntax-rule (overloaded-function-spec.name-id ofs)	(overloaded-function-spec-name-id    ofs))
-(define-syntax-rule (overloaded-function-spec.signature* ofs)	(overloaded-function-spec-signature* ofs))
-(define-syntax-rule (overloaded-function-spec.id* ofs)		(overloaded-function-spec-id*        ofs))
+(define <overloaded-function-spec>-rtd
+  (record-type-descriptor <overloaded-function-spec>))
 
-(define* (make-overloaded-function-spec {name.id identifier?})
-  (%make-overloaded-function-spec name.id '() '()))
+(define <overloaded-function-spec>-rcd
+  (record-constructor-descriptor <overloaded-function-spec>))
 
-;;; --------------------------------------------------------------------
+
+;;;; utilities
 
 (define* (overloaded-function-spec.add-specialised-implementation! input-form.stx
 								   {lhs.ofs overloaded-function-spec?}
 								   {spec.lambda-sig lambda-signature?}
 								   {spec.id identifier?})
+  ;;Add a  new specialised function  to an instance  of "<overloaded-function-spec>".
+  ;;This   function  is   used   at   expand-time  whenever   the   source  code   of
+  ;;DEFINE/OVERLOADED is expanded.
+  ;;
   (let ((new-formals.sig (lambda-signature.argvals spec.lambda-sig)))
     (for-each (lambda (spec.lambda-sig)
 		(when (type-signature=? (lambda-signature.argvals spec.lambda-sig) new-formals.sig)
@@ -63,12 +84,14 @@
 		   (condition (make-who-condition __who__)
 			      (make-message-condition "formals type signature already exists in overloaded function")
 			      (syntax-violation input-form.stx #f)))))
-      (overloaded-function-spec-signature* lhs.ofs)))
-  (set-overloaded-function-spec-signature*! lhs.ofs (cons spec.lambda-sig (overloaded-function-spec-signature* lhs.ofs)))
-  (set-overloaded-function-spec-id*!        lhs.ofs (cons spec.id         (overloaded-function-spec-id*        lhs.ofs))))
+      (overloaded-function-spec.signature* lhs.ofs)))
+  (overloaded-function-spec.signature*-set! lhs.ofs (cons spec.lambda-sig (overloaded-function-spec.signature* lhs.ofs)))
+  (overloaded-function-spec.id*-set!        lhs.ofs (cons spec.id         (overloaded-function-spec.id*        lhs.ofs))))
 
 (define* (overloaded-function-spec.register-specialisation! lhs.id spec.id spec.lambda-sig)
-  ;;Register a specialisation function in the descriptor of an overloaded function.
+  ;;Register a specialisation  function in the descriptor of  an overloaded function.
+  ;;This function is used  in the visit-code of a library  that defines an overloaded
+  ;;function at the top-level.
   ;;
   ;;LHS.ID is the syntactic identifier bound to the overloaded function descriptor.
   ;;
@@ -89,17 +112,19 @@
 		      (assertion-violation __who__
 			"invalid syntactic binding's descriptor, expecting overloaded function"
 			lhs.id lhs.des))))))
-    (set-overloaded-function-spec-signature*! lhs.ofs (cons spec.lambda-sig (overloaded-function-spec-signature* lhs.ofs)))
-    (set-overloaded-function-spec-id*!        lhs.ofs (cons spec.id         (overloaded-function-spec-id*        lhs.ofs)))))
+    (overloaded-function-spec.signature*-set! lhs.ofs (cons spec.lambda-sig (overloaded-function-spec.signature* lhs.ofs)))
+    (overloaded-function-spec.id*-set!        lhs.ofs (cons spec.id         (overloaded-function-spec.id*        lhs.ofs)))))
 
 (define (overloaded-function-spec.expanded-expr ofs)
   ;;Build and return a core language  expression that, compiled and evaluated, return
   ;;an empty copy of the OFS argument.
   ;;
-  (let ((name.id (overloaded-function-spec.name-id ofs)))
+  (let ((name.id	(overloaded-function-spec.name-id ofs))
+	(ofd.id		(overloaded-function-spec.ofd-id  ofs)))
     (build-application no-source
 	(build-primref no-source 'make-overloaded-function-spec)
-      (list (build-data no-source name.id)))))
+      (list (build-data no-source name.id)
+	    (build-data no-source ofd.id)))))
 
 
 ;;;; done

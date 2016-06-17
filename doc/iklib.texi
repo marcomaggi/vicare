@@ -5628,6 +5628,7 @@ waiting for its termination in a coroutine; it assumes that
 * iklib conditions proccon::    Procedure argument consistency violations.
 * iklib conditions exprret::    Expression return value violations.
 * iklib conditions non-reinst:: Non-reinstatable continuations.
+* iklib conditions late-bind::  Late binding conditions.
 * iklib conditions string::     String encoding and decoding.
 * iklib conditions misc::       Miscellaneous primitives.
 @end menu
@@ -6216,6 +6217,87 @@ Return @true{} if @var{obj} is a condition object of type
 Raise a compound condition object with components: @condition{who},
 @condition{message}, @condition{irritants},
 @condition{non-reinstatable}.
+@end defun
+
+@c page
+@node iklib conditions late-bind
+@subsection Late binding conditions
+
+@menu
+* iklib conditions late-bind base::     Base of late binding conditions.
+* iklib conditions late-bind method::   Method late binding conditions.
+* iklib conditions late-bind overload:: Overloaded function late binding
+                                        conditions.
+@end menu
+
+@c page
+@node iklib conditions late-bind base
+@subsubsection Base of late binding conditions
+
+
+@deftp {Condition Type} @acondition{late-binding-error}
+Condition object type representing an error while attempting late
+binding in a procedure application: no specialised function matches the
+given operands; it is derived from @condition{error}.
+@end deftp
+
+
+@defun make-late-binding-error
+Build and return a new condition object of type
+@condition{late-binding-error}.
+@end defun
+
+
+@defun late-binding-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{late-binding-error}; otherwise return @false{}.
+@end defun
+
+@c page
+@node iklib conditions late-bind method
+@subsubsection Method late binding conditions
+
+
+@deftp {Condition Type} @acondition{method-late-binding-error}
+Condition object type representing an error while attempting late
+binding in a method application: no specialised function matches the
+given operands; it is derived from @condition{late-binding-error}.
+@end deftp
+
+
+@defun make-method-late-binding-error
+Build and return a new condition object of type
+@condition{method-late-binding-error}.
+@end defun
+
+
+@defun method-late-binding-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{method-late-binding-error}; otherwise return @false{}.
+@end defun
+
+@c page
+@node iklib conditions late-bind overload
+@subsubsection Overloaded function late binding conditions
+
+
+@deftp {Condition Type} @acondition{overloaded-function-late-binding-error}
+Condition object type representing an error while attempting late
+binding in a method application: no specialised function matches the
+given operands; it is derived from @condition{late-binding-error}.
+@end deftp
+
+
+@defun make-overloaded-function-late-binding-error
+Build and return a new condition object of type
+@condition{overloaded-function-late-binding-error}.
+@end defun
+
+
+@defun overloaded-function-late-binding-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{overloaded-function-late-binding-error}; otherwise return
+@false{}.
 @end defun
 
 @c page
