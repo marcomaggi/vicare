@@ -124,7 +124,7 @@
 
 ;;; no match
 
-  (check-for-false	(type-annotation-super-and-sub? <list>
+  (check-for-true	(type-annotation-super-and-sub? <list>
 							(alist <symbol> <number>)))
 
   (check-for-false	(type-annotation-super-and-sub? (alist <symbol> <number>)
