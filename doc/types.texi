@@ -5732,7 +5732,7 @@ labels.  Let's consider this situation:
 
 @noindent
 the definitions of @class{delta} and @class{gamma} share some clauses;
-both of them already have a parent class and multiple inheritance is not
+both of them already have a parent type and multiple inheritance is not
 supported by @value{PRJNAME}.  Is it possible to write the shared
 clauses only once and attach them to the record--type definitions?  Yes,
 with mixins.  The example above is equivalent to the following:
