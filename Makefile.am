@@ -426,6 +426,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.numerics.complex-numbers.sls			\
 	scheme/ikarus.core-type-descr.sls				\
 	scheme/ikarus.object-type-descr.sls				\
+	scheme/ikarus.object-type-facilities.scm			\
 	scheme/ikarus.object-utilities.sls				\
 	scheme/ikarus.object-type-descr.descriptors-signatures.sls	\
 	scheme/ikarus.options.sls					\
