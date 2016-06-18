@@ -566,7 +566,7 @@ annotation.
 @c ------------------------------------------------------------
 
 @deftp {Type Annotation} nelist-of @meta{item-type}
-@deftpx {Parent Type} @aclass{list}
+@deftpx {Parent Type} @aclass{pair}
 Describe a proper non--empty list holding any number of items all of the
 specified type.  The syntax @meta{item-type} is a nested type
 annotation.  This type annotation is expanded to:
@@ -787,33 +787,37 @@ This type annotation can be used to match @strong{exactly} a type
 annotation with one of the ancestors of @meta{type}:
 
 @lisp
-(type-signature-matching ((ancestor-of &condition))
-                         (&condition))
+(type-annotation-matching (ancestor-of &condition)
+                          &condition)
 @result{} no-match
 
-(type-signature-matching ((ancestor-of &condition))
-                         (<condition>))
+(type-annotation-matching (ancestor-of &condition)
+                          <condition>)
 @result{} exact-match
 
-(type-signature-matching ((ancestor-of &condition))
-                         (<record>))
+(type-annotation-matching (ancestor-of &condition)
+                          <record>)
 @result{} exact-match
 
-(type-signature-matching ((ancestor-of &condition))
-                         (<struct>))
+(type-annotation-matching (ancestor-of &condition)
+                          <struct>)
 @result{} exact-match
 
-(type-signature-matching ((ancestor-of &condition))
-                         (<top>))
+(type-annotation-matching (ancestor-of &condition)
+                          <top>)
 @result{} exact-match
+
+(type-annotation-matching <condition>
+                          (ancestor-of &condition))
+@result{} possible-match
 @end lisp
 
 When used along with @syntax{not}, it can is used to avoid matching
 exactly a type annotation with one of the ancestors of @meta{type}:
 
 @lisp
-(type-signature-matching ((not (ancestor-of &condition)))
-                         (<condition>))
+(type-annotation-matching (not (ancestor-of &condition))
+                          <condition>)
 @result{} no-match
 @end lisp
 @end deftp

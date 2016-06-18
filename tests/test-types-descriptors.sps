@@ -24,7 +24,7 @@
 
 
 #!vicare
-(program (test-vicare-type-descriptors)
+(program (test-types-descriptors)
   (options typed-language)
   (import (vicare)
     (vicare checks)
@@ -2083,14 +2083,13 @@
 ;;; --------------------------------------------------------------------
 ;;; alist
 
-  (doit-true	(alist <fixnum> <fixnum>)
-		(alist <fixnum> <fixnum>))
+  (doit-true	<list>					(alist <fixnum> <string>))
+  (doit-true	(list-of <pair>)			(alist <fixnum> <string>))
+  (doit-true	(list-of (pair <fixnum> <string>))	(alist <fixnum> <string>))
 
-  (doit-false	(alist <fixnum> <fixnum>)
-		(alist <fixnum> <string>))
-
-  (doit-false	(alist <fixnum> <fixnum>)
-		(alist <string> <fixnum>))
+  (doit-true	(alist <fixnum> <fixnum>)	(alist <fixnum> <fixnum>))
+  (doit-false	(alist <fixnum> <fixnum>)	(alist <fixnum> <string>))
+  (doit-false	(alist <fixnum> <fixnum>)	(alist <string> <fixnum>))
 
 ;;; --------------------------------------------------------------------
 ;;; union
@@ -2425,7 +2424,7 @@
   (doit	<list>			(pair <fixnum> <flonum>)	=> no-match)
   (doit	<list>			(pair <fixnum> <null>)		=> exact-match)
   (doit	<list>			(pair-of <fixnum>)		=> no-match)
-  (doit	<list>			(pair-of <null>)		=> no-match)
+  (doit	<list>			(pair-of <null>)		=> possible-match)
   (doit	<list>			(list <fixnum> <flonum>)	=> exact-match)
   (doit	<list>			(list-of <fixnum>)		=> exact-match)
   (doit	<list>			(nelist-of <fixnum>)		=> exact-match)
@@ -2438,7 +2437,7 @@
   (doit	<nelist>		(pair <fixnum> <flonum>)	=> no-match)
   (doit	<nelist>		(pair <fixnum> <null>)		=> exact-match)
   (doit	<nelist>		(pair-of <fixnum>)		=> no-match)
-  (doit	<nelist>		(pair-of <null>)		=> no-match)
+  (doit	<nelist>		(pair-of <null>)		=> possible-match)
   (doit	<nelist>		(list <fixnum> <flonum>)	=> exact-match)
   (doit	<nelist>		(list-of <fixnum>)		=> possible-match)
   (doit	<nelist>		(nelist-of <fixnum>)		=> exact-match)
@@ -2807,12 +2806,12 @@
 
 ;;;
 
-  (doit	(pair-of <null>)	<list>			=> no-match)
-  (doit	(pair-of <list>)	<list>			=> no-match)
+  (doit	(pair-of <null>)	<list>			=> possible-match)
+  (doit	(pair-of <list>)	<list>			=> possible-match)
   (doit	(pair-of <fixnum>)	<list>			=> no-match)
 
-  (doit	(pair-of <null>)	<nelist>		=> no-match)
-  (doit	(pair-of <list>)	<nelist>		=> no-match)
+  (doit	(pair-of <null>)	<nelist>		=> possible-match)
+  (doit	(pair-of <list>)	<nelist>		=> possible-match)
   (doit	(pair-of <fixnum>)	<nelist>		=> no-match)
 
   (doit	(pair-of <null>)	<null>			=> no-match)
@@ -3031,6 +3030,24 @@
   (doit	<null>		(alist <fixnum> <fixnum>)	=> possible-match)
   (doit	<nelist>	(alist <fixnum> <fixnum>)	=> possible-match)
 
+  (begin
+    (doit <list>				(alist <fixnum> <string>)	=> exact-match)
+    (doit (list-of <pair>)			(alist <fixnum> <string>)	=> exact-match)
+    (doit (list-of (pair <fixnum> <string>))	(alist <fixnum> <string>)	=> exact-match)
+    (doit (list <pair>)				(alist <fixnum> <string>)	=> possible-match)
+    (doit (list (pair <fixnum> <string>))	(alist <fixnum> <string>)	=> possible-match)
+    (doit (pair <pair> <list>)			(alist <fixnum> <string>)	=> possible-match)
+    (doit (pair-of <pair>)			(alist <fixnum> <string>)	=> possible-match)
+    ;;
+    (doit (alist <fixnum> <string>)	<list>					=> possible-match)
+    (doit (alist <fixnum> <string>)	(list-of <pair>)			=> possible-match)
+    (doit (alist <fixnum> <string>)	(list-of (pair <fixnum> <string>))	=> exact-match)
+    (doit (alist <fixnum> <string>)	(list (pair <fixnum> <string>))		=> exact-match)
+    (doit (alist <fixnum> <string>)	(list <pair>)				=> possible-match)
+    (doit (alist <fixnum> <string>)	(pair <pair> <list>)			=> possible-match)
+    (doit (alist <fixnum> <string>)	(pair-of <pair>)			=> possible-match)
+    #| end of BEGIN |# )
+
   (doit	(alist <fixnum> <fixnum>)	<top>		=> possible-match)
   (doit	(alist <fixnum> <fixnum>)	<list>		=> possible-match)
   (doit	(alist <fixnum> <fixnum>)	<null>		=> exact-match)
@@ -3213,7 +3230,6 @@
   (doit ((not (ancestor-of &condition)))	(<top>)			=> no-match)
 
 ;;;
-
   (doit (<fixnum>)				(<zero>)		=> possible-match)
   (doit ((ancestor-of <fixnum>))		(<zero>)		=> no-match)
 

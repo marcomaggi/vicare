@@ -934,7 +934,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-promises.sps					\
 	tests/test-vicare-time.sps					\
 	tests/test-vicare-try.sps					\
-	tests/test-vicare-type-descriptors.sps				\
 	tests/test-vicare-quotations.sps				\
 	tests/test-vicare-ratnums.sps					\
 	tests/test-vicare-reader.sps					\
@@ -953,6 +952,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-writer.sps					\
 	\
 	tests/test-types-conditions.sps					\
+	tests/test-types-descriptors.sps				\
 	tests/test-types-enumerations.sps				\
 	tests/test-types-labels.sps					\
 	tests/test-types-mixins.sps					\
