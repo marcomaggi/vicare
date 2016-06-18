@@ -76,9 +76,7 @@
       ;;of OBJECT.DES.  OBJECT.DES is *not* included in the list.
       ;;
       (case-descriptor object.des
-	(core-type-descriptor?
-	 (core-type-descriptor.ancestor-des* object.des))
-
+	(core-type-descriptor?			(core-type-descriptor.ancestor-des*   object.des))
 	(record-type-descriptor?
 	 (let recur ((obj.des object.des))
 	   (cond ((record-type-parent obj.des)

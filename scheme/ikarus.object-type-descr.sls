@@ -674,11 +674,6 @@
 (define <complement-type-descr>-rcd
   (record-constructor-descriptor <complement-type-descr>))
 
-;;; --------------------------------------------------------------------
-
-(define* (complement-type-descr.not {complement.des complement-type-descr?} {proc procedure?})
-  (not (proc (complement-type-descr.item-des complement.des))))
-
 
 ;;;; compound type descriptors: ancestor-of
 
@@ -722,7 +717,7 @@
 	 object-type-descr.compatible-super-and-sub?
 	 object-type-descr.matching-formal-and-operand)
 
-  (include "ikarus.object-type-facilities.scm"	#t)
+  (include "ikarus.object-type-descr.facilities.scm"	#t)
 
   #| end of module |# )
 

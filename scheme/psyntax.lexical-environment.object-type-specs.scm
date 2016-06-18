@@ -294,7 +294,7 @@
        (or (?pred X) ...)))
     ))
 
-(define-syntax case-descriptor
+(define-syntax case-specification
   (syntax-rules (else
 		 core-type-spec? record-type-spec? struct-type-spec?
 		 list-type-spec? list-of-type-spec? vector-type-spec? vector-of-type-spec?
