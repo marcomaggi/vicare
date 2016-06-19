@@ -3350,17 +3350,33 @@ an overloaded function named @func{fun} is defined by the first use of
 @syntax{define/overload}; subsequent uses add new specialisations to the
 same function.
 
-We can use overloaded functions only with the ``canonical'' function
-application syntax:
+In the above example: the selection of the specialised function happens
+at expand--time, because the expander can determine the type of the
+operands.  Early binding (more precisely: expand--time dispatching) is
+available only with the ``canonical'' function application syntax:
 
 @lisp
 (@meta{fun} @meta{operand} ...)
 @end lisp
 
+Here is an example of late binding (more precisely: run--time
+dispatching, or dynamic dispatching):
+
+@lisp
+(define/overload (doit @{O <string>@})
+  (list 'string O))
+
+(define/overload (doit @{O <fixnum>@})
+  (list 'fixnum O))
+
+(map doit '("ciao" 123))
+@result{} ((string "ciao") (fixnum 123))
+@end lisp
+
 @noindent
-using @func{apply} (and, more generally, putting the overloaded
-function's syntactic identifier in reference position) will cause an
-expand--time syntax violation.
+putting the overloaded function's syntactic identifier in reference
+position will reference a special function that implements dynamic
+dispatching.
 
 It is an error to define two specialised functions with the same formals
 type signature.  Specialised functions are allowed to have different

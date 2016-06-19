@@ -260,6 +260,10 @@
 		       $core-rtd $core-rcd $module $core-type-descriptor
 		       displaced-lexical)
 		      (values type descr ?id))
+		     ((local-overloaded-function)
+		      (values 'local-overloaded-function-reference  descr ?id))
+		     ((global-overloaded-function)
+		      (values 'global-overloaded-function-reference descr ?id))
 		     (else
 		      ;;This will cause an error to be raised later.
 		      (values 'other #f #f))))))
@@ -995,6 +999,24 @@
        ;;
        (let ((over.ofs (syntactic-binding-descriptor/global-overloaded-function.ofs descr)))
 	 (chi-overloaded-function-application expr.stx lexenv.run lexenv.expand over.ofs)))
+
+      ((local-overloaded-function-reference)
+       ;;Local  overloaded-function reference.   The  syntactic binding's  descriptor
+       ;;DESCR has format:
+       ;;
+       ;;   (local-overloaded-function . #<overloaded-function-spec>)
+       ;;
+       (let ((over.ofs (syntactic-binding-descriptor/local-overloaded-function.ofs descr)))
+	 (chi-expr (overloaded-function-spec.late-binding-function-id over.ofs) lexenv.run lexenv.expand)))
+
+      ((global-overloaded-function-reference)
+       ;;Global  overloaded-function reference.   The syntactic  binding's descriptor
+       ;;DESCR has format:
+       ;;
+       ;;   (global-overloaded-function . (#<library> . ?loc))
+       ;;
+       (let ((over.ofs (syntactic-binding-descriptor/global-overloaded-function.ofs descr)))
+	 (chi-expr (overloaded-function-spec.late-binding-function-id over.ofs) lexenv.run lexenv.expand)))
 
       ((enumeration)
        ;;Syntax  use  of  a  previously  defined  enumeration  type.   The  syntactic

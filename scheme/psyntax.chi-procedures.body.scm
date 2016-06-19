@@ -1873,7 +1873,7 @@
 	    (else
 	     ;;No syntactic  binding with identifier  LHS.ID exists.  Let's  define a
 	     ;;new overloaded function.
-	     (%establish-new-overloaded-function input-form.stx rib lexenv.run shadow/redefine-bindings?
+	     (%establish-new-overloaded-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 						 lhs.id input-formals.stx body*.stx
 						 %synner)))))
 
@@ -1904,7 +1904,7 @@
 
   (module (%establish-new-overloaded-function)
 
-    (define (%establish-new-overloaded-function input-form.stx rib lexenv.run shadow/redefine-bindings?
+    (define (%establish-new-overloaded-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 						lhs.id input-formals.stx body*.stx
 						synner)
       (receive (spec.id spec.lambda-sig spec.qdef lexenv.run)
@@ -1912,8 +1912,15 @@
 	  (%establish-specialised-implementation input-form.stx rib lexenv.run shadow/redefine-bindings?
 						 lhs.id input-formals.stx body*.stx)
 	;;Establish the syntactic binding of the overloaded function.
-	(let* ((ofd.id		(datum->syntax lhs.id (gensym (syntax->datum lhs.id))))
-	       (lhs.ofs		(make-overloaded-function-spec lhs.id ofd.id))
+	(let* ((lhs.sym		(syntax->datum lhs.id))
+	       ;;OFD.ID is the syntactic  identifier bound to the Overloaded-Function
+	       ;;Descriptor used at run-time for late binding.
+	       (ofd.id		(datum->syntax lhs.id (gensym lhs.sym)))
+	       ;;LBF.ID  is  the  syntactic  identifier bound  to  the  Late  Binding
+	       ;;Function  used at  run-time for  late binding,  when the  overloaded
+	       ;;function is referenced.
+	       (lbf.id		(datum->syntax lhs.id (gensym lhs.sym)))
+	       (lhs.ofs		(make-overloaded-function-spec lhs.id ofd.id lbf.id))
 	       (lhs.lab		(generate-label-gensym lhs.id))
 	       (lhs.des		(make-syntactic-binding-descriptor/overloaded-function/from-data lhs.ofs))
 	       (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.des lexenv.run)))
@@ -1927,23 +1934,25 @@
 	    ;;to illegally redefine a binding.
 	    (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
 	    (receive (ofd.qdef lexenv.run)
-		(%establish-overloaded-function-descriptor ofd.id spec.id spec.lambda-sig rib lexenv.run shadow/redefine-bindings?)
-	      (values (list spec.qdef ofd.qdef) lexenv.run))))))
+		(%establish-overloaded-function-descriptor ofd.id spec.id spec.lambda-sig rib lexenv.run kwd* shadow/redefine-bindings?)
+	      (receive (lbf.qdef lexenv.run)
+		  (%establish-overloaded-function-late-binding-function lbf.id ofd.id rib lexenv.run kwd* shadow/redefine-bindings?)
+		(values (list spec.qdef ofd.qdef lbf.qdef) lexenv.run)))))))
 
-    (define (%establish-overloaded-function-descriptor ofd.id spec.id spec.lambda-sig rib lexenv.run shadow/redefine-bindings?)
-      (let* ((spec.ann	(object-type-spec.type-annotation
-			 (make-closure-type-spec (make-case-lambda-signature (list spec.lambda-sig)))))
-	     (ofd.rhs	(bless `(make-overloaded-function-descriptor
-				 (list (cons (type-descriptor ,spec.ann) ,spec.id)))))
-	     (ofd.stx	(list (core-prim-id 'define/std) ofd.id ofd.rhs))
-	     (ofd.qdef	(make-qdef-standard-defvar ofd.stx ofd.id #t ofd.rhs))
-	     (ofd.lab	(generate-label-gensym ofd.id))
-	     (ofd.des	(make-syntactic-binding-descriptor/lexical-var (qdef.lex ofd.qdef)))
-	     (lexenv.run	(push-entry-on-lexenv ofd.lab ofd.des lexenv.run)))
-	;;This rib extension  will raise an exception if it  represents an attempt to
-	;;illegally redefine a binding.
-	(extend-rib! rib ofd.id ofd.lab shadow/redefine-bindings?)
-	(values ofd.qdef lexenv.run)))
+    (define (%establish-overloaded-function-descriptor ofd.id spec.id spec.lambda-sig rib lexenv.run kwd* shadow/redefine-bindings?)
+      (let* ((spec.ann		(object-type-spec.type-annotation
+				 (make-closure-type-spec (make-case-lambda-signature (list spec.lambda-sig)))))
+	     (input-form.stx	(bless `(define/std ,ofd.id
+					  (make-overloaded-function-descriptor
+					   (list (cons (type-descriptor ,spec.ann) ,spec.id)))))))
+	(chi-define/std input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)))
+
+    (define (%establish-overloaded-function-late-binding-function lbf.id ofd.id rib lexenv.run kwd* shadow/redefine-bindings?)
+      (let* ((args.id		(make-syntactic-identifier-for-temporary-variable "args"))
+	     (input-form.stx	(bless
+				 `(define/std (,lbf.id . ,args.id)
+				    (apply overloaded-function-late-binding ,ofd.id ,args.id)))))
+	(chi-define/std input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)))
 
     #| end of module: %ESTABLISH-NEW-OVERLOADED-FUNCTION |# )
 

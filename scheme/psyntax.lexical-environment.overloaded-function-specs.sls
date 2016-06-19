@@ -27,6 +27,7 @@
 	 make-overloaded-function-spec	overloaded-function-spec?
 	 overloaded-function-spec.name-id
 	 overloaded-function-spec.ofd-id
+	 overloaded-function-spec.late-binding-function-id
 	 overloaded-function-spec.signature*
 	 overloaded-function-spec.id*
 	 overloaded-function-spec.add-specialised-implementation!
@@ -41,23 +42,26 @@
   (nongenerative vicare:expander:<overloaded-function-spec>)
   (sealed #t)
   (fields
-    (immutable name-id		overloaded-function-spec.name-id)
+    (immutable	name-id				overloaded-function-spec.name-id)
 		;A syntactic identifier representing the overloaded function name.
-    (immutable ofd.id		overloaded-function-spec.ofd-id)
+    (immutable	ofd.id				overloaded-function-spec.ofd-id)
 		;The    syntactic   identifier    bound    to    the   instance    of
 		;"<overloaded-function-descriptor>" holding run-time informations for
 		;this overloaded function.  It is used for late binding.
-    (mutable   signature*	overloaded-function-spec.signature* overloaded-function-spec.signature*-set!)
+    (immutable	late-binding-function-id	overloaded-function-spec.late-binding-function-id)
+		;A syntactic identifier  bound to the function used  for late binding
+		;whenever the overloaded function is referenced rather then applied.
+    (mutable	signature*			overloaded-function-spec.signature* overloaded-function-spec.signature*-set!)
 		;Null or a proper list of "<lambda-signature>" instances representing
 		;the specialised functions' signatures.
-    (mutable   id*		overloaded-function-spec.id* overloaded-function-spec.id*-set!)
+    (mutable	id*				overloaded-function-spec.id* overloaded-function-spec.id*-set!)
 		;Null  or  a  proper  list  of syntactic  identifiers  bound  to  the
 		;specialised functions.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
-      (lambda* ({name.id identifier?} {ofd.id identifier?})
-	(make-record name.id ofd.id '() '()))))
+      (lambda* ({name.id identifier?} {ofd.id identifier?} {late-binding-function.id identifier?})
+	(make-record name.id ofd.id late-binding-function.id '() '()))))
   #| end of DEFINE-RECORD-TYPE |# )
 
 (define <overloaded-function-spec>-rtd

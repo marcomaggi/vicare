@@ -419,7 +419,7 @@
   #| end of PARAMETRISE |# )
 
 
-(parametrise ((check-test-name	'late-binding-syntax))
+(parametrise ((check-test-name	'late-binding-syntax-application))
 
   (check
       (internal-body
@@ -466,6 +466,52 @@
 	    (debug-print (condition-message E)))
 	  #t)
 	 (else E)))))
+
+  #| end of PARAMETRISE |# )
+
+
+(parametrise ((check-test-name	'late-binding-syntax-reference))
+
+  (check
+      (internal-body
+	(define/overload (doit {O <string>})
+	  (list 'string O))
+
+	(define/overload (doit {O <fixnum>})
+	  (list 'fixnum O))
+
+	(values (apply doit '("ciao"))
+		(apply doit '(123))))
+    => '(string "ciao") '(fixnum 123))
+
+  (check
+      (internal-body
+	(define/overload (doit {O <string>})
+	  (list 'string O))
+
+	(define/overload (doit {O <fixnum>})
+	  (list 'fixnum O))
+
+	(define (this func)
+	  (func "ciao"))
+
+	(define (that func)
+	  (func 123))
+
+	(values (this doit)
+		(that doit)))
+    => '(string "ciao") '(fixnum 123))
+
+  (check
+      (internal-body
+	(define/overload (doit {O <string>})
+	  (list 'string O))
+
+	(define/overload (doit {O <fixnum>})
+	  (list 'fixnum O))
+
+	(map doit '("ciao" 123)))
+    => '((string "ciao") (fixnum 123)))
 
   #| end of PARAMETRISE |# )
 
