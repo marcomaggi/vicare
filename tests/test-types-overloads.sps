@@ -516,6 +516,43 @@
   #| end of PARAMETRISE |# )
 
 
+(parametrise ((check-test-name	'overloaded-methods))
+
+  (check
+      (internal-body
+	(define-record-type <alpha>
+	  (fields a)
+	  (method/overload (doit {O <alpha>})
+	    (.a O))
+	  (method/overload (doit {O <alpha>} {S <symbol>})
+	    (list S (.a O))))
+
+	(define-record-type <beta>
+	  (fields b)
+	  (method/overload (doit {O <beta>})
+	    (.b O))
+	  (method/overload (doit {O <beta>} {S <symbol>})
+	    (list S (.b O))))
+
+	(define (this O)
+	  (.doit O))
+
+	(define (that O)
+	  (.doit O 'ciao))
+
+	(define A
+	  (new <alpha> 1))
+
+	(define B
+	  (new <beta> 2))
+
+	(values (this A) (this B)
+		(that A) (that B)))
+    => 1 2 '(ciao 1) '(ciao 2))
+
+  #| end of PARAMETRISE |# )
+
+
 ;;;; done
 
 (check-report)

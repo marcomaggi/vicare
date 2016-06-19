@@ -732,8 +732,8 @@
 	     (values (cons method-name.sym	method-name*.sym)
 		     (cons method-procname.id	method-procname*.id)
 		     (cons method-form.sexp	method-form*.sexp)
-		     ;;Overloaded functions are not available for late binding.
-		     methods-late-binding-alist)))))
+		     (cons (cons method-name.sym method-procname.id)
+			   methods-late-binding-alist))))))
 
       ((_ . ?clause*)
        (recurse ?clause*))))
