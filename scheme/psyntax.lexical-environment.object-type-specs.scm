@@ -2324,9 +2324,10 @@
   (parent <object-type-spec>)
   (sealed #t)
   (fields
-    (immutable component-ots*		compound-condition-type-spec.component-ots*)
+    (immutable	component-ots*		compound-condition-type-spec.component-ots*)
 		;A list of instances of  "<record-type-spec>" describing the types of
 		;component condition objects.
+    (mutable	memoised-length)
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
@@ -2348,7 +2349,7 @@
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
-	   component-type*.ots)))
+	   component-type*.ots #f)))
 
       (define (%splice-component-specs component-type*.ots)
 	(fold-right (lambda (component.ots knil)
@@ -2405,6 +2406,12 @@
 
 (define* (compound-condition-type-spec.for-all {compound-condition.ots compound-condition-type-spec?} {proc procedure?})
   (for-all proc (compound-condition-type-spec.component-ots* compound-condition.ots)))
+
+(define* (compound-condition-type-spec.length {ots compound-condition-type-spec?})
+  (or (<compound-condition-type-spec>-memoised-length ots)
+      (receive-and-return (len)
+	  (length (compound-condition-type-spec.component-ots* ots))
+	(<compound-condition-type-spec>-memoised-length-set! ots len))))
 
 
 ;;;; union object spec
@@ -3339,6 +3346,11 @@
 	     (,item-pred.stx (car ,obj.sym))
 	     (,item-pred.stx (cdr ,obj.sym)))))))
 
+;;; --------------------------------------------------------------------
+
+(define (pair-of-type-spec?/list ots)
+  (and (pair-of-type-spec? ots)
+       (object-type-spec.list-type-spec? (pair-of-type-spec.item-ots ots))))
 
 
 ;;;; heterogeneous list object spec

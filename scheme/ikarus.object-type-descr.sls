@@ -141,7 +141,7 @@
 	  core-type-descriptor.uids-list
 	  core-type-descriptor.parent
 	  core-type-descriptor.ancestor-des*
-	  core-type-descriptor.super-and-sub?
+	  core-type-descriptor.parent-and-child?
 	  ;;;
 	  <void>-ctd				<top>-ctd			<no-return>-ctd
 	  <true>-ctd				<false>-ctd
@@ -201,9 +201,9 @@
       (and (pair-of-type-descr? object.des)
 	   (object-type-descr.list-type-descr? (pair-of-type-descr.item-des object.des)))))
 
-(define (pair-type-descr?/list des)
-  (and (pair-type-descr? des)
-       (object-type-descr.list-type-descr? (pair-type-descr.cdr-des des))))
+(define (record-type-descriptor=? rtd1 rtd2)
+  (eq? (record-type-uid rtd1)
+       (record-type-uid rtd2)))
 
 ;;; --------------------------------------------------------------------
 
@@ -325,10 +325,15 @@
   (nongenerative vicare:descriptors:<compound-condition-type-descr>)
   (sealed #t)
   (fields
-    (immutable component-des*		compound-condition-type-descr.component-des*)
+    (immutable	component-des*		compound-condition-type-descr.component-des*)
 		;A list of instances of "<record-type-descr>" describing the types of
 		;component condition objects.
+    (mutable	memoised-length)
     #| end of FIELDS |# )
+  (protocol
+    (lambda (make-record)
+      (lambda (component*.des)
+	(make-record component*.des #f))))
   #| end of DEFINE-RECORD-TYPE |# )
 
 (define <compound-condition-type-descr>-rtd
@@ -345,6 +350,52 @@
 (define* (compound-condition-type-descr.for-all {compound-condition.des compound-condition-type-descr?} {proc procedure?})
   (for-all proc (compound-condition-type-descr.component-des* compound-condition.des)))
 
+(define* (compound-condition-type-descr.length {des compound-condition-type-descr?})
+  (or (<compound-condition-type-descr>-memoised-length des)
+      (receive-and-return (len)
+	  (length (compound-condition-type-descr.component-des* des))
+	(<compound-condition-type-descr>-memoised-length-set! des len))))
+
+(define* (compound-condition-type-descr.set=? {des1 compound-condition-type-descr?}
+					      {des2 compound-condition-type-descr?})
+  ;;Return true  if the two compound  conditions have the same  components, otherwise
+  ;;return false.
+  ;;
+  (and (= (compound-condition-type-descr.length des1)
+	  (compound-condition-type-descr.length des2))
+       (let super-loop ((component1*.des (compound-condition-type-descr.component-des* des1))
+			(component2*.des (compound-condition-type-descr.component-des* des2)))
+	 (if (pair? component1*.des)
+	     (let sub-loop ((component2*.des	component2*.des)
+			    (leftover2*.des	'()))
+	       (if (pair? component2*.des)
+		   (if (condition-object-component-descriptor=? (car component1*.des) (car component2*.des))
+		       ;;We discard this component2.
+		       (super-loop (cdr component1*.des) (append (cdr component2*.des) leftover2*.des))
+		     ;;We add this component2 to the leftovers.
+		     (sub-loop (cdr component2*.des) (cons (car component2*.des) leftover2*.des)))
+		 ;;There are more component2, but no more component1.
+		 #f))
+	   ;;There are no more component1: are there more component2?
+	   (null? component2*.des)))))
+
+(define (condition-object-component-descriptor=? obj1 obj2)
+  ;;A  compound  condition-object's component  is  either:  a record-type  descriptor
+  ;;("&condition-rtd"  or   one  of   its  sub-types);   the  core   type  descriptor
+  ;;"<condition>"; the core type descriptor "<compound-condition>".
+  (cond-with-predicates obj1
+    (record-type-descriptor?
+     (and (record-type-descriptor? obj2)
+	  (record-type-descriptor=? obj1 obj2)))
+
+    (<condition>-ctd?
+     (<condition>-ctd? obj2))
+
+    (<compound-condition>-ctd?
+     (<compound-condition>-ctd? obj2))
+
+    (else #f)))
+
 
 ;;;; compound type descriptors: symbols enumeration
 
@@ -352,13 +403,14 @@
   (nongenerative vicare:descriptors:<enumeration-type-descr>)
   (sealed #t)
   (fields
-    (immutable symbol*	enumeration-type-descr.symbol*)
-    (mutable memoised-length)
+    (immutable	symbol*			enumeration-type-descr.symbol*)
+    (mutable	memoised-length)
     #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
       (lambda (symbol*)
-	(make-record symbol* #f)))))
+	(make-record symbol* #f))))
+  #| end of DEFINE-RECORD-TYPE |# )
 
 (define <enumeration-type-descr>-rtd
   (record-type-descriptor <enumeration-type-descr>))
@@ -376,6 +428,29 @@
       (receive-and-return (len)
 	  (length (enumeration-type-descr.symbol* des))
 	(<enumeration-type-descr>-memoised-length-set! des len))))
+
+(define* (enumeration-type-descr.set=? {des1 enumeration-type-descr?}
+				       {des2 enumeration-type-descr?})
+  ;;Return  true if  the two  enumerations have  the same  symbols, otherwise  return
+  ;;false.
+  ;;
+  (and (= (enumeration-type-descr.length des1)
+	  (enumeration-type-descr.length des2))
+       (let super-loop ((component1*.des (enumeration-type-descr.symbol* des1))
+			(component2*.des (enumeration-type-descr.symbol* des2)))
+	 (if (pair? component1*.des)
+	     (let sub-loop ((component2*.des	component2*.des)
+			    (leftover2*.des	'()))
+	       (if (pair? component2*.des)
+		   (if (eq? (car component1*.des) (car component2*.des))
+		       ;;We discard this component2.
+		       (super-loop (cdr component1*.des) (append (cdr component2*.des) leftover2*.des))
+		     ;;We add this component2 to the leftovers.
+		     (sub-loop (cdr component2*.des) (cons (car component2*.des) leftover2*.des)))
+		 ;;There are more component2, but no more component1.
+		 #f))
+	   ;;There are no more component1: are there more component2?
+	   (null? component2*.des)))))
 
 
 ;;;; compound type descriptors: closure
@@ -445,6 +520,10 @@
 (define <pair-type-descr>-rcd
   (record-constructor-descriptor <pair-type-descr>))
 
+(define (pair-type-descr?/list des)
+  (and (pair-type-descr? des)
+       (object-type-descr.list-type-descr? (pair-type-descr.cdr-des des))))
+
 
 ;;;; compound type descriptors: pairs of
 
@@ -460,6 +539,12 @@
 
 (define <pair-of-type-descr>-rcd
   (record-constructor-descriptor <pair-of-type-descr>))
+
+;;; --------------------------------------------------------------------
+
+(define (pair-of-type-descr?/list des)
+  (and (pair-of-type-descr? des)
+       (object-type-descr.list-type-descr? (pair-of-type-descr.item-des des))))
 
 
 ;;;; compound type descriptors: lists
@@ -607,8 +692,14 @@
   (nongenerative vicare:descriptors:<union-type-descr>)
   (sealed #t)
   (fields
-    (immutable item-des*	union-type-descr.item-des*)
-    #| end of FIELDS |# ))
+    (immutable	item-des*	union-type-descr.item-des*)
+    (mutable	memoised-length)
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-record)
+      (lambda (item*.des)
+	(make-record item*.des #f))))
+  #| end of DEFINE-RECORD-TYPE |# )
 
 (define (make-union-type-descr item*.des)
   (if (%list-of-single-item? item*.des)
@@ -629,6 +720,33 @@
 (define (union-type-descr.for-all union.des proc)
   (for-all proc (union-type-descr.item-des* union.des)))
 
+(define* (union-type-descr.length {des union-type-descr?})
+  (or (<union-type-descr>-memoised-length des)
+      (receive-and-return (len)
+	  (length (union-type-descr.item-des* des))
+	(<union-type-descr>-memoised-length-set! des len))))
+
+(define* (union-type-descr.set=? {des1 union-type-descr?} {des2 union-type-descr?})
+  ;;Return true if the two unions have the same components, otherwise return false.
+  ;;
+  (and (= (union-type-descr.length des1)
+	  (union-type-descr.length des2))
+       (let super-loop ((component1*.des (union-type-descr.item-des* des1))
+			(component2*.des (union-type-descr.item-des* des2)))
+	 (if (pair? component1*.des)
+	     (let sub-loop ((component2*.des	component2*.des)
+			    (leftover2*.des	'()))
+	       (if (pair? component2*.des)
+		   (if (eq? (car component1*.des) (car component2*.des))
+		       ;;We discard this component2.
+		       (super-loop (cdr component1*.des) (append (cdr component2*.des) leftover2*.des))
+		     ;;We add this component2 to the leftovers.
+		     (sub-loop (cdr component2*.des) (cons (car component2*.des) leftover2*.des)))
+		 ;;There are more component2, but no more component1.
+		 #f))
+	   ;;There are no more component1: are there more component2?
+	   (null? component2*.des)))))
+
 
 ;;;; compound type descriptors: intersection
 
@@ -636,8 +754,14 @@
   (nongenerative vicare:descriptors:<intersection-type-descr>)
   (sealed #t)
   (fields
-    (immutable item-des*	intersection-type-descr.item-des*)
-    #| end of FIELDS |# ))
+    (immutable	item-des*	intersection-type-descr.item-des*)
+    (mutable	memoised-length)
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-record)
+      (lambda (item*.des)
+	(make-record item*.des #f))))
+  #| end of DEFINE-RECORD-TYPE |# )
 
 (define (make-intersection-type-descr item*.des)
   (if (%list-of-single-item? item*.des)
@@ -657,6 +781,33 @@
 
 (define (intersection-type-descr.for-all intersection.des proc)
   (for-all proc (intersection-type-descr.item-des* intersection.des)))
+
+(define* (intersection-type-descr.length {des intersection-type-descr?})
+  (or (<intersection-type-descr>-memoised-length des)
+      (receive-and-return (len)
+	  (length (intersection-type-descr.item-des* des))
+	(<intersection-type-descr>-memoised-length-set! des len))))
+
+(define* (intersection-type-descr.set=? {des1 intersection-type-descr?} {des2 intersection-type-descr?})
+  ;;Return true if the two intersections have the same components, otherwise return false.
+  ;;
+  (and (= (intersection-type-descr.length des1)
+	  (intersection-type-descr.length des2))
+       (let super-loop ((component1*.des (intersection-type-descr.item-des* des1))
+			(component2*.des (intersection-type-descr.item-des* des2)))
+	 (if (pair? component1*.des)
+	     (let sub-loop ((component2*.des	component2*.des)
+			    (leftover2*.des	'()))
+	       (if (pair? component2*.des)
+		   (if (eq? (car component1*.des) (car component2*.des))
+		       ;;We discard this component2.
+		       (super-loop (cdr component1*.des) (append (cdr component2*.des) leftover2*.des))
+		     ;;We add this component2 to the leftovers.
+		     (sub-loop (cdr component2*.des) (cons (car component2*.des) leftover2*.des)))
+		 ;;There are more component2, but no more component1.
+		 #f))
+	   ;;There are no more component1: are there more component2?
+	   (null? component2*.des)))))
 
 
 ;;;; compound type descriptors: complement
@@ -724,111 +875,118 @@
 
 ;;;; descriptor of objects
 
-(define (type-descriptor-of datum)
+(define (type-descriptor-of obj)
   ;;Recursive function.  Build and return  an object type descriptor representing the
-  ;;type of datum.
+  ;;type of obj.
   ;;
-  ;;We use a hashtable  to detect circular structures in DATUM; we  put in here pairs
-  ;;and vectors.
+  ;;We use a hashtable to detect circular structures in OBJ; we put in here pairs and
+  ;;vectors.
   (define table (make-eq-hashtable))
-  (let recur ((datum datum))
-    (cond ((boolean? datum)		(cond (datum
+  (let recur ((obj obj))
+    (cond ((boolean? obj)		(cond (obj
 					       <true>-ctd)
 					      (else
 					       <false>-ctd)))
-	  ((char?    datum)		<char>-ctd)
-	  ((symbol?  datum)		(make-enumeration-type-descr (list datum)))
-	  ((keyword? datum)		<keyword>-ctd)
-	  ((procedure? datum)		<procedure>-ctd)
+	  ((char?    obj)		<char>-ctd)
+	  ((symbol?  obj)		(make-enumeration-type-descr (list obj)))
+	  ((keyword? obj)		<keyword>-ctd)
+	  ((procedure? obj)		<procedure>-ctd)
 
-	  ((fixnum?  datum)		(cond ((fxpositive? datum)
+	  ((fixnum?  obj)		(cond ((fxpositive? obj)
 					       <positive-fixnum>-ctd)
-					      ((fxnegative? datum)
+					      ((fxnegative? obj)
 					       <negative-fixnum>-ctd)
-					      ((fxzero? datum)
+					      ((fxzero? obj)
 					       <zero-fixnum>-ctd)
 					      (else
 					       ;;This should never happen.
 					       <fixnum>-ctd)))
 
-	  ((flonum?  datum)		(cond ((flpositive? datum)
+	  ((flonum?  obj)		(cond ((flpositive? obj)
 					       <positive-flonum>-ctd)
-					      ((flnegative? datum)
+					      ((flnegative? obj)
 					       <negative-flonum>-ctd)
-					      ((flzero?/positive datum)
+					      ((flzero?/positive obj)
 					       <positive-zero-flonum>-ctd)
-					      ((flzero?/negative datum)
+					      ((flzero?/negative obj)
 					       <negative-zero-flonum>-ctd)
 					      (else
 					       ;;This  happens  when  the  flonum  is
 					       ;;not-a-number.
 					       <flonum>-ctd)))
 
-	  ((ratnum?  datum)		(cond ((ratnum-positive? datum)
+	  ((ratnum?  obj)		(cond ((ratnum-positive? obj)
 					       <positive-ratnum>-ctd)
-					      ((ratnum-negative? datum)
+					      ((ratnum-negative? obj)
 					       <negative-ratnum>-ctd)
 					      (else
 					       ;;This should never happen.
 					       <ratnum>-ctd)))
-	  ((bignum?  datum)		(cond ((bignum-positive? datum)
+	  ((bignum?  obj)		(cond ((bignum-positive? obj)
 					       <positive-bignum>-ctd)
-					      ((bignum-negative? datum)
+					      ((bignum-negative? obj)
 					       <negative-bignum>-ctd)
 					      (else
 					       ;;This should never happen.
 					       <bignum>-ctd)))
-	  ((compnum? datum)		(cond ((exact-compnum? datum)
+	  ((compnum? obj)		(cond ((exact-compnum? obj)
 					       <exact-compnum>-ctd)
-					      ((zero-compnum? datum)
+					      ((zero-compnum? obj)
 					       <zero-compnum>-ctd)
 					      (else
 					       <non-zero-inexact-compnum>-ctd)))
-	  ((cflonum? datum)		(cond ((zero-cflonum? datum)
+	  ((cflonum? obj)		(cond ((zero-cflonum? obj)
 					       <zero-cflonum>-ctd)
 					      (else
 					       <non-zero-cflonum>-ctd)))
 
-	  ((string?  datum)		(cond ((string-empty? datum)
+	  ((string?  obj)		(cond ((string-empty? obj)
 					       <empty-string>-ctd)
 					      (else
 					       <nestring>-ctd)))
 
-	  ((null? datum)		<null>-ctd)
+	  ((null? obj)			<null>-ctd)
 
-	  ((list? datum)		(if (hashtable-ref table datum #f)
+	  ((list? obj)			(if (hashtable-ref table obj #f)
 					    <nelist>-ctd
 					  (begin
-					    (let pair-recur ((P datum))
+					    (let pair-recur ((P obj))
 					      (when (pair? P)
 						(hashtable-set! table P #t)
 						(pair-recur (cdr P))))
-					    (make-list-type-descr (map recur datum)))))
+					    (make-list-type-descr (map recur obj)))))
 
-	  ((pair? datum)		(if (hashtable-ref table datum #f)
+	  ((pair? obj)			(if (hashtable-ref table obj #f)
 					    <pair>-ctd
 					  (begin
-					    (hashtable-set! table datum #t)
-					    (make-pair-type-descr (recur (car datum))
-								  (recur (cdr datum))))))
+					    (hashtable-set! table obj #t)
+					    (make-pair-type-descr (recur (car obj))
+								  (recur (cdr obj))))))
 
-	  ((vector?  datum)		(cond ((vector-empty? datum)
+	  ((vector?  obj)		(cond ((vector-empty? obj)
 					       <empty-vector>-ctd)
 					      (else
-					       (if (hashtable-ref table datum #f)
+					       (if (hashtable-ref table obj #f)
 						   <nevector>-ctd
 						 (begin
-						   (hashtable-set! table datum #t)
-						   (make-vector-type-descr (map recur (vector->list datum))))))))
+						   (hashtable-set! table obj #t)
+						   (make-vector-type-descr (map recur (vector->list obj))))))))
 
-	  ((bytevector? datum)		(cond ((bytevector-empty? datum)
+	  ((bytevector? obj)		(cond ((bytevector-empty? obj)
 					       <empty-bytevector>-ctd)
 					      (else
 					       <nebytevector>-ctd)))
 
-	  ((hashtable? datum)		<hashtable>-ctd)
+	  ((simple-condition? obj)	(record-rtd obj))
+	  ((condition? obj)		(make-compound-condition-type-descr (map record-rtd (simple-conditions obj))))
+	  ((record? obj)		(record-rtd obj))
+	  ((record-type-descriptor? obj) (struct-std obj))
 
-	  ((eq? datum (void))		<void>-ctd)
+	  ((hashtable? obj)		<hashtable>-ctd)
+	  ((struct-type-descriptor? obj) <struct>-ctd)
+	  ((struct? obj)		(struct-std obj))
+
+	  ((void-object? obj)		<void>-ctd)
 	  (else				<top>-ctd))))
 
 

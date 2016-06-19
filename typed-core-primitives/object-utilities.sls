@@ -92,7 +92,7 @@
   (signatures
    ((<core-type-descriptor>)		=> ((list-of <core-type-descriptor>)))))
 
-(declare-core-primitive core-type-descriptor.super-and-sub?
+(declare-core-primitive core-type-descriptor.parent-and-child?
     (safe)
   (signatures
    ((<core-type-descriptor> <core-type-descriptor>)	=> (<boolean>))))

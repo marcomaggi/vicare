@@ -159,6 +159,42 @@
   (doit '#vu8(1 2 3)		=> <nebytevector>-ctd)
   (doit '#vu8()			=> <empty-bytevector>-ctd)
 
+;;; --------------------------------------------------------------------
+;;; structs
+
+  (doit (new alpha 1)		=> (type-descriptor alpha))
+  (doit (new beta  2)		=> (type-descriptor beta))
+
+  (doit (record-type-descriptor <alpha>)	=> (struct-std (record-type-descriptor <alpha>)))
+  (doit (record-type-descriptor <beta>)		=> (struct-std (record-type-descriptor <beta>)))
+
+;;; --------------------------------------------------------------------
+;;; records
+
+  (doit (new <alpha> 1)		=> (type-descriptor <alpha>))
+  (doit (new <beta> 1 2)	=> (type-descriptor <beta>))
+  (doit (new <duo> 1 2)		=> (type-descriptor <duo>))
+
+;;; --------------------------------------------------------------------
+;;; condition objects
+
+  (doit (make-who-condition 'ciao)		=> (type-descriptor &who))
+  (doit (condition (make-who-condition 'ciao))	=> (type-descriptor &who))
+
+  (doit (condition (make-who-condition 'ciao)
+		   (make-message-condition "salut"))
+	=> (type-descriptor (condition &who &message)))
+
+  (doit (condition (make-who-condition 'ciao)
+		   (condition (make-message-condition "salut")))
+	=> (type-descriptor (condition &who &message)))
+
+;;; --------------------------------------------------------------------
+;;; hashtables
+
+  (doit (make-eq-hashtable)		=> <hashtable>-ctd)
+  (doit (make-eq-hashtable)		=> (type-descriptor <hashtable>))
+
   #| end of PARAMETRISE |# )
 
 
@@ -1074,86 +1110,157 @@
   (doit-true	(condition &irritants (condition &who))
 		(condition (condition &who) &irritants))
 
+  (begin
+    (doit-true	(condition &who &message &irritants)	(condition &who &message &irritants))
+    (doit-true	(condition &who &message &irritants)	(condition &message &who &irritants))
+    (doit-true	(condition &who &message &irritants)	(condition &message &irritants &who))
+    (doit-true	(condition &who &message &irritants)	(condition &irritants &message &who))
+    (begin
+      (doit-false (condition &who &message &irritants)	(condition &message &irritants))
+      (doit-false (condition &who &message &irritants)	(condition &who &irritants))
+      (doit-false (condition &who &message &irritants)	(condition &who &message))
+      ;;
+      (doit-false (condition &who &message &irritants)	(condition &who))
+      (doit-false (condition &who &message &irritants)	(condition &message))
+      (doit-false (condition &who &message &irritants)	(condition &irritants)))
+    (begin
+      (doit-false (condition &message &irritants)	(condition &who &message &irritants))
+      (doit-false (condition &who &irritants)		(condition &who &message &irritants))
+      (doit-false (condition &who &message)		(condition &who &message &irritants))
+      ;;
+      (doit-false (condition &who)			(condition &who &message &irritants))
+      (doit-false (condition &message)			(condition &who &message &irritants))
+      (doit-false (condition &irritants)		(condition &who &message &irritants))))
+
+  ;;Should "<condition>"  and "<compound-condition>"  be allowed  as components  of a
+  ;;compond-condition object?  (Marco Maggi; Sun Jun 19, 2016)
+  ;;
+  #;(begin
+    (doit-true	(condition &who <condition>)		(condition &who <condition>))
+    (doit-true	(condition &who <condition>)		(condition <condition> &who))
+    ;;
+    (doit-true	(condition &who <compound-condition>)	(condition &who <compound-condition>))
+    (doit-true	(condition &who <compound-condition>)	(condition <compound-condition> &who))
+    ;;
+    (doit-true	(condition <condition> <compound-condition>)	(condition <condition> <compound-condition>))
+    (doit-true	(condition <condition> <compound-condition>)	(condition <compound-condition> <condition>))
+    ;;
+    (doit-false	(condition &who <condition>)		(condition &who &irritants))
+    (doit-false	(condition &who <compound-condition>)	(condition &who &irritants))
+    ;;
+    (doit-false (condition &who &irritants)		(condition &who <condition>))
+    (doit-false (condition &who &irritants)		(condition &who <compound-condition>)))
+
 ;;; --------------------------------------------------------------------
 ;;; enumeration
 
-  (doit-true	(enumeration ciao)
-		(enumeration ciao))
+  (doit-true	(enumeration ciao)		(enumeration ciao))
+  (doit-false	(enumeration ciao)		(enumeration hello))
+  (doit-false	(enumeration ciao hello)	(enumeration hello))
+  (doit-false	(enumeration ciao)		(enumeration hello ciao))
 
-  (doit-false	(enumeration ciao)
-		(enumeration hello))
-
-  (doit-false	(enumeration ciao hello)
-		(enumeration hello))
-
-  (doit-false	(enumeration ciao)
-		(enumeration hello ciao))
+  (begin
+    (doit-true	(enumeration ciao hello salut)	(enumeration ciao hello salut))
+    (doit-true	(enumeration ciao hello salut)	(enumeration hello ciao salut))
+    (doit-true	(enumeration ciao hello salut)	(enumeration hello salut ciao))
+    (doit-true	(enumeration ciao hello salut)	(enumeration salut hello ciao))
+    (begin
+      (doit-false (enumeration ciao hello salut)	(enumeration hello salut))
+      (doit-false (enumeration ciao hello salut)	(enumeration ciao salut))
+      (doit-false (enumeration ciao hello salut)	(enumeration ciao hello))
+      ;;
+      (doit-false (enumeration ciao hello salut)	(enumeration ciao))
+      (doit-false (enumeration ciao hello salut)	(enumeration hello))
+      (doit-false (enumeration ciao hello salut)	(enumeration salut)))
+    (begin
+      (doit-false (enumeration hello salut)		(enumeration ciao hello salut))
+      (doit-false (enumeration ciao salut)		(enumeration ciao hello salut))
+      (doit-false (enumeration ciao hello)		(enumeration ciao hello salut))
+      ;;
+      (doit-false (enumeration ciao)			(enumeration ciao hello salut))
+      (doit-false (enumeration hello)			(enumeration ciao hello salut))
+      (doit-false (enumeration salut)			(enumeration ciao hello salut))))
 
 ;;; --------------------------------------------------------------------
 ;;; hashtable
 
-  (doit-true	(hashtable <fixnum> <fixnum>)
-		(hashtable <fixnum> <fixnum>))
-
-  (doit-false	(hashtable <fixnum> <fixnum>)
-		(hashtable <fixnum> <string>))
-
-  (doit-false	(hashtable <fixnum> <fixnum>)
-		(hashtable <string> <fixnum>))
+  (doit-true	(hashtable <fixnum> <fixnum>)	(hashtable <fixnum> <fixnum>))
+  (doit-false	(hashtable <fixnum> <fixnum>)	(hashtable <fixnum> <string>))
+  (doit-false	(hashtable <fixnum> <fixnum>)	(hashtable <string> <fixnum>))
 
 ;;; --------------------------------------------------------------------
 ;;; alist
 
-  (doit-true	(alist <fixnum> <fixnum>)
-		(alist <fixnum> <fixnum>))
-
-  (doit-false	(alist <fixnum> <fixnum>)
-		(alist <fixnum> <string>))
-
-  (doit-false	(alist <fixnum> <fixnum>)
-		(alist <string> <fixnum>))
+  (doit-true	(alist <fixnum> <fixnum>)	(alist <fixnum> <fixnum>))
+  (doit-false	(alist <fixnum> <fixnum>)	(alist <fixnum> <string>))
+  (doit-false	(alist <fixnum> <fixnum>)	(alist <string> <fixnum>))
 
 ;;; --------------------------------------------------------------------
 ;;; union
 
-  (doit-false	(or (list <fixnum> <flonum>))
-		<fixnum>)
+  (doit-false	(or (list <fixnum> <flonum>))	<fixnum>)
+  (doit-false	(or (list <fixnum> <flonum>))	<flonum>)
+  (doit-false	(or (list <fixnum> <flonum>))	<string>)
+  (doit-true	(or (list <fixnum> <flonum>))	(or (list <fixnum> <flonum>)))
 
-  (doit-false	(or (list <fixnum> <flonum>))
-		<flonum>)
-
-  (doit-false	(or (list <fixnum> <flonum>))
-		<string>)
-
-  (doit-true	(or (list <fixnum> <flonum>))
-		(or (list <fixnum> <flonum>)))
+  (begin
+    (doit-true	(or <fixnum> <string> <false>)	(or <fixnum> <string> <false>))
+    (doit-true	(or <fixnum> <string> <false>)	(or <string> <fixnum> <false>))
+    (doit-true	(or <fixnum> <string> <false>)	(or <string> <false> <fixnum>))
+    (doit-true	(or <fixnum> <string> <false>)	(or <false> <string> <fixnum>))
+    (begin
+      (doit-false (or <fixnum> <string> <false>)	(or <string> <false>))
+      (doit-false (or <fixnum> <string> <false>)	(or <fixnum> <false>))
+      (doit-false (or <fixnum> <string> <false>)	(or <fixnum> <string>))
+      ;;
+      (doit-false (or <fixnum> <string> <false>)	(or <fixnum>))
+      (doit-false (or <fixnum> <string> <false>)	(or <string>))
+      (doit-false (or <fixnum> <string> <false>)	(or <false>)))
+    (begin
+      (doit-false (or <string> <false>)		(or <fixnum> <string> <false>))
+      (doit-false (or <fixnum> <false>)		(or <fixnum> <string> <false>))
+      (doit-false (or <fixnum> <string>)		(or <fixnum> <string> <false>))
+      ;;
+      (doit-false (or <fixnum>)			(or <fixnum> <string> <false>))
+      (doit-false (or <string>)			(or <fixnum> <string> <false>))
+      (doit-false (or <false>)			(or <fixnum> <string> <false>))))
 
 ;;; --------------------------------------------------------------------
 ;;; intersection
 
-  (doit-false	(and (list <number> <flonum>))
-		<flonum>)
+  (doit-false	(and (list <number> <flonum>))		<flonum>)
+  (doit-false	(and (list <number> <flonum>))		<string>)
+  (doit-true	(and (list <number> <flonum>))		(and (list <number> <flonum>)))
 
-  (doit-false	(and (list <number> <flonum>))
-		<string>)
-
-  (doit-true	(and (list <number> <flonum>))
-		(and (list <number> <flonum>)))
+  (begin
+    (doit-true	(and <fixnum> <string> <false>)	(and <fixnum> <string> <false>))
+    (doit-true	(and <fixnum> <string> <false>)	(and <string> <fixnum> <false>))
+    (doit-true	(and <fixnum> <string> <false>)	(and <string> <false> <fixnum>))
+    (doit-true	(and <fixnum> <string> <false>)	(and <false> <string> <fixnum>))
+    (begin
+      (doit-false (and <fixnum> <string> <false>)	(and <string> <false>))
+      (doit-false (and <fixnum> <string> <false>)	(and <fixnum> <false>))
+      (doit-false (and <fixnum> <string> <false>)	(and <fixnum> <string>))
+      ;;
+      (doit-false (and <fixnum> <string> <false>)	(and <fixnum>))
+      (doit-false (and <fixnum> <string> <false>)	(and <string>))
+      (doit-false (and <fixnum> <string> <false>)	(and <false>)))
+    (begin
+      (doit-false (and <string> <false>)		(and <fixnum> <string> <false>))
+      (doit-false (and <fixnum> <false>)		(and <fixnum> <string> <false>))
+      (doit-false (and <fixnum> <string>)		(and <fixnum> <string> <false>))
+      ;;
+      (doit-false (and <fixnum>)			(and <fixnum> <string> <false>))
+      (doit-false (and <string>)			(and <fixnum> <string> <false>))
+      (doit-false (and <false>)				(and <fixnum> <string> <false>))))
 
 ;;; --------------------------------------------------------------------
 ;;; complement
 
-  (doit-false	(not <flonum>)
-		<fixnum>)
-
-  (doit-false	<fixnum>
-		(not <flonum>))
-
-  (doit-false	<fixnum>
-		(not <fixnum>))
-
-  (doit-true	(not <fixnum>)
-		(not <fixnum>))
+  (doit-false	(not <flonum>)		<fixnum>)
+  (doit-false	<fixnum>		(not <flonum>))
+  (doit-false	<fixnum>		(not <fixnum>))
+  (doit-true	(not <fixnum>)		(not <fixnum>))
 
 ;;; --------------------------------------------------------------------
 ;;; ancestor-of
@@ -1596,7 +1703,7 @@
   (doit-false	<list>			(pair <fixnum> <flonum>))
   (doit-true	<list>			(pair <fixnum> <null>))
   (doit-false	<list>			(pair-of <fixnum>))
-  (doit-false	<list>			(pair-of <null>))
+  (doit-true	<list>			(pair-of <null>))
   (doit-true	<list>			(list <fixnum> <flonum>))
   (doit-true	<list>			(list-of <fixnum>))
   (doit-true	<list>			(nelist-of <fixnum>))
@@ -1609,7 +1716,7 @@
   (doit-false	<nelist>		(pair <fixnum> <flonum>))
   (doit-true	<nelist>		(pair <fixnum> <null>))
   (doit-false	<nelist>		(pair-of <fixnum>))
-  (doit-false	<nelist>		(pair-of <null>))
+  (doit-true	<nelist>		(pair-of <null>))
   (doit-true	<nelist>		(list <fixnum> <flonum>))
   (doit-false	<nelist>		(list-of <fixnum>))
   (doit-true	<nelist>		(nelist-of <fixnum>))
@@ -2424,7 +2531,9 @@
   (doit	<list>			(pair <fixnum> <flonum>)	=> no-match)
   (doit	<list>			(pair <fixnum> <null>)		=> exact-match)
   (doit	<list>			(pair-of <fixnum>)		=> no-match)
-  (doit	<list>			(pair-of <null>)		=> possible-match)
+  (doit	<list>			(pair-of <list>)		=> exact-match)
+  (doit	<list>			(pair-of <null>)		=> exact-match)
+  (doit	<list>			(pair-of <nelist>)		=> exact-match)
   (doit	<list>			(list <fixnum> <flonum>)	=> exact-match)
   (doit	<list>			(list-of <fixnum>)		=> exact-match)
   (doit	<list>			(nelist-of <fixnum>)		=> exact-match)
@@ -2437,7 +2546,9 @@
   (doit	<nelist>		(pair <fixnum> <flonum>)	=> no-match)
   (doit	<nelist>		(pair <fixnum> <null>)		=> exact-match)
   (doit	<nelist>		(pair-of <fixnum>)		=> no-match)
-  (doit	<nelist>		(pair-of <null>)		=> possible-match)
+  (doit	<nelist>		(pair-of <list>)		=> exact-match)
+  (doit	<nelist>		(pair-of <null>)		=> exact-match)
+  (doit	<nelist>		(pair-of <nelist>)		=> exact-match)
   (doit	<nelist>		(list <fixnum> <flonum>)	=> exact-match)
   (doit	<nelist>		(list-of <fixnum>)		=> possible-match)
   (doit	<nelist>		(nelist-of <fixnum>)		=> exact-match)

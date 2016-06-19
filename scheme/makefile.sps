@@ -3949,7 +3949,7 @@
     (core-type-descriptor.method-retriever	$type-descriptors)
     (core-type-descriptor=?			$type-descriptors)
     (core-type-descriptor.ancestor-des*		$type-descriptors)
-    (core-type-descriptor.super-and-sub?	$type-descriptors)
+    (core-type-descriptor.parent-and-child?	$type-descriptors)
 
     ;;scheme-type descriptors
     (<bignum>-ctd				$type-descriptors)
