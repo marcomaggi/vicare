@@ -589,6 +589,15 @@
 (define* (list-type-descr.for-all {des list-type-descr?} {proc procedure?})
   (for-all proc (list-type-descr.item-des* des)))
 
+(define* (list-type-descr.car-des {des list-type-descr?})
+  (car (list-type-descr.item-des* des)))
+
+(define* (list-type-descr.cdr-des {des list-type-descr?})
+  (let ((item*.des (list-type-descr.item-des* des)))
+    (if (pair? item*.des)
+	(make-list-type-descr (cdr item*.des))
+      <null>-ctd)))
+
 
 ;;;; compound type descriptors: lists of
 
