@@ -1944,7 +1944,9 @@
 				 (make-closure-type-spec (make-case-lambda-signature (list spec.lambda-sig)))))
 	     (input-form.stx	(bless `(define/std ,ofd.id
 					  (make-overloaded-function-descriptor
-					   (list (cons (type-descriptor ,spec.ann) ,spec.id)))))))
+					   (list (cons (car (case-lambda-descriptors.clause-signature*
+							     (closure-type-descr.signature (type-descriptor ,spec.ann))))
+						       ,spec.id)))))))
 	(chi-define/std input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)))
 
     (define (%establish-overloaded-function-late-binding-function lbf.id ofd.id rib lexenv.run kwd* shadow/redefine-bindings?)
@@ -1984,7 +1986,11 @@
       (let* ((spec.ann	(object-type-spec.type-annotation
 			 (make-closure-type-spec (make-case-lambda-signature (list spec.lambda-sig)))))
 	     (ofd.id	(overloaded-function-spec.ofd-id lhs.ofs))
-	     (regis.stx	(bless `(overloaded-function-descriptor.register! ,ofd.id (type-descriptor ,spec.ann) ,spec.id))))
+	     (regis.stx	(bless `(overloaded-function-descriptor.register!
+				 ,ofd.id
+				 (car (case-lambda-descriptors.clause-signature*
+				       (closure-type-descr.signature (type-descriptor ,spec.ann))))
+				 ,spec.id))))
 	(make-qdef-top-expr regis.stx)))
 
     #| end of module: %EXTEND-EXISTENT-OVERLOADED-FUNCTION |# )

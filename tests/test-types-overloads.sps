@@ -303,7 +303,9 @@
   (import (only (vicare system type-descriptors)
 		make-overloaded-function-descriptor
 		overloaded-function-descriptor.register!
-		overloaded-function-late-binding))
+		overloaded-function-late-binding
+		case-lambda-descriptors.clause-signature*
+		closure-type-descr.signature))
 
   (define (doit-string {O <string>})
     (list 'string O))
@@ -312,10 +314,12 @@
     (list 'fixnum O))
 
   (define doit-string.des
-    (type-descriptor (lambda (<string>) => (<list>))))
+    (car (case-lambda-descriptors.clause-signature*
+	  (closure-type-descr.signature (type-descriptor (lambda (<string>) => (<list>)))))))
 
   (define doit-fixnum.des
-    (type-descriptor (lambda (<fixnum>) => (<list>))))
+    (car (case-lambda-descriptors.clause-signature*
+	  (closure-type-descr.signature (type-descriptor (lambda (<fixnum>) => (<list>)))))))
 
   (define ofd
     (receive-and-return (ofd)

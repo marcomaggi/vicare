@@ -92,8 +92,8 @@
 		  #;record-type-method-retriever)
 	    system::)
     (prefix (only (ikarus.object-type-descr)
-		  closure-type-descr?
-		  select-most-specific-closure-type-descr
+		  lambda-descriptors?
+		  select-most-specific-lambda-descriptors
 		  make-descriptors-signature
 		  type-descriptor-of)
 	    td::))
@@ -287,21 +287,21 @@
 ;;; --------------------------------------------------------------------
 
 (define* (overloaded-function-descriptor.register! {over.des		overloaded-function-descriptor?}
-						   {closure.des		td::closure-type-descr?}
+						   {lambda.des		td::lambda-descriptors?}
 						   {implementation	procedure?})
   (overloaded-function-descriptor.table-set! over.des
-					     (cons (cons closure.des implementation)
+					     (cons (cons lambda.des implementation)
 						   (overloaded-function-descriptor.table over.des))))
 
 (define* (overloaded-function-descriptor.select-matching-entry {over.des overloaded-function-descriptor?} operand*)
   (let ((rands.sig	(td::make-descriptors-signature (map td::type-descriptor-of operand*)))
 	(closure-entry*	(overloaded-function-descriptor.table over.des)))
-    ;;CLOSURE-ENTRY* is an alist having instances of <closure-type-descr> as keys and
+    ;;CLOSURE-ENTRY* is an alist having instances of <lambda-descriptors> as keys and
     ;;procedures as  values.  RANDS.SIG  is an instance  of "<descriptors-signature>"
     ;;representing the  types of the operands.   The return value is  the alist entry
     ;;which is the  most specific matching for the operands.   If no matching closure
     ;;is found: return false.
-    (td::select-most-specific-closure-type-descr closure-entry* rands.sig)))
+    (td::select-most-specific-lambda-descriptors closure-entry* rands.sig)))
 
 (define* (overloaded-function-late-binding {over.des overloaded-function-descriptor?} . operand*)
   (cond ((overloaded-function-descriptor.select-matching-entry over.des operand*)

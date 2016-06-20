@@ -41,6 +41,7 @@
     lambda-descriptors=?
     lambda-descriptors.super-and-sub?
     lambda-descriptors.match-formals-against-operands
+    select-most-specific-lambda-descriptors
 
     <case-lambda-descriptors>-rtd		<case-lambda-descriptors>-rcd
     make-case-lambda-descriptors		case-lambda-descriptors?
@@ -72,7 +73,6 @@
     closure-type-descr.signature
     closure-type-descr.super-and-sub?
     closure-type-descr.match-formals-against-operands
-    select-most-specific-closure-type-descr
 
 ;;; --------------------------------------------------------------------
 
@@ -499,39 +499,6 @@
   ;;possible-match, no-match.
   ;;
   (case-lambda-descriptors.match-formals-against-operands (closure-type-descr.signature D1) operands.des))
-
-;;; --------------------------------------------------------------------
-
-(define (select-most-specific-closure-type-descr closure-entry* rands.sig)
-  ;;This   function  is   used  to   determine   the  specialised   function  in   an
-  ;;overloaded-function which is most specific for a tuple of operands.
-  ;;
-  ;;CLOSURE-ENTRY* is an  alist having instances of <closure-type-descr>  as keys and
-  ;;procedures  as values.   RANDS.SIG  is an  instance of  "<descriptors-signature>"
-  ;;representing the  types of  the operands.   The return value  is the  alist entry
-  ;;which is the most specific matching for the operands.
-  ;;
-  ;;We  want the  less specific  arguments  to be  super-types of  the most  specific
-  ;;arguments; we do not care about the return values.
-  ;;
-  ;;	   (less-and-most-specific?
-  ;;		(lambda (<number>) => (<string>))
-  ;;	        (lambda (<fixnum>) => (<string>)))	=> #t
-  ;;
-  (fold-left
-      (lambda (selected-entry entry)
-	;;ENTRY is  a pair having  an instance of  <closure-type-descr> as car  and a
-	;;procedure as cdr.   SELECTED-ENTRY is false or a pair  with the same format
-	;;of ENTRY.
-	(if (eq? 'exact-match
-		 (closure-type-descr.match-formals-against-operands (car entry) rands.sig))
-	    (if selected-entry
-		(if (closure-type-descr.super-and-sub? (car selected-entry) (car entry))
-		    entry
-		  selected-entry)
-	      entry)
-	  selected-entry))
-    #f closure-entry*))
 
 
 ;;;; compound type descriptors: hashtables

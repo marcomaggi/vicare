@@ -41,6 +41,7 @@
      lambda-descriptors=?
      lambda-descriptors.super-and-sub?
      lambda-descriptors.match-formals-against-operands
+     select-most-specific-lambda-descriptors
 
      <case-lambda-descriptors>
      <case-lambda-descriptors>-rtd		<case-lambda-descriptors>-rcd
@@ -181,6 +182,39 @@
   ;;      (<string> <record>))				=> no-match
   ;;
   (descriptors-signature.match-formals-against-operands (lambda-descriptors.argvals formals.des) operands.des))
+
+;;; --------------------------------------------------------------------
+
+(define (select-most-specific-lambda-descriptors closure-entry* rands.sig)
+  ;;This   function  is   used  to   determine   the  specialised   function  in   an
+  ;;overloaded-function which is most specific for a tuple of operands.
+  ;;
+  ;;CLOSURE-ENTRY* is an alist having instances of "<lambda-descriptors>" as keys and
+  ;;procedures  as values.   RANDS.SIG  is an  instance of  "<descriptors-signature>"
+  ;;representing the  types of  the operands.   The return value  is the  alist entry
+  ;;which is the most specific matching for the operands.
+  ;;
+  ;;We  want the  less specific  arguments  to be  super-types of  the most  specific
+  ;;arguments; we do not care about the return values.
+  ;;
+  ;;	   (less-and-most-specific?
+  ;;		(lambda (<number>) => (<string>))
+  ;;	        (lambda (<fixnum>) => (<string>)))	=> #t
+  ;;
+  (fold-left
+      (lambda (selected-entry entry)
+	;;ENTRY is  a pair having  an instance of  <closure-type-descr> as car  and a
+	;;procedure as cdr.   SELECTED-ENTRY is false or a pair  with the same format
+	;;of ENTRY.
+	(if (eq? 'exact-match
+		 (lambda-descriptors.match-formals-against-operands (car entry) rands.sig))
+	    (if selected-entry
+		(if (lambda-descriptors.super-and-sub? (car selected-entry) (car entry))
+		    entry
+		  selected-entry)
+	      entry)
+	  selected-entry))
+    #f closure-entry*))
 
 
 ;;;; descriptors signatures for case-lambda procedures
