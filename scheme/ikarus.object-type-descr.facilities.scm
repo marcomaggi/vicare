@@ -1315,6 +1315,7 @@
 
   (define (%compatible-super/struct-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
+      (struct-type-descriptor?		#f)
       (complement-type-descr?
        (let ((sub-item.des (complement-type-descr.item-des sub.des)))
 	 (cond
@@ -1341,11 +1342,8 @@
 
       (list-type-descr?
        ;;(matching (pair <fixnum> <list>) (list <number>))	=> possible-match
-       (let ((sub-item*.des (list-type-descr.item-des* sub.des)))
-	 (and (super-and-sub? (pair-type-descr.car-des super.des) (car sub-item*.des))
-	      (super-and-sub? (pair-type-descr.cdr-des super.des) (if (pair? (cdr sub-item*.des))
-								      (make-list-type-descr (cdr sub-item*.des))
-								    <null>-ctd)))))
+       (and (super-and-sub? (pair-type-descr.car-des super.des) (list-type-descr.car sub.des))
+	    (super-and-sub? (pair-type-descr.cdr-des super.des) (list-type-descr.cdr sub.des))))
 
       (list-of-type-descr?
        ;;(matching (pair <fixnum> <list>) (list-of <fixnum>))	=> possible-match
@@ -1368,7 +1366,7 @@
       (pair-of-type-descr?
        ;;(matching (pair-of <fixnum>) (pair <number> <number>))	=> possible-match
        (super-and-sub? (pair-of-type-descr.item-des super.des)
-		       (pair-of-type-descr.item-des sub.des)))
+		       (pair-of-type-descr.item-des   sub.des)))
 
       (list-type-descr?
        ;;(matching (pair-of <list>) (list <list>))	=> possible-match
@@ -1393,39 +1391,28 @@
   (define (%compatible-super/list-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
       (list-type-descr?
+       ;;(matching (list <fixnum>) (list <number>))	=> possible-match
        (for-all super-and-sub?
 	 (list-type-descr.item-des* super.des)
 	 (list-type-descr.item-des*   sub.des)))
 
       (list-of-type-descr?
+       ;;(matching (list <fixnum>) (list-of <number>))	=> possible-match
        (let ((sub-item.des (list-of-type-descr.item-des sub.des)))
-	 (list-type-descr.for-all super.des (lambda (super-item.des)
-					      (super-and-sub? super-item.des sub-item.des)))))
+	 (list-type-descr.for-all super.des
+	   (lambda (super-item.des)
+	     (super-and-sub? super-item.des sub-item.des)))))
 
       (pair-type-descr?
-       (and (<= 1 (list-type-descr.length super.des))
-	    (let* ((super-item*.des	(list-type-descr.item-des* super.des))
-		   (super-first.des	(car super-item*.des))
-		   (super-rest*.des	(cdr super-item*.des))
-		   (sub-car.des		(pair-type-descr.car-des sub.des))
-		   (sub-cdr.des		(pair-type-descr.cdr-des sub.des)))
-	      (and (super-and-sub? super-first.des sub-car.des)
-		   (super-and-sub? (if (pair? super-rest*.des)
-				       (make-list-type-descr super-rest*.des)
-				     <null>-ctd)
-				   sub-cdr.des)))))
+       ;;(matching (list <fixnum>) (pair <fixnum> <null>)) => possible-match
+       (and (super-and-sub? (list-type-descr.car super.des) (pair-type-descr.car-des sub.des))
+	    (super-and-sub? (list-type-descr.cdr super.des) (pair-type-descr.cdr-des sub.des))))
 
       (pair-of-type-descr?
-       (and (<= 1 (list-type-descr.length super.des))
-	    (let* ((super-item*.des	(list-type-descr.item-des* super.des))
-		   (super-first.des	(car super-item*.des))
-		   (super-rest*.des	(cdr super-item*.des))
-		   (sub-item.des	(pair-of-type-descr.item-des sub.des)))
-	      (and (super-and-sub? super-first.des sub-item.des)
-		   (super-and-sub? (if (pair? super-rest*.des)
-				       (make-list-type-descr super-rest*.des)
-				     <null>-ctd)
-				   sub-item.des)))))
+       ;;(matching (list <list>) (pair-of <list>))	=> possible-match
+       (let ((sub-item.des (pair-of-type-descr.item-des sub.des)))
+	 (and (super-and-sub? (list-type-descr.car super.des) sub-item.des)
+	      (super-and-sub? (list-type-descr.cdr super.des) sub-item.des))))
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
@@ -1437,26 +1424,25 @@
       (list-type-descr?
        ;;(matching (list-of <fixnum>) (list <number>))		=> possible-match
        (let ((super-item.des (list-of-type-descr.item-des super.des)))
-	 (list-type-descr.for-all sub.des (lambda (sub-item.des)
-					    (super-and-sub? super-item.des sub-item.des)))))
+	 (list-type-descr.for-all sub.des
+	   (lambda (sub-item.des)
+	     (super-and-sub? super-item.des sub-item.des)))))
 
       (list-of-type-descr?
        ;;(matching (list-of <fixnum>) (list-of <number>))	=> possible-match
        (super-and-sub? (list-of-type-descr.item-des super.des)
-		       (list-of-type-descr.item-des sub.des)))
+		       (list-of-type-descr.item-des   sub.des)))
 
       (pair-type-descr?
        ;;(matching (list-of <fixnum>) (pair <number> <null>))	=> possible-match
-       (let ((super-item.des (list-of-type-descr.item-des super.des)))
-	 (and (super-and-sub? super-item.des (pair-type-descr.car-des sub.des))
-	      (super-and-sub? super.des      (pair-type-descr.cdr-des sub.des)))))
+       (and (super-and-sub? (list-of-type-descr.item-des super.des) (pair-type-descr.car-des sub.des))
+	    (super-and-sub? super.des                               (pair-type-descr.cdr-des sub.des))))
 
       (pair-of-type-descr?
        ;;(matching (list-of <list>) (pair-of <nelist>))		=> possible-match
-       (let ((super-item.des	(list-of-type-descr.item-des super.des))
-	     (sub-item.des	(pair-of-type-descr.item-des   sub.des)))
-	 (and (super-and-sub? super-item.des sub-item.des)
-	      (super-and-sub? super.des      sub-item.des))))
+       (let ((sub-item.des (pair-of-type-descr.item-des sub.des)))
+	 (and (super-and-sub? (list-of-type-descr.item-des super.des) sub-item.des)
+	      (super-and-sub? super.des                               sub-item.des))))
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
