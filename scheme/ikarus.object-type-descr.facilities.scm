@@ -287,8 +287,15 @@
 
 (module (object-type-descr.matching-super-and-sub?)
 
-  (define-syntax-rule (super-and-sub? A B)
-    (object-type-descr.matching-super-and-sub? A B))
+  (define-syntax (super-and-sub? stx)
+    (syntax-case stx ()
+      ((_ ?A ?B)
+       #'(object-type-descr.matching-super-and-sub? ?A ?B))
+      (?id
+       (identifier? #'?id)
+       #'object-type-descr.matching-super-and-sub?)
+      ))
+
 
   (define* (object-type-descr.matching-super-and-sub? super.des sub.des)
     (cond
@@ -371,7 +378,7 @@
 	 ;;(super-and-sub? (list <top>) <nelist>)	=> #f
 	 (and (<pair>-ctd? sub.des)
 	      (list-type-descr.list-of-single-item? super.des)
-	      (<top>-ctd? (list-type-descr.car-des super.des))))
+	      (<top>-ctd? (list-type-descr.car super.des))))
 
 	(list-of-type-descr?
 	 ;;(super-and-sub? (list-of <top>) <list>)
@@ -480,22 +487,51 @@
 					    (object-type-descr=? <top>-ctd sub-ancestor.des))))
 	 (complement-type-descr?	#f)
 	 (else				#t)))
-      (<pair>-ctd?			(or-with-predicates sub.des pair-type-descr? pair-of-type-descr? list-type-descr?))
+      ;;(super-and-sub? <pair>	(pair <fixnum> <flonum>))	=> #t
+      ;;(super-and-sub? <pair>	(pair <fixnum> <flonum>))	=> #t
+      ;;(super-and-sub? <pair>	(pair-of <fixnum>))		=> #t
+      ;;(super-and-sub? <pair>	(list <fixnum>))		=> #t
+      (<pair>-ctd?			(or-with-predicates sub.des
+					  pair-type-descr? pair-of-type-descr? list-type-descr?))
+      ;;(super-and-sub? <list>	(list <fixnum> <flonum>))	=> #t
+      ;;(super-and-sub? <list>	(list-of <fixnum>))		=> #t
+      ;;(super-and-sub? <list>	(pair <fixnum> <list>))		=> #t
+      ;;(super-and-sub? <list>	(pair-of <list>))		=> #t
       (<list>-ctd?			(or-with-predicates sub.des
 					  list-type-descr? list-of-type-descr? pair-type-descr?/list pair-of-type-descr?/list))
+      ;;(super-and-sub? <nelist>	(list <fixnum> <flonum>))	=> #t
+      ;;(super-and-sub? <nelist>	(list-of <fixnum>))		=> #f
+      ;;(super-and-sub? <nelist>	(pair <fixnum> <list>))		=> #t
+      ;;(super-and-sub? <nelist>	(pair-of <list>))		=> #t
       (<nelist>-ctd?			(or-with-predicates sub.des
 					  list-type-descr? pair-type-descr?/list pair-of-type-descr?/list))
+      ;;(super-and-sub? <vector>	(vector <fixnum>))		=> #t
+      ;;(super-and-sub? <vector>	(vector-of <fixnum>))		=> #t
       (<vector>-ctd?			(or-with-predicates sub.des vector-type-descr? vector-of-type-descr?))
+      ;;(super-and-sub? <nevector>	(vector <fixnum>))		=> #t
+      ;;(super-and-sub? <nevector>	(vector-of <fixnum>))		=> #f
       (<nevector>-ctd?			(vector-type-descr? sub.des))
+      ;;(super-and-sub? <symbol>	(enumeration ciao))		=> #t
       (<symbol>-ctd?			(enumeration-type-descr? sub.des))
+      ;;(super-and-sub? <hashtable>	(hashtable <string> <fixnum>))	=> #t
       (<hashtable>-ctd?			(hashtable-type-descr? sub.des))
+      ;;(super-and-sub? <condition>	&condition)			=> #t
+      ;;(super-and-sub? <condition>	(compound &who &message))	=> #t
       (<condition>-ctd?			(or-with-predicates sub.des compound-condition-type-descr? simple-condition-type-descr?))
+      ;;(super-and-sub? <compound-condition>	(compound &who &message))	=> #t
       (<compound-condition>-ctd?	(or-with-predicates sub.des compound-condition-type-descr?))
-      ;;The record-type case includes the condition object-type case.
+      ;;(super-and-sub? <record>	?record-type)			=> #t
+      ;;(super-and-sub? <record>	&condition)			=> #t
+      ;;(super-and-sub? <record>	(compound &who &message)	=> #t
       (<record>-ctd?			(or-with-predicates sub.des record-type-descriptor? compound-condition-type-descr?))
-      ;;The record-type case includes the condition object-type case.
+      ;;(super-and-sub? <struct>	?struct-type)			=> #t
+      ;;(super-and-sub? <struct>	?record-type)			=> #t
+      ;;(super-and-sub? <struct>	&condition)			=> #t
+      ;;(super-and-sub? <struct>	(compound &who &message)	=> #t
+      ;;(super-and-sub? <struct>	(hashtable <string> <fixnum>))	=> #t
       (<struct>-ctd?			(or-with-predicates sub.des
 					  record-type-descriptor? compound-condition-type-descr? hashtable-type-descr? struct-type-descriptor?))
+      ;;(super-and-sub? <procedure>	(lambda (<fixnum>) => (<fixnum>)))	=> #t
       (<procedure>-ctd?			(closure-type-descr? sub.des))
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
@@ -534,22 +570,28 @@
   (define (%matching-super/pair-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
       (pair-type-descr?
+       ;;(super-and-sub? (pair <number> <string>) (pair <fixnum> <string>))	=> #t
        (and (super-and-sub? (pair-type-descr.car-des super.des) (pair-type-descr.car-des sub.des))
 	    (super-and-sub? (pair-type-descr.cdr-des super.des) (pair-type-descr.cdr-des sub.des))))
 
       (pair-of-type-descr?
+       ;;(super-and-sub? (pair <number> <integer>) (pair-of <fixnum>))	=> #t
        (let ((sub-item.des (pair-of-type-descr.item-des sub.des)))
 	 (and (super-and-sub? (pair-type-descr.car-des super.des) sub-item.des)
 	      (super-and-sub? (pair-type-descr.cdr-des super.des) sub-item.des))))
 
       (list-type-descr?
+       ;;(super-and-sub? (pair <number> <integer>) (list <fixnum> <fixnum>))	=> #t
+       ;;(super-and-sub? (pair <number> <null>)    (list <fixnum>))		=> #t
+       ;;(super-and-sub? (pair <number> (list-of <fixnum>)) (list <fixnum> <fixnum>))	=> #t
        (let ((sub-item*.des (list-type-descr.item-des* sub.des)))
 	 (and (super-and-sub? (pair-type-descr.car-des super.des) (car sub-item*.des))
-	      (super-and-sub? (pair-type-descr.cdr-des super.des) (if (pair? (cdr sub-item*.des))
-								      (make-list-type-descr (cdr sub-item*.des))
-								    <null>-ctd)))))
+	      (super-and-sub? (pair-type-descr.cdr-des super.des) (list-type-descr.cdr sub.des)))))
 
-      ;;No list-of because a list-of may be empty.
+      ;;Always false with LIST-OF as SUB.DES, because a LIST-OF may be empty.
+      ;;
+      ;;(super-and-sub? (pair <number> <null>) (list-of <fixnum>))	=> #f
+      (list-of-type-descr?	#f)
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
@@ -559,27 +601,30 @@
   (define (%matching-super/pair-of-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
       (pair-type-descr?
+       ;;(super-and-sub? (pair-of <number>) (pair <fixnum> <fixnum>))	=> #t
        (let ((super-item.des (pair-of-type-descr.item-des super.des)))
 	 (and (super-and-sub? super-item.des (pair-type-descr.car-des sub.des))
 	      (super-and-sub? super-item.des (pair-type-descr.cdr-des sub.des)))))
 
       (pair-of-type-descr?
+       ;;(super-and-sub? (pair-of <number>) (pair-of <fixnum>))	=> #t
        (super-and-sub? (pair-of-type-descr.item-des super.des)
 		       (pair-of-type-descr.item-des sub.des)))
 
       (list-type-descr?
+       ;;(super-and-sub? (pair-of <list>) (list <list> <fixnum>))	=> #t
+       ;;(super-and-sub? (pair-of (or <number> <list>))
+       ;;                (list <fixnum> <list>))		=> #t
        (let ((super-item.des (pair-of-type-descr.item-des super.des)))
-	 (list-type-descr.for-all sub.des (lambda (sub-item.des)
-					    (super-and-sub? super-item.des sub-item.des)))))
+	 (and (super-and-sub? super-item.des (list-type-descr.car sub.des))
+	      (super-and-sub? super-item.des (list-type-descr.cdr sub.des)))))
 
-      (list-of-type-descr?
-       ;;(super-and-sub? (pair-of <fixnum>) (list-of <fixnum>))	=> #f
-       (let ((super-item.des (pair-of-type-descr.item-des super.des)))
-	 (and
-	  ;;for the car
-	  (super-and-sub? super-item.des (list-of-type-descr.item-des sub.des))
-	  ;;for the cdr
-	  (super-and-sub? super-item.des sub.des))))
+      ;;Always false with LIST-OF as SUB.DES, because a LIST-OF may be empty.
+      ;;
+      ;;(super-and-sub? (pair-of <list>) (list-of <list>))	=> #f
+      ;;(super-and-sub? (pair-of (or <number> <list>))
+      ;;                (list-of <fixnum>))			=> #f
+      (list-of-type-descr?	#f)
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
@@ -589,28 +634,28 @@
   (define (%matching-super/list-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
       (pair-type-descr?
-       (let ((super-item*.des (list-type-descr.item-des* super.des)))
-	 (and (super-and-sub? (car super-item*.des) (pair-type-descr.car-des sub.des))
-	      (super-and-sub? (make-list-type-descr (cdr super-item*.des))
-			      (pair-type-descr.cdr-des sub.des)))))
+       ;;(super-and-sub? (list <number>) (pair <number> <null>))	=> #t
+       (and (super-and-sub? (list-type-descr.car super.des) (pair-type-descr.car-des sub.des))
+	    (super-and-sub? (list-type-descr.cdr super.des) (pair-type-descr.cdr-des sub.des))))
 
       (pair-of-type-descr?
-       (let ((super-item*.des (list-type-descr.item-des* super.des)))
-	 (let ((sub-item.des (pair-of-type-descr.item-des sub.des)))
-	   (and (super-and-sub? (car super-item*.des) sub-item.des)
-		(super-and-sub? (if (pair? (cdr super-item*.des))
-				    (make-list-type-descr (cdr super-item*.des))
-				  <null>-ctd)
-				sub-item.des)))))
+       ;;(super-and-sub? (list <list>) (pair-of <list>))	=> #t
+       (let ((sub-item.des (pair-of-type-descr.item-des sub.des)))
+	 (and (super-and-sub? (list-type-descr.car super.des) sub-item.des)
+	      (super-and-sub? (list-type-descr.cdr super.des) sub-item.des))))
 
       (list-type-descr?
+       ;;(super-and-sub? (list <number>) (list <fixnum>))	=> #t
        (and (= (list-type-descr.length super.des)
 	       (list-type-descr.length sub.des))
-	    (for-all object-type-descr.matching-super-and-sub?
+	    (for-all super-and-sub?
 	      (list-type-descr.item-des* super.des)
 	      (list-type-descr.item-des* sub.des))))
 
-      ;;No list-of because a list-of may be empty.
+      ;;Always false with LIST-OF as SUB.DES, because a LIST-OF may be empty.
+      ;;
+      ;;(super-and-sub? (list <number>) (list-of <fixnum>))	=> #f
+      (list-of-type-descr?	#f)
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
@@ -620,23 +665,30 @@
   (define (%matching-super/list-of-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
       (pair-type-descr?
+       ;;(super-and-sub? (list-of <number>) (pair <fixnum> <null>))	=> #t
+       ;;(super-and-sub? (list-of <number>)
+       ;;                (pair <fixnum> (list-of <fixnum>)))		=> #t
        (let ((super-item.des (list-of-type-descr.item-des super.des)))
 	 (and (super-and-sub? super-item.des (pair-type-descr.car-des sub.des))
 	      (super-and-sub? super.des      (pair-type-descr.cdr-des sub.des)))))
 
       (pair-of-type-descr?
-       (let ((super-item.des	(list-of-type-descr.item-des super.des))
-	     (sub-item.des	(pair-of-type-descr.item-des sub.des)))
-	 (and (super-and-sub? super-item.des sub-item.des)
+       ;;(super-and-sub? (list-of <list>) (pair-of <list>))	=> #t
+       (let ((sub-item.des (pair-of-type-descr.item-des sub.des)))
+	 (and (super-and-sub? (list-of-type-descr.item-des super.des) sub-item.des)
 	      (object-type-descr.list-type-descr? sub-item.des))))
 
       (list-type-descr?
+       ;;(super-and-sub? (list-of <number>) (list <fixnum> <flonum>))	=> #t
        (let ((super-item.des (list-of-type-descr.item-des super.des)))
-	 (list-type-descr.for-all sub.des (lambda (sub-item.des)
-					    (super-and-sub? super-item.des sub-item.des)))))
+	 (list-type-descr.for-all sub.des
+	   (lambda (sub-item.des)
+	     (super-and-sub? super-item.des sub-item.des)))))
 
       (list-of-type-descr?
-       (super-and-sub? (list-of-type-descr.item-des super.des) (list-of-type-descr.item-des sub.des)))
+       ;;(super-and-sub? (list-of <number>) (list-of <fixnum>))		=> #t
+       (super-and-sub? (list-of-type-descr.item-des super.des)
+		       (list-of-type-descr.item-des   sub.des)))
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))

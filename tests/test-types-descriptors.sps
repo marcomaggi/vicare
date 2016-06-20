@@ -2942,12 +2942,15 @@
 ;;; pair-of/list
 
   (doit	(pair-of <list>)		(list <list> <list>)	=> exact-match)
+  (doit	(pair-of <list>)		(list <list> <fixnum>)	=> exact-match)
   (doit	(pair-of (or <number> <list>))	(list <fixnum> <list>)	=> exact-match)
 
 ;;; pair-of/list-of
 
   (doit	(pair-of <number>)		(list-of <fixnum>)	=> no-match)
   (doit	(pair-of <number>)		(list-of <string>)	=> no-match)
+  (doit (pair-of <list>)		(list-of <list>)	=> possible-match)
+  (doit (pair-of (or <number> <list>))	(list-of <fixnum>)	=> possible-match)
 
 ;;; --------------------------------------------------------------------
 ;;; list
