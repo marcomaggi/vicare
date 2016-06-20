@@ -1136,10 +1136,8 @@
 	 ;;(matching <list> <top>)			=> possible-match
 	 (cond-with-predicates sub.des
 	   (<pair>-ctd?		#t)
-	   (pair-type-descr?
-	    (super-and-sub? <list>-ctd (pair-type-descr.cdr-des sub.des)))
-	   (pair-of-type-descr?
-	    (super-and-sub? <list>-ctd (pair-of-type-descr.item-des sub.des)))
+	   (pair-type-descr?	(pair-type-descr?/list    sub.des))
+	   (pair-of-type-descr?	(pair-of-type-descr?/list sub.des))
 	   (else
 	    (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
 
@@ -1154,10 +1152,8 @@
 	 (cond-with-predicates sub.des
 	   (<list>-ctd?		#t)
 	   (<pair>-ctd?		#t)
-	   (pair-type-descr?
-	    (super-and-sub? <list>-ctd (pair-type-descr.cdr-des sub.des)))
-	   (pair-of-type-descr?
-	    (super-and-sub? <list>-ctd (pair-of-type-descr.item-des sub.des)))
+	   (pair-type-descr?	(pair-type-descr?/list    sub.des))
+	   (pair-of-type-descr?	(pair-of-type-descr?/list sub.des))
 	   (list-of-type-descr?	#t)
 	   (else
 	    (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
@@ -1166,44 +1162,54 @@
 	 ;;(matching <null> <list>)			=> possible-match
 	 ;;(matching <null> (list-of <fixnum>))		=> possible-match
 	 ;;(matching <null> (alist <top> <top>))	=> possible-match
-	 (or (or-with-predicates sub.des <list>-ctd? list-of-type-descr?)
+	 (or (or-with-predicates sub.des
+	       <list>-ctd? list-of-type-descr?)
 	     (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des)))
 
 	(<nevector>-ctd?
 	 ;;(matching <nevector> <vector>)		=> possible-match
 	 ;;(matching <nevector> (vector-of <fixnum>))	=> possible-match
-	 (or (or-with-predicates sub.des vector-of-type-descr? <vector>-ctd?)
+	 (or (or-with-predicates sub.des
+	       vector-of-type-descr? <vector>-ctd?)
 	     (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des)))
 
 	(<empty-vector>-ctd?
 	 ;;(matching <empty-vector> <vector>)		=> possible-match
 	 ;;(matching <empty-vector> (vector-of <fixnum>)) => possible-match
-	 (or (or-with-predicates sub.des vector-of-type-descr? <vector>-ctd?)
+	 (or (or-with-predicates sub.des
+	       vector-of-type-descr? <vector>-ctd?)
 	     (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des)))
 
 	(<pair>-ctd?
 	 ;;(matching <pair> <list>)			=> possible-match
 	 ;;(matching <pair> (list-of <fixnum>))		=> possible-match
 	 ;;(matching <pair> (alist <top> <top>))	=> possible-match
-	 (or (or-with-predicates sub.des <list>-ctd? list-of-type-descr?)
+	 (or (or-with-predicates sub.des
+	       <list>-ctd? list-of-type-descr?)
 	     (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des)))
 
 	(else
 	 (cond-with-predicates sub.des
 	   (union-type-descr?
 	    ;;(matching <fixnum> (or <fixnum> <string>))	=> possible-match
-	    (union-type-descr.exists sub.des (lambda (sub-item.des)
-					       (object-type-descr.matching-super-and-sub? super.des sub-item.des))))
+	    (union-type-descr.exists sub.des
+	      (lambda (sub-item.des)
+		(object-type-descr.matching-super-and-sub? super.des sub-item.des))))
+
 	   (intersection-type-descr?
 	    ;;(matching <fixnum> (and <positive> <exact-integer>))
-	    (intersection-type-descr.for-all sub.des (lambda (sub-item.des)
-						       (object-type-descr.matching-super-and-sub? super.des sub-item.des))))
+	    (intersection-type-descr.for-all sub.des
+	      (lambda (sub-item.des)
+		(object-type-descr.matching-super-and-sub? super.des sub-item.des))))
+
 	   (complement-type-descr?
 	    (%compatible/super-core/sub-complement super.des sub.des))
 
 	   (ancestor-of-type-descr?
-	    (ancestor-of-type-descr.exists sub.des (lambda (sub-ancestor.des)
-						     (object-type-descr=? super.des sub-ancestor.des))))
+	    ;;(matching <integer> (ancestor-or <fixnum>))	=> possible-match
+	    (ancestor-of-type-descr.exists sub.des
+	      (lambda (sub-ancestor.des)
+		(object-type-descr=? super.des sub-ancestor.des))))
 
 	   (else
 	    ;;(matching <fixnum> <exact-integer>)
@@ -1273,6 +1279,10 @@
 
     (define (%compatible-super/record-type-descriptor super.des sub.des)
       (cond-with-predicates sub.des
+	;;This  branch  includes the  case  of  SUPER.DES  and SUB.DES  being  simple
+	;;condition object types.
+	(record-type-descriptor?
+	 ($rtd-subtype? super.des sub.des))
 	(complement-type-descr?
 	 (%compatible/super-record/sub-complement super.des sub.des))
 	(else
