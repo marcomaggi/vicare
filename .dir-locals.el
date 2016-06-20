@@ -75,6 +75,7 @@
      (eval . (put 'vector-type-descr.for-all						'scheme-indent-function 1))
      (eval . (put 'ancestor-of-type-descr.exists					'scheme-indent-function 1))
      (eval . (put 'ancestor-of-type-descr.for-all					'scheme-indent-function 1))
+     (eval . (put 'enumeration-type-descr.for-all					'scheme-indent-function 1))
      (eval . (put 'with-object-type-syntactic-binding					'scheme-indent-function 1))
      (eval . (put 'with-pending-library-request						'scheme-indent-function 1))
      (eval . (put 'with-who								'scheme-indent-function 1))

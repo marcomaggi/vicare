@@ -3178,7 +3178,8 @@
   (doit	(or <fixnum> <flonum>)	<flonum>	=> exact-match)
   (doit	(or <fixnum> <flonum>)	<string>	=> no-match)
 
-  (doit	(or <fixnum> <flonum>)	(or <fixnum> <flonum>)	=> exact-match)
+  (doit	(or <fixnum> <flonum>)	(or <fixnum> <flonum>)		=> exact-match)
+  (doit	(or <number> <string>)	(and <fixnum> <positive>)	=> exact-match)
 
 ;;; --------------------------------------------------------------------
 ;;; intersection

@@ -203,7 +203,7 @@
 
    ((compound-condition-type-descr? super.des)
     (and (compound-condition-type-descr? sub.des)
-	 (compound-condition-type-descr.set=? super.des sub.des)))
+	 (compound-condition-type-descr=? super.des sub.des)))
 
    ((compound-condition-type-descr? sub.des)
     #f)
@@ -212,7 +212,7 @@
 
    ((enumeration-type-descr? super.des)
     (and (enumeration-type-descr? sub.des)
-	 (enumeration-type-descr.set=? super.des sub.des)))
+	 (enumeration-type-descr=? super.des sub.des)))
 
    ((enumeration-type-descr? sub.des)
     #f)
@@ -244,7 +244,7 @@
 
    ((union-type-descr? super.des)
     (and (union-type-descr? sub.des)
-	 (union-type-descr.set=? super.des sub.des)))
+	 (union-type-descr=? super.des sub.des)))
 
    ((union-type-descr? sub.des)
     #f)
@@ -253,7 +253,7 @@
 
    ((intersection-type-descr? super.des)
     (and (intersection-type-descr? sub.des)
-	 (intersection-type-descr.set=? super.des sub.des)))
+	 (intersection-type-descr=? super.des sub.des)))
 
    ((intersection-type-descr? sub.des)
     #f)
@@ -697,16 +697,15 @@
 
   (define (%matching-super/vector-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
+      ;;(super-and-sub? (vector <number>) (vector <fixnum>))	=> #t
       (vector-type-descr?
-       (let ((super-item*.des (vector-type-descr.item-des* super.des)))
-	 (and (= (vector-type-descr.length super.des)
-		 (vector-type-descr.length   sub.des))
-	      (for-all (lambda (super-item.des sub-item.des)
-			 (super-and-sub? super-item.des sub-item.des))
-		super-item*.des
-		(vector-type-descr.item-des* sub.des)))))
+       (and (= (vector-type-descr.length super.des)
+	       (vector-type-descr.length   sub.des))
+	    (for-all super-and-sub?
+	      (vector-type-descr.item-des* super.des)
+	      (vector-type-descr.item-des*   sub.des))))
 
-      ;;No vector-of because a vector-of may be empty.
+      ;;No VECTOR-OF because a VECTOR-OF may be empty.
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
@@ -716,14 +715,16 @@
   (define (%matching-super/vector-of-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
       (vector-type-descr?
+       ;;(super-and-sub? (vector-of <number>) (vector <fixnum>))	=> #t
        (let ((super-item.des (vector-of-type-descr.item-des super.des)))
-	 (for-all (lambda (sub-item.des)
-		    (super-and-sub? super-item.des sub-item.des))
-	   (vector-type-descr.item-des* sub.des))))
+	 (vector-type-descr.for-all sub.des
+	   (lambda (sub-item.des)
+	     (super-and-sub? super-item.des sub-item.des)))))
 
       (vector-of-type-descr?
+       ;;(super-and-sub? (vector-of <number>) (vector-of <fixnum>))	=> #t
        (super-and-sub? (vector-of-type-descr.item-des super.des)
-		       (vector-of-type-descr.item-des sub.des)))
+		       (vector-of-type-descr.item-des   sub.des)))
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
@@ -733,6 +734,8 @@
   (define (%matching-super/compound-condition-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
       (compound-condition-type-descr?
+       ;;(super-and-sub? (compound &who &message)
+       ;;                (compound &who &message))	=> #t
        (compound-condition-type-descr.for-all super.des
 	 (lambda (super-component.des)
 	   (compound-condition-type-descr.exists sub.des
@@ -747,11 +750,11 @@
   (define (%matching-super/enumeration-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
       (enumeration-type-descr?
-       ;; (super-and-sub? (enumeration ciao hello) (enumeration ciao)) => #t
+       ;;(super-and-sub? (enumeration ciao hello) (enumeration ciao)) => #t
        (let ((super*.sym (enumeration-type-descr.symbol* super.des)))
-	 (for-all (lambda (sub.sym)
-		    (memq sub.sym super*.sym))
-	   (enumeration-type-descr.symbol* sub.des))))
+	 (enumeration-type-descr.for-all sub.des
+	   (lambda (sub.sym)
+	     (memq sub.sym super*.sym)))))
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
@@ -771,10 +774,10 @@
   (define (%matching-super/hashtable-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
       (hashtable-type-descr?
-       (and (object-type-descr.matching-super-and-sub? (hashtable-type-descr.key-des super.des)
-						       (hashtable-type-descr.key-des sub.des))
-	    (object-type-descr.matching-super-and-sub? (hashtable-type-descr.val-des super.des)
-						       (hashtable-type-descr.val-des sub.des))))
+       ;;(super-and-sub? (hashtable <number> <string>)
+       ;;                (hashtable <fixnum> <string>))		=> #t
+       (and (super-and-sub? (hashtable-type-descr.key-des super.des) (hashtable-type-descr.key-des sub.des))
+	    (super-and-sub? (hashtable-type-descr.val-des super.des) (hashtable-type-descr.val-des sub.des))))
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
@@ -784,34 +787,40 @@
   (define (%matching-super/union-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
       (union-type-descr?
-       (let ((super-item*.des (union-type-descr.item-des* super.des))
-	     (sub-item*.des   (union-type-descr.item-des* super.des)))
-	 (for-all (lambda (super-item.des)
-		    (exists (lambda (sub-item.des)
-			      (object-type-descr.matching-super-and-sub? super-item.des sub-item.des))
-		      sub-item*.des))
-	   super-item*.des)))
+       ;;(super-and-sub? (or <number> <string>)
+       ;;                (or <fixnum> <string>))	=> #t
+       (union-type-descr.for-all super.des
+	 (lambda (super-item.des)
+	   (union-type-descr.exists sub.des
+	     (lambda (sub-item.des)
+	       (super-and-sub? super-item.des sub-item.des))))))
 
       (else
-       (union-type-descr.exists super.des (lambda (super-item.des)
-					    (super-and-sub? super-item.des sub.des))))))
+       ;;(super-and-sub? (or <number> <string>)
+       ;;                (and <fixnum> <positive>))	=> #t
+       (union-type-descr.exists super.des
+	 (lambda (super-item.des)
+	   (super-and-sub? super-item.des sub.des))))))
 
 ;;; --------------------------------------------------------------------
 
   (define (%matching-super/intersection-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
       (intersection-type-descr?
-       (let ((super-item*.des (intersection-type-descr.item-des* super.des))
-	     (sub-item*.des   (intersection-type-descr.item-des* super.des)))
-	 (for-all (lambda (super-item.des)
-		    (for-all (lambda (sub-item.des)
-			       (super-and-sub? super-item.des sub-item.des))
-		      sub-item*.des))
-	   super-item*.des)))
+       ;;(super-and-sub? (and <number> <positive>)
+       ;;                (and <fixnum> <positive>))	=> #t
+       (intersection-type-descr.for-all super.des
+	 (lambda (super-item.des)
+	   (intersection-type-descr.for-all sub.des
+	     (lambda (sub-item.des)
+	       (super-and-sub? super-item.des sub-item.des))))))
 
       (else
-       (intersection-type-descr.for-all super.des (lambda (super-item.des)
-						    (super-and-sub? super-item.des sub.des))))))
+       ;;(super-and-sub? (and <number> <positive>)
+       ;;                (or <positive-fixnum> <positive-bignum>))	=> #t
+       (intersection-type-descr.for-all super.des
+	 (lambda (super-item.des)
+	   (super-and-sub? super-item.des sub.des))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -868,8 +877,8 @@
        ;;(matching (ancestor-of <alpha>) (ancestor-of <alpha>))		=> exact-match
        ;;(matching (ancestor-of <alpha>) (ancestor-of <beta>))		=> possible-match
        ;;(matching (ancestor-of <beta>)  (ancestor-of <alpha>))		=> exact-match
-       (object-type-descr.matching-super-and-sub? (ancestor-of-type-descr.item-des sub.des)
-						  (ancestor-of-type-descr.item-des super.des)))
+       (super-and-sub? (ancestor-of-type-descr.item-des sub.des)
+		       (ancestor-of-type-descr.item-des super.des)))
 
       (complement-type-descr?
        ;;(define-record-type <alpha>)
@@ -884,8 +893,9 @@
        #f)
 
       (else
-       (ancestor-of-type-descr.exists super.des (lambda (ancestor-super.des)
-						  (object-type-descr=? ancestor-super.des sub.des))))))
+       (ancestor-of-type-descr.exists super.des
+	 (lambda (ancestor-super.des)
+	   (object-type-descr=? ancestor-super.des sub.des))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -893,21 +903,21 @@
     (cond-with-predicates sub.des
       (union-type-descr?
        (union-type-descr.for-all sub.des
-				 (lambda (sub-item.des)
-				   (super-and-sub? super.des sub-item.des))))
+	 (lambda (sub-item.des)
+	   (super-and-sub? super.des sub-item.des))))
 
       (intersection-type-descr?
        (intersection-type-descr.for-all sub.des
-					(lambda (sub-item.des)
-					  (super-and-sub? super.des sub-item.des))))
+	 (lambda (sub-item.des)
+	   (super-and-sub? super.des sub-item.des))))
 
       (complement-type-descr?
        #f)
 
       (ancestor-of-type-descr?
        (ancestor-of-type-descr.for-all sub.des
-				       (lambda (sub-ancestor.des)
-					 (object-type-descr=? super.des sub-ancestor.des))))
+	 (lambda (sub-ancestor.des)
+	   (object-type-descr=? super.des sub-ancestor.des))))
 
       (else #f)))
 
@@ -966,11 +976,15 @@
 	 (%compatible-super/core-type-descr super.des sub.des))
 
 	(union-type-descr?
-	 (union-type-descr.exists super.des (lambda (super-item.des)
-					      (super-and-sub? super-item.des sub.des))))
+	 (union-type-descr.exists super.des
+	   (lambda (super-item.des)
+	     (super-and-sub? super-item.des sub.des))))
+
 	(intersection-type-descr?
-	 (intersection-type-descr.for-all super.des (lambda (super-item.des)
-						      (super-and-sub? super-item.des sub.des))))
+	 (intersection-type-descr.for-all super.des
+	   (lambda (super-item.des)
+	     (super-and-sub? super-item.des sub.des))))
+
 	(complement-type-descr?
 	 (%compatible/super-complement/sub-core super.des sub.des))
 
@@ -1045,6 +1059,10 @@
 	    ;;(matching (hashtable <top> <top>) <struct>)	=> possible-match
 	    (or-with-predicates super.des
 	      record-type-descriptor? struct-type-descriptor? hashtable-type-descr?))
+
+	   (<record>-ctd?
+	    (or-with-predicates super.des
+	      record-type-descriptor?))
 
 	   (else
 	    (object-type-descr.matching-super-and-sub? sub.des super.des))))))

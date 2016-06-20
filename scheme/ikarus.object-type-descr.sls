@@ -356,8 +356,8 @@
 	  (length (compound-condition-type-descr.component-des* des))
 	(<compound-condition-type-descr>-memoised-length-set! des len))))
 
-(define* (compound-condition-type-descr.set=? {des1 compound-condition-type-descr?}
-					      {des2 compound-condition-type-descr?})
+(define* (compound-condition-type-descr=? {des1 compound-condition-type-descr?}
+					  {des2 compound-condition-type-descr?})
   ;;Return true  if the two compound  conditions have the same  components, otherwise
   ;;return false.
   ;;
@@ -429,8 +429,8 @@
 	  (length (enumeration-type-descr.symbol* des))
 	(<enumeration-type-descr>-memoised-length-set! des len))))
 
-(define* (enumeration-type-descr.set=? {des1 enumeration-type-descr?}
-				       {des2 enumeration-type-descr?})
+(define* (enumeration-type-descr=? {des1 enumeration-type-descr?}
+				   {des2 enumeration-type-descr?})
   ;;Return  true if  the two  enumerations have  the same  symbols, otherwise  return
   ;;false.
   ;;
@@ -451,6 +451,9 @@
 		 #f))
 	   ;;There are no more component1: are there more component2?
 	   (null? component2*.des)))))
+
+(define* (enumeration-type-descr.for-all {des enumeration-type-descr?} {proc procedure?})
+  (for-all proc (enumeration-type-descr.symbol* des)))
 
 
 ;;;; compound type descriptors: closure
@@ -735,7 +738,7 @@
 	  (length (union-type-descr.item-des* des))
 	(<union-type-descr>-memoised-length-set! des len))))
 
-(define* (union-type-descr.set=? {des1 union-type-descr?} {des2 union-type-descr?})
+(define* (union-type-descr=? {des1 union-type-descr?} {des2 union-type-descr?})
   ;;Return true if the two unions have the same components, otherwise return false.
   ;;
   (and (= (union-type-descr.length des1)
@@ -797,7 +800,7 @@
 	  (length (intersection-type-descr.item-des* des))
 	(<intersection-type-descr>-memoised-length-set! des len))))
 
-(define* (intersection-type-descr.set=? {des1 intersection-type-descr?} {des2 intersection-type-descr?})
+(define* (intersection-type-descr=? {des1 intersection-type-descr?} {des2 intersection-type-descr?})
   ;;Return true if the two intersections have the same components, otherwise return false.
   ;;
   (and (= (intersection-type-descr.length des1)
