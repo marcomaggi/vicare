@@ -31,25 +31,23 @@
      make-descriptors-signature			descriptors-signature?
      descriptors-signature.object-type-descrs
      descriptors-signature=?
-     descriptors-signature.matching-super-and-sub?
-     descriptors-signature.compatible-super-and-sub?
+     descriptors-signature.super-and-sub?
      descriptors-signature.match-formals-against-operands
 
      <lambda-descriptors>
      <lambda-descriptors>-rtd			<lambda-descriptors>-rcd
-     make-lambda-descriptors			lambda-descriptors?
+     make-lambda-descriptors			lambda-descriptors?		not-empty-list-of-lambda-descriptors?
      lambda-descriptors.retvals			lambda-descriptors.argvals
      lambda-descriptors=?
-     lambda-descriptors.match-super-and-sub
+     lambda-descriptors.super-and-sub?
      lambda-descriptors.match-formals-against-operands
-     not-empty-list-of-lambda-descriptors?
 
      <case-lambda-descriptors>
      <case-lambda-descriptors>-rtd		<case-lambda-descriptors>-rcd
      make-case-lambda-descriptors		case-lambda-descriptors?
      case-lambda-descriptors.clause-signature*
      case-lambda-descriptors=?
-     case-lambda-descriptors.match-super-and-sub
+     case-lambda-descriptors.super-and-sub?
      case-lambda-descriptors.match-formals-against-operands
 
      #| end of exports |# )
@@ -58,6 +56,7 @@
 ;;;; object-type descriptor signatures
 
 (define-record-type (<descriptors-signature> make-descriptors-signature descriptors-signature?)
+  (nongenerative vicare:type-descriptors:<descriptors-signature>)
   (sealed #t)
   (fields
     (immutable object-type-descrs	descriptors-signature.object-type-descrs)
@@ -89,6 +88,7 @@
 ;;;; descriptors signatures for lambda procedures
 
 (define-record-type (<lambda-descriptors> make-lambda-descriptors lambda-descriptors?)
+  (nongenerative vicare:type-descriptors:<lambda-descriptors>)
   (sealed #t)
   (fields
     (immutable retvals	lambda-descriptors.retvals)
@@ -116,42 +116,77 @@
 		       (loop (cdr obj)))
 		(null? obj))))))
 
+;;; --------------------------------------------------------------------
+
 (define* (lambda-descriptors=? {D1 lambda-descriptors?} {D2 lambda-descriptors?})
   (and (descriptors-signature=? (lambda-descriptors.retvals D1)
 				(lambda-descriptors.retvals D2))
        (descriptors-signature=? (lambda-descriptors.argvals D1)
 				(lambda-descriptors.argvals D2))))
 
-(define* (lambda-descriptors.match-super-and-sub {D1 lambda-descriptors?} {D2 lambda-descriptors?})
-  (let ((retvals-state (descriptors-signature.match-formals-against-operands (lambda-descriptors.retvals D1)
-									     (lambda-descriptors.retvals D2)))
-	(argvals-state (descriptors-signature.match-formals-against-operands (lambda-descriptors.argvals D1)
-									     (lambda-descriptors.argvals D2))))
-    (case retvals-state
-      ((exact-match)
-       (case argvals-state
-	 ((exact-match)
-	  'exact-match)
-	 ((possible-match)
-	  'possible-match)
-	 (else
-	  'no-match)))
-      ((possible-match)
-       (case argvals-state
-	 ((exact-match possible-match)
-	  'possible-match)
-	 (else
-	  'no-match)))
-      (else
-       'no-match))))
+(define* (lambda-descriptors.super-and-sub? {super.des lambda-descriptors?} {sub.des lambda-descriptors?})
+  ;;Compare two closure's clauses type signatures to determine if they are super-type
+  ;;and sub-type.  Return a boolean, true if they are super and sub.
+  ;;
+  ;;This happens when a  formal argument (super.des) must be a closure  and the operand (D2)
+  ;;is a closure.  Example:
+  ;;
+  ;;   (define (fun {D2 (lambda (<fixnum>) => (<number>))})
+  ;;     ---)
+  ;;
+  ;;   (define ({D2 <fixnum>} {A <number>})
+  ;;     ---)
+  ;;
+  ;;   (type-of D2)	=> (lambda (<number>) => (<fixnum>))
+  ;;   (fun D2)
+  ;;
+  ;;We want:
+  ;;
+  ;;* The formal's argvals to be sub-types of the operands's argvals.
+  ;;
+  ;;* The formal's retvals to be super-types of the operand's retvals.
+  ;;
+  ;;Like this:
+  ;;
+  ;;	   (super-and-sub? (lambda (<fixnum>) => (<number>))
+  ;;	                   (lambda (<number>) => (<fixnum>)))	=> #t
+  ;;
+  ;;	   (super-and-sub? (lambda (<number>) => (<string>))
+  ;;	                   (lambda (<fixnum>) => (<string>)))	=> #f
+  ;;
+  ;;	   (super-and-sub? (lambda (<string>) => (<fixnum>))
+  ;;	                   (lambda (<string>) => (<number>)))	=> #f
+  ;;
+  (and (descriptors-signature.super-and-sub? (lambda-descriptors.retvals super.des) (lambda-descriptors.retvals   sub.des))
+       (descriptors-signature.super-and-sub? (lambda-descriptors.argvals   sub.des) (lambda-descriptors.argvals super.des))))
 
 (define* (lambda-descriptors.match-formals-against-operands {formals.des lambda-descriptors?} {operands.des descriptors-signature?})
+  ;;Compare  formals' and  operands' type  signatures to  determine if  the closure's
+  ;;clause represented by "<lambda-descriptors>" matches the operands.  Return one of
+  ;;the symbols: exact-match, possible-match, no-match.
+  ;;
+  ;;In a function application, we want the function's arguments to be super-types and
+  ;;the operands to be sub-types.  We do not care about the return values' types.
+  ;;
+  ;;   (match-formals-against-operands?
+  ;;      (lambda (<number> <struct>) => (<string>))
+  ;;      (<fixnum> <record>))				=> exact-match
+  ;;
+  ;;   (match-formals-against-operands?
+  ;;      (lambda (<fixnum> <struct>) => (<string>))
+  ;;      (<number> <record>))				=> possible-match
+  ;;
+  ;;   (match-formals-against-operands?
+  ;;      (lambda (<fixnum> <struct>) => (<string>))
+  ;;      (<string> <record>))				=> no-match
+  ;;
   (descriptors-signature.match-formals-against-operands (lambda-descriptors.argvals formals.des) operands.des))
 
 
 ;;;; descriptors signatures for case-lambda procedures
 
 (define-record-type (<case-lambda-descriptors> make-case-lambda-descriptors case-lambda-descriptors?)
+  (nongenerative vicare:type-descriptors:<case-lambda-descriptors>)
   (sealed #t)
   (fields
     (immutable clause-signature*	case-lambda-descriptors.clause-signature*)
@@ -173,64 +208,43 @@
 ;;; --------------------------------------------------------------------
 
 (define* (case-lambda-descriptors=? {D1 case-lambda-descriptors?} {D2 case-lambda-descriptors?})
-  (let ((clause-signature2* (case-lambda-descriptors.clause-signature* D2)))
-    (for-all (lambda (clause-signature1)
-	       (exists (lambda (clause-signature2)
-			 (lambda-descriptors=? clause-signature1 clause-signature2))
-		 clause-signature2*))
-      (case-lambda-descriptors.clause-signature* D1))))
+  (let super-loop ((clause1*.des (case-lambda-descriptors.clause-signature* D1))
+		   (clause2*.des (case-lambda-descriptors.clause-signature* D2)))
+    (if (pair? clause1*.des)
+	(let sub-loop ((clause2*.des	clause2*.des)
+		       (leftover2*.des	'()))
+	  (if (pair? clause2*.des)
+	      (if (lambda-descriptors=? (car clause1*.des) (car clause2*.des))
+		  ;;We discard this CLAUSE2.  Go to the outer loop with the leftovers
+		  ;;as CLAUSE2*.
+		  (super-loop (cdr clause1*.des) (append (cdr clause2*.des) leftover2*.des))
+		;;We add this CLAUSE2 to the leftovers.
+		(sub-loop (cdr clause2*.des) (cons (car clause2*.des) leftover2*.des)))
+	    ;;There are more CLAUSE2, but no more CLAUSE1.
+	    #f))
+      ;;There are no more CLAUSE1: are there more CLAUSE2?.
+      (null? clause2*.des))))
 
-(define* (case-lambda-descriptors.match-super-and-sub {super.des case-lambda-descriptors?} {sub.des case-lambda-descriptors?})
-  ;;For every clause in the super there must be a matching clause in the sub.
+(define* (case-lambda-descriptors.super-and-sub? {super.des case-lambda-descriptors?} {sub.des case-lambda-descriptors?})
+  ;;Compare two  closure's type signatures  to determine  if they are  super-type and
+  ;;sub-type.  Return a boolean, true if they are super and sub.  For every clause in
+  ;;the super there must be a matching clause in the sub.
   ;;
-  ;;Examples:
-  ;;
-  ;;   (type-descriptor-matching-super-and-sub?
-  ;;     (lambda (<fixnum>) => (<string>))
-  ;;     (case-lambda
-  ;;       ((<fixnum>) => (<string>))
-  ;;       ((<flonum>) => (<string>))))		=> #t
-  ;;
-  ;;   (type-descriptor-matching-super-and-sub?
-  ;;     (case-lambda
-  ;;       ((<fixnum>) => (<string>))
-  ;;       ((<flonum>) => (<string>)))
-  ;;     (lambda (<fixnum>) => (<string>)))		=> #f
-  ;;
-  ;;   (type-descriptor-matching-super-and-sub?
-  ;;     (case-lambda
-  ;;       ((<fixnum>) => (<string>))
-  ;;       ((<flonum>) => (<string>)))
-  ;;     (lambda (<flonum>) => (<string>)))		=> #f
-  ;;
-  (let ((super.clause*	(case-lambda-descriptors.clause-signature* super.des))
-	(sub.clause*	(case-lambda-descriptors.clause-signature* sub.des)))
-    (returnable
-      (fold-left
-	  (lambda (outer-state super.clause)
-	    (let ((inner-state (returnable
-				 (fold-left
-				     (lambda (inner-state sub.clause)
-				       (case (lambda-descriptors.match-super-and-sub super.clause sub.clause)
-					 ;;Found an  exactly matching  clause: return
-					 ;;now.
-					 ((exact-match)		(return 'exact-match))
-					 ;;Found a possibly  matching clause: set the
-					 ;;state.
-					 ((possible-match)	'possible-match)
-					 ;;This  clause  does  not  match:  keep  the
-					 ;;previous state.
-					 (else			inner-state)))
-				   'no-match sub.clause*))))
-	      (case inner-state
-		((exact-match)		outer-state)
-		((possible-match)	'possible-match)
-		(else			(return 'no-match)))))
-	'exact-match super.clause*))))
+  (let ((super-clause-signature*	(case-lambda-descriptors.clause-signature* super.des))
+	(sub-clause-signature*		(case-lambda-descriptors.clause-signature* sub.des)))
+    (for-all (lambda (super-clause-signature)
+	       (exists (lambda (sub-clause-signature)
+			 (lambda-descriptors.super-and-sub? super-clause-signature sub-clause-signature))
+		 sub-clause-signature*))
+      super-clause-signature*)))
 
 ;;; --------------------------------------------------------------------
 
 (define* (case-lambda-descriptors.match-formals-against-operands {formals.des case-lambda-descriptors?} {operands.des descriptors-signature?})
+  ;;Compare formals' and operands' type signatures to determine if a closure's clause
+  ;;exists  that matches  the  operands.   Return one  of  the symbols:  exact-match,
+  ;;possible-match, no-match.
+  ;;
   (returnable
     (fold-left (lambda (state formals.clause-des)
 		 (case (lambda-descriptors.match-formals-against-operands formals.clause-des operands.des)
@@ -361,26 +375,15 @@
 
 ;;;; matching super-type and sub-type
 
-(define* (descriptors-signature.matching-super-and-sub? formals.sig operands.sig)
+(define* (descriptors-signature.super-and-sub? {formals.sig	descriptors-signature?}
+					       {operands.sig	descriptors-signature?})
   ;;Return true if FORMALS.SIG and OPERANDS.SIG  have the same structure and the type
   ;;in  the homologous  positions  are matching  super-type  and sub-type;  otherwise
   ;;return false.
   ;;
-  (%descriptors-signature.criterion-super-and-sub? __who__ formals.sig operands.sig
-						   object-type-descr.matching-super-and-sub?))
-
-(define* (descriptors-signature.compatible-super-and-sub? formals.sig operands.sig)
-  ;;Return true if FORMALS.SIG and OPERANDS.SIG  have the same structure and the type
-  ;;in the  homologous positions  are compatible  super-type and  sub-type; otherwise
-  ;;return false.
-  ;;
-  (%descriptors-signature.criterion-super-and-sub? __who__ formals.sig operands.sig
-						   (lambda (formal.des operand.des)
-						     (or (object-type-descr.matching-super-and-sub?   formal.des operand.des)
-							 (object-type-descr.compatible-super-and-sub? formal.des operand.des)))))
-
-(define (%descriptors-signature.criterion-super-and-sub? caller-who formals.sig operands.sig
-							 super-and-sub?)
+  (define-syntax-rule (super-and-sub? ?A ?B)
+    (object-type-descr.matching-super-and-sub? ?A ?B))
+  (define caller-who __who__)
   (let  ((formals.specs		(descriptors-signature.object-type-descrs formals.sig))
 	 (operands.specs	(descriptors-signature.object-type-descrs operands.sig)))
     (cond
@@ -543,6 +546,12 @@
 
 (module (descriptors-signature.match-formals-against-operands)
 
+  (define-syntax-rule (matching-super-and-sub? ?A ?B)
+    (object-type-descr.matching-super-and-sub? ?A ?B))
+
+  (define-syntax-rule (compatible-super-and-sub? ?A ?B)
+    (object-type-descr.compatible-super-and-sub? ?A ?B))
+
   (define* (descriptors-signature.match-formals-against-operands formals.sig operands.sig)
     ;;In the context of a closure object application to fixed operands:
     ;;
@@ -674,9 +683,9 @@
     (define (%match-formals-pair-against-operands-pair loop state
 						       formals-car.des formals-cdr.descrs
 						       operands-car.des operands-cdr.descrs)
-      (cond ((object-type-descr.matching-super-and-sub? formals-car.des operands-car.des)
+      (cond ((matching-super-and-sub? formals-car.des operands-car.des)
 	     (loop state formals-cdr.descrs operands-cdr.descrs))
-	    ((object-type-descr.compatible-super-and-sub? formals-car.des operands-car.des)
+	    ((compatible-super-and-sub? formals-car.des operands-car.des)
 	     (loop 'possible-match formals-cdr.descrs operands-cdr.descrs))
 	    (else
 	     'no-match)))
@@ -688,9 +697,9 @@
 	;;This       is      a       mutually      recursive       function      with
 	;;%MATCH-FORMALS-AGAINST-OPERANDS-LIST-OF.
 	;;
-	(cond ((object-type-descr.matching-super-and-sub? formals-car.des operand.des)
+	(cond ((matching-super-and-sub? formals-car.des operand.des)
 	       (%match-formals-against-operands-list-of formals-cdr.descrs operand.des %error-invalid-formals-signature))
-	      ((object-type-descr.compatible-super-and-sub? formals-car.des operand.des)
+	      ((compatible-super-and-sub? formals-car.des operand.des)
 	       (%match-formals-against-operands-list-of formals-cdr.descrs operand.des %error-invalid-formals-signature))
 	      (else 'no-match)))
 
@@ -731,9 +740,9 @@
 	  ;;There is an unspecified number of formals, with a known type.
 	  (<list-of-descr>
 	   (let ((formal.des (list-of-type-descr.item-des formals.descrs)))
-	     (cond ((object-type-descr.matching-super-and-sub? formal.des operand.des)
+	     (cond ((matching-super-and-sub? formal.des operand.des)
 		    'possible-match)
-		   ((object-type-descr.compatible-super-and-sub? formal.des operand.des)
+		   ((compatible-super-and-sub? formal.des operand.des)
 		    'possible-match)
 		   (else 'no-match))))
 
@@ -813,9 +822,9 @@
 	;;There is an unspecified number of rest operands, with a known type.
 	(<list-of-descr>
 	 (let ((operand.des (list-of-type-descr.item-des operands.descrs)))
-	   (cond ((object-type-descr.matching-super-and-sub? formal.des operand.des)
+	   (cond ((matching-super-and-sub? formal.des operand.des)
 		  state)
-		 ((object-type-descr.compatible-super-and-sub? formal.des operand.des)
+		 ((compatible-super-and-sub? formal.des operand.des)
 		  'possible-match)
 		 (else 'no-match))))
 
@@ -833,10 +842,10 @@
 
     (define (%match-formals-list-of-against-operands-pair state formal.des operands-car.des operands-cdr.descrs
 							  %error-invalid-operands-signature)
-      (cond ((object-type-descr.matching-super-and-sub? formal.des operands-car.des)
+      (cond ((matching-super-and-sub? formal.des operands-car.des)
 	     (%match-formals-list-of-against-operands state formal.des operands-cdr.descrs
 						      %error-invalid-operands-signature))
-	    ((object-type-descr.compatible-super-and-sub? formal.des operands-car.des)
+	    ((compatible-super-and-sub? formal.des operands-car.des)
 	     (%match-formals-list-of-against-operands 'possible-match formal.des operands-cdr.descrs
 						      %error-invalid-operands-signature))
 	    (else

@@ -240,7 +240,7 @@
   (signatures
    ((<descriptors-signature> <descriptors-signature>)	=> (<boolean>))))
 
-(declare-core-primitive descriptors-signature.matching-super-and-sub?
+(declare-core-primitive descriptors-signature.super-and-sub?
     (safe)
   (signatures
    ((<descriptors-signature> <descriptors-signature>)	=> (<boolean>))))
@@ -277,10 +277,10 @@
   (signatures
    ((<lambda-descriptors> <lambda-descriptors>)	=> (<boolean>))))
 
-(declare-core-primitive lambda-descriptors.match-super-and-sub
+(declare-core-primitive lambda-descriptors.super-and-sub?
     (safe)
   (signatures
-   ((<lambda-descriptors> <lambda-descriptors>)	=> ((enumeration exact-match possible-match no-match)))))
+   ((<lambda-descriptors> <lambda-descriptors>)	=> (<boolean>))))
 
 (declare-core-primitive lambda-descriptors.match-formals-against-operands
     (safe)
@@ -310,10 +310,10 @@
   (signatures
    ((<case-lambda-descriptors> <case-lambda-descriptors>)	=> (<boolean>))))
 
-(declare-core-primitive case-lambda-descriptors.match-super-and-sub
+(declare-core-primitive case-lambda-descriptors.super-and-sub?
     (safe)
   (signatures
-   ((<case-lambda-descriptors> <case-lambda-descriptors>)	=> ((enumeration exact-match possible-match no-match)))))
+   ((<case-lambda-descriptors> <case-lambda-descriptors>)	=> (<boolean>))))
 
 (declare-core-primitive case-lambda-descriptors.match-formals-against-operands
     (safe)

@@ -764,8 +764,7 @@
   (define (%matching-super/closure-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
       (closure-type-descr?
-       (eq? 'exact-match (closure-type-descr.match-super-and-sub super.des sub.des)))
-
+       (closure-type-descr.super-and-sub? super.des sub.des))
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
 
@@ -1063,6 +1062,10 @@
 	   (<record>-ctd?
 	    (or-with-predicates super.des
 	      record-type-descriptor?))
+
+	   (<procedure>-ctd?
+	    ;;(matching (lambda (<fixnum>) => (<string>))	<procedure>)	=> possible-match
+	    (closure-type-descr? super.des))
 
 	   (else
 	    (object-type-descr.matching-super-and-sub? sub.des super.des))))))
@@ -1452,19 +1455,19 @@
   (define (%compatible-super/vector-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
       (vector-type-descr?
-       ;;(matching (vector <fixnum>) (vector <number>))	=> possible-match
+       ;;(matching (vector <fixnum>) (vector <number>))		=> possible-match
        (and (= (vector-type-descr.length super.des)
 	       (vector-type-descr.length   sub.des))
-	    (for-all (lambda (super-item.des sub-item.des)
-		       (super-and-sub? super-item.des sub-item.des))
+	    (for-all super-and-sub?
 	      (vector-type-descr.item-des* super.des)
 	      (vector-type-descr.item-des* sub.des))))
 
       (vector-of-type-descr?
        ;;(matching (vector <fixnum>) (vector-of <number>))	=> possible-match
        (let ((sub-item.des (vector-of-type-descr.item-des sub.des)))
-	 (vector-type-descr.for-all super.des (lambda (super-item.des)
-						(super-and-sub? super-item.des sub-item.des)))))
+	 (vector-type-descr.for-all super.des
+	   (lambda (super-item.des)
+	     (super-and-sub? super-item.des sub-item.des)))))
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
@@ -1476,13 +1479,14 @@
       (vector-type-descr?
        ;;(matching (vector-of <fixnum>) (vector <number>))	=> possible-match
        (let ((super-item.des (vector-of-type-descr.item-des super.des)))
-	 (vector-type-descr.for-all sub.des (lambda (sub-item.des)
-					      (super-and-sub? super-item.des sub-item.des)))))
+	 (vector-type-descr.for-all sub.des
+	   (lambda (sub-item.des)
+	     (super-and-sub? super-item.des sub-item.des)))))
 
       (vector-of-type-descr?
        ;;(matching (vector-of <fixnum>) (vector-of <number>))	=> possible-match
        (super-and-sub? (vector-of-type-descr.item-des super.des)
-		       (vector-of-type-descr.item-des sub.des)))
+		       (vector-of-type-descr.item-des   sub.des)))
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
@@ -1504,14 +1508,24 @@
 ;;; --------------------------------------------------------------------
 
   (define (%compatible-super/enumeration-type-descriptor super.des sub.des)
-    (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))
+    (cond-with-predicates sub.des
+      (enumeration-type-descr?
+       ;;(matching (enumeration ciao) (enumeration ciao hello))	=> possible-match
+       (let ((sub*.sym (enumeration-type-descr.symbol* sub.des)))
+	 (enumeration-type-descr.for-all super.des
+	   (lambda (super.sym)
+	     (memq super.sym sub*.sym)))))
+
+      (else
+       (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
 
 ;;; --------------------------------------------------------------------
 
   (define (%compatible-super/closure-type-descriptor super.des sub.des)
     (cond-with-predicates sub.des
-      (closure-type-descr?
-       (eq? 'exact-match (closure-type-descr.match-super-and-sub super.des sub.des)))
+      ;;There is no compatibility criterion between "<closure-type-descr>" instances,
+      ;;either the match or not.
+      (closure-type-descr?	#f)
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
 

@@ -4093,8 +4093,7 @@
     (make-descriptors-signature					$type-descriptors)
     (descriptors-signature?					$type-descriptors)
     (descriptors-signature.object-type-descrs			$type-descriptors)
-    (descriptors-signature.matching-super-and-sub?		$type-descriptors)
-    (descriptors-signature.compatible-super-and-sub?		$type-descriptors)
+    (descriptors-signature.super-and-sub?			$type-descriptors)
     (descriptors-signature.match-formals-against-operands	$type-descriptors)
 ;;;
     (<lambda-descriptors>-rtd)
@@ -4105,7 +4104,7 @@
     (lambda-descriptors.retvals					$type-descriptors)
     (lambda-descriptors.argvals					$type-descriptors)
     (lambda-descriptors=?					$type-descriptors)
-    (lambda-descriptors.match-super-and-sub			$type-descriptors)
+    (lambda-descriptors.super-and-sub?				$type-descriptors)
     (lambda-descriptors.match-formals-against-operands		$type-descriptors)
 ;;;
     (<case-lambda-descriptors>-rtd)
@@ -4115,7 +4114,7 @@
     (case-lambda-descriptors?					$type-descriptors)
     (case-lambda-descriptors.clause-signature*			$type-descriptors)
     (case-lambda-descriptors=?					$type-descriptors)
-    (case-lambda-descriptors.match-super-and-sub		$type-descriptors)
+    (case-lambda-descriptors.super-and-sub?			$type-descriptors)
     (case-lambda-descriptors.match-formals-against-operands	$type-descriptors)
 ;;;
     (<compound-condition-type-descr>-rtd)

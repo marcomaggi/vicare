@@ -2277,18 +2277,20 @@
 ;;;
 
   (doit-true	(lambda (<fixnum>) => <list>)		(lambda (<fixnum>) => <list>))
-  (doit-true	(lambda (<number>) => <list>)		(lambda (<fixnum>) => <list>))
-  (doit-false	(lambda (<fixnum>) => <list>)		(lambda (<number>) => <list>))
+  (doit-false	(lambda (<number>) => <list>)		(lambda (<fixnum>) => <list>))
+  (doit-true	(lambda (<fixnum>) => <list>)		(lambda (<number>) => <list>))
 ;;;
   (doit-true	(lambda (<fixnum>) => (<fixnum>))		(lambda (<fixnum>) => (<fixnum>)))
-  (doit-true	(lambda (<number>) => (<number>))		(lambda (<fixnum>) => (<fixnum>)))
+  (doit-false	(lambda (<number>) => (<number>))		(lambda (<fixnum>) => (<fixnum>)))
+  (doit-true	(lambda (<fixnum>) => (<number>))		(lambda (<number>) => (<fixnum>)))
   (doit-false	(lambda (<fixnum>) => (<fixnum>))		(lambda (<number>) => (<number>)))
-  (doit-false	(lambda (<fixnum>) => (<number>))		(lambda (<number>) => (<number>)))
+  (doit-true	(lambda (<fixnum>) => (<number>))		(lambda (<number>) => (<number>)))
   (doit-false	(lambda (<number>) => (<fixnum>))		(lambda (<number>) => (<number>)))
 ;;;
   (doit-false	(lambda (<fixnum>) => (<string>))		(lambda (<fixnum>) => (<fixnum>)))
   (doit-false	(lambda (<string>) => (<fixnum>))		(lambda (<fixnum>) => (<fixnum>)))
-  (doit-true	(lambda (<top>) => (<top>))			(lambda (<fixnum>) => (<pair>)))
+  (doit-false	(lambda (<top>) => (<top>))			(lambda (<fixnum>) => (<pair>)))
+  (doit-false	(lambda (<fixnum>) => (<pair>))		(lambda (<top>) => (<top>)))
 
 ;;; --------------------------------------------------------------------
 
@@ -2328,7 +2330,7 @@
 	      (lambda (<string>) => (<fixnum>)))
 
   (doit-true (case-lambda
-	       ((<real>)	=> (<boolean>))
+	       ((<fixnum>)	=> (<boolean>))
 	       ((<vector>)	=> (<boolean>)))
 	     (case-lambda
 	       ((<fixnum>)	=> (<boolean>))
@@ -2377,11 +2379,9 @@
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <type-predicate>
 
-  (doit-true <type-predicate>
-	     (lambda (<top>) => (<boolean>)))
-
-  (doit-true <type-predicate>
-	     (lambda (<string>) => (<boolean>)))
+  (doit-true	<type-predicate>		(lambda (<top>) => (<boolean>)))
+  (doit-false	<type-predicate>		(lambda (<string>) => (<boolean>)))
+  (doit-true	(lambda (<string>) => (<boolean>))	<type-predicate>)
 
   (doit-false <type-predicate>
 	      (lambda (<top>) => (<string>)))
@@ -2422,65 +2422,45 @@
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <type-printer>
 
-  (doit-true <type-printer>
-	     (lambda (<top> <textual-output-port> <procedure>) => <list>))
-
-  (doit-true <type-printer>
-	     (lambda (<fixnum> <textual-output-port> <procedure>) => (<void>)))
+  (doit-true	<type-printer>	(lambda (<top>    <textual-output-port> <procedure>) => <list>))
+  (doit-false	<type-printer>	(lambda (<fixnum> <textual-output-port> <procedure>) => (<void>)))
+  (doit-true	(lambda (<fixnum> <textual-output-port> <procedure>) => <list>)	<type-printer>)
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <equality-predicate>
 
-  (doit-true <equality-predicate>
-	     (lambda (<top> <top>) => (<boolean>)))
+  (doit-true	<equality-predicate>	(lambda (<top> <top>) => (<boolean>)))
+  (doit-false	<equality-predicate>	(lambda (<string> <string>) => (<boolean>)))
+  (doit-false	<equality-predicate>	(lambda (<top> <top>) => (<top>)))
+  (doit-false	<equality-predicate>	(lambda (<top> <top> <top>) => (<boolean>)))
 
-  (doit-true <equality-predicate>
-	     (lambda (<string> <string>) => (<boolean>)))
-
-  (doit-false <equality-predicate>
-	      (lambda (<top> <top>) => (<top>)))
-
-  (doit-false <equality-predicate>
-	      (lambda (<top> <top> <top>) => (<boolean>)))
+  (doit-true	(lambda (<string> <string>) => (<boolean>))	<equality-predicate>)
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <comparison-procedure>
 
-  (doit-true <comparison-procedure>
-	     (lambda (<top> <top>) => (<fixnum>)))
+  (doit-true	<comparison-procedure>		(lambda (<top> <top>) => (<fixnum>)))
+  (doit-false	<comparison-procedure>		(lambda (<string> <string>) => (<fixnum>)))
+  (doit-false	<comparison-procedure>		(lambda (<top> <top>) => (<top>)))
+  (doit-false	<comparison-procedure>		(lambda (<top> <top> <top>) => (<fixnum>)))
 
-  (doit-true <comparison-procedure>
-	     (lambda (<string> <string>) => (<fixnum>)))
-
-  (doit-false <comparison-procedure>
-	      (lambda (<top> <top>) => (<top>)))
-
-  (doit-false <comparison-procedure>
-	      (lambda (<top> <top> <top>) => (<fixnum>)))
+  (doit-true	(lambda (<string> <string>) => (<fixnum>))	<comparison-procedure>)
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <hash-function>
 
-  (doit-true <hash-function>
-	     (lambda (<top>) => (<non-negative-fixnum>)))
+  (doit-true	<hash-function>		(lambda (<top>) => (<non-negative-fixnum>)))
+  (doit-false	<hash-function>		(lambda (<string>) => (<non-negative-fixnum>)))
+  (doit-false	<hash-function>		(lambda (<top>) => (<fixnum>)))
+  (doit-false	<hash-function>		(lambda (<top> <top>) => (<non-negative-fixnum>)))
 
-  (doit-true <hash-function>
-	     (lambda (<string>) => (<non-negative-fixnum>)))
-
-  (doit-false <hash-function>
-	      (lambda (<top>) => (<fixnum>)))
-
-  (doit-false <hash-function>
-	      (lambda (<top> <top>) => (<non-negative-fixnum>)))
+  (doit-true	(lambda (<string>) => (<non-negative-fixnum>))	<hash-function>)
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <type-method-retriever>
 
-  (doit-true <type-method-retriever>
-	     (lambda (<symbol>) => (<procedure>)))
-
-  (doit-false <type-method-retriever>
-	      (lambda (<top>) => (<procedure>)))
+  (doit-true	<type-method-retriever>		(lambda (<symbol>) => (<procedure>)))
+  (doit-true	<type-method-retriever>		(lambda (<top>) => (<procedure>)))
 
   #| end of PARAMETRISE |# )
 
@@ -3135,6 +3115,49 @@
   (doit	(hashtable <fixnum> <fixnum>) (hashtable <string> <fixnum>)		=> no-match)
   (doit	(hashtable <fixnum> <fixnum>) (hashtable <positive-fixnum> <fixnum>)	=> exact-match)
   (doit	(hashtable <fixnum> <fixnum>) (hashtable <fixnum> <positive-fixnum>)	=> exact-match)
+
+;;; --------------------------------------------------------------------
+;;; procedures
+
+  (begin
+    (doit <top>			(lambda (<fixnum>) => (<string>))	=> exact-match)
+    (doit <procedure>		(lambda (<fixnum>) => (<string>))	=> exact-match)
+    ;;
+    (doit (lambda (<fixnum>) => (<string>))		<top>		=> possible-match)
+    (doit (lambda (<fixnum>) => (<string>))		<procedure>	=> possible-match))
+
+  (begin
+    (doit (lambda (<number>) => (<string>))	(lambda (<fixnum>) => (<string>))	=> no-match)
+    (doit (lambda (<fixnum>) => (<string>))	(lambda (<number>) => (<string>))	=> exact-match)
+    (doit (lambda (<symbol>) => (<string>))	(lambda (<number>) => (<string>))	=> no-match)
+    ;;
+    (doit (lambda (<string>) => (<number>))	(lambda (<string>) => (<fixnum>))	=> exact-match)
+    (doit (lambda (<string>) => (<fixnum>))	(lambda (<string>) => (<number>))	=> no-match)
+    (doit (lambda (<string>) => (<symbol>))	(lambda (<string>) => (<number>))	=> no-match))
+
+  (doit (lambda (<number>) => (<string>))
+	(case-lambda
+	  ((<number>) => (<string>))
+	  ((<symbol>) => (<string>)))
+	=> exact-match)
+
+  (doit (lambda (<fixnum>) => (<string>))
+	(case-lambda
+	  ((<number>) => (<string>))
+	  ((<symbol>) => (<string>)))
+	=> exact-match)
+
+  (doit (lambda (<number>) => (<string>))
+	(case-lambda
+	  ((<fixnum>) => (<string>))
+	  ((<symbol>) => (<string>)))
+	=> no-match)
+
+  (doit (case-lambda
+	  ((<number>) => (<string>))
+	  ((<symbol>) => (<string>)))
+	(lambda (<number>) => (<string>))
+	=> no-match)
 
 ;;; --------------------------------------------------------------------
 ;;; alist

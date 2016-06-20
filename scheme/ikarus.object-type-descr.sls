@@ -32,22 +32,21 @@
     make-descriptors-signature			descriptors-signature?
     descriptors-signature.object-type-descrs
     descriptors-signature=?
-    descriptors-signature.matching-super-and-sub?
-    descriptors-signature.compatible-super-and-sub?
+    descriptors-signature.super-and-sub?
     descriptors-signature.match-formals-against-operands
 
     <lambda-descriptors>-rtd			<lambda-descriptors>-rcd
     make-lambda-descriptors			lambda-descriptors?
     lambda-descriptors.retvals			lambda-descriptors.argvals
     lambda-descriptors=?
-    lambda-descriptors.match-super-and-sub
+    lambda-descriptors.super-and-sub?
     lambda-descriptors.match-formals-against-operands
 
     <case-lambda-descriptors>-rtd		<case-lambda-descriptors>-rcd
     make-case-lambda-descriptors		case-lambda-descriptors?
     case-lambda-descriptors.clause-signature*
     case-lambda-descriptors=?
-    case-lambda-descriptors.match-super-and-sub
+    case-lambda-descriptors.super-and-sub?
     case-lambda-descriptors.match-formals-against-operands
 
 ;;; --------------------------------------------------------------------
@@ -71,6 +70,9 @@
     <closure-type-descr>-rtd			<closure-type-descr>-rcd
     make-closure-type-descr			closure-type-descr?
     closure-type-descr.signature
+    closure-type-descr.super-and-sub?
+    closure-type-descr.match-formals-against-operands
+    select-most-specific-closure-type-descr
 
 ;;; --------------------------------------------------------------------
 
@@ -322,7 +324,7 @@
 ;;;; compound type descriptors: compound condition-object types
 
 (define-record-type (<compound-condition-type-descr> make-compound-condition-type-descr compound-condition-type-descr?)
-  (nongenerative vicare:descriptors:<compound-condition-type-descr>)
+  (nongenerative vicare:type-descriptors:<compound-condition-type-descr>)
   (sealed #t)
   (fields
     (immutable	component-des*		compound-condition-type-descr.component-des*)
@@ -400,7 +402,7 @@
 ;;;; compound type descriptors: symbols enumeration
 
 (define-record-type (<enumeration-type-descr> make-enumeration-type-descr enumeration-type-descr?)
-  (nongenerative vicare:descriptors:<enumeration-type-descr>)
+  (nongenerative vicare:type-descriptors:<enumeration-type-descr>)
   (sealed #t)
   (fields
     (immutable	symbol*			enumeration-type-descr.symbol*)
@@ -436,21 +438,21 @@
   ;;
   (and (= (enumeration-type-descr.length des1)
 	  (enumeration-type-descr.length des2))
-       (let super-loop ((component1*.des (enumeration-type-descr.symbol* des1))
-			(component2*.des (enumeration-type-descr.symbol* des2)))
-	 (if (pair? component1*.des)
-	     (let sub-loop ((component2*.des	component2*.des)
-			    (leftover2*.des	'()))
-	       (if (pair? component2*.des)
-		   (if (eq? (car component1*.des) (car component2*.des))
-		       ;;We discard this component2.
-		       (super-loop (cdr component1*.des) (append (cdr component2*.des) leftover2*.des))
-		     ;;We add this component2 to the leftovers.
-		     (sub-loop (cdr component2*.des) (cons (car component2*.des) leftover2*.des)))
-		 ;;There are more component2, but no more component1.
+       (let super-loop ((symbol1* (enumeration-type-descr.symbol* des1))
+			(symbol2* (enumeration-type-descr.symbol* des2)))
+	 (if (pair? symbol1*)
+	     (let sub-loop ((symbol2*	symbol2*)
+			    (leftover2*	'()))
+	       (if (pair? symbol2*)
+		   (if (eq? (car symbol1*) (car symbol2*))
+		       ;;We discard this symbol2.
+		       (super-loop (cdr symbol1*) (append (cdr symbol2*) leftover2*))
+		     ;;We add this symbol2 to the leftovers.
+		     (sub-loop (cdr symbol2*) (cons (car symbol2*) leftover2*)))
+		 ;;There are more symbol2, but no more symbol1.
 		 #f))
-	   ;;There are no more component1: are there more component2?
-	   (null? component2*.des)))))
+	   ;;There are no more symbol1: are there more symbol2?
+	   (null? symbol2*)))))
 
 (define* (enumeration-type-descr.for-all {des enumeration-type-descr?} {proc procedure?})
   (for-all proc (enumeration-type-descr.symbol* des)))
@@ -459,7 +461,7 @@
 ;;;; compound type descriptors: closure
 
 (define-record-type (<closure-type-descr> make-closure-type-descr closure-type-descr?)
-  (nongenerative vicare:descriptors:<closure-type-descr>)
+  (nongenerative vicare:type-descriptors:<closure-type-descr>)
   (sealed #t)
   (fields
     (immutable signature	closure-type-descr.signature)
@@ -483,15 +485,59 @@
   (case-lambda-descriptors=? (closure-type-descr.signature D1)
 			     (closure-type-descr.signature D2)))
 
-(define* (closure-type-descr.match-super-and-sub {D1 closure-type-descr?} {D2 closure-type-descr?})
-  (case-lambda-descriptors.match-super-and-sub (closure-type-descr.signature D1)
-					       (closure-type-descr.signature D2)))
+(define* (closure-type-descr.super-and-sub? {D1 closure-type-descr?} {D2 closure-type-descr?})
+  ;;Compare two  closure type  descriptors to  determine if  they are  super-type and
+  ;;sub-type.  Return a boolean, true if they are super and sub.  For every clause in
+  ;;the super there must be a matching clause in the sub.
+  ;;
+  (case-lambda-descriptors.super-and-sub? (closure-type-descr.signature D1)
+					  (closure-type-descr.signature D2)))
+
+(define* (closure-type-descr.match-formals-against-operands {D1 closure-type-descr?} {operands.des descriptors-signature?})
+  ;;Compare formals'  and operands' type  signatures to  determine if a  closure type
+  ;;descriptor  matches  the  operands.   Return one  of  the  symbols:  exact-match,
+  ;;possible-match, no-match.
+  ;;
+  (case-lambda-descriptors.match-formals-against-operands (closure-type-descr.signature D1) operands.des))
+
+;;; --------------------------------------------------------------------
+
+(define (select-most-specific-closure-type-descr closure-entry* rands.sig)
+  ;;This   function  is   used  to   determine   the  specialised   function  in   an
+  ;;overloaded-function which is most specific for a tuple of operands.
+  ;;
+  ;;CLOSURE-ENTRY* is an  alist having instances of <closure-type-descr>  as keys and
+  ;;procedures  as values.   RANDS.SIG  is an  instance of  "<descriptors-signature>"
+  ;;representing the  types of  the operands.   The return value  is the  alist entry
+  ;;which is the most specific matching for the operands.
+  ;;
+  ;;We  want the  less specific  arguments  to be  super-types of  the most  specific
+  ;;arguments; we do not care about the return values.
+  ;;
+  ;;	   (less-and-most-specific?
+  ;;		(lambda (<number>) => (<string>))
+  ;;	        (lambda (<fixnum>) => (<string>)))	=> #t
+  ;;
+  (fold-left
+      (lambda (selected-entry entry)
+	;;ENTRY is  a pair having  an instance of  <closure-type-descr> as car  and a
+	;;procedure as cdr.   SELECTED-ENTRY is false or a pair  with the same format
+	;;of ENTRY.
+	(if (eq? 'exact-match
+		 (closure-type-descr.match-formals-against-operands (car entry) rands.sig))
+	    (if selected-entry
+		(if (closure-type-descr.super-and-sub? (car selected-entry) (car entry))
+		    entry
+		  selected-entry)
+	      entry)
+	  selected-entry))
+    #f closure-entry*))
 
 
 ;;;; compound type descriptors: hashtables
 
 (define-record-type (<hashtable-type-descr> make-hashtable-type-descr hashtable-type-descr?)
-  (nongenerative vicare:descriptors:<hashtable-type-descr>)
+  (nongenerative vicare:type-descriptors:<hashtable-type-descr>)
   (sealed #t)
   (fields
     (immutable key-des			hashtable-type-descr.key-des)
@@ -510,7 +556,7 @@
 ;;;; compound type descriptors: pairs
 
 (define-record-type (<pair-type-descr> make-pair-type-descr pair-type-descr?)
-  (nongenerative vicare:descriptors:<pair-type-descr>)
+  (nongenerative vicare:type-descriptors:<pair-type-descr>)
   (sealed #t)
   (fields
     (immutable car-des		pair-type-descr.car-des)
@@ -531,7 +577,7 @@
 ;;;; compound type descriptors: pairs of
 
 (define-record-type (<pair-of-type-descr> make-pair-of-type-descr pair-of-type-descr?)
-  (nongenerative vicare:descriptors:<pair-of-type-descr>)
+  (nongenerative vicare:type-descriptors:<pair-of-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des		pair-of-type-descr.item-des)
@@ -553,7 +599,7 @@
 ;;;; compound type descriptors: lists
 
 (define-record-type (<list-type-descr> %make-list-type-descr list-type-descr?)
-  (nongenerative vicare:descriptors:<list-type-descr>)
+  (nongenerative vicare:type-descriptors:<list-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des*		list-type-descr.item-des*)
@@ -605,7 +651,7 @@
 ;;;; compound type descriptors: lists of
 
 (define-record-type (<list-of-type-descr> make-list-of-type-descr list-of-type-descr?)
-  (nongenerative vicare:descriptors:<list-of-type-descr>)
+  (nongenerative vicare:type-descriptors:<list-of-type-descr>)
   (fields
     (immutable item-des		list-of-type-descr.item-des)
     #| end of FIELDS |# ))
@@ -620,7 +666,7 @@
 ;;; compound type descriptors: alists
 
 (define-record-type (<alist-type-descr> make-alist-type-descr alist-type-descr?)
-  (nongenerative vicare:descriptors:<alist-type-descr>)
+  (nongenerative vicare:type-descriptors:<alist-type-descr>)
   (parent <list-of-type-descr>)
   (sealed #t)
   (fields
@@ -645,7 +691,7 @@
 ;;;; compound type descriptors: vectors
 
 (define-record-type (<vector-type-descr> %make-vector-type-descr vector-type-descr?)
-  (nongenerative vicare:descriptors:<vector-type-descr>)
+  (nongenerative vicare:type-descriptors:<vector-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des*		vector-type-descr.item-des*)
@@ -685,7 +731,7 @@
 ;;;; compound type descriptors: vectors of
 
 (define-record-type (<vector-of-type-descr> make-vector-of-type-descr vector-of-type-descr?)
-  (nongenerative vicare:descriptors:<vector-of-type-descr>)
+  (nongenerative vicare:type-descriptors:<vector-of-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des		vector-of-type-descr.item-des)
@@ -701,7 +747,7 @@
 ;;;; compound type descriptors: union
 
 (define-record-type (<union-type-descr> %make-union-type-descr union-type-descr?)
-  (nongenerative vicare:descriptors:<union-type-descr>)
+  (nongenerative vicare:type-descriptors:<union-type-descr>)
   (sealed #t)
   (fields
     (immutable	item-des*	union-type-descr.item-des*)
@@ -743,27 +789,27 @@
   ;;
   (and (= (union-type-descr.length des1)
 	  (union-type-descr.length des2))
-       (let super-loop ((component1*.des (union-type-descr.item-des* des1))
-			(component2*.des (union-type-descr.item-des* des2)))
-	 (if (pair? component1*.des)
-	     (let sub-loop ((component2*.des	component2*.des)
+       (let super-loop ((item1*.des (union-type-descr.item-des* des1))
+			(item2*.des (union-type-descr.item-des* des2)))
+	 (if (pair? item1*.des)
+	     (let sub-loop ((item2*.des		item2*.des)
 			    (leftover2*.des	'()))
-	       (if (pair? component2*.des)
-		   (if (eq? (car component1*.des) (car component2*.des))
-		       ;;We discard this component2.
-		       (super-loop (cdr component1*.des) (append (cdr component2*.des) leftover2*.des))
-		     ;;We add this component2 to the leftovers.
-		     (sub-loop (cdr component2*.des) (cons (car component2*.des) leftover2*.des)))
-		 ;;There are more component2, but no more component1.
+	       (if (pair? item2*.des)
+		   (if (object-type-descr=? (car item1*.des) (car item2*.des))
+		       ;;We discard this item2.
+		       (super-loop (cdr item1*.des) (append (cdr item2*.des) leftover2*.des))
+		     ;;We add this item2 to the leftovers.
+		     (sub-loop (cdr item2*.des) (cons (car item2*.des) leftover2*.des)))
+		 ;;There are more item2, but no more item1.
 		 #f))
-	   ;;There are no more component1: are there more component2?
-	   (null? component2*.des)))))
+	   ;;There are no more item1: are there more item2?
+	   (null? item2*.des)))))
 
 
 ;;;; compound type descriptors: intersection
 
 (define-record-type (<intersection-type-descr> %make-intersection-type-descr intersection-type-descr?)
-  (nongenerative vicare:descriptors:<intersection-type-descr>)
+  (nongenerative vicare:type-descriptors:<intersection-type-descr>)
   (sealed #t)
   (fields
     (immutable	item-des*	intersection-type-descr.item-des*)
@@ -805,27 +851,27 @@
   ;;
   (and (= (intersection-type-descr.length des1)
 	  (intersection-type-descr.length des2))
-       (let super-loop ((component1*.des (intersection-type-descr.item-des* des1))
-			(component2*.des (intersection-type-descr.item-des* des2)))
-	 (if (pair? component1*.des)
-	     (let sub-loop ((component2*.des	component2*.des)
+       (let super-loop ((item1*.des (intersection-type-descr.item-des* des1))
+			(item2*.des (intersection-type-descr.item-des* des2)))
+	 (if (pair? item1*.des)
+	     (let sub-loop ((item2*.des	item2*.des)
 			    (leftover2*.des	'()))
-	       (if (pair? component2*.des)
-		   (if (eq? (car component1*.des) (car component2*.des))
-		       ;;We discard this component2.
-		       (super-loop (cdr component1*.des) (append (cdr component2*.des) leftover2*.des))
-		     ;;We add this component2 to the leftovers.
-		     (sub-loop (cdr component2*.des) (cons (car component2*.des) leftover2*.des)))
-		 ;;There are more component2, but no more component1.
+	       (if (pair? item2*.des)
+		   (if (object-type-descr=? (car item1*.des) (car item2*.des))
+		       ;;We discard this item2.
+		       (super-loop (cdr item1*.des) (append (cdr item2*.des) leftover2*.des))
+		     ;;We add this item2 to the leftovers.
+		     (sub-loop (cdr item2*.des) (cons (car item2*.des) leftover2*.des)))
+		 ;;There are more item2, but no more item1.
 		 #f))
-	   ;;There are no more component1: are there more component2?
-	   (null? component2*.des)))))
+	   ;;There are no more item1: are there more item2?
+	   (null? item2*.des)))))
 
 
 ;;;; compound type descriptors: complement
 
 (define-record-type (<complement-type-descr> make-complement-type-descr complement-type-descr?)
-  (nongenerative vicare:descriptors:<complement-type-descr>)
+  (nongenerative vicare:type-descriptors:<complement-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des		complement-type-descr.item-des)
@@ -841,7 +887,7 @@
 ;;;; compound type descriptors: ancestor-of
 
 (define-record-type (<ancestor-of-type-descr> make-ancestor-of-type-descr ancestor-of-type-descr?)
-  (nongenerative vicare:descriptors:<ancestor-of-type-descr>)
+  (nongenerative vicare:type-descriptors:<ancestor-of-type-descr>)
   (sealed #t)
   (fields
     (immutable item-des		ancestor-of-type-descr.item-des)

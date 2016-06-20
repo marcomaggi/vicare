@@ -93,9 +93,7 @@
 	    system::)
     (prefix (only (ikarus.object-type-descr)
 		  closure-type-descr?
-		  closure-type-descr.signature
-		  case-lambda-descriptors.match-super-and-sub
-		  case-lambda-descriptors.match-formals-against-operands
+		  select-most-specific-closure-type-descr
 		  make-descriptors-signature
 		  type-descriptor-of)
 	    td::))
@@ -296,23 +294,14 @@
 						   (overloaded-function-descriptor.table over.des))))
 
 (define* (overloaded-function-descriptor.select-matching-entry {over.des overloaded-function-descriptor?} operand*)
-  (let ((rands.sig (td::make-descriptors-signature (map td::type-descriptor-of operand*))))
-    (fold-left
-	(lambda (selected-entry entry)
-	  ;;ENTRY is  a pair having  an instance of  <closure-type-descr> as
-	  ;;car and a  procedure as cdr.  SELECTED-ENTRY is false  or a pair
-	  ;;with the same format of ENTRY.
-	  (let ((clambda.des (td::closure-type-descr.signature (car entry))))
-	    (if (eq? 'exact-match (td::case-lambda-descriptors.match-formals-against-operands clambda.des rands.sig))
-		(if selected-entry
-		    (if (eq? 'exact-match (td::case-lambda-descriptors.match-super-and-sub
-					   (td::closure-type-descr.signature (car selected-entry))
-					   clambda.des))
-			entry
-		      selected-entry)
-		  entry)
-	      selected-entry)))
-      #f (overloaded-function-descriptor.table over.des))))
+  (let ((rands.sig	(td::make-descriptors-signature (map td::type-descriptor-of operand*)))
+	(closure-entry*	(overloaded-function-descriptor.table over.des)))
+    ;;CLOSURE-ENTRY* is an alist having instances of <closure-type-descr> as keys and
+    ;;procedures as  values.  RANDS.SIG  is an instance  of "<descriptors-signature>"
+    ;;representing the  types of the operands.   The return value is  the alist entry
+    ;;which is the  most specific matching for the operands.   If no matching closure
+    ;;is found: return false.
+    (td::select-most-specific-closure-type-descr closure-entry* rands.sig)))
 
 (define* (overloaded-function-late-binding {over.des overloaded-function-descriptor?} . operand*)
   (cond ((overloaded-function-descriptor.select-matching-entry over.des operand*)
