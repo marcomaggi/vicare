@@ -25,7 +25,7 @@
 
 
 #!vicare
-(library (vicare language-extensions labels (0 4 2015 5 25))
+(library (vicare language-extensions labels (0 4 2016 5 25))
   (options typed-language)
   (export
     define-label

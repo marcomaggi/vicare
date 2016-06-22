@@ -37,7 +37,7 @@
 
 
 #!vicare
-(library (vicare language-extensions mixins (0 4 2015 6 1))
+(library (vicare language-extensions mixins (0 4 2016 6 1))
   (options typed-language)
   (export
     define-mixin
