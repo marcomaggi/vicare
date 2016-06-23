@@ -81,6 +81,10 @@
 
 ;;; --------------------------------------------------------------------
 ;;; type syntaxes
+
+;;FIXME To  be uncommented when switching  to the typed language.   (Marco Maggi; Thu
+;;Jun 23, 2016)
+
 #|
   (check
       (let* ((D	(queue 0 1 2 3))
