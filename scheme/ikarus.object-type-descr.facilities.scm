@@ -450,6 +450,10 @@
 	  ;;(matching (not <no-return>) <no-return>)		=> no-match
 	  (<no-return>-ctd?		#f)
 
+	  ;;(matching (not <bottom>)	<top>)			=> possible-match
+	  ;;(matching (not <bottom>)	<void>)			=> possible-match
+	  (<bottom>-ctd?		#f)
+
 	  (ancestor-of-type-descr?
 	   ;;(super-and-sub? (not (ancestor-of <fixnum>)) <top>)		=> #f
 	   ;;(super-and-sub? (not (ancestor-of <fixnum>)) <positive-fixnum>)	=> #t
@@ -1188,6 +1192,9 @@
 	 (or (or-with-predicates sub.des
 	       <list>-ctd? list-of-type-descr?)
 	     (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des)))
+
+	;;(matching <bottom>	?type)		=> no-match
+	(<bottom>-ctd?		#f)
 
 	(else
 	 (cond-with-predicates sub.des

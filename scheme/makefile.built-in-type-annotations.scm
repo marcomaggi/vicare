@@ -123,7 +123,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-type-annotation <type-predicate>
-  (lambda (<bottom>) => (<boolean>)))
+  (lambda (<top>) => (<boolean>)))
 
 (define-type-annotation <type-destructor>
   (lambda (<bottom>) => <list>))

@@ -2397,9 +2397,10 @@
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <type-predicate>
 
+  ;; <type-predicate> == (lambda (<top>) => (<boolean>))
   (doit-true	<type-predicate>		(lambda (<top>) => (<boolean>)))
-  (doit-true	<type-predicate>		(lambda (<string>) => (<boolean>)))
-  (doit-false	(lambda (<string>) => (<boolean>))	<type-predicate>)
+  (doit-false	<type-predicate>		(lambda (<string>) => (<boolean>)))
+  (doit-true	(lambda (<string>) => (<boolean>))	<type-predicate>)
 
   (doit-false <type-predicate>		(lambda (<top>) => (<string>)))
   (doit-false <type-predicate>		(lambda (<top>) => (<top>)))
@@ -2710,10 +2711,13 @@
 
   (doit	<top>			<void>				=> no-match)
   (doit	<top>			<no-return>			=> no-match)
+  (doit	<top>			<bottom>			=> exact-match)
   (doit	<void>			<void>				=> exact-match)
   (doit	<no-return>		<no-return>			=> exact-match)
+  (doit	<bottom>		<bottom>			=> exact-match)
   (doit	<void>			<top>				=> no-match)
   (doit	<no-return>		<top>				=> no-match)
+  (doit	<bottom>		<top>				=> no-match)
 
   (doit	<top>			<struct>			=> exact-match)
   (doit	<top>			<record>			=> exact-match)
@@ -2880,12 +2884,15 @@
   (doit	<top>			(not <fixnum>)		=> possible-match)
   (doit	<top>			(not <void>)		=> possible-match)
   (doit	<top>			(not <no-return>)	=> possible-match)
+  (doit	<top>			(not <bottom>)		=> possible-match)
   (doit (not <fixnum>)		<top>			=> possible-match)
   (doit (not <top>)		<top>			=> no-match)
   (doit (not <void>)		<top>			=> possible-match)
   (doit (not <no-return>)	<top>			=> possible-match)
+  (doit (not <bottom>)		<top>			=> possible-match)
   ;;
   (doit	<void>			(not <no-return>)	=> possible-match)
+  (doit	<void>			(not <bottom>)		=> possible-match)
   (doit	<void>			(not <top>)		=> possible-match)
   (doit	<void>			(not <void>)		=> no-match)
   (doit	<void>			(not <fixnum>)		=> possible-match)
@@ -2893,6 +2900,7 @@
   (doit (not <top>)		<void>			=> possible-match)
   (doit (not <void>)		<void>			=> no-match)
   (doit (not <no-return>)	<void>			=> possible-match)
+  (doit (not <bottom>)		<void>			=> possible-match)
   ;;
   (doit	<no-return>		(not <no-return>)	=> no-match)
   (doit	<no-return>		(not <void>)		=> possible-match)
@@ -2902,6 +2910,15 @@
   (doit (not <top>)		<no-return>		=> possible-match)
   (doit (not <void>)		<no-return>		=> possible-match)
   (doit (not <no-return>)	<no-return>		=> no-match)
+  ;;
+  (doit	<bottom>		(not <bottom>)		=> no-match)
+  (doit	<bottom>		(not <void>)		=> no-match)
+  (doit	<bottom>		(not <top>)		=> no-match)
+  (doit	<bottom>		(not <fixnum>)		=> no-match)
+  (doit (not <fixnum>)		<bottom>		=> exact-match)
+  (doit (not <top>)		<bottom>		=> exact-match)
+  (doit (not <void>)		<bottom>		=> exact-match)
+  (doit (not <bottom>)		<bottom>		=> exact-match)
   ;;
   (doit	<top>			(not <fixnum>)		=> possible-match)
   (doit	<exact-integer>		(not <fixnum>)		=> possible-match)
@@ -3387,9 +3404,14 @@
 	(lambda (<number>) => (<string>))
 	=> no-match)
 
-  (doit <type-predicate>	(lambda (<bottom>)	=> (<boolean>))	=> exact-match)
+  ;; <type-predicate> == (lambda (<top>) => (<boolean>))
+  (doit <type-predicate>	(lambda (<bottom>)	=> (<boolean>))	=> no-match)
   (doit <type-predicate>	(lambda (<top>)	=> (<boolean>))	=> exact-match)
-  (doit <type-predicate>	(lambda (<string>)	=> (<boolean>))	=> exact-match)
+  (doit <type-predicate>	(lambda (<string>)	=> (<boolean>))	=> no-match)
+
+  (doit (lambda (<bottom>)	=> (<boolean>))		<type-predicate>	=> exact-match)
+  (doit (lambda (<top>)	=> (<boolean>))		<type-predicate>	=> exact-match)
+  (doit (lambda (<string>)	=> (<boolean>))		<type-predicate>	=> exact-match)
 
   (doit (or <false> (lambda (<symbol>) => ((or <false> <procedure>))))
 	(lambda (<symbol>) => ((or <false> <procedure>)))		=> exact-match)

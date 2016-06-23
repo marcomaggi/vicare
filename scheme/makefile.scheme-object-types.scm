@@ -31,7 +31,9 @@
   (hash-function void-hash))
 
 (define-scheme-type <bottom>
-    <top>)
+    #f
+  (predicate always-false)
+  (hash-function object-hash))
 
 
 ;;;; standalone object types

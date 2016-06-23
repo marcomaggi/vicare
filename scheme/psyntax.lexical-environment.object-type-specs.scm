@@ -801,6 +801,10 @@
 	  ;;(matching (not <no-return>) <no-return>)		=> no-match
 	  (<no-return>-ots?		#f)
 
+	  ;;(matching (not <bottom>)	<top>)			=> possible-match
+	  ;;(matching (not <bottom>)	<void>)			=> possible-match
+	  (<bottom>-ots?		#f)
+
 	  (ancestor-of-type-spec?
 	   ;;(super-and-sub? (not (ancestor-of <fixnum>)) <top>)		=> #f
 	   ;;(super-and-sub? (not (ancestor-of <fixnum>)) <positive-fixnum>)	=> #t
@@ -1580,6 +1584,9 @@
 	 (or (or-with-predicates sub.ots
 	       <list>-ots? list-of-type-spec?)
 	     (%matching-sub/union/intersection/complement/ancestor-of super.ots sub.ots)))
+
+	;;(matching <bottom>	?type)		=> no-match
+	(<bottom>-ots?		#f)
 
 	(else
 	 (cond-with-predicates sub.ots
@@ -5247,16 +5254,7 @@
       (make-ancestor-of-type-spec (type-annotation->object-type-spec ?type lexenv)))
 
      ((type-predicate ?type)
-      (type-annotation->object-type-spec (bless
-					  ;;FIXME  Can  we  do better  in  this  type
-					  ;;annotation?  Notice that  when the ?TYPE,
-					  ;;or it  hierarchy, contains  a label  or a
-					  ;;union  things get  messy.  (Marco  Maggi;
-					  ;;Fri Apr 29, 2016)
-					  `(case-lambda
-					     ((,?type)		=> (<true>))
-					     ((<bottom>)	=> (<boolean>))))
-					 lexenv))
+      (type-annotation->object-type-spec (bless `(lambda (,?type) => (<boolean>))) lexenv))
 
      ((equality-predicate ?type)
       (type-annotation->object-type-spec (bless `(lambda (,?type ,?type) => (<boolean>))) lexenv))

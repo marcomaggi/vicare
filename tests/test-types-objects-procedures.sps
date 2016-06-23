@@ -341,13 +341,22 @@
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <type-predicate>
 
-  (doit-true	<type-predicate>	(lambda (<top>) => (<boolean>)))
-  (doit-true	<type-predicate>	(lambda (<string>) => (<boolean>)))
-  (doit-false	<type-predicate>	(lambda (<top>) => (<string>)))
-  (doit-false	<type-predicate>	(lambda (<top>) => (<top>)))
+  ;; <type-predicate> == (lambda (<top>) => (<boolean>))
 
-  (doit-true	<type-predicate>	(lambda (<top>) => (<true>)))
-  (doit-true	<type-predicate>	(lambda (<top>) => (<false>)))
+  (doit-true	<type-predicate>	(lambda (<top>)	=> (<boolean>)))
+  (doit-false	<type-predicate>	(lambda (<top>)	=> (<string>)))
+  (doit-false	<type-predicate>	(lambda (<top>)	=> (<top>)))
+  (doit-true	<type-predicate>	(lambda (<top>)	=> (<true>)))
+  (doit-true	<type-predicate>	(lambda (<top>)	=> (<false>)))
+  (doit-false	<type-predicate>	(lambda (<string>)	=> (<boolean>)))
+
+  (doit-true	(lambda (<top>)	=> (<boolean>))		<type-predicate>)
+  (doit-false	(lambda (<top>)	=> (<string>))		<type-predicate>)
+  (doit-true	(lambda (<top>)	=> (<top>))		<type-predicate>)
+  (doit-false	(lambda (<top>)	=> (<true>))		<type-predicate>)
+  (doit-false	(lambda (<top>)	=> (<false>))		<type-predicate>)
+  (doit-true	(lambda (<string>)	=> (<boolean>))		<type-predicate>)
+
   (doit-true	<type-predicate>	(case-lambda
 					  ((<top>)	=> (<boolean>))
 					  ((<string>)	=> (<string>))))
@@ -364,9 +373,7 @@
   ;;
   ;;is expanded to:
   ;;
-  ;;   (case-lambda
-  ;;    ((<fixnum>)	=> (<true>))
-  ;;    ((<bottom>)	=> (<boolean>)))
+  ;;   (lambda (<fixnum>) => (<boolean>))
 
   (doit-true	(lambda (<bottom>)	=> (<boolean>))		(lambda (<fixnum>)	=> (<true>)))
   (doit-false	(lambda (<fixnum>)	=> (<true>))		(lambda (<bottom>)	=> (<boolean>)))
@@ -397,7 +404,7 @@
   (doit-true	(lambda (<bottom>) => (<boolean>))		(type-predicate <fixnum>))
   (doit-false	(type-predicate <fixnum>)		(lambda (<bottom>) => (<boolean>)))
   (doit-false	(lambda (<top>) => (<boolean>))		(type-predicate <fixnum>))
-  (doit-false	(type-predicate <fixnum>)		(lambda (<top>) => (<boolean>)))
+  (doit-true	(type-predicate <fixnum>)		(lambda (<top>) => (<boolean>)))
   (doit-true	(type-predicate <fixnum>)		(type-predicate <fixnum>))
   (doit-true	(type-predicate <fixnum>)		(type-predicate <number>))
   (doit-false	(type-predicate <number>)		(type-predicate <fixnum>))

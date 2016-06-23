@@ -828,9 +828,7 @@ exactly a type annotation with one of the ancestors of @meta{type}:
 A short--cut to specify:
 
 @lisp
-(case-lambda
-  ((@meta{type})     => (<true>))
-  ((<bottom>)  => (<boolean>)))
+(lambda (@meta{type}) => (<true>))
 @end lisp
 @end deftp
 
@@ -4080,7 +4078,7 @@ type is equivalent to:
 
 @lisp
 (define-type <type-predicate>
-  (lambda (<bottom>) => (<boolean>)))
+  (lambda (<top>) => (<boolean>)))
 @end lisp
 @end deftp
 
@@ -5973,7 +5971,7 @@ comparison procedures (@samp{-1}, @samp{0}, @samp{+1}):
 (define-label <comparison-fixnum>
   (parent (or <non-negative-fixnum> <negative-fixnum>))
   (type-predicate
-    (lambda (parent-pred)
+    (lambda (@{parent-pred <type-predicate>@})
       (lambda (obj)
         (and (parent-pred obj)
              (fx<=? obj +1)
