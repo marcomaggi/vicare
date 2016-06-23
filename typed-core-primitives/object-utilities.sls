@@ -160,7 +160,6 @@
 (declare-core-type-descriptor <keyword>-ctd)
 (declare-core-type-descriptor <list>-ctd)
 (declare-core-type-descriptor <nelist>-ctd)
-;;
 (declare-core-type-descriptor <negative-bignum>-ctd)
 (declare-core-type-descriptor <negative-fixnum>-ctd)
 (declare-core-type-descriptor <negative-flonum>-ctd)
@@ -203,6 +202,8 @@
 (declare-core-type-descriptor <top>-ctd)
 (declare-core-type-descriptor <transcoder>-ctd)
 (declare-core-type-descriptor <true>-ctd)
+(declare-core-type-descriptor <untyped>-ctd)
+(declare-core-type-descriptor <bottom>-ctd)
 (declare-core-type-descriptor <utsname>-ctd)
 (declare-core-type-descriptor <vector>-ctd)
 (declare-core-type-descriptor <nevector>-ctd)
@@ -468,8 +469,13 @@
 (declare-core-primitive make-list-type-descr
     (safe)
   (signatures
+   ((<nelist>)			=> (<list-type-descr>))))
+
+(declare-core-primitive make-null-or-list-type-descr
+    (safe)
+  (signatures
    ((<null>)			=> (<core-type-descriptor>))
-   ((<list>)			=> (<list-type-descr>))))
+   ((<nelist>)			=> (<list-type-descr>))))
 
 (declare-type-predicate list-type-descr?	<list-type-descr>)
 
@@ -482,6 +488,16 @@
     (safe)
   (signatures
    ((<list-type-descr>)		=> (<non-negative-exact-integer>))))
+
+(declare-core-primitive list-type-descr.car
+    (safe)
+  (signatures
+   ((<list-type-descr>)		=> (<type-descriptor>))))
+
+(declare-core-primitive list-type-descr.cdr
+    (safe)
+  (signatures
+   ((<list-type-descr>)		=> ((or <core-type-descriptor> <list-type-descr>)))))
 
 ;;; --------------------------------------------------------------------
 

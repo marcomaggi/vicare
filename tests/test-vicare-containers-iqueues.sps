@@ -23,7 +23,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (vicare containers queues)
   (vicare containers deques)
@@ -81,7 +81,7 @@
 
 ;;; --------------------------------------------------------------------
 ;;; type syntaxes
-
+#|
   (check
       (let* ((D	(queue 0 1 2 3))
 	     (S	(new <iqueue-queue> D)))
@@ -118,7 +118,7 @@
 	  (values rv1 rv2  rv3 rv4  rv5 rv6
 		  (iqueue-empty? S))))
     => 0 0 1 1 2 2 #t)
-
+|#
   #t)
 
 

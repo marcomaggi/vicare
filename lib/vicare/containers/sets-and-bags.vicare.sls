@@ -1051,7 +1051,7 @@
      (receive-and-return (result)
 	 (sob-empty-copy sob1)
        (dyadic-sob-union! result sob1 sob2)))
-    ((sob1 sob2 sob3 sobs)
+    ((sob1 sob2 sob3 {sobs (list-of <sob>)})
      (receive-and-return (result)
 	 (sob-empty-copy sob1)
        (dyadic-sob-union! result sob1 sob2)
@@ -1066,7 +1066,7 @@
     ((sob1 sob2)
      (dyadic-sob-union! sob1 sob1 sob2)
      sob1)
-    ((sob1 sob2 sob3 sobs)
+    ((sob1 sob2 sob3 {sobs (list-of <sob>)})
      (dyadic-sob-union! sob1 sob1 sob2)
      (for-each
 	 (lambda (sob)
@@ -1113,7 +1113,7 @@
        (dyadic-sob-intersection! result sob1 sob2)
        ;;This returns RESULT.
        (sob-cleanup! result)))
-    ((sob1 sob2 sob3 sobs)
+    ((sob1 sob2 sob3 {sobs (list-of <sob>)})
      (let ((result (sob-empty-copy sob1)))
        (dyadic-sob-intersection! result sob1 sob2)
        (for-each
@@ -1130,7 +1130,7 @@
      (dyadic-sob-intersection! sob1 sob1 sob2)
      ;;This returns SOB1.
      (sob-cleanup! sob1))
-    ((sob1 sob2 sob3 sobs)
+    ((sob1 sob2 sob3 {sobs (list-of <sob>)})
      (dyadic-sob-intersection! sob1 sob1 sob2)
      (for-each
 	 (lambda (sob)
@@ -1172,7 +1172,7 @@
        (dyadic-sob-difference! result sob1 sob2)
        ;;This returns RESULT.
        (sob-cleanup! result)))
-    ((sob1 sob2 sob3 sobs)
+    ((sob1 sob2 sob3 {sobs (list-of <sob>)})
      (let ((result (sob-empty-copy sob1)))
        (dyadic-sob-difference! result sob1 sob2)
        (for-each
@@ -1188,7 +1188,7 @@
      (dyadic-sob-difference! sob1 sob1 sob2)
      ;;This returns SOB1.
      (sob-cleanup! sob1))
-    ((sob1 sob2 sob3 . sobs)
+    ((sob1 sob2 sob3 . {sobs (list-of <sob>)})
      (dyadic-sob-difference! sob1 sob1 sob2)
      (for-each
 	 (lambda (sob) (dyadic-sob-difference! sob1 sob1 sob))
@@ -1317,7 +1317,7 @@
      (receive-and-return (result)
 	 (sob-empty-copy sob1)
        (dyadic-sob-sum! result sob1 sob2)))
-    ((sob1 sob2 sob3 sobs)
+    ((sob1 sob2 sob3 {sobs (list-of <sob>)})
      (receive-and-return (result)
 	 (sob-empty-copy sob1)
        (dyadic-sob-sum! result sob1 sob2)
@@ -1332,7 +1332,7 @@
     ((sob1 sob2)
      (dyadic-sob-sum! sob1 sob1 sob2)
      sob1)
-    ((sob1 sob2 sob3 sobs)
+    ((sob1 sob2 sob3 {sobs (list-of <sob>)})
      (dyadic-sob-sum! sob1 sob1 sob2)
      (for-each
 	 (lambda (sob)

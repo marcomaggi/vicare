@@ -265,7 +265,7 @@
   ;;the super there must be a matching clause in the sub.
   ;;
   (let ((super-clause-signature*	(case-lambda-descriptors.clause-signature* super.des))
-	(sub-clause-signature*		(case-lambda-descriptors.clause-signature* sub.des)))
+	(sub-clause-signature*		(case-lambda-descriptors.clause-signature*   sub.des)))
     (for-all (lambda (super-clause-signature)
 	       (exists (lambda (sub-clause-signature)
 			 (lambda-descriptors.super-and-sub? super-clause-signature sub-clause-signature))

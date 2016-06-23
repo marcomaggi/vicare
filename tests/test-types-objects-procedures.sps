@@ -227,259 +227,253 @@
 
 (parametrise ((check-test-name	'super-and-sub))
 
-  (check-for-true	(type-annotation-super-and-sub? <procedure>
-							<procedure>))
+  (define-syntax-rule (doit-true ?super ?sub)
+    (check-for-true	(type-annotation-super-and-sub? ?super ?sub)))
 
-  (check-for-true	(type-annotation-super-and-sub? <procedure>
-							(lambda <list> => (<fixnum>))))
-
-  (check-for-false	(type-annotation-super-and-sub? (lambda <list> => (<fixnum>))
-							<procedure>))
-
-  (check-for-false	(type-annotation-super-and-sub? (lambda <list> => (<fixnum>))
-							<fixnum>))
+  (define-syntax-rule (doit-false ?super ?sub)
+    (check-for-false	(type-annotation-super-and-sub? ?super ?sub)))
 
 ;;; --------------------------------------------------------------------
 
-  (check-for-true	(type-annotation-super-and-sub? (lambda <list> => (<fixnum>))
-							(lambda <list> => (<fixnum>))))
+  (doit-true	<procedure>	<procedure>)
+  (doit-true	<procedure>	(lambda <list> => (<fixnum>)))
 
-  (check-for-true	(type-annotation-super-and-sub? (lambda <list> => (<number>))
-							(lambda <list> => (<fixnum>))))
-
-  (check-for-false	(type-annotation-super-and-sub? (lambda <list> => (<fixnum>))
-							(lambda <list> => (<number>))))
-
-;;;
-
-  (check-for-true	(type-annotation-super-and-sub? (lambda (<fixnum>) => <list>)
-							(lambda (<fixnum>) => <list>)))
-
-  (check-for-true	(type-annotation-super-and-sub? (lambda (<number>) => <list>)
-							(lambda (<fixnum>) => <list>)))
-
-  (check-for-false	(type-annotation-super-and-sub? (lambda (<fixnum>) => <list>)
-							(lambda (<number>) => <list>)))
-
-;;;
-
-  (check-for-true	(type-annotation-super-and-sub? (lambda (<fixnum>) => (<fixnum>))
-							(lambda (<fixnum>) => (<fixnum>))))
-
-  (check-for-true	(type-annotation-super-and-sub? (lambda (<number>) => (<number>))
-							(lambda (<fixnum>) => (<fixnum>))))
-
-  (check-for-false	(type-annotation-super-and-sub? (lambda (<fixnum>) => (<fixnum>))
-							(lambda (<number>) => (<number>))))
-
-  (check-for-false	(type-annotation-super-and-sub? (lambda (<fixnum>) => (<number>))
-							(lambda (<number>) => (<number>))))
-
-  (check-for-false	(type-annotation-super-and-sub? (lambda (<number>) => (<fixnum>))
-							(lambda (<number>) => (<number>))))
-
-;;;
-
-  (check-for-false	(type-annotation-super-and-sub? (lambda (<fixnum>) => (<string>))
-							(lambda (<fixnum>) => (<fixnum>))))
-
-  (check-for-false	(type-annotation-super-and-sub? (lambda (<string>) => (<fixnum>))
-							(lambda (<fixnum>) => (<fixnum>))))
-
-  (check-for-true	(type-annotation-super-and-sub? (lambda (<top>) => (<top>))
-							(lambda (<fixnum>) => (<pair>))))
+  (doit-false	(lambda <list> => (<fixnum>))		<procedure>)
+  (doit-false	(lambda <list> => (<fixnum>))		<fixnum>)
 
 ;;; --------------------------------------------------------------------
 
-  (check-for-true	(type-annotation-super-and-sub? <procedure>
-							(case-lambda
-							  ((<fixnum>) => (<fixnum>)))))
+  (doit-true	(lambda <list> => (<fixnum>))	(lambda <list> => (<fixnum>)))
+  (doit-true	(lambda <list> => (<number>))	(lambda <list> => (<fixnum>)))
+  (doit-false	(lambda <list> => (<fixnum>))	(lambda <list> => (<number>)))
 
-  (check-for-false	(type-annotation-super-and-sub? (case-lambda
-							  ((<fixnum>) => (<fixnum>)))
-							<procedure>))
+  (doit-true	(lambda (<fixnum>) => <list>)	(lambda (<fixnum>) => <list>))
+  (doit-false	(lambda (<number>) => <list>)	(lambda (<fixnum>) => <list>))
+  (doit-true	(lambda (<fixnum>) => <list>)	(lambda (<number>) => <list>))
 
-  (check-for-true	(type-annotation-super-and-sub? (lambda (<fixnum>) => (<string>))
-							(case-lambda
-							  ((<fixnum>) => (<string>))
-							  ((<flonum>) => (<string>)))))
+  (doit-true	(lambda (<fixnum>) => (<fixnum>))	(lambda (<fixnum>) => (<fixnum>)))
+  (doit-false	(lambda (<number>) => (<number>))	(lambda (<fixnum>) => (<fixnum>)))
+  (doit-false	(lambda (<fixnum>) => (<fixnum>))	(lambda (<number>) => (<number>)))
+  (doit-true	(lambda (<fixnum>) => (<number>))	(lambda (<number>) => (<number>)))
+  (doit-false	(lambda (<number>) => (<fixnum>))	(lambda (<number>) => (<number>)))
 
-  (check-for-true	(type-annotation-super-and-sub? (lambda (<flonum>) => (<string>))
-							(case-lambda
-							  ((<fixnum>) => (<string>))
-							  ((<flonum>) => (<string>)))))
+  (doit-false	(lambda (<fixnum>) => (<string>))	(lambda (<fixnum>) => (<fixnum>)))
+  (doit-false	(lambda (<string>) => (<fixnum>))	(lambda (<fixnum>) => (<fixnum>)))
+  (doit-false	(lambda (<top>)    => (<top>))	(lambda (<fixnum>) => (<pair>)))
+
+;;; --------------------------------------------------------------------
+
+  (doit-true	<procedure>
+		(case-lambda
+		  ((<fixnum>) => (<fixnum>))))
+
+  (doit-false	(case-lambda
+		  ((<fixnum>) => (<fixnum>)))
+		<procedure>)
+
+  (doit-true	(lambda (<fixnum>) => (<string>))
+		(case-lambda
+		  ((<fixnum>) => (<string>))
+		  ((<flonum>) => (<string>))))
+
+  (doit-true	(lambda (<flonum>) => (<string>))
+		(case-lambda
+		  ((<fixnum>) => (<string>))
+		  ((<flonum>) => (<string>))))
 
 ;;;
 
-  (check-for-false	(type-annotation-super-and-sub? (case-lambda
-							  ((<fixnum>) => (<string>))
-							  ((<flonum>) => (<string>)))
-							(lambda (<fixnum>) => (<string>))))
+  (doit-false (case-lambda
+		((<fixnum>) => (<string>))
+		((<flonum>) => (<string>)))
+	      (lambda (<fixnum>) => (<string>)))
 
-  (check-for-false	(type-annotation-super-and-sub? (case-lambda
-							  ((<fixnum>) => (<string>))
-							  ((<flonum>) => (<string>)))
-							(lambda (<flonum>) => (<string>))))
+  (doit-false (case-lambda
+		((<fixnum>) => (<string>))
+		((<flonum>) => (<string>)))
+	      (lambda (<flonum>) => (<string>)))
 
-  (check-for-false	(type-annotation-super-and-sub? (case-lambda
-							  ((<fixnum>) => (<string>))
-							  ((<flonum>) => (<string>)))
-							(lambda (<string>) => (<fixnum>))))
+  (doit-false (case-lambda
+		((<fixnum>) => (<string>))
+		((<flonum>) => (<string>)))
+	      (lambda (<string>) => (<fixnum>)))
 
-  (check-for-true	(type-annotation-super-and-sub? (case-lambda
-							  ((<real>)	=> (<boolean>))
-							  ((<vector>)	=> (<boolean>)))
-							(case-lambda
-							  ((<fixnum>)	=> (<boolean>))
-							  ((<flonum>)	=> (<boolean>))
-							  ((<vector>)	=> (<boolean>)))))
+  (doit-true (case-lambda
+	       ((<fixnum>)	=> (<boolean>))
+	       ((<vector>)	=> (<boolean>)))
+	     (case-lambda
+	       ((<bignum>)	=> (<boolean>))
+	       ((<integer>)	=> (<boolean>))
+	       ((<vector>)	=> (<boolean>))))
 
-  (check-for-false	(type-annotation-super-and-sub? (case-lambda
-							  ((<top>)		=> (<pair>))
-							  ((<top>)		=> (<real>))
-							  ((<top>)		=> (<vector>)))
-							(case-lambda
-							  ((<top>)		=> (<fixnum>))
-							  ((<top>)		=> (<flonum>))
-							  ((<top>)		=> ((vector-of <true>))))))
+  (doit-false (case-lambda
+		((<top>)		=> (<pair>))
+		((<top>)		=> (<real>))
+		((<top>)		=> (<vector>)))
+	      (case-lambda
+		((<top>)		=> (<fixnum>))
+		((<top>)		=> (<flonum>))
+		((<top>)		=> ((vector-of <true>)))))
 
-  (check-for-false	(type-annotation-super-and-sub? (case-lambda
-							  ((<top>)		=> (<pair>))
-							  ((<top>)		=> (<real>))
-							  ((<top>)		=> (<vector>)))
-							(case-lambda
-							  ((<top>)		=> (<fixnum>))
-							  ((<top>)		=> (<flonum>))
-							  ((<top>)		=> (<transcoder>)) ;;this does not match
-							  ((<top>)		=> ((vector-of <true>))))))
+  (doit-false (case-lambda
+		((<top>)		=> (<pair>))
+		((<top>)		=> (<real>))
+		((<top>)		=> (<vector>)))
+	      (case-lambda
+		((<top>)		=> (<fixnum>))
+		((<top>)		=> (<flonum>))
+		((<top>)		=> (<transcoder>)) ;;this does not match
+		((<top>)		=> ((vector-of <true>)))))
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <thunk>
 
-  (check-for-true	(type-annotation-super-and-sub? <thunk>
-							(lambda () => <list>)))
-
-  (check-for-true	(type-annotation-super-and-sub? <thunk>
-							(case-lambda
-							  (() => <list>))))
-
-  (check-for-true	(type-annotation-super-and-sub? <thunk>
-							(case-lambda
-							  (()		=> (<string>))
-							  ((<fixnum>)	=> (<string>)))))
-
-  (check-for-true	(type-annotation-super-and-sub? <thunk>
-							(case-lambda
-							  ((<fixnum>)	=> (<string>))
-							  (()		=> (<string>)))))
+  (doit-true	<thunk>		(lambda () => <list>))
+  (doit-true	<thunk>		(case-lambda
+				  (() => <list>)))
+  (doit-true	<thunk>		(case-lambda
+				  (()		=> (<string>))
+				  ((<fixnum>)	=> (<string>))))
+  (doit-true	<thunk>		(case-lambda
+				  ((<fixnum>)	=> (<string>))
+				  (()		=> (<string>))))
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <type-predicate>
 
-  (check-for-true	(type-annotation-super-and-sub? <type-predicate>
-							(lambda (<top>) => (<boolean>))))
+  (doit-true	<type-predicate>	(lambda (<top>) => (<boolean>)))
+  (doit-true	<type-predicate>	(lambda (<string>) => (<boolean>)))
+  (doit-false	<type-predicate>	(lambda (<top>) => (<string>)))
+  (doit-false	<type-predicate>	(lambda (<top>) => (<top>)))
 
-  (check-for-true	(type-annotation-super-and-sub? <type-predicate>
-							(lambda (<string>) => (<boolean>))))
+  (doit-true	<type-predicate>	(lambda (<top>) => (<true>)))
+  (doit-true	<type-predicate>	(lambda (<top>) => (<false>)))
+  (doit-true	<type-predicate>	(case-lambda
+					  ((<top>)	=> (<boolean>))
+					  ((<string>)	=> (<string>))))
+  (doit-true	<type-predicate>	(case-lambda
+					  ((<string> <number>)	=> (<string>))
+					  ((<top>)		=> (<boolean>))))
 
-  (check-for-false	(type-annotation-super-and-sub? <type-predicate>
-							(lambda (<top>) => (<string>))))
+;;; --------------------------------------------------------------------
+;;; special procedures types: type-predicate
 
-  (check-for-false	(type-annotation-super-and-sub? <type-predicate>
-							(lambda (<top>) => (<top>))))
+  ;;Type type annotation:
+  ;;
+  ;;   (type-predicate <fixnum>)
+  ;;
+  ;;is expanded to:
+  ;;
+  ;;   (case-lambda
+  ;;    ((<fixnum>)	=> (<true>))
+  ;;    ((<bottom>)	=> (<boolean>)))
 
-  ;;Ugly but what can I do?
-  (check-for-true	(type-annotation-super-and-sub? <type-predicate>
-							(lambda (<top>) => (<true>))))
-  (check-for-true	(type-annotation-super-and-sub? <type-predicate>
-							(lambda (<top>) => (<false>))))
+  (doit-true	(lambda (<bottom>)	=> (<boolean>))		(lambda (<fixnum>)	=> (<true>)))
+  (doit-false	(lambda (<fixnum>)	=> (<true>))		(lambda (<bottom>)	=> (<boolean>)))
 
-  (check-for-true	(type-annotation-super-and-sub? <type-predicate>
-							(case-lambda
-							  ((<top>)	=> (<boolean>))
-							  ((<string>)	=> (<string>)))))
+  (doit-true	(lambda (<bottom>)	=> (<boolean>))		(lambda (<top>)	=> (<boolean>)))
+  (doit-true	(lambda (<fixnum>)	=> (<boolean>))		(lambda (<top>)	=> (<boolean>)))
 
-  (check-for-true	(type-annotation-super-and-sub? <type-predicate>
-							(case-lambda
-							  ((<string> <number>)	=> (<string>))
-							  ((<top>)		=> (<boolean>)))))
+  (doit-false	(lambda (<top>)	=> (<boolean>))		(lambda (<bottom>)	=> (<boolean>)))
+  (doit-false	(lambda (<top>)	=> (<boolean>))		(lambda (<fixnum>)	=> (<boolean>)))
+
+  (doit-false	(case-lambda
+		  ((<fixnum>)	=> (<true>))
+		  ((<bottom>)	=> (<boolean>)))
+		(lambda (<top>)	=> (<boolean>)))
+
+  (doit-true	(case-lambda
+		  ((<fixnum>)	=> (<true>))
+		  ((<bottom>)	=> (<boolean>)))
+		(lambda (<fixnum>)	=> (<true>)))
+
+  (doit-true	(case-lambda
+		  ((<fixnum>)	=> (<true>))
+		  ((<bottom>)	=> (<boolean>)))
+		(case-lambda
+		  ((<fixnum>)	=> (<true>))
+		  ((<bottom>)	=> (<boolean>))))
+
+  (doit-true	(lambda (<bottom>) => (<boolean>))		(type-predicate <fixnum>))
+  (doit-false	(type-predicate <fixnum>)		(lambda (<bottom>) => (<boolean>)))
+  (doit-false	(lambda (<top>) => (<boolean>))		(type-predicate <fixnum>))
+  (doit-false	(type-predicate <fixnum>)		(lambda (<top>) => (<boolean>)))
+  (doit-true	(type-predicate <fixnum>)		(type-predicate <fixnum>))
+  (doit-true	(type-predicate <fixnum>)		(type-predicate <number>))
+  (doit-false	(type-predicate <number>)		(type-predicate <fixnum>))
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <type-destructor>
 
-  (check-for-true	(type-annotation-super-and-sub? <type-destructor>
-							(lambda (<top>) => (<boolean>))))
-
-  (check-for-true	(type-annotation-super-and-sub? <type-destructor>
-							(lambda (<top>) => <list>)))
-
-  (check-for-true	(type-annotation-super-and-sub? <type-destructor>
-							(case-lambda
-							  ((<top> <top>) => (<top>))
-							  ((<top>)	=> <list>))))
+  (doit-true	<type-destructor>		(lambda (<top>) => (<boolean>)))
+  (doit-true	<type-destructor>		(lambda (<top>) => <list>))
+  (doit-true	<type-destructor>		(case-lambda
+						  ((<top> <top>)	=> (<top>))
+						  ((<top>)		=> <list>)))
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <type-printer>
 
-  (check-for-true	(type-annotation-super-and-sub? <type-printer>
-							(lambda (<top> <textual-output-port> <procedure>) => <list>)))
-
-  (check-for-true	(type-annotation-super-and-sub? <type-printer>
-							(lambda (<fixnum> <textual-output-port> <procedure>) => (<void>))))
+  (doit-true	<type-printer>		(lambda (<top> <textual-output-port> <procedure>) => <list>))
+  (doit-true	<type-printer>		(lambda (<fixnum> <textual-output-port> <procedure>) => (<void>)))
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <equality-predicate>
 
-  (check-for-true	(type-annotation-super-and-sub? <equality-predicate>
-							(lambda (<top> <top>) => (<boolean>))))
+  (doit-true	<equality-predicate>	(lambda (<top>    <top>)	=> (<boolean>)))
+  (doit-true	<equality-predicate>	(lambda (<string> <string>)	=> (<boolean>)))
+  (doit-false	<equality-predicate>	(lambda (<top>    <top>)	=> (<top>)))
+  (doit-false	<equality-predicate>	(lambda (<top> <top> <top>)	=> (<boolean>)))
 
-  (check-for-true	(type-annotation-super-and-sub? <equality-predicate>
-							(lambda (<string> <string>) => (<boolean>))))
+;;; --------------------------------------------------------------------
+;;; special procedures types: equality-predicate
 
-  (check-for-false	(type-annotation-super-and-sub? <equality-predicate>
-							(lambda (<top> <top>) => (<top>))))
-
-  (check-for-false	(type-annotation-super-and-sub? <equality-predicate>
-							(lambda (<top> <top> <top>) => (<boolean>))))
+  (doit-true	(equality-predicate <fixnum>)	(lambda (<fixnum>    <fixnum>)	=> (<boolean>)))
+  (doit-true	(equality-predicate <string>)	(lambda (<string>	<string>)	=> (<boolean>)))
+  (doit-false	(equality-predicate <fixnum>)	(lambda (<fixnum>    <fixnum>)	=> (<top>)))
+  (doit-false	(equality-predicate <fixnum>)	(lambda (<fixnum> <fixnum> <fixnum>)	=> (<boolean>)))
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <comparison-procedure>
 
-  (check-for-true	(type-annotation-super-and-sub? <comparison-procedure>
-							(lambda (<top> <top>) => (<fixnum>))))
+  (doit-true	<comparison-procedure>	(lambda (<top>    <top>)	=> (<fixnum>)))
+  (doit-true	<comparison-procedure>	(lambda (<string> <string>)	=> (<fixnum>)))
+  (doit-false	<comparison-procedure>	(lambda (<top>    <top>)	=> (<top>)))
+  (doit-false	<comparison-procedure>	(lambda (<top> <top> <top>)	=> (<fixnum>)))
 
-  (check-for-true	(type-annotation-super-and-sub? <comparison-procedure>
-							(lambda (<string> <string>) => (<fixnum>))))
+;;; --------------------------------------------------------------------
+;;; special procedures types: comparison-procedure
 
-  (check-for-false	(type-annotation-super-and-sub? <comparison-procedure>
-							(lambda (<top> <top>) => (<top>))))
-
-  (check-for-false	(type-annotation-super-and-sub? <comparison-procedure>
-							(lambda (<top> <top> <top>) => (<fixnum>))))
+  (doit-true	(comparison-procedure <fixnum>)	(lambda (<fixnum> <fixnum>)	=> (<fixnum>)))
+  (doit-true	(comparison-procedure <string>)	(lambda (<string> <string>)	=> (<fixnum>)))
+  (doit-false	(comparison-procedure <fixnum>)	(lambda (<fixnum> <fixnum>)	=> (<top>)))
+  (doit-false	(comparison-procedure <fixnum>)	(lambda (<fixnum> <fixnum> <fixnum>)	=> (<fixnum>)))
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <hash-function>
 
-  (check-for-true	(type-annotation-super-and-sub? <hash-function>
-							(lambda (<top>) => (<non-negative-fixnum>))))
+  (doit-true	<hash-function>		(lambda (<top>)		=> (<non-negative-fixnum>)))
+  (doit-true	<hash-function>		(lambda (<string>)		=> (<non-negative-fixnum>)))
+  (doit-false	<hash-function>		(lambda (<top>)		=> (<fixnum>)))
+  (doit-false	<hash-function>		(lambda (<top> <top>)	=> (<non-negative-fixnum>)))
 
-  (check-for-true	(type-annotation-super-and-sub? <hash-function>
-							(lambda (<string>) => (<non-negative-fixnum>))))
+;;; --------------------------------------------------------------------
+;;; special procedures types: hash-function
 
-  (check-for-false	(type-annotation-super-and-sub? <hash-function>
-							(lambda (<top>) => (<fixnum>))))
-
-  (check-for-false	(type-annotation-super-and-sub? <hash-function>
-							(lambda (<top> <top>) => (<non-negative-fixnum>))))
+  (doit-true	(hash-function <fixnum>)	(lambda (<fixnum>)		=> (<non-negative-fixnum>)))
+  (doit-true	(hash-function <string>)	(lambda (<string>)		=> (<non-negative-fixnum>)))
+  (doit-false	(hash-function <fixnum>)	(lambda (<top>)		=> (<fixnum>)))
+  (doit-false	(hash-function <fixnum>)	(lambda (<top> <top>)	=> (<non-negative-fixnum>)))
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <type-method-retriever>
 
-  (check-for-true	(type-annotation-super-and-sub? <type-method-retriever>
-							(lambda (<symbol>) => (<procedure>))))
+  (doit-true	<type-method-retriever>		(lambda (<symbol>)	=> (<procedure>)))
+  (doit-true	<type-method-retriever>		(lambda (<symbol>)	=> ((or <false> <procedure>))))
+  (doit-true	<type-method-retriever>		(lambda (<top>)	=> (<procedure>)))
+  (doit-true	<type-method-retriever>		(lambda (<top>)	=> ((or <false> <procedure>))))
 
-  (check-for-false	(type-annotation-super-and-sub? <type-method-retriever>
-							(lambda (<top>) => (<procedure>))))
+  (doit-false	<type-method-retriever>		(lambda (<string>)	=> ((or <false> <procedure>))))
 
   (void))
 

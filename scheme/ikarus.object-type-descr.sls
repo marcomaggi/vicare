@@ -85,8 +85,10 @@
     pair-of-type-descr.item-des
 
     <list-type-descr>-rtd			<list-type-descr>-rcd
-    make-list-type-descr			list-type-descr?
-    list-type-descr.item-des*
+    make-list-type-descr			make-null-or-list-type-descr
+    list-type-descr?
+    list-type-descr.item-des*			list-type-descr.length
+    list-type-descr.car				list-type-descr.cdr
 
     <list-of-type-descr>-rtd			<list-of-type-descr>-rcd
     make-list-of-type-descr			list-of-type-descr?
@@ -145,6 +147,7 @@
 	  core-type-descriptor.ancestor-des*
 	  core-type-descriptor.parent-and-child?
 	  ;;;
+	  <bottom>-ctd
 	  <void>-ctd				<top>-ctd			<no-return>-ctd
 	  <true>-ctd				<false>-ctd
 	  <char>-ctd				<keyword>-ctd			<symbol>-ctd
@@ -292,6 +295,7 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-type-descriptor-predicate <bottom>-ctd)
 (define-type-descriptor-predicate <no-return>-ctd)
 (define-type-descriptor-predicate <void>-ctd)
 (define-type-descriptor-predicate <top>-ctd)
@@ -382,19 +386,24 @@
 	   (null? component2*.des)))))
 
 (define (condition-object-component-descriptor=? obj1 obj2)
-  ;;A  compound  condition-object's component  is  either:  a record-type  descriptor
-  ;;("&condition-rtd"  or   one  of   its  sub-types);   the  core   type  descriptor
-  ;;"<condition>"; the core type descriptor "<compound-condition>".
+  ;;A compound condition-object's component is either:
+  ;;
+  ;;1. A record-type descriptor ("&condition-rtd" or one of its sub-types).
+  ;;
+  ;;2. The core type descriptor "<condition>".  Currently disabled.
+  ;;
+  ;;3. The core type descriptor "<compound-condition>".  Currently disabled.
+  ;;
   (cond-with-predicates obj1
     (record-type-descriptor?
      (and (record-type-descriptor? obj2)
 	  (record-type-descriptor=? obj1 obj2)))
 
-    (<condition>-ctd?
-     (<condition>-ctd? obj2))
+    ;; (<condition>-ctd?
+    ;;  (<condition>-ctd? obj2))
 
-    (<compound-condition>-ctd?
-     (<compound-condition>-ctd? obj2))
+    ;; (<compound-condition>-ctd?
+    ;;  (<compound-condition>-ctd? obj2))
 
     (else #f)))
 
@@ -423,7 +432,8 @@
 ;;; --------------------------------------------------------------------
 
 (define* (enumeration-type-descr.member? {des enumeration-type-descr?} {sym symbol?})
-  (memq sym (enumeration-type-descr.symbol* des)))
+  (and (memq sym (enumeration-type-descr.symbol* des))
+       #t))
 
 (define* (enumeration-type-descr.length {des enumeration-type-descr?})
   (or (<enumeration-type-descr>-memoised-length des)
@@ -455,7 +465,8 @@
 	   (null? symbol2*)))))
 
 (define* (enumeration-type-descr.for-all {des enumeration-type-descr?} {proc procedure?})
-  (for-all proc (enumeration-type-descr.symbol* des)))
+  (and (for-all proc (enumeration-type-descr.symbol* des))
+       #t))
 
 
 ;;;; compound type descriptors: closure
@@ -565,22 +576,18 @@
 
 ;;;; compound type descriptors: lists
 
-(define-record-type (<list-type-descr> %make-list-type-descr list-type-descr?)
+(define-record-type (<list-type-descr> make-list-type-descr list-type-descr?)
   (nongenerative vicare:type-descriptors:<list-type-descr>)
   (sealed #t)
   (fields
-    (immutable item-des*		list-type-descr.item-des*)
-    (mutable memoised-length)
+    (immutable	item-des*		list-type-descr.item-des*)
+    (mutable	memoised-length)
     #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
-      (lambda (item*.des)
-	(make-record item*.des #f)))))
-
-(define* (make-list-type-descr {item*.des list?})
-  (if (null? item*.des)
-      <null>-ctd
-    (%make-list-type-descr item*.des)))
+      (define* (make-list-type-descr {item*.des pair?})
+	(make-record item*.des #f))
+      make-list-type-descr)))
 
 (define <list-type-descr>-rtd
   (record-type-descriptor <list-type-descr>))
@@ -589,6 +596,11 @@
   (record-constructor-descriptor <list-type-descr>))
 
 ;;; --------------------------------------------------------------------
+
+(define (make-null-or-list-type-descr item*.des)
+  (if (pair? item*.des)
+      (make-list-type-descr item*.des)
+    <null>-ctd))
 
 (define* (list-type-descr.length {des list-type-descr?})
   (or (<list-type-descr>-memoised-length des)
@@ -609,10 +621,7 @@
   (car (list-type-descr.item-des* des)))
 
 (define* (list-type-descr.cdr {des list-type-descr?})
-  (let ((item*.des (list-type-descr.item-des* des)))
-    (if (pair? item*.des)
-	(make-list-type-descr (cdr item*.des))
-      <null>-ctd)))
+  (make-null-or-list-type-descr (cdr (list-type-descr.item-des* des))))
 
 
 ;;;; compound type descriptors: lists of
@@ -661,8 +670,8 @@
   (nongenerative vicare:type-descriptors:<vector-type-descr>)
   (sealed #t)
   (fields
-    (immutable item-des*		vector-type-descr.item-des*)
-    (mutable memoised-length)
+    (immutable	item-des*		vector-type-descr.item-des*)
+    (mutable	memoised-length)
     #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
@@ -979,7 +988,7 @@
 					      (when (pair? P)
 						(hashtable-set! table P #t)
 						(pair-recur (cdr P))))
-					    (make-list-type-descr (map recur obj)))))
+					    (make-null-or-list-type-descr (map recur obj)))))
 
 	  ((pair? obj)			(if (hashtable-ref table obj #f)
 					    <pair>-ctd

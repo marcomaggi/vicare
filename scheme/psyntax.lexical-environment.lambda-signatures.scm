@@ -29,13 +29,15 @@
    lambda-signature.argvals			lambda-signature.argvals.specs
    lambda-signature.fully-unspecified?		lambda-signature.only-<untyped>-and-<list>?
    lambda-signature.untyped-to-top
-   lambda-signature.match-super-and-sub
+   lambda-signature.super-and-sub?
+   lambda-signature.match-formals-against-operands
 
    <case-lambda-signature>
    make-case-lambda-signature			case-lambda-signature?
    case-lambda-signature=?
    case-lambda-signature.retvals		case-lambda-signature.clause-signature*
-   case-lambda-signature.min-and-max-argvals	case-lambda-signature.match-super-and-sub
+   case-lambda-signature.min-and-max-argvals
+   case-lambda-signature.super-and-sub?		case-lambda-signature.match-formals-against-operands
 
    #| end of exports |# )
 
@@ -85,16 +87,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (lambda-signature=? {signature1 lambda-signature?} {signature2 lambda-signature?})
-  ;;Return true if the signatures are equal; otherwise return false.
-  ;;
-  (and (type-signature=? (lambda-signature.argvals signature1)
-			 (lambda-signature.argvals signature2))
-       (type-signature=? (lambda-signature.retvals signature1)
-			 (lambda-signature.retvals signature2))))
-
-;;; --------------------------------------------------------------------
-
 (define* (lambda-signature.fully-unspecified? {lambda-signature lambda-signature?})
   ;;A clause signature  has fully unspecified types if its  retvals type signature is
   ;;the  standalone  "<list>"  and  its  argvals type  signature  is  the  standalone
@@ -122,28 +114,71 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (lambda-signature.match-super-and-sub {S1 lambda-signature?} {S2 lambda-signature?})
-  (let ((retvals-state (type-signature.match-formals-against-operands (lambda-signature.retvals S1)
-								      (lambda-signature.retvals S2)))
-	(argvals-state (type-signature.match-formals-against-operands (lambda-signature.argvals S1)
-								      (lambda-signature.argvals S2))))
-    (case retvals-state
-      ((exact-match)
-       (case argvals-state
-	 ((exact-match)
-	  'exact-match)
-	 ((possible-match)
-	  'possible-match)
-	 (else
-	  'no-match)))
-      ((possible-match)
-       (case argvals-state
-	 ((exact-match possible-match)
-	  'possible-match)
-	 (else
-	  'no-match)))
-      (else
-       'no-match))))
+(define* (lambda-signature=? {signature1 lambda-signature?} {signature2 lambda-signature?})
+  ;;Return true if the signatures are equal; otherwise return false.
+  ;;
+  (and (type-signature=? (lambda-signature.argvals signature1)
+			 (lambda-signature.argvals signature2))
+       (type-signature=? (lambda-signature.retvals signature1)
+			 (lambda-signature.retvals signature2))))
+
+(define* (lambda-signature.super-and-sub? {super.ots lambda-signature?} {sub.ots lambda-signature?})
+  ;;Compare two closure's clauses type signatures to determine if they are super-type
+  ;;and sub-type.  Return a boolean, true if they are super and sub.
+  ;;
+  ;;This happens when a  formal argument (super.ots) must be a closure  and the operand (S2)
+  ;;is a closure.  Example:
+  ;;
+  ;;   (define (fun {S2 (lambda (<fixnum>) => (<number>))})
+  ;;     ---)
+  ;;
+  ;;   (define ({S2 <fixnum>} {A <number>})
+  ;;     ---)
+  ;;
+  ;;   (type-of S2)	=> (lambda (<number>) => (<fixnum>))
+  ;;   (fun S2)
+  ;;
+  ;;We want:
+  ;;
+  ;;* The formal's argvals to be sub-types of the operands's argvals.
+  ;;
+  ;;* The formal's retvals to be super-types of the operand's retvals.
+  ;;
+  ;;Like this:
+  ;;
+  ;;	   (super-and-sub? (lambda (<fixnum>) => (<number>))
+  ;;	                   (lambda (<number>) => (<fixnum>)))	=> #t
+  ;;
+  ;;	   (super-and-sub? (lambda (<number>) => (<string>))
+  ;;	                   (lambda (<fixnum>) => (<string>)))	=> #f
+  ;;
+  ;;	   (super-and-sub? (lambda (<string>) => (<fixnum>))
+  ;;	                   (lambda (<string>) => (<number>)))	=> #f
+  ;;
+  (and (type-signature.matching-super-and-sub? (lambda-signature.retvals super.ots) (lambda-signature.retvals   sub.ots))
+       (type-signature.matching-super-and-sub? (lambda-signature.argvals   sub.ots) (lambda-signature.argvals super.ots))))
+
+(define* (lambda-signature.match-formals-against-operands {formals.ots lambda-signature?} {operands.ots type-signature?})
+  ;;Compare  formals' and  operands' type  signatures to  determine if  the closure's
+  ;;clause represented by  "<lambda-signature>" matches the operands.   Return one of
+  ;;the symbols: exact-match, possible-match, no-match.
+  ;;
+  ;;In a function application, we want the function's arguments to be super-types and
+  ;;the operands to be sub-types.  We do not care about the return values' types.
+  ;;
+  ;;   (match-formals-against-operands?
+  ;;      (lambda (<number> <struct>) => (<string>))
+  ;;      (<fixnum> <record>))				=> exact-match
+  ;;
+  ;;   (match-formals-against-operands?
+  ;;      (lambda (<fixnum> <struct>) => (<string>))
+  ;;      (<number> <record>))				=> possible-match
+  ;;
+  ;;   (match-formals-against-operands?
+  ;;      (lambda (<fixnum> <struct>) => (<string>))
+  ;;      (<string> <record>))				=> no-match
+  ;;
+  (type-signature.match-formals-against-operands (lambda-signature.argvals formals.ots) operands.ots))
 
 
 ;;;; type definition: applicable object signatures
@@ -172,22 +207,6 @@
 	(case-lambda-signature.clause-signature* S))
       (display "]" port)))
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define* (case-lambda-signature=? {sig1 case-lambda-signature?} {sig2 case-lambda-signature?})
-  (let ((csig1* (case-lambda-signature.clause-signature* sig1))
-	(csig2* (case-lambda-signature.clause-signature* sig2)))
-    (and (for-all (lambda (csig1)
-		    (exists (lambda (csig2)
-			      (lambda-signature=? csig1 csig2))
-		      csig2*))
-	   csig1*)
-	 (for-all (lambda (csig2)
-		    (exists (lambda (csig1)
-			      (lambda-signature=? csig1 csig2))
-		      csig1*))
-	   csig2*))))
 
 ;;; --------------------------------------------------------------------
 
@@ -254,53 +273,54 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (case-lambda-signature.match-super-and-sub {super.sig case-lambda-signature?} {sub.sig case-lambda-signature?})
-  ;;For every clause in the super there must be a matching clause in the sub.
+(define* (case-lambda-signature=? {D1 case-lambda-signature?} {D2 case-lambda-signature?})
+  (let super-loop ((clause1*.ots (case-lambda-signature.clause-signature* D1))
+		   (clause2*.ots (case-lambda-signature.clause-signature* D2)))
+    (if (pair? clause1*.ots)
+	(let sub-loop ((clause2*.ots	clause2*.ots)
+		       (leftover2*.ots	'()))
+	  (if (pair? clause2*.ots)
+	      (if (lambda-signature=? (car clause1*.ots) (car clause2*.ots))
+		  ;;We discard this CLAUSE2.  Go to the outer loop with the leftovers
+		  ;;as CLAUSE2*.
+		  (super-loop (cdr clause1*.ots) (append (cdr clause2*.ots) leftover2*.ots))
+		;;We add this CLAUSE2 to the leftovers.
+		(sub-loop (cdr clause2*.ots) (cons (car clause2*.ots) leftover2*.ots)))
+	    ;;There are more CLAUSE2, but no more CLAUSE1.
+	    #f))
+      ;;There are no more CLAUSE1: are there more CLAUSE2?.
+      (null? clause2*.ots))))
+
+(define* (case-lambda-signature.super-and-sub? {super.ots case-lambda-signature?} {sub.ots case-lambda-signature?})
+  ;;Compare two  closure's type signatures  to determine  if they are  super-type and
+  ;;sub-type.  Return a boolean, true if they are super and sub.  For every clause in
+  ;;the super there must be a matching clause in the sub.
   ;;
-  ;;Examples:
+  (let ((super-clause-signature*	(case-lambda-signature.clause-signature* super.ots))
+	(sub-clause-signature*		(case-lambda-signature.clause-signature*   sub.ots)))
+    (for-all (lambda (super-clause-signature)
+	       (exists (lambda (sub-clause-signature)
+			 (lambda-signature.super-and-sub? super-clause-signature sub-clause-signature))
+		 sub-clause-signature*))
+      super-clause-signature*)))
+
+;;; --------------------------------------------------------------------
+
+(define* (case-lambda-signature.match-formals-against-operands {formals.ots case-lambda-signature?} {operands.ots type-signature?})
+  ;;Compare formals' and operands' type signatures to determine if a closure's clause
+  ;;exists  that matches  the  operands.   Return one  of  the symbols:  exact-match,
+  ;;possible-match, no-match.
   ;;
-  ;;   (type-annotation-super-and-sub?
-  ;;     (lambda (<fixnum>) => (<string>))
-  ;;     (case-lambda
-  ;;       ((<fixnum>) => (<string>))
-  ;;       ((<flonum>) => (<string>))))		=> #t
-  ;;
-  ;;   (type-annotation-super-and-sub?
-  ;;     (case-lambda
-  ;;       ((<fixnum>) => (<string>))
-  ;;       ((<flonum>) => (<string>)))
-  ;;     (lambda (<fixnum>) => (<string>)))		=> #f
-  ;;
-  ;;   (type-annotation-super-and-sub?
-  ;;     (case-lambda
-  ;;       ((<fixnum>) => (<string>))
-  ;;       ((<flonum>) => (<string>)))
-  ;;     (lambda (<flonum>) => (<string>)))		=> #f
-  ;;
-  (let ((super.clause*	(case-lambda-signature.clause-signature* super.sig))
-	(sub.clause*	(case-lambda-signature.clause-signature* sub.sig)))
-    (returnable
-      (fold-left
-	  (lambda (outer-state super.clause)
-	    (let ((inner-state (returnable
-				 (fold-left
-				     (lambda (inner-state sub.clause)
-				       (case (lambda-signature.match-super-and-sub super.clause sub.clause)
-					 ;;Found an  exactly matching  clause: return
-					 ;;now.
-					 ((exact-match)		(return 'exact-match))
-					 ;;Found a possibly  matching clause: set the
-					 ;;state.
-					 ((possible-match)	'possible-match)
-					 ;;This  clause  does  not  match:  keep  the
-					 ;;previous state.
-					 (else			inner-state)))
-				   'no-match sub.clause*))))
-	      (case inner-state
-		((exact-match)		outer-state)
-		((possible-match)	'possible-match)
-		(else			(return 'no-match)))))
-	'exact-match super.clause*))))
+  (returnable
+    (fold-left (lambda (state formals.clause-signature)
+		 (case (lambda-signature.match-formals-against-operands formals.clause-signature operands.ots)
+		   ((exact-match)
+		    (return 'exact-match))
+		   ((possible-match)
+		    'possible-match)
+		   (else
+		    state)))
+      'no-match (case-lambda-signature.clause-signature* formals.ots))))
 
 
 ;;;; done

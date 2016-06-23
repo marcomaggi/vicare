@@ -49,9 +49,9 @@
     (safe)
   (signatures
    ((<type-predicate>
-     (lambda (<top> <top>) => (<boolean>))  ;equal-to predicate
-     (lambda (<top> <top>) => (<boolean>))) ;less-than predicate
-    => (<comparison-procedure>))))
+     (lambda (<bottom> <bottom>) => (<boolean>))  ;equal-to predicate
+     (lambda (<bottom> <bottom>) => (<boolean>))) ;less-than predicate
+    => ((comparison-procedure <top>)))))
 
 ;; numeric procedures
 (declare-comparison-procedure compar-fixnum		<fixnum>)

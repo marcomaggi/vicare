@@ -226,9 +226,9 @@
 		    ((_)				effect-free)))))))
   (declare record-type-destructor		<type-destructor>)
   (declare record-type-printer			<type-printer>)
-  (declare record-type-equality-predicate	<equality-predicate>)
-  (declare record-type-comparison-procedure	<comparison-procedure>)
-  (declare record-type-hash-function		<hash-function>)
+  (declare record-type-equality-predicate	(equality-predicate <top>))
+  (declare record-type-comparison-procedure	(comparison-procedure <top>))
+  (declare record-type-hash-function		(hash-function <top>))
   (declare record-type-method-retriever		<type-method-retriever>)
   #| end of LET-SYNTAX |# )
 
@@ -315,9 +315,9 @@
 		    ((_)		effect-free)))))))
   (declare record-destructor		<type-destructor>)
   (declare record-printer		<type-printer>)
-  (declare record-equality-predicate	<equality-predicate>)
-  (declare record-comparison-procedure	<comparison-procedure>)
-  (declare record-hash-function		<hash-function>)
+  (declare record-equality-predicate	(equality-predicate <top>))
+  (declare record-comparison-procedure	(comparison-procedure <top>))
+  (declare record-hash-function		(hash-function <top>))
   #| end of LET-SYNTAX |# )
 
 (declare-core-primitive record-ref
@@ -430,9 +430,9 @@
 		     (safe)
 		   (signatures
 		    ((<record-type-descriptor>)		=> ((or <false> ?rv-type)))))))))
-  (declare $record-type-equality-predicate	<equality-predicate>)
-  (declare $record-type-comparison-procedure	<comparison-procedure>)
-  (declare $record-type-hash-function		<hash-function>)
+  (declare $record-type-equality-predicate	(equality-predicate <top>))
+  (declare $record-type-comparison-procedure	(comparison-procedure <top>))
+  (declare $record-type-hash-function		(hash-function <top>))
   (declare $record-type-method-retriever	<type-method-retriever>)
   #| end of LET-SYNTAX |# )
 
@@ -498,9 +498,9 @@
 		    ((_)		effect-free)))))))
   (declare $record-destructor		<type-destructor>)
   (declare $record-printer		<type-printer>)
-  (declare $record-equality-predicate	<equality-predicate>)
-  (declare $record-comparison-procedure	<comparison-procedure>)
-  (declare $record-hash-function	<hash-function>)
+  (declare $record-equality-predicate	(equality-predicate <top>))
+  (declare $record-comparison-procedure	(comparison-procedure <top>))
+  (declare $record-hash-function	(hash-function <top>))
   (declare $record-method-retriever	<type-method-retriever>)
   #| end of LET-SYNTAX |# )
 

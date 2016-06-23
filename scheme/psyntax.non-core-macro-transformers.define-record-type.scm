@@ -204,8 +204,9 @@
     (cond ((%make-equality-predicate-code clause*.stx foo parent-rtd.id synner)
 	   => (lambda (foo-equality-predicate-code)
 		(let ((foo-equality-predicate.id (%named-gensym/suffix foo-for-id-generation "-equality-predicate")))
-		  (values foo-equality-predicate.id `((define/typed {,foo-equality-predicate.id <equality-predicate>}
-							,foo-equality-predicate-code))))))
+		  (values foo-equality-predicate.id
+			  `((define/typed {,foo-equality-predicate.id (equality-predicate ,foo)}
+			      ,foo-equality-predicate-code))))))
 	  (else
 	   (values #f '()))))
 
@@ -216,8 +217,9 @@
     (cond ((%make-comparison-procedure-code clause*.stx foo parent-rtd.id synner)
 	   => (lambda (foo-comparison-procedure-code)
 		(let ((foo-comparison-procedure.id (%named-gensym/suffix foo-for-id-generation "-comparison-procedure")))
-		  (values foo-comparison-procedure.id `((define/typed {,foo-comparison-procedure.id <comparison-procedure>}
-							  ,foo-comparison-procedure-code))))))
+		  (values foo-comparison-procedure.id
+			  `((define/typed {,foo-comparison-procedure.id (comparison-procedure ,foo)}
+			      ,foo-comparison-procedure-code))))))
 	  (else
 	   (values #f '()))))
 
@@ -228,7 +230,7 @@
     (cond ((%make-hash-function-code clause*.stx foo parent-rtd.id synner)
 	   => (lambda (foo-hash-function-code)
 		(let ((foo-hash-function.id (%named-gensym/suffix foo-for-id-generation "-hash-function")))
-		  (values foo-hash-function.id `((define/typed {,foo-hash-function.id <hash-function>}
+		  (values foo-hash-function.id `((define/typed {,foo-hash-function.id (hash-function ,foo)}
 						   ,foo-hash-function-code))))))
 	  (else
 	   (values #f '()))))
@@ -279,11 +281,14 @@
 		 (append unsafe-field-accessor* (%filter-out-falses unsafe-field-mutator*))))
       ,@parent-rtd-definition
       ,@parent-rcd-definition
+      (define-syntax ,foo ,foo-syntactic-binding-form)
+      ;;We want these common function definitions after the definition of FOO.
       ,@foo-destructor-definition
       ,@foo-equality-predicate-definition
       ,@foo-comparison-procedure-definition
       ,@foo-hash-function-definition
-      (define-syntax ,foo ,foo-syntactic-binding-form)
+      ;;We want  the RTD definition after  the common functions definitions,  so that
+      ;;the RTD can reference them.
       ,@foo-rtd-definitions
       ,@foo-rcd-definitions
       ,@foo-maker-definitions

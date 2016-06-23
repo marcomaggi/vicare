@@ -403,7 +403,8 @@
     <true>-ots				<true>-ots?
     <false>-ots				<false>-ots?
     <symbol>-ots			<symbol>-ots?
-    <struct>-ots			<record>-ots
+    <struct>-ots			<struct>-ots?
+    <record>-ots			<record>-ots?
     <condition>-ots			<condition>-ots?
     <compound-condition>-ots		<compound-condition>-ots?
     &condition-ots			&condition-ots?
@@ -2966,6 +2967,7 @@
   (define-type-id-retriever <no-return>-type-id			<no-return>)
   (define-type-id-retriever <void>-type-id			<void>)
   (define-type-id-retriever <untyped>-type-id			<untyped>)
+  (define-type-id-retriever <bottom>-type-id		<bottom>)
   (define-type-id-retriever <top>-type-id			<top>)
   (define-type-id-retriever <procedure>-type-id			<procedure>)
   (define-type-id-retriever <boolean>-type-id			<boolean>)
@@ -3003,6 +3005,7 @@
   (define-type-spec-retriever <no-return>-ots			<no-return>)
   (define-type-spec-retriever <void>-ots			<void>)
   (define-type-spec-retriever <untyped>-ots			<untyped>)
+  (define-type-spec-retriever <bottom>-ots		<bottom>)
   (define-type-spec-retriever <top>-ots				<top>)
   (define-type-spec-retriever <procedure>-ots			<procedure>)
   (define-type-spec-retriever <boolean>-ots			<boolean>)
@@ -3039,6 +3042,7 @@
   (define-type-id-predicate <no-return>-type-id?		<no-return>-type-id)
   (define-type-id-predicate <void>-type-id?			<void>-type-id)
   (define-type-id-predicate <untyped>-type-id?			<untyped>-type-id)
+  (define-type-id-predicate <bottom>-type-id?	<bottom>-type-id)
   (define-type-id-predicate <top>-type-id?			<top>-type-id)
   (define-type-id-predicate <boolean>-type-id?			<boolean>-type-id)
   (define-type-id-predicate <true>-type-id?			<true>-type-id)
@@ -3094,11 +3098,14 @@
   (define-type-spec-predicate <no-return>-ots?			<no-return>-ots)
   (define-type-spec-predicate <void>-ots?			<void>-ots)
   (define-type-spec-predicate <untyped>-ots?			<untyped>-ots)
+  (define-type-spec-predicate <bottom>-ots?			<bottom>-ots)
   (define-type-spec-predicate <top>-ots?			<top>-ots)
   (define-type-spec-predicate <boolean>-ots?			<boolean>-ots)
   (define-type-spec-predicate <true>-ots?			<true>-ots)
   (define-type-spec-predicate <false>-ots?			<false>-ots)
   (define-type-spec-predicate <symbol>-ots?			<symbol>-ots)
+  (define-type-spec-predicate <struct>-ots?			<struct>-ots)
+  (define-type-spec-predicate <record>-ots?			<record>-ots)
   (define-type-spec-predicate <procedure>-ots?			<procedure>-ots)
   (define-type-spec-predicate <vector>-ots?			<vector>-ots)
   (define-type-spec-predicate <nevector>-ots?			<nevector>-ots)

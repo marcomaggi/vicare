@@ -51,7 +51,7 @@
 	 type-descriptor-parent-transformer
 	 type-descriptor-ancestors-transformer
 	 type-descriptor=?-transformer
-	 type-descriptor-matching-super-and-sub?-transformer
+	 type-descriptor-super-and-sub?-transformer
 	 type-descriptor-matching-transformer
 	 #| end of EXPORTS |# )
 
@@ -1041,21 +1041,23 @@
 				       caller-who asrt.stx asrt.sig expr.psi
 				       return-values? cast-signature?))
 
-		((type-signature.matching-super-and-sub? asrt.sig expr.sig)
-		 ;;Good.  Everything  is all  right at  expand-time.  We  replace the
-		 ;;expression's type signature with the asserted type signature: yes,
-		 ;;this is  really useful, especially  with RHS type  propagation and
-		 ;;mutable variables.
-		 (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
-
-		((type-signature.compatible-super-and-sub? asrt.sig expr.sig)
-		 ;;Compatible signatures, let's check the values at run-time.
-		 (%run-time-validation input-form.stx lexenv.run lexenv.expand
-				       caller-who asrt.stx asrt.sig expr.psi
-				       return-values? cast-signature?))
-
 		(else
-		 (%error-mismatching-signatures)))
+		 (case (type-signature.match-formals-against-operands asrt.sig expr.sig)
+		   ((exact-match)
+		    ;;Good.  Everything is all right  at expand-time.  We replace the
+		    ;;expression's type  signature with the asserted  type signature:
+		    ;;yes,  this   is  really   useful,  especially  with   RHS  type
+		    ;;propagation and mutable variables.
+		    (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
+
+		   ((possible-match)
+		    ;;Compatible signatures, let's check the values at run-time.
+		    (%run-time-validation input-form.stx lexenv.run lexenv.expand
+					  caller-who asrt.stx asrt.sig expr.psi
+					  return-values? cast-signature?))
+
+		   (else
+		    (%error-mismatching-signatures)))))
 	;;Just insert a run-time validation when using a non-typed language.
 	(%run-time-validation input-form.stx lexenv.run lexenv.expand
 			      caller-who asrt.stx asrt.sig expr.psi
@@ -1256,35 +1258,35 @@
 	    (expr.sig		(psi.retvals-signature expr.psi)))
        (define (%do-unsafe-cast-signature)
 	 (make-psi input-form.stx expr.core target.sig))
-       (cond ((type-signature.matching-super-and-sub? target.sig expr.sig)
-	      ;;Good,  matching  type  signatures:   we  are  generalising  the  type
-	      ;;specification.  For example:
-	      ;;
-	      ;;   (unsafe-cast-signature (<number>) 123)
-	      ;;
-	      ;;which generalises from "<fixnum>" to "<number>".
-	      (%do-unsafe-cast-signature))
-	     ((type-signature.compatible-super-and-sub? expr.sig target.sig)
-	      ;;Good,   non-matching  but   compatible   type   signatures:  we   are
-	      ;;specialising the type specification.  For example:
-	      ;;
-	      ;;   (define ({fun <number>})
-	      ;;     123)
-	      ;;   (unsafe-cast-signature (<fixnum>) (fun))
-	      ;;
-	      ;;which specialises from "<number>" to "<fixnum>".
-	      (%do-unsafe-cast-signature))
-	     (else
-	      ;;Bad, non-matching and incompatible signatures.  For example:
-	      ;;
-	      ;;   (unsafe-cast-signature (<fixnum>) "ciao")
-	      ;;
-	      (raise
-	       (condition (make-who-condition __who__)
-			  (make-message-condition "source expression's signature is incompatible with the requested target signature")
-			  (make-syntax-violation input-form.stx ?expr)
-			  (make-irritants-condition (list expr.sig))))))
-       ))
+       (case (type-signature.match-formals-against-operands target.sig expr.sig)
+	 ((exact-match)
+	  ;;Good,   matching  type   signatures:   we  are   generalising  the   type
+	  ;;specification.  For example:
+	  ;;
+	  ;;   (unsafe-cast-signature (<number>) 123)
+	  ;;
+	  ;;which generalises from "<positive-fixnum>" to "<number>".
+	  (%do-unsafe-cast-signature))
+	 ((possible-match)
+	  ;;Good, non-matching  but compatible  type signatures: we  are specialising
+	  ;;the type specification.  For example:
+	  ;;
+	  ;;   (define ({fun <number>})
+	  ;;     123)
+	  ;;   (unsafe-cast-signature (<fixnum>) (fun))
+	  ;;
+	  ;;which specialises from "<number>" to "<fixnum>".
+	  (%do-unsafe-cast-signature))
+	 (else
+	  ;;Bad, non-matching and incompatible signatures.  For example:
+	  ;;
+	  ;;   (unsafe-cast-signature (<fixnum>) "ciao")
+	  ;;
+	  (raise
+	   (condition (make-who-condition __who__)
+		      (make-message-condition "source expression's signature is incompatible with the requested target signature")
+		      (make-syntax-violation input-form.stx ?expr)
+		      (make-irritants-condition (list target.sig expr.sig))))))))
     (_
      (__synner__ "invalid syntax in macro use"))))
 
@@ -1612,7 +1614,7 @@
 ;; TYPE-DESCRIPTOR=?
 ;; TYPE-DESCRIPTOR-PARENT
 ;; TYPE-DESCRIPTOR-ANCESTORS
-;; TYPE-DESCRIPTOR-MATCHING-SUPER-AND-SUB?
+;; TYPE-DESCRIPTOR-SUPER-AND-SUB?
 ;; TYPE-DESCRIPTOR-MATCHING
 ;;
 
@@ -1671,11 +1673,10 @@
     (_
      (__synner__ "invalid syntax in macro use"))))
 
-(define-core-transformer (type-descriptor-matching-super-and-sub? input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer        function         used        to         expand        Vicare's
-  ;;TYPE-DESCRIPTOR-MATCHING-SUPER-AND-SUB?   syntaxes from  the  top-level built  in
-  ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
-  ;;LEXENV; return a PSI struct.
+(define-core-transformer (type-descriptor-super-and-sub? input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used  to  expand  Vicare's  TYPE-DESCRIPTOR-SUPER-AND-SUB?
+  ;;syntaxes  from the  top-level built  in  environment.  Expand  the syntax  object
+  ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?super-type-annotation ?sub-type-annotation)

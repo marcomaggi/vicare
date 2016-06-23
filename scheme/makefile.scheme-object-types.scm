@@ -30,6 +30,9 @@
   (predicate void-object?)
   (hash-function void-hash))
 
+(define-scheme-type <bottom>
+    <top>)
+
 
 ;;;; standalone object types
 

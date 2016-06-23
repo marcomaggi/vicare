@@ -826,18 +826,6 @@
 	     (cons selected.id selected.lambda-sig))
 	    (else #f))))
 
-  #;(define (%search-applicable-function operator.ofs rands.sig)
-    (let ((spec*.id		(overloaded-function-spec.id*        operator.ofs))
-	  (spec*.lambda-sig	(overloaded-function-spec.signature* operator.ofs)))
-      (let loop ((spec*.lambda-sig	spec*.lambda-sig)
-		 (spec*.id		spec*.id))
-	(if (pair? spec*.lambda-sig)
-	    (if (let ((spec.formals-sig (lambda-signature.argvals (car spec*.lambda-sig))))
-		  (eq? 'exact-match (type-signature.match-formals-against-operands spec.formals-sig rands.sig)))
-		(cons (car spec*.id) (car spec*.lambda-sig))
-	      (loop (cdr spec*.lambda-sig) (cdr spec*.id)))
-	  #f))))
-
   #| end of module: CHI-OVERLOADED-FUNCTION-APPLICATION |# )
 
 
@@ -1369,7 +1357,10 @@
 	application.sig)))
 
   (define (%single-value-operand-signature->application-signature input-form.stx rands.sig original-prim-name)
-    (let ((rand.ots (car (type-signature.object-type-specs rands.sig))))
+    (let* ((rand.ots (car (type-signature.object-type-specs rands.sig)))
+	   (rand.ots (if (label-type-spec? rand.ots)
+			 (object-type-spec.parent-ots rand.ots)
+		       rand.ots)))
       (cond ((list-of-type-spec? rand.ots)
 	     ;;This is not  an exact match: the  operand might be null.   So we apply
 	     ;;the original primitive.
@@ -1432,7 +1423,10 @@
 	application.sig)))
 
   (define (%single-value-operand-signature->application-signature input-form.stx rands.sig original-prim-name)
-    (let ((rand.ots (car (type-signature.object-type-specs rands.sig))))
+    (let* ((rand.ots (car (type-signature.object-type-specs rands.sig)))
+	   (rand.ots (if (label-type-spec? rand.ots)
+			 (object-type-spec.parent-ots rand.ots)
+		       rand.ots)))
       (cond ((list-of-type-spec? rand.ots)
 	     ;;This is not  an exact match: the  operand might be null.   So we apply
 	     ;;the original primitive.
@@ -1567,42 +1561,45 @@
 	       (make-compound-condition-type-spec component*.ots)))))))
 
   (define (%process-single-value-operand input-form.stx component*.ots rand.ots punt)
-    (cond ((simple-condition-object-type-spec? rand.ots)
-	   (cons rand.ots component*.ots))
+    (let ((rand.ots (if (label-type-spec? rand.ots)
+			(object-type-spec.parent-ots rand.ots)
+		      rand.ots)))
+      (cond ((simple-condition-object-type-spec? rand.ots)
+	     (cons rand.ots component*.ots))
 
-	  ((compound-condition-type-spec? rand.ots)
-	   (append (compound-condition-type-spec.component-ots* rand.ots)
-		   component*.ots))
+	    ((compound-condition-type-spec? rand.ots)
+	     (append (compound-condition-type-spec.component-ots* rand.ots)
+		     component*.ots))
 
-	  ((and (union-type-spec? rand.ots)
-		(for-all (lambda (item.ots)
-			   (or (simple-condition-object-type-spec?	item.ots)
-			       (compound-condition-type-spec?		item.ots)
-			       (<compound-condition>-ots?		item.ots)
-			       (<condition>-ots?			item.ots)))
-		  (union-type-spec.item-ots* rand.ots)))
-	   (punt))
+	    ((and (union-type-spec? rand.ots)
+		  (for-all (lambda (item.ots)
+			     (or (simple-condition-object-type-spec?	item.ots)
+				 (compound-condition-type-spec?		item.ots)
+				 (<compound-condition>-ots?		item.ots)
+				 (<condition>-ots?			item.ots)))
+		    (union-type-spec.item-ots* rand.ots)))
+	     (punt))
 
-	  ((and (intersection-type-spec? rand.ots)
-		(for-all (lambda (item.ots)
-			   (or (simple-condition-object-type-spec?	item.ots)
-			       (compound-condition-type-spec?		item.ots)
-			       (<compound-condition>-ots?		item.ots)
-			       (<condition>-ots?			item.ots)))
-		  (intersection-type-spec.item-ots* rand.ots)))
-	   (punt))
+	    ((and (intersection-type-spec? rand.ots)
+		  (for-all (lambda (item.ots)
+			     (or (simple-condition-object-type-spec?	item.ots)
+				 (compound-condition-type-spec?		item.ots)
+				 (<compound-condition>-ots?		item.ots)
+				 (<condition>-ots?			item.ots)))
+		    (intersection-type-spec.item-ots* rand.ots)))
+	     (punt))
 
-	  ((or (<compound-condition>-ots? rand.ots)
-	       (<condition>-ots?          rand.ots))
-	   (punt))
+	    ((or (<compound-condition>-ots? rand.ots)
+		 (<condition>-ots?          rand.ots))
+	     (punt))
 
-	  ((object-type-spec.compatible-super-and-sub? (<condition>-ots) rand.ots)
-	   (cons rand.ots component*.ots))
+	    ((object-type-spec.compatible-super-and-sub? (<condition>-ots) rand.ots)
+	     (cons rand.ots component*.ots))
 
-	  (else
-	   ;;This should never happen.
-	   (assertion-violation __module_who__
-	     "internal error, core primitive operand of wrong type" input-form.stx rand.ots))))
+	    (else
+	     ;;This should never happen.
+	     (assertion-violation __module_who__
+	       "internal error, core primitive operand of wrong type" input-form.stx rand.ots)))))
 
   #| end of module: CHI-CONDITION-APPLICATION |# )
 
@@ -1751,30 +1748,33 @@
 	(make-message-condition "last operand in call to APPLY is not a sub-type of <list>")
 	(make-syntax-violation input-form.stx (psi.input-form last-rand.psi))
 	(make-application-operand-signature-condition (psi.retvals-signature last-rand.psi))))
-    (cond ((list-type-spec? last-rand.ots)
-	   ;;Exact match.
-	   (list-type-spec.item-ots* last-rand.ots))
-	  ((or (list-of-type-spec?	last-rand.ots)
-	       (<nelist>-ots?		last-rand.ots)
-	       (<list>-ots?		last-rand.ots))
-	   ;;Exact match.
-	   last-rand.ots)
-	  ((<null>-ots? last-rand.ots)
-	   ;;Exact match.
-	   '())
-	  ((<top>-ots? last-rand.ots)
-	   ;;Possible match.
-	   (<list>-ots))
-	  (else
-	   ;;No match.
-	   (case-expander-language
-	     ((typed)
-	      (raise			(condition (make-expand-time-type-signature-violation) (common))))
-	     ((default)
-	      (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
-	      (<list>-ots))
-	     ((strict-r6rs)
-	      (<list>-ots))))))
+    (let ((last-rand.ots (if (label-type-spec? last-rand.ots)
+			     (object-type-spec.parent-ots last-rand.ots)
+			   last-rand.ots)))
+      (cond ((list-type-spec? last-rand.ots)
+	     ;;Exact match.
+	     (list-type-spec.item-ots* last-rand.ots))
+	    ((or (list-of-type-spec?	last-rand.ots)
+		 (<nelist>-ots?		last-rand.ots)
+		 (<list>-ots?		last-rand.ots))
+	     ;;Exact match.
+	     last-rand.ots)
+	    ((<null>-ots? last-rand.ots)
+	     ;;Exact match.
+	     '())
+	    ((<top>-ots? last-rand.ots)
+	     ;;Possible match.
+	     (<list>-ots))
+	    (else
+	     ;;No match.
+	     (case-expander-language
+	       ((typed)
+		(raise			(condition (make-expand-time-type-signature-violation) (common))))
+	       ((default)
+		(raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+		(<list>-ots))
+	       ((strict-r6rs)
+		(<list>-ots)))))))
 
 ;;; --------------------------------------------------------------------
 

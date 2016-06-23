@@ -283,11 +283,14 @@
 (define-syntax (case-type-signature-structure input-form.stx)
   (define (main input-form.stx)
     (sys::syntax-case input-form.stx ()
-      ((_ ?annotation . ?clause*)
+      ((_ ?specification . ?clause*)
        (sys::with-syntax
 	   (((CLAUSE ...)	(%parse-clauses (sys::syntax ?clause*))))
 	 (sys::syntax
-	  (let ((annotation ?annotation))
+	  (let* ((specification ?specification)
+		 (specification (if (label-type-spec? specification)
+				    (object-type-spec.parent-ots specification)
+				  specification)))
 	    (cond CLAUSE ...)))))
        ))
 
@@ -310,50 +313,50 @@
        clause.stx)
 
       ((null? . ?body)
-       (sys::syntax ((null? annotation) . ?body)))
+       (sys::syntax ((null? specification) . ?body)))
 
       ((<null> => ?expr)
-       (sys::syntax ((<null>-ots? annotation) (?expr annotation))))
+       (sys::syntax ((<null>-ots? specification) (?expr specification))))
       ((<null> . ?body)
-       (sys::syntax ((<null>-ots? annotation) . ?body)))
+       (sys::syntax ((<null>-ots? specification) . ?body)))
 
       ((pair? => ?expr)
-       (sys::syntax ((pair? annotation) (?expr annotation))))
+       (sys::syntax ((pair? specification) (?expr specification))))
       ((pair? . ?body)
-       (sys::syntax ((pair? annotation) . ?body)))
+       (sys::syntax ((pair? specification) . ?body)))
 
       ((<pair-spec> => ?expr)
-       (sys::syntax ((pair-type-spec? annotation) (?expr annotation))))
+       (sys::syntax ((pair-type-spec? specification) (?expr specification))))
       ((<pair-spec> . ?body)
-       (sys::syntax ((pair-type-spec? annotation) . ?body)))
+       (sys::syntax ((pair-type-spec? specification) . ?body)))
 
       ((<list> => ?expr)
-       (sys::syntax ((<list>-ots? annotation) (?expr annotation))))
+       (sys::syntax ((<list>-ots? specification) (?expr specification))))
       ((<list> . ?body)
-       (sys::syntax ((<list>-ots? annotation) . ?body)))
+       (sys::syntax ((<list>-ots? specification) . ?body)))
 
       ((<nelist> => ?expr)
-       (sys::syntax ((<nelist>-ots? annotation) (?expr annotation))))
+       (sys::syntax ((<nelist>-ots? specification) (?expr specification))))
       ((<nelist> . ?body)
-       (sys::syntax ((<nelist>-ots? annotation) . ?body)))
+       (sys::syntax ((<nelist>-ots? specification) . ?body)))
 
       ((<list-of-spec> => ?expr)
-       (sys::syntax ((list-of-type-spec? annotation) (?expr annotation))))
+       (sys::syntax ((list-of-type-spec? specification) (?expr specification))))
       ((<list-of-spec> . ?body)
-       (sys::syntax ((list-of-type-spec? annotation) . ?body)))
+       (sys::syntax ((list-of-type-spec? specification) . ?body)))
 
       ((<list-spec> => ?expr)
-       (sys::syntax ((list-type-spec? annotation) (?expr annotation))))
+       (sys::syntax ((list-type-spec? specification) (?expr specification))))
       ((<list-spec> . ?body)
-       (sys::syntax ((list-type-spec? annotation) . ?body)))
+       (sys::syntax ((list-type-spec? specification) . ?body)))
 
       ((<list>/<list-of-spec> => ?expr)
-       (sys::syntax ((or (<list>-ots?     annotation)
-			 (list-of-type-spec? annotation))
-		     (?expr annotation))))
+       (sys::syntax ((or (<list>-ots?     specification)
+			 (list-of-type-spec? specification))
+		     (?expr specification))))
       ((<list>/<list-of-spec> . ?body)
-       (sys::syntax ((or (<list>-ots?     annotation)
-			 (list-of-type-spec? annotation))
+       (sys::syntax ((or (<list>-ots?     specification)
+			 (list-of-type-spec? specification))
 		     . ?body)))
 
       (_
@@ -463,13 +466,17 @@
   ;;   (?car-type . ?list-type-signature)
   ;;
   (define (%acceptable-list-ots? type.ots)
-    (or (<list>-ots?		type.ots)
-	(<nelist>-ots?		type.ots)
-	(<null>-ots?		type.ots)
-	(list-of-type-spec?	type.ots)
-	(list-type-spec?	type.ots)
-	(and (pair-type-spec? type.ots)
-	     (%acceptable-list-ots? (pair-type-spec.cdr-ots type.ots)))))
+    (if (label-type-spec? type.ots)
+	(%acceptable-list-ots? (object-type-spec.parent-ots type.ots))
+      (or (<list>-ots?		type.ots)
+	  (<nelist>-ots?	type.ots)
+	  (<null>-ots?		type.ots)
+	  (list-of-type-spec?	type.ots)
+	  (list-type-spec?	type.ots)
+	  (and (pair-type-spec? type.ots)
+	       (%acceptable-list-ots? (pair-type-spec.cdr-ots type.ots)))
+	  (and (pair-of-type-spec? type.ots)
+	       (%acceptable-list-ots? (pair-of-type-spec.item-ots type.ots))))))
   (define (ta->ots type.stx)
     (try
 	(type-annotation->object-type-spec type.stx lexenv)
@@ -478,7 +485,8 @@
 	 (%synner type.stx)))))
   (define (%synner subform)
     (synner "invalid syntax object as type signature" subform))
-  (syntax-match input-signature.stx (<no-return> <null> <list> <nelist> list-of list pair nelist-of)
+  (syntax-match input-signature.stx (<no-return> <null> <list> <nelist>
+						 list-of list pair pair-of nelist-of)
     (<no-return>
      (<no-return>-ots))
 
@@ -506,6 +514,12 @@
 	   (make-pair-type-spec (ta->ots ?car))
 	 (%synner ?cdr))))
 
+    ((pair-of ?item)
+     (let ((item.ots (ta->ots ?item)))
+       (if (%acceptable-list-ots? item.ots)
+	   (make-pair-of-type-spec (ta->ots ?item))
+	 (%synner ?item))))
+
     ((nelist-of ?type)
      (let ((type.ots (ta->ots ?type)))
        (make-pair-type-spec type.ots (make-list-of-type-spec type.ots))))
@@ -530,7 +544,7 @@
      ;;INPUT-SIGNATURE.STX must be a proper or improper list of type annotations.
      (cons (ta->ots ?car)
 	   (let recur ((stx ?cdr))
-	     (syntax-match stx (<no-return> <null> <list> <nelist> list-of list pair nelist-of)
+	     (syntax-match stx (<no-return> <null> <list> <nelist> list-of list pair pair-of nelist-of)
 	       ((list-of ?type)
 		(make-list-of-type-spec (ta->ots ?type)))
 
@@ -545,6 +559,12 @@
 		  (if (%acceptable-list-ots? cdr.ots)
 		      (make-pair-type-spec (ta->ots ?car))
 		    (%synner ?cdr))))
+
+	       ((pair-of ?item)
+		(let ((item.ots (ta->ots ?item)))
+		  (if (%acceptable-list-ots? item.ots)
+		      (make-pair-of-type-spec (ta->ots ?item))
+		    (%synner ?item))))
 
 	       ((nelist-of ?type)
 		(let ((type.ots (ta->ots ?type)))

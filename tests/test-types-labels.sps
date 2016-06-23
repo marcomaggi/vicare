@@ -29,8 +29,7 @@
   (import (vicare)
     (vicare language-extensions labels)
     (vicare language-extensions mixins)
-    (vicare checks)
-    (prefix (vicare expander) expander::))
+    (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** test Vicare typed language: DEFINE-LABEL\n")
@@ -62,27 +61,37 @@
   (define-label <pos-fx>
     (parent <fixnum>)
     (type-predicate
-      (lambda (parent?)
-	(lambda (obj)
+      (lambda ({parent? <type-predicate>})
+	(lambda ({_ <boolean>} obj)
 	  (and (parent?   obj)
 	       (positive? obj))))))
 
 ;;; --------------------------------------------------------------------
 ;;; super and sub
 
-  (check-for-true	(type-annotation-super-and-sub? <fixnum> <fx>))
-  (check-for-true	(type-annotation-super-and-sub? <fx> <fixnum>))
-  (check-for-true	(type-annotation-super-and-sub? <fx> <positive-fixnum>))
-  (check-for-true	(type-annotation-super-and-sub? <fx> <zero-fixnum>))
-  (check-for-true	(type-annotation-super-and-sub? <fx> <negative-fixnum>))
-  (check-for-true	(type-annotation-super-and-sub? <fx> <all-fixnums>))
+  (check-for-true	(type-annotation-super-and-sub? <fixnum>		<fx>))
+  (check-for-false	(type-annotation-super-and-sub? <positive-fixnum>	<fx>))
+  (check-for-false	(type-annotation-super-and-sub? <zero-fixnum>		<fx>))
+  (check-for-false	(type-annotation-super-and-sub? <negative-fixnum>	<fx>))
+  (check-for-false	(type-annotation-super-and-sub? <all-fixnums>		<fx>))
 
-  (check-for-true	(type-annotation-super-and-sub? <fixnum> <pos-fx>))
-  (check-for-false	(type-annotation-super-and-sub? <pos-fx> <fixnum>))
-  (check-for-false	(type-annotation-super-and-sub? <pos-fx> <positive-fixnum>))
-  (check-for-false	(type-annotation-super-and-sub? <pos-fx> <zero-fixnum>))
-  (check-for-false	(type-annotation-super-and-sub? <pos-fx> <negative-fixnum>))
-  (check-for-false	(type-annotation-super-and-sub? <pos-fx> <all-fixnums>))
+  (check-for-true	(type-annotation-super-and-sub? <fx>		<fixnum>))
+  (check-for-true	(type-annotation-super-and-sub? <fx>		<positive-fixnum>))
+  (check-for-true	(type-annotation-super-and-sub? <fx>		<zero-fixnum>))
+  (check-for-true	(type-annotation-super-and-sub? <fx>		<negative-fixnum>))
+  (check-for-true	(type-annotation-super-and-sub? <fx>		<all-fixnums>))
+
+  (check-for-true	(type-annotation-super-and-sub? <fixnum>		<pos-fx>))
+  (check-for-false	(type-annotation-super-and-sub? <positive-fixnum>	<pos-fx>))
+  (check-for-false	(type-annotation-super-and-sub? <zero-fixnum>		<pos-fx>))
+  (check-for-false	(type-annotation-super-and-sub? <negative-fixnum>	<pos-fx>))
+  (check-for-false	(type-annotation-super-and-sub? <all-fixnums>		<pos-fx>))
+
+  (check-for-false	(type-annotation-super-and-sub? <pos-fx>	<fixnum>))
+  (check-for-false	(type-annotation-super-and-sub? <pos-fx>	<positive-fixnum>))
+  (check-for-false	(type-annotation-super-and-sub? <pos-fx>	<zero-fixnum>))
+  (check-for-false	(type-annotation-super-and-sub? <pos-fx>	<negative-fixnum>))
+  (check-for-false	(type-annotation-super-and-sub? <pos-fx>	<all-fixnums>))
 
 ;;; --------------------------------------------------------------------
 ;;; matching
@@ -101,47 +110,54 @@
   (matching <fx>			<top>			=> possible-match)
   (matching <fx>			<exact-integer>		=> possible-match)
 
+  (matching <fixnum>			<fx>			=> exact-match)
+  (matching <positive-fixnum>		<fx>			=> possible-match)
+  (matching <zero-fixnum>		<fx>			=> possible-match)
+  (matching <negative-fixnum>		<fx>			=> possible-match)
+  (matching <all-fixnums>		<fx>			=> possible-match)
+  (matching <string>			<fx>			=> no-match)
+  (matching <top>			<fx>			=> exact-match)
+  (matching <exact-integer>		<fx>			=> exact-match)
+
   ;;The type "<fx>"  is not equal to  an ancestor of "<fixnum>",  while "<fixnum>" is
   ;;equal to an ancestor of "<fx>".
-  (matching (ancestor-of <fixnum>) <fx>			=> no-match)
-  (matching (ancestor-of <fx>) <fixnum>			=> exact-match)
-  (matching <fx> (ancestor-of <fixnum>) 		=> no-match)
-  (matching <fixnum> (ancestor-of <fx>)			=> exact-match)
+  (matching (ancestor-of <fixnum>)	<fx>			=> no-match)
+  (matching (ancestor-of <fx>)		<fixnum>		=> exact-match)
+  (matching <fx>			(ancestor-of <fixnum>) 	=> no-match)
+  (matching <fixnum>			(ancestor-of <fx>)	=> exact-match)
 
-  (matching <string> <fx>				=> no-match)
-  (matching <fx> <string>				=> no-match)
-
+  (matching <string>			<fx>			=> no-match)
+  (matching <fx>			<string>		=> no-match)
 ;;;
+  (matching <top>			<pos-fx>		=> exact-match)
+  (matching <exact-integer>		<pos-fx>		=> exact-match)
+  (matching <fixnum>			<pos-fx>		=> exact-match)
 
-  (matching <top>		<pos-fx>		=> exact-match)
-  (matching <exact-integer>	<pos-fx>		=> exact-match)
-  (matching <fixnum>		<pos-fx>		=> exact-match)
+  (matching <pos-fx>			<top>			=> possible-match)
+  (matching <pos-fx>			<number>		=> possible-match)
+  (matching <pos-fx>			<integer>		=> possible-match)
+  (matching <pos-fx>			<exact-integer>		=> possible-match)
+  (matching <pos-fx>			<fixnum>		=> possible-match)
+  (matching <pos-fx>			<positive-fixnum>	=> possible-match)
+  (matching <pos-fx>			<zero-fixnum>		=> possible-match)
+  (matching <pos-fx>			<negative-fixnum>	=> possible-match)
+  (matching <pos-fx>			<all-fixnums>		=> possible-match)
 
-  (matching <pos-fx>		<top>			=> possible-match)
-  (matching <pos-fx>		<number>		=> possible-match)
-  (matching <pos-fx>		<integer>		=> possible-match)
-  (matching <pos-fx>		<exact-integer>		=> possible-match)
-  (matching <pos-fx>		<fixnum>		=> possible-match)
-  (matching <pos-fx>		<positive-fixnum>	=> possible-match)
-  (matching <pos-fx>		<zero-fixnum>		=> possible-match)
-  (matching <pos-fx>		<negative-fixnum>	=> possible-match)
-  (matching <pos-fx>		<all-fixnums>		=> possible-match)
-
-  (matching <pos-fx>		(parent-of <fixnum>)	=> possible-match)
+  (matching <pos-fx>			(parent-of <fixnum>)	=> possible-match)
 
   ;;The type "<pos-fx>"  is not equal to an ancestor  of "<fixnum>", while "<fixnum>"
   ;;is equal to an ancestor of "<pos-fx>".
-  (matching <pos-fx> (ancestor-of <fixnum>)		=> no-match)
-  (matching <fixnum> (ancestor-of <pos-fx>)		=> exact-match)
-  (matching (ancestor-of <fixnum>) <pos-fx>		=> no-match)
-  (matching (ancestor-of <pos-fx>) <fixnum>		=> exact-match)
+  (matching <pos-fx>			(ancestor-of <fixnum>)	=> no-match)
+  (matching <fixnum>			(ancestor-of <pos-fx>)	=> exact-match)
+  (matching (ancestor-of <fixnum>)	<pos-fx>		=> no-match)
+  (matching (ancestor-of <pos-fx>)	<fixnum>		=> exact-match)
 
   ;;The type "<exact>" is a union containing "<fixnum>".
-  (matching <pos-fx>		<exact>			=> possible-match)
-  (matching <exact>		<pos-fx>		=> exact-match)
+  (matching <pos-fx>			<exact>			=> possible-match)
+  (matching <exact>			<pos-fx>		=> exact-match)
 
-  (matching <string>		<pos-fx>		=> no-match)
-  (matching <pos-fx>		<string>		=> no-match)
+  (matching <string>			<pos-fx>		=> no-match)
+  (matching <pos-fx>			<string>		=> no-match)
 
   #| end of PARAMETRISE |# )
 
@@ -166,7 +182,7 @@
     (define-label <comparison-fixnum>
       (parent <all-fixnums>)
       (type-predicate
-	(lambda (parent?)
+	(lambda ({parent? <type-predicate>})
 	  (lambda ({_ <boolean>} obj)
 	    (and (parent? obj)
 		 (fx<=? obj +1)
@@ -237,7 +253,7 @@
     (define-label <comparison-fixnum>
       (parent <all-fixnums>)
       (type-predicate
-	(lambda (parent?)
+	(lambda ({parent? <type-predicate>})
 	  (lambda ({_ <boolean>} obj)
 	    (and (parent? obj)
 		 (fx<=? obj +1)
@@ -306,8 +322,8 @@
       (constructor ({A <fixnum>} {B <fixnum>})
 	(vector A B))
       (type-predicate
-	(lambda (parent?)
-	  (lambda (obj)
+	(lambda ({parent? <type-predicate>})
+	  (lambda ({_ <boolean>} obj)
 	    (and (parent? obj)
 		 (fixnum? (vector-ref obj 0))
 		 (fixnum? (vector-ref obj 1)))))))
@@ -326,7 +342,7 @@
     (check (type-annotation-matching <nevector> <twofx>)	=> 'exact-match)
     (check (type-annotation-matching <twofx> <nevector>)	=> 'possible-match)
 
-    (check (type-annotation-matching (vector <fixnum> <fixnum>) <twofx>)	=> 'exact-match)
+    (check (type-annotation-matching (vector <fixnum> <fixnum>)	<twofx>)	=> 'exact-match)
     (check (type-annotation-matching <twofx> (vector <fixnum> <fixnum>))	=> 'possible-match)
 
     (check (type-annotation-matching (vector-of <fixnum>) <twofx>)	=> 'exact-match)
@@ -349,8 +365,8 @@
       (constructor ({A <fixnum>} {B <fixnum>} {C <fixnum>})
 	(vector A B C))
       (type-predicate
-	(lambda (parent?)
-	  (lambda (obj)
+	(lambda ({parent? <type-predicate>})
+	  (lambda ({_ <boolean>} obj)
 	    (and (parent? obj)
 		 (vector-for-all fixnum? obj))))))
 
@@ -379,8 +395,8 @@
 	(add-result (list 'destroyed O))
 	999)
       (type-predicate
-	(lambda (parent?)
-	  (lambda (obj)
+	(lambda ({parent? <type-predicate>})
+	  (lambda ({_ <boolean>} obj)
 	    (and (parent? obj)
 		 (fixnum? (vector-ref obj 0))
 		 (fixnum? (vector-ref obj 1)))))))
@@ -388,10 +404,10 @@
     (define {O <twofx>}
       (new <twofx> 1 2))
 
-    (check-for-true (type-annotation-super-and-sub? <vector> <empty-vector>))
-    (check-for-true (type-annotation-super-and-sub? <vector> <nevector>))
-    (check-for-true (type-annotation-super-and-sub? <nevector> (vector <fixnum> <fixnum>)))
-    (check-for-true (type-annotation-super-and-sub? <nevector> <twofx>))
+    (check-for-true (type-annotation-super-and-sub? <vector>	<empty-vector>))
+    (check-for-true (type-annotation-super-and-sub? <vector>	<nevector>))
+    (check-for-true (type-annotation-super-and-sub? <nevector>	(vector <fixnum> <fixnum>)))
+    (check-for-true (type-annotation-super-and-sub? <nevector>	<twofx>))
 
     (check
 	(with-result
@@ -450,50 +466,56 @@
 
 (parametrise ((check-test-name	'misc-operations))
 
-  (define-label <my-fixnum>
-    (parent <fixnum>)
-    (equality-predicate
-      (lambda (parent-func)
-	fx=?))
-    (comparison-procedure
-      (lambda ({parent-func (comparison-procedure <fixnum>)})
-	(lambda ({a <my-fixnum>} {b <my-fixnum>})
-	  (cond ((fx=? a b)	 0)
-		((fx<=? a b)	-1)
-		(else		+1)))))
-    (hash-function
-      (lambda (parent-func)
-	(lambda (obj)
-	  (add1 (parent-func obj))))))
+  (internal-body
+
+    (define-label <my-fixnum>
+      (parent <fixnum>))
+
+    (check (type-annotation-matching <my-fixnum>	<my-fixnum>)		=> 'exact-match)
+
+    (check (type-annotation-matching <my-fixnum>	<fixnum>)		=> 'exact-match)
+    (check (type-annotation-matching <my-fixnum>	<positive-fixnum>)	=> 'exact-match)
+    (check (type-annotation-matching <my-fixnum>	<exact-integer>)	=> 'possible-match)
+
+    (check (type-annotation-matching <exact-integer>	<my-fixnum>)		=> 'exact-match)
+    (check (type-annotation-matching <fixnum>		<my-fixnum>)		=> 'exact-match)
+    (check (type-annotation-matching <positive-fixnum>	<my-fixnum>)		=> 'possible-match)
+
+    #| end of INTERNAL-BODY |# )
 
 ;;; --------------------------------------------------------------------
 
-  (check-for-true	((equality-predicate <my-fixnum>) 1 1))
-  (check-for-false	((equality-predicate <my-fixnum>) 1 2))
+  (internal-body
 
-;;; --------------------------------------------------------------------
+    (define-label <my-fixnum>
+      (parent <fixnum>)
+      (equality-predicate
+	(lambda (parent-func)
+	  (lambda ({a <my-fixnum>} {b <my-fixnum>})
+	    (fx=? a b))))
+      (comparison-procedure
+	(lambda (parent-func)
+	  (lambda ({a <my-fixnum>} {b <my-fixnum>})
+	    (cond ((fx=? a b)	 0)
+		  ((fx<=? a b)	-1)
+		  (else		+1)))))
+      (hash-function
+	(lambda ({parent-func (hash-function <fixnum>)})
+	  (lambda ({_ <non-negative-fixnum>} {obj <my-fixnum>})
+	    (fxadd1 (parent-func obj)))))
+      #| end of DEFINE-LABEL |# )
 
-  (check
-      ((comparison-procedure <my-fixnum>) 1 1)
-    => 0)
+    (check-for-true	((equality-predicate <my-fixnum>) 1 1))
+    (check-for-false	((equality-predicate <my-fixnum>) 1 2))
 
-  (check
-      ((comparison-procedure <my-fixnum>) 1 2)
-    => -1)
+    (check ((comparison-procedure <my-fixnum>) 1 1)	=> 0)
+    (check ((comparison-procedure <my-fixnum>) 1 2)	=> -1)
+    (check ((comparison-procedure <my-fixnum>) 2 1)	=> +1)
 
-  (check
-      ((comparison-procedure <my-fixnum>) 2 1)
-    => +1)
+    (check ((hash-function <my-fixnum>) 1)		=> (add1 (fixnum-hash 1)))
+    (check ((hash-function <my-fixnum>) 123)		=> (add1 (fixnum-hash 123)))
 
-;;; --------------------------------------------------------------------
-
-  (check
-      ((hash-function <my-fixnum>) 1)
-    => (add1 (fixnum-hash 1)))
-
-  (check
-      ((hash-function <my-fixnum>) 123)
-    => (add1 (fixnum-hash 123)))
+    #| end of INTERNAL-BODY |# )
 
   (void))
 
@@ -523,7 +545,7 @@
       (parent <string>)
       (hash-function
 	(lambda (parent-func)
-	  (lambda (S)
+	  (lambda ({_ <non-negative-fixnum>} {S <String>})
 	    (if (string-empty? S)
 		0
 	      (char-hash (string-ref S 0)))))))
@@ -580,7 +602,7 @@
     (define-label <comparison-fixnum>
       (parent (or <non-negative-fixnum> <negative-fixnum>))
       (type-predicate
-	(lambda (parent?)
+	(lambda ({parent? <type-predicate>})
 	  (lambda ({_ <boolean>} obj)
 	    (and (parent? obj)
 		 (fx<=? obj +1)

@@ -169,7 +169,7 @@
 			      (list #'(syntax FUNC)
 				    ;;NOTE  We  do   *not*  use  a  TYPE-PREDICATE
 				    ;;annotation here because, at present,
-				    #`(define/typed {FUNC (type-predicate TYPE-NAME)}
+				    #`(define/typed {FUNC <type-predicate>}
 					(#,stx (is-a? _ #,parent.stx)))))))
 		      (else
 		       (list #f))))

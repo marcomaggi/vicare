@@ -1347,7 +1347,7 @@
 	  (parent alpha)
 	  (fields {b <non-negative-fixnum>})
 	  (hash-function
-	    (lambda ({alpha-hash <hash-function>})
+	    (lambda ({alpha-hash (hash-function alpha)})
 	      (lambda ({O beta})
 		(fx+ (alpha-hash O) (.b O))))))
 	(.hash (new beta 1 2)))

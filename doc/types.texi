@@ -809,7 +809,7 @@ annotation with one of the ancestors of @meta{type}:
 
 (type-annotation-matching <condition>
                           (ancestor-of &condition))
-@result{} possible-match
+@result{} exact-match
 @end lisp
 
 When used along with @syntax{not}, it can is used to avoid matching
@@ -830,7 +830,7 @@ A short--cut to specify:
 @lisp
 (case-lambda
   ((@meta{type})     => (<true>))
-  ((<top>)      => (<boolean>)))
+  ((<bottom>)  => (<boolean>)))
 @end lisp
 @end deftp
 
@@ -952,6 +952,11 @@ descriptor.  Usually we do not have to deal with type descriptors; so
 most of the syntactic bindings are exported by the library
 @library{vicare system type-descriptors}, while the public @api{} is
 exported by @library{vicare}.
+
+Whenever we need a type descriptor, we must use the syntax
+@syntax{type-descriptor} or the function @func{type-descriptor-of}; we
+should never call directly the constructors of the type descriptor
+types.
 
 @menu
 * types descr retrieving::      Retrieving type descriptors.
@@ -1868,27 +1873,27 @@ equal; otherwise it returns @false{}.
 @end deffn
 
 
-@deffn Syntax type-descriptor-matching-super-and-sub? @metai{type-annotation} @metaii{type-annotation}
+@deffn Syntax type-descriptor-super-and-sub? @metai{type-annotation} @metaii{type-annotation}
 Expand to an expression which, compiled and evaluated, returns @true{}
 if the type descriptor associated to @metai{type-annotation} is a
 matching super--type of the type descriptor associated to
 @metaii{type-annotation}; otherwise it returns @false{}.
 
 @lisp
-(type-descriptor-matching-super-and-sub?
+(type-descriptor-super-and-sub?
    @aclass{top} @aclass{top})
 @result{} #t
 
-(type-descriptor-matching-super-and-sub?
+(type-descriptor-super-and-sub?
    @aclass{top} @aclass{number})
 @result{} #t
 
-(type-descriptor-matching-super-and-sub?
+(type-descriptor-super-and-sub?
    @aclass{number} @aclass{top})
 @result{} #t
 
 ;;this pair is a matching super-type of this list
-(type-descriptor-matching-super-and-sub?
+(type-descriptor-super-and-sub?
    (pair @aclass{fixnum} @aclass{null}) (list @aclass{fixnum}))
 @result{} #t
 @end lisp
@@ -3580,6 +3585,7 @@ representing the types of built--in objects: fixnum, strings, vectors,
 et cetera.
 
 @menu
+* types built-in bottom::       The universal subtype.
 * types built-in void::         Type of the void object.
 * types built-in no-return::    Type of non-returning expressions.
 * types built-in top::          The conventional parent of all the types.
@@ -3606,6 +3612,23 @@ et cetera.
 * types built-in sentinel::     Type of sentinel object.
 * types built-in misc::         Miscellaneous built-in types.
 @end menu
+
+@c page
+@node types built-in bottom
+@subsection The universal subtype
+
+
+@deftp {Core Type} @aclass{bottom}
+A virtual type that is the sub--type of all the other types.  We must
+never use this type annotation for variables.  As example, the following
+type annotation defines a function signature in which the argument can
+be any value:
+
+@lisp
+(define-type <my-func>
+  (lambda (<bottom>) => (<string>)))
+@end lisp
+@end deftp
 
 @c page
 @node types built-in no-return
@@ -4057,7 +4080,7 @@ type is equivalent to:
 
 @lisp
 (define-type <type-predicate>
-  (lambda (<top>) => (<boolean>)))
+  (lambda (<bottom>) => (<boolean>)))
 @end lisp
 @end deftp
 
@@ -4068,7 +4091,7 @@ The definition of this type is equivalent to:
 
 @lisp
 (define-type <type-destructor>
-  (lambda (<top>) => <list>))
+  (lambda (<bottom>) => <list>))
 @end lisp
 @end deftp
 
@@ -4079,7 +4102,7 @@ type.  The definition of this type is equivalent to:
 
 @lisp
 (define-type-annotation <type-printer>
-  (lambda (<top> <textual-output-port> <procedure>) => <list>))
+  (lambda (<bottom> <textual-output-port> <procedure>) => <list>))
 @end lisp
 @end deftp
 
@@ -4090,7 +4113,7 @@ this type is equivalent to:
 
 @lisp
 (define-type <equality-predicate>
-  (lambda (<top> <top>) => (<boolean>)))
+  (lambda (<bottom> <bottom>) => (<boolean>)))
 @end lisp
 @end deftp
 
@@ -4101,7 +4124,7 @@ this type is equivalent to:
 
 @lisp
 (define-type <comparison-procedure>
-  (lambda (<top> <top>) => (<fixnum>)))
+  (lambda (<bottom> <bottom>) => (<fixnum>)))
 @end lisp
 @end deftp
 
@@ -4112,7 +4135,7 @@ this type is equivalent to:
 
 @lisp
 (define-type <hash-function>
-  (lambda (<top>) => (<non-negative-fixnum>)))
+  (lambda (<bottom>) => (<non-negative-fixnum>)))
 @end lisp
 @end deftp
 

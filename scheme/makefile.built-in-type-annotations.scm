@@ -123,13 +123,13 @@
 ;;; --------------------------------------------------------------------
 
 (define-type-annotation <type-predicate>
-  (lambda (<top>) => (<boolean>)))
+  (lambda (<bottom>) => (<boolean>)))
 
 (define-type-annotation <type-destructor>
-  (lambda (<top>) => <list>))
+  (lambda (<bottom>) => <list>))
 
 (define-type-annotation <type-printer>
-  (lambda (<top> <textual-output-port> <procedure>) => <list>))
+  (lambda (<bottom> <textual-output-port> <procedure>) => <list>))
 
 (define-type-annotation <type-method-retriever>
   (lambda (<symbol>) => ((or <false> <procedure>))))
@@ -137,13 +137,13 @@
 ;;; --------------------------------------------------------------------
 
 (define-type-annotation <equality-predicate>
-  (lambda (<top> <top>) => (<boolean>)))
+  (lambda (<bottom> <bottom>) => (<boolean>)))
 
 (define-type-annotation <comparison-procedure>
-  (lambda (<top> <top>) => (<fixnum>)))
+  (lambda (<bottom> <bottom>) => (<fixnum>)))
 
 (define-type-annotation <hash-function>
-  (lambda (<top>) => (<non-negative-fixnum>)))
+  (lambda (<bottom>) => (<non-negative-fixnum>)))
 
 
 ;;;; input/output ports

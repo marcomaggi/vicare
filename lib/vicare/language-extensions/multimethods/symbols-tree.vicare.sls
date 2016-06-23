@@ -75,7 +75,7 @@
   (set! stack (cdr stack)))
 
 (define-syntax-rule (pop-caar! stack)
-  (set! stack (cons (cdar stack) (cdr stack))))
+  (set! stack (cons (cdar stack) (unsafe-cast-signature (<list>) (cdr stack)))))
 
 
 ;;;; type declarations

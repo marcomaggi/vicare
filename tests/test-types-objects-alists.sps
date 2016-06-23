@@ -114,9 +114,9 @@
   (check-for-true	(type-annotation-super-and-sub? (list-of (pair-of <real>))
 							(alist <fixnum> <flonum>)))
 
-  (check-for-true	(type-annotation-super-and-sub? (list (pair <symbol> <number>)
-							      (pair <symbol> <number>))
-							(alist <symbol> <flonum>)))
+  (check-for-true	(type-annotation-super-and-sub? (alist <symbol> <number>)
+							(list (pair <symbol> <number>)
+							      (pair <symbol> <flonum>))))
 
   (check-for-true	(type-annotation-super-and-sub? (alist <real> <number>)
 							(list (pair-of (or <fixnum> <flonum>))
