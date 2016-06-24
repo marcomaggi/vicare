@@ -403,9 +403,6 @@
        (let (({O ?type} ?builder))
 	 (begin
 	   (check
-	       (slot-ref O ?slot)
-	     => (quasiquote ?value))
-	   (check
 	       (method-call ?slot O)
 	     => (quasiquote ?value))
 	   (check

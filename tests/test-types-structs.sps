@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -133,68 +133,6 @@
 
 	(is-a? (new duo 1 2) duo))
     => #t)
-
-  #t)
-
-
-(parametrise ((check-test-name	'generic-slots-syntax))
-
-  (define-struct alpha
-    (a b c))
-
-;;; --------------------------------------------------------------------
-;;; accessors and mutators
-
-  (check
-      (let ((stru (new alpha 1 2 3)))
-	(list (slot-ref stru a alpha)
-	      (slot-ref stru b alpha)
-	      (slot-ref stru c alpha)))
-    => '(1 2 3))
-
-  (check
-      (let ((stru (new alpha 1 2 3)))
-	(slot-set! stru a alpha 19)
-	(slot-set! stru b alpha 29)
-	(slot-set! stru c alpha 39)
-	(list (slot-ref stru a alpha)
-	      (slot-ref stru b alpha)
-	      (slot-ref stru c alpha)))
-    => '(19 29 39))
-
-  (check
-      (let ((stru (new alpha 1 2 3)))
-	(list ((slot-ref _ a alpha) stru)
-	      ((slot-ref _ b alpha) stru)
-	      ((slot-ref _ c alpha) stru)))
-    => '(1 2 3))
-
-  (check
-      (let ((stru (new alpha 1 2 3)))
-	((slot-set! _ a alpha _) stru 19)
-	((slot-set! _ b alpha _) stru 29)
-	((slot-set! _ c alpha _) stru 39)
-	(list ((slot-ref _ a alpha) stru)
-	      ((slot-ref _ b alpha) stru)
-	      ((slot-ref _ c alpha) stru)))
-    => '(19 29 39))
-
-  (check
-      (let (({stru alpha} (new alpha 1 2 3)))
-	(list (slot-ref stru a)
-	      (slot-ref stru b)
-	      (slot-ref stru c)))
-    => '(1 2 3))
-
-  (check
-      (let (({stru alpha} (new alpha 1 2 3)))
-	(slot-set! stru a 19)
-	(slot-set! stru b 29)
-	(slot-set! stru c 39)
-	(list (slot-ref stru a)
-	      (slot-ref stru b)
-	      (slot-ref stru c)))
-    => '(19 29 39))
 
   #t)
 

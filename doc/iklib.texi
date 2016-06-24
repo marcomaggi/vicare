@@ -3032,8 +3032,7 @@ read as @func{brace} forms as follows:
 @deffn {Fluid Syntax} {<>}
 A fluid syntax which is free to be bound to whatever user code needs.
 It is meant to be a placeholder for some expression defined by the local
-context; for example: it is used by the syntaxes @func{is-a?},
-@func{slot-ref} and @func{slot-set!}.
+context; for example: it is used by the syntaxe @func{is-a?}
 @end deffn
 
 
@@ -3285,14 +3284,6 @@ vicare> (internal-body
                #'(vector ?a ?b))))
           (expansion-of (doit 1 2)))
 $1 = ((primitive vector) (quote 1) (quote 2))
-
-vicare> (internal-body
-          (define-struct alpha
-            (a b c))
-          (define O
-            (alpha (1 2 3)))
-          (expansion-of (slot-ref O a)))
-$1 = (alpha-a O)
 
 vicare> (expansion-of (define (fun a) (+ 1 a)))
 $1 = (define fun (lambda (a) ((primitive +) (quote 1) a)))
@@ -9200,7 +9191,8 @@ transformers):
 
 @example
 (library (etv-demo)
-  (export that make-that)
+  (export that make-that
+          that-a that-b that-c)
   (import (vicare))
   (define-record-type that
     (fields a b c)))
@@ -9228,9 +9220,9 @@ and use its fields to produce the output of a syntax use:
   (lambda (stx)
     (let ((S (retrieve-expand-time-value #'it)))
       (with-syntax
-          ((A (slot-ref S a that))
-           (B (slot-ref S b that))
-           (C (slot-ref S c that)))
+          ((A (that-a S))
+           (B (that-b S))
+           (C (that-c S)))
         #'(quote #(A B C))))))
 
 (get-it)        @expansion{} (quote #(1 2 3))

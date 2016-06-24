@@ -1940,7 +1940,6 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes types::        Defining type annotations.
 * types syntaxes new-and-del::  Constructors and destructors.
 * types syntaxes predicates::   Predicate syntaxes.
-* types syntaxes slots::        Slot getter and setter syntaxes.
 * types syntaxes methods::      Calling object-type methods.
 * types syntaxes annotations::  Operating on type annotations.
 * types syntaxes signatures::   Operating on type signatures.
@@ -2214,95 +2213,6 @@ predicate function.
 @result{} #t
 @end example
 @end deffn
-
-@c page
-@node types syntaxes slots
-@subsection Slot getter and setter syntaxes
-
-
-The syntaxes @func{slot-ref} and @func{slot-set!} allow access and
-mutation of struct and record fields:
-
-@example
-(define-record-type color
-  (fields (mutable red)
-          (mutable green)
-          (mutable blue)))
-
-(define @{R color@}
-  (new color 1 2 3))
-
-(slot-set! R red   color 19)
-(slot-set! R green color 29)
-(slot-set! R blue  color 39)
-
-(slot-ref R red   color)        @result{} 19
-(slot-ref R green color)        @result{} 29
-(slot-ref R blue  color)        @result{} 39
-@end example
-
-The following syntactic bindings are exported by the library
-@library{vicare}.
-
-
-@deffn Syntax slot-ref @meta{expr} @meta{field-name} @meta{type}
-@deffnx Syntax slot-ref @meta{expr} @meta{field-name}
-@deffnx Syntax slot-ref _ @meta{field-name} @meta{type}
-@deffnx {Auxiliary Syntax} _
-Expand to the slot accessor of @meta{field-name} applied to @meta{expr}.
-@meta{expr} can be any expression evaluating to an instance of
-@meta{type}.  @meta{type} must be the type identifier of a struct--type
-or record--type.  @meta{field-name} must be an identifier representing
-the name of a field.  When @syntax{_} is used in place of @meta{expr}:
-the syntax evaluates to a slot accessor function.
-
-When @meta{type} is absent: the type is inferred from @meta{expr}.  If
-it is impossible to infer the type of @meta{expr}: an exception is
-raised at expand--time.
-@end deffn
-
-
-@deffn Syntax slot-set! @meta{expr} @meta{field-name} @meta{type} @meta{new-val}
-@deffnx Syntax slot-set! @meta{expr} @meta{field-name} @meta{new-val}
-@deffnx Syntax slot-set! _ @meta{field-name} @meta{type} _
-@deffnx {Auxiliary Syntax} _
-Expand to the slot mutator of @meta{field-name} applied to @meta{expr}
-and @meta{new-val}.  @meta{expr} can be any expression evaluating to an
-instance of @meta{type}.  @meta{type} must be the type identifier of a
-struct--type or record--type.  @meta{field-name} must be an identifier
-representing the name of a field.  When @syntax{_} is used in place of
-both @meta{expr} and @meta{new-val}: the syntax evaluates to a slot
-mutator function.
-
-When @meta{type} is absent: the type is inferred from @meta{expr}.  If
-it is impossible to infer the type of @meta{expr}: an exception is
-raised at expand--time.
-@end deffn
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Dot notation
-
-As special case it is possible to mutate a record's mutable field using
-the @syntax{set!} syntax and the dot notation.  Here is an example:
-
-@lisp
-(define-record-type alpha
-  (fields (mutable a)
-          (mutable b)))
-
-(define @{O alpha@}
-  (new alpha 1 2))
-
-(set! (.a O) 10)
-(set! (.b O) 20)
-
-(.a O)  @result{} 10
-(.b O)  @result{} 20
-@end lisp
-
-For details on the dot notation @ref{types syntaxes methods, Dot
-notation}.
 
 @c page
 @node types syntaxes methods

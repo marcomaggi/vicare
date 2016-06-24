@@ -578,26 +578,6 @@
     => #f)
 
 ;;; --------------------------------------------------------------------
-;;; safe accessors and mutators
-
-  (check
-      (let ((stru (make-alpha 1 2 3)))
-	(list (slot-ref stru a alpha)
-	      (slot-ref stru b alpha)
-	      (slot-ref stru c alpha)))
-    => '(1 2 3))
-
-  (check
-      (let ((stru (make-alpha 1 2 3)))
-	(slot-set! stru a alpha 10)
-	(slot-set! stru b alpha 20)
-	(slot-set! stru c alpha 30)
-	(list (slot-ref stru a alpha)
-	      (slot-ref stru b alpha)
-	      (slot-ref stru c alpha)))
-    => '(10 20 30))
-
-;;; --------------------------------------------------------------------
 ;;; generic maker syntax
 
   (check
@@ -635,43 +615,6 @@
   (check
       (is-a? 123 beta)
     => #f)
-
-;;; --------------------------------------------------------------------
-;;; generic safe slot getter and setter
-
-  (check
-      (let ((stru (make-alpha 1 2 3)))
-	(list (slot-ref stru a alpha)
-	      (slot-ref stru b alpha)
-	      (slot-ref stru c alpha)))
-    => '(1 2 3))
-
-  (check
-      (let ((stru (make-alpha 1 2 3)))
-	(slot-set! stru a alpha 19)
-	(slot-set! stru b alpha 29)
-	(slot-set! stru c alpha 39)
-	(list (slot-ref stru a alpha)
-	      (slot-ref stru b alpha)
-	      (slot-ref stru c alpha)))
-    => '(19 29 39))
-
-  (check
-      (let ((stru (make-alpha 1 2 3)))
-	(list ((slot-ref _ a alpha) stru)
-	      ((slot-ref _ b alpha) stru)
-	      ((slot-ref _ c alpha) stru)))
-    => '(1 2 3))
-
-  (check
-      (let ((stru (make-alpha 1 2 3)))
-	((slot-set! _ a alpha _) stru 19)
-	((slot-set! _ b alpha _) stru 29)
-	((slot-set! _ c alpha _) stru 39)
-	(list ((slot-ref _ a alpha) stru)
-	      ((slot-ref _ b alpha) stru)
-	      ((slot-ref _ c alpha) stru)))
-    => '(19 29 39))
 
   #t)
 

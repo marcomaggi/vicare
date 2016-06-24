@@ -134,7 +134,6 @@ case-lambda              fluid-let-syntax
 struct-type-descriptor   struct-type-and-struct?
 record-type-descriptor   record-constructor-descriptor
 type-descriptor          is-a?
-slot-ref                 slot-set!
 splice-first-expand
 predicate-procedure-argument-validation
 predicate-return-value-validation

@@ -1234,7 +1234,7 @@
        ((_ (method-call ?field-name ?expr) ?new-value)
 	(identifier? ?field-name)
 	(chi-expr (bless
-		   `(slot-set! ,?expr ,?field-name ,?new-value))
+		   `(method-call ,?field-name ,?expr ,?new-value))
 		  lexenv.run lexenv.expand))
 
        ((_ ?lhs ?rhs)
@@ -1255,7 +1255,7 @@
        ((_ (method-call ?field-name ?expr) ?new-value)
 	(identifier? ?field-name)
 	(chi-expr (bless
-		   `(slot-set! ,?expr ,?field-name ,?new-value))
+		   `(method-call ,?field-name ,?expr ,?new-value))
 		  lexenv.run lexenv.expand))
 
        ((_ ?lhs ?rhs)
