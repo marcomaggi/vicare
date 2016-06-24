@@ -356,7 +356,7 @@
 ;;maker of "<object-type-spec>" is not exported by the module.
 ;;
 (define-record-type (<object-type-spec> make-object-type-spec object-type-spec?)
-  (nongenerative *6*vicare:expander:<object-type-spec>)
+  (nongenerative *7*vicare:expander:<object-type-spec>)
   (fields
     (mutable name-or-maker)
 		;A  procedure that,  applied to  this  OTS, returns  a syntax  object
@@ -456,7 +456,7 @@
 		;False or a syntax object  which, expanded and evaluated, returns the
 		;hash function for this type.
 
-    (immutable safe-accessors-table	object-type-spec.safe-accessors-table)
+    (immutable accessors-table	object-type-spec.accessors-table)
 		;Null or  an alist  mapping symbols representing  the field  names to
 		;syntax objects  representing Scheme  expressions that,  expanded and
 		;evaluated at run-time, return the associated safe field accessor.  A
@@ -466,7 +466,7 @@
 		;
 		;and called explicitly with the SLOT-REF syntax.
 
-    (immutable safe-mutators-table	object-type-spec.safe-mutators-table)
+    (immutable mutators-table	object-type-spec.mutators-table)
 		;Null or  an alist  mapping symbols representing  the field  names to
 		;syntax objects  representing Scheme  expressions that,  expanded and
 		;evaluated at run-time, return the  associated safe field mutator.  A
@@ -494,11 +494,11 @@
 				      type-annotation-maker
 				      constructor-stx destructor-stx type-predicate-stx
 				      equality-predicate.id comparison-procedure.id hash-function.id
-				      safe-accessors-table safe-mutators-table methods-table)
+				      accessors-table mutators-table methods-table)
 	(make-record name uids-list parent.ots type-annotation-maker
 		     constructor-stx destructor-stx type-predicate-stx
 		     equality-predicate.id comparison-procedure.id hash-function.id
-		     safe-accessors-table safe-mutators-table methods-table))
+		     accessors-table mutators-table methods-table))
       make-object-type-spec))
 
   (custom-printer
@@ -578,7 +578,7 @@
     ;;expanded  and  evaluated  at  run-time,  returns  the  field's  safe  accessor;
     ;;otherwise return false.
     ;;
-    (%sexp-retriever ots field-name.sym object-type-spec.safe-accessors-table))
+    (%sexp-retriever ots field-name.sym object-type-spec.accessors-table))
 
   (define* (object-type-spec.safe-mutator-stx {ots object-type-spec?} field-name.sym)
     ;;OTS must an object-type specification  record.  FIELD-NAME.SYM must be a symbol
@@ -594,7 +594,7 @@
     ;;
     ;;Otherwise return false.
     ;;
-    (%sexp-retriever ots field-name.sym object-type-spec.safe-mutators-table))
+    (%sexp-retriever ots field-name.sym object-type-spec.mutators-table))
 
   (define* (object-type-spec.applicable-method-stx {ots object-type-spec?} method-name.sym)
     ;;OTS must an object-type specification record.  METHOD-NAME.SYM must be a symbol
@@ -2865,7 +2865,7 @@
 ;;object-type specifications for: <fixnum>, <flonum>, <string>, <list>, ...
 ;;
 (define-record-type (<core-type-spec> make-core-type-spec core-type-spec?)
-  (nongenerative *6*vicare:expander:<core-type-spec>)
+  (nongenerative *7*vicare:expander:<core-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2932,7 +2932,7 @@
 ;;"Struct-Type Spec") or STRUCT-OTS.
 ;;
 (define-record-type (<struct-type-spec> make-struct-type-spec struct-type-spec?)
-  (nongenerative *6*vicare:expander:<struct-type-spec>)
+  (nongenerative *7*vicare:expander:<struct-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2943,7 +2943,7 @@
     (lambda (make-object-type-spec)
       (define* (make-struct-type-spec name std
 				      constructor.id predicate.id
-				      safe-accessors-table safe-mutators-table methods-table)
+				      accessors-table mutators-table methods-table)
 	(let* ((parent.ots		(<struct>-ots))
 	       (uids-list		(cons (struct-type-symbol std) (object-type-spec.unique-identifiers parent.ots)))
 	       (destructor.stx		(bless `(internal-applicable-struct-type-destructor ,std)))
@@ -2953,7 +2953,7 @@
 	  ((make-object-type-spec name uids-list parent.ots struct-type-spec.type-annotation-maker
 				  constructor.id destructor.stx predicate.id
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  safe-accessors-table safe-mutators-table methods-table)
+				  accessors-table mutators-table methods-table)
 	   std)))
       make-struct-type-spec))
 
@@ -2984,7 +2984,7 @@
 ;;called RTS (as in "Record-Type Spec") or RECORD-OTS.
 ;;
 (define-record-type (<record-type-spec> make-record-type-spec record-type-spec?)
-  (nongenerative *6*vicare:expander:<record-type-spec>)
+  (nongenerative *7*vicare:expander:<record-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3003,7 +3003,7 @@
 				      rtd-id rcd-id super-protocol-id parent-name.id
 				      constructor.stx destructor.stx predicate.stx
 				      equality-predicate.id comparison-procedure.id hash-function.id
-				      safe-accessors-table safe-mutators-table methods-table)
+				      accessors-table mutators-table methods-table)
 	(let* ((parent.ots	(cond ((<record>-type-id? parent-name.id)
 				       (<record>-ots))
 				      ((<condition>-type-id? parent-name.id)
@@ -3021,7 +3021,7 @@
 	  ((make-object-type-spec type-name uids-list parent.ots record-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx pred
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  safe-accessors-table safe-mutators-table methods-table)
+				  accessors-table mutators-table methods-table)
 	   rtd-id rcd-id super-protocol-id)))
       make-record-type-spec))
 
@@ -3110,7 +3110,7 @@
 ;;"<compound-condition>" representing compound condition objects of a known type.
 ;;
 (define-record-type (<compound-condition-type-spec> make-compound-condition-type-spec compound-condition-type-spec?)
-  (nongenerative *6*vicare:expander:<compound-condition-type-spec>)
+  (nongenerative *7*vicare:expander:<compound-condition-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3211,7 +3211,7 @@
 ;;types.
 ;;
 (define-record-type (<union-type-spec> make-union-type-spec union-type-spec?)
-  (nongenerative *6*vicare:expander:<union-type-spec>)
+  (nongenerative *7*vicare:expander:<union-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3489,7 +3489,7 @@
 ;;types.
 ;;
 (define-record-type (<intersection-type-spec> make-intersection-type-spec intersection-type-spec?)
-  (nongenerative *6*vicare:expander:<intersection-type-spec>)
+  (nongenerative *7*vicare:expander:<intersection-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3665,7 +3665,7 @@
 ;;types.
 ;;
 (define-record-type (<complement-type-spec> make-complement-type-spec complement-type-spec?)
-  (nongenerative *6*vicare:expander:<complement-type-spec>)
+  (nongenerative *7*vicare:expander:<complement-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3744,7 +3744,7 @@
 ;;types.
 ;;
 (define-record-type (<ancestor-of-type-spec> make-ancestor-of-type-spec ancestor-of-type-spec?)
-  (nongenerative *6*vicare:expander:<ancestor-of-type-spec>)
+  (nongenerative *7*vicare:expander:<ancestor-of-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3841,7 +3841,7 @@
 ;;the signature of a closure object.
 ;;
 (define-record-type (<closure-type-spec> make-closure-type-spec closure-type-spec?)
-  (nongenerative *6*vicare:expander:<closure-type-spec>)
+  (nongenerative *7*vicare:expander:<closure-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3950,7 +3950,7 @@
 ;;"<pair>" representing pair of objects holding items of a known type.
 ;;
 (define-record-type (<pair-type-spec> make-pair-type-spec pair-type-spec?)
-  (nongenerative *6*vicare:expander:<pair-type-spec>)
+  (nongenerative *7*vicare:expander:<pair-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4065,7 +4065,7 @@
 ;;"<pair>" representing pair of objects holding items of the same type.
 ;;
 (define-record-type (<pair-of-type-spec> make-pair-of-type-spec pair-of-type-spec?)
-  (nongenerative *6*vicare:expander:<pair-of-type-spec>)
+  (nongenerative *7*vicare:expander:<pair-of-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4160,7 +4160,7 @@
 ;;heterogeneous type.
 ;;
 (define-record-type (<list-type-spec> make-list-type-spec list-type-spec?)
-  (nongenerative *6*vicare:expander:<list-type-spec>)
+  (nongenerative *7*vicare:expander:<list-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4296,7 +4296,7 @@
 ;;type.
 ;;
 (define-record-type (<list-of-type-spec> make-list-of-type-spec list-of-type-spec?)
-  (nongenerative *6*vicare:expander:<list-of-type-spec>)
+  (nongenerative *7*vicare:expander:<list-of-type-spec>)
   (parent <object-type-spec>)
   (sealed #f)
   (fields
@@ -4387,7 +4387,7 @@
 ;;"<list>" representing alist objects holding keys and values of a known type.
 ;;
 (define-record-type (<alist-type-spec> make-alist-type-spec alist-type-spec?)
-  (nongenerative *6*vicare:expander:<alist-type-spec>)
+  (nongenerative *7*vicare:expander:<alist-type-spec>)
   (parent <list-of-type-spec>)
   (sealed #t)
   (fields
@@ -4468,7 +4468,7 @@
 ;;heterogeneous type.
 ;;
 (define-record-type (<vector-type-spec> make-vector-type-spec vector-type-spec?)
-  (nongenerative *6*vicare:expander:<vector-type-spec>)
+  (nongenerative *7*vicare:expander:<vector-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4589,7 +4589,7 @@
 ;;"<vector>" representing vector objects holding items of a known type.
 ;;
 (define-record-type (<vector-of-type-spec> make-vector-of-type-spec vector-of-type-spec?)
-  (nongenerative *6*vicare:expander:<vector-of-type-spec>)
+  (nongenerative *7*vicare:expander:<vector-of-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4676,7 +4676,7 @@
 ;;type.
 ;;
 (define-record-type (<hashtable-type-spec> make-hashtable-type-spec hashtable-type-spec?)
-  (nongenerative *6*vicare:expander:<hashtable-type-spec>)
+  (nongenerative *7*vicare:expander:<hashtable-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4758,7 +4758,7 @@
 ;;annotation.
 ;;
 (define-record-type (<enumeration-type-spec> make-enumeration-type-spec enumeration-type-spec?)
-  (nongenerative *6*vicare:expander:<enumeration-type-spec>)
+  (nongenerative *7*vicare:expander:<enumeration-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4847,7 +4847,7 @@
 ;;defined with DEFINE-LABEL.
 ;;
 (define-record-type (<label-type-spec> make-label-type-spec label-type-spec?)
-  (nongenerative *6*vicare:expander:<label-type-spec>)
+  (nongenerative *7*vicare:expander:<label-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
