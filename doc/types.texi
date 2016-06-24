@@ -1937,7 +1937,7 @@ Scheme source code reader in @code{#!vicare} mode.
 
 @menu
 * types syntaxes type-of::      Determining the type of expressions.
-* types syntaxes defining::     Defining type annotations.
+* types syntaxes types::        Defining type annotations.
 * types syntaxes new-and-del::  Constructors and destructors.
 * types syntaxes predicates::   Predicate syntaxes.
 * types syntaxes slots::        Slot getter and setter syntaxes.
@@ -1947,6 +1947,7 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes assert::       Validating signatures.
 * types syntaxes unsafe-cast::  Casting the type of expressions.
 * types syntaxes case-type::    Branching on type of expression.
+* types syntaxes variables::    Defining typed variables.
 * types syntaxes overloads::    Overloaded functions.
 * types syntaxes operations::   Miscellaneous operations.
 @end menu
@@ -2070,7 +2071,7 @@ object type specification.
 @end deffn
 
 @c page
-@node types syntaxes defining
+@node types syntaxes types
 @subsection Defining type annotations
 
 
@@ -3318,6 +3319,199 @@ Examples:
   (else         'else))
 @result{} else
 @end lisp
+@end deffn
+
+@c page
+@node types syntaxes variables
+@subsection Defining typed variables
+
+
+In all the following syntax definitions, we assume the following formats
+for the input form components:
+
+@lisp
+@meta{standard-clause} ==
+  | (@meta{formals} . @meta{body})
+
+@meta{typed-clause} ==
+  | (@meta{typed-clause-formals} . @meta{body})
+
+@meta{typed-clause-formals} ==
+  | @meta{typed-formals}
+  | (@meta{anonymous-retvals} . @meta{typed-formals})
+
+@meta{anonymous-retvals} ==
+  | (brace _ @metao{rv-type} @meta{rv-type} ...)
+  | (brace _ @meta{rv-type} ... . @meta{rest-rv-type})
+
+@meta{typed-var} ==
+  | @meta{name-id}
+  | (brace @meta{name-id} @meta{type})
+
+@meta{typed-who} ==
+  | @meta{who-id}
+  | (brace @meta{who-id} @metao{rv-type} @meta{rv-type} ...)
+  | (brace @meta{who-id} @meta{rv-type} ... . @meta{rest-rv-type})
+
+@meta{formals} ==
+  | @meta{args-id}
+  | (@meta{arg-id} ...)
+  | (@meta{arg-id} @metao{arg-id} ... . @meta{args-id})
+
+@meta{typed-formals} ==
+  | @meta{typed-args}
+  | (@meta{typed-arg} ...)
+  | (@metao{typed-arg} @meta{typed-arg} ... . @meta{typed-rest})
+
+@meta{typed-arg} ==
+  | @meta{arg-id}
+  | (brace @meta{arg-id} @meta{arg-type})
+
+@meta{typed-args} ==
+  | @meta{args-id}
+  | (brace @meta{args-id} @meta{args-type})
+
+@meta{typed-rest} ==
+  | @meta{rest-id}
+  | (brace @meta{rest-id} @meta{rest-type})
+@end lisp
+
+@noindent
+where the following components are syntactic identifiers:
+
+@lisp
+@meta{name-id} @meta{who-id} @meta{arg-id} @meta{args-id} @meta{rest-id}
+@end lisp
+
+@noindent
+the following components are type annotations:
+
+@lisp
+@meta{type} @meta{arg-type} @meta{rv-type}
+@end lisp
+
+@noindent
+and the following components are type annotations that must represent
+lists:
+
+@lisp
+@meta{args-type} @meta{rest-type} @meta{rest-rv-type}
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Standard syntaxes
+
+
+@deffn Syntax define/std @meta{who-id}
+@deffnx Syntax define/std @meta{who-id} @meta{expr}
+@deffnx Syntax define/std (@meta{who-id} . @meta{formals}) . @meta{body}
+This is the @syntax{define} syntax as defined by @rnrs{6}; whenever the
+@syntax{define} syntactic binding is used in code with the typed
+language @strong{disabled}: it expands into a use of
+@syntax{define/std}.
+@end deffn
+
+
+@deffn Syntax case-define/std @meta{who-id} @metao{standard-clause} @meta{standard-clause} @dots{}
+This is a @syntax{case-define} syntax compatible with the @rnrs{6}
+language; whenever the @syntax{case-define} syntactic binding is used in
+code with the typed language @strong{disabled}: it expands into a use of
+@syntax{case-define/std}.
+@end deffn
+
+
+@deffn Syntax lambda/std @meta{formals} . @meta{body}
+This is the @syntax{lambda} syntax as defined by @rnrs{6}; whenever the
+@syntax{lambda} syntactic binding is used in code with the typed
+language @strong{disabled}: it expands into a use of
+@syntax{lambda/std}.
+@end deffn
+
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Checked syntaxes
+
+
+@deffn Syntax define/checked @meta{typed-var}
+@deffnx Syntax define/checked @meta{typed-var} @meta{expr}
+@deffnx Syntax define/checked (@meta{typed-who} . @meta{typed-formals}) . @meta{body}
+This is the @syntax{define} syntax that supports the typed language;
+whenever the @syntax{define} syntactic binding is used in code with the
+typed language @strong{enabled}: it expands into a use of
+@syntax{define/checked}.
+
+When defining a variable: the result of the expression is validated
+either at expand--time or at run--time, to make sure that it matches the
+type of the variable.  The expression's type must be a sub--type of the
+variable's type.
+
+When defining a function: the operands and return values are validated
+either at expand--time or at run--time, to make sure that they match the
+type of the function's type signature.  The operands' types must be
+sub--types of the arguments' types; the return values' type must be
+sub--types of the declared signature types.
+@end deffn
+
+
+@deffn Syntax case-define/checked @meta{who-id} @metao{typed-clause} @meta{typed-clause} @dots{}
+This is a @syntax{case-define} variant that supports the typed language.
+Operands and return values are validated either at expand--time or at
+run--time, to make sure that they match the type signature.
+@end deffn
+
+
+@deffn Syntax lambda/checked @meta{typed-clause-formals} . @meta{body}
+This is the @syntax{lambda} syntax that supports the typed language;
+whenever the @syntax{lambda} syntactic binding is used in code with the
+typed language @strong{enabled}: it expands into a use of
+@syntax{lambda/checked}.
+
+The operands and return values are validated either at expand--time and
+at run--time, to make sure that they match the type of the function's
+type signature.  The operands' types must be sub--types of the
+arguments' types; the return values' type must be sub--types of the
+declared signature types.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Typed syntaxes
+
+
+@deffn Syntax define/typed @meta{typed-var}
+@deffnx Syntax define/typed @meta{typed-var} @meta{expr}
+@deffnx Syntax define/typed (@meta{typed-who} . @meta{typed-formals}) . @meta{body}
+This is a @syntax{define} syntax variant that supports the typed
+language.
+
+When defining a variable: the result of the expression is validated only
+at expand--time, to make sure that it matches the type of the variable.
+The expression's type must be a sub--type of the variable's type.
+
+When defining a function: the operands and return values are validated
+only at expand--time, to make sure that they match the type of the
+function's type signature.  The operands' types must be sub--types of
+the arguments' types; the return values' type must be sub--types of the
+declared signature types.
+@end deffn
+
+
+@deffn Syntax case-define/typed @meta{who-id} @metao{typed-clause} @meta{typed-clause} @dots{}
+This is a @syntax{case-define} variant that supports the typed language.
+Operands and return values are validated only expand--time, to make sure
+that they match the type signature.
+@end deffn
+
+
+@deffn Syntax lambda/typed @meta{typed-clause-formals} . @meta{body}
+This is a @syntax{lambda} syntax variant supports the typed language.
+
+The operands and return values are validated only at expand--time, to
+make sure that they match the type of the function's type signature.
+The operands' types must be sub--types of the arguments' types; the
+return values' type must be sub--types of the declared signature types.
 @end deffn
 
 @c page
