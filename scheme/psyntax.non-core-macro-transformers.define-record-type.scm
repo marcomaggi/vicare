@@ -124,7 +124,7 @@
 		;A list  of syntactic identifiers  that will  be bound to  the unsafe
 		;mutators.  This list  holds #f in the position  of immutable fields.
 		;This list has one item for each item in UNSAFE-FIELD-ACCESSOR*.
-     safe-field-method*
+     field-method*
 		;A list of syntactic identifiers that will be bound to the safe field
 		;accessor/mutator methods.
      fields-vector-spec
@@ -243,7 +243,7 @@
   ;;expression returning a closure object: the methods-retriever function.
   (define methods-retriever-code.sexp
     (%make-methods-retriever-code foo
-				  field-name*.sym safe-field-method*
+				  field-name*.sym field-method*
 				  methods-late-binding-alist))
 
   ;;Null or a list of definitions to build at run-time the record-type descriptor.
@@ -264,7 +264,8 @@
 					    foo-comparison-procedure.id
 					    foo-hash-function.id
 					    safe-field-accessor* safe-field-mutator*
-					    method-name*.sym method-procname*.id))
+					    (append method-name*.sym	field-name*.sym)
+					    (append method-procname*.id	field-method*)))
 
   (bless
    `(module (,foo
@@ -303,7 +304,7 @@
 					  safe-field-accessor* unsafe-field-accessor*
 					  safe-field-mutator*  unsafe-field-mutator*)
       ,@(%make-safe-method-code foo field-type*.ann
-				safe-field-method* unsafe-field-accessor* unsafe-field-mutator*)
+				field-method* unsafe-field-accessor* unsafe-field-mutator*)
       #| end of module |# )))
 
 
@@ -550,7 +551,7 @@
 	     (unsafe-field-accessor*		'())
 	     (safe-field-mutator*		'())
 	     (unsafe-field-mutator*		'())
-	     (safe-field-method*		'())
+	     (field-method*		'())
 	     (fields-vector-spec*		'()))
     (define (%register-field-name field-name.id)
       (let ((field.sym (identifier->symbol field-name.id)))
@@ -566,7 +567,7 @@
 	       (reverse unsafe-field-accessor*)
 	       (reverse safe-field-mutator*)
 	       (reverse unsafe-field-mutator*)
-	       (reverse safe-field-method*)
+	       (reverse field-method*)
 	       (list->vector (reverse fields-vector-spec*))))
 
       (((mutable   ?name ?accessor ?mutator) . ?rest)
@@ -582,7 +583,7 @@
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons ?mutator safe-field-mutator*)
 	       (cons (%gen-unsafe-mutator-name  field-name.id) unsafe-field-mutator*)
-	       (cons (%gen-safe-method-name     field-name.id) safe-field-method*)
+	       (cons (%gen-safe-method-name     field-name.id) field-method*)
 	       (cons `(mutable ,field-name.id) fields-vector-spec*))))
 
       (((immutable ?name ?accessor) . ?rest)
@@ -597,7 +598,7 @@
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons #f safe-field-mutator*)
 	       (cons #f unsafe-field-mutator*)
-	       (cons (%gen-safe-method-name     field-name.id) safe-field-method*)
+	       (cons (%gen-safe-method-name     field-name.id) field-method*)
 	       (cons `(immutable ,field-name.id) fields-vector-spec*))))
 
       (((mutable   ?name) . ?rest)
@@ -611,7 +612,7 @@
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons (%gen-safe-mutator-name    field-name.id) safe-field-mutator*)
 	       (cons (%gen-unsafe-mutator-name  field-name.id) unsafe-field-mutator*)
-	       (cons (%gen-safe-method-name     field-name.id) safe-field-method*)
+	       (cons (%gen-safe-method-name     field-name.id) field-method*)
 	       (cons `(mutable ,field-name.id) fields-vector-spec*))))
 
       (((immutable ?name) . ?rest)
@@ -625,7 +626,7 @@
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons #f safe-field-mutator*)
 	       (cons #f unsafe-field-mutator*)
-	       (cons (%gen-safe-method-name     field-name.id) safe-field-method*)
+	       (cons (%gen-safe-method-name     field-name.id) field-method*)
 	       (cons `(immutable ,field-name.id) fields-vector-spec*))))
 
       ((?name . ?rest)
@@ -639,7 +640,7 @@
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons #f safe-field-mutator*)
 	       (cons #f unsafe-field-mutator*)
-	       (cons (%gen-safe-method-name     field-name.id) safe-field-method*)
+	       (cons (%gen-safe-method-name     field-name.id) field-method*)
 	       (cons `(immutable ,field-name.id) fields-vector-spec*))))
 
       ((?spec . ?rest)
@@ -971,7 +972,7 @@
 
 (define (%make-safe-method-code foo
 				field-type*.ann
-				safe-field-method* unsafe-field-accessor* unsafe-field-mutator*)
+				field-method* unsafe-field-accessor* unsafe-field-mutator*)
   ;;Return a list  holding a symbolic expressions (to be  BLESSed later) representing
   ;;Scheme  expressions  which,  expanded  and  evaluated  at  run-time,  define  the
   ;;syntactic bindings of the  safe field methods.  The returned list  is meant to be
@@ -983,7 +984,7 @@
   ;;FIELD-TYPE*.ANN must be the list of  syntax objects representing the fields' type
   ;;annotations.
   ;;
-  ;;SAFE-FIELD-METHOD*  must be  a  list of  symbols representing  the  names of  the
+  ;;FIELD-METHOD*  must be  a  list of  symbols representing  the  names of  the
   ;;syntactic identifiers the will be bound to the safe field methods.
   ;;
   ;;UNSAFE-FIELD-ACCESSOR*  and   UNSAFE-FIELD-MUTATOR*  must  be  list   of  symbols
@@ -1001,7 +1002,7 @@
 		   (,unsafe-field-mutator ,record.sym ,new-value.sym)))
 	     `(define/checked ((brace ,safe-field-method ,field-type.ann) (brace ,record.sym ,foo))
 		(unsafe-cast-signature (,field-type.ann) (,unsafe-field-accessor ,record.sym))))))
-    safe-field-method* unsafe-field-accessor* unsafe-field-mutator* field-type*.ann))
+    field-method* unsafe-field-accessor* unsafe-field-mutator* field-type*.ann))
 
 
 (define (%make-parent-rtd+rcd-code clause* foo input-form.stx synner)
@@ -1421,7 +1422,7 @@
        (synner "invalid syntax in HASH-FUNCTION clause" clause)))))
 
 
-(define (%make-methods-retriever-code foo field-name*.sym safe-field-method* methods-late-binding-alist)
+(define (%make-methods-retriever-code foo field-name*.sym field-method* methods-late-binding-alist)
   ;;Return false  or a  symbolic expression  (to be  BLESSed later)  representing the
   ;;Scheme definition of the methods-retriever function: a LAMBDA syntax use.
   ;;
@@ -1441,7 +1442,7 @@
 	     ;;... then the fields, so that the methods will be selected first.
 	     ,@(map (lambda (name procname)
 		      `((,name) ,procname))
-		 field-name*.sym safe-field-method*)
+		 field-name*.sym field-method*)
 	     (else #f))))
     #f))
 

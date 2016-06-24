@@ -29,7 +29,6 @@
   (import (rename (vicare)
 		  (make-record-type-descriptor		make-record-type-descriptor*)
 		  (make-record-constructor-descriptor	make-record-constructor-descriptor*))
-    (vicare language-extensions syntaxes)
     (vicare checks))
 
 (check-set-mode! 'report-failed)

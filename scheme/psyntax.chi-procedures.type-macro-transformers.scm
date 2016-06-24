@@ -837,28 +837,6 @@
 		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
 						   method.stx subject-expr.psi arg*.stx)))
 
-	  ((and (null? arg*.stx)
-		(object-type-spec.safe-accessor-stx subject-expr.ots method-name.sym))
-	   ;;No additional  arguments: the input form  has the correct syntax  for an
-	   ;;field accessor application.  A matching field name exists.
-	   => (lambda (accessor.stx)
-		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-						   accessor.stx subject-expr.psi arg*.stx)))
-
-	  ((and (list-of-single-item? arg*.stx)
-		(object-type-spec.safe-mutator-stx subject-expr.ots method-name.sym))
-	   ;;A single additional argument: the input  form has the correct syntax for
-	   ;;a field mutator application.  A matching mutable field name exists.
-	   => (lambda (mutator.stx)
-		(if (boolean? mutator.stx)
-		    (raise
-		     (condition (make-who-condition __module_who__)
-				(make-message-condition "attempt to mutate immutable field")
-				(make-syntax-violation input-form.stx subject-expr.stx)
-				(make-application-operand-signature-condition (psi.retvals-signature subject-expr.psi))))
-		  (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-						     mutator.stx subject-expr.psi arg*.stx))))
-
 	  (else
 	   (raise
 	    (condition (make-who-condition __module_who__)
