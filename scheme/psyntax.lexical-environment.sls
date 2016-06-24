@@ -264,6 +264,7 @@
     overloaded-function-spec.name-id			overloaded-function-spec.ofd-id
     overloaded-function-spec.late-binding-function-id
     overloaded-function-spec.signature*			overloaded-function-spec.id*
+    overloaded-function-spec.closure-ots
     overloaded-function-spec.add-specialised-implementation!
     overloaded-function-spec.register-specialisation!
     overloaded-function-spec.expanded-expr

@@ -30,6 +30,7 @@
 	 overloaded-function-spec.late-binding-function-id
 	 overloaded-function-spec.signature*
 	 overloaded-function-spec.id*
+	 overloaded-function-spec.closure-ots
 	 overloaded-function-spec.add-specialised-implementation!
 	 overloaded-function-spec.register-specialisation!
 	 overloaded-function-spec.expanded-expr
@@ -72,6 +73,14 @@
 
 
 ;;;; utilities
+
+(define* (overloaded-function-spec.closure-ots {over.ofs overloaded-function-spec?})
+  ;;Return  an  instance  of  "<object-type-spec>" representing  the  closure  object
+  ;;associated to the overloaded function.  Only the type signature registered so far
+  ;;are included.
+  ;;
+  (make-closure-type-spec
+   (make-case-lambda-signature (overloaded-function-spec.signature* over.ofs))))
 
 (define* (overloaded-function-spec.add-specialised-implementation! input-form.stx
 								   {lhs.ofs overloaded-function-spec?}

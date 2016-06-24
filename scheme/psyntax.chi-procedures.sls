@@ -1006,8 +1006,12 @@
        ;;
        ;;   (local-overloaded-function . #<overloaded-function-spec>)
        ;;
-       (let ((over.ofs (syntactic-binding-descriptor/local-overloaded-function.ofs descr)))
-	 (chi-expr (overloaded-function-spec.late-binding-function-id over.ofs) lexenv.run lexenv.expand)))
+       (let* ((over.ofs (syntactic-binding-descriptor/local-overloaded-function.ofs descr))
+	      (fun.psi  (chi-expr (overloaded-function-spec.late-binding-function-id over.ofs) lexenv.run lexenv.expand))
+	      (fun.ots  (overloaded-function-spec.closure-ots over.ofs)))
+	 (make-psi expr.stx
+	   (build-lexical-reference expr.stx (psi.core-expr fun.psi))
+	   (make-type-signature/single-value fun.ots))))
 
       ((global-overloaded-function-reference)
        ;;Global  overloaded-function reference.   The syntactic  binding's descriptor
@@ -1015,8 +1019,12 @@
        ;;
        ;;   (global-overloaded-function . (#<library> . ?loc))
        ;;
-       (let ((over.ofs (syntactic-binding-descriptor/global-overloaded-function.ofs descr)))
-	 (chi-expr (overloaded-function-spec.late-binding-function-id over.ofs) lexenv.run lexenv.expand)))
+       (let* ((over.ofs (syntactic-binding-descriptor/global-overloaded-function.ofs descr))
+	      (fun.psi	(chi-expr (overloaded-function-spec.late-binding-function-id over.ofs) lexenv.run lexenv.expand))
+	      (fun.ots  (overloaded-function-spec.closure-ots over.ofs)))
+	 (make-psi expr.stx
+	   (build-global-reference expr.stx (psi.core-expr fun.psi))
+	   (make-type-signature/single-value fun.ots))))
 
       ((enumeration)
        ;;Syntax  use  of  a  previously  defined  enumeration  type.   The  syntactic
