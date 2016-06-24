@@ -120,7 +120,6 @@
     object-type-spec.type-predicate-stx			object-type-spec.equality-predicate
     object-type-spec.comparison-procedure		object-type-spec.hash-function
     object-type-spec.applicable-method-stx		object-type-spec.applicable-hash-function
-    object-type-spec.safe-accessor-stx			object-type-spec.safe-mutator-stx
     object-type-spec.single-value-validator-lambda-stx	object-type-spec.list-validator-lambda-stx
     object-type-spec.type-descriptor-core-expr
     expression-expander-for-core-expressions

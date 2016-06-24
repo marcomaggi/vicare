@@ -259,11 +259,7 @@
   (define foo-syntactic-binding-form
     (%make-type-name-syntactic-binding-form foo foo-uid make-foo foo? foo-super-rcd.id foo-destructor.id
 					    foo-parent.id foo-rtd foo-rcd
-					    field-name*.sym field-relative-idx*
-					    foo-equality-predicate.id
-					    foo-comparison-procedure.id
-					    foo-hash-function.id
-					    safe-field-accessor* safe-field-mutator*
+					    foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
 					    (append method-name*.sym	field-name*.sym)
 					    (append method-procname*.id	field-method*)))
 
@@ -1450,11 +1446,9 @@
 (define* (%make-type-name-syntactic-binding-form foo.id foo-uid make-foo.id foo?.id
 						 foo-super-rcd.sym foo-destructor.sym
 						 foo-parent.id foo-rtd.sym foo-rcd.sym
-						 field-name*.sym field-relative-idx*
 						 foo-equality-predicate.id
 						 foo-comparison-procedure.id
 						 foo-hash-function.id
-						 safe-field-accessor* safe-field-mutator*
 						 method-name*.sym method-procname*.id)
   ;;Build and return symbolic expression (to  be BLESSed later) representing a Scheme
   ;;expression which, expanded and evaluated  at expand-time, returns the record-type
@@ -1483,17 +1477,6 @@
   ;;
   ;;FOO-RTD.SYM must be a  gensym: it will become the name  of the identifier bound
   ;;to the record-constructor descriptor.
-  ;;
-  ;;FIELD-NAME*.SYM must be a list of symbols representing all the field names.
-  ;;
-  ;;FIELD-RELATIVE-IDX* must  be a  list of fixnums  representing the  relative field
-  ;;indexes (zero based).
-  ;;
-  ;;SAFE-FIELD-ACCESSOR* must be  a list of syntactic identifiers that  will be bound
-  ;;to the field accessors.
-  ;;
-  ;;SAFE-FIELD-MUTATOR* must be a list of syntactic identifiers that will be bound to
-  ;;the field mutators.  In the positions of immutable fields: the list contains #f.
   ;;
   ;;METHOD-NAME*.SYM must be null or a list of symbols representing the method names.
   ;;
@@ -1527,23 +1510,6 @@
 			    knil))
 		  '() field-name*.id operator*.id)))
 
-  (define (%make-alist-from-syms key*.sym value*.sym)
-    (cons 'list (map (lambda (key.sym value.sym)
-		       (list 'cons `(quote ,key.sym) `(syntax ,value.sym)))
-		  key*.sym value*.sym)))
-
-  ;;A sexp which will be BLESSed in the  output code.  The sexp will evaluate to an
-  ;;alist in which:  keys are symbols representing all the  field names; values are
-  ;;identifiers bound to the safe accessors.
-  (define foo-fields-safe-accessors.table
-    (%make-alist-from-ids field-name*.sym safe-field-accessor*))
-
-  ;;A sexp which will be BLESSed in the  output code.  The sexp will evaluate to an
-  ;;alist in which:  keys are symbols representing mutable field  names; values are
-  ;;identifiers bound to safe mutators.
-  (define foo-fields-safe-mutators.table
-    (%make-alist-from-ids field-name*.sym safe-field-mutator*))
-
   (define foo-methods.table
     (%make-alist-from-ids method-name*.sym method-procname*.id))
 
@@ -1561,8 +1527,6 @@
 			  (syntax ,foo-equality-predicate.id)
 			  (syntax ,foo-comparison-procedure.id)
 			  (syntax ,foo-hash-function.id)
-			  ,foo-fields-safe-accessors.table
-			  ,foo-fields-safe-mutators.table
 			  ,foo-methods.table))
 
 

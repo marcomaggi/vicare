@@ -780,12 +780,11 @@
 		  (NORMAL-FIELDS-VECTOR		(list->vector (map (lambda (field-name.id)
 								     (cons #f field-name.id))
 								field-name*.id)))
-		  ;;This is  an alist  having: field name  symbols as  keys; syntactic
+		  ;;This is  an alist having:  field name symbols as  keys; syntactic
 		  ;;identifiers representing accessor names as values.
-		  (ACCESSOR-TABLE		`(list ,@(map (lambda (field-name.id ?accessor)
+		  (METHOD-TABLE			`(list ,@(map (lambda (field-name.id ?accessor)
 								`(cons (quote ,field-name.id) (syntax ,?accessor)))
 							   field-name*.id ?accessor*)))
-		  (METHOD-TABLE			ACCESSOR-TABLE)
 		  ;;This  is  a   closure  accepting  as  single   argument  a  symbol
 		  ;;representing a field  name; the single return value is  false or a
 		  ;;field accessor closure object.
@@ -823,8 +822,6 @@
 					  #f #;equality-predicate
 					  #f #;comparison-procedure
 					  #f #;hash-function
-					  ,ACCESSOR-TABLE
-					  '() #;safe-mutators.table
 					  ,METHOD-TABLE))
 		 (define/std ,RTD
 		   ($make-record-type-descriptor-ex (quote ,?name) (record-type-descriptor ,?parent-name)

@@ -742,7 +742,7 @@
 (declare-core-primitive make-struct-type-spec
     (safe)
   (signatures
-   ((<syntactic-identifier> <struct-type-descriptor> <syntactic-identifier> <syntactic-identifier> <list> <list> <list>)
+   ((<syntactic-identifier> <struct-type-descriptor> <syntactic-identifier> <syntactic-identifier> <list>)
     => (<struct-type-spec>))))
 
 (declare-core-primitive make-record-type-spec
@@ -760,8 +760,6 @@
      (or <false> <syntactic-identifier>) ;equality-predicate.id
      (or <false> <syntactic-identifier>) ;comparison-procedure.id
      (or <false> <syntactic-identifier>) ;hash-function.id
-     <list>				 ;safe-accessors-table
-     <list>				 ;safe-mutators-table
      <list>)				 ;methods-table
     => (<record-type-spec>))))
 

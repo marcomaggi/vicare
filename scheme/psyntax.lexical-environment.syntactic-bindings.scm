@@ -1010,7 +1010,7 @@
   ;;
   ;;   (?type-name ?uid ?rtd-name ?rcd-name ?parent-id
   ;;    ?constructor-id ?type-predicate-id
-  ;;    ?accessors-alist ?mutators-alist)
+  ;;    ?methods-alist)
   ;;
   ;;Syntactic binding descriptors of  type "$core-record-type-name" are hard-coded in
   ;;the boot image  and generated directly by the makefile  at boot image build-time.
@@ -1033,13 +1033,11 @@
 	 (equality-predicate.id		#f)
 	 (comparison-procedure.id	#f)
 	 (hash-function.id		#f)
-	 (accessors-table		(%alist-ref-or-null hard-coded-sexp 7))
-	 (mutators-table		'())
-	 (methods-table			accessors-table)
+	 (methods-table			(%alist-ref-or-null hard-coded-sexp 7))
 	 (ots				(make-record-type-spec type-name.id uid.sym rtd.id rcd.id super-protocol.id parent.id
 							       constructor-sexp destructor-sexp type-predicate-sexp
 							       equality-predicate.id comparison-procedure.id hash-function.id
-							       accessors-table mutators-table methods-table)))
+							       methods-table)))
     (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
 
@@ -1069,7 +1067,7 @@
   ;;where ?HARD-CODED-SEXP has the format:
   ;;
   ;;   (?type-name ?uid ?rtd-name ?rcd-name
-  ;;    ?parent-name ?constructor-name ?type-predicate-name ?accessors-alist)
+  ;;    ?parent-name ?constructor-name ?type-predicate-name ?methods-alist)
   ;;
   ;;Syntactic  binding  descriptors  of type  "$core-condition-object-type-name"  are
   ;;hard-coded in the boot image and generated directly by the makefile at boot image
@@ -1093,14 +1091,12 @@
 	 (equality-predicate.id		#f)
 	 (comparison-procedure.id	#f)
 	 (hash-function.id		#f)
-	 (accessors-table		(%alist-ref-or-null hard-coded-sexp 7))
-	 (mutators-table		'())
-	 (methods-table			accessors-table)
+	 (methods-table			(%alist-ref-or-null hard-coded-sexp 7))
 	 (ots				(make-record-type-spec type-name.id uid.sym
 							       rtd.id rcd.id super-protocol.id parent.id
 							       constructor.id destructor.id type-predicate.id
 							       equality-predicate.id comparison-procedure.id hash-function.id
-							       accessors-table mutators-table methods-table)))
+							       methods-table)))
     (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
 

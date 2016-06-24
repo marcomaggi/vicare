@@ -180,12 +180,6 @@
 
 ;;; --------------------------------------------------------------------
 
-    (define safe-accessors-table.sexp
-      (%make-alist-from-ids field*.sym accessor*.id))
-
-    (define safe-mutators-table.sexp
-      (%make-alist-from-ids field*.sym mutator*.id))
-
     (define methods-table.sexp
       (%make-alist-from-ids field*.sym method*.id))
 
@@ -199,8 +193,6 @@
 	(define-syntax ,type.id
 	  (make-struct-type-spec (syntax ,type.id) ',std
 				 (syntax ,constructor.id) (syntax ,predicate.id)
-				 ,safe-accessors-table.sexp
-				 ,safe-mutators-table.sexp
 				 ,methods-table.sexp))
 	(define/checked ((brace ,constructor.id ,type.id) . ,constructor-arg*.sym)
 	  (receive-and-return (S)
