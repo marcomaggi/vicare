@@ -347,14 +347,17 @@
     ;;signature, with the identifiers "_" replaced with "<top>" or "<list>".
     ;;
     (let recur ((sig type-signature.stx))
-      (syntax-case sig (<no-return> <list> list-of)
+      (syntax-case sig (<bottom> <list> <nelist> <bottom> list list-of pair pair-of)
 	(()
 	 '())
 
-	(<no-return>
+	(<bottom>
 	 sig)
 
 	(<list>
+	 sig)
+
+	(<nelist>
 	 sig)
 
 	(?type
@@ -362,8 +365,18 @@
 	      (free-identifier=? #'_ #'?type))
 	 (%replace-type-alias #'?type #t))
 
+	((list ?item-type0 ?item-type ...)
+	 #`(list . #,(map %validate-type-annotation (syntax->list #'(?item-type0 ?item-type ...)))))
+
 	((list-of ?item-type)
 	 #`(list-of #,(%validate-type-annotation #'?item-type)))
+
+	((pair-of ?item-type)
+	 #`(pair-of #,(%validate-type-annotation #'?item-type)))
+
+	((pair ?car-type ?cdr-type)
+	 #`(pair #,(%validate-type-annotation #'?car-type)
+		 #,(%validate-type-annotation #'?cdr-type)))
 
 	((?car . ?cdr)
 	 (cons (%validate-type-annotation #'?car)
@@ -374,7 +387,7 @@
 
   (define (%validate-type-annotation type-annotation.stx)
     (syntax-case type-annotation.stx
-	(pair list vector pair-of list-of nelist-of vector-of <no-return> <list>
+	(pair list vector pair-of list-of nelist-of vector-of <list>
 	      condition or and not alist hashtable lambda case-lambda =>
 	      enumeration type-predicate equality-predicate comparison-procedure hash-function)
 

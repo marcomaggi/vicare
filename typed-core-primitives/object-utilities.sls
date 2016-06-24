@@ -165,7 +165,6 @@
 (declare-core-type-descriptor <negative-flonum>-ctd)
 (declare-core-type-descriptor <negative-ratnum>-ctd)
 (declare-core-type-descriptor <negative-zero-flonum>-ctd)
-(declare-core-type-descriptor <no-return>-ctd)
 (declare-core-type-descriptor <null>-ctd)
 (declare-core-type-descriptor <number>-ctd)
 (declare-core-type-descriptor <opaque-record>-ctd)

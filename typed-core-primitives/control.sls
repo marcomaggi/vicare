@@ -64,17 +64,17 @@
 (declare-core-primitive call-with-current-continuation
     (safe)
   (signatures
-   (((lambda ((lambda <list> => <no-return>)) => <list>))	=> <list>)))
+   (((lambda ((lambda <list> => <bottom>)) => <list>))	=> <list>)))
 
 (declare-core-primitive call/cc
     (safe)
   (signatures
-   (((lambda ((lambda <list> => <no-return>)) => <list>))	=> <list>)))
+   (((lambda ((lambda <list> => <bottom>)) => <list>))	=> <list>)))
 
 (declare-core-primitive unwinding-call/cc
     (safe)
   (signatures
-   (((lambda ((lambda <list> => <no-return>)) => <list>))	=> <list>)))
+   (((lambda ((lambda <list> => <bottom>)) => <list>))	=> <list>)))
 
 (declare-parameter run-unwind-protection-cleanup-upon-exit?	<top>)
 
@@ -105,7 +105,7 @@
 (declare-core-primitive raise
     (safe)
   (signatures
-   ((<top>)		=> <no-return>)))
+   ((<top>)		=> <bottom>)))
 
 (declare-core-primitive raise-continuable
     (safe)

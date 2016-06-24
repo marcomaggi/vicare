@@ -336,7 +336,6 @@
 	     ;;this case first because it is the most likely.
 	     ;;
 	     ;;(matching <top>		<void>)		=> no-match
-	     ;;(matching <top>		<no-return>)	=> no-match
 	     ;;(matching <top>		<fixnum>)	=> exact-match
 	     ;;(matching <fixnum>	<fixnum>)	=> exact-match
 	     ;;(matching <number>	<fixnum>)	=> exact-match
@@ -344,7 +343,6 @@
 	     (cond ((<top>-ctd? super.des)
 		    (cond-with-predicates sub.des
 		      (<void>-ctd?		#f)
-		      (<no-return>-ctd?	#f)
 		      (else			#t)))
 		   ((core-type-descriptor=? super.des sub.des))
 		   ((core-type-descriptor.parent-and-child? super.des sub.des))
@@ -423,32 +421,18 @@
 	  ;;(super-and-sub? (not <top>) <fixnum>)		=> #f
 	  ;;(super-and-sub? (not <top>) <top>)			=> #f
 	  ;;(super-and-sub? (not <top>) <void>)			=> #f
-	  ;;(super-and-sub? (not <top>) <no-return>)		=> #f
 	  ;;(matching (not <top>) <fixnum>)			=> possible-match
 	  ;;(matching (not <top>) <top>)			=> no-match
 	  ;;(matching (not <top>) <void>)			=> possible-match
-	  ;;(matching (not <top>) <no-return>)			=> possible-match
 	  (<top>-ctd?			#f)
 
 	  ;;(super-and-sub? (not <void>) <fixnum>)		=> #f
 	  ;;(super-and-sub? (not <void>) <top>)			=> #f
 	  ;;(super-and-sub? (not <void>) <void>			=> #f
-	  ;;(super-and-sub? (not <void>) <no-return>)		=> #f
 	  ;;(matching (not <void>) <fixnum>)			=> possible-match
 	  ;;(matching (not <void>) <top>)			=> possible-match
 	  ;;(matching (not <void>) <void>)			=> no-match
-	  ;;(matching (not <void>) <no-return>)			=> possible-match
 	  (<void>-ctd?			#f)
-
-	  ;;(super-and-sub? (not <no-return>) <fixnum>)		=> #f
-	  ;;(super-and-sub? (not <no-return>) <top>)		=> #f
-	  ;;(super-and-sub? (not <no-return>) <void>)		=> #f
-	  ;;(super-and-sub? (not <no-return>) <no-return>)	=> #f
-	  ;;(matching (not <no-return>) <fixnum>)		=> possible-match
-	  ;;(matching (not <no-return>) <top>)			=> possible-match
-	  ;;(matching (not <no-return>) <void>)			=> possible-match
-	  ;;(matching (not <no-return>) <no-return>)		=> no-match
-	  (<no-return>-ctd?		#f)
 
 	  ;;(matching (not <bottom>)	<top>)			=> possible-match
 	  ;;(matching (not <bottom>)	<void>)			=> possible-match
@@ -942,7 +926,6 @@
   (define (object-type-descr.top-sub-type? item.des)
     (cond-with-predicates item.des
       (<void>-ctd?		#f)
-      (<no-return>-ctd?		#f)
       (else			#t)))
 
   (define (object-type-descr.compatible-super-and-sub? super.des sub.des)
@@ -1091,11 +1074,9 @@
 	   ;;(matching (not <fixnum>)    <top>)		=> possible-match
 	   ;;(matching (not <top>)       <top>)		=> no-match
 	   ;;(matching (not <void>)      <top>)		=> possible-match
-	   ;;(matching (not <no-return>) <top>)		=> possible-match
 	   (cond-with-predicates super-item.des
 	     (<top>-ctd?		#f)
 	     (<void>-ctd?		#t)
-	     (<no-return>-ctd?		#t)
 	     (else
 	      (not (object-type-descr.matching-super-and-sub? super-item.des sub.des)))))
 
@@ -1103,22 +1084,9 @@
 	   ;;(matching (not <fixnum>)    <void>)	=> possible-match
 	   ;;(matching (not <top>)       <void>)	=> possible-match
 	   ;;(matching (not <void>)      <void>)	=> no-match
-	   ;;(matching (not <no-return>) <void>)	=> possible-match
 	   (cond-with-predicates super-item.des
 	     (<top>-ctd?		#t)
 	     (<void>-ctd?		#f)
-	     (<no-return>-ctd?		#t)
-	     (else			#t)))
-
-	  (<no-return>-ctd?
-	   ;;(matching (not <fixnum>)    <no-return>)	=> possible-match
-	   ;;(matching (not <top>)       <no-return>)	=> possible-match
-	   ;;(matching (not <void>)      <no-return>)	=> possible-match
-	   ;;(matching (not <no-return>) <no-return>)	=> possible-match
-	   (cond-with-predicates super-item.des
-	     (<top>-ctd?		#t)
-	     (<void>-ctd?		#t)
-	     (<no-return>-ctd?		#f)
 	     (else			#t)))
 
 	  (else
@@ -1229,11 +1197,9 @@
 	       ;;(matching <top> (not <fixnum>))		=> possible-match
 	       ;;(matching <top> (not <top>))			=> no-match
 	       ;;(matching <top> (not <void>))			=> possible-match
-	       ;;(matching <top> (not <no-return>))		=> possible-match
 	       (cond-with-predicates sub-item.des
 		 (<top>-ctd?		#f)
 		 (<void>-ctd?		#t)
-		 (<no-return>-ctd?	#t)
 		 (else
 		  (object-type-descr.top-sub-type? sub-item.des))))
 
@@ -1241,23 +1207,9 @@
 	       ;;(matching <void> (not <fixnum>))		=> possible-match
 	       ;;(matching <void> (not <top>))			=> possible-match
 	       ;;(matching <void> (not <void>))			=> no-match
-	       ;;(matching <void> (not <no-return>))		=> possible-match
 	       (cond-with-predicates sub-item.des
-		 (<no-return>-ctd?	#t)
 		 (<void>-ctd?		#f)
 		 (<top>-ctd?		#t)
-		 (else
-		  (object-type-descr.top-sub-type? sub-item.des))))
-
-	      ((<no-return>-ctd? super.des)
-	       ;;(matching <no-return> (not <fixnum>))		=> possible-match
-	       ;;(matching <no-return> (not <top>))		=> possible-match
-	       ;;(matching <no-return> (not <void>))		=> possible-match
-	       ;;(matching <no-return> (not <no-return>))	=> no-match
-	       (cond-with-predicates sub-item.des
-		 (<top>-ctd?		#t)
-		 (<void>-ctd?		#t)
-		 (<no-return>-ctd?	#f)
 		 (else
 		  (object-type-descr.top-sub-type? sub-item.des))))
 

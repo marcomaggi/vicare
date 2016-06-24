@@ -147,8 +147,7 @@
 	  core-type-descriptor.ancestor-des*
 	  core-type-descriptor.parent-and-child?
 	  ;;;
-	  <bottom>-ctd
-	  <void>-ctd				<top>-ctd			<no-return>-ctd
+	  <void>-ctd				<top>-ctd			<bottom>-ctd
 	  <true>-ctd				<false>-ctd
 	  <char>-ctd				<keyword>-ctd			<symbol>-ctd
 	  <procedure>-ctd			<struct>-ctd			<record>-ctd
@@ -296,7 +295,6 @@
 ;;; --------------------------------------------------------------------
 
 (define-type-descriptor-predicate <bottom>-ctd)
-(define-type-descriptor-predicate <no-return>-ctd)
 (define-type-descriptor-predicate <void>-ctd)
 (define-type-descriptor-predicate <top>-ctd)
 (define-type-descriptor-predicate <symbol>-ctd)

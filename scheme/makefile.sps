@@ -964,8 +964,7 @@
   (define (%validate-parent parent.stx)
     (when (let ((prnt #'?parent-name))
 	    (and (identifier? prnt)
-		 (or (free-identifier=? prnt #'<no-return>)
-		     (free-identifier=? prnt #'<void>)
+		 (or (free-identifier=? prnt #'<void>)
 		     (free-identifier=? prnt #'<null>)
 		     (free-identifier=? prnt #'<empty-vector>))))
       (synner "attempt to use a sealed object-type as parent of object-type specification"
@@ -3787,8 +3786,7 @@
 ;;; built-in Scheme object types
 
     (<untyped>)
-    (<bottom>			v $language)
-    (<no-return>				v $language)
+    (<bottom>					v $language)
     (<void>					v $language)
     (<top>					v $language)
     (<eof>					v $language)
@@ -3999,7 +3997,6 @@
     (<nelist>-ctd				$type-descriptors)
     (<nestring>-ctd				$type-descriptors)
     (<nevector>-ctd				$type-descriptors)
-    (<no-return>-ctd				$type-descriptors)
     (<non-zero-cflonum>-ctd			$type-descriptors)
     (<non-zero-inexact-compnum>-ctd		$type-descriptors)
     (<null>-ctd					$type-descriptors)

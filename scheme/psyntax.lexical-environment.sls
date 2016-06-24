@@ -355,10 +355,10 @@
     syntax-parameter-value		retrieve-expand-time-value
 
     ;; core object-type identifiers
-    <no-return>-type-id			<no-return>-type-id?
+    <untyped>-type-id			<untyped>-type-id?
     <void>-type-id			<void>-type-id?
     <top>-type-id			<top>-type-id?
-    <untyped>-type-id			<untyped>-type-id?
+    <bottom>-type-id			<bottom>-type-id?
     <procedure>-type-id			<procedure>-type-id?
     <pair>-type-id			<pair>-type-id?
     <list>-type-id			<list>-type-id?
@@ -381,10 +381,10 @@
     &condition-type-id			&condition-type-id?
 
     ;; core object-type specifications
-    <no-return>-ots			<no-return>-ots?
     <void>-ots				<void>-ots?
     <untyped>-ots			<untyped>-ots?
     <top>-ots				<top>-ots?
+    <bottom>-ots			<bottom>-ots?
     <procedure>-ots			<procedure>-ots?
     <pair>-ots				<pair>-ots?
     <null>-ots				<null>-ots?
@@ -2964,10 +2964,9 @@
 		(receive-and-return (id)
 		    (core-prim-id '?tag)
 		  (set! memoized-id id))))))))
-  (define-type-id-retriever <no-return>-type-id			<no-return>)
   (define-type-id-retriever <void>-type-id			<void>)
   (define-type-id-retriever <untyped>-type-id			<untyped>)
-  (define-type-id-retriever <bottom>-type-id		<bottom>)
+  (define-type-id-retriever <bottom>-type-id			<bottom>)
   (define-type-id-retriever <top>-type-id			<top>)
   (define-type-id-retriever <procedure>-type-id			<procedure>)
   (define-type-id-retriever <boolean>-type-id			<boolean>)
@@ -3002,10 +3001,9 @@
 		(receive-and-return (ots)
 		    (id->object-type-spec (core-prim-id '?tag) (make-empty-lexenv))
 		  (set! memoized-ots ots))))))))
-  (define-type-spec-retriever <no-return>-ots			<no-return>)
   (define-type-spec-retriever <void>-ots			<void>)
   (define-type-spec-retriever <untyped>-ots			<untyped>)
-  (define-type-spec-retriever <bottom>-ots		<bottom>)
+  (define-type-spec-retriever <bottom>-ots			<bottom>)
   (define-type-spec-retriever <top>-ots				<top>)
   (define-type-spec-retriever <procedure>-ots			<procedure>)
   (define-type-spec-retriever <boolean>-ots			<boolean>)
@@ -3039,10 +3037,9 @@
       (define (?who obj)
 	(and (identifier? obj)
 	     (~free-identifier=? obj (?tag-retriever))))))
-  (define-type-id-predicate <no-return>-type-id?		<no-return>-type-id)
   (define-type-id-predicate <void>-type-id?			<void>-type-id)
   (define-type-id-predicate <untyped>-type-id?			<untyped>-type-id)
-  (define-type-id-predicate <bottom>-type-id?	<bottom>-type-id)
+  (define-type-id-predicate <bottom>-type-id?			<bottom>-type-id)
   (define-type-id-predicate <top>-type-id?			<top>-type-id)
   (define-type-id-predicate <boolean>-type-id?			<boolean>-type-id)
   (define-type-id-predicate <true>-type-id?			<true>-type-id)
@@ -3095,7 +3092,6 @@
 					       (object-type-spec.name src-ots)
 					     (set! memoised-name src-name)))))
 			 (~free-identifier=? (object-type-spec.name obj) src-name))))))))))
-  (define-type-spec-predicate <no-return>-ots?			<no-return>-ots)
   (define-type-spec-predicate <void>-ots?			<void>-ots)
   (define-type-spec-predicate <untyped>-ots?			<untyped>-ots)
   (define-type-spec-predicate <bottom>-ots?			<bottom>-ots)

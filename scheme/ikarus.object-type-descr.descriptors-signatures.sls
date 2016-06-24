@@ -421,9 +421,9 @@
   (let  ((formals.specs		(descriptors-signature.object-type-descrs formals.sig))
 	 (operands.specs	(descriptors-signature.object-type-descrs operands.sig)))
     (cond
-     ((<no-return>-ctd? formals.specs)
-      (<no-return>-ctd? operands.specs))
-     ((<no-return>-ctd? operands.specs)
+     ((<bottom>-ctd? formals.specs)
+      (<bottom>-ctd? operands.specs))
+     ((<bottom>-ctd? operands.specs)
       #f)
      (else
       (let recur ((formals.specs	formals.specs)

@@ -1104,7 +1104,7 @@
 	 "the expression in the TYPE-OF annotation is typed as returning an unspecified number of values"
 	 expr.stx))
 
-      (<no-return>
+      (<bottom>
        (syntax-violation __who__
 	 "the expression in the TYPE-OF annotation is typed as not returning"
 	 expr.stx))
@@ -1427,7 +1427,7 @@
 	  (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
 	  (make-type-signature-condition (psi.retvals-signature rhs.psi))))
       (case-type-signature-full-structure (psi.retvals-signature rhs.psi)
-	(<no-return>
+	(<bottom>
 	 ;;The expression is marked as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
 	   (%handle-error common "expression used as right-hand side in SET! is typed as not returning")))

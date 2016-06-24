@@ -374,7 +374,7 @@
 		;We need to remember that:
 		;
 		;* When defining  a built-in Scheme type, the  following types cannot
-		;be subtyped: <no-return>, <void>, <null>, <empty-vector>.
+		;be subtyped: <bottom>, <void>, <null>, <empty-vector>.
 		;
 		;* Besides  the built-in  Scheme types, the  pari subtypes,  the list
 		;subtypes, the  vector subtypes, the only  object-type specifications
@@ -682,7 +682,6 @@
 	     ;;case first because it is the most likely.
 	     ;;
 	     ;;(matching <top>		<void>)		=> no-match
-	     ;;(matching <top>		<no-return>)	=> no-match
 	     ;;(matching <top>		<fixnum>)	=> exact-match
 	     ;;(matching <fixnum>	<fixnum>)	=> exact-match
 	     ;;(matching <number>	<fixnum>)	=> exact-match
@@ -690,7 +689,6 @@
 	     (cond ((<top>-ots? super.ots)
 		    (cond-with-predicates sub.ots
 		      (<void>-ots?		#f)
-		      (<no-return>-ots?	#f)
 		      (else			#t)))
 		   (($core-type-spec=? super.ots sub.ots))
 		   ((core-type-spec.parent-and-child? super.ots sub.ots))
@@ -774,32 +772,18 @@
 	  ;;(super-and-sub? (not <top>) <fixnum>)		=> #f
 	  ;;(super-and-sub? (not <top>) <top>)			=> #f
 	  ;;(super-and-sub? (not <top>) <void>)			=> #f
-	  ;;(super-and-sub? (not <top>) <no-return>)		=> #f
 	  ;;(matching (not <top>) <fixnum>)			=> possible-match
 	  ;;(matching (not <top>) <top>)			=> no-match
 	  ;;(matching (not <top>) <void>)			=> possible-match
-	  ;;(matching (not <top>) <no-return>)			=> possible-match
 	  (<top>-ots?			#f)
 
 	  ;;(super-and-sub? (not <void>) <fixnum>)		=> #f
 	  ;;(super-and-sub? (not <void>) <top>)			=> #f
 	  ;;(super-and-sub? (not <void>) <void>			=> #f
-	  ;;(super-and-sub? (not <void>) <no-return>)		=> #f
 	  ;;(matching (not <void>) <fixnum>)			=> possible-match
 	  ;;(matching (not <void>) <top>)			=> possible-match
 	  ;;(matching (not <void>) <void>)			=> no-match
-	  ;;(matching (not <void>) <no-return>)			=> possible-match
 	  (<void>-ots?			#f)
-
-	  ;;(super-and-sub? (not <no-return>) <fixnum>)		=> #f
-	  ;;(super-and-sub? (not <no-return>) <top>)		=> #f
-	  ;;(super-and-sub? (not <no-return>) <void>)		=> #f
-	  ;;(super-and-sub? (not <no-return>) <no-return>)	=> #f
-	  ;;(matching (not <no-return>) <fixnum>)		=> possible-match
-	  ;;(matching (not <no-return>) <top>)			=> possible-match
-	  ;;(matching (not <no-return>) <void>)			=> possible-match
-	  ;;(matching (not <no-return>) <no-return>)		=> no-match
-	  (<no-return>-ots?		#f)
 
 	  ;;(matching (not <bottom>)	<top>)			=> possible-match
 	  ;;(matching (not <bottom>)	<void>)			=> possible-match
@@ -1478,11 +1462,9 @@
 	   ;;(matching (not <fixnum>)    <top>)		=> possible-match
 	   ;;(matching (not <top>)       <top>)		=> no-match
 	   ;;(matching (not <void>)      <top>)		=> possible-match
-	   ;;(matching (not <no-return>) <top>)		=> possible-match
 	   (cond-with-predicates super-item.ots
 	     (<top>-ots?		#f)
 	     (<void>-ots?		#t)
-	     (<no-return>-ots?		#t)
 	     (else
 	      (not (object-type-spec.matching-super-and-sub? super-item.ots sub.ots)))))
 
@@ -1490,22 +1472,9 @@
 	   ;;(matching (not <fixnum>)    <void>)	=> possible-match
 	   ;;(matching (not <top>)       <void>)	=> possible-match
 	   ;;(matching (not <void>)      <void>)	=> no-match
-	   ;;(matching (not <no-return>) <void>)	=> possible-match
 	   (cond-with-predicates super-item.ots
 	     (<top>-ots?		#t)
 	     (<void>-ots?		#f)
-	     (<no-return>-ots?		#t)
-	     (else			#t)))
-
-	  (<no-return>-ots?
-	   ;;(matching (not <fixnum>)    <no-return>)	=> possible-match
-	   ;;(matching (not <top>)       <no-return>)	=> possible-match
-	   ;;(matching (not <void>)      <no-return>)	=> possible-match
-	   ;;(matching (not <no-return>) <no-return>)	=> possible-match
-	   (cond-with-predicates super-item.ots
-	     (<top>-ots?		#t)
-	     (<void>-ots?		#t)
-	     (<no-return>-ots?		#f)
 	     (else			#t)))
 
 	  (else
@@ -1621,11 +1590,9 @@
 	       ;;(matching <top> (not <fixnum>))		=> possible-match
 	       ;;(matching <top> (not <top>))			=> no-match
 	       ;;(matching <top> (not <void>))			=> possible-match
-	       ;;(matching <top> (not <no-return>))		=> possible-match
 	       (cond-with-predicates sub-item.ots
 		 (<top>-ots?		#f)
 		 (<void>-ots?		#t)
-		 (<no-return>-ots?	#t)
 		 (else
 		  (object-type-spec.top-sub-type? sub-item.ots))))
 
@@ -1633,23 +1600,9 @@
 	       ;;(matching <void> (not <fixnum>))		=> possible-match
 	       ;;(matching <void> (not <top>))			=> possible-match
 	       ;;(matching <void> (not <void>))			=> no-match
-	       ;;(matching <void> (not <no-return>))		=> possible-match
 	       (cond-with-predicates sub-item.ots
-		 (<no-return>-ots?	#t)
 		 (<void>-ots?		#f)
 		 (<top>-ots?		#t)
-		 (else
-		  (object-type-spec.top-sub-type? sub-item.ots))))
-
-	      ((<no-return>-ots? super.ots)
-	       ;;(matching <no-return> (not <fixnum>))		=> possible-match
-	       ;;(matching <no-return> (not <top>))		=> possible-match
-	       ;;(matching <no-return> (not <void>))		=> possible-match
-	       ;;(matching <no-return> (not <no-return>))	=> no-match
-	       (cond-with-predicates sub-item.ots
-		 (<top>-ots?		#t)
-		 (<void>-ots?		#t)
-		 (<no-return>-ots?	#f)
 		 (else
 		  (object-type-spec.top-sub-type? sub-item.ots))))
 
@@ -2119,10 +2072,10 @@
 	     (<untyped>-ots? ots2))
 	 ots2)
 
-	((<no-return>-ots? ots1)
+	((<bottom>-ots? ots1)
 	 ots2)
 
-	((<no-return>-ots? ots2)
+	((<bottom>-ots? ots2)
 	 ots1)
 
 	((<void>-ots? ots1)
@@ -2597,7 +2550,6 @@
 (define (object-type-spec.top-sub-type? item.ots)
   (cond-with-predicates item.ots
     (<void>-ots?	#f)
-    (<no-return>-ots?	#f)
     (else		#t)))
 
 (define (%compare-super-with-sub-and-its-parents super.ots sub.ots)
@@ -3354,8 +3306,8 @@
 	    ;;akin to: if one operand of multiplication is NaN, the result is NaN.
 	    ((find <void>-ots? component-type*.ots))
 	    (else
-	     ;;If there are "<no-return>" components: we filter them out.
-	     (let* ((component-type*.ots (remp <no-return>-ots? component-type*.ots))
+	     ;;If there are "<bottom>" components: we filter them out.
+	     (let* ((component-type*.ots (remp <bottom>-ots? component-type*.ots))
 		    ;;If a component  is sub-type of another  component: the sub-type
 		    ;;must be filtered out.  We do the filtering twice: left-to-right
 		    ;;and right-to-left.
@@ -3623,8 +3575,8 @@
 	    ;;akin to: if one operand of multiplication is NaN, the result is NaN.
 	    ((find <void>-ots? component-type*.ots))
 	    (else
-	     ;;If there are "<no-return>" components: we filter them out.
-	     (let* ((component-type*.ots	(remp <no-return>-ots? component-type*.ots))
+	     ;;If there are "<bottom>" components: we filter them out.
+	     (let* ((component-type*.ots	(remp <bottom>-ots? component-type*.ots))
 		    ;;If  a  component  is   super-type  of  another  component:  the
 		    ;;super-type must  be filtered out.   We do the  filtering twice:
 		    ;;left-to-right and right-to-left.

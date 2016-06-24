@@ -757,50 +757,50 @@
 (declare-core-primitive error
     (safe)
   (signatures
-   ((<&who-value> <string> . <list>)		=> <no-return>)))
+   ((<&who-value> <string> . <list>)		=> <bottom>)))
 
 (declare-core-primitive assertion-violation
     (safe)
   (signatures
-   ((<&who-value> <string> . <list>)		=> <no-return>)))
+   ((<&who-value> <string> . <list>)		=> <bottom>)))
 
 (declare-core-primitive syntax-violation
     (safe)
   (signatures
-   ((<&who-value> <string> <top>)		=> <no-return>)
-   ((<&who-value> <string> <top> <top>)	=> <no-return>)))
+   ((<&who-value> <string> <top>)		=> <bottom>)
+   ((<&who-value> <string> <top> <top>)	=> <bottom>)))
 
 (declare-core-primitive warning
     (safe)
   (signatures
    ;;We do not know the number of returned values.
-   ((<&who-value> <string> . <list>)		=> <no-return>)))
+   ((<&who-value> <string> . <list>)		=> <bottom>)))
 
 ;;This is deprecated.
 (declare-core-primitive die
     (safe)
   (signatures
-   ((<&who-value> <string> . <list>)		=> <no-return>)))
+   ((<&who-value> <string> . <list>)		=> <bottom>)))
 
 (declare-core-primitive procedure-argument-violation
     (safe)
   (signatures
-   ((<&who-value> <string> . <list>)		=> <no-return>)))
+   ((<&who-value> <string> . <list>)		=> <bottom>)))
 
 (declare-core-primitive expression-return-value-violation
     (safe)
   (signatures
-   ((<&who-value> <string> <positive-fixnum> . <list>)	=> <no-return>)))
+   ((<&who-value> <string> <positive-fixnum> . <list>)	=> <bottom>)))
 
 (declare-core-primitive non-reinstatable-violation
     (safe)
   (signatures
-   ((<&who-value> <string> . <list>)			=> <no-return>)))
+   ((<&who-value> <string> . <list>)			=> <bottom>)))
 
 (declare-core-primitive procedure-signature-argument-violation
     (safe)
   (signatures
-   ((<&who-value> <string> <positive-fixnum> <top> <top>)	=> (<no-return>))))
+   ((<&who-value> <string> <positive-fixnum> <top> <top>)	=> (<bottom>))))
 
 (declare-core-primitive assertion-error
     (safe)
@@ -808,22 +808,22 @@
    ((<top> <syntax-object>
 	   <non-negative-exact-integer> <non-negative-exact-integer>
 	   <non-negative-exact-integer> <non-negative-exact-integer>)
-    => (<no-return>))))
+    => (<bottom>))))
 
 (declare-core-primitive procedure-arguments-consistency-violation
     (safe)
   (signatures
-   ((<&who-value> <string> . <list>)		=> (<no-return>))))
+   ((<&who-value> <string> . <list>)		=> (<bottom>))))
 
 (declare-core-primitive procedure-arguments-consistency-violation/failed-expression
     (safe)
   (signatures
-   ((<&who-value> <string> <top> . <list>)	=> (<no-return>))))
+   ((<&who-value> <string> <top> . <list>)	=> (<bottom>))))
 
 (declare-core-primitive procedure-signature-return-value-violation
     (safe)
   (signatures
-   ((<&who-value> <string> <non-negative-fixnum> <top> <top>)	=> (<no-return>))))
+   ((<&who-value> <string> <non-negative-fixnum> <top> <top>)	=> (<bottom>))))
 
 /section)
 

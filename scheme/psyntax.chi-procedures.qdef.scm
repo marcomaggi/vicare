@@ -460,7 +460,7 @@
 	  (make-syntax-violation (qdef.input-form qdef) rhs.stx)
 	  (make-type-signature-condition rhs.sig)))
       (case-type-signature-full-structure rhs.sig
-	(<no-return>
+	(<bottom>
 	 ;;The expression is marked as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
 	   (raise-continuable
@@ -521,7 +521,7 @@
 	    (make-syntax-violation (qdef.input-form qdef) rhs.stx)
 	    (make-type-signature-condition rhs.sig)))
 	(case-type-signature-full-structure (psi.retvals-signature rhs.psi)
-	  (<no-return>
+	  (<bottom>
 	   ;;The expression is marked as not-returning.
 	   (when (options::warn-about-not-returning-expressions)
 	     (raise-continuable
@@ -621,7 +621,7 @@
 	    (make-syntax-violation (qdef.input-form qdef) rhs.stx)
 	    (make-type-signature-condition rhs.sig)))
 	(case-type-signature-full-structure (psi.retvals-signature rhs.psi)
-	  (<no-return>
+	  (<bottom>
 	   ;;The expression is marked as not-returning.
 	   (when (options::warn-about-not-returning-expressions)
 	     (raise-continuable

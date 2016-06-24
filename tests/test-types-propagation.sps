@@ -389,7 +389,7 @@
 	    (lambda ()
 	      (error #f "wrong"))
 	  (lambda () 123))
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (call-with-values
@@ -660,7 +660,7 @@
 	    (lambda ()
 	      (error #f "wrong"))
 	  (lambda (a) a))
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (call-with-values
@@ -768,7 +768,7 @@
 	    (lambda () (error #f "wrong"))
 	  (lambda (a b)
 	    (values a b)))
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (call-with-values
@@ -1202,7 +1202,7 @@
 	    (lambda () (error #f "wrong"))
 	  (lambda (a b . rest)
 	    (values a b rest)))
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (call-with-values
@@ -1493,7 +1493,7 @@
   ;;The first expression does not return.
   ;;
   (doit (begin0 (error #f "ciao") (read) (read))
-	=> <no-return>)
+	=> <bottom>)
 
   ;;The  first expression  returns an  unspecified number  of values,  of unspecified
   ;;type.
@@ -1552,7 +1552,7 @@
   (doit (receive/std ()
 	    (error #f "wrong")
 	  123)
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (receive/std ()
@@ -1692,7 +1692,7 @@
   (doit (receive/std (a)
 	    (error #f "wrong")
 	  a)
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (receive/std (a)
@@ -1762,7 +1762,7 @@
   (doit (receive/std (a b)
 	    (error #f "wrong")
 	  (values a b))
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (receive/std (a b)
@@ -2027,7 +2027,7 @@
   (doit (receive/std (a b . rest)
 	    (error #f "wrong")
 	  (values a b rest))
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (receive/std (a b . rest)
@@ -2105,7 +2105,7 @@
   (doit (receive ()
 	    (error #f "wrong")
 	  123)
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (receive ()
@@ -2329,7 +2329,7 @@
   (doit (receive (a)
 	    (error #f "wrong")
 	  a)
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (receive (a)
@@ -2425,7 +2425,7 @@
   (doit (receive (a b)
 	    (error #f "wrong")
 	  (values a b))
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (receive (a b)
@@ -2809,7 +2809,7 @@
   (doit (receive (a b . rest)
 	    (error #f "wrong")
 	  (values a b rest))
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (receive (a b . rest)
@@ -2862,7 +2862,7 @@
 	    (error #f "wrong")
 	  (one)
 	  (two))
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (receive-and-return ()
@@ -3051,7 +3051,7 @@
 	    (error #f "wrong")
 	  (one)
 	  (two a))
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (receive-and-return (a)
@@ -3164,7 +3164,7 @@
 	    (error #f "wrong")
 	  (one)
 	  (two a b))
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (receive-and-return (a b)
@@ -3420,7 +3420,7 @@
 	    (error #f "wrong")
 	  (one)
 	  (two a b rest))
-	=> <no-return>)
+	=> <bottom>)
   (check
       (try
 	  (receive-and-return (a b . rest)

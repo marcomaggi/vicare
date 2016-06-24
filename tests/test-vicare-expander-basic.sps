@@ -1151,7 +1151,7 @@
 		 (quote #f))))
 
 ;;; --------------------------------------------------------------------
-;;; expressions typed as "<no-return>"
+;;; expressions typed as "<bottom>"
 
 ;;This file does not use the typed language.
 

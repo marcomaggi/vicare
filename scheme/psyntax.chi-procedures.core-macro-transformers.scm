@@ -527,7 +527,7 @@
 	 ;;of the syntactic binding.
 	 => (lambda (rhs.ots) rhs.ots))
 
-	(<no-return>
+	(<bottom>
 	 ;;The expression is marked as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
 	   (raise-continuable
@@ -1474,7 +1474,7 @@
       ((<void>)
        (%handle-error "expression used as operand in logic predicate is typed as returning void" 'always-true))
 
-      (<no-return>
+      (<bottom>
        ;;This is special.  We want to accept expressions like:
        ;;
        ;;   (or (do-stuff)
@@ -1598,7 +1598,7 @@
 	      (form0.sig	(psi.retvals-signature form0.psi))
 	      (form*.psi	(chi-expr* ?form* lexenv.run lexenv.expand)))
 	 (case-type-signature-full-structure form0.sig
-	   (<no-return>
+	   (<bottom>
 	    ;;The expression is typed as not-returning.
 	    (when (options::warn-about-not-returning-expressions)
 	      (raise-continuable
@@ -1780,7 +1780,7 @@
     (let* ((producer.psi	(chi-expr producer.stx lexenv.run lexenv.expand))
 	   (producer.sig	(psi.retvals-signature producer.psi)))
       (case-type-signature-full-structure producer.sig
-	(<no-return>
+	(<bottom>
 	 ;;The producer expression is typed as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
 	   (raise-continuable
@@ -1835,7 +1835,7 @@
     (let* ((producer.psi	(chi-expr producer.stx lexenv.run lexenv.expand))
 	   (producer.sig	(psi.retvals-signature producer.psi)))
       (case-type-signature-full-structure producer.sig
-	(<no-return>
+	(<bottom>
 	 ;;The producer expression is typed as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
 	   (raise-continuable
@@ -1926,7 +1926,7 @@
 		    (make-expected-type-signature-condition formals.sig)
 		    (make-returned-type-signature-condition producer.sig))))
       (case-type-signature-full-structure producer.sig
-	(<no-return>
+	(<bottom>
 	 ;;The producer expression is typed as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
 	   (raise-continuable
@@ -2025,7 +2025,7 @@
 		    (make-expected-type-signature-condition formals.sig)
 		    (make-returned-type-signature-condition producer.sig))))
       (case-type-signature-full-structure producer.sig
-	(<no-return>
+	(<bottom>
 	 ;;The producer expression is typed as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
 	   (raise-continuable
@@ -2279,7 +2279,7 @@
     (let* ((producer.psi	(chi-expr producer.stx lexenv.run lexenv.expand))
 	   (producer.sig	(psi.retvals-signature producer.psi)))
       (case-type-signature-full-structure producer.sig
-	(<no-return>
+	(<bottom>
 	 ;;The producer expression is typed as not-returning.
 	 (when (options::warn-about-not-returning-expressions)
 	   (raise-continuable
@@ -2353,7 +2353,7 @@
 					caller-who return-values?
 					arg.id arg.ots producer.core consumer*.stx)))
 	(case-type-signature-full-structure producer.sig
-	  (<no-return>
+	  (<bottom>
 	   ;;The producer expression is typed as not-returning.
 	   (when (options::warn-about-not-returning-expressions)
 	     (raise-continuable
@@ -2500,7 +2500,7 @@
 		      (make-expected-type-signature-condition formals.sig)
 		      (make-returned-type-signature-condition producer.sig))))
 	(case-type-signature-full-structure producer.sig
-	  (<no-return>
+	  (<bottom>
 	   ;;The producer expression is typed as not-returning.
 	   (when (options::warn-about-not-returning-expressions)
 	     (raise-continuable
@@ -2660,7 +2660,7 @@
 		      (make-expected-type-signature-condition formals.sig)
 		      (make-returned-type-signature-condition producer.sig))))
 	(case-type-signature-full-structure producer.sig
-	  (<no-return>
+	  (<bottom>
 	   ;;The producer expression is typed as not-returning.
 	   (when (options::warn-about-not-returning-expressions)
 	     (raise-continuable

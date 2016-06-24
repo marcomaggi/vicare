@@ -256,6 +256,11 @@
   (check-for-true	(is-a? '#(1 2 3) (vector-of <fixnum>)))
   (check-for-false	(is-a? "ciao"    (vector-of <fixnum>)))
 
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(is-a? error			(lambda (<&who-value> <string> . <list>) => <bottom>)))
+  (check-for-true	(is-a? assertion-violation	(lambda (<&who-value> <string> . <list>) => <bottom>)))
+
   (void))
 
 
@@ -784,11 +789,8 @@
   (doit-false	<number>		<top>)
 
   (doit-false	<top>			<void>)
-  (doit-false	<top>			<no-return>)
   (doit-true	<void>			<void>)
-  (doit-true	<no-return>		<no-return>)
   (doit-false	<void>			<top>)
-  (doit-false	<no-return>		<top>)
 
   (doit-true	<top>			<struct>)
   (doit-true	<top>			<record>)
@@ -947,17 +949,10 @@
   (doit-false	<top>			(not <top>))
   (doit-false	<top>			(not <fixnum>))
   (doit-false	<top>			(not <void>))
-  (doit-false	<top>			(not <no-return>))
   ;;
-  (doit-false	<void>			(not <no-return>))
   (doit-false	<void>			(not <top>))
   (doit-false	<void>			(not <void>))
   (doit-false	<void>			(not <fixnum>))
-  ;;
-  (doit-false	<no-return>		(not <no-return>))
-  (doit-false	<no-return>		(not <void>))
-  (doit-false	<no-return>		(not <top>))
-  (doit-false	<no-return>		(not <fixnum>))
   ;;
   (doit-false	<fixnum>		(not <string>))
 
@@ -1580,6 +1575,33 @@
   (doit-false	<type-method-retriever>		(lambda (<string>)	=> (<procedure>)))
   (doit-false	<type-method-retriever>		(lambda (<symbol>)	=> (<number>)))
 
+;;; --------------------------------------------------------------------
+;;; <bottom> as not-returning type
+
+  (doit-true	(lambda (<top>) => <bottom>)		(lambda (<top>) => <bottom>))
+  (doit-false	(lambda (<top>) => <bottom>)		(lambda (<top>) => (<bottom>)))
+  (doit-false	(lambda (<top>) => (<bottom>))	(lambda (<top>) => <bottom>))
+
+  (begin
+    (doit-false	(lambda (<top>) => <bottom>)			(lambda (<top>) => <list>))
+    (doit-false	(lambda (<top>) => <bottom>)			(lambda (<top>) => <nelist>))
+    (doit-false	(lambda (<top>) => <bottom>)			(lambda (<top>) => <null>))
+    (doit-false	(lambda (<top>) => <bottom>)			(lambda (<top>) => (list <fixnum>)))
+    (doit-false	(lambda (<top>) => <bottom>)			(lambda (<top>) => (list-of <fixnum>)))
+    (doit-false	(lambda (<top>) => <bottom>)			(lambda (<top>) => (pair <fixnum> <list>)))
+    (doit-false	(lambda (<top>) => <bottom>)			(lambda (<top>) => (pair-of <list>)))
+    ;;
+    (doit-false (lambda (<top>) => <list>)			(lambda (<top>) => <bottom>))
+    (doit-false (lambda (<top>) => <nelist>)			(lambda (<top>) => <bottom>))
+    (doit-false (lambda (<top>) => <null>)			(lambda (<top>) => <bottom>))
+    (doit-false (lambda (<top>) => (list <fixnum>))		(lambda (<top>) => <bottom>))
+    (doit-false (lambda (<top>) => (list-of <fixnum>))	(lambda (<top>) => <bottom>))
+    (doit-false (lambda (<top>) => (pair <fixnum> <list>))	(lambda (<top>) => <bottom>))
+    (doit-false (lambda (<top>) => (pair-of <list>))		(lambda (<top>) => <bottom>)))
+
+  (doit-false	(lambda (<top>) => <bottom>)		(lambda (<top>) => (<string>)))
+  (doit-false	(lambda (<top>) => (<string>))	(lambda (<top>) => <bottom>))
+
   #| end of PARAMETRISE |# )
 
 
@@ -1980,13 +2002,10 @@
   (doit	<number>		<top>				=> possible-match)
 
   (doit	<top>			<void>				=> no-match)
-  (doit	<top>			<no-return>			=> no-match)
   (doit	<top>			<bottom>			=> exact-match)
   (doit	<void>			<void>				=> exact-match)
-  (doit	<no-return>		<no-return>			=> exact-match)
   (doit	<bottom>		<bottom>			=> exact-match)
   (doit	<void>			<top>				=> no-match)
-  (doit	<no-return>		<top>				=> no-match)
   (doit	<bottom>		<top>				=> no-match)
 
   (doit	<top>			<struct>			=> exact-match)
@@ -2153,15 +2172,12 @@
   (doit	<top>			(not <top>)		=> no-match)
   (doit	<top>			(not <fixnum>)		=> possible-match)
   (doit	<top>			(not <void>)		=> possible-match)
-  (doit	<top>			(not <no-return>)	=> possible-match)
   (doit	<top>			(not <bottom>)		=> possible-match)
   (doit (not <fixnum>)		<top>			=> possible-match)
   (doit (not <top>)		<top>			=> no-match)
   (doit (not <void>)		<top>			=> possible-match)
-  (doit (not <no-return>)	<top>			=> possible-match)
   (doit (not <bottom>)		<top>			=> possible-match)
   ;;
-  (doit	<void>			(not <no-return>)	=> possible-match)
   (doit	<void>			(not <bottom>)		=> possible-match)
   (doit	<void>			(not <top>)		=> possible-match)
   (doit	<void>			(not <void>)		=> no-match)
@@ -2169,17 +2185,7 @@
   (doit (not <fixnum>)		<void>			=> exact-match)
   (doit (not <top>)		<void>			=> possible-match)
   (doit (not <void>)		<void>			=> no-match)
-  (doit (not <no-return>)	<void>			=> possible-match)
   (doit (not <bottom>)		<void>			=> possible-match)
-  ;;
-  (doit	<no-return>		(not <no-return>)	=> no-match)
-  (doit	<no-return>		(not <void>)		=> possible-match)
-  (doit	<no-return>		(not <top>)		=> possible-match)
-  (doit	<no-return>		(not <fixnum>)		=> possible-match)
-  (doit (not <fixnum>)		<no-return>		=> exact-match)
-  (doit (not <top>)		<no-return>		=> possible-match)
-  (doit (not <void>)		<no-return>		=> possible-match)
-  (doit (not <no-return>)	<no-return>		=> no-match)
   ;;
   (doit	<bottom>		(not <bottom>)		=> no-match)
   (doit	<bottom>		(not <void>)		=> no-match)
@@ -3108,7 +3114,7 @@
   (doit (type-signature-union (<fixnum>) (<void>))
 	=> (<void>))
 
-  (doit (type-signature-union (<fixnum>) <no-return>)
+  (doit (type-signature-union (<fixnum>) <bottom>)
 	=> (<fixnum>))
 
 ;;; --------------------------------------------------------------------
@@ -3171,7 +3177,7 @@
 
   (doit <top>			=> ())
   (doit <void>			=> ())
-  (doit <no-return>		=> ())
+  (doit <bottom>		=> ())
 
   (doit <condition>		=> (<record> <struct> <top>))
 

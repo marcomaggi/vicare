@@ -298,7 +298,7 @@
      ;;run-time what happens; this is standard Scheme behaviour.
      (%build-default-application))
 
-    (<no-return>
+    (<bottom>
      ;;The operator expression  does not return.  This is not  strictly wrong.  For
      ;;example:
      ;;
@@ -453,7 +453,7 @@
 	 ;;run-time what happens; this is standard Scheme behaviour.
 	 (%build-default-application))
 
-	(<no-return>
+	(<bottom>
 	 ;;The operator  expression does not  return.  This  is not strictly  wrong.  For
 	 ;;example:
 	 ;;
@@ -541,7 +541,7 @@
 	   (consumer-argvals.sig	(lambda-signature.argvals consumer-clause-signature))
 	   (match-symbol		(let ((clear-argvals.sig (type-signature.untyped-to-top consumer-argvals.sig)))
 					  (case-type-signature-full-structure producer-retvals.sig
-					    (<no-return>
+					    (<bottom>
 					     'no-return)
 					    (else
 					     (type-signature.match-formals-against-operands clear-argvals.sig producer-retvals.sig))))))
@@ -650,7 +650,7 @@
 	    (else
 	     (%error-non-procedure))))
     (case-type-signature-full-structure* producer.sig
-      (<no-return>
+      (<bottom>
        ;;The operand expression will not return.
        (when (options::warn-about-not-returning-expressions)
 	 (raise-continuable
@@ -895,7 +895,7 @@
 	      (define (%handle-error message rv)
 		(%error (lambda () (common-condition-objects message)) rv))
 	      (case-type-signature-full-structure rand.sig
-		(<no-return>
+		(<bottom>
 		 ;;The operand expression will not return.
 		 (when (options::warn-about-not-returning-expressions)
 		   (raise-continuable

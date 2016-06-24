@@ -215,7 +215,7 @@
 	 ;;of the expression.
 	 => (lambda (constructor.ots) constructor.ots))
 
-	(<no-return>
+	(<bottom>
 	 ;;The expression is marked as not-returning.
 	 (%handle-error common "type constructor expression is typed as not returning"))
 
@@ -305,7 +305,7 @@
 	   ((single-value)
 	    => (lambda (type.ots)
 		 (%apply-appropriate-destructor __who__ input-form.stx lexenv.run lexenv.expand type.ots expr.psi)))
-	   (<no-return>
+	   (<bottom>
 	    (__synner__ "subject expression of destructor syntax defined to no return" ?expr))
 	   (<list>
 	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
@@ -399,7 +399,7 @@
 		    (%match-pred-type-against-single-value-expr input-form.stx lexenv.run lexenv.expand
 								expr.psi expr.ots type-annotation.ots %run-time-predicate)))
 
-	      (<no-return>
+	      (<bottom>
 	       (let ((common (condition
 			       (make-who-condition __module_who__)
 			       (make-message-condition "subject expression typed as not returning")
@@ -588,7 +588,7 @@
 	    => (lambda (type.ots)
 		 (%expand-to-object-accessor-application-post input-form.stx lexenv.run lexenv.expand
 							      type.ots expr.psi ?field-name)))
-	   (<no-return>
+	   (<bottom>
 	    (__synner__ "subject expression of field accessor syntax defined to no return" ?expr))
 	   (<list>
 	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
@@ -689,7 +689,7 @@
 	    => (lambda (type.ots)
 		 (%expand-to-object-mutator-application-post input-form.stx lexenv.run lexenv.expand
 							     type.ots expr.psi ?field-name ?new-value)))
-	   (<no-return>
+	   (<bottom>
 	    (__synner__ "subject expression of field mutator syntax defined to no return" ?expr))
 	   (<list>
 	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
@@ -786,7 +786,7 @@
 						       ?subject-expr subject-expr.psi subject-expr.ots
 						       ?arg*)))
 
-	   (<no-return>
+	   (<bottom>
 	    (let ((common (condition
 			   (make-who-condition __module_who__)
 			   (make-message-condition "subject expression of method call defined to never return")
@@ -1024,7 +1024,7 @@
 
 		((type-signature.no-return? asrt.sig)
 		 (syntax-violation caller-who
-		   "internal error, invalid <no-return> assertion signature"
+		   "internal error, invalid <bottom> assertion signature"
 		   input-form.stx asrt.stx))
 
 		((type-signature.no-return? expr.sig)
@@ -1107,7 +1107,7 @@
 		 (let ((asrt.ots (car asrt.specs)))
 		   (if (or (<top>-ots?       asrt.ots)
 			   (<untyped>-ots?   asrt.ots)
-			   (<no-return>-ots? asrt.ots))
+			   (<bottom>-ots? asrt.ots))
 		       ;;No validation.
 		       (let ((validators (recur (cdr asrt.specs) (cdr consumer-formals.sexp) (fxadd1 operand-index))))
 			 (if return-values?
@@ -1127,8 +1127,8 @@
 		 ;;values will match, so we generate no validator.
 		 '())
 
-		((<no-return>-ots? asrt.specs)
-		 ;;There is a rest argument, but its type is "<no-return>".  Any list
+		((<bottom>-ots? asrt.specs)
+		 ;;There is a rest argument, but its type is "<bottom>".  Any list
 		 ;;of values will match, so we generate no validator.
 		 '())
 

@@ -19,11 +19,6 @@
   (equality-predicate equal?)
   (hash-function object-hash))
 
-(define-scheme-type <no-return>
-    #f
-  (predicate always-false)
-  (hash-function object-hash))
-
 (define-scheme-type <void>
     #f
   (constructor void)

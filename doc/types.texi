@@ -3583,10 +3583,9 @@ representing the types of built--in objects: fixnum, strings, vectors,
 et cetera.
 
 @menu
-* types built-in bottom::       The universal subtype.
 * types built-in void::         Type of the void object.
-* types built-in no-return::    Type of non-returning expressions.
-* types built-in top::          The conventional parent of all the types.
+* types built-in top::          The universal super-type.
+* types built-in bottom::       The universal sub-type.
 * types built-in booleans::     Type of boolean objects.
 * types built-in chars::        Type of character objects.
 * types built-in symbols::      Type of symbol objects.
@@ -3610,53 +3609,6 @@ et cetera.
 * types built-in sentinel::     Type of sentinel object.
 * types built-in misc::         Miscellaneous built-in types.
 @end menu
-
-@c page
-@node types built-in bottom
-@subsection The universal subtype
-
-
-@deftp {Core Type} @aclass{bottom}
-A virtual type that is the sub--type of all the other types.  We must
-never use this type annotation for variables.  As example, the following
-type annotation defines a function signature in which the argument can
-be any value:
-
-@lisp
-(define-type <my-func>
-  (lambda (<bottom>) => (<string>)))
-@end lisp
-@end deftp
-
-@c page
-@node types built-in no-return
-@subsection Type of non-returning expressions
-
-
-The expressions that raise a non--continuable exception have type
-@class{no-return}:
-
-@lisp
-(type-of (error #f "wrong"))
-@result{} #[signature (<no-return>)]
-@end lisp
-
-We must never use @class{no-return} in a type signature.
-@class{no-return} is removed from union and intersection type
-annotations:
-
-@lisp
-(type-annotation (and <no-return> <fixnum>))
-@result{} #[core-type-spec #[type (<fixnum>)]]
-
-(type-annotation (or  <no-return> <fixnum>))
-@result{} #[core-type-spec #[type (<fixnum>)]]
-@end lisp
-
-
-@deftp {Core Type} @aclass{no-return}
-The type of non--returning expressions.
-@end deftp
 
 @c page
 @node types built-in void
@@ -3691,7 +3643,7 @@ is void; otherwise return @false{}.
 
 @c page
 @node types built-in top
-@subsection The conventional parent of all the types
+@subsection The universal super--type
 
 
 @deftp {Core Type} @aclass{top}
@@ -3715,6 +3667,46 @@ Compute and return a hash value for @var{self}.  When the object--type
 does not define a specialised hash function: @func{object-hash} is
 applied to @var{self}.
 @end deftypemethod
+
+@c page
+@node types built-in bottom
+@subsection The universal sub--type
+
+
+@deftp {Core Type} @aclass{bottom}
+A conventional type that is the sub--type of all the other types.  We
+must never use this type annotation for variables.
+
+As usage example, the following type annotation defines a function
+signature in which the argument can be any value:
+
+@lisp
+(define-type <my-func>
+  (lambda (<bottom>) => (<string>)))
+@end lisp
+
+The expressions that raise a non--continuable exception have type
+@class{bottom}:
+
+@lisp
+(type-of (error #f "wrong"))
+@result{} #[signature <bottom>]
+@end lisp
+
+@noindent
+notice that the type signature is the improper list @code{<bottom>},
+@strong{not} the list @code{(<bottom>)}.
+
+@class{bottom} is removed from union and intersection type annotations:
+
+@lisp
+(type-annotation (and <bottom> <fixnum>))
+@result{} #[core-type-spec #[type (<fixnum>)]]
+
+(type-annotation (or  <bottom> <fixnum>))
+@result{} #[core-type-spec #[type (<fixnum>)]]
+@end lisp
+@end deftp
 
 @c page
 @node types built-in booleans

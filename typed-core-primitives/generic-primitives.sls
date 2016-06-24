@@ -490,12 +490,12 @@
 (declare-core-primitive <untyped>-constructor
     (safe)
   (signatures
-   (<list>		=> <no-return>)))
+   (<list>		=> <bottom>)))
 
 (declare-core-primitive <untyped>-type-predicate
     (safe)
   (signatures
-   (<list>		=> <no-return>)))
+   (<list>		=> <bottom>)))
 
 /section)
 

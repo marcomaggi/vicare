@@ -89,7 +89,7 @@
   ;;     ;;The expression returns an unspecified number of values.
   ;;     ?body0 ?body ...)
   ;;
-  ;;    (<no-return>
+  ;;    (<bottom>
   ;;     ;;The expression is typed as not-returning.
   ;;     ?body0 ?body ...)
   ;;
@@ -116,7 +116,7 @@
   ;;     ;;The expression returns a single value, typed as "<procedure>".
   ;;     => (lambda (obj.ots) ?body0 ?body ...))
   ;;
-  ;;    (<no-return>
+  ;;    (<bottom>
   ;;     ;;The expression is typed as not-returning.
   ;;     ?body0 ?body ...)
   ;;
@@ -171,7 +171,7 @@
 			     (define (?who)
 			       (?pred signature.specs)))
 			    )))
-	      (declare signature.no-return?	<no-return>-ots?)
+	      (declare signature.no-return?	<bottom>-ots?)
 	      (declare signature.empty?		null?)
 	      (declare signature.null?		<null>-ots?)
 	      (declare signature.list?		<list>-ots?)
@@ -185,7 +185,7 @@
 	      single-item?)
 	    (define (signature.unspecified-values?)
 	      (and (not single-item?)
-		   (not (<no-return>-ots? signature.specs))
+		   (not (<bottom>-ots? signature.specs))
 		   (not (<void>-ots?      signature.specs))
 		   (or (list-of-type-spec? signature.specs)
 		       (<list>-ots? signature.specs))))
@@ -209,7 +209,7 @@
   (define (%parse-single-clause clause.stx)
     (sys::syntax-case clause.stx (=> single-value <list>/<list-of-spec> <null>
 				     <top> <untyped> <closure> <procedure>
-				     <no-return> <void> <list> <nelist>
+				     <bottom> <void> <list> <nelist>
 				     <list-of-spec> <list-spec> <pair-spec>)
       ((() ?body0 ?body ...)
        (sys::syntax ((signature.empty?)			?body0 ?body ...)))
@@ -240,7 +240,7 @@
 
       ;;;
 
-      ((<no-return> ?body0 ?body ...)
+      ((<bottom> ?body0 ?body ...)
        (sys::syntax ((signature.no-return?)		?body0 ?body ...)))
 
       ((<list>/<list-of-spec> => ?body)
@@ -370,13 +370,13 @@
 (define-syntax case-type-signature-full-structure*
   ;;This is like CASE-TYPE-SIGNATURE-FULL-STRUCTURE but it has all the clauses.
   ;;
-  (syntax-rules (<no-return>
+  (syntax-rules (<bottom>
 		 single-value <void>
 		 <list> <null> <list-of-spec>
 		 <nelist> <pair-spec> <list-spec>
 		 else)
     ((_ ?specs
-	(<no-return>		. ?body-no-return)
+	(<bottom>		. ?body-no-return)
 	((<void>)		. ?body-single-void)
 	((single-value)		. ?body-single-value)
 	;;
@@ -390,7 +390,7 @@
 	;;
 	(else			. ?body-else))
      (case-type-signature-full-structure ?specs
-	(<no-return>		. ?body-no-return)
+	(<bottom>		. ?body-no-return)
 	((<void>)		. ?body-single-void)
 	((single-value)		. ?body-single-value)
 	;;
@@ -436,310 +436,303 @@
 
 ;;;; type signature syntax object parser
 
-(define* (syntax-object->type-signature-specs input-signature.stx lexenv synner)
-  ;;Parse the syntax object INPUT-SIGNATURE.STX and as a type signature specification
-  ;;and convert it into a proper  or improper list of "<object-type-spec>" instances.
-  ;;If the input is invalid: raise a syntax violation.
-  ;;
-  ;;We can always use "(current-inferior-lexenv)" as value for the LEXENV argument.
-  ;;
-  ;;SYNNER must be a function called, in tail position, as:
-  ;;
-  ;;   (SYNNER ?message ?subform)
-  ;;
-  ;;for example:
-  ;;
-  ;;   (define (synner message subform)
-  ;;     (syntax-violation #f message input-signature.stx subform))
-  ;;
-  ;;Examples of acceptable type signatures:
-  ;;
-  ;;   <no-return>
-  ;;   <list>
-  ;;   <nelist>
-  ;;   <null>
-  ;;   ()
-  ;;   (list-of ?type)
-  ;;   (list)
-  ;;   (list ?type0 ?type ...)
-  ;;   (pair ?car-type ?list-type-signature)
-  ;;   (?car-type . ?list-type-signature)
-  ;;
-  (define (%acceptable-list-ots? type.ots)
-    (if (label-type-spec? type.ots)
-	(%acceptable-list-ots? (object-type-spec.parent-ots type.ots))
-      (or (<list>-ots?		type.ots)
-	  (<nelist>-ots?	type.ots)
-	  (<null>-ots?		type.ots)
-	  (list-of-type-spec?	type.ots)
-	  (list-type-spec?	type.ots)
-	  (and (pair-type-spec? type.ots)
-	       (%acceptable-list-ots? (pair-type-spec.cdr-ots type.ots)))
-	  (and (pair-of-type-spec? type.ots)
-	       (%acceptable-list-ots? (pair-of-type-spec.item-ots type.ots))))))
-  (define (ta->ots type.stx)
-    (try
-	(type-annotation->object-type-spec type.stx lexenv)
-      (catch E
-	(else
-	 (%synner type.stx)))))
-  (define (%synner subform)
-    (synner "invalid syntax object as type signature" subform))
-  (syntax-match input-signature.stx (<no-return> <null> <list> <nelist>
-						 list-of list pair pair-of nelist-of)
-    (<no-return>
-     (<no-return>-ots))
+(module (syntax-object->type-signature-specs
+	 syntax-object.type-signature?
+	 tail-type-annotation->object-type-spec
+	 type-signature-specs?)
 
-    (<list>
-     (<list>-ots))
+  (define* (syntax-object->type-signature-specs input-signature.stx lexenv synner)
+    ;;Parse  the   syntax  object  INPUT-SIGNATURE.STX   and  as  a   type  signature
+    ;;specification   and  convert   it   into   a  proper   or   improper  list   of
+    ;;"<object-type-spec>"  instances.   If the  input  is  invalid: raise  a  syntax
+    ;;violation.
+    ;;
+    ;;We can always use "(current-inferior-lexenv)" as value for the LEXENV argument.
+    ;;
+    ;;SYNNER must be a function called, in tail position, as:
+    ;;
+    ;;   (SYNNER ?message ?subform)
+    ;;
+    ;;for example:
+    ;;
+    ;;   (define (synner message subform)
+    ;;     (syntax-violation #f message input-signature.stx subform))
+    ;;
+    ;;Examples of acceptable type signatures:
+    ;;
+    ;;   <bottom>
+    ;;   <list>
+    ;;   <nelist>
+    ;;   <null>
+    ;;   ()
+    ;;   (list-of ?type)
+    ;;   (list)
+    ;;   (list ?type0 ?type ...)
+    ;;   (pair ?car-type ?list-type-signature)
+    ;;   (?car-type . ?list-type-signature)
+    ;;
+    (define (ta->ots type.stx)
+      (try
+	  (type-annotation->object-type-spec type.stx lexenv)
+	(catch E
+	  (else
+	   (%synner type.stx)))))
+    (define (%synner subform)
+      (synner "invalid syntax object as type signature" subform))
+    (syntax-match input-signature.stx (<bottom> <list> <nelist> <null> list list-of pair pair-of nelist-of)
+      (<bottom>
+       (<bottom>-ots))
 
-    (<nelist>
-     (<nelist>-ots))
+      (<list>
+       (<list>-ots))
 
-    (<null>
-     (<null>-ots))
+      (<nelist>
+       (<nelist>-ots))
 
-    ((list-of ?type)
-     (make-list-of-type-spec (ta->ots ?type)))
+      (<null>
+       (<null>-ots))
 
-    ((list)
-     (<null>-ots))
+      ((list)
+       (<null>-ots))
 
-    ((list ?type ?type* ...)
-     (make-list-type-spec (map ta->ots (cons ?type ?type*))))
+      ((list-of ?type)
+       (make-list-of-type-spec (ta->ots ?type)))
 
-    ((pair ?car ?cdr)
-     (let ((cdr.ots (ta->ots ?cdr)))
-       (if (%acceptable-list-ots? cdr.ots)
-	   (make-pair-type-spec (ta->ots ?car))
-	 (%synner ?cdr))))
+      ((list ?type ?type* ...)
+       (make-list-type-spec (map ta->ots (cons ?type ?type*))))
 
-    ((pair-of ?item)
-     (let ((item.ots (ta->ots ?item)))
-       (if (%acceptable-list-ots? item.ots)
-	   (make-pair-of-type-spec (ta->ots ?item))
-	 (%synner ?item))))
+      ((pair ?car ?cdr)
+       (let ((cdr.ots (ta->ots ?cdr)))
+	 (if (%acceptable-list-ots? cdr.ots)
+	     (make-pair-type-spec (ta->ots ?car) cdr.ots)
+	   (%synner ?cdr))))
 
-    ((nelist-of ?type)
-     (let ((type.ots (ta->ots ?type)))
-       (make-pair-type-spec type.ots (make-list-of-type-spec type.ots))))
+      ((pair-of ?item)
+       (let ((item.ots (ta->ots ?item)))
+	 (if (%acceptable-list-ots? item.ots)
+	     (make-pair-of-type-spec item.ots)
+	   (%synner ?item))))
 
-    (?type
-     (identifier? ?type)
-     ;;For example, here we want to allow syntactic identifiers bound with:
-     ;;
-     ;;   (define-type ?type <list>)
-     ;;
-     (let ((type.ots (ta->ots ?type)))
-       (if (or (<no-return>-ots?	type.ots)
-	       (%acceptable-list-ots?	type.ots))
-	   type.ots
-	 (%synner ?type))))
+      ((nelist-of ?type)
+       (let ((type.ots (ta->ots ?type)))
+	 (make-pair-type-spec type.ots (make-list-of-type-spec type.ots))))
 
-    (()
-     ;;This is good: an empty type signature means no values.
-     '())
+      (?type
+       (identifier? ?type)
+       ;;For example, here we want to allow syntactic identifiers bound with:
+       ;;
+       ;;   (define-type ?type <list>)
+       ;;
+       (let ((type.ots (ta->ots ?type)))
+	 (if (or (<bottom>-ots?		type.ots)
+		 (%acceptable-list-ots?	type.ots))
+	     type.ots
+	   (%synner ?type))))
 
-    ((?car . ?cdr)
-     ;;INPUT-SIGNATURE.STX must be a proper or improper list of type annotations.
-     (cons (ta->ots ?car)
-	   (let recur ((stx ?cdr))
-	     (syntax-match stx (<no-return> <null> <list> <nelist> list-of list pair pair-of nelist-of)
-	       ((list-of ?type)
-		(make-list-of-type-spec (ta->ots ?type)))
+      (()
+       ;;This is good: an empty type signature means no values.
+       '())
 
-	       ((list)
-		(<null>-ots))
+      ((?car . ?cdr)
+       ;;INPUT-SIGNATURE.STX must be a proper or improper list of type annotations.
+       (cons (ta->ots ?car)
+	     (let recur ((stx ?cdr))
+	       (syntax-match stx (<bottom> <list> <nelist> <null> list list-of pair pair-of nelist-of)
+		 ((list-of ?type)
+		  (make-list-of-type-spec (ta->ots ?type)))
 
-	       ((list ?type ?type* ...)
-		(make-list-type-spec (map ta->ots (cons ?type ?type*))))
+		 ((list)
+		  (<null>-ots))
 
-	       ((pair ?car ?cdr)
-		(let ((cdr.ots (ta->ots ?cdr)))
-		  (if (%acceptable-list-ots? cdr.ots)
-		      (make-pair-type-spec (ta->ots ?car))
-		    (%synner ?cdr))))
+		 ((list ?type ?type* ...)
+		  (make-list-type-spec (map ta->ots (cons ?type ?type*))))
 
-	       ((pair-of ?item)
-		(let ((item.ots (ta->ots ?item)))
-		  (if (%acceptable-list-ots? item.ots)
-		      (make-pair-of-type-spec (ta->ots ?item))
-		    (%synner ?item))))
+		 ((pair ?car ?cdr)
+		  (let ((cdr.ots (ta->ots ?cdr)))
+		    (if (%acceptable-list-ots? cdr.ots)
+			(make-pair-type-spec (ta->ots ?car) cdr.ots)
+		      (%synner ?cdr))))
 
-	       ((nelist-of ?type)
-		(let ((type.ots (ta->ots ?type)))
-		  (make-pair-type-spec type.ots (make-list-of-type-spec type.ots))))
+		 ((pair-of ?item)
+		  (let ((item.ots (ta->ots ?item)))
+		    (if (%acceptable-list-ots? item.ots)
+			(make-pair-of-type-spec (ta->ots ?item))
+		      (%synner ?item))))
 
-	       ((?car . ?cdr)
-		(cons (ta->ots ?car) (recur ?cdr)))
+		 ((nelist-of ?type)
+		  (let ((type.ots (ta->ots ?type)))
+		    (make-pair-type-spec type.ots (make-list-of-type-spec type.ots))))
 
-	       (()
-		'())
+		 ((?car . ?cdr)
+		  (cons (ta->ots ?car) (recur ?cdr)))
+
+		 (()
+		  '())
 
 ;;; the ones below are less probable
 
-	       (?type
-		(identifier? ?type)
-		;;For example, here we want to allow syntactic identifiers bound with:
-		;;
-		;;   (define-type ?type <list>)
-		;;
-		(let ((type.ots (ta->ots ?type)))
-		  (if (%acceptable-list-ots? type.ots)
-		      type.ots
-		    (%synner ?type))))
+		 (?type
+		  (identifier? ?type)
+		  ;;For example, here we want to allow syntactic identifiers bound with:
+		  ;;
+		  ;;   (define-type ?type <list>)
+		  ;;
+		  (let ((type.ots (ta->ots ?type)))
+		    (if (%acceptable-list-ots? type.ots)
+			type.ots
+		      (%synner ?type))))
 
-	       (<list>
-		(<list>-ots))
+		 (<list>
+		  (<list>-ots))
 
-	       (<nelist>
-		(<nelist>-ots))
+		 (<nelist>
+		  (<nelist>-ots))
 
-	       (<null>
-		(<null>-ots))
+		 (<null>
+		  (<null>-ots))
 
-	       (_
-		(%synner stx))))))
+		 (_
+		  (%synner stx))))))
 
-    (_
-     (%synner #f))))
-
-;;; --------------------------------------------------------------------
-
-(case-define* syntax-object.type-signature?
-  ;;Return true  if STX  is a  syntax object  representing the  type signature  of an
-  ;;expression's return values; otherwise return false.   The return value is true if
-  ;;STX is null or  a proper or improper list of type  identifiers, with a standalone
-  ;;type identifier being acceptable if it is "<list>" or one of its sub-types.
-  ;;
-  ;;Examples:
-  ;;
-  ;;   (syntax-object.type-signature? #'<no-return>)			=> #t
-  ;;   (syntax-object.type-signature? #'<list>)				=> #t
-  ;;   (syntax-object.type-signature? #'())				=> #t
-  ;;   (syntax-object.type-signature? #'(<fixnum> <string>))		=> #t
-  ;;   (syntax-object.type-signature? #'(<fixnum> <string> . <list>))	=> #t
-  ;;
-  ;;A standalone "<list>" identifier means: any number of values of any type.
-  ;;
-  ((stx)
-   (syntax-object.type-signature? stx (current-inferior-lexenv)))
-  ((stx lexenv)
-   (syntax-object->type-signature-specs stx lexenv (lambda (message subform) #f))))
+      (_
+       (%synner #f))))
 
 ;;; --------------------------------------------------------------------
 
-(case-define* tail-type-annotation->object-type-spec
-  ;;Let's consider the following LAMBDA syntaxes:
-  ;;
-  ;;   (lambda/typed {args <list>}				?body)
-  ;;   (lambda/typed {args (list-of <fixnum>)}			?body)
-  ;;   (lambda/typed ({a <fixnum>} . {rest <list>})		?body)
-  ;;   (lambda/typed ({a <fixnum>} . {rest (list-of <fixnum>)})	?body)
-  ;;
-  ;;the  type annotations  for the  ARGS and  REST arguments  are special:  they must
-  ;;represent  lists.  This  function parses  such  type annotations  and returns  an
-  ;;instance  of "<object-type-spce>"  representing it.   If the  type annotation  is
-  ;;invalid: an exception is raised.
-  ;;
-  ((annotation.stx lexenv)
-   (tail-type-annotation->object-type-spec annotation.stx lexenv annotation.stx))
-  ((annotation.stx lexenv name.stx)
-   (define (%acceptable-list-ots? type.ots)
-     (or (<list>-ots?		type.ots)
-	 (<nelist>-ots?		type.ots)
-	 (<null>-ots?		type.ots)
-	 (list-of-type-spec?	type.ots)
-	 (list-type-spec?	type.ots)
-	 (and (pair-type-spec? type.ots)
-	      (%acceptable-list-ots? (pair-type-spec.cdr-ots type.ots)))))
-   (define (ta->ots type.stx)
-     (try
-	 (type-annotation->object-type-spec type.stx lexenv)
-       (catch E
-	 (else
-	  (%synner type.stx)))))
-   (define (%synner subform)
-     (syntax-violation __who__ "invalid syntax object as type signature" annotation.stx subform))
-   (syntax-match annotation.stx (<null> <list> <nelist> list-of list pair nelist-of)
-     (<list>
-      (<list>-ots))
+  (case-define* syntax-object.type-signature?
+    ;;Return true  if STX is  a syntax object representing  the type signature  of an
+    ;;expression's return values;  otherwise return false.  The return  value is true
+    ;;if  STX is  null or  a proper  or  improper list  of type  identifiers, with  a
+    ;;standalone type  identifier being acceptable  if it is  "<list>" or one  of its
+    ;;sub-types.
+    ;;
+    ;;Examples:
+    ;;
+    ;;   (syntax-object.type-signature? #'<bottom>)			=> #t
+    ;;   (syntax-object.type-signature? #'<list>)			=> #t
+    ;;   (syntax-object.type-signature? #'())				=> #t
+    ;;   (syntax-object.type-signature? #'(<fixnum> <string>))		=> #t
+    ;;   (syntax-object.type-signature? #'(<fixnum> <string> . <list>))	=> #t
+    ;;
+    ;;A standalone "<list>" identifier means: any number of values of any type.
+    ;;
+    ((stx)
+     (syntax-object.type-signature? stx (current-inferior-lexenv)))
+    ((stx lexenv)
+     (syntax-object->type-signature-specs stx lexenv (lambda (message subform) #f))))
 
-     (<nelist>
-      (<nelist>-ots))
+;;; --------------------------------------------------------------------
 
-     (<null>
-      (<null>-ots))
+  (case-define* tail-type-annotation->object-type-spec
+    ;;Let's consider the following LAMBDA syntaxes:
+    ;;
+    ;;   (lambda/typed {args <list>}					?body)
+    ;;   (lambda/typed {args (list-of <fixnum>)}			?body)
+    ;;   (lambda/typed ({a <fixnum>} . {rest <list>})			?body)
+    ;;   (lambda/typed ({a <fixnum>} . {rest (list-of <fixnum>)})	?body)
+    ;;
+    ;;the type  annotations for the  ARGS and REST  arguments are special:  they must
+    ;;represent lists.   This function  parses such type  annotations and  returns an
+    ;;instance of  "<object-type-spce>" representing it.   If the type  annotation is
+    ;;invalid: an exception is raised.
+    ;;
+    ((annotation.stx lexenv)
+     (tail-type-annotation->object-type-spec annotation.stx lexenv annotation.stx))
+    ((annotation.stx lexenv name.stx)
+     (define (ta->ots type.stx)
+       (try
+	   (type-annotation->object-type-spec type.stx lexenv)
+	 (catch E
+	   (else
+	    (%synner type.stx)))))
+     (define (%synner subform)
+       (syntax-violation __who__ "invalid syntax object as type signature" annotation.stx subform))
+     (syntax-match annotation.stx (<list> <nelist> <null> list list-of pair pair-of nelist-of)
+       (<list>
+	(<list>-ots))
 
-     ((list-of ?type)
-      (make-list-of-type-spec (ta->ots ?type)))
+       (<nelist>
+	(<nelist>-ots))
 
-     ((list)
-      (<null>-ots))
+       (<null>
+	(<null>-ots))
 
-     ((list ?type ?type* ...)
-      (make-list-type-spec (map ta->ots (cons ?type ?type*))))
+       ((list-of ?type)
+	(make-list-of-type-spec (ta->ots ?type)))
 
-     ((pair ?car ?cdr)
-      (let ((cdr.ots (ta->ots ?car)))
-	(if (%acceptable-list-ots? cdr.ots)
-	    (make-pair-type-spec (ta->ots ?car))
-	  (%synner ?cdr))))
+       ((list)
+	(<null>-ots))
 
-    ((nelist-of ?type)
-     (let ((type.ots (ta->ots ?type)))
-       (make-pair-type-spec type.ots (make-list-of-type-spec type.ots))))
+       ((list ?type ?type* ...)
+	(make-list-type-spec (map ta->ots (cons ?type ?type*))))
 
-     (?type
-      (identifier? ?type)
-      ;;For example, here we want to allow syntactic identifiers bound with:
-      ;;
-      ;;   (define-type ?type <list>)
-      ;;
-      (let ((type.ots (ta->ots ?type)))
-	(if (or (<no-return>-ots?	type.ots)
-		(%acceptable-list-ots?	type.ots))
-	    type.ots
-	  (%synner ?type))))
+       ((pair ?car ?cdr)
+	(let ((cdr.ots (ta->ots ?car)))
+	  (if (%acceptable-list-ots? cdr.ots)
+	      (make-pair-type-spec (ta->ots ?car) cdr.ots)
+	    (%synner ?cdr))))
 
-     (()
-      ;;This is good: an empty type signature means no values.
-      '())
+       ((pair-of ?item)
+	(let ((item.ots (ta->ots ?item)))
+	  (if (%acceptable-list-ots? item.ots)
+	      (make-pair-of-type-spec item.ots)
+	    (%synner ?item))))
 
-     (else
-      (%synner #f)))))
+       ((nelist-of ?type)
+	(let ((type.ots (ta->ots ?type)))
+	  (make-pair-type-spec type.ots (make-list-of-type-spec type.ots))))
 
-
-;;;; signature specs parser
+       (?type
+	(identifier? ?type)
+	;;For example, here we want to allow syntactic identifiers bound with:
+	;;
+	;;   (define-type ?type <list>)
+	;;
+	(let ((type.ots (ta->ots ?type)))
+	  (if (%acceptable-list-ots? type.ots)
+	      type.ots
+	    (%synner ?type))))
 
-(define* (type-signature-specs? input-signature.specs)
-  ;;Return  true   if  INPUT-SIGNATURE.SPECS  is   a  proper  or  improper   list  of
-  ;;"<object-type-spec>" instances  representing a  valid type  signature.  Otherwise
-  ;;return false.
-  ;;
+       (()
+	;;This is good: an empty type signature means no values.
+	'())
+
+       (else
+	(%synner #f)))))
+
+;;; --------------------------------------------------------------------
+
+  (define* (type-signature-specs? input-signature.specs)
+    ;;Return  true  if  INPUT-SIGNATURE.SPECS  is   a  proper  or  improper  list  of
+    ;;"<object-type-spec>" instances representing a  valid type signature.  Otherwise
+    ;;return false.
+    ;;
+    (cond ((pair? input-signature.specs)
+	   (let loop ((specs (cdr input-signature.specs)))
+	     (cond ((pair? specs)
+		    (loop (cdr specs)))
+		   ((null? specs))
+		   ((%acceptable-list-ots? specs))
+		   (else #f))))
+	  ((<bottom>-ots?		input-signature.specs))
+	  ((%acceptable-list-ots?	input-signature.specs))
+	  ;;This is good: an empty type signature means no values.
+	  ((null?			input-signature.specs))
+	  (else				#f)))
+
+;;; --------------------------------------------------------------------
+
   (define (%acceptable-list-ots? type.ots)
-    #;(debug-print '%acceptable-list-ots? type.ots)
     (or (<list>-ots?		type.ots)
 	(<nelist>-ots?		type.ots)
 	(<null>-ots?		type.ots)
 	(list-of-type-spec?	type.ots)
 	(list-type-spec?	type.ots)
-	(and (pair-type-spec? type.ots)
-	     (%acceptable-list-ots? (pair-type-spec.cdr-ots type.ots)))))
-  (cond ((pair? input-signature.specs)
-	 ;;INPUT-SIGNATURE.SPECS  must  be   a  proper  or  improper   list  of  type
-	 ;;annotations.
-	 (let loop ((specs (cdr input-signature.specs)))
-	   (cond ((pair? specs)
-		  (loop (cdr specs)))
-		 ((null? specs))
-		 ((%acceptable-list-ots? specs))
-		 (else #f))))
-	((<no-return>-ots?	input-signature.specs))
-	((%acceptable-list-ots?	input-signature.specs))
-	;;This is good: an empty type signature means no values.
-	((null? input-signature.specs))
-	(else #f)))
+	(and (pair-type-spec?		type.ots) (%acceptable-list-ots? (pair-type-spec.cdr-ots      type.ots)))
+	(and (pair-of-type-spec?	type.ots) (%acceptable-list-ots? (pair-of-type-spec.item-ots  type.ots)))
+	(and (label-type-spec?		type.ots) (%acceptable-list-ots? (object-type-spec.parent-ots type.ots)))))
+
+  #| end of module |# )
 
 
 ;;;; type signature: type definition
@@ -818,7 +811,7 @@
   (define-single-type-signature-maker make-type-signature/single-stx			<stx>-ots)
   (define-single-type-signature-maker make-type-signature/single-syntactic-identifier	<syntactic-identifier>-ots)
   (define-cached-signature-maker make-type-signature/standalone-list			(<list>-ots))
-  (define-cached-signature-maker make-type-signature/no-return				(<no-return>-ots))
+  (define-cached-signature-maker make-type-signature/no-return				(<bottom>-ots))
   #| end of LET-SYNTAX |# )
 
 (define-syntax-rule (make-type-signature/fully-unspecified)
@@ -914,7 +907,7 @@
   (let ((specs (type-signature.object-type-specs signature)))
     (and (pair? specs)
 	 (null? (cdr specs))
-	 (<no-return>-ots? specs))))
+	 (<bottom>-ots? specs))))
 
 
 ;;;; type signature: accessors
@@ -1081,9 +1074,9 @@
   (let  ((formals.specs		(type-signature.object-type-specs formals.sig))
 	 (operands.specs	(type-signature.object-type-specs operands.sig)))
     (cond
-     ((<no-return>-ots? formals.specs)
-      (<no-return>-ots? operands.specs))
-     ((<no-return>-ots? operands.specs)
+     ((<bottom>-ots? formals.specs)
+      (<bottom>-ots? operands.specs))
+     ((<bottom>-ots? operands.specs)
       #f)
      (else
       (let recur ((formals.specs	formals.specs)
@@ -1601,7 +1594,7 @@
 		   ;;Both SIG1  and SIG2 are improper  lists with the same  number of
 		   ;;items.   Since  both  SPECS1  and   SPECS2  come  from  a  valid
 		   ;;"<type-signature>" instance: here we know that SPECS1 and SPECS2
-		   ;;are    either    "<no-return>"    OTSs,   "<list>"    OTSs    or
+		   ;;are    either    "<bottom>"    OTSs,   "<list>"    OTSs    or
 		   ;;"<list-of-type-spec>"  instances; so  their  common ancestor  is
 		   ;;either the "<list>" OTS or a "<list-of-type-spec>" instance.
 		   (object-type-spec.common-ancestor specs1 specs2))))))))
@@ -1639,8 +1632,8 @@
       ;;
       ;;the type signature of  the returned values is the one  of the expression that
       ;;returns.
-      ((<no-return>-ots? specs1)	specs2)
-      ((<no-return>-ots? specs2)	specs1)
+      ((<bottom>-ots? specs1)	specs2)
+      ((<bottom>-ots? specs2)	specs1)
 
       ;;If  a  signature  is  fully   unspecified:  just  consider  the  union  fully
       ;;unspecified.  This is useful with the standard language.
@@ -1726,8 +1719,8 @@
       ;;
       ;;the type signature of  the returned values is the one  of the expression that
       ;;returns.
-      ((<no-return>-ots? specs1)	specs2)
-      ((<no-return>-ots? specs2)	specs1)
+      ((<bottom>-ots? specs1)	specs2)
+      ((<bottom>-ots? specs2)	specs1)
 
       ;;If  a  signature  is  fully   unspecified:  just  consider  the  union  fully
       ;;unspecified.  This is useful with the standard language.
