@@ -489,24 +489,6 @@
 		(.get-b O)))
     => 10 20)
 
-  ;;Using SET! to mutate fields.
-  ;;
-  (check
-      (internal-body
-
-	(define-record-type alpha
-	  (fields (mutable a)
-		  (mutable b)))
-
-	(define {O alpha}
-	  (make-alpha 1 2))
-
-	(set! (.a O) 10)
-	(set! (.b O) 20)
-	(values (.a O)
-		(.b O)))
-    => 10 20)
-
   ;;Accessing and mutating fields of record-type with parent and grandparent.
   ;;
   (check

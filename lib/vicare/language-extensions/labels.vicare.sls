@@ -333,7 +333,7 @@
 	 ;;
 	 ;;   #(#(?parent-id))
 	 ;;
-         (set! (.parent parsed) (vector-ref (vector-ref args 0) 0)))
+         (.parent parsed (vector-ref (vector-ref args 0) 0)))
 
 	((constructor)
 	 ;;An input clause must have the format:
@@ -348,8 +348,8 @@
 	     (lambda (spec)
 	       (syntax-case spec ()
 		 (#(?args ?body0 ?body ...)
-		  (set! (.constructor parsed) (cons #'(?args ?body0 ?body ...)
-						    (.constructor parsed))))
+		  (.constructor parsed (cons #'(?args ?body0 ?body ...)
+					     (.constructor parsed))))
 		 (#(?stuff ...)
 		  (synner "invalid constructor specification" #'(constructor ?stuff ...)))))
 	   args))
@@ -365,7 +365,7 @@
 	 ;;
 	 (syntax-case (vector-ref args 0) ()
 	   (#(?args ?body0 ?body ...)
-	    (set! (.destructor parsed) #'(?args ?body0 ?body ...)))
+	    (.destructor parsed #'(?args ?body0 ?body ...)))
 	   (#(?stuff ...)
 	    (synner "invalid destructor specification" #'(destructor ?stuff ...)))))
 
@@ -378,7 +378,7 @@
 	 ;;
 	 ;;   #(#(?predicate-stx))
 	 ;;
-	 (set! (.type-predicate parsed) (vector-ref (vector-ref args 0) 0)))
+	 (.type-predicate parsed (vector-ref (vector-ref args 0) 0)))
 
 	((equality-predicate)
 	 ;;The input clause must have the format:
@@ -389,7 +389,7 @@
 	 ;;
 	 ;;   #(#(?func-stx))
 	 ;;
-	 (set! (.equality-predicate parsed) (vector-ref (vector-ref args 0) 0)))
+	 (.equality-predicate parsed (vector-ref (vector-ref args 0) 0)))
 
 	((comparison-procedure)
 	 ;;The input clause must have the format:
@@ -400,7 +400,7 @@
 	 ;;
 	 ;;   #(#(?func-stx))
 	 ;;
-	 (set! (.comparison-procedure parsed) (vector-ref (vector-ref args 0) 0)))
+	 (.comparison-procedure parsed (vector-ref (vector-ref args 0) 0)))
 
 	((hash-function)
 	 ;;The input clause must have the format:
@@ -411,7 +411,7 @@
 	 ;;
 	 ;;   #(#(?func-stx))
 	 ;;
-	 (set! (.hash-function parsed) (vector-ref (vector-ref args 0) 0)))
+	 (.hash-function parsed (vector-ref (vector-ref args 0) 0)))
 
 	((nongenerative)
 	 ;;The input clause must have the format:
@@ -422,7 +422,7 @@
 	 ;;
 	 ;;   #(#(?uid))
 	 ;;
-	 (set! (.uid parsed) (vector-ref (vector-ref args 0) 0)))
+	 (.uid parsed (vector-ref (vector-ref args 0) 0)))
 
 	(else
 	 (assertion-violation __module_who__ "invalid clause spec" spec))))
@@ -451,10 +451,9 @@
 		  (values #'?method-name method-proc.id #`(brace #,method-proc.id . ?rv-types))))
 	       (_
 		(synner "invalid method name specification" #'?who)))
-	   (set! (.method* parsed)
-		 (cons (vector method-name.id method-proc.id
-			       #`(define/checked (#,method-who.stx . ?args) ?body0 ?body ...))
-		       (.method* parsed)))))
+	   (.method* parsed (cons (vector method-name.id method-proc.id
+					  #`(define/checked (#,method-who.stx . ?args) ?body0 ?body ...))
+				  (.method* parsed)))))
 	(#(?stuff ...)
 	 (synner "invalid method specification" #'(method ?stuff ...)))))
 
@@ -470,11 +469,10 @@
       ;;
       (syntax-case spec ()
 	(#(?who ?case-method-clause0 ?case-method-clause ...)
-	 (set! (.method* parsed)
-	       (cons (let ((method-proc.id (identifier-record-field-accessor (.type-name parsed) #'?method-name)))
-		       (vector #'?who method-proc.id
-			       #`(case-define #,method-proc.id ?case-method-clause0 ?case-method-clause ...)))
-		     (.method* parsed))))
+	 (.method* parsed (cons (let ((method-proc.id (identifier-record-field-accessor (.type-name parsed) #'?method-name)))
+				  (vector #'?who method-proc.id
+					  #`(case-define #,method-proc.id ?case-method-clause0 ?case-method-clause ...)))
+				(.method* parsed))))
 	(#(?stuff ...)
 	 (synner "invalid method specification" #'(case-method ?stuff ...)))))
 
@@ -502,10 +500,9 @@
 		  (values #'?method-name method-proc.id #`(brace #,method-proc.id . ?rv-types))))
 	       (_
 		(synner "invalid method name specification" #'?who)))
-	   (set! (.method* parsed)
-		 (cons (vector method-name.id method-proc.id
-			       #`(define/overload (#,method-who.stx . ?args) ?body0 ?body ...))
-		       (.method* parsed)))))
+	   (.method* parsed (cons (vector method-name.id method-proc.id
+					  #`(define/overload (#,method-who.stx . ?args) ?body0 ?body ...))
+				  (.method* parsed)))))
 	(#(?stuff ...)
 	 (synner "invalid method specification" #'(method ?stuff ...)))))
 

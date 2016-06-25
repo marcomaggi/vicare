@@ -1230,13 +1230,7 @@
 
   (define* (chi-set! input-form.stx lexenv.run lexenv.expand)
     (while-not-expanding-application-first-subform
-     (syntax-match input-form.stx (method-call)
-       ((_ (method-call ?field-name ?expr) ?new-value)
-	(identifier? ?field-name)
-	(chi-expr (bless
-		   `(method-call ,?field-name ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))
-
+     (syntax-match input-form.stx ()
        ((_ ?lhs ?rhs)
 	(identifier? ?lhs)
 	(%chi-set-identifier input-form.stx lexenv.run lexenv.expand
@@ -1251,13 +1245,7 @@
     ;;possible.
     ;;
     (while-not-expanding-application-first-subform
-     (syntax-match input-form.stx (method-call)
-       ((_ (method-call ?field-name ?expr) ?new-value)
-	(identifier? ?field-name)
-	(chi-expr (bless
-		   `(method-call ,?field-name ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))
-
+     (syntax-match input-form.stx ()
        ((_ ?lhs ?rhs)
 	(identifier? ?lhs)
 	(%chi-set-identifier input-form.stx lexenv.run lexenv.expand
