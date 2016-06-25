@@ -121,62 +121,65 @@
 	     (string->id (string-append "$set-" type.str "-" x "!")))
 	field*.str))
 
-    (define constructor-arg*.sym
+    (define field*.type
+      (map object-type-spec.name field*.ots))
+
+    (define constructor-arg*.id
       (map make-syntactic-identifier-for-temporary-variable field*.str))
+
+    (define constructor-arg*.spec
+      (map (lambda (arg.id field.type)
+	     `(brace ,arg.id ,field.type))
+	constructor-arg*.id field*.type))
 
 ;;; --------------------------------------------------------------------
 
     (define accessor-sexp*
-      (map (lambda (accessor.id unsafe-accessor.id field.ots)
-	     (let ((stru.sym	(make-syntactic-identifier-for-temporary-variable "stru"))
-		   (field.type	(object-type-spec.name field.ots)))
-	       `(define/checked ((brace ,accessor.id ,field.type) (brace ,stru.sym ,type.id))
-		  (,unsafe-accessor.id ,stru.sym))))
-	accessor*.id unsafe-accessor*.id field*.ots))
+      (map (lambda (accessor.id unsafe-accessor.id field.type)
+	     (let ((stru.id	(make-syntactic-identifier-for-temporary-variable "stru")))
+	       `(define/checked ((brace ,accessor.id ,field.type) (brace ,stru.id ,type.id))
+		  (,unsafe-accessor.id ,stru.id))))
+	accessor*.id unsafe-accessor*.id field*.type))
 
     (define mutator-sexp*
-      (map (lambda (mutator.id unsafe-mutator.id field.ots)
-	     (let ((stru.sym	(make-syntactic-identifier-for-temporary-variable "stru"))
-		   (val.sym	(make-syntactic-identifier-for-temporary-variable "val"))
-		   (field.type	(object-type-spec.name field.ots)))
-	       `(define/checked ((brace ,mutator.id <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.type))
-		  (,unsafe-mutator.id ,stru.sym ,val.sym))))
-	mutator*.id unsafe-mutator*.id field*.ots))
+      (map (lambda (mutator.id unsafe-mutator.id field.type)
+	     (let ((stru.id	(make-syntactic-identifier-for-temporary-variable "stru"))
+		   (val.id	(make-syntactic-identifier-for-temporary-variable "val")))
+	       `(define/checked ((brace ,mutator.id <void>) (brace ,stru.id ,type.id) (brace ,val.id ,field.type))
+		  (,unsafe-mutator.id ,stru.id ,val.id))))
+	mutator*.id unsafe-mutator*.id field*.type))
 
     (define method-sexp*
-      (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id field.ots)
-    	     (let ((stru.sym	(make-syntactic-identifier-for-temporary-variable "stru"))
-    		   (val.sym	(make-syntactic-identifier-for-temporary-variable "val"))
-		   (field.type	(object-type-spec.name field.ots)))
+      (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id field.type)
+    	     (let ((stru.id	(make-syntactic-identifier-for-temporary-variable "stru"))
+    		   (val.id	(make-syntactic-identifier-for-temporary-variable "val")))
     	       `(case-define/checked ,method.id
-    		  (((brace _ ,field.type) (brace ,stru.sym ,type.id))
-    		   (,unsafe-accessor.id ,stru.sym))
-    		  (((brace _ <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.type))
-    		   (,unsafe-mutator.id ,stru.sym ,val.sym)))))
-    	method*.id unsafe-accessor*.id unsafe-mutator*.id field*.ots))
+    		  (((brace _ ,field.type) (brace ,stru.id ,type.id))
+    		   (,unsafe-accessor.id ,stru.id))
+    		  (((brace _ <void>) (brace ,stru.id ,type.id) (brace ,val.id ,field.type))
+    		   (,unsafe-mutator.id ,stru.id ,val.id)))))
+    	method*.id unsafe-accessor*.id unsafe-mutator*.id field*.type))
 
 ;;; --------------------------------------------------------------------
 
     (define unsafe-accessor-sexp*
-      (map (lambda (unsafe-accessor.id field.idx field.ots)
-	     (let ((stru.sym	(make-syntactic-identifier-for-temporary-variable "stru"))
-		   (field.type	(object-type-spec.name field.ots)))
+      (map (lambda (unsafe-accessor.id field.idx field.type)
+	     (let ((stru.id	(make-syntactic-identifier-for-temporary-variable "stru")))
 	       `(define-syntax ,unsafe-accessor.id
 		  (identifier-syntax
-		   (lambda/typed ((brace _ ,field.type) (brace ,stru.sym <struct>))
-		     ($struct-ref ,stru.sym ,field.idx))))))
-	unsafe-accessor*.id field*.idx field*.ots))
+		   (lambda/typed ((brace _ ,field.type) (brace ,stru.id <struct>))
+		     ($struct-ref ,stru.id ,field.idx))))))
+	unsafe-accessor*.id field*.idx field*.type))
 
     (define unsafe-mutator-sexp*
-      (map (lambda (unsafe-mutator.id field.idx field.ots)
-	     (let ((stru.sym	(make-syntactic-identifier-for-temporary-variable "stru"))
-		   (val.sym	(make-syntactic-identifier-for-temporary-variable "val"))
-		   (field.type	(object-type-spec.name field.ots)))
+      (map (lambda (unsafe-mutator.id field.idx field.type)
+	     (let ((stru.id	(make-syntactic-identifier-for-temporary-variable "stru"))
+		   (val.id	(make-syntactic-identifier-for-temporary-variable "val")))
 	       `(define-syntax ,unsafe-mutator.id
 		  (identifier-syntax
-		   (lambda/typed ((brace _ <void>) (brace ,stru.sym <struct>) (brace ,val.sym ,field.type))
-		     ($struct-set! ,stru.sym ,field.idx ,val.sym))))))
-	unsafe-mutator*.id field*.idx field*.ots))
+		   (lambda/typed ((brace _ <void>) (brace ,stru.id <struct>) (brace ,val.id ,field.type))
+		     ($struct-set! ,stru.id ,field.idx ,val.id))))))
+	unsafe-mutator*.id field*.idx field*.type))
 
 ;;; --------------------------------------------------------------------
 
@@ -194,9 +197,9 @@
 	  (make-struct-type-spec (syntax ,type.id) ',std
 				 (syntax ,constructor.id) (syntax ,predicate.id)
 				 ,methods-table.sexp))
-	(define/checked ((brace ,constructor.id ,type.id) . ,constructor-arg*.sym)
+	(define/checked ((brace ,constructor.id ,type.id) . ,constructor-arg*.spec)
 	  (receive-and-return (S)
-	      ($struct ',std . ,constructor-arg*.sym)
+	      ($struct ',std . ,constructor-arg*.id)
 	    (when ($std-destructor ',std)
 	      ($struct-guardian S))))
 	,@unsafe-accessor-sexp*
