@@ -62,6 +62,8 @@
 ;;	     |------------> <enumeration-type-spec>
 ;;	     |
 ;;	      ------------> <label-type-spec>
+;;	     |
+;;	      ------------> <interface-type-spec>
 ;;
 ;;The type "<object-type-spec>" has a field  PARENT-OTS that is used to represent the
 ;;hierarchy of Scheme-level object-types.
@@ -245,6 +247,12 @@
 	 <label-type-spec>-rtd				<label-type-spec>-rcd
 	 <label-type-spec>
 	 make-label-type-spec				label-type-spec?
+
+	 <interface-type-spec>-rtd			<interface-type-spec>-rcd
+	 <interface-type-spec>
+	 make-interface-type-spec			interface-type-spec?
+	 interface-type-spec.method-names
+	 interface-type-spec.method-signatures
 
 	 ;;;
 
@@ -4819,6 +4827,45 @@
   (record-constructor-descriptor <label-type-spec>))
 
 (define (label-type-spec.type-annotation-maker ots)
+  (object-type-spec.name ots))
+
+
+;;;; interface spec
+;;
+;;This  record-type is  used as  syntactic binding  descriptor's value  for interface
+;;types defined with DEFINE-INTERFACE.
+;;
+(define-record-type (<interface-type-spec> make-interface-type-spec interface-type-spec?)
+  (nongenerative *7*vicare:expander:<interface-type-spec>)
+  (parent <object-type-spec>)
+  (sealed #t)
+  (fields
+    (immutable method-name*.sym		interface-type-spec.method-names)
+		;List of symbols representing method names.
+    (immutable method-signature*.ots	interface-type-spec.method-signatures)
+		;List  of "<closure-type-spec>"  instances representing  the methods'
+		;required type signatures.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-object-type-spec)
+      (define* (make-interface-type-spec {type-name.id identifier?} method-name*.sym method-signature*.ots)
+	(let* ((parent.ots	(<top>-ots))
+	       (uid*		(cons 'vicare:expander:<interface-type-spec> (object-type-spec.unique-identifiers parent.ots))))
+	  ((make-object-type-spec type-name.id uid*
+				  parent.ots interface-type-spec.type-annotation-maker
+				  #f #f #f #f #f #f '())
+	   method-name*.sym method-signature*.ots)))
+
+      make-interface-type-spec))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <interface-type-spec>-rtd
+  (record-type-descriptor <interface-type-spec>))
+
+(define <interface-type-spec>-rcd
+  (record-constructor-descriptor <interface-type-spec>))
+
+(define (interface-type-spec.type-annotation-maker ots)
   (object-type-spec.name ots))
 
 

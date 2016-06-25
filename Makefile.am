@@ -958,6 +958,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-types-labels.sps					\
 	tests/test-types-mixins.sps					\
 	tests/test-types-overloads.sps					\
+	tests/test-types-interfaces.sps					\
 	tests/test-types-reader-annotations.sps				\
 	tests/test-types-records.sps					\
 	tests/test-types-propagation.sps				\

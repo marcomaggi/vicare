@@ -828,6 +828,7 @@
 	 (define-type-descriptors		(macro . define-type-descriptors))
 	 (strip-angular-parentheses		(macro . strip-angular-parentheses))
 	 (mixins				(macro . mixins))
+	 (implements				(macro . implements))
 	 (define-record-type			(macro . define-record-type))
 	 (type-predicate			(macro . type-predicate))
 	 (method				(macro . method))
@@ -3279,6 +3280,7 @@
     (define-type-descriptors			v $language)
     (strip-angular-parentheses			v $language)
     (mixins					v $language)
+    (implements					v $language)
     (type-predicate				v $language)
     (equality-predicate				v $language)
     (comparison-procedure			v $language)
@@ -5045,6 +5047,14 @@
     (<label-type-spec>					$expander)
     (make-label-type-spec)
     (label-type-spec?					$expander)
+
+    (<interface-type-spec>-rtd)
+    (<interface-type-spec>-rcd)
+    (<interface-type-spec>				$expander)
+    (make-interface-type-spec				$expander)
+    (interface-type-spec?				$expander)
+    (interface-type-spec.method-names			$expander)
+    (interface-type-spec.method-signatures		$expander)
 ;;;
     (<type-signature>-rtd)
     (<type-signature>-rcd)
@@ -5071,6 +5081,8 @@
     (type-signature.min-and-max-counts			$expander)
     (type-signature.common-ancestor			$expander)
     (type-signature.union				$expander)
+;;;
+    (type-annotation->object-type-spec			$expander)
 ;;;
     (&syntactic-identifier				$expander)
     (&syntactic-identifier-rtd)

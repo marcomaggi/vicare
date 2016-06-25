@@ -608,6 +608,20 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/mixins.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/mixins.fasl
 
+lib/vicare/language-extensions/interfaces.fasl: \
+		lib/vicare/language-extensions/interfaces.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_language_extensions_interfaces_fasldir = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_interfaces_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+nodist_lib_vicare_language_extensions_interfaces_fasl_DATA = lib/vicare/language-extensions/interfaces.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_language_extensions_interfaces_vicare_sls_DATA = lib/vicare/language-extensions/interfaces.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/language-extensions/interfaces.vicare.sls
+CLEANFILES += lib/vicare/language-extensions/interfaces.fasl
+
 lib/vicare/language-extensions/tracing-syntaxes.fasl: \
 		lib/vicare/language-extensions/tracing-syntaxes.sls \
 		$(FASL_PREREQUISITES)

@@ -191,6 +191,7 @@
   (declare strip-angular-parentheses)
   (declare type-predicate)
   (declare mixins)
+  (declare implements)
   (declare catch)
   (declare finally)
   (declare pair)

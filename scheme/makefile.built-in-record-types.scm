@@ -288,6 +288,13 @@
     <object-type-spec>
   make-label-type-spec label-type-spec?)
 
+(define-built-in-record-type <interface-type-spec>
+    <object-type-spec>
+  make-interface-type-spec interface-type-spec?
+  (methods
+   (method-names	interface-type-spec.method-names)
+   (method-signatures	interface-type-spec.method-signatures)))
+
 ;;; --------------------------------------------------------------------
 
 (define-built-in-record-type <type-signature>
