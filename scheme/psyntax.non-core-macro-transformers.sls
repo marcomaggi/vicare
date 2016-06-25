@@ -179,6 +179,7 @@
   (declare nongenerative)
   (declare parent-rtd)
   (declare constructor)
+  (declare constructor-signature)
   (declare destructor)
   (declare super-protocol)
   (declare destructor-protocol)

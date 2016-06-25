@@ -164,9 +164,12 @@
   (define foo-rcd-definitions
     (%make-rcd-definitions clause*.stx foo foo-rtd foo-rcd parent-rcd.id synner))
 
+  (define constructor-signature.stx
+    (%get-constructor-signature clause*.stx synner))
+
   ;;Code for record maker function.
   (define foo-maker-definitions
-    (%make-maker-definitions foo foo-rcd make-foo synner))
+    (%make-maker-definitions foo foo-rcd make-foo constructor-signature.stx synner))
 
   ;;Code for predicate and optional custom  predicate.  False or a form evaluating to
   ;;the predicate definitions.
@@ -341,8 +344,8 @@
 		(map core-prim-id
 		  '( ;;These are the R6RS ones.
 		    fields parent parent-rtd protocol sealed opaque nongenerative
-			   ;;These are the Vicare extensions.
-		    super-protocol destructor-protocol
+		     ;;;These are the Vicare extensions.
+		    constructor-signature super-protocol destructor-protocol
 		    custom-printer type-predicate
 		    equality-predicate comparison-procedure hash-function
 		    define-type-descriptors strip-angular-parentheses
@@ -439,7 +442,7 @@
        ;;This record-type is generative.
        (values (gensym (syntax->datum foo)) #t))
       (_
-       (synner "expected symbol or no argument in nongenerative clause" clause)))))
+       (synner "expected symbol or no argument in NONGENERATIVE clause" clause)))))
 
 (define (%get-define-type-descriptors clause* synner)
   (let ((clause (%get-clause 'define-type-descriptors clause*)))
@@ -448,7 +451,7 @@
       ;;No matching clause found.
       (#f	#f)
       (_
-       (synner "expected no argument in define-type-descriptors clause" clause)))))
+       (synner "expected no argument in DEFINE-TYPE-DESCRIPTORS clause" clause)))))
 
 (define (%get-strip-angular-parentheses clause* synner)
   (let ((clause (%get-clause 'strip-angular-parentheses clause*)))
@@ -457,7 +460,26 @@
       ;;No matching clause found.
       (#f	#f)
       (_
-       (synner "expected no argument in strip-angular-parentheses clause" clause)))))
+       (synner "expected no argument in STRIP-ANGULAR-PARENTHESES clause" clause)))))
+
+(define (%get-constructor-signature clause* synner)
+  (let ((clause (%get-clause 'constructor-signature clause*)))
+    (syntax-match clause ()
+      ((_ ?signature)
+       (begin
+	 ;;NOTE Here  we would  really like  to validate  ?SIGNATURE as  closure type
+	 ;;specification.  But the  return value of the signature  is the record-type
+	 ;;syntactic identifier, which  is unbound when this function  is called.  So
+	 ;;we can do nothing.  We will validated it later.  (Marco Maggi; Sat Jun 25,
+	 ;;2016)
+	 ;;
+	 ;; (unless (closure-type-spec? (type-annotation->object-type-spec ?signature))
+	 ;;   (synner "expected closure type signature argument in CONSTRUCTOR-SIGNATURE clause" clause))
+	 ?signature))
+      ;;No matching clause found.
+      (#f		#f)
+      (_
+       (synner "expected closure type signature argument in CONSTRUCTOR-SIGNATURE clause" clause)))))
 
 
 (define (%parse-field-specs type-id foo-for-id-generation clause* synner)
@@ -1131,21 +1153,25 @@
 	($make-record-constructor-descriptor ,foo-rtd ,parent-rcd.id ,protocol-expr)))))
 
 
-(define (%make-maker-definitions foo foo-rcd make-foo synner)
+(define (%make-maker-definitions foo foo-rcd make-foo constructor-signature.stx synner)
   ;;Return a list  of symbolic expressions (to be BLESSed  later) representing Scheme
   ;;definitions defining the record maker procedure.
   ;;
-  ;;FIXME Here we should really implement some  way to specify typed arguments to the
-  ;;maker.  Right now it  is not possible with the single  PROTOCOL clause defined by
-  ;;the standard, so we  just use an ARGS catch-all argument.   (Marco Maggi; Sun Apr
-  ;;10, 2016)
-  ;;
-  (let ((internal-maker.sym	(make-syntactic-identifier-for-temporary-variable (identifier->symbol make-foo)))
-	(args.sym		(make-syntactic-identifier-for-temporary-variable "args")))
-    `((define/std ,internal-maker.sym
+  (let ((internal-maker.id	(make-syntactic-identifier-for-temporary-variable (identifier->symbol make-foo)))
+	(args.id		(make-syntactic-identifier-for-temporary-variable "args")))
+    `((define/std ,internal-maker.id
 	($record-constructor ,foo-rcd))
-      (define/checked ((brace ,make-foo ,foo) . ,args.sym)
-	(unsafe-cast-signature (,foo) (apply ,internal-maker.sym ,args.sym))))))
+      ,(if constructor-signature.stx
+	   `(begin
+	      (define/checked (brace ,make-foo ,constructor-signature.stx) ,internal-maker.id)
+	      (begin-for-syntax
+		(unless (type-annotation-super-and-sub? (lambda <bottom> => (,foo))
+							,constructor-signature.stx)
+		  (syntax-violation 'define-record-type
+		    "the record constructor signature is not a closure type with record-type as single return value"
+		    (syntax ,constructor-signature.stx) #f))))
+	 `(define/checked ((brace ,make-foo ,foo) . ,args.id)
+	    (unsafe-cast-signature (,foo) (apply ,internal-maker.id ,args.id)))))))
 
 
 (define (%make-predicate-definitions clause* foo? foo-rtd synner)

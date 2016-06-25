@@ -1580,7 +1580,7 @@
 
   (doit-true	(lambda (<top>) => <bottom>)		(lambda (<top>) => <bottom>))
   (doit-false	(lambda (<top>) => <bottom>)		(lambda (<top>) => (<bottom>)))
-  (doit-false	(lambda (<top>) => (<bottom>))	(lambda (<top>) => <bottom>))
+  (doit-true	(lambda (<top>) => (<bottom>))	(lambda (<top>) => <bottom>))
 
   (begin
     (doit-false	(lambda (<top>) => <bottom>)			(lambda (<top>) => <list>))
@@ -1591,16 +1591,16 @@
     (doit-false	(lambda (<top>) => <bottom>)			(lambda (<top>) => (pair <fixnum> <list>)))
     (doit-false	(lambda (<top>) => <bottom>)			(lambda (<top>) => (pair-of <list>)))
     ;;
-    (doit-false (lambda (<top>) => <list>)			(lambda (<top>) => <bottom>))
-    (doit-false (lambda (<top>) => <nelist>)			(lambda (<top>) => <bottom>))
-    (doit-false (lambda (<top>) => <null>)			(lambda (<top>) => <bottom>))
-    (doit-false (lambda (<top>) => (list <fixnum>))		(lambda (<top>) => <bottom>))
-    (doit-false (lambda (<top>) => (list-of <fixnum>))	(lambda (<top>) => <bottom>))
-    (doit-false (lambda (<top>) => (pair <fixnum> <list>))	(lambda (<top>) => <bottom>))
-    (doit-false (lambda (<top>) => (pair-of <list>))		(lambda (<top>) => <bottom>)))
+    (doit-true	(lambda (<top>) => <list>)			(lambda (<top>) => <bottom>))
+    (doit-true	(lambda (<top>) => <nelist>)			(lambda (<top>) => <bottom>))
+    (doit-true	(lambda (<top>) => <null>)			(lambda (<top>) => <bottom>))
+    (doit-true	(lambda (<top>) => (list <fixnum>))		(lambda (<top>) => <bottom>))
+    (doit-true	(lambda (<top>) => (list-of <fixnum>))	(lambda (<top>) => <bottom>))
+    (doit-true	(lambda (<top>) => (pair <fixnum> <list>))	(lambda (<top>) => <bottom>))
+    (doit-true	(lambda (<top>) => (pair-of <list>))		(lambda (<top>) => <bottom>)))
 
   (doit-false	(lambda (<top>) => <bottom>)		(lambda (<top>) => (<string>)))
-  (doit-false	(lambda (<top>) => (<string>))	(lambda (<top>) => <bottom>))
+  (doit-true	(lambda (<top>) => (<string>))	(lambda (<top>) => <bottom>))
 
   #| end of PARAMETRISE |# )
 

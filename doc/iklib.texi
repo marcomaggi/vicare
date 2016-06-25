@@ -10599,6 +10599,7 @@ Reset to void all the fields of a structure.
 @deffnx {Auxiliary Syntax} method/overload
 @deffnx {Auxiliary Syntax} super-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} destructor-protocol @meta{expr}
+@deffnx {Auxiliary Syntax} constructor-signature @meta{signature}
 @deffnx {Auxiliary Syntax} type-predicate @meta{expr}
 @deffnx {Auxiliary Syntax} custom-printer @meta{expr}
 @deffnx {Auxiliary Syntax} equality-predicate @meta{expr}
@@ -10634,6 +10635,7 @@ concatenated in the order in which they are given.  Example:
 @menu
 * iklib records defs super-proto:: The super-type protocol.
 * iklib records defs destructor::  The destructor protocol.
+* iklib records defs consig::      The constructor signature.
 * iklib records defs predicate::   The custom predicate.
 * iklib records defs printer::     The custom printer.
 * iklib records defs equality::    The custom equality predicate.
@@ -10792,6 +10794,58 @@ If this type has no @clause{destructor-protocol} clause, it has a parent
 and the parent has a destructor function: the parent's destructor
 function becomes this type's destructor function.
 @end itemize
+
+@c page
+@node iklib records defs consig
+@subsubsection The constructor signature
+
+
+@cindex @syntax{constructor-signature}, record--type definition clause
+
+
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
+
+@lisp
+(constructor-signature @meta{signature})
+@end lisp
+
+@noindent
+allows the specification of a type signature for the record--type
+constructor.  This clause is meant to be used in the context of the
+typed language.
+
+Some usage examples:
+
+@lisp
+(define-record-type <duo>
+  (fields @{one <fixnum>@}
+          @{two <string>@})
+  (constructor-signature
+    (lambda (<fixnum> <string>) => (<duo>))))
+
+(define-record-type <alpha>
+  (fields @{A <fixnum>@}
+          @{B <string>@})
+  (protocol
+    (lambda (make-record)
+      (lambda (A)
+        (make-record A (number->string A)))))
+  (constructor-signature
+    (lambda (<fixnum>) => (<alpha>))))
+@end lisp
+
+This clause is needed because the @clause{protocol} clause does not
+allow the specification of a full type signature for the record--type
+constructor.
+
+When the clause @syntax{constructor-signature} @strong{is not} used, the
+syntax @syntax{define-record-type} just defines a default type
+signature as follows:
+
+@lisp
+(lambda <list> => (@meta{type-name}))
+@end lisp
 
 @c page
 @node iklib records defs predicate

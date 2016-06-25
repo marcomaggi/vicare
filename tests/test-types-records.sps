@@ -84,6 +84,47 @@
   #t)
 
 
+(parametrise ((check-test-name	'constructor-signature))
+
+  (check
+      (internal-body
+	(define-record-type <duo>
+	  (fields {one <fixnum>} {two <string>})
+	  (constructor-signature
+	    (lambda (<fixnum> <string>) => (<duo>))))
+
+	(is-a? (new <duo> 1 "ciao") <duo>))
+    => #t)
+
+  (check
+      (internal-body
+	(define-record-type <duo>
+	  (fields {one <fixnum>} {two <string>})
+	  (constructor-signature
+	    (lambda (<fixnum> <string>) => (<duo>))))
+
+	(syntax=? (type-annotation-syntax (type-of (new <duo> 1 "ciao")))
+		  #'<duo>))
+    => #t)
+
+  (check
+      (internal-body
+	(define-record-type <alpha>
+	  (fields {A <fixnum>}
+		  {B <string>})
+	  (protocol
+	    (lambda (make-record)
+	      (lambda (A)
+		(make-record A (number->string A)))))
+	  (constructor-signature
+	    (lambda (<fixnum>) => (<alpha>))))
+
+	(is-a? (new <alpha> 1) <alpha>))
+    => #t)
+
+  #| end of PARAMETRISE |# )
+
+
 (parametrise ((check-test-name	'predicate-syntax))
 
   (internal-body

@@ -562,6 +562,31 @@
 	      (object-type-spec.applicable-method-stx parent.ots method-name.sym)))
 	(else #f)))
 
+(define* (object-type-spec.compatible-method-stx {ots object-type-spec?}
+						 {method-name.sym symbol?}
+						 {prototype.ots object-type-spec?})
+  ;;OTS must an object-type specification  record.  PROTOTYPE.OTS must be an instance
+  ;;of "<object-type-spec>" describing the possible type of a method.
+  ;;
+  ;;If METHOD-NAME.SYM  is EQ?  to  an OTS's method  name: compare the  method's type
+  ;;specification  with PROTOTYPE.OTS;  return true  if METHOD.OTS  is a  sub-type of
+  ;;PROTOTYPE.OTS, otherwise return false.  If no method name matches: return false.
+  ;;
+  ;;When the return value is true: OTS has  a method that can be used when a function
+  ;;of type PROTOTYPE.OTS is required.
+  ;;
+  (cond ((assq method-name.sym (object-type-spec.methods-table ots))
+	 ;;The name  is known; extract the  symbolic expression from the  alist entry
+	 ;;and return it.
+	 => (lambda (entry)
+	      (let* ((method.id		(cdr entry))
+		     (method.ots	((expression-expander-for-type-annotations) method.id (current-inferior-lexenv))))
+		(object-type-spec.matching-super-and-sub? prototype.ots method.ots))))
+	((object-type-spec.parent-ots ots)
+	 => (lambda (parent.ots)
+	      (object-type-spec.applicable-method-stx parent.ots method-name.sym)))
+	(else #f)))
+
 
 ;;;; basic object-type specification: matching super and sub types
 

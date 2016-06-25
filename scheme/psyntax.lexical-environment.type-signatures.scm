@@ -1077,7 +1077,7 @@
      ((<bottom>-ots? formals.specs)
       (<bottom>-ots? operands.specs))
      ((<bottom>-ots? operands.specs)
-      #f)
+      #t)
      (else
       (let recur ((formals.specs	formals.specs)
 		  (operands.specs	operands.specs))
