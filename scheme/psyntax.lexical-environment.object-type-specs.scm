@@ -122,6 +122,7 @@
 	 object-type-spec.equality-predicate		object-type-spec.comparison-procedure
 	 object-type-spec.hash-function			object-type-spec.applicable-hash-function
 	 object-type-spec.applicable-method-stx		object-type-spec.ancestor-ots*
+	 object-type-spec.implemented-interfaces
 	 object-type-spec.type-descriptor-core-expr
 	 object-type-spec.single-value-validator-lambda-stx
 	 object-type-spec.list-validator-lambda-stx
@@ -229,7 +230,6 @@
 	 <intersection-type-spec>-rtd			<intersection-type-spec>-rcd
 	 make-intersection-type-spec			intersection-of-type-specs
 	 intersection-type-spec?			intersection-type-spec.item-ots*
-	 interface-type-spec.compliant-spec?
 
 	 <complement-type-spec>
 	 <complement-type-spec>-rtd			<complement-type-spec>-rcd
@@ -252,7 +252,8 @@
 	 <interface-type-spec>-rtd			<interface-type-spec>-rcd
 	 <interface-type-spec>
 	 make-interface-type-spec			interface-type-spec?
-	 interface-type-spec.methods-table
+	 interface-type-spec.method-prototypes-table
+	 interface-type-spec.compliant-spec?
 
 	 ;;;
 
@@ -626,8 +627,8 @@
     (cond
      ((eq? super.ots sub.ots))
      ((core-type-spec?  sub.ots)	(%matching-sub/core-type-spec  super.ots sub.ots))
-     ((label-type-spec? sub.ots)	(%matching-sub/label-type-spec super.ots sub.ots))
      ((interface-type-spec? sub.ots)	(%matching-sub/interface-type-spec super.ots sub.ots))
+     ((label-type-spec? sub.ots)	(%matching-sub/label-type-spec super.ots sub.ots))
      (else
       (case-specification super.ots
 	(core-type-spec?		(%matching-super/core-type-spec		super.ots sub.ots))
@@ -649,8 +650,8 @@
 	(ancestor-of-type-spec?		(%matching-super/ancestor-of-type-spec  super.ots sub.ots))
 	(else
 	 (cond-with-predicates super.ots
-	   (label-type-spec?		(%matching-super/label-type-spec super.ots sub.ots))
 	   (interface-type-spec?	(%matching-super/interface-type-spec super.ots sub.ots))
+	   (label-type-spec?		(%matching-super/label-type-spec super.ots sub.ots))
 	   (else			#f)))))))
 
 ;;; --------------------------------------------------------------------
@@ -1237,6 +1238,8 @@
       (label-type-spec?
        (super-and-sub? (object-type-spec.parent-ots super.ots)
 		       (object-type-spec.parent-ots   sub.ots)))
+      (interface-type-spec?
+       #f)
       (else
        (if (label-type-spec.with-type-predicate? super.ots)
 	   #f
@@ -1253,7 +1256,7 @@
 	(label-type-spec?
 	 (super-and-sub? (object-type-spec.parent-ots super.ots) sub-item.ots))
 	(interface-type-spec?
-	 (%matching-super/interface-type-spec super.ots sub.ots))
+	 #f)
 	(else
 	 (super-and-sub? super.ots sub-item.ots)))))
 
@@ -1325,8 +1328,8 @@
     ;;
     (cond
      ((core-type-spec?  sub.ots)		(%compatible-sub/core-type-spec   super.ots sub.ots))
-     ((label-type-spec? sub.ots)		(%compatible-sub/label-type-spec  super.ots sub.ots))
      ((interface-type-spec? sub.ots)		#f)
+     ((label-type-spec? sub.ots)		(%compatible-sub/label-type-spec  super.ots sub.ots))
      (else
       (case-specification super.ots
 	(core-type-spec?			(%compatible-super/core-type-spec	  super.ots sub.ots))
@@ -1348,8 +1351,8 @@
 	(ancestor-of-type-spec?			(%compatible-super/ancestor-of-type-spec  super.ots sub.ots))
 	(else
 	 (cond-with-predicates super.ots
-	   (label-type-spec?		(%compatible-super/label-type-spec super.ots sub.ots))
 	   (interface-type-spec?	#f)
+	   (label-type-spec?		(%compatible-super/label-type-spec super.ots sub.ots))
 	   (else
 	    (object-type-spec.matching-super-and-sub? sub.ots super.ots))))))))
 
@@ -4897,9 +4900,9 @@
   (parent <object-type-spec>)
   (sealed #t)
   (fields
-    (immutable	type-descriptor-id	interface-type-spec.type-descriptor-id)
+    (immutable	type-descriptor-id		interface-type-spec.type-descriptor-id)
 		;A syntactic identifier bound to the run-time type descriptor.
-    (immutable	methods-table*		interface-type-spec.methods-table)
+    (immutable	method-prototypes-table		interface-type-spec.method-prototypes-table)
 		;Alist having as keys symbols representing method names and as values
 		;"<closure-type-spec>" instances  representing the  methods' required
 		;type signatures.
@@ -4907,24 +4910,24 @@
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-interface-type-spec {type-name.id identifier?} {type-descriptor.id identifier?}
-					 requested-methods-table* implemented-methods-table*)
+					 method-prototypes-table implemented-methods-table)
 	(let* ((parent.ots		(<top>-ots))
 	       (uid*			(cons 'vicare:expander:<interface-type-spec> (object-type-spec.unique-identifiers parent.ots)))
 	       (implemented-interfaces	'()))
 	  ((make-object-type-spec type-name.id uid*
 				  parent.ots interface-type-spec.type-annotation-maker
-				  #f			       ;constructor-stx
-				  #f			       ;destructor-stx
+				  #f ;constructor-stx
+				  #f ;destructor-stx
 				  ;;By setting the predicate  to ALWAYS-FALSE we make
 				  ;;run-time matching fail.
 				  (core-prim-id 'always-false) ;type-predicate-stx
 				  #f			       ;equality-predicate.id
-				  #f			     ;comparison-procedure.id
-				  #f			     ;hash-function.id
-				  implemented-methods-table* ;methods-table
-				  implemented-interfaces     ;implemented-interfaces
+				  #f			    ;comparison-procedure.id
+				  #f			    ;hash-function.id
+				  implemented-methods-table ;methods-table
+				  implemented-interfaces    ;implemented-interfaces
 				  )
-	   type-descriptor.id requested-methods-table*)))
+	   type-descriptor.id method-prototypes-table)))
 
       make-interface-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
@@ -4941,18 +4944,25 @@
 ;;; --------------------------------------------------------------------
 
 (define* (interface-type-spec.compliant-spec? {iface interface-type-spec?} {ots object-type-spec?})
-  (for-all (lambda (method-spec)
-	     (object-type-spec.compatible-method-stx ots (car method-spec) (cdr method-spec)))
-    (interface-type-spec.methods-table iface)))
+  (and (for-all (lambda (method-prototype-entry)
+		  (object-type-spec.compatible-method-stx ots (car method-prototype-entry) (cdr method-prototype-entry)))
+	 (interface-type-spec.method-prototypes-table iface))
+       #t))
 
 (define* (interface-type-spec.super-and-sub? {iface interface-type-spec?} {ots object-type-spec?})
   ;;Return  true  if  the  interface  specification IFACE  is  a  super-type  of  the
-  ;;object-type specification OTS.
+  ;;object-type specification OTS.  In other words: return  true if OTS or one of its
+  ;;parents implement the interface IFACE.
   ;;
   (let ((iface.id (object-type-spec.name iface)))
-    (exists (lambda (implemented-iface.id)
-	      (free-identifier=? implemented-iface.id iface.id))
-      (object-type-spec.implemented-interfaces ots))))
+    (let loop ((ots ots))
+      (cond ((and (exists (lambda (implemented-iface.id)
+			    (free-identifier=? implemented-iface.id iface.id))
+		    (object-type-spec.implemented-interfaces ots))
+		  #t))
+	    ((object-type-spec.parent-ots ots)
+	     => loop)
+	    (else #f)))))
 
 
 ;;;; type annotations

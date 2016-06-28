@@ -29,6 +29,7 @@
   (import (vicare)
     (vicare language-extensions labels)
     (vicare language-extensions mixins)
+    (vicare language-extensions interfaces)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -187,8 +188,8 @@
 	    (and (parent? obj)
 		 (fx<=? obj +1)
 		 (fx>=? obj -1)))))
-      (method ({foo <string>} {O <comparison-fixnum>})
-	(number->string O)))
+      (method ({foo <string>})
+	(number->string this)))
 
 ;;;
     (check-for-true	(type-annotation-super-and-sub? <fixnum> <comparison-fixnum>))
@@ -242,7 +243,7 @@
       (internal-body
 	(define-label <my-fixnum>
 	  (parent <all-fixnums>)
-	  (method (doit {O <my-fixnum>})
+	  (method (doit)
 	    999))
 	(define {O <my-fixnum>}
 	  123)
@@ -258,8 +259,8 @@
 	    (and (parent? obj)
 		 (fx<=? obj +1)
 		 (fx>=? obj -1)))))
-      (method ({foo <string>} {O <comparison-fixnum>})
-	(number->string O)))
+      (method ({foo <string>})
+	(number->string this)))
 
     (check
 	(let (({O <comparison-fixnum>} 1))
@@ -283,8 +284,8 @@
 	(define-label <my-string>
 	  (parent <string>)
 	  (case-method doit
-	    (({_ <my-string>} {O <my-string>} {suffix <string>})
-	     (string-append O suffix))))
+	    (({_ <my-string>} {suffix <string>})
+	     (string-append this suffix))))
 
 	(define {O <my-string>}
 	  "ciao")
@@ -299,10 +300,10 @@
 	(define-label <my-string>
 	  (parent <string>)
 	  (case-method doit
-	    (({_ <my-string>} {O <my-string>} {suffix <string>})
-	     (string-append O suffix))
-	    (({_ <my-string>} {O <my-string>} {prefix <string>} {suffix <string>})
-	     (string-append prefix O suffix))))
+	    (({_ <my-string>} {suffix <string>})
+	     (string-append this suffix))
+	    (({_ <my-string>} {prefix <string>} {suffix <string>})
+	     (string-append prefix this suffix))))
 
 	(define {O <my-string>}
 	  "ciao")
@@ -312,6 +313,27 @@
     => "hey, ciao mamma" "ciao mamma ho")
 
   (void))
+
+
+(parametrise ((check-test-name	'overloaded-methods))
+
+  (check
+      (internal-body
+	(define-label <peluche>
+	  (parent (list <symbol>))
+	  (method/overload (name)
+	    (car this))
+	  (method/overload (name attr)
+	    (list attr (car this))))
+
+	(define {O <peluche>}
+	  '(cat))
+
+	(values (.name O)
+		(.name O 'pussy)))
+    => 'cat '(pussy cat))
+
+  #| end of PARAMETRISE |# )
 
 
 (parametrise ((check-test-name	'constructor))
@@ -424,13 +446,13 @@
   (check
       (internal-body
 	(define-mixin <stuff>
-	  (method (pussy {O <stuff>})
-	    (list 'pussy (.name O))))
+	  (method (pussy)
+	    (list 'pussy (.name this))))
 
 	(define-label <peluche>
 	  (parent (list <symbol>))
-	  (method (name {O <peluche>})
-	    (car O))
+	  (method (name)
+	    (car this))
 	  (mixins <stuff>))
 
 	(define {O <peluche>}
@@ -438,27 +460,6 @@
 
 	(values (.name  O)
 		(.pussy O)))
-    => 'cat '(pussy cat))
-
-  #| end of PARAMETRISE |# )
-
-
-(parametrise ((check-test-name	'overloads))
-
-  (check
-      (internal-body
-	(define-label <peluche>
-	  (parent (list <symbol>))
-	  (method/overload (name {O <peluche>})
-	    (car O))
-	  (method/overload (name {O <peluche>} {attr <symbol>})
-	    (list attr (car O))))
-
-	(define {O <peluche>}
-	  '(cat))
-
-	(values (.name O)
-		(.name O 'pussy)))
     => 'cat '(pussy cat))
 
   #| end of PARAMETRISE |# )
@@ -563,8 +564,8 @@
 
     (define-label <fx>
       (parent <fixnum>)
-      (method (incr {O <fx>})
-	(fxadd1 O)))
+      (method (incr)
+	(fxadd1 this)))
 
     (define {O <fx>}
       10)
@@ -580,16 +581,16 @@
     (define-label <String>
       (parent <string>)
       (case-method append
-	(({_ <String>} {O <String>} {suff <String>})
-	 (string-append O suff))
-	(({_ <String>} {O <String>} {pref <String>} {suff <String>})
-	 (string-append pref O suff))))
+	(({_ <String>} {suff <String>})
+	 (string-append this suff))
+	(({_ <String>} {pref <String>} {suff <String>})
+	 (string-append pref this suff))))
 
     (define {O <String>}
       "ciao")
 
-    (check (.append O "-suff")		=> "ciao-suff")
-    (check (.append O "pref-" "-suff")	=> "pref-ciao-suff")
+    (check (.append O "-suff")				=> "ciao-suff")
+    (check (.append O "pref-" "-suff")			=> "pref-ciao-suff")
 
     (check (.length (.append O "pref-" "-suff"))	=> 14)
 

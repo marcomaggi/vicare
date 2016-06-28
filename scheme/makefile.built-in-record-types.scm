@@ -292,7 +292,7 @@
     <object-type-spec>
   make-interface-type-spec interface-type-spec?
   (methods
-   (methods-table	interface-type-spec.methods-table)))
+   (method-prototypes-table	interface-type-spec.method-prototypes-table)))
 
 ;;; --------------------------------------------------------------------
 

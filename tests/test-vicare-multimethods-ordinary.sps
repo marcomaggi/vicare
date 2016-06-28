@@ -685,22 +685,22 @@
   (define-label <list-coords>
     (nongenerative user:<list-coords>)
     (parent (list <flonum> <flonum> <flonum>))
-    (method (x {O <list-coords>})
-      (list-ref O 0))
-    (method (y {O <list-coords>})
-      (list-ref O 1))
-    (method (z {O <list-coords>})
-      (list-ref O 2)))
+    (method (x)
+      (list-ref this 0))
+    (method (y)
+      (list-ref this 1))
+    (method (z)
+      (list-ref this 2)))
 
   (define-label <vector-coords>
     (nongenerative user:<vector-coords>)
     (parent (vector <flonum> <flonum> <flonum>))
-    (method (x {O <vector-coords>})
-      (vector-ref O 0))
-    (method (y {O <vector-coords>})
-      (vector-ref O 1))
-    (method (z {O <vector-coords>})
-      (vector-ref O 2)))
+    (method (x)
+      (vector-ref this 0))
+    (method (y)
+      (vector-ref this 1))
+    (method (z)
+      (vector-ref this 2)))
 
   (define-record-type <coords>
     (fields {x <flonum>}

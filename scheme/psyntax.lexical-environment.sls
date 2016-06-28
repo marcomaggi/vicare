@@ -121,6 +121,7 @@
     object-type-spec.comparison-procedure		object-type-spec.hash-function
     object-type-spec.applicable-method-stx		object-type-spec.applicable-hash-function
     object-type-spec.single-value-validator-lambda-stx	object-type-spec.list-validator-lambda-stx
+    object-type-spec.implemented-interfaces
     object-type-spec.type-descriptor-core-expr
     expression-expander-for-core-expressions
 
@@ -231,7 +232,7 @@
     <interface-type-spec>-rtd				<interface-type-spec>-rcd
     <interface-type-spec>
     make-interface-type-spec				interface-type-spec?
-    interface-type-spec.methods-table			interface-type-spec.compliant-spec?
+    interface-type-spec.method-prototypes-table		interface-type-spec.compliant-spec?
 ;;;
     ;; typed variable specification: base type
     <typed-variable-spec>

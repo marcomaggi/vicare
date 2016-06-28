@@ -917,10 +917,15 @@
   (signatures
    ((<interface-type-spec>)		=> (<syntactic-identifier>))))
 
-(declare-core-primitive interface-type-spec.methods-table
+(declare-core-primitive interface-type-spec.method-prototypes-table
     (safe)
   (signatures
    ((<interface-type-spec>)		=> ((alist <symbol> <closure-type-spec>)))))
+
+(declare-core-primitive interface-and-compliant-object-type?
+    (safe)
+  (signatures
+   ((<syntactic-identifier> <syntactic-identifier>)	=> (<boolean>))))
 
 ;;; --------------------------------------------------------------------
 ;;; operations on type specs

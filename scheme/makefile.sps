@@ -5062,7 +5062,7 @@
     (<label-type-spec>-rtd)
     (<label-type-spec>-rcd)
     (<label-type-spec>					$expander)
-    (make-label-type-spec)
+    (make-label-type-spec				$expander)
     (label-type-spec?					$expander)
 
     (<interface-type-spec>-rtd)
@@ -5070,7 +5070,7 @@
     (<interface-type-spec>				$expander)
     (make-interface-type-spec				$expander)
     (interface-type-spec?				$expander)
-    (interface-type-spec.methods-table			$expander)
+    (interface-type-spec.method-prototypes-table	$expander)
     (interface-and-compliant-object-type?		$expander)
 ;;;
     (<type-signature>-rtd)
