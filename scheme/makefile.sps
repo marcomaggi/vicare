@@ -558,7 +558,8 @@
     (break		($fluid . ,(gensym "fluid-label.break")))
     (with		($fluid . ,(gensym "fluid-label.with")))
     (brace		($fluid . ,(gensym "fluid-label.brace")))
-    (<>			($fluid . ,(gensym "fluid-label.<>")))))
+    (<>			($fluid . ,(gensym "fluid-label.<>")))
+    (this		($fluid . ,(gensym "fluid-label.<>")))))
 
 ;;At present there are no fluid syntaxes  with default binding defined by Vicare.  To
 ;;define one for an imaginary fluid SPIFY, we should to this here:
@@ -3634,6 +3635,7 @@
     (__file__					v $language)
     (__line__					v $language)
     (<>						v $language)
+    (this					v $language)
     (brace					v $language)
     (return					v $language)
     (continue					v $language)

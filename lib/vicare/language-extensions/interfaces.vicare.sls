@@ -46,10 +46,6 @@
 
   (define-auxiliary-syntaxes method-prototype)
 
-  (define-fluid-syntax this
-    (lambda (stx)
-      (syntax-violation 'this "invalid use of auxiliary syntax" stx #f)))
-
 
 (define-syntax define-interface
   (internal-body

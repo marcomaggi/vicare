@@ -3005,6 +3005,29 @@ transformers.
 @end deffn
 
 
+@deffn {Fluid Syntax} this
+A fluid syntax to be bound to the ``subject'' of a method procedure.  It
+is meant to be used as follows: given the record method definition:
+
+@lisp
+(define-record-type <duo>
+  (fields one two)
+  (method (add)
+    (+ (.one this) (.two this))))
+@end lisp
+
+@noindent
+the method's implementation procedure is defined as:
+
+@example
+(define (<duo>-add @{subject <duo>@})
+  (fluid-let-syntax
+      ((this (identifier-syntax subject)))
+    (+ (.one this) (.two this))))
+@end example
+@end deffn
+
+
 @deffn {Identifier Syntax} __file__
 Expand to a quoted string representing the source code location, for
 example the source file pathname.
