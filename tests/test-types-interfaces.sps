@@ -48,6 +48,43 @@
     ))
 
 
+(parametrise ((check-test-name	'type-descriptor))
+
+  (import (prefix (vicare system type-descriptors)
+		  td::))
+
+  (check
+      (internal-body
+	(define-interface <Stuff>
+	  (method-prototype red
+	    (lambda () => (<top>)))
+	  (method (blue)
+	    2))
+
+	(define itd
+	  (type-descriptor <Stuff>))
+
+	(values (td::interface-type-descr? itd)
+		(td::interface-type-descr.type-name itd)))
+    => #t '<Stuff>)
+
+  (check
+      (internal-body
+	(define-interface <Stuff>
+	  (method-prototype red
+	    (lambda () => (<top>)))
+	  (method (blue)
+	    2))
+
+	(define itd
+	  (type-descriptor <Stuff>))
+
+	(procedure? (td::interface-type-descr.method-retriever itd)))
+    => #t)
+
+  (void))
+
+
 (parametrise ((check-test-name	'misc))
 
   (define-interface <Sequence>

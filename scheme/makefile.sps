@@ -4217,7 +4217,7 @@
     (make-interface-type-descr			$type-descriptors)
     (interface-type-descr?			$type-descriptors)
     (interface-type-descr.type-name		$type-descriptors)
-    (interface-type-descr.methods-retriever	$type-descriptors)
+    (interface-type-descr.method-retriever	$type-descriptors)
 ;;;
     (<union-type-descr>-rtd)
     (<union-type-descr>-rcd)

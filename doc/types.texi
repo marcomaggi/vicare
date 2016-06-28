@@ -6009,10 +6009,21 @@ comparison-procedure hash-function
 @cindex @library{vicare language-extensions interfaces}, library
 
 
-@dfn{Interfaces} are a mechanism to verify, at expand--time, that:
+@dfn{Interfaces} are a mechanism to verify, at expand--time, that
 instances of an object--type can be used in a generic expression,
 because they implement all the needed methods and such methods can be
 called at run--time through dynamic dispatching.
+
+@menu
+* types interfaces intro::      Introduction to interfaces.
+* types interfaces defs::       Defining interfaces.
+* types interfaces descr::      Interfaces type descriptors.
+@end menu
+
+@c page
+@node types interfaces intro
+@subsection Introduction to interfaces
+
 
 Let's consider this code:
 
@@ -6095,6 +6106,16 @@ happen @strong{only} if the expander is able to determine the type of
 @meta{operand}; this validation cannot happen at run--time, so, for
 example, it is impossible for label types to implement interfaces.
 
+@c page
+@node types interfaces defs
+@subsection Defining interfaces
+
+
+The following syntactic bindings are exported by the library
+@library{vicare language-extensions interfaces}.  The syntactic bindings
+@clause{method}, @clause{case-method} and @clause{method/overload} are
+the same ones exported by @library{vicare}.
+
 
 @deffn Syntax define-interface @meta{name} @meta{clause} @dots{}
 @deffnx {Auxiliary Syntax} method-prototype
@@ -6119,6 +6140,35 @@ type annotation representing the type signature of the method.  Any
 object--type that implements an interface, must implement all the
 methods with signatures that are sub--types of the method prototypes.
 @end deffn
+
+@c page
+@node types interfaces descr
+@subsection Interfaces type descriptors
+
+
+Interfaces have run--time type descriptors, accessible through the
+@syntax{type-descriptor} syntax, @ref{types descr other interface,
+Interface type descriptors}.  Example:
+
+@lisp
+(import (prefix (vicare system type-descriptors)
+                td::))
+
+(define-interface <Stuff>
+  (method-prototype red
+    (lambda () => (<top>)))
+  (method (blue)
+    2))
+
+(define itd
+  (type-descriptor <Stuff>))
+
+(td::interface-type-descr? itd)
+@result{} #t
+
+(td::interface-type-descr.type-name itd)
+@result{} <Stuff>
+@end lisp
 
 @c page
 @node types labels
