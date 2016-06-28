@@ -48,12 +48,12 @@
     ))
 
 
-(parametrise ((check-test-name	'type-inspection))
+(parametrise ((check-test-name	'misc))
 
   (define-interface <Sequence>
-    (method-prototype length	(lambda (<bottom>) => (<non-negative-exact-integer>)))
-    (method-prototype first	(lambda (<bottom>) => (<char>)))
-    (method-prototype ref	(lambda (<bottom> <non-negative-exact-integer>) => (<char>)))
+    (method-prototype length	(lambda () => (<non-negative-exact-integer>)))
+    (method-prototype first	(lambda () => (<char>)))
+    (method-prototype ref	(lambda (<non-negative-exact-integer>) => (<char>)))
     (method ({just-length <non-negative-exact-integer>})
       (.length this))
     (case-method just-item
@@ -67,12 +67,12 @@
   (define-record-type <str>
     (implements <Sequence>)
     (fields {str <string>})
-    (method ({length <non-negative-fixnum>} {O <str>})
-      (string-length (.str O)))
-    (method ({first  <char>} {O <str>})
-      (string-ref    (.str O) 0))
-    (method ({ref    <char>} {O <str>} {idx <non-negative-exact-integer>})
-      (string-ref    (.str O) idx)))
+    (method ({length <non-negative-fixnum>})
+      (string-length (.str this)))
+    (method ({first  <char>})
+      (string-ref    (.str this) 0))
+    (method ({ref    <char>} {idx <non-negative-exact-integer>})
+      (string-ref    (.str this) idx)))
 
   (define (fun {O <Sequence>})
     (.length O))
@@ -97,6 +97,111 @@
       (let ((O (new <str> "ciao")))
 	(fun O))
     => 4)
+
+  (void))
+
+
+(parametrise ((check-test-name	'doc))
+
+  ;;No-interfaces example
+  ;;
+
+  (internal-body
+
+    (define-record-type <a-vector>
+      (fields {vec <nevector>})
+      (method ({first <top>})
+	(vector-ref (.vec this) 0)))
+
+    (define-record-type <a-string>
+      (fields {vec <nestring>})
+      (method ({first <top>})
+	(string-ref (.vec this) 0)))
+
+    (define-record-type <a-list>
+      (fields {vec <nelist>})
+      (method ({first <top>})
+	(car (.vec this))))
+
+    (define (fun O)
+      (.first O))
+
+    (check
+	(let ((O (new <a-vector> '#(1 2 3))))
+	  (fun O))
+      => 1)
+
+    (check
+	(let ((O (new <a-string> "ABC")))
+	  (fun O))
+      => #\A)
+
+    (check
+	(let ((O (new <a-list> '(a b c))))
+	  (fun O))
+      => 'a)
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+
+  (internal-body
+
+    (define-interface <Sequence>
+      (method-prototype first
+	(lambda () => (<top>))))
+
+    (define-record-type <a-vector>
+      (implements <Sequence>)
+      (fields {vec <nevector>})
+      (method ({first <top>})
+	(vector-ref (.vec this) 0)))
+
+    (define-record-type <a-string>
+      (implements <Sequence>)
+      (fields {vec <nestring>})
+      (method ({first <top>})
+	(string-ref (.vec this) 0)))
+
+    (define-record-type <a-list>
+      (implements <Sequence>)
+      (fields {vec <nelist>})
+      (method ({first <top>})
+	(car (.vec this))))
+
+    (define (fun {O <Sequence>})
+      (.first O))
+
+    (check
+	(let ((O (new <a-vector> '#(1 2 3))))
+	  (fun O))
+      => 1)
+
+    (check
+	(let ((O (new <a-string> "ABC")))
+	  (fun O))
+      => #\A)
+
+    (check
+	(let ((O (new <a-list> '(a b c))))
+	  (fun O))
+      => 'a)
+
+    ;;Operand does not implement the interface.
+    ;;
+    ;; (check
+    ;; 	(let ((O '#(1 2 3)))
+    ;; 	  (fun O))
+    ;;   => #\A)
+
+    ;;Run-time operand validation is impossible.
+    ;;
+    ;; (check
+    ;; 	(let ((O (new <a-string> "ABC")))
+    ;; 	  (apply fun (list O)))
+    ;;   => #\A)
+
+    #| end of INTERNAL-BODY |# )
 
   (void))
 

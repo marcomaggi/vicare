@@ -90,15 +90,14 @@
       (constructor-signature
 	(lambda (expander::<syntactic-identifier>) => (<parsing-results>)))
 
-      (method (definitions-push! {results <parsing-results>} definition.stx)
-	(.definitions results (cons definition.stx (.definitions results))))
+      (method (definitions-push! definition.stx)
+	(.definitions this (cons definition.stx (.definitions this))))
 
-      (method (methods-table-push! {results		<parsing-results>}
-				   {method-name.id	expander::<syntactic-identifier>}
+      (method (methods-table-push! {method-name.id	expander::<syntactic-identifier>}
 				   {method-procname.id	expander::<syntactic-identifier>})
-	(.methods-table results `((,method-name.id . ,method-procname.id) . ,(.methods-table results))))
+	(.methods-table this `((,method-name.id . ,method-procname.id) . ,(.methods-table this))))
 
-      (method (methods-table-alist {results <parsing-results>})
+      (method (methods-table-alist)
 	;;Return  a syntax  object  representing an  expression  which, expanded  and
 	;;evaluated, returns  an alist  having: as  keys symbols  representing method
 	;;names; as values  syntactic identifiers bound to  the method implementation
@@ -108,9 +107,9 @@
 			  (let ((method-name.id		(car entry))
 				(method-procname.id	(cdr entry)))
 			    #`(cons (quote #,method-name.id) (syntax #,method-procname.id))))
-		     (.methods-table results))))
+		     (.methods-table this))))
 
-      (method (methods-retriever {results <parsing-results>})
+      (method (methods-retriever)
 	;;Return  a syntax  object  representing an  expression  which, expanded  and
 	;;evaluated, returns the method retriever function.
 	;;
@@ -120,14 +119,13 @@
 			(let ((method-name.id		(car entry))
 			      (method-procname.id	(cdr entry)))
 			  #`((#,method-name.id) #,method-procname.id)))
-		   (.methods-table results))
+		   (.methods-table this))
 	      (else #f))))
 
-      (method (prototype-methods-table-push! {results		<parsing-results>}
-					     {method-name.id	expander::<syntactic-identifier>}
+      (method (prototype-methods-table-push! {method-name.id	expander::<syntactic-identifier>}
 					     {signature.ots	expander::<closure-type-spec>})
-	(.prototype-methods-table results (cons (cons method-name.id signature.ots)
-						(.prototype-methods-table results))))
+	(.prototype-methods-table this (cons (cons method-name.id signature.ots)
+					     (.prototype-methods-table this))))
 
       #| end of DEFINE-RECORD-TYPE |# )
 
@@ -212,7 +210,8 @@
 	(syntax-case arg ()
 	  (#(?method-name ?signature)
 	   (identifier? #'?method-name)
-	   (let ((signature.ots		(expander::type-annotation->object-type-spec #'?signature))
+	   (let ((signature.ots		(expander::type-annotation->object-type-spec
+					 (%add-bottom-arguments #'?signature synner)))
 		 (method-procname.id	(identifier-record-field-accessor (.type-name results) #'?method-name)))
 	     (.definitions-push!             results #`(define/std (#,method-procname.id subject . args)
 							 (apply method-call-late-binding (quote ?method-name) subject args)))
@@ -222,6 +221,24 @@
 
 	  (#(?stuff ...)
 	   (synner "invalid METHOD-PROTOTYPE specification" #'(method-prototype ?stuff ...)))))
+
+      (define (%add-bottom-arguments signature.stx synner)
+	(syntax-case signature.stx (case-lambda lambda =>)
+	  ((lambda ?formals => ?retvals)
+	   #'(lambda (<bottom> . ?formals) => ?retvals))
+
+	  ((case-lambda ?clause-signature0 ?clause-signature ...)
+	   #`(case-lambda
+	       #,(map (lambda (clause.stx)
+			(syntax-case clause.stx ()
+			  ((?formals => ?retvals)
+			   #'((<bottom> . ?formals) => ?retvals))
+			  (_
+			   (synner "invalid method prototype signature" signature.stx))))
+		   (syntax->list #'(?clause-signature0 ?clause-signature ...)))))
+
+	  (_
+	   (synner "invalid method prototype signature" signature.stx))))
 
       #| end of module: %PROCESS-CLAUSE/METHOD-PROTOTYPE |# )
 

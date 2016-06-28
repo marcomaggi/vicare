@@ -29,7 +29,6 @@
   (import (vicare)
     (vicare language-extensions labels)
     (vicare language-extensions mixins)
-    (vicare language-extensions interfaces)
     (vicare checks))
 
 (check-set-mode! 'report-failed)

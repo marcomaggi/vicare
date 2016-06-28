@@ -15,6 +15,7 @@ leave the type of variables unspecified.
 * types built-in::              Built-in object types.
 * types void::                  Handling of void values.
 * types mixins::                Sharing object-type definition clauses.
+* types interfaces::            Interface types.
 * types labels::                Sub-typing with labels.
 @end menu
 
@@ -2283,12 +2284,12 @@ Record--type methods}).  For example:
 @lisp
 (define-record-type duo
   (fields one two)
-  (method (sum-them self)
-    (+ (duo-one self)
-       (duo-two self)))
-  (method (mul-them self)
-    (* (duo-one self)
-       (duo-two self))))
+  (method (sum-them)
+    (+ (duo-one this)
+       (duo-two this)))
+  (method (mul-them)
+    (* (duo-one this)
+       (duo-two this))))
 @end lisp
 
 @noindent
@@ -2427,14 +2428,14 @@ following program:
   (define-record-type duo
     (fields one two)
 
-    (method (sum-them @{O duo@})
-      (+ (.one O) (.two O)))
+    (method (sum-them)
+      (+ (.one this) (.two this)))
 
-    (method (mul-them @{O duo@})
-      (* (.one O) (.two O)))
+    (method (mul-them)
+      (* (.one this) (.two this)))
 
-    (method (display O port)
-      (display O port)))
+    (method (display port)
+      (display this port)))
 
   (define @{O duo@}
     (new duo 3 4))
@@ -5893,7 +5894,7 @@ The syntax @syntax{set!} cannot be used as operand.
 @dfn{Mixins} are a way to add definition clauses to record--types and
 labels.  Let's consider this situation:
 
-@example
+@lisp
 (define-record-type <alpha>
   (fields a))
 
@@ -5903,15 +5904,15 @@ labels.  Let's consider this situation:
 (define-record-type <delta>
   (parent <alpha>)
   (fields v)
-  (method (doit @{O <delta>@})
-    (+ 1 (.v O))))
+  (method (doit)
+    (+ 1 (.v this))))
 
 (define-record-type <gamma>
   (parent <beta>)
   (fields v)
-  (method (doit @{O <gamma>@})
-    (+ 1 (.v O))))
-@end example
+  (method (doit)
+    (+ 1 (.v this))))
+@end lisp
 
 @noindent
 the definitions of @class{delta} and @class{gamma} share some clauses;
@@ -5920,7 +5921,7 @@ supported by @value{PRJNAME}.  Is it possible to write the shared
 clauses only once and attach them to the record--type definitions?  Yes,
 with mixins.  The example above is equivalent to the following:
 
-@example
+@lisp
 (define-record-type <alpha>
   (field a))
 
@@ -5929,8 +5930,8 @@ with mixins.  The example above is equivalent to the following:
 
 (define-mixin <stuff>
   (field v)
-  (method (doit @{O <stuff>@})
-    (+ 1 (.v O))))
+  (method (doit)
+    (+ 1 (.v this))))
 
 (define-record-type <delta>
   (parent <alpha>)
@@ -5939,7 +5940,7 @@ with mixins.  The example above is equivalent to the following:
 (define-record-type <gamma>
   (parent <beta>)
   (mixins <stuff>))
-@end example
+@end lisp
 
 @noindent
 the syntax use of @syntax{define-mixin} associates a set of clauses to
@@ -5991,11 +5992,132 @@ The following clauses are accepted in the body of a
 
 @lisp
 define-type-descriptors strip-angular-parentheses
-nongenerative sealed opaque protocol super-protocol fields
+nongenerative implements
+sealed opaque protocol super-protocol fields
 method case-method method/overload
 custom-printer type-predicate equality-predicate
 comparison-procedure hash-function
 @end lisp
+@end deffn
+
+@c page
+@node types interfaces
+@section Interface types
+
+
+@cindex Library @library{vicare language-extensions interfaces}
+@cindex @library{vicare language-extensions interfaces}, library
+
+
+@dfn{Interfaces} are a mechanism to verify, at expand--time, that:
+instances of an object--type can be used in a generic expression,
+because they implement all the needed methods and such methods can be
+called at run--time through dynamic dispatching.
+
+Let's consider this code:
+
+@lisp
+(define-record-type <a-vector>
+  (fields @{vec <nevector>@})
+  (method (@{first <top>@})
+    (vector-ref (.vec this) 0)))
+
+(define-record-type <a-string>
+  (fields @{vec <nestring>@})
+  (method (@{first <top>@})
+    (string-ref (.vec this) 0)))
+
+(define-record-type <a-list>
+  (fields @{vec <nelist>@})
+  (method (@{first <top>@})
+    (car (.vec this))))
+
+(define (fun O)
+  (.first O))
+
+(fun (new <a-vector> '#(1 2 3)))        @result{} 1
+(fun (new <a-string> "ABC"))            @result{} #\A
+(fun (new <a-list> '(a b c)))           @result{} a
+@end lisp
+
+@noindent
+everything works fine in the function @func{fun} because all of
+@class{a-vector}, @class{a-string} and @class{a-list} implement the
+method @samp{first}.  The code @code{(.first O)} expands into a call to
+@func{method-call-late-binding}, which, at run--time, finds the method
+implementation functions in the type descriptors of @class{a-vector},
+@class{a-string} and @class{a-list}.
+
+Fine, but the code is not type--checked at expand--time.  Enter
+interfaces.  Let's modify the code as follows:
+
+@lisp
+(define-interface <Sequence>
+  (method-prototype first
+    (lambda () => (<top>))))
+
+(define-record-type <a-vector>
+  (implements <Sequence>)
+  (fields @{vec <nevector>@})
+  (method (@{first <top>@})
+    (vector-ref (.vec this) 0)))
+
+(define-record-type <a-string>
+  (implements <Sequence>)
+  (fields @{vec <nestring>@})
+  (method (@{first <top>@})
+    (string-ref (.vec this) 0)))
+
+(define-record-type <a-list>
+  (implements <Sequence>)
+  (fields @{vec <nelist>@})
+  (method (@{first <top>@})
+    (car (.vec this))))
+
+(define (fun @{O <Sequence>@})
+  (.first O))
+
+(fun (new <a-vector> '#(1 2 3)))        @result{} 1
+(fun (new <a-string> "ABC"))            @result{} #\A
+(fun (new <a-list> '(a b c)))           @result{} a
+@end lisp
+
+@noindent
+everything works almost as before, but the record--type definition
+clause @code{(implements <Sequence>)} causes the expander to validate,
+at expand-time, that the record--types actually implement a method
+@code{first} with the correct type signature.
+
+Also, the function application @code{(fun @meta{operand})} is validated
+at expand--time to verify that the type of @meta{operand} is an
+object--type that implements @class{Sequence}.  Such validation can
+happen @strong{only} if the expander is able to determine the type of
+@meta{operand}; this validation cannot happen at run--time, so, for
+example, it is impossible for label types to implement interfaces.
+
+
+@deffn Syntax define-interface @meta{name} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} method-prototype
+@deffnx {Auxiliary Syntax} method
+@deffnx {Auxiliary Syntax} case-method
+@deffnx {Auxiliary Syntax} method/overload
+Define a new interface type bound to the syntactic identifier
+@meta{name}.  Interfaces can implement methods, case--methods and
+overloaded methods of their own, with the same syntax used for
+record--types.
+
+The clause @clause{method-prototype} must be used as follows:
+
+@lisp
+(method-prototype @meta{method-name} @meta{signature})
+@end lisp
+
+@noindent
+where @meta{method-name} is an identifier representing the name of the
+method and @meta{signature} is a @syntax{lambda} or @syntax{case-lambda}
+type annotation representing the type signature of the method.  Any
+object--type that implements an interface, must implement all the
+methods with signatures that are sub--types of the method prototypes.
 @end deffn
 
 @c page
@@ -6007,9 +6129,9 @@ comparison-procedure hash-function
 @cindex @library{vicare language-extensions labels}, library
 
 
-Labels are types built on top of other types: we put type labels on
-values of a parent type to handle them locally in a special way.  There
-are two kinds of labels:
+@dfn{Labels} are types built on top of other types: we put type labels
+on values of a parent type to handle them locally in a special way.
+There are two kinds of labels:
 
 @itemize
 @item
@@ -6055,6 +6177,9 @@ equality-predicate comparison-procedure hash-function
 method case-method method/overload
 mixins
 @end lisp
+
+@noindent
+notice that labels @strong{cannot} implement interfaces.
 
 The clause @clause{constructor} may appear zero, one or more times;
 these clauses define a constructor function to be used with the syntax
@@ -6163,8 +6288,8 @@ Let's define a label with a method to increment a fixnum.
 @lisp
 (define-label <fx>
   (parent <fixnum>)
-  (method (incr @{O <fx>@})
-    (fxadd1 O)))
+  (method (incr)
+    (fxadd1 this)))
 
 (define @{O <fx>@}
   10)
@@ -6178,10 +6303,10 @@ Now let's define a method for appending prefixes and suffixes:
 (define-label <String>
   (parent <string>)
   (case-method append
-    ((@{_ <String>@} @{O <String>@} @{suff <String>@})
-     (string-append O suff))
-    ((@{_ <String>@} @{O <String>@} @{pref <String>@} @{suff <String>@})
-     (string-append pref O suff))))
+    ((@{_ <String>@} @{suff <String>@})
+     (string-append this suff))
+    ((@{_ <String>@} @{pref <String>@} @{suff <String>@})
+     (string-append pref this suff))))
 
 (define @{O <String>@}
   "ciao")
@@ -6262,13 +6387,13 @@ Here we show how to include mixin clauses in a label definition:
 
 @lisp
 (define-mixin <stuff>
-  (method (pussy @{O <stuff>@})
-    (list 'pussy (.name O))))
+  (method (pussy)
+    (list 'pussy (.name this))))
 
 (define-label <peluche>
   (parent (list <symbol>))
-  (method (name @{O <peluche>@})
-    (car O))
+  (method (name)
+    (car this))
   (mixins <stuff>))
 
 (define @{O <peluche>@}

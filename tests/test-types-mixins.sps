@@ -506,26 +506,26 @@
   (check
       (internal-body
 	(define-mixin <stuff>
-	  (method (doit {O <stuff>})
-	    (display O)))
+	  (method (doit)
+	    (display this)))
 	(get-spec <stuff>))
     => '(define-mixin <stuff>
-	  (method (doit {O <stuff>})
-	    (display O))))
+	  (method (doit)
+	    (display this))))
 
   (check
       (internal-body
 	(define-mixin <stuff>
-	  (method (doit {O <stuff>})
-	    (display O))
-	  (method (done {O <stuff>})
-	    (write O)))
+	  (method (doit)
+	    (display this))
+	  (method (done)
+	    (write this)))
 	(get-spec <stuff>))
     => '(define-mixin <stuff>
-	  (method (doit {O <stuff>})
-	    (display O))
-	  (method (done {O <stuff>})
-	    (write O))))
+	  (method (doit)
+	    (display this))
+	  (method (done)
+	    (write this))))
 
   #| end of PARAMETRISE |# )
 
@@ -535,26 +535,26 @@
   (check
       (internal-body
 	(define-mixin <stuff>
-	  (method/overload (doit {O <stuff>})
-	    (display O)))
+	  (method/overload (doit)
+	    (display this)))
 	(get-spec <stuff>))
     => '(define-mixin <stuff>
-	  (method/overload (doit {O <stuff>})
-	    (display O))))
+	  (method/overload (doit)
+	    (display this))))
 
   (check
       (internal-body
 	(define-mixin <stuff>
-	  (method/overload (doit {O <stuff>})
-	    (display O))
-	  (method/overload (done {O <stuff>})
-	    (write O)))
+	  (method/overload (doit)
+	    (display this))
+	  (method/overload (done)
+	    (write this)))
 	(get-spec <stuff>))
     => '(define-mixin <stuff>
-	  (method/overload (doit {O <stuff>})
-	    (display O))
-	  (method/overload (done {O <stuff>})
-	    (write O))))
+	  (method/overload (doit)
+	    (display this))
+	  (method/overload (done)
+	    (write this))))
 
   #| end of PARAMETRISE |# )
 
@@ -565,49 +565,110 @@
       (internal-body
 	(define-mixin <stuff>
 	  (case-method doit
-	    (({O <stuff>})
-	     (display O))))
+	    (()
+	     (display this))))
 	(get-spec <stuff>))
     => '(define-mixin <stuff>
 	  (case-method doit
-	    (({O <stuff>})
-	     (display O)))))
+	    (()
+	     (display this)))))
 
   (check
       (internal-body
 	(define-mixin <stuff>
 	  (case-method doit
-	    (({O <stuff>})
-	     (display O))
-	    (({O <stuff>} {P <port>})
-	     (display O P))))
+	    (()
+	     (display this))
+	    (({P <port>})
+	     (display this P))))
 	(get-spec <stuff>))
     => '(define-mixin <stuff>
 	  (case-method doit
-	    (({O <stuff>})
-	     (display O))
-	    (({O <stuff>} {P <port>})
-	     (display O P)))))
+	    (()
+	     (display this))
+	    (({P <port>})
+	     (display this P)))))
 
   (check
       (internal-body
 	(define-mixin <stuff>
 	  (case-method doit
-	    (({O <stuff>})
-	     (display O)))
+	    (()
+	     (display this)))
 	  (case-method done
-	    (({O <stuff>})
-	     (write O))))
+	    (()
+	     (write this))))
 	(get-spec <stuff>))
     => '(define-mixin <stuff>
 	  (case-method doit
-	    (({O <stuff>})
-	     (display O)))
+	    (()
+	     (display this)))
 	  (case-method done
-	    (({O <stuff>})
-	     (write O)))))
+	    (()
+	     (write this)))))
 
   #| end of PARAMETRISE |# )
+
+
+(parametrise ((check-test-name	'implements))
+
+  (check
+      (internal-body
+	(define-mixin <stuff>
+	  (implements <Thing>)
+	  (fields a b c)
+	  (method (doit)
+	    (display this)))
+
+	(define-mixin <fluff>
+	  (mixins <stuff>))
+
+	(get-spec <fluff>))
+    => '(define-mixin <fluff>
+	  (implements <Thing>)
+	  (fields a b c)
+	  (method (doit)
+	    (display this))))
+
+  (check
+      (internal-body
+	(define-mixin <stuff>
+	  (implements <Thing>)
+	  (fields a b c)
+	  (method (doit)
+	    (display this)))
+
+	(define-mixin <fluff>
+	  (implements <Thong>)
+	  (mixins <stuff>))
+
+	(get-spec <fluff>))
+    => '(define-mixin <fluff>
+	  (implements <Thong> <Thing>)
+	  (fields a b c)
+	  (method (doit)
+	    (display this))))
+
+  (check
+      (internal-body
+	(define-mixin <stuff>
+	  (implements <One> <Two>)
+	  (implements <Three> <Four>)
+	  (fields a b c)
+	  (method (doit)
+	    (display this)))
+
+	(define-mixin <fluff>
+	  (mixins <stuff>))
+
+	(get-spec <fluff>))
+    => '(define-mixin <fluff>
+	  (implements <One> <Two> <Three> <Four>)
+	  (fields a b c)
+	  (method (doit)
+	    (display this))))
+
+  (void))
 
 
 (parametrise ((check-test-name	'mixins))
@@ -616,8 +677,8 @@
       (internal-body
 	(define-mixin <stuff>
 	  (fields a b c)
-	  (method (doit {O <stuff>})
-	    (display O)))
+	  (method (doit)
+	    (display this)))
 
 	(define-mixin <fluff>
 	  (mixins <stuff>))
@@ -625,8 +686,8 @@
 	(get-spec <fluff>))
     => '(define-mixin <fluff>
 	  (fields a b c)
-	  (method (doit {O <fluff>})
-	    (display O))))
+	  (method (doit)
+	    (display this))))
 
   ;;Two mixins.
   ;;
@@ -636,8 +697,8 @@
 	  (fields a b c))
 
 	(define-mixin <stuff-2>
-	  (method (doit {O <stuff-2>})
-	    (display O)))
+	  (method (doit)
+	    (display this)))
 
 	(define-mixin <fluff>
 	  (mixins <stuff-1> <stuff-2>))
@@ -645,8 +706,8 @@
 	(get-spec <fluff>))
     => '(define-mixin <fluff>
 	  (fields a b c)
-	  (method (doit {O <fluff>})
-	    (display O))))
+	  (method (doit)
+	    (display this))))
 
   ;;Two mixins with fields.
   ;;

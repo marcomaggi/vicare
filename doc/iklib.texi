@@ -10631,6 +10631,7 @@ Reset to void all the fields of a structure.
 @deffnx {Auxiliary Syntax} define-type-descriptors
 @deffnx {Auxiliary Syntax} strip-angular-parentheses
 @deffnx {Auxiliary Syntax} mixins @meta{mixin-name} @dots{}
+@deffnx {Auxiliary Syntax} implements @meta{interface-name} @dots{}
 Defined by @rnrs{6}.  Define a new @rnrs{6} record type; @ref{stdlib
 records syntactic layer, define-record-type}.  This syntax supports some
 @value{PRJNAME} extensions.
@@ -10668,6 +10669,7 @@ concatenated in the order in which they are given.  Example:
 * iklib records defs descriptors:: Defining type descriptors.
 * iklib records defs angular::     Stripping angular parentheses.
 * iklib records defs mixins::      Mixins.
+* iklib records defs implements::  Implemented interfaces.
 @end menu
 
 @c page
@@ -10675,7 +10677,7 @@ concatenated in the order in which they are given.  Example:
 @subsubsection The super--type protocol
 
 
-@cindex @syntax{super-protocol}, record--type definition clause
+@cindex @clause{super-protocol}, record--type definition clause
 
 
 In a use of the syntax @syntax{define-record-type}, the definition
@@ -10737,7 +10739,7 @@ the @clause{super-protocol} of @objtype{alpha}.
 @subsubsection The destructor protocol
 
 
-@cindex @syntax{destructor-protocol}, record--type definition clause
+@cindex @clause{destructor-protocol}, record--type definition clause
 
 
 In a use of the syntax @syntax{define-record-type}, the definition
@@ -10823,7 +10825,7 @@ function becomes this type's destructor function.
 @subsubsection The constructor signature
 
 
-@cindex @syntax{constructor-signature}, record--type definition clause
+@cindex @clause{constructor-signature}, record--type definition clause
 
 
 In a use of the syntax @syntax{define-record-type}, the definition
@@ -10875,7 +10877,7 @@ signature as follows:
 @subsubsection The custom predicate
 
 
-@cindex @syntax{type-predicate}, record--type definition clause
+@cindex @clause{type-predicate}, record--type definition clause
 
 
 In a use of the syntax @syntax{define-record-type}, the definition
@@ -10954,7 +10956,7 @@ into lists and vectors:
 @subsubsection The custom printer
 
 
-@cindex @syntax{custom-printer}, record--type definition clause
+@cindex @clause{custom-printer}, record--type definition clause
 
 
 In a use of the syntax @syntax{define-record-type}, the definition
@@ -10991,7 +10993,7 @@ Usage example:
 @subsubsection The custom equality predicate
 
 
-@cindex @syntax{equality-predicate}, record--type definition clause
+@cindex @clause{equality-predicate}, record--type definition clause
 
 
 In a use of the syntax @syntax{define-record-type}, the definition
@@ -11021,7 +11023,7 @@ equality predicate of the record--type.
 @subsubsection The custom comparison procedure
 
 
-@cindex @syntax{comparison-procedure}, record--type definition clause
+@cindex @clause{comparison-procedure}, record--type definition clause
 
 
 In a use of the syntax @syntax{define-record-type}, the definition
@@ -11051,7 +11053,7 @@ comparison procedure of the record--type.
 @subsubsection The custom hash function
 
 
-@cindex @syntax{hash-function}, record--type definition clause
+@cindex @clause{hash-function}, record--type definition clause
 
 
 In a use of the syntax @syntax{define-record-type}, the definition
@@ -11117,9 +11119,9 @@ the following record--type has a parent defining a hash function:
 @subsubsection Record--type methods
 
 
-@cindex @syntax{method}, record--type definition clause
-@cindex @syntax{case-method}, record--type definition clause
-@cindex @syntax{method/overload}, record--type definition clause
+@cindex @clause{method}, record--type definition clause
+@cindex @clause{case-method}, record--type definition clause
+@cindex @clause{method/overload}, record--type definition clause
 
 
 The syntactic bindings @clause{method} and @clause{case-method} are used
@@ -11136,16 +11138,16 @@ language.
 
 We can think of @clause{method} as acting like @syntax{define} with
 regard to the syntax of arguments to function; the first argument to a
-method is the record itself: we have to write it explicitly.  For
-example:
+method is the record itself, but it is implicit: we can access it using
+the fluid syntax @syntax{this}.  For example:
 
 @lisp
 (define-record-type duo
   (fields one two)
-  (method (sum-them this)
+  (method (sum-them)
     (+ (duo-one this)
        (duo-two this)))
-  (method (mul-them this)
+  (method (mul-them)
     (* (duo-one this)
        (duo-two this))))
 
@@ -11162,9 +11164,9 @@ like @syntax{case-define}:
 (define-record-type alpha
   (fields (mutable a))
   (case-method on-a
-    ((this)
+    (()
      (alpha-a this))
-    ((this new-val)
+    ((new-val)
      (alpha-a-set! this new-val))))
 
 (define @{O alpha@}
@@ -11182,14 +11184,14 @@ allows multiple function specialisations linked to the same method name:
 (define-record-type alpha
   (fields a b)
 
-  (method/overload (doit @{O alpha@} @{A <fixnum>@})
-    (list (alpha-a O) (alpha-b O) 'fixnum A))
+  (method/overload (doit @{A <fixnum>@})
+    (list (alpha-a this) (alpha-b this) 'fixnum A))
 
-  (method/overload (doit @{O alpha@} @{A <symbol>@})
-    (list (alpha-a O) (alpha-b O) 'symbol A))
+  (method/overload (doit @{A <symbol>@})
+    (list (alpha-a this) (alpha-b this) 'symbol A))
 
-  (method/overload (doit @{O alpha@} @{A <number>@} @{B <number>@})
-    (list (alpha-a O) (alpha-b O) 'numbers A B)))
+  (method/overload (doit @{A <number>@} @{B <number>@})
+    (list (alpha-a this) (alpha-b this) 'numbers A B)))
 
 (define @{O alpha@}
   (make-alpha 1 2))
@@ -11273,7 +11275,7 @@ and with dot notation (@pxref{types syntaxes methods, Dot notation}):
 @subsubsection Defining type descriptors
 
 
-@cindex @syntax{define-type-descriptors}, record--type definition clause
+@cindex @clause{define-type-descriptors}, record--type definition clause
 
 
 In a use of the syntax @syntax{define-record-type}, the definition
@@ -11306,7 +11308,7 @@ alpha-rcd       @result{} #<record-constructor-descriptor>
 @subsubsection Stripping angular parentheses
 
 
-@cindex @syntax{strip-angular-parentheses}, record--type definition clause
+@cindex @clause{strip-angular-parentheses}, record--type definition clause
 
 
 In a use of the syntax @syntax{define-record-type}, the definition
@@ -11381,7 +11383,7 @@ and using @clause{strip-angular-parentheses}:
 @subsubsection Mixins
 
 
-@cindex @syntax{mixins}, record--type definition clause
+@cindex @clause{mixins}, record--type definition clause
 
 
 In a use of the syntax @syntax{define-record-type}, the definition
@@ -11394,6 +11396,33 @@ clause:
 @noindent
 causes the listed mixins to be included in the record--type definition,
 @ref{types mixins, Sharing object--type definition clauses}.
+
+@c page
+@node iklib records defs implements
+@subsubsection Implemented interfaces
+
+
+@cindex @clause{implements}, record--type definition clause
+
+
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
+
+@lisp
+(implements @metao{interface-name} ...)
+@end lisp
+
+@noindent
+causes the listed interface names to be included in the list of
+interfaces implemented by this record--type's, @ref{types interfaces,
+Interface types}.  The clause @clause{implements} is meant to be used
+with the typed language.
+
+A record--type implements an interface when it implements all the method
+prototypes included in the interface definition.  The
+@clause{implements} clause causes a validation of the record--type's
+implemented methods against the interface's method prototypes: if a
+mismatch occurs, an exception is raised at expand--time.
 
 @c page
 @node iklib records predicates

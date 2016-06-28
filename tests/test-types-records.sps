@@ -214,10 +214,10 @@
 
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
-	  (method (get-a O)
-	    (alpha-a O))
-	  (method (get-b O)
-	    (alpha-b O)))
+	  (method (get-a)
+	    (alpha-a this))
+	  (method (get-b)
+	    (alpha-b this)))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
@@ -231,14 +231,14 @@
 
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
-	  (method (get-a O)
-	    (alpha-a O))
-	  (method (get-b O)
-	    (alpha-b O))
-	  (method (set-a O v)
-	    (alpha-a-set! O v))
-	  (method (set-b O v)
-	    (alpha-b-set! O v)))
+	  (method (get-a)
+	    (alpha-a this))
+	  (method (get-b)
+	    (alpha-b this))
+	  (method (set-a v)
+	    (alpha-a-set! this v))
+	  (method (set-b v)
+	    (alpha-b-set! this v)))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
@@ -292,17 +292,17 @@
 
 	(define-record-type duo
 	  (fields one two)
-	  (method (sum-them O)
-	    (+ (duo-one O)
-	       (duo-two O))))
+	  (method (sum-them)
+	    (+ (duo-one this)
+	       (duo-two this))))
 
 	(define-record-type trio
 	  (parent duo)
 	  (fields three)
-	  (method (mul-them O)
-	    (* (duo-one O)
-	       (duo-two O)
-	       (trio-three O))))
+	  (method (mul-them)
+	    (* (duo-one this)
+	       (duo-two this)
+	       (trio-three this))))
 
 	(define {O trio}
 	  (make-trio 3 5 7))
@@ -318,26 +318,26 @@
 
 	(define-record-type duo
 	  (fields one two)
-	  (method (sum-them O)
-	    (+ (duo-one O)
-	       (duo-two O))))
+	  (method (sum-them)
+	    (+ (duo-one this)
+	       (duo-two this))))
 
 	(define-record-type trio
 	  (parent duo)
 	  (fields three)
-	  (method (mul-them O)
-	    (* (duo-one O)
-	       (duo-two O)
-	       (trio-three O))))
+	  (method (mul-them)
+	    (* (duo-one this)
+	       (duo-two this)
+	       (trio-three this))))
 
 	(define-record-type quater
 	  (parent trio)
 	  (fields four)
-	  (method (list-them O)
-	    (list (duo-one O)
-		  (duo-two O)
-		  (trio-three O)
-		  (quater-four O))))
+	  (method (list-them)
+	    (list (duo-one this)
+		  (duo-two this)
+		  (trio-three this)
+		  (quater-four this))))
 
 	(define {O quater}
 	  (make-quater 3 5 7 11))
@@ -454,10 +454,10 @@
 
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
-	  (method (get-a O)
-	    (alpha-a O))
-	  (method (get-b O)
-	    (alpha-b O)))
+	  (method (get-a)
+	    (alpha-a this))
+	  (method (get-b)
+	    (alpha-b this)))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
@@ -471,14 +471,14 @@
 
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
-	  (method (get-a O)
-	    (alpha-a O))
-	  (method (get-b O)
-	    (alpha-b O))
-	  (method (set-a O v)
-	    (alpha-a-set! O v))
-	  (method (set-b O v)
-	    (alpha-b-set! O v)))
+	  (method (get-a)
+	    (alpha-a this))
+	  (method (get-b)
+	    (alpha-b this))
+	  (method (set-a v)
+	    (alpha-a-set! this v))
+	  (method (set-b v)
+	    (alpha-b-set! this v)))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
@@ -527,8 +527,8 @@
 
 	(define-record-type alpha
 	  (fields a b)
-	  (method (doit O c d)
-	    (+ (alpha-a O) (alpha-b O) c d)))
+	  (method (doit c d)
+	    (+ (alpha-a this) (alpha-b this) c d)))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
@@ -541,8 +541,8 @@
 
 	(define-record-type alpha
 	  (fields a b)
-	  (method (doit O . arg*)
-	    (apply + (alpha-a O) (alpha-b O) arg*)))
+	  (method (doit . arg*)
+	    (apply + (alpha-a this) (alpha-b this) arg*)))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
@@ -558,12 +558,12 @@
 
 	(define-record-type duo
 	  (fields one two)
-	  (method (sum-them self)
-	    (+ (duo-one self)
-	       (duo-two self)))
-	  (method (mul-them self)
-	    (* (duo-one self)
-	       (duo-two self))))
+	  (method (sum-them)
+	    (+ (duo-one this)
+	       (duo-two this)))
+	  (method (mul-them)
+	    (* (duo-one this)
+	       (duo-two this))))
 
 	(define {O duo}
 	  (new duo 3 5))
@@ -577,12 +577,12 @@
 
 	(define-record-type duo
 	  (fields one two)
-	  (method (sum-them {self duo})
-	    (+ (.one self)
-	       (.two self)))
-	  (method (mul-them {self duo})
-	    (* (.one self)
-	       (.two self))))
+	  (method (sum-them)
+	    (+ (.one this)
+	       (.two this)))
+	  (method (mul-them)
+	    (* (.one this)
+	       (.two this))))
 
 	(define {O duo}
 	  (new duo 3 5))
@@ -614,11 +614,11 @@
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
 	  (case-method get-a
-	    ((O)
-	     (alpha-a O)))
+	    (()
+	     (alpha-a this)))
 	  (case-method get-b
-	    ((O)
-	     (alpha-b O))))
+	    (()
+	     (alpha-b this))))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
@@ -633,15 +633,15 @@
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
 	  (case-method on-a
-	    ((O)
-	     (alpha-a O))
-	    ((O v)
-	     (alpha-a-set! O v)))
+	    (()
+	     (alpha-a this))
+	    ((v)
+	     (alpha-a-set! this v)))
 	  (case-method on-b
-	    ((O)
-	     (alpha-b O))
-	    ((O v)
-	     (alpha-b-set! O v))))
+	    (()
+	     (alpha-b this))
+	    ((v)
+	     (alpha-b-set! this v))))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
@@ -661,11 +661,11 @@
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
 	  (case-method on-a
-	    ((O)
-	     (alpha-a O)))
+	    (()
+	     (alpha-a this)))
 	  (case-method on-b
-	    ((O)
-	     (alpha-b O))))
+	    (()
+	     (alpha-b this))))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
@@ -680,15 +680,15 @@
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
 	  (case-method on-a
-	    ((O)
-	     (alpha-a O))
-	    ((O v)
-	     (alpha-a-set! O v)))
+	    (()
+	     (alpha-a this))
+	    ((v)
+	     (alpha-a-set! this v)))
 	  (case-method on-b
-	    ((O)
-	     (alpha-b O))
-	    ((O v)
-	     (alpha-b-set! O v))))
+	    (()
+	     (alpha-b this))
+	    ((v)
+	     (alpha-b-set! this v))))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
@@ -708,8 +708,8 @@
 	(define-record-type alpha
 	  (fields a b)
 	  (case-method doit
-	    ((O c d)
-	     (+ (alpha-a O) (alpha-b O) c d))))
+	    ((c d)
+	     (+ (alpha-a this) (alpha-b this) c d))))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
@@ -723,8 +723,8 @@
 	(define-record-type alpha
 	  (fields a b)
 	  (case-method doit
-	    ((O . arg*)
-	     (apply + (alpha-a O) (alpha-b O) arg*))))
+	    (arg*
+	     (apply + (alpha-a this) (alpha-b this) arg*))))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
@@ -748,23 +748,16 @@
 
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
-	  (method (get-a O)
-	    (alpha-a O))
-	  (method (get-b O)
-	    (alpha-b O)))
+	  (method (get-a)
+	    (alpha-a this))
+	  (method (get-b)
+	    (alpha-b this)))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
 
 	(define ({the-record <top>})
 	  O)
-
-	#;(debug-print (record-type-method-retriever (record-type-descriptor alpha)))
-	;; (cond ((record-type-method-retriever (record-type-descriptor alpha))
-	;;        => (lambda (proc)
-	;; 	    (debug-print 'retriever proc)
-	;; 	    (debug-print 'method (proc 'a)))))
-	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
 
 	(values (.get-a (the-record))
 		(.get-b (the-record))))
@@ -777,13 +770,13 @@
 
 	(define-record-type alpha
 	  (fields a b)
-	  (method (add-them {O alpha})
-	    (+ (.a O) (.b O))))
+	  (method (add-them)
+	    (+ (.a this) (.b this))))
 
 	(define-record-type beta
 	  (parent alpha)
-	  (method (mul-them {O beta})
-	    (* (.a O) (.b O))))
+	  (method (mul-them)
+	    (* (.a this) (.b this))))
 
 	(define {O beta}
 	  (make-beta 3 5))
@@ -802,18 +795,18 @@
 
 	(define-record-type alpha
 	  (fields a b)
-	  (method (add-them {O alpha})
-	    (+ (.a O) (.b O))))
+	  (method (add-them)
+	    (+ (.a this) (.b this))))
 
 	(define-record-type beta
 	  (parent alpha)
-	  (method (mul-them {O beta})
-	    (* (.a O) (.b O))))
+	  (method (mul-them)
+	    (* (.a this) (.b this))))
 
 	(define-record-type gamma
 	  (parent beta)
-	  (method (list-them {O gamma})
-	    (list (.a O) (.b O))))
+	  (method (list-them)
+	    (list (.a this) (.b this))))
 
 	(define {O gamma}
 	  (make-gamma 3 5))
@@ -836,10 +829,10 @@
 
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
-	  (method (get-a O)
-	    (alpha-a O))
-	  (method (get-b O)
-	    (alpha-b O)))
+	  (method (get-a)
+	    (alpha-a this))
+	  (method (get-b)
+	    (alpha-b this)))
 
 	(define {O alpha}
 	  (make-alpha 1 2))
@@ -860,13 +853,13 @@
 
 	(define-record-type alpha
 	  (fields a b)
-	  (method (add-them {O alpha})
-	    (+ (.a O) (.b O))))
+	  (method (add-them)
+	    (+ (.a this) (.b this))))
 
 	(define-record-type beta
 	  (parent alpha)
-	  (method (mul-them {O beta})
-	    (* (.a O) (.b O))))
+	  (method (mul-them)
+	    (* (.a this) (.b this))))
 
 	(define {O beta}
 	  (make-beta 3 5))
@@ -885,18 +878,18 @@
 
 	(define-record-type alpha
 	  (fields a b)
-	  (method (add-them {O alpha})
-	    (+ (.a O) (.b O))))
+	  (method (add-them)
+	    (+ (.a this) (.b this))))
 
 	(define-record-type beta
 	  (parent alpha)
-	  (method (mul-them {O beta})
-	    (* (.a O) (.b O))))
+	  (method (mul-them)
+	    (* (.a this) (.b this))))
 
 	(define-record-type gamma
 	  (parent beta)
-	  (method (list-them {O gamma})
-	    (list (.a O) (.b O))))
+	  (method (list-them)
+	    (list (.a this) (.b this))))
 
 	(define {O gamma}
 	  (make-gamma 3 5))

@@ -50,7 +50,8 @@
     equality-predicate
     comparison-procedure
     hash-function
-    mixins)
+    mixins
+    implements)
   (import (vicare))
 
 
@@ -63,6 +64,7 @@
        (list
 	;;KEYWORD MIN-OCCUR MAX-OCCUR MIN-ARGS MAX-ARGS MUTUALLY-INCLUSIVE MUTUALLY-EXCLUSIVE
 	(new <syntax-clause-spec> #'nongenerative		0 1      0 1      '() '())
+	(new <syntax-clause-spec> #'implements			0 +inf.0 0 +inf.0 '() '())
 	(new <syntax-clause-spec> #'define-type-descriptors	0 1      0 0      '() '())
 	(new <syntax-clause-spec> #'strip-angular-parentheses	0 1      0 0      '() '())
 	(new <syntax-clause-spec> #'sealed			0 1      1 1      '() '())
@@ -159,6 +161,7 @@
     (define (combine type-name.id rev-parsed-clause*.stx {spec <syntax-clause-spec>} args synner)
       ((case-identifiers (.keyword spec)
 	 ((nongenerative)		%process-clause/nongenerative)
+	 ((implements)			%process-clause/implements)
 	 ((define-type-descriptors)	%process-clause/define-type-descriptors)
 	 ((strip-angular-parentheses)	%process-clause/strip-angular-parentheses)
 	 ((sealed)			%process-clause/sealed)
@@ -204,6 +207,28 @@
 		      rev-parsed-clause*.stx)
 	      (synner "expected empty clause or single identifier argument in NONGENERATIVE clause"
 		      (list (.keyword spec) uid)))))))
+
+    (define (%process-clause/implements type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
+      ;;This  input clause  can appear  any  number of  times  and it  must have  the
+      ;;format:
+      ;;
+      ;;   (implements ?interface ...)
+      ;;
+      ;;we expect ARGS to have one of the formats:
+      ;;
+      ;;   #(#(?interface ...) ...)
+      ;;
+      (cons (cons (.keyword spec)
+		  (vector-fold-right
+		      (lambda (arg knil)
+			(vector-fold-right
+			    (lambda (iface.id knil)
+			      (unless (identifier? iface.id)
+				(synner "expected syntactic identifier as interface name" iface.id))
+			      (cons iface.id knil))
+			  knil arg))
+		    '() args))
+	    rev-parsed-clause*.stx))
 
     (define (%process-clause/define-type-descriptors type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
       ;;The input clause must have one of the formats:

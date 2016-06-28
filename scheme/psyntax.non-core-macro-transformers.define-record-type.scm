@@ -240,7 +240,7 @@
 
   ;;Code for methods.
   (define-values (method-name*.sym method-procname*.id method-form*.sexp methods-late-binding-alist)
-    (%parse-method-clauses clause*.stx foo-for-id-generation synner))
+    (%parse-method-clauses clause*.stx foo foo-for-id-generation synner))
 
   ;;False  or a  symbolic  expression (to  be BLESSed  later)  representing a  Scheme
   ;;expression returning a closure object: the methods-retriever function.
@@ -696,7 +696,7 @@
 
 (module (%parse-method-clauses)
 
-  (define (%parse-method-clauses clause* foo-for-id-generation synner)
+  (define (%parse-method-clauses clause* foo foo-for-id-generation synner)
     ;;Parse  the METHOD,  CASE-METHOD and  METHOD/OVERRIDE clauses  in CLAUSE*.   The
     ;;methods defined with METHOD/OVERRIDE are *not* available for late binding.
     ;;
@@ -715,17 +715,17 @@
     ;;symbol name.  Its values are the methods syntactic identifiers.
     ;;
     (receive (method-name*.sym method-procname*.id method-form*.sexp methods-late-binding-alist)
-	(%parse-methods-and-case-methods clause* foo-for-id-generation synner)
+	(%parse-methods-and-case-methods clause* foo foo-for-id-generation synner)
       (receive (method-name*.sym method-procname*.id method-form*.sexp methods-late-binding-alist)
-	  (%parse-overloaded-methods clause* foo-for-id-generation synner method-name*.sym
+	  (%parse-overloaded-methods clause* foo foo-for-id-generation synner method-name*.sym
 				     method-name*.sym method-procname*.id method-form*.sexp methods-late-binding-alist)
 	(values method-name*.sym method-procname*.id method-form*.sexp methods-late-binding-alist))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%parse-methods-and-case-methods clause* foo-for-id-generation synner)
+  (define (%parse-methods-and-case-methods clause* foo foo-for-id-generation synner)
     (define-syntax-rule (recurse ?clause*)
-      (%parse-methods-and-case-methods ?clause* foo-for-id-generation synner))
+      (%parse-methods-and-case-methods ?clause* foo foo-for-id-generation synner))
     (syntax-match clause* (method case-method)
       (()
        (values '() '() '() '()))
@@ -734,7 +734,7 @@
        (receive (method-name*.sym method-procname*.id method-form*.sexp methods-late-binding-alist)
 	   (recurse ?clause*)
 	 (receive (method-name.sym method-procname.id method-form.sexp)
-	     (%parse-method ?stuff foo-for-id-generation method-name*.sym synner)
+	     (%parse-method ?stuff foo foo-for-id-generation method-name*.sym synner)
 	   (values (cons method-name.sym	method-name*.sym)
 		   (cons method-procname.id	method-procname*.id)
 		   (cons method-form.sexp	method-form*.sexp)
@@ -745,7 +745,7 @@
        (receive (method-name*.sym method-procname*.id method-form*.sexp methods-late-binding-alist)
 	   (recurse ?clause*)
 	 (receive (method-name.sym method-procname.id method-form.sexp)
-	     (%parse-case-method ?stuff foo-for-id-generation method-name*.sym synner)
+	     (%parse-case-method ?stuff foo foo-for-id-generation method-name*.sym synner)
 	   (values (cons method-name.sym	method-name*.sym)
 		   (cons method-procname.id	method-procname*.id)
 		   (cons method-form.sexp	method-form*.sexp)
@@ -757,14 +757,14 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%parse-overloaded-methods clause* foo-for-id-generation synner other-method-name*.sym
+  (define (%parse-overloaded-methods clause* foo foo-for-id-generation synner other-method-name*.sym
 				     method-name*.sym method-procname*.id method-form*.sexp methods-late-binding-alist)
     ;;We parse  the METHOD/OVERLOAD  clauses knowing that  multiple methods  with the
     ;;same  name are  fine and  expected.  What  is forbidden  is that  an overloaded
     ;;method has the same name of a non-overloaded one.
     ;;
     (define-syntax-rule (recurse ?clause*)
-      (%parse-overloaded-methods ?clause* foo-for-id-generation synner other-method-name*.sym
+      (%parse-overloaded-methods ?clause* foo foo-for-id-generation synner other-method-name*.sym
 				 method-name*.sym method-procname*.id method-form*.sexp methods-late-binding-alist))
     (syntax-match clause* (method/overload)
       (()
@@ -774,7 +774,7 @@
        (receive (method-name*.sym method-procname*.id method-form*.sexp methods-late-binding-alist)
 	   (recurse ?clause*)
 	 (receive (method-name.sym method-procname.id method-form.sexp)
-	     (%parse-method-overload ?stuff foo-for-id-generation other-method-name*.sym synner)
+	     (%parse-method-overload ?stuff foo foo-for-id-generation other-method-name*.sym synner)
 	   (if (memq method-name.sym method-name*.sym)
 	       ;;An overloaded method with this name already exists.
 	       (values method-name*.sym
@@ -793,14 +793,16 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%parse-method clause.stx foo-for-id-generation method-name*.sym synner)
+  (define (%parse-method clause.stx foo foo-for-id-generation method-name*.sym synner)
+    (define subject.id (make-syntactic-identifier-for-temporary-variable "subject"))
     (syntax-match clause.stx (brace)
       (((?who . ?args) ?body0 ?body* ...)
        (identifier? ?who)
        (let* ((method-name.sym		(identifier->symbol ?who))
 	      (method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym))
-	      (method-form.sexp		`(define/checked (,method-procname.id . ,?args)
-					   ,?body0 . ,?body*)))
+	      (method-form.sexp		`(define/checked (,method-procname.id {,subject.id ,foo} . ,?args)
+					   (fluid-let-syntax ((this (identifier-syntax ,subject.id)))
+					     ,?body0 . ,?body*))))
 	 (%validate-method-name ?who method-name.sym method-name*.sym synner)
 	 (values method-name.sym method-procname.id method-form.sexp)))
 
@@ -808,37 +810,61 @@
        (identifier? ?who)
        (let* ((method-name.sym		(identifier->symbol ?who))
 	      (method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym))
-	      (method-form.sexp		`(define/checked ((brace ,method-procname.id ,?rv-tag0 . ,?rv-tag*) . ,?formals)
-					   ,?body0 . ,?body*)))
+	      (method-form.sexp		`(define/checked ((brace ,method-procname.id ,?rv-tag0 . ,?rv-tag*) {,subject.id ,foo} . ,?formals)
+					   (fluid-let-syntax ((this (identifier-syntax ,subject.id)))
+					     ,?body0 . ,?body*))))
 	 (%validate-method-name ?who method-name.sym method-name*.sym synner)
 	 (values method-name.sym method-procname.id method-form.sexp)))
 
       (_
        (synner "invalid syntax in METHOD clause" (cons (method-id) clause.stx)))))
 
-  (define (%parse-case-method clause.stx foo-for-id-generation method-name*.sym synner)
+  (define (%parse-case-method clause.stx foo foo-for-id-generation method-name*.sym synner)
     (syntax-match clause.stx (brace)
       ((?who ?method-clause0 ?method-clause* ...)
        (identifier? ?who)
        (let* ((method-name.sym		(identifier->symbol ?who))
 	      (method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym))
-	      (method-form.sexp		`(case-define ,method-procname.id ,?method-clause0 . ,?method-clause*)))
+	      (method-clause*.stx	(map (lambda (clause.stx)
+					       (%add-this-to-clause-formals clause.stx foo synner))
+					  (cons ?method-clause0 ?method-clause*)))
+	      (method-form.sexp		`(case-define ,method-procname.id . ,method-clause*.stx)))
 	 (%validate-method-name ?who method-name.sym method-name*.sym synner)
 	 (values method-name.sym method-procname.id method-form.sexp)))
 
       (_
        (synner "invalid syntax in CASE-METHOD clause" (cons (case-method-id) clause.stx)))))
 
+  (define (%add-this-to-clause-formals clause.stx foo synner)
+    (define subject.id (make-syntactic-identifier-for-temporary-variable "subject"))
+    (syntax-match clause.stx (brace)
+      ((((brace ?underscore . ?rv-types) . ?formals) ?body0 ?body* ...)
+       (underscore-id? ?underscore)
+       (bless
+	`(({,?underscore . ,?rv-types} {,subject.id ,foo} . ,?formals)
+	  (fluid-let-syntax ((this (identifier-syntax ,subject.id)))
+	    ,?body0 . ,?body*))))
+
+      ((?formals ?body0 ?body* ...)
+       (bless
+	`(({,subject.id ,foo} . ,?formals)
+	  (fluid-let-syntax ((this (identifier-syntax ,subject.id)))
+	    ,?body0 . ,?body*))))
+      (_
+       (synner "invalid CASE-METHOD clause syntax" clause.stx))))
+
 ;;; --------------------------------------------------------------------
 
-  (define (%parse-method-overload clause.stx foo-for-id-generation other-method-name*.sym synner)
+  (define (%parse-method-overload clause.stx foo foo-for-id-generation other-method-name*.sym synner)
+    (define subject.id (make-syntactic-identifier-for-temporary-variable "subject"))
     (syntax-match clause.stx (brace)
       (((?who . ?args) ?body0 ?body* ...)
        (identifier? ?who)
        (let* ((method-name.sym		(identifier->symbol ?who))
 	      (method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym))
-	      (method-form.sexp		`(define/overload (,method-procname.id . ,?args)
-					   ,?body0 . ,?body*)))
+	      (method-form.sexp		`(define/overload (,method-procname.id {,subject.id ,foo} . ,?args)
+					   (fluid-let-syntax ((this (identifier-syntax ,subject.id)))
+					     ,?body0 . ,?body*))))
 	 (%validate-method-name ?who method-name.sym other-method-name*.sym synner)
 	 (values method-name.sym method-procname.id method-form.sexp)))
 
@@ -846,8 +872,9 @@
        (identifier? ?who)
        (let* ((method-name.sym		(identifier->symbol ?who))
 	      (method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym))
-	      (method-form.sexp		`(define/overload ((brace ,method-procname.id ,?rv-tag0 . ,?rv-tag*) . ,?formals)
-					   ,?body0 . ,?body*)))
+	      (method-form.sexp		`(define/overload ((brace ,method-procname.id ,?rv-tag0 . ,?rv-tag*) {,subject.id ,foo} . ,?formals)
+					   (fluid-let-syntax ((this (identifier-syntax ,subject.id)))
+					     ,?body0 . ,?body*))))
 	 (%validate-method-name ?who method-name.sym other-method-name*.sym synner)
 	 (values method-name.sym method-procname.id method-form.sexp)))
 

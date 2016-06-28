@@ -50,8 +50,7 @@
     (import (only (psyntax system $all)
 		  make-label-type-spec)
       (prefix (only (vicare expander)
-		    <syntactic-identifier>
-		    interface-and-compliant-object-type?)
+		    <syntactic-identifier>)
 	      expander::))
     (define-constant __module_who__
       'define-label)
@@ -136,18 +135,17 @@
       (constructor-signature
 	(lambda (expander::<syntactic-identifier>) => (<parsing-results>)))
 
-      (method (definitions-push! {results <parsing-results>} definition.stx)
-	(.definitions results (cons definition.stx (.definitions results))))
+      (method (definitions-push! definition.stx)
+	(.definitions this (cons definition.stx (.definitions this))))
 
-      (method (constructor-clauses-push! {results <parsing-results>} clause)
-	(.constructor-clauses results (cons clause (.constructor-clauses results))))
+      (method (constructor-clauses-push! clause)
+	(.constructor-clauses this (cons clause (.constructor-clauses this))))
 
-      (method (methods-table-push! {results		<parsing-results>}
-				   {method-name.id	expander::<syntactic-identifier>}
+      (method (methods-table-push! {method-name.id	expander::<syntactic-identifier>}
 				   {method-procname.id	expander::<syntactic-identifier>})
-	(.methods-table results `((,method-name.id . ,method-procname.id) . ,(.methods-table results))))
+	(.methods-table this `((,method-name.id . ,method-procname.id) . ,(.methods-table this))))
 
-      (method (methods-table-alist {results <parsing-results>})
+      (method (methods-table-alist)
 	;;Return  a syntax  object  representing an  expression  which, expanded  and
 	;;evaluated, returns  an alist  having: as  keys symbols  representing method
 	;;names; as values  syntactic identifiers bound to  the method implementation
@@ -157,37 +155,37 @@
 			  (let ((method-name.id		(car entry))
 				(method-procname.id	(cdr entry)))
 			    #`(cons (quote #,method-name.id) (syntax #,method-procname.id))))
-		     (.methods-table results))))
+		     (.methods-table this))))
 
-      (method (finalise-definitions {results <parsing-results>})
+      (method (finalise-definitions)
 	;;After  all  the  clauses  have  been   parsed,  we  need  to  perform  some
 	;;post-processing  to  generate  definition   forms.   For  example  for  the
 	;;CONSTRUCTOR and DESTRUCTOR clauses.  This method does it.
 	;;
-	(.uid results (or (.uid results)
-			  (datum->syntax (.type-name results) (gensym (syntax->datum (.type-name results))))))
+	(.uid this (or (.uid this)
+		       (datum->syntax (.type-name this) (gensym (syntax->datum (.type-name this))))))
 
 	;;Constructor finalisation.
-	(let ((clause*.stx (.constructor-clauses results)))
+	(let ((clause*.stx (.constructor-clauses this)))
 	  (if (null? clause*.stx)
-	      (.constructor-id results #f)
+	      (.constructor-id this #f)
 	    (let ((clause*.stx (map (lambda (clause.stx)
-				      (cons (cons #`(brace _ #,(.type-name results)) (car clause.stx))
+				      (cons (cons #`(brace _ #,(.type-name this)) (car clause.stx))
 					    (cdr clause.stx)))
 				 (reverse clause*.stx))))
-	      (with-syntax ((FUNC (identifier-record-field-accessor (.type-name results) #'constructor)))
+	      (with-syntax ((FUNC (identifier-record-field-accessor (.type-name this) #'constructor)))
 		(begin
-		  (.constructor-id    results #'(syntax FUNC))
-		  (.definitions-push! results #`(case-define/checked FUNC . #,clause*.stx)))))))
+		  (.constructor-id    this #'(syntax FUNC))
+		  (.definitions-push! this #`(case-define/checked FUNC . #,clause*.stx)))))))
 
 	;;Destructor finalisation.
-	(cond ((.destructor-clause results)
+	(cond ((.destructor-clause this)
 	       => (lambda (clause.stx)
-		    (with-syntax ((FUNC (identifier-record-field-accessor (.type-name results) #'destructor)))
-		      (.destructor-id     results #'(syntax FUNC))
-		      (.definitions-push! results #`(case-define/checked FUNC #,clause.stx)))))
+		    (with-syntax ((FUNC (identifier-record-field-accessor (.type-name this) #'destructor)))
+		      (.destructor-id     this #'(syntax FUNC))
+		      (.definitions-push! this #`(case-define/checked FUNC #,clause.stx)))))
 	      (else
-	       (.destructor-id results #f))))
+	       (.destructor-id this #f))))
 
       #| end of DEFINE-RECORD-TYPE |# )
 
@@ -226,8 +224,8 @@
 	   (EQUALITY-PREDICATE-ID	(.equality-predicate-id		results))
 	   (COMPARISON-PROCEDURE-ID	(.comparison-procedure-id	results))
 	   (HASH-FUNCTION-ID		(.hash-function-id		results))
-	   ((DEFINITION ...)		(.definitions			results))
-	   (METHODS-TABLE-ALIST		(.methods-table-alist		results)))
+	   (METHODS-TABLE-ALIST		(.methods-table-alist		results))
+	   ((DEFINITION ...)		(.definitions			results)))
 	#`(module (TYPE-NAME)
 	    (define-syntax TYPE-NAME
 	      (make-label-type-spec (syntax TYPE-NAME) (quote UID) (syntax PARENT-STX)
