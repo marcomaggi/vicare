@@ -78,7 +78,7 @@
 (declare-core-primitive core-type-descriptor.method-retriever
     (safe)
   (signatures
-   ((<core-type-descriptor>)		=> ((lambda (<symbol>) => ((or <false> <procedure>)))))))
+   ((<core-type-descriptor>)		=> (<type-method-retriever>))))
 
 ;;; --------------------------------------------------------------------
 
@@ -629,6 +629,28 @@
     (safe)
   (signatures
    ((<ancestor-of-type-descr>)		=> (<list>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <interface-type-descr>-rtd)
+(declare-core-rcd <interface-type-descr>-rcd)
+
+(declare-core-primitive make-interface-type-descr
+    (safe)
+  (signatures
+   ((<symbol> <procedure>)		=> (<interface-type-descr>))))
+
+(declare-type-predicate interface-type-descr?	<interface-type-descr>)
+
+(declare-core-primitive interface-type-descr.type-name
+    (safe)
+  (signatures
+   ((<interface-type-descr>)		=> (<symbol>))))
+
+(declare-core-primitive interface-type-descr.method-retriever
+    (safe)
+  (signatures
+   ((<interface-type-descr>)		=> (<type-method-retriever>))))
 
 
 ;;;; object type descriptors: utilities

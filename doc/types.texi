@@ -960,6 +960,7 @@ types.
 * types descr retrieving::      Retrieving type descriptors.
 * types descr core::            Core object-type descriptors.
 * types descr compound::        Compound object-type descriptors.
+* types descr other::           Other object-type descriptors.
 * types descr signatures::      Type descriptor signatures.
 * types descr relations::       Relations between type descriptors.
 @end menu
@@ -1671,6 +1672,55 @@ Return @true{} if @var{obj} is an instance of
 @defun ancestor-of-type-descr.item-des @var{des}
 @defunx ancestor-of-type-descr.ancestor-des* @var{des}
 Accessors for the fields of @class{ancestor-of-type-descr} instances.
+@end defun
+
+@c page
+@node types descr other
+@subsection Other object-type descriptors
+
+
+@menu
+* types descr other interface::         Interface type descriptors.
+@end menu
+
+@c page
+@node types descr other interface
+@subsubsection Interface type descriptors
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system type-descriptors}.
+
+
+@deftp {Record Type} @aclass{interface-type-descr}
+Name of type descriptors representing interfaces.  It has the following
+fields:
+
+@table @code
+@item type-name
+A symbol representing the name of this interface type.
+
+@item method-retriever
+A function that retrieves method implementation functions given the name
+of a method as symbol.
+@end table
+@end deftp
+
+
+@defun make-interface-type-descr @var{type-name} @var{method-retriever}
+Build and return a new instance of @class{interface-type-descr}.
+@end defun
+
+
+@defun interface-type-descr? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{interface-type-descr}; otherwise return @false{}.
+@end defun
+
+
+@defun interface-type-descr.type-name @var{des}
+@defunx interface-type-descr.method-retriever @var{des}
+Accessors for the fields of @class{interface-type-descr} instances.
 @end defun
 
 @c page

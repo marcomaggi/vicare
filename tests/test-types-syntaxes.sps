@@ -1602,6 +1602,8 @@
   (doit-false	(lambda (<top>) => <bottom>)		(lambda (<top>) => (<string>)))
   (doit-true	(lambda (<top>) => (<string>))	(lambda (<top>) => <bottom>))
 
+  (doit-true	(lambda (<bottom>) => (<char>))	(lambda (<top> . <list>) => <bottom>))
+
   #| end of PARAMETRISE |# )
 
 

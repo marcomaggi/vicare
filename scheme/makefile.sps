@@ -4209,6 +4209,14 @@
     (ancestor-of-type-descr.item-des		$type-descriptors)
     (ancestor-of-type-descr.ancestor-des*	$type-descriptors)
 ;;;
+    (<interface-type-descr>-rtd)
+    (<interface-type-descr>-rcd)
+    (<interface-type-descr>			$type-descriptors)
+    (make-interface-type-descr			$type-descriptors)
+    (interface-type-descr?			$type-descriptors)
+    (interface-type-descr.type-name		$type-descriptors)
+    (interface-type-descr.methods-retriever	$type-descriptors)
+;;;
     (<union-type-descr>-rtd)
     (<union-type-descr>-rcd)
     (<union-type-descr>				$type-descriptors)
@@ -4854,9 +4862,9 @@
     (stx-rib*						$expander)
     (stx-annotated-expr*				$expander)
 
-    (<syntactic-identifier>				$expander)
     (<syntactic-identifier>-rtd)
     (<syntactic-identifier>-rcd)
+    (<syntactic-identifier>				$expander)
     (syntactic-identifier?				$expander)
 
     ;;FIXME This  is a temporary substitution.   When type unions are  implemented we
@@ -5042,6 +5050,13 @@
     (enumeration-type-spec.symbol*			$expander)
     (enumeration-type-spec.member?			$expander)
 
+    (<closure-type-spec>-rtd)
+    (<closure-type-spec>-rcd)
+    (<closure-type-spec>				$expander)
+    (make-closure-type-spec				$expander)
+    (closure-type-spec?					$expander)
+    (closure-type-spec.signature			$expander)
+
     (<label-type-spec>-rtd)
     (<label-type-spec>-rcd)
     (<label-type-spec>					$expander)
@@ -5053,8 +5068,8 @@
     (<interface-type-spec>				$expander)
     (make-interface-type-spec				$expander)
     (interface-type-spec?				$expander)
-    (interface-type-spec.method-names			$expander)
-    (interface-type-spec.method-signatures		$expander)
+    (interface-type-spec.methods-table			$expander)
+    (interface-and-compliant-object-type?		$expander)
 ;;;
     (<type-signature>-rtd)
     (<type-signature>-rcd)
@@ -6046,7 +6061,6 @@
     (record-type-method-retriever)
     (record-type-method-retriever-set!)
     (object-type-spec-override-predicate)
-    (make-closure-type-spec)
     (set!/initialise)
     (make-overloaded-function-spec)
     (overloaded-function-spec.register-specialisation!)

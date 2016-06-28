@@ -129,11 +129,11 @@
     <record>
   make-syntax-clause-spec syntax-clause-spec?
   (methods
-   (keyword				syntax-clause-spec-keyword)
+   (keyword			syntax-clause-spec-keyword)
    (min-number-of-occurrences	syntax-clause-spec-min-number-of-occurrences)
    (max-number-of-occurrences	syntax-clause-spec-max-number-of-occurrences)
-   (min-number-of-arguments		syntax-clause-spec-min-number-of-arguments)
-   (max-number-of-arguments		syntax-clause-spec-max-number-of-arguments)
+   (min-number-of-arguments	syntax-clause-spec-min-number-of-arguments)
+   (max-number-of-arguments	syntax-clause-spec-max-number-of-arguments)
    (mutually-inclusive		syntax-clause-spec-mutually-inclusive)
    (mutually-exclusive		syntax-clause-spec-mutually-exclusive)
    (custom-data			syntax-clause-spec-custom-data)))
@@ -292,8 +292,7 @@
     <object-type-spec>
   make-interface-type-spec interface-type-spec?
   (methods
-   (method-names	interface-type-spec.method-names)
-   (method-signatures	interface-type-spec.method-signatures)))
+   (methods-table	interface-type-spec.methods-table)))
 
 ;;; --------------------------------------------------------------------
 
@@ -442,6 +441,13 @@
   (methods
    (item-des		ancestor-of-type-descr.item-des)
    (ancestors-des*	ancestor-of-type-descr.ancestors-des*)))
+
+(define-built-in-record-type <interface-type-descr>
+    <record>
+  make-interface-type-descr interface-type-descr?
+  (methods
+   (type-name		interface-type-descr.type-name)
+   (method-retriever	interface-type-descr.method-retriever)))
 
 ;;; --------------------------------------------------------------------
 

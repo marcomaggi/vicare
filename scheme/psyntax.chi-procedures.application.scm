@@ -247,6 +247,7 @@
 	(build-application (syntax-annotation input-form.stx)
 	    rator.core
 	  rand*.core))))
+  ;;(debug-print __who__ input-form.stx rator.psi rand*.stx)
   (case-type-signature-full-structure (psi.retvals-signature rator.psi)
     ((<top>)
      ;;The operator expression correctly returns a  single value; it is not specified
@@ -382,6 +383,9 @@
 
   (define (chi-application/psi-first-operand/no-overload input-form.stx lexenv.run lexenv.expand
 							 rator.stx first-rand.psi other-rand*.stx)
+    ;; (debug-print 'chi-application/psi-first-operand/no-overload
+    ;; 		 input-form.stx
+    ;; 		 rator.stx first-rand.psi)
     (let* ((rator.psi (while-not-expanding-application-first-subform
 		       (chi-expr rator.stx lexenv.run lexenv.expand)))
 	   (rator.sig (psi.retvals-signature rator.psi)))
@@ -400,6 +404,9 @@
 	    (build-application (syntax-annotation input-form.stx)
 		rator.core
 	      (cons first-rand.core other-rand*.core)))))
+
+      ;; (debug-print 'chi-application/psi-first-operand/no-overload
+      ;; 		   'rator.sig rator.sig)
 
       (case-type-signature-full-structure rator.sig
 	((<top>)

@@ -108,6 +108,10 @@
     make-ancestor-of-type-descr			ancestor-of-type-descr?
     ancestor-of-type-descr.item-des		ancestor-of-type-descr.ancestor-des*
 
+    <interface-type-descr>-rtd			<interface-type-descr>-rcd
+    make-interface-type-descr			interface-type-descr?
+    interface-type-descr.type-name		interface-type-descr.method-retriever
+
 ;;; --------------------------------------------------------------------
 
     <union-type-descr>-rtd			<union-type-descr>-rcd
@@ -889,6 +893,32 @@
   (let ((ancestor*.des (ancestor-of-type-descr.ancestor-des* ancestor-of.des)))
     (and (pair? ancestor*.des)
 	 (for-all proc ancestor*.des))))
+
+
+;;;; compound type descriptors: interfaces
+
+(define-record-type (<interface-type-descr> make-interface-type-descr interface-type-descr?)
+  (nongenerative vicare:type-descriptors:<interface-type-descr>)
+  (sealed #t)
+  (fields
+    (immutable type-name		interface-type-descr.type-name)
+		;A symbol representing the name of this interface type.
+    (immutable method-retriever		interface-type-descr.method-retriever)
+		;A function that retrieves  method implementation functions given the
+		;name of a method as symbol.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-record)
+      (define* (make-interface-type-descr {type-name symbol?} {method-retriever procedure?})
+	(make-record type-name method-retriever))
+      make-interface-type-descr))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <interface-type-descr>-rtd
+  (record-type-descriptor <interface-type-descr>))
+
+(define <interface-type-descr>-rcd
+  (record-constructor-descriptor <interface-type-descr>))
 
 
 ;;;; object-type descriptors: facilities

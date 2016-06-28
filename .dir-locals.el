@@ -61,6 +61,7 @@
      (eval . (put 'push-lexical-contour							'scheme-indent-function 1))
      (eval . (put 'raise-compound-condition-object					'scheme-indent-function 1))
      (eval . (put 'raise-compound-condition-object/continuable				'scheme-indent-function 1))
+     (eval . (put 'syntax-clauses-fold-specs						'scheme-indent-function 1))
      (eval . (put 'syntactic-binding-getprop						'scheme-indent-function 1))
      (eval . (put 'sys::syntax-case							'scheme-indent-function 2))
      (eval . (put 'sys::with-syntax							'scheme-indent-function 1))

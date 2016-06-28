@@ -1034,10 +1034,11 @@
 	 (comparison-procedure.id	#f)
 	 (hash-function.id		#f)
 	 (methods-table			(%alist-ref-or-null hard-coded-sexp 7))
+	 (implemented-interfaces	'())
 	 (ots				(make-record-type-spec type-name.id uid.sym rtd.id rcd.id super-protocol.id parent.id
 							       constructor-sexp destructor-sexp type-predicate-sexp
 							       equality-predicate.id comparison-procedure.id hash-function.id
-							       methods-table)))
+							       methods-table implemented-interfaces)))
     (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
 
@@ -1092,11 +1093,12 @@
 	 (comparison-procedure.id	#f)
 	 (hash-function.id		#f)
 	 (methods-table			(%alist-ref-or-null hard-coded-sexp 7))
+	 (implemented-interfaces	'())
 	 (ots				(make-record-type-spec type-name.id uid.sym
 							       rtd.id rcd.id super-protocol.id parent.id
 							       constructor.id destructor.id type-predicate.id
 							       equality-predicate.id comparison-procedure.id hash-function.id
-							       methods-table)))
+							       methods-table implemented-interfaces)))
     (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
 

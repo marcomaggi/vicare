@@ -74,6 +74,9 @@
 (declare-core-rtd <non-interaction-lexical-environment>-rtd)
 (declare-core-rcd <non-interaction-lexical-environment>-rcd)
 
+(declare-core-rtd <interaction-lexical-environment>-rtd)
+(declare-core-rcd <interaction-lexical-environment>-rcd)
+
 (declare-core-rtd <stx>-rtd)
 (declare-core-rcd <stx>-rcd)
 
@@ -247,13 +250,6 @@
    ((<syntactic-identifier>)	=> (<top>)))
   (attributes
    ((_)			effect-free)))
-
-(declare-core-primitive make-type-annotation
-    (safe)
-  (signatures
-   ((<syntax-object>)	=> (<object-type-spec>)))
-  (attributes
-   ((_)			effect-free result-true)))
 
 /section)
 
@@ -688,56 +684,29 @@
 
 (section
 
-(declare-core-rtd <complement-type-spec>-rtd)
-(declare-core-rcd <complement-type-spec>-rcd)
-
-(declare-core-rtd <compound-condition-type-spec>-rtd)
-(declare-core-rcd <compound-condition-type-spec>-rcd)
-
-(declare-core-rtd <hashtable-type-spec>-rtd)
-(declare-core-rcd <hashtable-type-spec>-rcd)
-
-(declare-core-rtd <interaction-lexical-environment>-rtd)
-(declare-core-rcd <interaction-lexical-environment>-rcd)
-
-(declare-core-rtd <intersection-type-spec>-rtd)
-(declare-core-rcd <intersection-type-spec>-rcd)
-
-(declare-core-rtd <list-of-type-spec>-rtd)
-(declare-core-rcd <list-of-type-spec>-rcd)
-
-(declare-core-rtd <list-type-spec>-rtd)
-(declare-core-rcd <list-type-spec>-rcd)
-
 (declare-core-rtd <object-type-spec>-rtd)
 (declare-core-rcd <object-type-spec>-rcd)
 
-(declare-core-rtd <pair-of-type-spec>-rtd)
-(declare-core-rcd <pair-of-type-spec>-rcd)
+(declare-type-predicate object-type-spec?		<object-type-spec>)
 
-(declare-core-rtd <pair-type-spec>-rtd)
-(declare-core-rcd <pair-type-spec>-rcd)
+(declare-core-primitive make-type-annotation
+    (safe)
+  (signatures
+   ((<syntax-object>)	=> (<object-type-spec>)))
+  (attributes
+   ((_)			effect-free result-true)))
 
-(declare-core-rtd <record-type-spec>-rtd)
-(declare-core-rcd <record-type-spec>-rcd)
+;;; --------------------------------------------------------------------
 
 (declare-core-rtd <core-type-spec>-rtd)
 (declare-core-rcd <core-type-spec>-rcd)
 
-(declare-core-rtd <struct-type-spec>-rtd)
-(declare-core-rcd <struct-type-spec>-rcd)
-
-(declare-core-rtd <union-type-spec>-rtd)
-(declare-core-rcd <union-type-spec>-rcd)
-
-(declare-core-rtd <vector-of-type-spec>-rtd)
-(declare-core-rcd <vector-of-type-spec>-rcd)
-
-(declare-core-rtd <vector-type-spec>-rtd)
-(declare-core-rcd <vector-type-spec>-rcd)
-
+(declare-type-predicate core-type-spec?		<core-type-spec>)
 
 ;;; --------------------------------------------------------------------
+
+(declare-core-rtd <struct-type-spec>-rtd)
+(declare-core-rcd <struct-type-spec>-rcd)
 
 (declare-core-primitive make-struct-type-spec
     (safe)
@@ -745,65 +714,47 @@
    ((<syntactic-identifier> <struct-type-descriptor> <syntactic-identifier> <syntactic-identifier> <list>)
     => (<struct-type-spec>))))
 
+(declare-type-predicate struct-type-spec?		<struct-type-spec>)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <record-type-spec>-rtd)
+(declare-core-rcd <record-type-spec>-rcd)
+
 (declare-core-primitive make-record-type-spec
     (safe)
   (signatures
-   ((<syntactic-identifier>		 ;type-name
-     <symbol>				 ;uid
-     <syntactic-identifier>		 ;rcd-id
-     <syntactic-identifier>		 ;rtd-id
-     (or <false> <syntactic-identifier>) ;super-protocol-id
-     (or <false> <syntactic-identifier>) ;parent-name.id
-     (or <false> <syntactic-identifier>) ;constructor.stx
-     (or <false> <syntactic-identifier>) ;destructor.stx
-     <syntactic-identifier>		 ;predicate.stx
-     (or <false> <syntactic-identifier>) ;equality-predicate.id
-     (or <false> <syntactic-identifier>) ;comparison-procedure.id
-     (or <false> <syntactic-identifier>) ;hash-function.id
-     <list>)				 ;methods-table
+   ((<syntactic-identifier>		     ;type-name
+     <symbol>				     ;uid
+     <syntactic-identifier>		     ;rcd-id
+     <syntactic-identifier>		     ;rtd-id
+     (or <false> <syntactic-identifier>)     ;super-protocol-id
+     (or <false> <syntactic-identifier>)     ;parent-name.id
+     (or <false> <syntactic-identifier>)     ;constructor.stx
+     (or <false> <syntactic-identifier>)     ;destructor.stx
+     <syntactic-identifier>		     ;predicate.stx
+     (or <false> <syntactic-identifier>)     ;equality-predicate.id
+     (or <false> <syntactic-identifier>)     ;comparison-procedure.id
+     (or <false> <syntactic-identifier>)     ;hash-function.id
+     (alist <symbol> <syntactic-identifier>) ;methods-table
+     (list-of <syntactic-identifier>))	     ;implemented-interfaces
     => (<record-type-spec>))))
 
-;;; --------------------------------------------------------------------
-;;; type predicates
-
-(declare-type-predicate object-type-spec?		<object-type-spec>)
-(declare-type-predicate struct-type-spec?		<struct-type-spec>)
 (declare-type-predicate record-type-spec?		<record-type-spec>)
 
-(declare-type-predicate compound-condition-type-spec?	<compound-condition-type-spec>)
-(declare-type-predicate pair-type-spec?			<pair-type-spec>)
-(declare-type-predicate pair-of-type-spec?		<pair-of-type-spec>)
-(declare-type-predicate list-type-spec?			<list-type-spec>)
-(declare-type-predicate list-of-type-spec?		<list-of-type-spec>)
-(declare-type-predicate vector-type-spec?		<vector-type-spec>)
-(declare-type-predicate vector-of-type-spec?		<vector-of-type-spec>)
+;;; --------------------------------------------------------------------
 
-(declare-type-predicate union-type-spec?		<union-type-spec>)
-(declare-type-predicate intersection-type-spec?		<intersection-type-spec>)
-(declare-type-predicate complement-type-spec?		<complement-type-spec>)
+(declare-core-rtd <compound-condition-type-spec>-rtd)
+(declare-core-rcd <compound-condition-type-spec>-rcd)
+
+(declare-type-predicate compound-condition-type-spec?	<compound-condition-type-spec>)
 
 ;;; --------------------------------------------------------------------
-;;; <alist-type-spec>
 
-(declare-core-rtd <alist-type-spec>-rtd)
-(declare-core-rcd <alist-type-spec>-rcd)
+(declare-core-rtd <hashtable-type-spec>-rtd)
+(declare-core-rcd <hashtable-type-spec>-rcd)
 
-(declare-core-primitive make-alist-type-spec
-    (safe)
-  (signatures
-   ((<object-type-spec> <object-type-spec>)		=> (<alist-type-spec>))))
-
-(declare-type-predicate alist-type-spec?		<alist-type-spec>)
-
-(declare-core-primitive alist-type-spec.key-ots
-    (safe)
-  (signatures
-   ((<alist-type-spec>)		=> (<alist-type-spec>))))
-
-(declare-core-primitive alist-type-spec.value-ots
-    (safe)
-  (signatures
-   ((<alist-type-spec>)		=> (<alist-type-spec>))))
+(declare-type-predicate hashtable-type-spec?	<hashtable-type-spec>)
 
 ;;; --------------------------------------------------------------------
 ;;; <enumeration-type-spec>
@@ -830,6 +781,99 @@
    ((<enumeration-type-spec> <symbol>)	=> (<boolean>))))
 
 ;;; --------------------------------------------------------------------
+
+(declare-core-rtd <pair-type-spec>-rtd)
+(declare-core-rcd <pair-type-spec>-rcd)
+
+(declare-type-predicate pair-type-spec?			<pair-type-spec>)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <pair-of-type-spec>-rtd)
+(declare-core-rcd <pair-of-type-spec>-rcd)
+
+(declare-type-predicate pair-of-type-spec?		<pair-of-type-spec>)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <list-type-spec>-rtd)
+(declare-core-rcd <list-type-spec>-rcd)
+
+(declare-type-predicate list-type-spec?			<list-type-spec>)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <list-of-type-spec>-rtd)
+(declare-core-rcd <list-of-type-spec>-rcd)
+
+(declare-type-predicate list-of-type-spec?		<list-of-type-spec>)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <vector-of-type-spec>-rtd)
+(declare-core-rcd <vector-of-type-spec>-rcd)
+
+(declare-type-predicate vector-of-type-spec?		<vector-of-type-spec>)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <vector-type-spec>-rtd)
+(declare-core-rcd <vector-type-spec>-rcd)
+
+(declare-type-predicate vector-type-spec?		<vector-type-spec>)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <union-type-spec>-rtd)
+(declare-core-rcd <union-type-spec>-rcd)
+
+(declare-type-predicate union-type-spec?		<union-type-spec>)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <intersection-type-spec>-rtd)
+(declare-core-rcd <intersection-type-spec>-rcd)
+
+(declare-type-predicate intersection-type-spec?		<intersection-type-spec>)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <complement-type-spec>-rtd)
+(declare-core-rcd <complement-type-spec>-rcd)
+
+(declare-type-predicate complement-type-spec?		<complement-type-spec>)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <ancestor-of-type-spec>-rtd)
+(declare-core-rcd <ancestor-of-type-spec>-rcd)
+
+(declare-type-predicate ancestor-of-type-spec?	<ancestor-of-type-spec>)
+
+;;; --------------------------------------------------------------------
+;;; <alist-type-spec>
+
+(declare-core-rtd <alist-type-spec>-rtd)
+(declare-core-rcd <alist-type-spec>-rcd)
+
+(declare-core-primitive make-alist-type-spec
+    (safe)
+  (signatures
+   ((<object-type-spec> <object-type-spec>)		=> (<alist-type-spec>))))
+
+(declare-type-predicate alist-type-spec?		<alist-type-spec>)
+
+(declare-core-primitive alist-type-spec.key-ots
+    (safe)
+  (signatures
+   ((<alist-type-spec>)		=> (<alist-type-spec>))))
+
+(declare-core-primitive alist-type-spec.val-ots
+    (safe)
+  (signatures
+   ((<alist-type-spec>)		=> (<alist-type-spec>))))
+
+;;; --------------------------------------------------------------------
 ;;; <label-type-spec>
 
 (declare-core-rtd <label-type-spec>-rtd)
@@ -853,14 +897,40 @@
 (declare-type-predicate label-type-spec?	<label-type-spec>)
 
 ;;; --------------------------------------------------------------------
-;;; operations on type specs
 
-(declare-core-primitive union-of-type-specs
+(declare-core-rtd <interface-type-spec>-rtd)
+(declare-core-rcd <interface-type-spec>-rcd)
+
+(declare-core-primitive make-interface-type-spec
     (safe)
   (signatures
-   ((list-of <object-type-spec>)	=> (<object-type-spec>))))
+   ((<syntactic-identifier>		      ;type-name
+     <syntactic-identifier>		      ;type-descriptor-name
+     (alist <symbol> <closure-type-spec>)     ;requested methods table
+     (alist <symbol> <syntactic-identifier>)) ;implemented methods table
+    => (<interface-type-spec>))))
 
-/section)
+(declare-type-predicate interface-type-spec?	<interface-type-spec>)
+
+(declare-core-primitive interface-type-spec.type-descriptor-id
+    (safe)
+  (signatures
+   ((<interface-type-spec>)		=> (<syntactic-identifier>))))
+
+(declare-core-primitive interface-type-spec.methods-table
+    (safe)
+  (signatures
+   ((<interface-type-spec>)		=> ((alist <symbol> <closure-type-spec>)))))
+
+;;; --------------------------------------------------------------------
+;;; operations on type specs
+
+  (declare-core-primitive union-of-type-specs
+      (safe)
+    (signatures
+     ((list-of <object-type-spec>)	=> (<object-type-spec>))))
+
+  /section)
 
 
 ;;;; type signatures

@@ -256,6 +256,16 @@
 			   foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
 			   methods-retriever-code.sexp synner))
 
+  ;;Null or  a proper  list of  syntactic identifiers representing  the names  of the
+  ;;interfaces implemented by this record-type.
+  (define implemented-interface*.id
+    (%get-implemented-interface-names clause*.stx synner))
+
+  ;;Null or a proper  list of forms representing the code needed  to verify that this
+  ;;record-type actually implements the specified interfaces.
+  (define interfaces-validation-code
+    (%make-interfaces-validation-code foo implemented-interface*.id))
+
   ;;A  symbolic expression  representing  a  form which,  expanded  and evaluated  at
   ;;expand-time, returns the right-hand side of the record-type name's DEFINE-SYNTAX.
   ;;The value of the right-hand side is the syntactic binding's descriptor.
@@ -264,7 +274,8 @@
 					    foo-parent.id foo-rtd foo-rcd
 					    foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
 					    (append method-name*.sym	field-name*.sym)
-					    (append method-procname*.id	field-method*)))
+					    (append method-procname*.id	field-method*)
+					    implemented-interface*.id))
 
   (bless
    `(module (,foo
@@ -304,6 +315,7 @@
 					  safe-field-mutator*  unsafe-field-mutator*)
       ,@(%make-safe-method-code foo field-type*.ann
 				field-method* unsafe-field-accessor* unsafe-field-mutator*)
+      ,@interfaces-validation-code
       #| end of module |# )))
 
 
@@ -349,7 +361,7 @@
 		    custom-printer type-predicate
 		    equality-predicate comparison-procedure hash-function
 		    define-type-descriptors strip-angular-parentheses
-		    method case-method method/overload mixins))
+		    method case-method method/overload mixins implements))
 	      (set! cached rv))))))
 
   (define keyword-allowed-multiple-times?
@@ -358,7 +370,8 @@
 	(free-id-member? id (or cached
 				(receive-and-return (rv)
 				    (map core-prim-id
-				      '(method case-method method/overload fields mixins))
+				      '(method case-method method/overload fields
+					       mixins implements))
 				  (set! cached rv)))))))
 
   #| end of module: %VALIDATE-DEFINITION-CLAUSES |# )
@@ -480,6 +493,22 @@
       (#f		#f)
       (_
        (synner "expected closure type signature argument in CONSTRUCTOR-SIGNATURE clause" clause)))))
+
+(define (%get-implemented-interface-names clause* synner)
+  (let loop ((clause*	clause*)
+	     (iface*	'()))
+    (syntax-match clause* (implements)
+      (()
+       iface*)
+      (((implements ?interface* ...) . ?clauses)
+       (begin
+	 (for-all (lambda (obj)
+		    (unless (identifier? obj)
+		      (synner "expected interface identifier IMPLEMENTS clause" obj)))
+	   ?interface*)
+	 (loop ?clauses (append ?interface* iface*))))
+      ((_ . ?clauses)
+       (loop ?clauses iface*)))))
 
 
 (define (%parse-field-specs type-id foo-for-id-generation clause* synner)
@@ -1475,7 +1504,8 @@
 						 foo-equality-predicate.id
 						 foo-comparison-procedure.id
 						 foo-hash-function.id
-						 method-name*.sym method-procname*.id)
+						 method-name*.sym method-procname*.id
+						 implemented-interface*.id)
   ;;Build and return symbolic expression (to  be BLESSed later) representing a Scheme
   ;;expression which, expanded and evaluated  at expand-time, returns the record-type
   ;;name's syntactic binding's descriptor.
@@ -1509,6 +1539,9 @@
   ;;METHOD-PROCNAME*.ID  must be  null or  list  of identifiers  bound to  procedures
   ;;implementing the methods.
   ;;
+  ;;IMPLEMENTED-INTERFACE*.ID  null  or  a   proper  list  of  syntactic  identifiers
+  ;;representing the interfaces that this record-type implements.
+  ;;
   (define (%make-alist-from-ids field-name*.id operator*.id)
     ;;We want to return a  symbolic expression representing the following expand-time
     ;;expression:
@@ -1539,6 +1572,13 @@
   (define foo-methods.table
     (%make-alist-from-ids method-name*.sym method-procname*.id))
 
+  (define implemented-interfaces
+    (if (null? implemented-interface*.id)
+	'(quote ())
+      `(list ,@(map (lambda (iface.id)
+		      `(syntax ,iface.id))
+		 implemented-interface*.id))))
+
   `(make-record-type-spec (syntax ,foo.id)
 			  (quote ,foo-uid)
 			  (syntax ,foo-rtd.sym)
@@ -1553,7 +1593,26 @@
 			  (syntax ,foo-equality-predicate.id)
 			  (syntax ,foo-comparison-procedure.id)
 			  (syntax ,foo-hash-function.id)
-			  ,foo-methods.table))
+			  ,foo-methods.table
+			  ,implemented-interfaces))
+
+
+(define (%make-interfaces-validation-code foo implemented-interface*.id)
+  ;;Return null or a proper list of forms representing the code needed to verify that
+  ;;this record-type actually implements the specified interfaces.
+  ;;
+  (if (null? implemented-interface*.id)
+      '()
+    (let ((iface.id (make-syntactic-identifier-for-temporary-variable "iface")))
+      `((begin-for-syntax
+	  (for-each (lambda (,iface.id)
+		      (unless (interface-and-compliant-object-type? ,iface.id (syntax ,foo))
+			(assertion-violation (quote ,foo)
+			  "record-type does not implement the specified interface"
+			  (quote ,foo) ,iface.id)))
+	    (list . ,(map (lambda (id)
+			    `(syntax ,id))
+		       implemented-interface*.id))))))))
 
 
 ;;;; done

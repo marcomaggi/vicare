@@ -50,19 +50,55 @@
 
 (parametrise ((check-test-name	'type-inspection))
 
-  (define-interface <String>
-    (method length	(lambda (<String>) => (<non-negative-fixnum>)))
-    (method first	(lambda (<String>) => (<char>))))
+  (define-interface <Sequence>
+    (method-prototype length	(lambda (<bottom>) => (<non-negative-exact-integer>)))
+    (method-prototype first	(lambda (<bottom>) => (<char>)))
+    (method-prototype ref	(lambda (<bottom> <non-negative-exact-integer>) => (<char>)))
+    (method ({just-length <non-negative-exact-integer>})
+      (.length this))
+    (case-method just-item
+      (({_ <char>})
+       (.ref this 0))
+      (({_ <char>} {idx <non-negative-exact-integer>})
+       (.ref this idx)))
+    (method/overload (doit)
+      this))
 
   (define-record-type <str>
-    (implements <String>)
+    (implements <Sequence>)
     (fields {str <string>})
     (method ({length <non-negative-fixnum>} {O <str>})
       (string-length (.str O)))
-    (method ({first  <char>} {O <String>})
-      (string-ref    (.str O) 0)))
+    (method ({first  <char>} {O <str>})
+      (string-ref    (.str O) 0))
+    (method ({ref    <char>} {O <str>} {idx <non-negative-exact-integer>})
+      (string-ref    (.str O) idx)))
 
-  #| end of PARAMETRISE |# )
+  (define (fun {O <Sequence>})
+    (.length O))
+
+;;; --------------------------------------------------------------------
+
+  (check (type-annotation-matching <Sequence> <Sequence>)	=> 'exact-match)
+  (check (type-annotation-matching <Sequence> <str>)		=> 'exact-match)
+  (check (type-annotation-matching <str> <Sequence>)		=> 'no-match)
+  (check (type-annotation-matching <Sequence> <fixnum>)		=> 'no-match)
+  (check (type-annotation-matching <fixnum> <Sequence>)		=> 'no-match)
+
+  (check-for-true	(type-annotation-super-and-sub? <Sequence> <Sequence>))
+  (check-for-true	(type-annotation-super-and-sub? <Sequence> <str>))
+  (check-for-false	(type-annotation-super-and-sub? <str> <Sequence>))
+  (check-for-false	(type-annotation-super-and-sub? <Sequence> <fixnum>))
+  (check-for-false	(type-annotation-super-and-sub? <fixnum> <Sequence>))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((O (new <str> "ciao")))
+	(fun O))
+    => 4)
+
+  (void))
 
 
 ;;;; done

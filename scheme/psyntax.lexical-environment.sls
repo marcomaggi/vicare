@@ -227,6 +227,11 @@
     <label-type-spec>-rtd				<label-type-spec>-rcd
     <label-type-spec>
     make-label-type-spec				label-type-spec?
+
+    <interface-type-spec>-rtd				<interface-type-spec>-rcd
+    <interface-type-spec>
+    make-interface-type-spec				interface-type-spec?
+    interface-type-spec.methods-table			interface-type-spec.compliant-spec?
 ;;;
     ;; typed variable specification: base type
     <typed-variable-spec>
@@ -321,6 +326,7 @@
     case-identifier-syntactic-binding-descriptor
     case-identifier-syntactic-binding-descriptor/no-indirection
     __descr__
+    interface-and-compliant-object-type?
 
     ;; identifiers from the built-in environment
     system-id-gensym			system-id
@@ -2414,6 +2420,11 @@
 		   (make-message-condition "type identifier not bound to a struct-type specification")
 		   (make-syntactic-identifier-condition id)
 		   (make-object-type-spec-condition ots)))))))
+
+(define* (interface-and-compliant-object-type? {iface.id identifier?} {type.id identifier?})
+  (let ((iface.ots	(id->object-type-spec iface.id))
+	(type.ots	(id->object-type-spec type.id)))
+    (interface-type-spec.compliant-spec? iface.ots type.ots)))
 
 
 ;;;; identifier to syntactic binding's descriptor
