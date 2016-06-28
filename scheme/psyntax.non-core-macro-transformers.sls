@@ -824,7 +824,9 @@
 					  #f #;equality-predicate
 					  #f #;comparison-procedure
 					  #f #;hash-function
-					  ,METHOD-TABLE))
+					  ,METHOD-TABLE
+					  '() #;implemented-interfaces
+					  ))
 		 (define/std ,RTD
 		   ($make-record-type-descriptor-ex (quote ,?name) (record-type-descriptor ,?parent-name)
 						    (quote ,UID) #f ,SEALED? ,OPAQUE?
