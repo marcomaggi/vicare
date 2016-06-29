@@ -253,7 +253,7 @@
 	 <interface-type-spec>
 	 make-interface-type-spec			interface-type-spec?
 	 interface-type-spec.method-prototypes-table
-	 interface-type-spec.compliant-spec?
+	 interface-and-compliant-object-type?
 
 	 ;;;
 
@@ -4943,16 +4943,41 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (interface-type-spec.compliant-spec? {iface interface-type-spec?} {ots object-type-spec?})
-  (and (for-all (lambda (method-prototype-entry)
-		  (object-type-spec.compatible-method-stx ots (car method-prototype-entry) (cdr method-prototype-entry)))
-	 (interface-type-spec.method-prototypes-table iface))
-       #t))
+(define* (interface-and-compliant-object-type? {iface.id identifier?} {type.id identifier?})
+  ;;The argument IFACE.ID  must be a syntactic identifier bound  to an interface-type
+  ;;specification.  The argument  TYPE.ID must be a syntactic identifier  bound to an
+  ;;object-type specification.   Return true  if TYPE.ID  implements all  the methods
+  ;;needed by IFACE.ID; otherwise return false.
+  ;;
+  ;;This function must be used when, at expand-time, we define a new object-type that
+  ;;is meant to implement an interface.  For  example, it is used in the expansion of
+  ;;DEFINE-RECORD-TYPE.
+  ;;
+  (let ((iface.ots	(id->object-type-spec iface.id))
+	(type.ots	(id->object-type-spec type.id)))
+    (unless (interface-type-spec? iface.ots)
+      (assertion-violation __who__
+	"expected interface-type specification as first argument"
+	iface.id iface.ots))
+    (and (for-all (lambda (method-prototype-entry)
+		    (object-type-spec.compatible-method-stx type.ots (car method-prototype-entry) (cdr method-prototype-entry)))
+	   (interface-type-spec.method-prototypes-table iface.ots))
+	 #t)))
+
+;;; --------------------------------------------------------------------
 
 (define* (interface-type-spec.super-and-sub? {iface interface-type-spec?} {ots object-type-spec?})
   ;;Return  true  if  the  interface  specification IFACE  is  a  super-type  of  the
   ;;object-type specification OTS.  In other words: return  true if OTS or one of its
   ;;parents implement the interface IFACE.
+  ;;
+  ;;Use case: this function is used when,  in a function application, we determine if
+  ;;an  operand's type  is sub-type  of the  corresponding argument's  type and:  the
+  ;;argument's type is IFACE, the operand's type is OTS.
+  ;;
+  ;;Use case:  this function  is used  when, in a  typed variable  initialisation, we
+  ;;determine if  a return value's type  is sub-type of the  corresponding variable's
+  ;;type and: the variable's type is IFACE, the return value's type is OTS.
   ;;
   (let ((iface.id (object-type-spec.name iface)))
     (let loop ((ots ots))

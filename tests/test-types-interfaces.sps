@@ -48,6 +48,87 @@
     ))
 
 
+(parametrise ((check-test-name	'multiple-implementations))
+
+  ;;Two record-types in a hierarchy both implement the same interface.
+  ;;
+  (check
+      (internal-body
+	(define-interface <Arith>
+	  (method-prototype add
+	    (lambda () => (<number>))))
+
+	(define-record-type <duo>
+	  (implements <Arith>)
+	  (fields one two)
+	  (method ({add <number>})
+	    (+ (.one this) (.two this))))
+
+	(define-record-type <trio>
+	  (parent <duo>)
+	  (implements <Arith>)
+	  (fields three)
+	  (method ({add <number>})
+	    (+ (.one this) (.two this) (.three this))))
+
+	(define (fun {O <Arith>})
+	  (.add O))
+
+	(values (fun (new <duo>  1 2))
+		(fun (new <trio> 1 2 3))))
+    => 3 6)
+
+  (void))
+
+
+(parametrise ((check-test-name	'nongenerative))
+
+  ;;NONGENERATIVE clause with explicit UID.
+  ;;
+  (check
+      (internal-body
+	(define-interface <Arith>
+	  (nongenerative test-1:<Arith>)
+	  (method-prototype add
+	    (lambda () => (<number>))))
+
+	(define-record-type <duo>
+	  (implements <Arith>)
+	  (fields one two)
+	  (method ({add <number>})
+	    (+ (.one this) (.two this))))
+
+	(define (fun {O <Arith>})
+	  (.add O))
+
+	(fun (new <duo> 1 2)))
+    => 3)
+
+  ;;NONGENERATIVE clause with implicit UID.
+  ;;
+  (check
+      (internal-body
+	(define-interface <Arith>
+	  (nongenerative)
+	  (method-prototype add
+	    (lambda () => (<number>))))
+
+	(define-record-type <duo>
+	  (implements <Arith>)
+	  (fields one two)
+	  (method ({add <number>})
+	    (+ (.one this) (.two this))))
+
+	(define (fun {O <Arith>})
+	  (.add O))
+
+	(fun (new <duo> 1 2)))
+    => 3)
+
+
+  (void))
+
+
 (parametrise ((check-test-name	'type-descriptor))
 
   (import (prefix (vicare system type-descriptors)

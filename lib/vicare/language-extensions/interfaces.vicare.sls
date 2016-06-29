@@ -160,10 +160,24 @@
 	;;After  all  the  clauses  have  been   parsed,  we  need  to  perform  some
 	;;post-processing finalisation.  This method does it.
 	;;
-	(.uid this (or (.uid this) (.build-uid this))))
+	(.uid this (or (.uid this) (.build-generative-uid this))))
 
-      (method (build-uid)
-	(datum->syntax (.type-name this) (gensym (syntax->datum (.type-name this)))))
+      (method (build-nongenerative-uid)
+	;;Build and return a symbol to be used as UID for this interface type for the
+	;;case of: non-generative type.
+	;;
+	(datum->syntax (.type-name this)
+		       (string->symbol (string-append "vicare:nongenerative:"
+						      (symbol->string
+						       (syntax->datum
+							(.type-name this)))))))
+
+      (method (build-generative-uid)
+	;;Build and return a symbol to be used as UID for this interface type for the
+	;;case of: generative type.
+	;;
+	(datum->syntax (.type-name this)
+		       (gensym (syntax->datum (.type-name this)))))
 
       #| end of DEFINE-RECORD-TYPE |# )
 
@@ -242,11 +256,12 @@
       ;;
       (let ((arg (vector-ref args 0)))
 	(.uid results (if (vector-empty? arg)
-			  (.build-uid results)
+			  (.build-nongenerative-uid results)
 			(receive-and-return (obj)
 			    (vector-ref arg 0)
-			  (unless (symbol? obj)
-			    (synner "expected symbol as argument in NONGENERATIVE clause" obj)))))))
+			  (unless (identifier? obj)
+			    (synner "expected identifier as argument in NONGENERATIVE clause" obj))))))
+      results)
 
 ;;; --------------------------------------------------------------------
 

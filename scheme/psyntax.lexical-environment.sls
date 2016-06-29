@@ -232,7 +232,7 @@
     <interface-type-spec>-rtd				<interface-type-spec>-rcd
     <interface-type-spec>
     make-interface-type-spec				interface-type-spec?
-    interface-type-spec.method-prototypes-table		interface-type-spec.compliant-spec?
+    interface-type-spec.method-prototypes-table
 ;;;
     ;; typed variable specification: base type
     <typed-variable-spec>
@@ -2421,11 +2421,6 @@
 		   (make-message-condition "type identifier not bound to a struct-type specification")
 		   (make-syntactic-identifier-condition id)
 		   (make-object-type-spec-condition ots)))))))
-
-(define* (interface-and-compliant-object-type? {iface.id identifier?} {type.id identifier?})
-  (let ((iface.ots	(id->object-type-spec iface.id))
-	(type.ots	(id->object-type-spec type.id)))
-    (interface-type-spec.compliant-spec? iface.ots type.ots)))
 
 
 ;;;; identifier to syntactic binding's descriptor

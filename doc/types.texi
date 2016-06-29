@@ -6120,6 +6120,34 @@ happen @strong{only} if the expander is able to determine the type of
 @meta{operand}; this validation cannot happen at run--time, so, for
 example, it is impossible for label types to implement interfaces.
 
+Object--types in the same inheritance chain can implement the same
+interface.  Example:
+
+@lisp
+(define-interface <Arith>
+  (method-prototype add
+    (lambda () => (<number>))))
+
+(define-record-type <duo>
+  (implements <Arith>)
+  (fields one two)
+  (method (@{add <number>@})
+    (+ (.one this) (.two this))))
+
+(define-record-type <trio>
+  (parent <duo>)
+  (implements <Arith>)
+  (fields three)
+  (method (@{add <number>@})
+    (+ (.one this) (.two this) (.three this))))
+
+(define (fun @{O <Arith>@})
+  (.add O))
+
+(fun (new <duo>  1 2))          @result{} 3
+(fun (new <trio> 1 2 3))        @result{} 6
+@end lisp
+
 @c page
 @node types interfaces defs
 @subsection Defining interfaces
