@@ -6148,6 +6148,33 @@ interface.  Example:
 (fun (new <trio> 1 2 3))        @result{} 6
 @end lisp
 
+It is @strong{not} mandatory for interface types to require method
+prototypes.  Example:
+
+@lisp
+(define-interface <Stringer>
+  (method (to-string)
+    (with-output-to-string
+      (lambda ()
+        (display this)))))
+
+(define-record-type <duo>
+  (implements <Stringer>)
+  (fields one two)
+  (custom-printer
+    (lambda (@{this <duo>@} port sub-printer)
+      (display "#[duo "    port)
+      (display (.one this) port)
+      (display #\space     port)
+      (display (.two this) port)
+      (display #\]         port))))
+
+(define (fun @{O <Stringer>@})
+  (.to-string O))
+
+(fun (new <duo>  1 2)))         @result{} "#[duo 1 2]")
+@end lisp
+
 @c page
 @node types interfaces defs
 @subsection Defining interfaces
@@ -6167,7 +6194,8 @@ the same ones exported by @library{vicare}.
 Define a new interface type bound to the syntactic identifier
 @meta{name}.  Interfaces can implement methods, case--methods and
 overloaded methods of their own, with the same syntax used for
-record--types.
+record--types.  Interfaces cannot be instantiated: attempting to do it
+will raise an expand--time exception.
 
 The clause @clause{method-prototype} must be used as follows:
 

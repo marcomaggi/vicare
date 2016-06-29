@@ -126,6 +126,9 @@
 		(%build-object-with-validator input-form.stx lexenv.run lexenv.expand
 					      requested.ots ?rand*))
 
+	       ((interface-type-spec? requested.ots)
+		(__synner__ "attempt to instantiate interface" ?type-name))
+
 	       ((object-type-spec.constructor-stx requested.ots)
 		=> (lambda (constructor.stx)
 		     (if (boolean? constructor.stx)

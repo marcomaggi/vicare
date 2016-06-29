@@ -47,6 +47,118 @@
        => (quote ?expected)))
     ))
 
+(define (%eval sexp)
+  (with-exception-handler
+      (lambda (E)
+	(unless (warning? E)
+	  (raise-continuable E)))
+    (lambda ()
+      (eval sexp THE-ENVIRONMENT
+	    (expander-options typed-language)
+	    (compiler-options)))))
+
+(define THE-ENVIRONMENT
+  (environment '(vicare)
+	       '(vicare language-extensions interfaces)))
+
+
+(parametrise ((check-test-name	'basic))
+
+  ;;Basic example.
+  ;;
+  (check
+      (internal-body
+	(define-interface <Arith>
+	  (method-prototype add
+	    (lambda () => (<number>))))
+
+	(define-record-type <duo>
+	  (implements <Arith>)
+	  (fields one two)
+	  (method ({add <number>})
+	    (+ (.one this) (.two this))))
+
+	(define (fun {O <Arith>})
+	  (.add O))
+
+	(fun (new <duo>  1 2)))
+    => 3)
+
+  ;;Interface with no method prototypes.
+  ;;
+  (check
+      (internal-body
+	(define-interface <Stringer>
+	  (method (to-string)
+	    (with-output-to-string
+	      (lambda ()
+		(display this)))))
+
+	(define-record-type <duo>
+	  (implements <Stringer>)
+	  (fields one two)
+	  (custom-printer
+	    (lambda ({this <duo>} port sub-printer)
+	      (display "#[duo "    port)
+	      (display (.one this) port)
+	      (display #\space     port)
+	      (display (.two this) port)
+	      (display #\]         port))))
+
+	(define (fun {O <Stringer>})
+	  (.to-string O))
+
+	(fun (new <duo>  1 2)))
+    => "#[duo 1 2]")
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  ;;Attempt to instantiate interface.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-interface <Arith>
+		      (method-prototype add
+			(lambda () => (<number>))))
+
+		    (new <Arith>)))
+	(catch E
+	  ((&syntax)
+	   (when #f
+	     (fprintf (current-error-port) (condition-message E)))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => '<Arith>)
+
+  ;;Run-time type validation failure cause by APPLY.
+  ;;
+  (check
+      (internal-body
+	(define-interface <Arith>
+	  (method-prototype add
+	    (lambda () => (<number>))))
+
+	(define-record-type <duo>
+	  (implements <Arith>)
+	  (fields one two)
+	  (method ({add <number>})
+	    (+ (.one this) (.two this))))
+
+	(define (fun {O <Arith>})
+	  (.add O))
+
+	(try
+	    (apply fun (list (new <duo>  1 2)))
+	  (catch E
+	    ((&procedure-signature-argument-violation)
+	     (procedure-signature-argument-violation.failed-expression E))
+	    (else E))))
+    => '(is-a? _ <Arith>))
+
+  (void))
+
 
 (parametrise ((check-test-name	'multiple-implementations))
 
