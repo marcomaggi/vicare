@@ -110,7 +110,10 @@
 
     <interface-type-descr>-rtd			<interface-type-descr>-rcd
     make-interface-type-descr			interface-type-descr?
-    interface-type-descr.type-name		interface-type-descr.method-retriever
+    interface-type-descr.type-name		interface-type-descr.uid
+    interface-type-descr.method-prototype-names
+    interface-type-descr.implemented-method-names
+    interface-type-descr.method-retriever
 
 ;;; --------------------------------------------------------------------
 
@@ -901,16 +904,54 @@
   (nongenerative vicare:type-descriptors:<interface-type-descr>)
   (sealed #t)
   (fields
-    (immutable type-name		interface-type-descr.type-name)
+    (immutable	type-name			interface-type-descr.type-name)
 		;A symbol representing the name of this interface type.
-    (immutable method-retriever		interface-type-descr.method-retriever)
+    (immutable	uid				interface-type-descr.uid)
+		;A unique identifier associated to this type descriptor.
+    (immutable	method-prototype-names		interface-type-descr.method-prototype-names)
+		;A list of symbols representing the names of the methods that must be
+		;provided by object-types implementing this interface.
+    (immutable	implemented-method-names	interface-type-descr.implemented-method-names)
+		;A list of  symbols representing the names of  te methods implemented
+		;by this interface type.
+    (immutable	method-retriever		interface-type-descr.method-retriever)
 		;A function that retrieves  method implementation functions given the
 		;name of a method as symbol.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
-      (define* (make-interface-type-descr {type-name symbol?} {method-retriever procedure?})
-	(make-record type-name method-retriever))
+      (define* (make-interface-type-descr {type-name symbol?} {uid symbol?}
+					  method-prototype-names implemented-method-names
+					  {method-retriever procedure?})
+	(if (symbol-bound? uid)
+	    (receive-and-return (des)
+		(symbol-value uid)
+	      (%validate-old-descriptor-against-arguments des type-name uid method-prototype-names implemented-method-names))
+	  (receive-and-return (des)
+	      (make-record type-name uid method-prototype-names implemented-method-names method-retriever)
+	    (set-symbol-value! uid des))))
+
+      (define (%validate-old-descriptor-against-arguments des type-name uid method-prototype-names implemented-method-names)
+	(define (%error message . irritants)
+	  (apply assertion-violation 'make-interface-type-descr message des irritants))
+	(unless (interface-type-descr? des)
+	  (%error "UID symbol is bound to a non-interface object" uid des))
+	(unless (eq? type-name (interface-type-descr.type-name des))
+	  (%error "previous interface descriptor bound to the same UID has different name"
+		  des type-name))
+	(for-each (lambda (old-proto-name)
+		    (unless (memq old-proto-name method-prototype-names)
+		      (%error "previous interface descriptor bound to the same UID requires \
+                                 method prototype not present in new definition"
+			      des old-proto-name method-prototype-names)))
+	  (interface-type-descr.method-prototype-names des))
+	(for-each (lambda (old-method-name)
+		    (unless (memq old-method-name implemented-method-names)
+		      (%error "previous interface descriptor bound to the same UID defines \
+                                 method not present in new definition"
+			      des old-method-name implemented-method-names)))
+	  (interface-type-descr.implemented-method-names des)))
+
       make-interface-type-descr))
   #| end of DEFINE-RECORD-TYPE |# )
 

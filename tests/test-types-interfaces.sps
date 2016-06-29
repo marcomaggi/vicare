@@ -31,7 +31,7 @@
     (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** test Vicare typed language: DEFINE-INTERFACE\n")
+(check-display "*** test Vicare typed language: interfaces and define-interface\n")
 
 
 ;;;; helpers

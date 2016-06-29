@@ -446,8 +446,11 @@
     <record>
   make-interface-type-descr interface-type-descr?
   (methods
-   (type-name		interface-type-descr.type-name)
-   (method-retriever	interface-type-descr.method-retriever)))
+   (type-name			interface-type-descr.type-name)
+   (uid				interface-type-descr.uid)
+   (method-prototype-names	interface-type-descr.method-prototype-names)
+   (implemented-method-names	interface-type-descr.implemented-method-names)
+   (method-retriever		interface-type-descr.method-retriever)))
 
 ;;; --------------------------------------------------------------------
 

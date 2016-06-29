@@ -905,6 +905,7 @@
     (safe)
   (signatures
    ((<syntactic-identifier>		      ;type-name
+     <symbol>				      ;uid
      <syntactic-identifier>		      ;type-descriptor-name
      (alist <symbol> <closure-type-spec>)     ;requested methods table
      (alist <symbol> <syntactic-identifier>)) ;implemented methods table

@@ -4909,10 +4909,10 @@
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
-      (define* (make-interface-type-spec {type-name.id identifier?} {type-descriptor.id identifier?}
+      (define* (make-interface-type-spec {type-name.id identifier?} {uid symbol?} {type-descriptor.id identifier?}
 					 method-prototypes-table implemented-methods-table)
 	(let* ((parent.ots		(<top>-ots))
-	       (uid*			(cons 'vicare:expander:<interface-type-spec> (object-type-spec.unique-identifiers parent.ots)))
+	       (uid*			(cons uid (object-type-spec.unique-identifiers parent.ots)))
 	       (implemented-interfaces	'()))
 	  ((make-object-type-spec type-name.id uid*
 				  parent.ots interface-type-spec.type-annotation-maker

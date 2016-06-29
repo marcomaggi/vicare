@@ -4217,6 +4217,9 @@
     (make-interface-type-descr			$type-descriptors)
     (interface-type-descr?			$type-descriptors)
     (interface-type-descr.type-name		$type-descriptors)
+    (interface-type-descr.uid			$type-descriptors)
+    (interface-type-descr.method-prototype-names $type-descriptors)
+    (interface-type-descr.implemented-method-names $type-descriptors)
     (interface-type-descr.method-retriever	$type-descriptors)
 ;;;
     (<union-type-descr>-rtd)

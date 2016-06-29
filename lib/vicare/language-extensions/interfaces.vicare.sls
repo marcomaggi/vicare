@@ -33,16 +33,17 @@
 	  method-prototype
 	  this)
   (import (vicare)
-    (prefix (only (vicare expander) #;(psyntax system $all)
+    (prefix (only (vicare expander)
 		  make-interface-type-spec
 		  type-annotation->object-type-spec
 		  object-type-spec.type-annotation
 		  <closure-type-spec>
 		  <syntactic-identifier>)
 	    expander::)
-    (only (vicare system type-descriptors)
-	  <interface-type-descr>
-	  make-interface-type-descr))
+    (prefix (only (vicare system type-descriptors)
+		  <interface-type-descr>
+		  make-interface-type-descr)
+	    td::))
 
   (define-auxiliary-syntaxes method-prototype)
 
@@ -55,7 +56,8 @@
       (syntax-clauses-validate-specs
        (list
 	;;KEYWORD MIN-OCCUR MAX-OCCUR MIN-ARGS MAX-ARGS MUTUALLY-INCLUSIVE MUTUALLY-EXCLUSIVE
-	(new <syntax-clause-spec> #'method-prototype		0 +inf.0 2 2 '() '())
+	(new <syntax-clause-spec> #'nongenerative		0 1      0 1      '() '())
+	(new <syntax-clause-spec> #'method-prototype		0 +inf.0 2 2      '() '())
 	(new <syntax-clause-spec> #'method			0 +inf.0 2 +inf.0 '() '())
 	(new <syntax-clause-spec> #'case-method			0 +inf.0 2 +inf.0 '() '())
 	(new <syntax-clause-spec> #'method/overload		0 +inf.0 2 +inf.0 '() '())
@@ -65,6 +67,8 @@
       (fields
 	(immutable	type-name)
 		;Syntactic identifier representing the name of this interface.
+	(mutable	uid)
+		;Unique identifier associated to this type.
 	(mutable	definitions)
 		;Proper  list of  syntax objects  representing definition  forms that
 		;must go in the output of this macro.
@@ -80,12 +84,25 @@
 		;"<closure-type-spec>"  representing   the  type  signature   of  the
 		;prototyped methods.   The prototyped methods must  be implemented by
 		;the object-types that implement this interface.
+	(mutable	method-prototype-names)
+		;List of syntactic  identifiers representing the names  of the method
+		;prototypes.
+	(mutable	implemented-method-names)
+		;List of syntactic identifiers representing  the names of the methods
+		;implemented by this interface type (excluding the prototype names).
 	#| end of FIELDS |# )
 
       (protocol
 	(lambda (make-record)
 	  (lambda (type-name.id)
-	    (make-record type-name.id '() '() '()))))
+	    (make-record type-name.id
+			 #f  ;uid
+			 '() ;definitions
+			 '() ;methods-table
+			 '() ;prototype-methods-table
+			 '() ;method-prototype-names
+			 '() ;implemented-method-names
+			 ))))
 
       (constructor-signature
 	(lambda (expander::<syntactic-identifier>) => (<parsing-results>)))
@@ -127,6 +144,27 @@
 	(.prototype-methods-table this (cons (cons method-name.id signature.ots)
 					     (.prototype-methods-table this))))
 
+      (method (push-method-prototype-name!   {name expander::<syntactic-identifier>})
+	(.method-prototype-names   this (cons name (.method-prototype-names   this))))
+
+      (method (push-implemented-method-name! {name expander::<syntactic-identifier>})
+	(.implemented-method-names this (cons name (.implemented-method-names this))))
+
+      (method (type-descriptor-id)
+	;;Return the  syntactic identifier that  must be  bound to the  run-time type
+	;;descriptor for this interface type.
+	;;
+	(identifier-suffix (.type-name this) "-type-descriptor"))
+
+      (method (finalise)
+	;;After  all  the  clauses  have  been   parsed,  we  need  to  perform  some
+	;;post-processing finalisation.  This method does it.
+	;;
+	(.uid this (or (.uid this) (.build-uid this))))
+
+      (method (build-uid)
+	(datum->syntax (.type-name this) (gensym (syntax->datum (.type-name this)))))
+
       #| end of DEFINE-RECORD-TYPE |# )
 
 ;;; --------------------------------------------------------------------
@@ -154,18 +192,24 @@
 	synner))
 
     (define (%build-output {results <parsing-results>})
+      (.finalise results)
       (with-syntax
 	  ((TYPE-NAME			(.type-name			results))
-	   (TYPE-DESCRIPTOR		(identifier-suffix (.type-name results) "-type-descriptor"))
+	   (UID				(.uid				results))
+	   (TYPE-DESCRIPTOR		(.type-descriptor-id		results))
 	   (PROTOTYPE-METHODS-TABLE	(.prototype-methods-table	results))
+	   (METHOD-PROTOTYPE-NAMES	(.method-prototype-names	results))
+	   (IMPLEMENTED-METHOD-NAMES	(.implemented-method-names	results))
 	   (METHODS-TABLE-ALIST		(.methods-table-alist		results))
 	   (METHODS-RETRIEVER		(.methods-retriever		results))
 	   ((DEFINITION ...)		(.definitions			results)))
 	#'(module (TYPE-NAME)
-	    (define/typed {TYPE-DESCRIPTOR <interface-type-descr>}
-	      (make-interface-type-descr (quote TYPE-NAME) METHODS-RETRIEVER))
+	    (define/typed {TYPE-DESCRIPTOR td::<interface-type-descr>}
+	      (td::make-interface-type-descr (quote TYPE-NAME) (quote UID)
+					     (quote METHOD-PROTOTYPE-NAMES) (quote IMPLEMENTED-METHOD-NAMES)
+					     METHODS-RETRIEVER))
 	    (define-syntax TYPE-NAME
-	      (expander::make-interface-type-spec (syntax TYPE-NAME) (syntax TYPE-DESCRIPTOR)
+	      (expander::make-interface-type-spec (syntax TYPE-NAME) (quote UID) (syntax TYPE-DESCRIPTOR)
 						  (quote PROTOTYPE-METHODS-TABLE)
 						  METHODS-TABLE-ALIST))
 	    DEFINITION ...)))
@@ -178,9 +222,31 @@
 	 ((case-method)			%process-clause/case-method)
 	 ((method/overload)		%process-clause/method-overload)
 	 ((method-prototype)		%process-clause/method-prototype)
+	 ((nongenerative)		%process-clause/nongenerative)
 	 (else
 	  (assertion-violation __module_who__ "invalid clause spec" clause-spec)))
        results args synner))
+
+;;; --------------------------------------------------------------------
+
+    (define (%process-clause/nongenerative {results <parsing-results>} args synner)
+      ;;The input clause must have one of the formats:
+      ;;
+      ;;   (nongenerative)
+      ;;   (nongenerative ?uid)
+      ;;
+      ;;and we expect ARGS to have one of the formats:
+      ;;
+      ;;   #(#())
+      ;;   #(#(?uid))
+      ;;
+      (let ((arg (vector-ref args 0)))
+	(.uid results (if (vector-empty? arg)
+			  (.build-uid results)
+			(receive-and-return (obj)
+			    (vector-ref arg 0)
+			  (unless (symbol? obj)
+			    (synner "expected symbol as argument in NONGENERATIVE clause" obj)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -217,6 +283,7 @@
 							 (apply method-call-late-binding (quote ?method-name) subject args)))
 	     (.methods-table-push!           results #'?method-name method-procname.id)
 	     (.prototype-methods-table-push! results #'?method-name signature.ots)
+	     (.push-method-prototype-name!   results #'?method-name)
 	     results))
 
 	  (#(?stuff ...)
@@ -278,6 +345,7 @@
 					       (fluid-let-syntax ((this (identifier-syntax subject)))
 						 ?body0 ?body ...)))
 	     (.methods-table-push! results method-name.id method-procname.id)
+	     (.push-implemented-method-name! results method-name.id)
 	     results))
 	  (#(?stuff ...)
 	   (synner "invalid METHOD specification" #'(method ?stuff ...)))))
@@ -316,6 +384,7 @@
 					  (syntax->list #'(?case-method-clause0 ?case-method-clause ...)))))
 	     (.definitions-push!	results #`(case-define/checked #,method-procname.id . #,clause*.stx))
 	     (.methods-table-push!	results method-name.id method-procname.id)
+	     (.push-implemented-method-name! results method-name.id)
 	     results))
 
 	  (#(?stuff ...)
@@ -373,6 +442,7 @@
 					       (fluid-let-syntax ((this (identifier-syntax subject)))
 						 ?body0 ?body ...)))
 	     (.methods-table-push! results method-name.id method-procname.id)
+	     (.push-implemented-method-name! results method-name.id)
 	     results))
 
 	  (#(?stuff ...)
