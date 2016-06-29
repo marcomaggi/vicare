@@ -28,6 +28,7 @@
   (options typed-language)
   (import (vicare)
     (vicare language-extensions interfaces)
+    (vicare language-extensions instantiable-bodies)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -393,6 +394,91 @@
   (void))
 
 
+(parametrise ((check-test-name	'instantiable-bodies))
+
+  ;;Generic interfaces through instantiable bodies.
+  ;;
+  (check
+      (internal-body
+	(define-instantiable-body define-iface-arith
+	  (define-interface <Iface>
+	    (method-prototype add
+	      (lambda () => (<type-name>)))))
+
+	(define-iface-arith
+	  ((<Iface>		<NumberArith>)
+	   (<type-name>		<number>)))
+
+	(define-iface-arith
+	  ((<Iface>		<StringArith>)
+	   (<type-name>		<string>)))
+
+	(define-record-type <duo>
+	  (implements <NumberArith>)
+	  (fields one two)
+	  (method ({add <number>})
+	    (+ (.one this) (.two this))))
+
+	(define (nfun {O <NumberArith>})
+	  (.add O))
+
+	(define-record-type <string-duo>
+	  (implements <StringArith>)
+	  (fields one two)
+	  (method ({add <string>})
+	    (string-append (.one this) (.two this))))
+
+	(define (sfun {O <StringArith>})
+	  (.add O))
+
+	(values (nfun (new <duo> 1 2))
+		(sfun (new <string-duo> "hel" "lo"))))
+    => 3 "hello")
+
+;;; --------------------------------------------------------------------
+
+  ;;Generic interfaces through instantiable bodies, overloaded functions.
+  ;;
+  (check
+      (internal-body
+	(define-instantiable-body define-iface-arith
+	  (define-interface <Iface>
+	    (method-prototype add
+	      (lambda () => (<type-name>)))))
+
+	(define-iface-arith
+	  ((<Iface>		<NumberArith>)
+	   (<type-name>		<number>)))
+
+	(define-iface-arith
+	  ((<Iface>		<StringArith>)
+	   (<type-name>		<string>)))
+
+	(define-record-type <duo>
+	  (implements <NumberArith>)
+	  (fields one two)
+	  (method ({add <number>})
+	    (+ (.one this) (.two this))))
+
+	(define/overload (fun {O <NumberArith>})
+	  (.add O))
+
+	(define-record-type <string-duo>
+	  (implements <StringArith>)
+	  (fields one two)
+	  (method ({add <string>})
+	    (string-append (.one this) (.two this))))
+
+	(define/overload (fun {O <StringArith>})
+	  (.add O))
+
+	(values (fun (new <duo> 1 2))
+		(fun (new <string-duo> "hel" "lo"))))
+    => 3 "hello")
+
+  (void))
+
+
 (parametrise ((check-test-name	'doc))
 
   ;;No-interfaces example
@@ -437,6 +523,8 @@
 
 ;;; --------------------------------------------------------------------
 
+  ;;The same as above but with interfaces.
+  ;;
   (internal-body
 
     (define-interface <Sequence>

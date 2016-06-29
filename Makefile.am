@@ -111,6 +111,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-getopts.texi				\
 	doc/libs-gcc.texi				\
 	doc/libs-ilists.texi				\
+	doc/libs-instantiable-bodies.texi		\
 	doc/libs-irregex.texi				\
 	doc/libs-iteration-thunks.texi			\
 	doc/libs-ideques.texi				\
@@ -1023,6 +1024,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-language-extensions-ensure.sps		\
 	tests/test-vicare-language-extensions-hooks.sps			\
 	tests/test-vicare-language-extensions-identifier-substitutions.sps	\
+	tests/test-vicare-language-extensions-instantiable-bodies.sps		\
 	tests/test-vicare-language-extensions-keywords.sps		\
 	tests/test-vicare-language-extensions-loops.sps			\
 	tests/test-vicare-language-extensions-makers.sps		\

@@ -21,6 +21,7 @@
 * loops::                       Loop constructs.
 * comparisons::                 Comparison functions.
 * restarts::                    Signaling conditions and restarts.
+* ibodies::                     Instantiable bodies.
 @end menu
 
 @c page
@@ -3292,5 +3293,6 @@ Examples:
 @include libs-loops.texi
 @include libs-comparisons.texi
 @include libs-conditions-and-restarts.texi
+@include libs-instantiable-bodies.texi
 
 @c end of file

@@ -1,0 +1,58 @@
+@node ibodies
+@section Instantiable bodies
+
+
+@cindex Library @library{vicare language-extensions instantiable-bodies}
+@cindex @library{vicare language-extensions instantiable-bodies}, library
+
+
+Instantiable bodies are sequences of forms defined in a lexical context
+and usable in another lexical context with some preliminary processing.
+The following syntactic bindings are exported by the library
+@library{vicare language-extensions instantiable-bodies}.
+
+
+@deffn Syntax define-instantiable-body @meta{definer} . @meta{body}
+Define a new syntax bound to the syntactic identifier @meta{definer}
+which, when used, expands to the @meta{body} forms.  The defined syntax
+must be used as follows:
+
+@lisp
+(@meta{definer}
+  ((@meta{from} @meta{to}) ...))
+@end lisp
+
+@noindent
+where @meta{from} must be a syntactic identifier and @meta{to} can be
+any form.  Before the expansion: all the occurrences of the syntactic
+identifiers @meta{from} are replaced by the associated syntactic
+identifiers @meta{to}.
+@end deffn
+
+
+Here is a simple example:
+
+@lisp
+(define-instantiable-body definer
+  (define (fun)
+    const))
+
+(definer ((fun doit) (const 123)))
+
+(doit)  @result{} 123
+@end lisp
+
+@noindent
+the use of the syntax @syntax{definer} expands into:
+
+@lisp
+(define (doit)
+  123)
+@end lisp
+
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: vicare-libs.texi
+@c End:
