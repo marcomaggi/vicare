@@ -695,6 +695,20 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/multimethods.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/multimethods.fasl
 
+lib/vicare/language-extensions/instantiable-bodies.fasl: \
+		lib/vicare/language-extensions/instantiable-bodies.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_language_extensions_instantiable_bodies_fasldir = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_instantiable_bodies_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+nodist_lib_vicare_language_extensions_instantiable_bodies_fasl_DATA = lib/vicare/language-extensions/instantiable-bodies.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_language_extensions_instantiable_bodies_vicare_sls_DATA = lib/vicare/language-extensions/instantiable-bodies.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/language-extensions/instantiable-bodies.vicare.sls
+CLEANFILES += lib/vicare/language-extensions/instantiable-bodies.fasl
+
 lib/vicare/build-tools/automake.fasl: \
 		lib/vicare/build-tools/automake.vicare.sls \
 		lib/vicare/posix.fasl \
@@ -1335,7 +1349,7 @@ CLEANFILES += lib/vicare/containers/bytevectors/u8low.fasl
 
 lib/vicare/containers/bytevectors/generic-low.fasl: \
 		lib/vicare/containers/bytevectors/generic-low.vicare.sls \
-		lib/vicare/containers/auxiliary-syntaxes.fasl \
+		lib/vicare/language-extensions/instantiable-bodies.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -1350,7 +1364,7 @@ CLEANFILES += lib/vicare/containers/bytevectors/generic-low.fasl
 
 lib/vicare/containers/bytevectors/generic.fasl: \
 		lib/vicare/containers/bytevectors/generic.vicare.sls \
-		lib/vicare/containers/auxiliary-syntaxes.fasl \
+		lib/vicare/language-extensions/instantiable-bodies.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 

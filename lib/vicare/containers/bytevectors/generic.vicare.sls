@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2011, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -126,7 +126,7 @@
 #!r6rs
 (library (vicare containers bytevectors generic)
   (export instantiate-body)
-  (import (only (vicare containers auxiliary-syntaxes)
+  (import (only (vicare language-extensions instantiable-bodies)
 		define-instantiable-body))
 
   (define-instantiable-body instantiate-body

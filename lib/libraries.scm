@@ -93,6 +93,7 @@
      (vicare language-extensions multimethods symbols-tree)
      (vicare language-extensions multimethods methods-table)
      (vicare language-extensions multimethods)
+     (vicare language-extensions instantiable-bodies)
 
      (vicare build-tools automake)
 
