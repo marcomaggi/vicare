@@ -32,9 +32,13 @@
        (with-exception-handler
 	   (lambda (E)
 	     (raise
-	      (condition (make-who-condition __who__)
-			 (make-syntax-violation input-form.stx #f)
-			 E)))
+	      (condition E
+			 (if (who-condition? E)
+			     (condition)
+			   (make-who-condition __who__))
+			 (if (syntax-violation? E)
+			     (condition)
+			   (make-syntax-violation input-form.stx #f)))))
 	 (lambda ()
 	   (%validate-definition-clauses ?clause* __synner__)
 	   ;; (receive-and-return (out)
@@ -92,7 +96,7 @@
 		  ?foo)
 		 (_
 		  (synner "invalid record-type name specification" namespec)))))
-      (%introduce-mixin-clauses foo input-clause*.stx __synner__)))
+      (%introduce-mixin-clauses foo input-clause*.stx synner)))
   (define strip-angular-parentheses?
     (%get-strip-angular-parentheses clause*.stx synner))
   (define-values (foo make-foo foo? foo-for-id-generation)
@@ -499,12 +503,15 @@
 	     (iface*	'()))
     (syntax-match clause* (implements)
       (()
-       iface*)
+       (cond ((duplicate-identifiers? iface*)
+	      => (lambda (id)
+		   (synner "implemented interface declared multiple times" id)))
+	     (else iface*)))
       (((implements ?interface* ...) . ?clauses)
        (begin
 	 (for-all (lambda (obj)
 		    (unless (identifier? obj)
-		      (synner "expected interface identifier IMPLEMENTS clause" obj)))
+		      (synner "expected interface identifier as argument in IMPLEMENTS clause" obj)))
 	   ?interface*)
 	 (loop ?clauses (append ?interface* iface*))))
       ((_ . ?clauses)

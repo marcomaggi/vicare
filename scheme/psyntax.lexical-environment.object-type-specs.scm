@@ -4957,7 +4957,7 @@
 	(type.ots	(id->object-type-spec type.id)))
     (unless (interface-type-spec? iface.ots)
       (assertion-violation __who__
-	"expected interface-type specification as first argument"
+	"syntactic identifier not bound to interface-type specification as expected"
 	iface.id iface.ots))
     (and (for-all (lambda (method-prototype-entry)
 		    (object-type-spec.compatible-method-stx type.ots (car method-prototype-entry) (cdr method-prototype-entry)))

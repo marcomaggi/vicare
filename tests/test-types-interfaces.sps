@@ -61,6 +61,11 @@
   (environment '(vicare)
 	       '(vicare language-extensions interfaces)))
 
+(define (%print-message bool str)
+  (when bool
+    (fprintf (current-error-port) "~a\n" str)))
+
+
 
 (parametrise ((check-test-name	'basic))
 
@@ -111,8 +116,10 @@
 	(fun (new <duo>  1 2)))
     => "#[duo 1 2]")
 
-;;; --------------------------------------------------------------------
-;;; errors
+  (void))
+
+
+(parametrise ((check-test-name	'errors))
 
   ;;Attempt to instantiate interface.
   ;;
@@ -126,8 +133,7 @@
 		    (new <Arith>)))
 	(catch E
 	  ((&syntax)
-	   (when #f
-	     (fprintf (current-error-port) (condition-message E)))
+	   (%print-message #f (condition-message E))
 	   (syntax->datum (syntax-violation-subform E)))
 	  (else E)))
     => '<Arith>)
@@ -156,6 +162,62 @@
 	     (procedure-signature-argument-violation.failed-expression E))
 	    (else E))))
     => '(is-a? _ <Arith>))
+
+  ;;The argument of IMPLEMENTS is not an identifier.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <duo>
+		      (implements 123)
+		      (fields one two)
+		      (method ({add <number>})
+			(+ (.one this) (.two this))))))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 123)
+
+  ;;Interface implemented twice.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-interface <Arith>
+		      (method-prototype add
+			(lambda () => (<number>))))
+
+		    (define-record-type <duo>
+		      (implements <Arith>)
+		      (implements <Arith>)
+		      (fields one two)
+		      (method ({add <number>})
+			(+ (.one this) (.two this))))))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => '<Arith>)
+
+  ;;The argument of IMPLEMENTS is not an interface name.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <duo>
+		      (implements <fixnum>)
+		      (fields one two)
+		      (method ({add <number>})
+			(+ (.one this) (.two this))))))
+	(catch E
+	  ((&assertion)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (car (condition-irritants E))))
+	  (else E)))
+    => '<fixnum>)
 
   (void))
 

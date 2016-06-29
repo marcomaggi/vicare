@@ -67,7 +67,9 @@
     (psyntax.lexical-environment)
     (only (psyntax.library-manager)
 	  current-include-loader
-	  source-code-location))
+	  source-code-location)
+    (only (psyntax.syntax-utilities)
+	  duplicate-identifiers?))
 
   (include "psyntax.helpers.scm" #t)
 
