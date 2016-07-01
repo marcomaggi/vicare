@@ -253,7 +253,7 @@
 	 <interface-type-spec>
 	 make-interface-type-spec			interface-type-spec?
 	 interface-type-spec.method-prototypes-table
-	 interface-and-compliant-object-type?
+	 build-table-for-interface-and-compliant-object-type
 
 	 ;;;
 
@@ -572,32 +572,6 @@
 	 ;;The name  is known; extract the  symbolic expression from the  alist entry
 	 ;;and return it.
 	 => cdr)
-	((object-type-spec.parent-ots ots)
-	 => (lambda (parent.ots)
-	      (object-type-spec.applicable-method-stx parent.ots method-name.sym)))
-	(else #f)))
-
-(define* (object-type-spec.compatible-method-stx {ots object-type-spec?}
-						 {method-name.sym symbol?}
-						 {prototype.ots object-type-spec?})
-  ;;OTS  must be  an  object-type  specification record.   PROTOTYPE.OTS  must be  an
-  ;;instance  of  "<object-type-spec>"  describing  the possible  type  of  a  method
-  ;;function.
-  ;;
-  ;;If METHOD-NAME.SYM  is EQ?  to  an OTS's method  name: compare the  method's type
-  ;;specification  with PROTOTYPE.OTS;  return true  if METHOD.OTS  is a  sub-type of
-  ;;PROTOTYPE.OTS, otherwise return false.  If no method name matches: return false.
-  ;;
-  ;;When the return value is true: OTS has  a method that can be used when a function
-  ;;of type PROTOTYPE.OTS is required.
-  ;;
-  (cond ((assq method-name.sym (object-type-spec.methods-table ots))
-	 ;;The name  is known; extract the  symbolic expression from the  alist entry
-	 ;;and return it.
-	 => (lambda (entry)
-	      (let* ((method.id		(cdr entry))
-		     (method.ots	((expression-expander-for-type-annotations) method.id (current-inferior-lexenv))))
-		(object-type-spec.matching-super-and-sub? prototype.ots method.ots))))
 	((object-type-spec.parent-ots ots)
 	 => (lambda (parent.ots)
 	      (object-type-spec.applicable-method-stx parent.ots method-name.sym)))
@@ -1263,11 +1237,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%matching-super/interface-type-spec super.ots sub.ots)
-    (cond-with-predicates sub.ots
-      (interface-type-spec?
-       (interface-type-spec=? super.ots sub.ots))
-      (else
-       (interface-type-spec.super-and-sub? super.ots sub.ots))))
+    (interface-type-spec.super-and-sub? super.ots sub.ots))
 
   (define (%matching-sub/interface-type-spec super.ots sub.ots)
     (cond-with-predicates super.ots
@@ -4910,23 +4880,36 @@
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-interface-type-spec {type-name.id identifier?} {uid symbol?} {type-descriptor.id identifier?}
-					 method-prototypes-table implemented-methods-table)
+					 method-prototypes-table interface-methods-table
+					 implemented-interfaces)
+	;;The  argument  METHOD-PROTOTYPES-TABLE must  be  an  alist having  as  keys
+	;;symbols  representing  method  names and  as  values  "<closure-type-spec>"
+	;;instances representing the methods' required type signatures.
+	;;
+	;;The  argument INTERFACE-METHODS-TABLE  must  be an  alist  having: as  keys
+	;;symbols representing method names; as values syntactic identifiers bound to
+	;;the   interface   method   implementation  functions.    It   becomes   the
+	;;METHODS-TABLE for this interface-type specification.
+	;;
+	;;The argument IMPLEMENTED-INTERFACES must be a list of syntactic identifiers
+	;;bound  to  the  interface-type   specifications  that  this  interface-type
+	;;implements.
+	;;
 	(let* ((parent.ots		(<top>-ots))
 	       (uid*			(cons uid (object-type-spec.unique-identifiers parent.ots)))
-	       (implemented-interfaces	'()))
+	       ;;By setting the  predicate to ALWAYS-FALSE we  make run-time matching
+	       ;;fail.
+	       (type-predicate.stx	(core-prim-id 'always-false)))
 	  ((make-object-type-spec type-name.id uid*
 				  parent.ots interface-type-spec.type-annotation-maker
-				  #f ;constructor-stx
-				  #f ;destructor-stx
-				  ;;By setting the predicate  to ALWAYS-FALSE we make
-				  ;;run-time matching fail.
-				  (core-prim-id 'always-false) ;type-predicate-stx
-				  #f			       ;equality-predicate.id
-				  #f			    ;comparison-procedure.id
-				  #f			    ;hash-function.id
-				  implemented-methods-table ;methods-table
-				  implemented-interfaces    ;implemented-interfaces
-				  )
+				  #f			  ;constructor-stx
+				  #f			  ;destructor-stx
+				  type-predicate.stx	  ;type-predicate-stx
+				  #f			  ;equality-predicate.id
+				  #f			  ;comparison-procedure.id
+				  #f			  ;hash-function.id
+				  interface-methods-table ;methods-table
+				  implemented-interfaces) ;implemented-interfaces
 	   type-descriptor.id method-prototypes-table)))
 
       make-interface-type-spec))
@@ -4943,44 +4926,22 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (interface-and-compliant-object-type? {iface.id identifier?} {type.id identifier?})
-  ;;The argument IFACE.ID  must be a syntactic identifier bound  to an interface-type
-  ;;specification.  The argument  TYPE.ID must be a syntactic identifier  bound to an
-  ;;object-type specification.   Return true  if TYPE.ID  implements all  the methods
-  ;;needed by IFACE.ID; otherwise return false.
-  ;;
-  ;;This function must be used when, at expand-time, we define a new object-type that
-  ;;is meant to implement an interface.  For  example, it is used in the expansion of
-  ;;DEFINE-RECORD-TYPE.
-  ;;
-  (let ((iface.ots	(id->object-type-spec iface.id))
-	(type.ots	(id->object-type-spec type.id)))
-    (unless (interface-type-spec? iface.ots)
-      (assertion-violation __who__
-	"syntactic identifier not bound to interface-type specification as expected"
-	iface.id iface.ots))
-    (and (for-all (lambda (method-prototype-entry)
-		    (object-type-spec.compatible-method-stx type.ots (car method-prototype-entry) (cdr method-prototype-entry)))
-	   (interface-type-spec.method-prototypes-table iface.ots))
-	 #t)))
-
-;;; --------------------------------------------------------------------
-
-(define* (interface-type-spec.super-and-sub? {iface interface-type-spec?} {ots object-type-spec?})
-  ;;Return  true  if  the  interface  specification IFACE  is  a  super-type  of  the
-  ;;object-type specification OTS.  In other words: return  true if OTS or one of its
-  ;;parents implement the interface IFACE.
+(define* (interface-type-spec.super-and-sub? {iface.ots interface-type-spec?} {object-type.ots object-type-spec?})
+  ;;Return  true if  the interface  specification IFACE.OTS  is a  super-type of  the
+  ;;object-type  specification  OBJECT-TYPE.OTS.   In  other words:  return  true  if
+  ;;OBJECT-TYPE.OTS, or one of its parents, implement the interface IFACE.OTS.
   ;;
   ;;Use case: this function is used when,  in a function application, we determine if
   ;;an  operand's type  is sub-type  of the  corresponding argument's  type and:  the
-  ;;argument's type is IFACE, the operand's type is OTS.
+  ;;argument's type is IFACE.OTS, the operand's type is OBJECT-TYPE.OTS.
   ;;
   ;;Use case:  this function  is used  when, in a  typed variable  initialisation, we
   ;;determine if  a return value's type  is sub-type of the  corresponding variable's
-  ;;type and: the variable's type is IFACE, the return value's type is OTS.
+  ;;type  and:  the  variable's  type  is  IFACE.OTS,  the  return  value's  type  is
+  ;;OBJECT-TYPE.OTS.
   ;;
-  (let ((iface.id (object-type-spec.name iface)))
-    (let loop ((ots ots))
+  (let ((iface.id (object-type-spec.name iface.ots)))
+    (let loop ((ots object-type.ots))
       (cond ((and (exists (lambda (implemented-iface.id)
 			    (free-identifier=? implemented-iface.id iface.id))
 		    (object-type-spec.implemented-interfaces ots))
@@ -4988,6 +4949,115 @@
 	    ((object-type-spec.parent-ots ots)
 	     => loop)
 	    (else #f)))))
+
+;;; --------------------------------------------------------------------
+
+(module (build-table-for-interface-and-compliant-object-type)
+
+  (define __module_who__
+    'build-table-for-interface-and-compliant-object-type)
+
+  (define* (build-table-for-interface-and-compliant-object-type {iface.id identifier?} {object-type.id identifier?})
+    ;;The argument IFACE.ID must be a syntactic identifier bound to an interface-type
+    ;;specification.   The argument  OBJECT-TYPE.ID  must be  a syntactic  identifier
+    ;;bound  to an  object-type specification.   Verify that  the type  specification
+    ;;bound to OBJECT-TYPE.ID implements all the methods needed by the interface type
+    ;;bound to IFACE.ID; otherwise raise an exception.
+    ;;
+    ;;This function  must be used when,  at expand-time, we define  a new object-type
+    ;;that  is meant  to implement  an interface.   For example,  it is  used in  the
+    ;;expansion of DEFINE-RECORD-TYPE.
+    ;;
+    ;;When  successful return  an alist  having:  as keys,  symbols representing  the
+    ;;interface-type's method  names; as values,  the syntactic identifiers  bound to
+    ;;the object-type's method implementation procedures.
+    ;;
+    (let ((iface.ots		(id->object-type-spec iface.id))
+	  (object-type.ots	(id->object-type-spec object-type.id)))
+      (unless (interface-type-spec? iface.ots)
+	(assertion-violation __who__
+	  "syntactic identifier not bound to interface-type specification as expected"
+	  iface.id iface.ots))
+      (fold-left (lambda (table method-prototype-entry)
+		   (cons (let ((method-name.sym		(car method-prototype-entry))
+			       (method-prototype.ots	(cdr method-prototype-entry)))
+			   (object-type-spec.compatible-method-stx iface.id object-type.id object-type.ots
+								   method-name.sym method-prototype.ots))
+			 table))
+	'() (interface-type-spec.method-prototypes-table iface.ots))))
+
+  (define (object-type-spec.compatible-method-stx iface.id object-type.id object-type.ots
+						  method-name.sym method-prototype.ots)
+    ;;OBJECT-TYPE.OTS must  be the  instance of "<object-type-spec>"  that implements
+    ;;the interface.  METHOD-NAME.SYM must be  a symbol representing the method name.
+    ;;METHOD-PROTOTYPE.OTS must  be an  instance of  "<closure-type-spec>" describing
+    ;;the requested method type signature.
+    ;;
+    ;;If METHOD-NAME.SYM  is EQ?   to an OBJECT-TYPE.OTS's  method name:  compare the
+    ;;implemented   method's  type   specification  with   METHOD-PROTOTYPE.OTS,  the
+    ;;comparison   is   successful   if   the  specification   is   a   sub-type   of
+    ;;METHOD-PROTOTYPE.OTS.  If  the signatures  are mismatched: raise  an exception.
+    ;;If no method name matches: raise an exception.
+    ;;
+    ;;When this function is successful: OBJECT-TYPE.OTS has a method that can be used
+    ;;when a function of type METHOD-PROTOTYPE.OTS is required.
+    ;;
+    ;;When successful:  return a pair whose  car is METHOD-NAME.SYM and  whose cdr is
+    ;;the syntactic identifier bound to the matching method implementation procedure.
+    ;;
+    (define-syntax-rule (recursion ?ots)
+      (object-type-spec.compatible-method-stx iface.id object-type.id ?ots method-name.sym method-prototype.ots))
+    (cond ((assq method-name.sym (object-type-spec.methods-table object-type.ots))
+	   ;;The name is known; extract the  symbolic expression from the alist entry
+	   ;;and return it.
+	   => (lambda (entry)
+		(let* ((method-implementation-procname.id	(cdr entry))
+		       (method-implementation-procedure.ots	((expression-expander-for-type-annotations)
+								 method-implementation-procname.id (current-inferior-lexenv))))
+		  (if (object-type-spec.matching-super-and-sub? method-prototype.ots method-implementation-procedure.ots)
+		      (cons method-name.sym method-implementation-procname.id)
+		    (raise
+		     (condition
+		       (make-who-condition __module_who__)
+		       (make-message-condition "object-type does not implement the specified interface-type: \
+                                                  mismatching method implementation")
+		       (make-interface-implementation-mismatching-method-violation
+			object-type.id iface.id method-name.sym
+			(object-type-spec.type-annotation method-implementation-procedure.ots)
+			(object-type-spec.type-annotation method-prototype.ots))))))))
+	  ((object-type-spec.parent-ots object-type.ots)
+	   => (lambda (parent.ots)
+		(recursion parent.ots)))
+	  (else
+	   (raise
+	    (condition
+	      (make-who-condition __module_who__)
+	      (make-message-condition "object-type does not implement the specified interface-type: \
+                                       missing method implementation")
+	      (make-interface-implementation-missing-method-violation
+	       object-type.id iface.id method-name.sym
+	       (object-type-spec.type-annotation method-prototype.ots)))))))
+
+  (define-condition-type &interface-implementation-missing-method-violation
+      &violation
+    make-interface-implementation-missing-method-violation
+    interface-implementation-missing-method-violation?
+    (object-type-name			interface-implementation-missing-method-violation.object-type-name)
+    (interface-type-name		interface-implementation-missing-method-violation.interface-type-name)
+    (method-name			interface-implementation-missing-method-violation.method-name)
+    (interface-type-method-signature	interface-implementation-missing-method-violation.interface-type-method-signature))
+
+  (define-condition-type &interface-implementation-mismatching-method-violation
+      &violation
+    make-interface-implementation-mismatching-method-violation
+    interface-implementation-mismatching-method-violation?
+    (object-type-name			interface-implementation-mismatching-method-violation.object-type-name)
+    (interface-type-name		interface-implementation-mismatching-method-violation.interface-type-name)
+    (method-name			interface-implementation-mismatching-method-violation.method-name)
+    (object-type-method-signature	interface-implementation-mismatching-method-violation.object-type-method-signature)
+    (interface-type-method-signature	interface-implementation-mismatching-method-violation.interface-type-method-signature))
+
+  #| end of module: BUILD-TABLE-FOR-INTERFACE-AND-COMPLIANT-OBJECT-TYPE |# )
 
 
 ;;;; type annotations

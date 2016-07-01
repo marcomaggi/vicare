@@ -256,6 +256,42 @@
   (void))
 
 
+(parametrise ((check-test-name	'interface-implements))
+
+  ;;An interface-type implements another interface type with its own methods.
+  ;;
+  (check
+      (internal-body
+	(define-interface <Red>
+	  (method-prototype red
+	    (lambda () => (<number>))))
+
+	(define-interface <Colors>
+	  (implements <Red>)
+	  (method-prototype value
+	    (lambda () => (<number>)))
+	  (method ({red <number>})
+	    (.value this)))
+
+	(define-record-type <value>
+	  (implements <Colors>)
+	  (fields {value <number>}))
+
+	(define (fun {O <Colors>})
+	  (pleasure O))
+
+	(define (pleasure {O <Red>})
+	  (.red O))
+
+	(define O
+	  (new <value> 123))
+
+	(fun O))
+    => 123)
+
+  (void))
+
+
 (parametrise ((check-test-name	'nongenerative))
 
   ;;NONGENERATIVE clause with explicit UID.

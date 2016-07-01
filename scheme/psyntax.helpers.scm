@@ -227,10 +227,6 @@
 	       (reader-annotation-stripped expr)
 	     expr)))
 
-(define (list-of-single-item? ell)
-  (and (pair? ell)
-       (null? (cdr ell))))
-
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare

@@ -33,6 +33,7 @@
     core-type-descriptor.name			core-type-descriptor.parent
     core-type-descriptor.type-predicate		core-type-descriptor.equality-predicate
     core-type-descriptor.comparison-procedure	core-type-descriptor.hash-function
+    core-type-descriptor.uid
     core-type-descriptor.uids-list		core-type-descriptor.method-retriever
     core-type-descriptor=?			core-type-descriptor.ancestor-des*
     core-type-descriptor.parent-and-child?
@@ -260,6 +261,9 @@
   (record-constructor-descriptor <core-type-descriptor>))
 
 ;;; --------------------------------------------------------------------
+
+(define* (core-type-descriptor.uid {des core-type-descriptor?})
+  (car (core-type-descriptor.uids-list des)))
 
 (define* (core-type-descriptor=? {des1 core-type-descriptor?} {des2 core-type-descriptor?})
   (or (eq? des1 des2)

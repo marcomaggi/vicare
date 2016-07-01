@@ -838,7 +838,9 @@
 						    #f ;equality-predicate
 						    #f ;comparison-procedure
 						    #f ;hash-function
-						    ,METHOD-RETRIEVER))
+						    ,METHOD-RETRIEVER
+						    #f ;implemented-interfaces
+						    ))
 		 (define/std ,RCD
 		   ($make-record-constructor-descriptor ,RTD (record-constructor-descriptor ,?parent-name) #f))
 		 ;;At present  we cannot know the  exact number of arguments  for the

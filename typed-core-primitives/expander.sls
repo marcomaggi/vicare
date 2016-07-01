@@ -408,6 +408,7 @@
   (declare identifier-record-field-mutator)
   (declare identifier-struct-field-accessor)
   (declare identifier-struct-field-mutator)
+  (declare identifier-method-procname)
   #| end of LET-SYNTAX |# )
 
 /section)
@@ -904,11 +905,12 @@
 (declare-core-primitive make-interface-type-spec
     (safe)
   (signatures
-   ((<syntactic-identifier>		      ;type-name
-     <symbol>				      ;uid
-     <syntactic-identifier>		      ;type-descriptor-name
-     (alist <symbol> <closure-type-spec>)     ;requested methods table
-     (alist <symbol> <syntactic-identifier>)) ;implemented methods table
+   ((<syntactic-identifier>		     ;type-name
+     <symbol>				     ;uid
+     <syntactic-identifier>		     ;type-descriptor-name
+     (alist <symbol> <closure-type-spec>)    ;requested methods table
+     (alist <symbol> <syntactic-identifier>) ;implemented methods table
+     (list-of <syntactic-identifier>))	     ;implemented-interfaces
     => (<interface-type-spec>))))
 
 (declare-type-predicate interface-type-spec?	<interface-type-spec>)
@@ -923,10 +925,10 @@
   (signatures
    ((<interface-type-spec>)		=> ((alist <symbol> <closure-type-spec>)))))
 
-(declare-core-primitive interface-and-compliant-object-type?
+(declare-core-primitive build-table-for-interface-and-compliant-object-type
     (safe)
   (signatures
-   ((<syntactic-identifier> <syntactic-identifier>)	=> (<boolean>))))
+   ((<syntactic-identifier> <syntactic-identifier>)	=> ((alist <symbol> <syntactic-identifier>)))))
 
 ;;; --------------------------------------------------------------------
 ;;; operations on type specs

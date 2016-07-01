@@ -1097,6 +1097,10 @@ Return @true{} if @var{obj} is an instance of
 Accessors for the fields of @class{core-type-descriptor}.
 @end defun
 
+@defun core-type-descriptor.uid @var{ctd}
+Return the @uid{} of the core--type descriptor @var{ctd}.
+@end defun
+
 @c page
 @node types descr compound
 @subsection Compound object-type descriptors
@@ -1712,6 +1716,10 @@ provided by object--types implementing this interface.
 A list of symbols representing the names of te methods implemented by
 this interface type (excluding the prototype names).
 
+@item implemented-interface-uids
+A list of symbols representing the @uid{}s of the interfaces implemented
+by this interface--type.
+
 @item method-retriever
 A function that retrieves method implementation functions given the name
 of a method as symbol.
@@ -1734,6 +1742,7 @@ Return @true{} if @var{obj} is an instance of
 @defunx interface-type-descr.uid @var{des}
 @defunx interface-type-descr.method-prototype-names @var{des}
 @defunx interface-type-descr.implemented-method-names @var{des}
+@defunx interface-type-descr.implemented-interface-uids @var{des}
 @defunx interface-type-descr.method-retriever @var{des}
 Accessors for the fields of @class{interface-type-descr} instances.
 @end defun

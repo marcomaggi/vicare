@@ -70,6 +70,11 @@
   (signatures
    ((<core-type-descriptor>)		=> (<hash-function>))))
 
+(declare-core-primitive core-type-descriptor.uid
+    (safe)
+  (signatures
+   ((<core-type-descriptor>)		=> (<symbol>))))
+
 (declare-core-primitive core-type-descriptor.uids-list
     (safe)
   (signatures
@@ -642,6 +647,7 @@
      <symbol>		;uid
      (list-of <symbol>)	;method-prototype-names
      (list-of <symbol>)	;implemented-method-names
+     (list-of <symbol>) ;implemented-interface-uids
      <procedure>)	;method-retriever-function
     => (<interface-type-descr>))))
 
@@ -663,6 +669,11 @@
    ((<interface-type-descr>)		=> ((list-of <symbol>)))))
 
 (declare-core-primitive interface-type-descr.implemented-method-names
+    (safe)
+  (signatures
+   ((<interface-type-descr>)		=> ((list-of <symbol>)))))
+
+(declare-core-primitive interface-type-descr.implemented-interface-uids
     (safe)
   (signatures
    ((<interface-type-descr>)		=> ((list-of <symbol>)))))

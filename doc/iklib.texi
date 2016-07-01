@@ -8143,6 +8143,8 @@ the enclosing body.
 * iklib expander utils id::       Identifiers processing: generic functions.
 * iklib expander utils records::  Generating identifiers for records @api{}.
 * iklib expander utils structs::  Generating identifiers for structs @api{}.
+* iklib expander utils types::    Generating identifiers for
+                                  object-types @api{}.
 * iklib expander utils pairs::    Pairs processing.
 * iklib expander utils vectors::  Vectors processing.
 * iklib expander utils special::  Special processors.
@@ -8516,6 +8518,28 @@ string, symbol or identifier.
 (bound-identifier=?
  (identifier-struct-field-mutator #'alpha "one")
  #'set-alpha-one!)
+@result{} #t
+@end example
+@end defun
+
+@c page
+@node iklib expander utils types
+@subsubsection Generating identifiers for object--types @api{}
+
+
+@defun identifier-method-procname @var{type-id} @var{method-name}
+Assume @var{type-id} is an identifier representing the name of an
+object--type: build and return a new identifer, in the same lexical
+context of @var{type-id}, representing the implementation procedure of a
+method named @var{method-name}.  @var{method-name} can be a string,
+symbol or identifier.
+
+@example
+(import (vicare))
+
+(bound-identifier=?
+ (identifier-method-procname #'<alpha> "one")
+ #'<alpha>-one)
 @result{} #t
 @end example
 @end defun
@@ -13229,6 +13253,13 @@ The following bindings are exported by the library @library{vicare}.
 @defun circular-list? @var{obj}
 Return @true{} if @var{obj} is a circular list; otherwise return
 @false{}.
+@end defun
+
+
+@defun list-of-single-item? @var{obj}
+Return @true{} if @var{obj} is a list with a single item, otherwise
+return @false{}.  In other words: return @true{} if @var{obj} is a pair
+whose cdr is null.
 @end defun
 
 

@@ -381,18 +381,21 @@
 (declare-core-primitive $make-record-type-descriptor-ex
     (unsafe)
   (signatures
-   ;;name
-   ;;parent uid generative? sealed? opaque?
-   ;;fields normalised-fields
-   ;;destructor printer
-   ;;equality-predicate comparison-procedure hash-function
-   ;;method-retriever
-   ((<symbol>
-     (or <false> <record-type-descriptor>) <symbol> <boolean> <boolean> <boolean>
-     (vector-of (list <symbol> <symbol>)) (vector-of (pair <boolean> <symbol>))
-     (or <false> <type-destructor>) (or <false> <type-printer>)
-     (or <false> <equality-predicate>) (or <false> <comparison-procedure>) (or <false> <hash-function>)
-     (or <false> <type-method-retriever>))
+   ((<symbol>				   ;name
+     (or <false> <record-type-descriptor>) ;parent
+     <symbol>				   ;uid
+     <boolean>				   ;generative?
+     <boolean>				   ;sealed?
+     <boolean>				   ;opaque?
+     (vector-of (list <symbol> <symbol>))  ;fields
+     (vector-of (pair <boolean> <symbol>)) ;normalised-fields
+     (or <false> <type-destructor>)	   ;destructor
+     (or <false> <type-printer>)	   ;printer
+     (or <false> <equality-predicate>)	   ;equality-predicate
+     (or <false> <comparison-procedure>)   ;comparison-procedure
+     (or <false> <hash-function>)	   ;hash-function
+     (or <false> <type-method-retriever>)  ;method-retriever
+     (or <false> <type-method-retriever>)) ;implemented-interfaces
     => (<record-type-descriptor>))))
 
 ;;; --------------------------------------------------------------------

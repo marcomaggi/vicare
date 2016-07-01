@@ -113,6 +113,7 @@
     interface-type-descr.type-name		interface-type-descr.uid
     interface-type-descr.method-prototype-names
     interface-type-descr.implemented-method-names
+    interface-type-descr.implemented-interface-uids
     interface-type-descr.method-retriever
 
 ;;; --------------------------------------------------------------------
@@ -912,8 +913,11 @@
 		;A list of symbols representing the names of the methods that must be
 		;provided by object-types implementing this interface.
     (immutable	implemented-method-names	interface-type-descr.implemented-method-names)
-		;A list of  symbols representing the names of  te methods implemented
-		;by this interface type.
+		;A list of symbols representing  the names of the methods implemented
+		;by this interface-type.
+    (immutable	implemented-interface-uids	interface-type-descr.implemented-interface-uids)
+		;A  list  of   symbols  representing  the  UIDs   of  the  interfaces
+		;implemented by this interface-type.
     (immutable	method-retriever		interface-type-descr.method-retriever)
 		;A function that retrieves  method implementation functions given the
 		;name of a method as symbol.
@@ -922,16 +926,20 @@
     (lambda (make-record)
       (define* (make-interface-type-descr {type-name symbol?} {uid symbol?}
 					  method-prototype-names implemented-method-names
+					  implemented-interface-uids
 					  {method-retriever procedure?})
 	(if (symbol-bound? uid)
 	    (receive-and-return (des)
 		(symbol-value uid)
-	      (%validate-old-descriptor-against-arguments des type-name uid method-prototype-names implemented-method-names))
+	      (%validate-old-descriptor-against-arguments des type-name uid method-prototype-names implemented-method-names
+							  implemented-interface-uids))
 	  (receive-and-return (des)
-	      (make-record type-name uid method-prototype-names implemented-method-names method-retriever)
+	      (make-record type-name uid method-prototype-names implemented-method-names
+			   implemented-interface-uids method-retriever)
 	    (set-symbol-value! uid des))))
 
-      (define (%validate-old-descriptor-against-arguments des type-name uid method-prototype-names implemented-method-names)
+      (define (%validate-old-descriptor-against-arguments des type-name uid method-prototype-names implemented-method-names
+							  implemented-interface-uids)
 	(define (%error message . irritants)
 	  (apply assertion-violation 'make-interface-type-descr message des irritants))
 	(unless (interface-type-descr? des)
@@ -942,15 +950,21 @@
 	(for-each (lambda (old-proto-name)
 		    (unless (memq old-proto-name method-prototype-names)
 		      (%error "previous interface descriptor bound to the same UID requires \
-                                 method prototype not present in new definition"
+                               method prototype not present in new definition"
 			      des old-proto-name method-prototype-names)))
 	  (interface-type-descr.method-prototype-names des))
 	(for-each (lambda (old-method-name)
 		    (unless (memq old-method-name implemented-method-names)
 		      (%error "previous interface descriptor bound to the same UID defines \
-                                 method not present in new definition"
+                               method not present in new definition"
 			      des old-method-name implemented-method-names)))
-	  (interface-type-descr.implemented-method-names des)))
+	  (interface-type-descr.implemented-method-names des))
+	(for-each (lambda (old-iface-uid)
+		    (unless (memq old-iface-uid implemented-interface-uids)
+		      (%error "previous interface descriptor bound to the same UID implements \
+                               interface not implemented by the new definition"
+			      des old-iface-uid implemented-interface-uids)))
+	  (interface-type-descr.implemented-interface-uids des)))
 
       make-interface-type-descr))
   #| end of DEFINE-RECORD-TYPE |# )
@@ -986,7 +1000,15 @@
   ;;vectors.
   (define table (make-eq-hashtable))
   (let recur ((obj obj))
-    (cond ((boolean? obj)		(cond (obj
+    ;;Yes, we do records first.
+    (cond ((record? obj)		(cond ((simple-condition? obj)
+					       (record-rtd obj))
+					      ((condition? obj)
+					       (make-compound-condition-type-descr (map record-rtd (simple-conditions obj))))
+					      (else
+					       (record-rtd obj))))
+
+	  ((boolean? obj)		(cond (obj
 					       <true>-ctd)
 					      (else
 					       <false>-ctd)))
@@ -1080,14 +1102,15 @@
 					      (else
 					       <nebytevector>-ctd)))
 
-	  ((simple-condition? obj)	(record-rtd obj))
-	  ((condition? obj)		(make-compound-condition-type-descr (map record-rtd (simple-conditions obj))))
-	  ((record? obj)		(record-rtd obj))
-	  ((record-type-descriptor? obj) (struct-std obj))
-
-	  ((hashtable? obj)		<hashtable>-ctd)
-	  ((struct-type-descriptor? obj) <struct>-ctd)
-	  ((struct? obj)		(struct-std obj))
+	  ;;These are all structs.
+	  ((struct? obj)		(cond ((record-type-descriptor? obj)
+					       (struct-std obj))
+					      ((hashtable? obj)
+					       <hashtable>-ctd)
+					      ((struct-type-descriptor? obj)
+					       <struct>-ctd)
+					      (else
+					       (struct-std obj))))
 
 	  ((void-object? obj)		<void>-ctd)
 	  (else				<top>-ctd))))

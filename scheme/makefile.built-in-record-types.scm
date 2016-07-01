@@ -333,6 +333,7 @@
    (equality-predicate			core-type-descriptor.equality-predicate)
    (comparison-procedure		core-type-descriptor.comparison-procedure)
    (hash-function			core-type-descriptor.hash-function)
+   (uid					core-type-descriptor.uid)
    (uids-list				core-type-descriptor.uids-list)
    (method-retriever			core-type-descriptor.method-retriever)))
 
@@ -450,6 +451,7 @@
    (uid				interface-type-descr.uid)
    (method-prototype-names	interface-type-descr.method-prototype-names)
    (implemented-method-names	interface-type-descr.implemented-method-names)
+   (implemented-interface-uids	interface-type-descr.implemented-interface-uids)
    (method-retriever		interface-type-descr.method-retriever)))
 
 ;;; --------------------------------------------------------------------

@@ -77,6 +77,15 @@
    ((())		foldable effect-free result-false)
    ((_)			foldable effect-free)))
 
+(declare-core-primitive list-of-single-item?
+    (safe)
+  (signatures
+   (((pair <top> <null>))		=> (<true>))
+   (((pair <top> (not <null>)))		=> (<false>))
+   ((<pair>)				=> (<boolean>))
+   ((<list>)				=> (<boolean>))
+   (((and (not <pair>) (not <list>)))	=> (<false>))))
+
 ;;; --------------------------------------------------------------------
 ;;; constructors
 

@@ -34,7 +34,8 @@
     record-type-sealed?			record-type-opaque?
     record-field-mutable?
     record-type-field-names
-    (rename (<rtd>-uids-list record-type-uids-list))
+    (rename (<rtd>-uids-list			record-type-uids-list)
+	    (<rtd>-implemented-interfaces	record-type-implemented-interfaces))
 
     ;; bindings for (vicare system $records)
 
@@ -295,6 +296,11 @@
    method-retriever
 		;False or  a function,  accepting a method  name as  single argument,
 		;returning a method's implementation function as single return value.
+   implemented-interfaces
+		;False  or  a  vector   of  pairs  representing  the  interface-types
+		;implemented by this  record-type.  Each pair has: as car  the UID of
+		;an interface-type; as cdr a method retriever procedure to be used by
+		;the interface method callers.
    ))
 
 #;(module ()
@@ -966,6 +972,7 @@
 				       #f ;comparison-procedure
 				       #f ;hash-function
 				       #f ;method-retriever
+				       #f ;implemented-interfaces
 				       )))
 
   (define* (make-record-type-descriptor-ex {name    record-type-name?}
@@ -979,19 +986,20 @@
 					   {equality-predicate (or not procedure?)}
 					   {comparison-procedure (or not procedure?)}
 					   {hash-function (or not procedure?)}
-					   {method-retriever (or not procedure?)})
+					   {method-retriever (or not procedure?)}
+					   implemented-interfaces)
     (let ((normalised-fields	(%normalise-fields-vector fields))
 	  (generative?		(if uid #f #t))
 	  (uid			(or uid (gensym name))))
       ($make-record-type-descriptor-ex name parent uid generative? sealed? opaque? fields normalised-fields
 				       destructor printer
 				       equality-predicate comparison-procedure hash-function
-				       method-retriever)))
+				       method-retriever implemented-interfaces)))
 
   (define ($make-record-type-descriptor-ex name parent uid generative? sealed? opaque? fields normalised-fields
 					   destructor printer
 					   equality-predicate comparison-procedure hash-function
-					   method-retriever)
+					   method-retriever implemented-interfaces)
     ;;Return a  record-type descriptor representing  a record type distinct  from all
     ;;the built-in types and other record types.
     ;;
@@ -1009,17 +1017,17 @@
 	    (%generate-rtd name parent uid generative? sealed? opaque? normalised-fields
 			   destructor printer
 			   equality-predicate comparison-procedure hash-function
-			   method-retriever)
+			   method-retriever implemented-interfaces)
 	  (%make-nongenerative-rtd name parent uid sealed? opaque? fields normalised-fields
 				   destructor printer
 				   equality-predicate comparison-procedure hash-function
-				   method-retriever))
+				   method-retriever implemented-interfaces))
       ($set-<rtd>-initialiser! rtd (%make-record-initialiser rtd))))
 
   (define (%generate-rtd name parent-rtd uid generative? sealed? opaque? normalised-fields
 			 destructor printer
 			 equality-predicate comparison-procedure hash-function
-			 method-retriever)
+			 method-retriever implemented-interfaces)
     ;;Build and return a new instance of RTD struct.
     ;;
     (let* ((fields-number	($vector-length normalised-fields))
@@ -1053,7 +1061,7 @@
   (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? fields normalised-fields
 				   destructor printer
 				   equality-predicate comparison-procedure hash-function
-				   method-retriever)
+				   method-retriever implemented-interfaces)
     ;;Build and  return a  new instance of  RTD or return  an already  generated (and
     ;;interned) RTD.  If the  specified UID holds an RTD in  its "value" field: check
     ;;that the arguments are compatible and return the interned RTD.
@@ -1086,7 +1094,7 @@
 	   (%generate-rtd name parent-rtd uid #f sealed? opaque? normalised-fields
 			  destructor printer
 			  equality-predicate comparison-procedure hash-function
-			  method-retriever))))
+			  method-retriever implemented-interfaces))))
 
   (define-syntax-rule (%intern-nongenerative-rtd! ?uid ?rtd)
     ($set-symbol-value! ?uid ?rtd))

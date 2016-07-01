@@ -253,13 +253,6 @@
 				  field-name*.sym field-method*
 				  methods-late-binding-alist))
 
-  ;;Null or a list of definitions to build at run-time the record-type descriptor.
-  (define foo-rtd-definitions
-    (%make-rtd-definitions foo foo-rtd foo-uid generative? clause*.stx parent-rtd.id fields-vector-spec
-			   foo-destructor.id (%make-custom-printer-code clause*.stx foo synner)
-			   foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
-			   methods-retriever-code.sexp synner))
-
   ;;Null or  a proper  list of  syntactic identifiers representing  the names  of the
   ;;interfaces implemented by this record-type.
   (define implemented-interface*.id
@@ -267,8 +260,15 @@
 
   ;;Null or a proper  list of forms representing the code needed  to verify that this
   ;;record-type actually implements the specified interfaces.
-  (define interfaces-validation-code
-    (%make-interfaces-validation-code foo implemented-interface*.id))
+  (define implemented-interfaces-table.sexp
+    (%make-implemented-interfaces-table-code foo implemented-interface*.id))
+
+  ;;Null or a list of definitions to build at run-time the record-type descriptor.
+  (define foo-rtd-definitions
+    (%make-rtd-definitions foo foo-rtd foo-uid generative? clause*.stx parent-rtd.id fields-vector-spec
+			   foo-destructor.id (%make-custom-printer-code clause*.stx foo synner)
+			   foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
+			   methods-retriever-code.sexp implemented-interfaces-table.sexp synner))
 
   ;;A  symbolic expression  representing  a  form which,  expanded  and evaluated  at
   ;;expand-time, returns the right-hand side of the record-type name's DEFINE-SYNTAX.
@@ -319,7 +319,6 @@
 					  safe-field-mutator*  unsafe-field-mutator*)
       ,@(%make-safe-method-code foo field-type*.ann
 				field-method* unsafe-field-accessor* unsafe-field-mutator*)
-      ,@interfaces-validation-code
       #| end of module |# )))
 
 
@@ -1157,7 +1156,7 @@
 			       clause* parent-rtd fields-vector-spec
 			       destructor printer
 			       equality-predicate comparison-procedure hash-function
-			       method-retriever synner)
+			       method-retriever implemented-interfaces-table synner)
   ;;Return a list of symbolic expressions (to be BLESSed later) representing a Scheme
   ;;definitions which,  expanded and  evaluated at  run-time, define  the record-type
   ;;descriptor.
@@ -1191,7 +1190,7 @@
 					 ,fields-vec ,normalised-fields-vec
 					 ,destructor ,printer
 					 ,equality-predicate ,comparison-procedure ,hash-function
-					 ,method-retriever)))))
+					 ,method-retriever ,implemented-interfaces-table)))))
 
 
 (define (%make-rcd-definitions clause* foo foo-rtd foo-rcd parent-rcd.id synner)
@@ -1631,22 +1630,67 @@
 			  ,implemented-interfaces))
 
 
-(define (%make-interfaces-validation-code foo implemented-interface*.id)
-  ;;Return null or a proper list of forms representing the code needed to verify that
-  ;;this record-type actually implements the specified interfaces.
-  ;;
-  (if (null? implemented-interface*.id)
-      '()
-    (let ((iface.id (make-syntactic-identifier-for-temporary-variable "iface")))
-      `((begin-for-syntax
-	  (for-each (lambda (,iface.id)
-		      (unless (interface-and-compliant-object-type? ,iface.id (syntax ,foo))
-			(assertion-violation (quote ,foo)
-			  "record-type does not implement the specified interface"
-			  (quote ,foo) ,iface.id)))
-	    (list . ,(map (lambda (id)
-			    `(syntax ,id))
-		       implemented-interface*.id))))))))
+(module (%make-implemented-interfaces-table-code)
+
+  (define (%make-implemented-interfaces-table-code foo implemented-interface*.id)
+    ;;Return false  or a symbolic  expression (to  be blessed later)  representing an
+    ;;expression  which,   expanded  and  evaluated,  will   return  the  record-type
+    ;;implemented interfaces table.
+    ;;
+    ;;This expression  must return  a vector  have one  item for  each interface-type
+    ;;implemented by this record-type, with format:
+    ;;
+    ;;   #((?interface-name . ?method-retriever) ...)
+    ;;
+    ;;where: ?INTERFACE-NAME is  the UID of the  interface-type; ?METHOD-RETRIEVER is
+    ;;the method retriever function for  the method implementation procedures defined
+    ;;by this record-type.
+    ;;
+    ;;The core primitive BUILD-TABLE-FOR-INTERFACE-AND-COMPLIANT-OBJECT-TYPE verifies
+    ;;that the record-type actually  implements the interface-type.  When successful:
+    ;;it returns an alist having:  as keys, symbols representing the interface-type's
+    ;;method names; as  values, the syntactic identifiers bound  to the object-type's
+    ;;method implementation procedures.  Otherwise it raises an exception.
+    ;;
+    (cond ((null? implemented-interface*.id)
+	   '())
+	  ((list-of-single-item? implemented-interface*.id)
+	   (let ((iface.id (car implemented-interface*.id)))
+	     `(quasisyntax (vector (unsyntax ,(%compose-interfaces-table-entry-code foo iface.id))))))
+	  (else
+	   (let ((iface.id	(make-syntactic-identifier-for-temporary-variable "iface"))
+		 (knil.id	(make-syntactic-identifier-for-temporary-variable "knil")))
+	     `(quasisyntax
+	       (vector (unsyntax-splicing
+			(fold-left (lambda (,knil.id ,iface.id)
+				     (cons ,(%compose-interfaces-table-entry-code foo iface.id)
+					   ,knil.id))
+			  '() (list . ,(map (lambda (id)
+					      `(syntax ,id))
+					 implemented-interface*.id))))))))))
+
+  (define (%compose-interfaces-table-entry-code foo iface.id)
+    (let ((methods-table.id	(make-syntactic-identifier-for-temporary-variable "methods-table"))
+	  (method-retriever.id	(make-syntactic-identifier-for-temporary-variable "method-retriever"))
+	  (interface-uid.id	(make-syntactic-identifier-for-temporary-variable "interface-uid"))
+	  (method-name.id	(make-syntactic-identifier-for-temporary-variable "method-name"))
+	  (method-procname.id	(make-syntactic-identifier-for-temporary-variable "method-procname"))
+	  (entry.id		(make-syntactic-identifier-for-temporary-variable "entry")))
+      `(let* ((,interface-uid.id    (car (type-unique-identifiers ,iface.id)))
+	      (,methods-table.id    (build-table-for-interface-and-compliant-object-type ,iface.id ,foo))
+	      (,method-retriever.id (quasisyntax
+				     (lambda (,method-name.id)
+				       (case ,method-name.id
+					 (unsyntax-splicing
+					  (map (lambda (,entry.id)
+						 (let ((,method-name.id		(car ,entry.id))
+						       (,method-procname.id	(cdr ,entry.id)))
+						   (quasisyntax (((unsyntax ,method-name.id)) (unsyntax ,method-procname.id)))))
+					    ,methods-table.id))
+					 (else #f))))))
+	 (cons (unsyntax ,interface-uid.id) (unsyntax ,method-retriever.id)))))
+
+  #| end of module: %MAKE-IMPLEMENTED-INTERFACES-TABLE-CODE |# )
 
 
 ;;;; done

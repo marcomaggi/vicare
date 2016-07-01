@@ -767,17 +767,18 @@
 	     ($make-record-type-descriptor-ex (quote ?name) PARENT-RTD
 					      (quote UID) GENERATIVE? SEALED? OPAQUE?
 					      '#((immutable ?field) ...) '#((#f . ?field) ...)
-					      #f	;destructor
-					      #f	;printer
-					      #f	;equality-predicate
-					      #f	;comparison-procedure
-					      #f	;hash-function
+					      #f ;destructor
+					      #f ;printer
+					      #f ;equality-predicate
+					      #f ;comparison-procedure
+					      #f ;hash-function
 					      ;;method-retriever
 					      (lambda (name)
 						(case name
 						  ((?field) ?accessor)
 						  ...
 						  (else #f)))
+					      #f ;implemented-interfaces
 					      ))
 	   (define RCD
 	     ($make-record-constructor-descriptor RTD PARENT-RCD #f))

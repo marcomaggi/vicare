@@ -74,7 +74,7 @@
     zero-compnum?			zero-cflonum?
     procedure-arguments-consistency-violation
     last-pair				enum-set?
-    list-of-nestrings?
+    list-of-nestrings?			list-of-single-item?
 
     list-of-symbols?			list-of-symbols.union
     list-of-symbols.intersection	list-of-symbols.subset?
@@ -152,7 +152,7 @@
 		  ;;Maggi; Wed Sep 30, 2015)
 		  with-blocked-exceptions
 		  void-object?			stadalone-pair?
-		  circular-list?
+		  circular-list?		list-of-single-item?
 
 		  reader-annotation?		reader-annotation-expression
 		  reader-annotation-stripped	reader-annotation-source
@@ -199,6 +199,7 @@
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Mar 19,
     ;;2016)
     (only (ikarus lists)
+	  list-of-single-item?
 	  circular-list?)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 27,
     ;;2016)

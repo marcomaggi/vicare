@@ -233,6 +233,7 @@
     <interface-type-spec>
     make-interface-type-spec				interface-type-spec?
     interface-type-spec.method-prototypes-table
+    build-table-for-interface-and-compliant-object-type
 ;;;
     ;; typed variable specification: base type
     <typed-variable-spec>
@@ -327,7 +328,6 @@
     case-identifier-syntactic-binding-descriptor
     case-identifier-syntactic-binding-descriptor/no-indirection
     __descr__
-    interface-and-compliant-object-type?
 
     ;; identifiers from the built-in environment
     system-id-gensym			system-id

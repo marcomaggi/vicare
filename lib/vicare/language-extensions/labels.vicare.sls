@@ -173,7 +173,7 @@
 				      (cons (cons #`(brace _ #,(.type-name this)) (car clause.stx))
 					    (cdr clause.stx)))
 				 (reverse clause*.stx))))
-	      (with-syntax ((FUNC (identifier-record-field-accessor (.type-name this) #'constructor)))
+	      (with-syntax ((FUNC (identifier-method-procname (.type-name this) #'constructor)))
 		(begin
 		  (.constructor-id    this #'(syntax FUNC))
 		  (.definitions-push! this #`(case-define/checked FUNC . #,clause*.stx)))))))
@@ -181,7 +181,7 @@
 	;;Destructor finalisation.
 	(cond ((.destructor-clause this)
 	       => (lambda (clause.stx)
-		    (with-syntax ((FUNC (identifier-record-field-accessor (.type-name this) #'destructor)))
+		    (with-syntax ((FUNC (identifier-method-procname (.type-name this) #'destructor)))
 		      (.destructor-id     this #'(syntax FUNC))
 		      (.definitions-push! this #`(case-define/checked FUNC #,clause.stx)))))
 	      (else
@@ -364,7 +364,7 @@
       ;;
       (let ((protocol-stx (vector-ref (vector-ref args 0) 0)))
 	(with-syntax
-	    ((FUNC (identifier-record-field-accessor (.type-name results) #'type-predicate)))
+	    ((FUNC (identifier-method-procname (.type-name results) #'type-predicate)))
 	  (.type-predicate-id results #'(syntax FUNC))
 	  (.definitions-push! results #`(define/typed {FUNC <type-predicate>}
 					  (#,protocol-stx (is-a? _ #,(.parent results))))))))
@@ -382,7 +382,7 @@
       ;;
       (let ((equality-predicate-protocol (vector-ref (vector-ref args 0) 0)))
 	(with-syntax
-	    ((FUNC (identifier-record-field-accessor (.type-name results) #'equality-predicate)))
+	    ((FUNC (identifier-method-procname (.type-name results) #'equality-predicate)))
 	  (.equality-predicate-id results #'(syntax FUNC))
 	  (.definitions-push!     results #`(define/typed {FUNC (equality-predicate #,(.type-name results))}
 					      (#,equality-predicate-protocol (equality-predicate #,(.parent results))))))))
@@ -400,7 +400,7 @@
       ;;
       (let ((comparison-procedure-protocol (vector-ref (vector-ref args 0) 0)))
 	(with-syntax
-	    ((FUNC (identifier-record-field-accessor (.type-name results) #'comparison-procedure)))
+	    ((FUNC (identifier-method-procname (.type-name results) #'comparison-procedure)))
 	  (.comparison-procedure-id results #'(syntax FUNC))
 	  (.definitions-push!       results #`(define/typed {FUNC (comparison-procedure #,(.type-name results))}
 						(#,comparison-procedure-protocol (comparison-procedure #,(.parent results))))))))
@@ -418,7 +418,7 @@
       ;;
       (let ((hash-function-protocol (vector-ref (vector-ref args 0) 0)))
 	(with-syntax
-	    ((FUNC (identifier-record-field-accessor (.type-name results) #'hash-function)))
+	    ((FUNC (identifier-method-procname (.type-name results) #'hash-function)))
 	  (.hash-function-id  results #'(syntax FUNC))
 	  (.definitions-push! results #`(define/typed {FUNC (hash-function #,(.type-name results))}
 					  (#,hash-function-protocol (hash-function #,(.parent results))))))))
@@ -504,7 +504,7 @@
 	(syntax-case arg ()
 	  (#(?who ?case-method-clause0 ?case-method-clause ...)
 	   (let* ((method-name.id	#'?who)
-		  (method-procname.id	(identifier-record-field-accessor (.type-name results) #'?who))
+		  (method-procname.id	(identifier-method-procname (.type-name results) #'?who))
 		  (clause*.stx		(map (lambda (clause.stx)
 					       (%add-this-to-clause-formals results clause.stx synner))
 					  (syntax->list #'(?case-method-clause0 ?case-method-clause ...)))))
@@ -580,11 +580,11 @@
       (syntax-case who.stx (brace)
 	(?method-name
 	 (identifier? #'?method-name)
-	 (let ((method-procname.id (identifier-record-field-accessor (.type-name results) #'?method-name)))
+	 (let ((method-procname.id (identifier-method-procname (.type-name results) #'?method-name)))
 	   (values #'?method-name method-procname.id method-procname.id)))
 	((brace ?method-name . ?rv-types)
 	 (identifier? #'?method-name)
-	 (let ((method-procname.id (identifier-record-field-accessor (.type-name results) #'?method-name)))
+	 (let ((method-procname.id (identifier-method-procname (.type-name results) #'?method-name)))
 	   (values #'?method-name method-procname.id #`(brace #,method-procname.id . ?rv-types))))
 	(_
 	 (synner "invalid method name specification" who.stx))))

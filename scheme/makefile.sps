@@ -2267,6 +2267,7 @@
     (list-ref					v r ba se)
     (list-tail					v r ba se)
     (list?					v r ba se)
+    (list-of-single-item?			v $language)
     (circular-list?				v $language)
     (log					v r ba se)
     (magnitude					v r ba se)
@@ -3946,11 +3947,15 @@
     (core-type-descriptor.equality-predicate	$type-descriptors)
     (core-type-descriptor.comparison-procedure	$type-descriptors)
     (core-type-descriptor.hash-function		$type-descriptors)
+    (core-type-descriptor.uid			$type-descriptors)
     (core-type-descriptor.uids-list		$type-descriptors)
     (core-type-descriptor.method-retriever	$type-descriptors)
     (core-type-descriptor=?			$type-descriptors)
     (core-type-descriptor.ancestor-des*		$type-descriptors)
     (core-type-descriptor.parent-and-child?	$type-descriptors)
+
+    ;; record-type utilities
+    (record-type-implemented-interfaces		$type-descriptors)
 
     ;;scheme-type descriptors
     (<bignum>-ctd				$type-descriptors)
@@ -4220,6 +4225,7 @@
     (interface-type-descr.uid			$type-descriptors)
     (interface-type-descr.method-prototype-names $type-descriptors)
     (interface-type-descr.implemented-method-names $type-descriptors)
+    (interface-type-descr.implemented-interface-uids $type-descriptors)
     (interface-type-descr.method-retriever	$type-descriptors)
 ;;;
     (<union-type-descr>-rtd)
@@ -4679,6 +4685,8 @@
     (identifier-struct-field-accessor		v $language)
     (identifier-struct-field-mutator		v $language)
 
+    (identifier-method-procname			v $language)
+
     (syntax-car					v $language)
     (syntax-cdr					v $language)
     (syntax->list				v $language)
@@ -5074,7 +5082,7 @@
     (make-interface-type-spec				$expander)
     (interface-type-spec?				$expander)
     (interface-type-spec.method-prototypes-table	$expander)
-    (interface-and-compliant-object-type?		$expander)
+    (build-table-for-interface-and-compliant-object-type $expander)
 ;;;
     (<type-signature>-rtd)
     (<type-signature>-rcd)

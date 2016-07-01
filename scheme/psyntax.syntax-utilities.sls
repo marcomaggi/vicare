@@ -47,6 +47,9 @@
     identifier-struct-field-accessor
     identifier-struct-field-mutator
 
+    ;; identifier processing: object-type API
+    identifier-method-procname
+
     ;; vectors processing
     syntax->vector
 
@@ -203,6 +206,12 @@
 
 (define (identifier-record-field-mutator type-id field-name)
   (identifier-append type-id type-id "-" field-name "-set!"))
+
+(define (identifier-method-procname type-id method-name)
+  ;;(identifier-method-procname #'<alpha> #'doit)
+  ;;=> #'<alpha>-doit
+  ;;
+  (identifier-append type-id type-id "-" method-name))
 
 
 ;;;; identifiers processing: structs API
