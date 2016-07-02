@@ -37,6 +37,10 @@
     try					catch
     non-compound-sexp?			self-evaluating?
 
+    cnd::define-core-condition-type
+    cnd::&condition			cnd::&error
+    cnd::&violation			cnd::&warning
+
     (rename (records::record-type-printer-set!	record-type-printer-set!)
 	    (records::$record-type-printer-set!	$record-type-printer-set!)
 	    (records::record-printer		record-printer))
@@ -183,6 +187,13 @@
 		    (vicare-built-with-arguments-validation-enabled
 		     enable-arguments-validation?))
 	    options::)
+    (prefix (only (ikarus conditions)
+		  define-core-condition-type
+		  &condition
+		  &error
+		  &violation
+		  &warning)
+	    cnd::)
     (ikarus.printing-messages)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Dec 26,
     ;;2015)

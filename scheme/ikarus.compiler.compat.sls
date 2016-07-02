@@ -68,10 +68,13 @@
     expression-return-value-violation
     print-stderr-message
 
+    cnd::define-core-condition-type
+    cnd::&condition			cnd::&assertion
+
     ;; syntax helpers
     cond-compiler-expansion
-    building-normal-boot-image
-    building-rotation-boot-image
+    boot-building-normal-boot-image
+    boot-building-rotation-boot-image
     inclusion-in-boot-image)
   (import (except (vicare)
 		  reader-annotation?
@@ -84,8 +87,8 @@
 ;;;; helper syntaxes
 
 (define-auxiliary-syntaxes
-  building-normal-boot-image
-  building-rotation-boot-image
+  boot-building-normal-boot-image
+  boot-building-rotation-boot-image
   inclusion-in-boot-image)
 
 (define-syntax (cond-compiler-expansion stx)
@@ -115,13 +118,13 @@
 		   (else
 		    "building a new normal boot image"))))
 
-  (syntax-case stx (building-normal-boot-image
-		    building-rotation-boot-image
+  (syntax-case stx (boot-building-normal-boot-image
+		    boot-building-rotation-boot-image
 		    inclusion-in-boot-image)
     ((_ ?description
 	((inclusion-in-boot-image)	. ?inclusion-in-boot-body)
-	((building-normal-boot-image)	. ?building-normal-body)
-	((building-rotation-boot-image)	. ?building-rotation-body))
+	((boot-building-normal-boot-image)	. ?building-normal-body)
+	((boot-building-rotation-boot-image)	. ?building-rotation-body))
      (begin
        (log #'?description)
        (cond (expanding-for-inclusion-in-boot-image?
@@ -150,7 +153,7 @@
    (define reader-annotation-source		annotation-source)
    (define reader-annotation-stripped		annotation-stripped))
 
-  ((building-normal-boot-image)
+  ((boot-building-normal-boot-image)
    ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
    ;;build a normal boot image.
    (import (rename (only (vicare)
@@ -161,7 +164,7 @@
 		   (annotation-source		reader-annotation-source)
 		   (annotation-stripped		reader-annotation-stripped))))
 
-  ((building-rotation-boot-image)
+  ((boot-building-rotation-boot-image)
    ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
    ;;build a rotation boot image.
    (import (only (vicare)
@@ -169,6 +172,63 @@
 		 reader-annotation-source
 		 reader-annotation-stripped))
    (void)))
+
+
+;;;; condition-object definition
+
+(cond-compiler-expansion "condition-object definition syntax"
+  ((inclusion-in-boot-image)
+   ;;This is used  when the compiler's source  code is expanded for  inclusion in the
+   ;;boot image.
+   (import (prefix (only (ikarus conditions)
+			 define-core-condition-type
+			 &condition
+			 &assertion)
+		   cnd::)))
+
+  ((boot-building-normal-boot-image)
+   ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
+   ;;build a normal boot image.
+   (import (prefix (only (rnrs)
+			 &condition
+			 &assertion)
+		   cnd::))
+   (define-syntax cnd::define-core-condition-type
+     (lambda (stx)
+       (syntax-case stx ()
+	 ((_ ?type-name . ?body)
+	  (identifier? #'?type-name)
+	  (let ((type-name.str (symbol->string (syntax->datum #'?type-name))))
+	    (with-syntax
+		((RTD (datum->syntax #'?type-name (string->symbol (string-append type-name.str "-rtd"))))
+		 (RCD (datum->syntax #'?type-name (string->symbol (string-append type-name.str "-rcd")))))
+	      #'(begin
+		  (define-condition-type ?type-name . ?body)
+		  (define RTD (record-type-descriptor        ?type-name))
+		  (define RCD (record-constructor-descriptor ?type-name))))))
+	 ))))
+
+  ((boot-building-rotation-boot-image)
+   ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
+   ;;build a rotation boot image.
+   (import (prefix (only (rnrs)
+			 &condition
+			 &assertion)
+		   cnd::))
+   (define-syntax define-core-condition-type
+     (lambda (stx)
+       (syntax-case stx ()
+	 ((_ ?type-name . ?body)
+	  (identifier? #'?type-name)
+	  (let ((type-name.str (symbol->string (syntax->datum #'?type-name))))
+	    (with-syntax
+		((RTD (datum->syntax #'?type-name (string->symbol (string-append type-name.str "-rtd"))))
+		 (RCD (datum->syntax #'?type-name (string->symbol (string-append type-name.str "-rcd")))))
+	      #'(begin
+		  (define-condition-type ?type-name . ?body)
+		  (define RTD (record-type-descriptor        ?type-name))
+		  (define RCD (record-constructor-descriptor ?type-name))))))
+	 )))))
 
 
 ;;;; done

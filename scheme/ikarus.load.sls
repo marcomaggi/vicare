@@ -52,6 +52,10 @@
 		  default-include-file-loader
 		  current-include-file-locator
 		  current-include-file-loader)
+    (prefix (only (ikarus conditions)
+		  define-core-condition-type
+		  &condition)
+	    cnd::)
     (ikarus.printing-messages)
     (prefix (ikarus.posix)
 	    posix.)
@@ -272,15 +276,15 @@
   	    (make-library-resolution-condition libref failed-list)
   	    (map make-imported-from-condition pending-libraries))))
 
-  (define-condition-type &library-resolution
-      &condition
+  (cnd::define-core-condition-type &library-resolution
+      cnd::&condition
     make-library-resolution-condition
     library-resolution-condition?
     (library condition-library)
     (files condition-files))
 
-  (define-condition-type &imported-from
-      &condition
+  (cnd::define-core-condition-type &imported-from
+      cnd::&condition
     make-imported-from-condition
     imported-from-condition?
     (importing-library importing-library))

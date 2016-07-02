@@ -2965,6 +2965,11 @@
     (&h_errno-rtd)
     (&h_errno-rcd)
     (h_errno-condition?				v $language)
+    (&i/o-wrong-fasl-header-error-rtd)
+    (&i/o-wrong-fasl-header-error-rcd)
+    (&i/o-wrong-fasl-header-error		v $language)
+    (make-i/o-wrong-fasl-header-error		v $language)
+    (i/o-wrong-fasl-header-error?		v $language)
 ;;;
     (&failed-expression				v $language)
     (&failed-expression-rtd)

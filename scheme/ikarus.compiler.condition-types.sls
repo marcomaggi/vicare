@@ -54,67 +54,44 @@
     compile-time-operand-core-type-error
     compile-time-retval-core-type-error
     compiler-internal-error)
-  (import (vicare))
+  (import (vicare)
+    (ikarus.compiler.compat))
 
 ;; (define begin-end-of-file
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.compiler.condition-types.sls begin")))
 
 
-;;;; helpers
-
-(define-syntax (declare-rtd/rcd stx)
-  (define (mkname type.id suffix)
-    (datum->syntax type.id (string->symbol (string-append (symbol->string (syntax->datum type.id)) suffix))))
-  (syntax-case stx ()
-    ((_ ?type)
-     (identifier? #'?type)
-     (with-syntax
-	 ((RTD-ID (mkname #'?type "-rtd"))
-	  (RCD-ID (mkname #'?type "-rcd")))
-       #'(begin
-	   (define RTD-ID (record-type-descriptor ?type))
-	   (define RCD-ID (record-constructor-descriptor ?type)))))
-    ))
-
-
-(define-condition-type &library
-    &condition
+(cnd::define-core-condition-type &library
+    cnd::&condition
   make-library-condition library-condition?
   (name		library-condition-name))
-(declare-rtd/rcd &library)
 
-(define-condition-type &module
-    &condition
+(cnd::define-core-condition-type &module
+    cnd::&condition
   make-module-condition module-condition?
   (name		module-condition-name))
-(declare-rtd/rcd &module)
 
 ;;; --------------------------------------------------------------------
 
-(define-condition-type &compile-time-error
-    &assertion
+(cnd::define-core-condition-type &compile-time-error
+    cnd::&assertion
   make-compile-time-error compile-time-error?)
-(declare-rtd/rcd &compile-time-error)
 
-(define-condition-type &compile-time-arity-error
+(cnd::define-core-condition-type &compile-time-arity-error
     &compile-time-error
   make-compile-time-arity-error compile-time-arity-error?)
-(declare-rtd/rcd &compile-time-arity-error)
 
-(define-condition-type &compile-time-core-type-error
+(cnd::define-core-condition-type &compile-time-core-type-error
     &compile-time-error
   make-compile-time-core-type-error compile-time-core-type-error?)
-(declare-rtd/rcd &compile-time-core-type-error)
 
-(define-condition-type &compile-time-operand-core-type-error
+(cnd::define-core-condition-type &compile-time-operand-core-type-error
     &compile-time-error
   make-compile-time-operand-core-type-error compile-time-operand-core-type-error?)
-(declare-rtd/rcd &compile-time-operand-core-type-error)
 
-(define-condition-type &compile-time-retval-core-type-error
+(cnd::define-core-condition-type &compile-time-retval-core-type-error
     &compile-time-error
   make-compile-time-retval-core-type-error compile-time-retval-core-type-error?)
-(declare-rtd/rcd &compile-time-retval-core-type-error)
 
 (define (compile-time-error module-who who message . irritants)
   (%raise-error module-who who message (make-compile-time-error) irritants))
@@ -130,10 +107,9 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-condition-type &compiler-internal-error
+(cnd::define-core-condition-type &compiler-internal-error
     &compile-time-error
   make-compiler-internal-error compiler-internal-error?)
-(declare-rtd/rcd &compiler-internal-error)
 
 (define (compiler-internal-error module-who who message . irritants)
   (%raise-error module-who who message (make-compiler-internal-error) irritants))

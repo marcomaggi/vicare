@@ -5644,6 +5644,7 @@ waiting for its termination in a coroutine; it assumes that
 * iklib conditions non-reinst:: Non-reinstatable continuations.
 * iklib conditions late-bind::  Late binding conditions.
 * iklib conditions string::     String encoding and decoding.
+* iklib conditions wfs::        Wrong @fasl{} header.
 * iklib conditions misc::       Miscellaneous primitives.
 @end menu
 
@@ -7076,6 +7077,29 @@ Return @true{} if @var{obj} is a condition object of type
 @defun utf32-string-decoding-orphan-octets.bytevector @var{cnd}
 @defunx utf32-string-decoding-orphan-octets.index @var{cnd}
 @defunx utf32-string-decoding-orphan-octets.octets @var{cnd}
+@end defun
+
+@c page
+@node iklib conditions wfs
+@subsection Wrong @fasl{} header
+
+
+@deftp {Condition Type} @acondition{i/o-wrong-fasl-header-error}
+Condition object type representing an error while reading a @fasl{}
+file: the header of the file is wrong; it is derived from
+@condition{i/o}.
+@end deftp
+
+
+@defun make-i/o-wrong-fasl-header-error-error
+Build and return a new condition object of type
+@condition{i/o-wrong-fasl-header-error}.
+@end defun
+
+
+@defun i/o-wrong-fasl-header-error-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{i/o-wrong-fasl-header-error}; otherwise return @false{}.
 @end defun
 
 @c page

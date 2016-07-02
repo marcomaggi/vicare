@@ -72,7 +72,7 @@
 
    #| end of branch |# )
 
-  ((building-normal-boot-image)
+  ((boot-building-normal-boot-image)
    (import (prefix (only (vicare compiler)
 			 system-value
 			 system-value-gensym)
@@ -83,7 +83,7 @@
      old-boot-image.system-value-gensym)
    #| end of branch |# )
 
-  ((building-rotation-boot-image)
+  ((boot-building-rotation-boot-image)
    (import (only (vicare compiler)
 		 system-value
 		 system-value-gensym))

@@ -51,9 +51,9 @@
   (import (except (vicare)
 		  interrupt-handler
 		  engine-handler)
-          (only (vicare system $interrupts)
-		$interrupted?
-		$unset-interrupted!))
+    (only (vicare system $interrupts)
+	  $interrupted?
+	  $unset-interrupted!))
 
 
 (define interrupt-handler
@@ -79,23 +79,24 @@
   ;;fixnum representing the  wrong number of arguments.  LIST-OF-ARGS is  the list of
   ;;wrong arguments.
   ;;
-  (define-condition-type &affected-procedure
-      &condition
-    make-affected-procedure-condition
-    affected-procedure-condition?
-    (proc	condition-affected-procedure))
-  (define-condition-type &wrong-num-args
-      &condition
-    make-wrong-num-args-condition
-    wrong-num-args-condition?
-    (n		condition-wrong-num-args))
+  ;; (define-core-condition-type &affected-procedure
+  ;;     &condition
+  ;;   make-affected-procedure-condition
+  ;;   affected-procedure-condition?
+  ;;   (proc	condition-affected-procedure))
+  ;; (define-core-condition-type &wrong-num-args
+  ;;     &condition
+  ;;   make-wrong-num-args-condition
+  ;;   wrong-num-args-condition?
+  ;;   (n		condition-wrong-num-args))
   (raise
    (condition (make-assertion-violation)
 	      (make-who-condition 'apply)
 	      (make-message-condition "incorrect number of arguments")
-	      (make-affected-procedure-condition proc)
-	      (make-wrong-num-args-condition wrong-num-of-args)
-	      (make-irritants-condition (cons proc list-of-args)))))
+	      #;(make-affected-procedure-condition proc)
+	      #;(make-wrong-num-args-condition wrong-num-of-args)
+	      (make-irritants-condition (list proc wrong-num-of-args))
+	      (make-irritants-condition list-of-args))))
 
 (define ($multiple-values-error . args)
   ;;Whenever an attempt to return zero  or multiple, but not one, values

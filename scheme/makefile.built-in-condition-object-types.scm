@@ -223,6 +223,10 @@
   (methods
    (code		condition-h_errno)))
 
+(define-built-in-condition-type &i/o-wrong-fasl-header-error
+    &i/o
+  make-i/o-wrong-fasl-header-error i/o-wrong-fasl-header-error?)
+
 (define-built-in-condition-type &out-of-memory-error
     &error
   make-out-of-memory-error out-of-memory-error?)

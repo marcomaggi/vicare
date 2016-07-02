@@ -19,8 +19,8 @@
 (library (ikarus.compiler.helpers)
   (export
     cond-compiler-expansion
-    building-normal-boot-image
-    building-rotation-boot-image
+    boot-building-normal-boot-image
+    boot-building-rotation-boot-image
     inclusion-in-boot-image
 
     sl-apply-label-func

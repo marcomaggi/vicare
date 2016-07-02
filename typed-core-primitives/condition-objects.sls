@@ -748,6 +748,19 @@
 /section)
 
 
+;;;; other condition objects
+
+(declare-core-rtd &i/o-wrong-fasl-header-error-rtd)
+(declare-core-rcd &i/o-wrong-fasl-header-error-rcd)
+
+(declare-core-primitive make-i/o-wrong-fasl-header-error
+    (safe)
+  (signatures
+   (() => (&i/o-wrong-fasl-header-error))))
+
+(declare-type-predicate i/o-wrong-fasl-header-error?	&i/o-wrong-fasl-header-error)
+
+
 ;;;; condition objects, safe procedures, condition object raisers
 
 (section
