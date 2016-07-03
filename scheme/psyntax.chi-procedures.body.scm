@@ -856,8 +856,10 @@
 	 module-interface-exp-id*
 	 module-interface-exp-lab-vec)
 
-  (define-record-type (<module-interface> make-module-interface module-interface?)
+  (define-core-record-type <module-interface>
     (nongenerative vicare:expander:<module-interface>)
+    (define-type-descriptors)
+    (strip-angular-parentheses)
     (fields (immutable first-mark	module-interface-first-mark)
 		;The first mark in the lexical context of the MODULE form.
 	    (immutable exp-id-vec	module-interface-exp-id-vec)

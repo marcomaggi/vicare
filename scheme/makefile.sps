@@ -387,6 +387,7 @@
     "ikarus.vectors.sls"
     "ikarus.hash-tables.sls"
     "ikarus.records.procedural.sls"
+    "ikarus.records.syntactic.sls"
     "ikarus.strings.sls"
     "ikarus.symbols.sls"
     "ikarus.unicode.sls"

@@ -799,18 +799,17 @@
 
 ;;;; top level environment objects: type definitions
 
-(define-record-type (<lexical-environment> unused-make-lexical-environment environment?)
+(define-core-record-type (<lexical-environment> unused-make-lexical-environment environment?)
+  (define-type-descriptors)
   (nongenerative vicare:expander:<lexical-environment>))
-
-(define <lexical-environment>-rtd (record-type-descriptor        <lexical-environment>))
-(define <lexical-environment>-rcd (record-constructor-descriptor <lexical-environment>))
 
 ;;; --------------------------------------------------------------------
 
 ;;An ENV record encapsulates a substitution and a set of libraries.
 ;;
-(define-record-type (<non-interaction-lexical-environment> make-non-interaction-lexical-environment non-interaction-lexical-environment?)
+(define-core-record-type (<non-interaction-lexical-environment> make-non-interaction-lexical-environment non-interaction-lexical-environment?)
   (nongenerative vicare:expander:<non-interaction-lexical-environment>)
+  (define-type-descriptors)
   (parent <lexical-environment>)
   (fields (immutable names	env-names)
 		;A vector of symbols representing the public names of bindings from a
@@ -831,14 +830,12 @@
     (lambda (S port sub-printer)
       (display "#<non-interaction-lexical-environment>" port))))
 
-(define <non-interaction-lexical-environment>-rtd (record-type-descriptor        <non-interaction-lexical-environment>))
-(define <non-interaction-lexical-environment>-rcd (record-constructor-descriptor <non-interaction-lexical-environment>))
-
 ;;; --------------------------------------------------------------------
 
-(define-record-type (<interaction-lexical-environment> make-interaction-lexical-environment interaction-lexical-environment?)
+(define-core-record-type (<interaction-lexical-environment> make-interaction-lexical-environment interaction-lexical-environment?)
   (nongenerative vicare:expander:<interaction-lexical-environment>)
   (parent <lexical-environment>)
+  (define-type-descriptors)
   (fields (immutable rib	interaction-env-rib)
 		;The  top  RIB   structure  for  the  evaluation  of   code  in  this
 		;environment.  It maps bound identifiers to labels.
@@ -849,9 +846,6 @@
   (custom-printer
     (lambda (S port sub-printer)
       (display "#<interaction-lexical-environment>" port))))
-
-(define <interaction-lexical-environment>-rtd (record-type-descriptor        <interaction-lexical-environment>))
-(define <interaction-lexical-environment>-rcd (record-constructor-descriptor <interaction-lexical-environment>))
 
 
 ;;;; top level environment objects: operations
@@ -1152,7 +1146,7 @@
 
 ;;;; rib type definition
 
-(define-record-type rib
+(define-core-record-type rib
   (nongenerative vicare:expander:rib)
   (fields
    (mutable name*	rib-name*	set-rib-name*!)
@@ -1397,7 +1391,7 @@
       (assertion-violation/internal-error __who__
 	"attempt to extend sealed RIB" rib))
     (let ((id.source-name  ($identifier->symbol id))
-	  (id.mark*        ($<stx>-mark*  id))
+	  (id.mark*        (stx-mark*  id))
 	  (rib.name*       (rib-name*  rib))
 	  (rib.mark**      (rib-mark** rib))
 	  (rib.label*      (rib-label* rib)))
@@ -1644,9 +1638,9 @@
     ;;this  is  what  this  function  does.   But:  we  must  also  handle  anti-mark
     ;;annihilation and the associated removal of shifts from the ribs.
     ;;
-    (let ((stx2.mark* ($<stx>-mark*		stx2))
-	  (stx2.rib*  ($<stx>-rib*		stx2))
-	  (stx2.ae*   ($<stx>-annotated-expr*	stx2)))
+    (let ((stx2.mark* (stx-mark*		stx2))
+	  (stx2.rib*  (stx-rib*		stx2))
+	  (stx2.ae*   (stx-annotated-expr*	stx2)))
       ;;If the first item in stx2.mark* is an anti-mark...
       (if (and (not (null? stx1.mark*))
 	       (not (null? stx2.mark*))
@@ -1775,10 +1769,10 @@
     (define-syntax-rule (%recurse ?expr ?accum-rib* ?accum-ae*)
       (%push-down-marks top-expr.stx mark rib ?expr ?accum-rib* ?accum-ae*))
     (cond ((stx? expr.stx)
-	   (let ((expr.expr	($<stx>-expr		expr.stx))
-		 (expr.mark*	($<stx>-mark*		expr.stx))
-		 (expr.rib*	($<stx>-rib*		expr.stx))
-		 (expr.ae*	($<stx>-annotated-expr*	expr.stx)))
+	   (let ((expr.expr	(stx-expr		expr.stx))
+		 (expr.mark*	(stx-mark*		expr.stx))
+		 (expr.rib*	(stx-rib*		expr.stx))
+		 (expr.ae*	(stx-annotated-expr*	expr.stx)))
 	     (define result.ae*
 	       (%merge-annotated-expr* accum-ae* expr.ae*))
 	     (if (pair? expr.mark*)
@@ -1853,8 +1847,10 @@
 
 ;;;; wrapped syntax object type definition
 
-(define-record-type (<stx> make-stx stx?)
+(define-core-record-type <stx>
   (nongenerative vicare:expander:<stx>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields (immutable expr		stx-expr)
 		;A symbolic expression, possibly  annotated, whose subexpressions can
 		;also be instances of stx.
@@ -1914,14 +1910,13 @@
 	      (%display " source=")	(%write   (source-position-port-id pos))))))
       (%display "]"))))
 
-(define <stx>-rtd (record-type-descriptor        <stx>))
-(define <stx>-rcd (record-constructor-descriptor <stx>))
-
 
 ;;;; syntactic identifier type definition
 
-(define-record-type (<syntactic-identifier> make-syntactic-identifier syntactic-identifier?)
+(define-core-record-type <syntactic-identifier>
   (nongenerative vicare:expander:<syntactic-identifier>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <stx>)
   (protocol
     (lambda (make-stx)
@@ -1955,9 +1950,6 @@
 	      (%display " source=")	(%write   (source-position-port-id pos))))))
       (%display "]"))))
 
-(define <syntactic-identifier>-rtd (record-type-descriptor        <syntactic-identifier>))
-(define <syntactic-identifier>-rcd (record-constructor-descriptor <syntactic-identifier>))
-
 
 ;;;; unwrapped syntax object operations
 
@@ -1990,7 +1982,7 @@
   ;;We include also  the annotated expression from ID because,  when showing an error
   ;;trace, it helps to understand from where the returned object comes.
   ;;
-  (make-stx-or-syntactic-identifier datum ($<stx>-mark* id) ($<stx>-rib* id) ($<stx>-annotated-expr* id)))
+  (make-stx-or-syntactic-identifier datum (stx-mark* id) (stx-rib* id) (stx-annotated-expr* id)))
 
 (define (syntax->datum S)
   (syntax-object-strip-annotations S '()))
@@ -2141,7 +2133,7 @@
 	  expr)
       (let f ((x expr))
 	(cond ((stx? x)
-	       (syntax-object-strip-annotations ($<stx>-expr x) ($<stx>-mark* x)))
+	       (syntax-object-strip-annotations (stx-expr x) (stx-mark* x)))
 	      ((reader-annotation? x)
 	       (reader-annotation-stripped x))
 	      ((pair? x)
@@ -2180,8 +2172,8 @@
     ;;This is like ID->LABEL, but it searches only the first rib in ID.
     ;;
     (let ((id.source-name	(identifier->symbol id))
-	  (rib			(car ($<stx>-rib* id)))
-	  (mark*		($<stx>-mark* id))
+	  (rib			(car (stx-rib* id)))
+	  (mark*		(stx-mark* id))
 	  (fail-kont		(lambda () #f)))
       (if (rib-sealed/freq rib)
 	  (%search-in-rib/sealed rib id.source-name mark* fail-kont)
@@ -2194,8 +2186,8 @@
     ;;
     (define id.source-name (identifier->symbol id))
     #;(debug-print __who__ id.source-name)
-    (let search ((rib*  ($<stx>-rib* id))
-		 (mark* ($<stx>-mark* id)))
+    (let search ((rib*  (stx-rib* id))
+		 (mark* (stx-mark* id)))
       (and (pair? rib*)
 	   (if (eq? (car rib*) 'shift)
 	       ;;This is the only  place in the expander where a  symbol "shift" in a
@@ -2725,7 +2717,7 @@
   ;;is a symbol.
   ;;
   (and (stx? x)
-       (symbol-or-annotated-symbol? ($<stx>-expr x))))
+       (symbol-or-annotated-symbol? (stx-expr x))))
 
 (define (false-or-identifier? x)
   (or (not x)
@@ -2741,7 +2733,7 @@
   ;;same set of marks.
   ;;
   (and (eq? ($identifier->symbol id1) ($identifier->symbol id2))
-       (same-marks? ($<stx>-mark* id1) ($<stx>-mark* id2))))
+       (same-marks? (stx-mark* id1) (stx-mark* id2))))
 
 (define* (free-identifier=? {x identifier?} {y identifier?})
   (~free-identifier=? x y))
@@ -2778,7 +2770,7 @@
   ($identifier->symbol x))
 
 (define ($identifier->symbol x)
-  (let ((expr ($<stx>-expr x)))
+  (let ((expr (stx-expr x)))
     (if (reader-annotation? expr)
 	(reader-annotation-stripped expr)
       expr)))

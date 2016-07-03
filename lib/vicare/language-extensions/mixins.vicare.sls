@@ -342,7 +342,7 @@
 	   (identifier? #'?field-name)
 	   (void))
 	  (_
-	   (synner "invalid field specification" name-spec.stx))))
+	   (synner "invalid field specification" field-spec.stx))))
       (syntax-case arg ()
 	(#(?field-spec ...)
 	 (fold-left (lambda (knil field-spec.stx)

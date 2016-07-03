@@ -363,10 +363,12 @@
 ;;it directly, rather we  must define subtype and instantiate that.   This is why the
 ;;maker of "<object-type-spec>" is not exported by the module.
 ;;
-(define-record-type (<object-type-spec> make-object-type-spec object-type-spec?)
+(define-core-record-type <object-type-spec>
   (nongenerative *8*vicare:expander:<object-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
-    (mutable name-or-maker)
+    (mutable name-or-maker		object-type-spec.name-or-maker object-type-spec.name-or-maker-set!)
 		;A  procedure that,  applied to  this  OTS, returns  a syntax  object
 		;representing the name of this type.  For some types it is the actual
 		;type  identifier, for  example:  "<fixnum>,  "<string>".  For  other
@@ -391,7 +393,7 @@
 		;*  The  subtypes of  pairs,  lists  and  vectors cannot  be  further
 		;subtyped.
 
-    (immutable type-annotation-maker)
+    (immutable type-annotation-maker	object-type-spec.type-annotation-maker)
 		;A  procedure that,  applied to  this  OTS, returns  a syntax  object
 		;representing the type annotation of this type.
 
@@ -433,7 +435,7 @@
 		;
 		;and called explicitly with the DELETE syntax.
 
-    (mutable type-predicate)
+    (mutable type-predicate		object-type-spec.type-predicate object-type-spec.type-predicate-set!)
 		;Either false  or:
 		;
 		;* A  syntax object representing  a Scheme expression  that, expanded
@@ -501,29 +503,23 @@
 
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <object-type-spec>-rtd
-  (record-type-descriptor <object-type-spec>))
-
-(define <object-type-spec>-rcd
-  (record-constructor-descriptor <object-type-spec>))
-
 ;;; --------------------------------------------------------------------
 
 (define* (object-type-spec.name {ots object-type-spec?})
-  (let ((thing (<object-type-spec>-name-or-maker ots)))
+  (let ((thing (object-type-spec.name-or-maker ots)))
     (if (procedure? thing)
 	(thing ots)
       thing)))
 
 (define* (object-type-spec.type-annotation {ots object-type-spec?})
-  ((<object-type-spec>-type-annotation-maker ots) ots))
+  ((object-type-spec.type-annotation-maker ots) ots))
 
 (define* (object-type-spec.type-predicate-stx {ots object-type-spec?})
-  (let ((thing (<object-type-spec>-type-predicate ots)))
+  (let ((thing (object-type-spec.type-predicate ots)))
     (if (procedure? thing)
 	(receive-and-return (pred.stx)
 	    (thing ots)
-	  (<object-type-spec>-type-predicate-set! ots pred.stx))
+	  (object-type-spec.type-predicate-set! ots pred.stx))
       ;;Here THING is either false or a syntax object.
       thing)))
 
@@ -2880,8 +2876,10 @@
 ;;Scheme  objects,  not  records,  not  structs.  Instances  of  this  type  are  the
 ;;object-type specifications for: <fixnum>, <flonum>, <string>, <list>, ...
 ;;
-(define-record-type (<core-type-spec> make-core-type-spec core-type-spec?)
+(define-core-record-type <core-type-spec>
   (nongenerative *8*vicare:expander:<core-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2910,12 +2908,6 @@
       (display (object-type-spec.name S) port)
       (display "]" port)))
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define <core-type-spec>-rtd
-  (record-type-descriptor <core-type-spec>))
-
-(define <core-type-spec>-rcd
-  (record-constructor-descriptor <core-type-spec>))
 
 ;;; --------------------------------------------------------------------
 
@@ -2946,8 +2938,10 @@
 ;;Lexical variables  bound to  instances of  this type  should be  called STS  (as in
 ;;"Struct-Type Spec") or STRUCT-OTS.
 ;;
-(define-record-type (<struct-type-spec> make-struct-type-spec struct-type-spec?)
+(define-core-record-type <struct-type-spec>
   (nongenerative *8*vicare:expander:<struct-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2979,12 +2973,6 @@
 
   #| end of DEFINE-STRUCT-TYPE |# )
 
-(define <struct-type-spec>-rtd
-  (record-type-descriptor <struct-type-spec>))
-
-(define <struct-type-spec>-rcd
-  (record-constructor-descriptor <struct-type-spec>))
-
 (define (struct-type-spec.type-annotation-maker ots)
   (object-type-spec.name ots))
 
@@ -2997,8 +2985,10 @@
 ;;Lexical  variables bound  to instances  of this  type and  its sub-types  should be
 ;;called RTS (as in "Record-Type Spec") or RECORD-OTS.
 ;;
-(define-record-type (<record-type-spec> make-record-type-spec record-type-spec?)
+(define-core-record-type <record-type-spec>
   (nongenerative *8*vicare:expander:<record-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3046,12 +3036,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define <record-type-spec>-rtd
-  (record-type-descriptor <record-type-spec>))
-
-(define <record-type-spec>-rcd
-  (record-constructor-descriptor <record-type-spec>))
 
 ;;; --------------------------------------------------------------------
 
@@ -3123,8 +3107,10 @@
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
 ;;"<compound-condition>" representing compound condition objects of a known type.
 ;;
-(define-record-type (<compound-condition-type-spec> make-compound-condition-type-spec compound-condition-type-spec?)
+(define-core-record-type <compound-condition-type-spec>
   (nongenerative *8*vicare:expander:<compound-condition-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3177,12 +3163,6 @@
 
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <compound-condition-type-spec>-rtd
-  (record-type-descriptor <compound-condition-type-spec>))
-
-(define <compound-condition-type-spec>-rcd
-  (record-constructor-descriptor <compound-condition-type-spec>))
-
 ;;; --------------------------------------------------------------------
 
 (define (compound-condition-type-spec.type-annotation-maker ots)
@@ -3212,10 +3192,10 @@
   (for-all proc (compound-condition-type-spec.component-ots* compound-condition.ots)))
 
 (define* (compound-condition-type-spec.length {ots compound-condition-type-spec?})
-  (or (<compound-condition-type-spec>-memoised-length ots)
+  (or (compound-condition-type-spec-memoised-length ots)
       (receive-and-return (len)
 	  (length (compound-condition-type-spec.component-ots* ots))
-	(<compound-condition-type-spec>-memoised-length-set! ots len))))
+	(compound-condition-type-spec-memoised-length-set! ots len))))
 
 
 ;;;; union object spec
@@ -3223,8 +3203,10 @@
 ;;This record-type  is used as  syntactic binding  descriptor's value for  type union
 ;;types.
 ;;
-(define-record-type (<union-type-spec> make-union-type-spec union-type-spec?)
+(define-core-record-type <union-type-spec>
   (nongenerative *8*vicare:expander:<union-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3264,12 +3246,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define <union-type-spec>-rtd
-  (record-type-descriptor <union-type-spec>))
-
-(define <union-type-spec>-rcd
-  (record-constructor-descriptor <union-type-spec>))
 
 ;;; --------------------------------------------------------------------
 
@@ -3500,8 +3476,10 @@
 ;;This record-type is  used as syntactic binding descriptor's  value for intersection
 ;;types.
 ;;
-(define-record-type (<intersection-type-spec> make-intersection-type-spec intersection-type-spec?)
+(define-core-record-type <intersection-type-spec>
   (nongenerative *8*vicare:expander:<intersection-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3542,12 +3520,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define <intersection-type-spec>-rtd
-  (record-type-descriptor <intersection-type-spec>))
-
-(define <intersection-type-spec>-rcd
-  (record-constructor-descriptor <intersection-type-spec>))
 
 ;;; --------------------------------------------------------------------
 
@@ -3675,8 +3647,10 @@
 ;;This record-type  is used  as syntactic binding  descriptor's value  for complement
 ;;types.
 ;;
-(define-record-type (<complement-type-spec> make-complement-type-spec complement-type-spec?)
+(define-core-record-type <complement-type-spec>
   (nongenerative *8*vicare:expander:<complement-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3713,12 +3687,6 @@
 
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <complement-type-spec>-rtd
-  (record-type-descriptor <complement-type-spec>))
-
-(define <complement-type-spec>-rcd
-  (record-constructor-descriptor <complement-type-spec>))
-
 ;;; --------------------------------------------------------------------
 
 (define (make-complement-type-name ots)
@@ -3753,8 +3721,10 @@
 ;;This record-type is  used as syntactic binding descriptor's  value for ANCESTOR-OF
 ;;types.
 ;;
-(define-record-type (<ancestor-of-type-spec> make-ancestor-of-type-spec ancestor-of-type-spec?)
+(define-core-record-type <ancestor-of-type-spec>
   (nongenerative *8*vicare:expander:<ancestor-of-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3794,12 +3764,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define <ancestor-of-type-spec>-rtd
-  (record-type-descriptor <ancestor-of-type-spec>))
-
-(define <ancestor-of-type-spec>-rcd
-  (record-constructor-descriptor <ancestor-of-type-spec>))
 
 ;;; --------------------------------------------------------------------
 
@@ -3849,8 +3813,10 @@
 ;;NOTE There is  no predicate sexp because,  at run-time, there is no  way to inspect
 ;;the signature of a closure object.
 ;;
-(define-record-type (<closure-type-spec> make-closure-type-spec closure-type-spec?)
+(define-core-record-type <closure-type-spec>
   (nongenerative *8*vicare:expander:<closure-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3893,12 +3859,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define <closure-type-spec>-rtd
-  (record-type-descriptor <closure-type-spec>))
-
-(define <closure-type-spec>-rcd
-  (record-constructor-descriptor <closure-type-spec>))
 
 ;;; --------------------------------------------------------------------
 
@@ -3957,8 +3917,10 @@
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
 ;;"<pair>" representing pair of objects holding items of a known type.
 ;;
-(define-record-type (<pair-type-spec> make-pair-type-spec pair-type-spec?)
+(define-core-record-type <pair-type-spec>
   (nongenerative *8*vicare:expander:<pair-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4021,12 +3983,6 @@
 
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <pair-type-spec>-rtd
-  (record-type-descriptor <pair-type-spec>))
-
-(define <pair-type-spec>-rcd
-  (record-constructor-descriptor <pair-type-spec>))
-
 ;;; --------------------------------------------------------------------
 
 (define (make-pair-type-name ots)
@@ -4071,8 +4027,10 @@
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
 ;;"<pair>" representing pair of objects holding items of the same type.
 ;;
-(define-record-type (<pair-of-type-spec> make-pair-of-type-spec pair-of-type-spec?)
+(define-core-record-type <pair-of-type-spec>
   (nongenerative *8*vicare:expander:<pair-of-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4126,12 +4084,6 @@
 
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <pair-of-type-spec>-rtd
-  (record-type-descriptor <pair-of-type-spec>))
-
-(define <pair-of-type-spec>-rcd
-  (record-constructor-descriptor <pair-of-type-spec>))
-
 ;;; --------------------------------------------------------------------
 
 (define (make-pair-of-type-name ots)
@@ -4165,8 +4117,10 @@
 ;;"<list>"  representing non-empty  proper  list  objects holding  items  of a  known
 ;;heterogeneous type.
 ;;
-(define-record-type (<list-type-spec> make-list-type-spec list-type-spec?)
+(define-core-record-type <list-type-spec>
   (nongenerative *8*vicare:expander:<list-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4224,12 +4178,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define <list-type-spec>-rtd
-  (record-type-descriptor <list-type-spec>))
-
-(define <list-type-spec>-rcd
-  (record-constructor-descriptor <list-type-spec>))
 
 ;;; --------------------------------------------------------------------
 
@@ -4300,8 +4248,10 @@
 ;;"<list>"  representing proper  list objects  holding items  of a  known homogeneous
 ;;type.
 ;;
-(define-record-type (<list-of-type-spec> make-list-of-type-spec list-of-type-spec?)
+(define-core-record-type <list-of-type-spec>
   (nongenerative *8*vicare:expander:<list-of-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #f)
   (fields
@@ -4354,12 +4304,6 @@
 
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <list-of-type-spec>-rtd
-  (record-type-descriptor <list-of-type-spec>))
-
-(define <list-of-type-spec>-rcd
-  (record-constructor-descriptor <list-of-type-spec>))
-
 ;;; --------------------------------------------------------------------
 
 (define (make-list-of-type-name ots)
@@ -4390,8 +4334,10 @@
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
 ;;"<list>" representing alist objects holding keys and values of a known type.
 ;;
-(define-record-type (<alist-type-spec> make-alist-type-spec alist-type-spec?)
+(define-core-record-type <alist-type-spec>
   (nongenerative *8*vicare:expander:<alist-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <list-of-type-spec>)
   (sealed #t)
   (fields
@@ -4417,12 +4363,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define <alist-type-spec>-rtd
-  (record-type-descriptor <alist-type-spec>))
-
-(define <alist-type-spec>-rcd
-  (record-constructor-descriptor <alist-type-spec>))
 
 ;;; --------------------------------------------------------------------
 
@@ -4471,8 +4411,10 @@
 ;;"<vector>"  representing  non-empty  vector  objects   holding  items  of  a  known
 ;;heterogeneous type.
 ;;
-(define-record-type (<vector-type-spec> make-vector-type-spec vector-type-spec?)
+(define-core-record-type <vector-type-spec>
   (nongenerative *8*vicare:expander:<vector-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4531,12 +4473,6 @@
 
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <vector-type-spec>-rtd
-  (record-type-descriptor <vector-type-spec>))
-
-(define <vector-type-spec>-rcd
-  (record-constructor-descriptor <vector-type-spec>))
-
 ;;; --------------------------------------------------------------------
 
 (define (make-vector-type-name ots)
@@ -4591,8 +4527,10 @@
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
 ;;"<vector>" representing vector objects holding items of a known type.
 ;;
-(define-record-type (<vector-of-type-spec> make-vector-of-type-spec vector-of-type-spec?)
+(define-core-record-type <vector-of-type-spec>
   (nongenerative *8*vicare:expander:<vector-of-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4645,12 +4583,6 @@
 
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <vector-of-type-spec>-rtd
-  (record-type-descriptor <vector-of-type-spec>))
-
-(define <vector-of-type-spec>-rcd
-  (record-constructor-descriptor <vector-of-type-spec>))
-
 ;;; --------------------------------------------------------------------
 
 (define (make-vector-of-type-name ots)
@@ -4677,8 +4609,10 @@
 ;;"<hashtable>" representing  hashtable objects  holding keys and  values of  a known
 ;;type.
 ;;
-(define-record-type (<hashtable-type-spec> make-hashtable-type-spec hashtable-type-spec?)
+(define-core-record-type <hashtable-type-spec>
   (nongenerative *8*vicare:expander:<hashtable-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4733,12 +4667,6 @@
 
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <hashtable-type-spec>-rtd
-  (record-type-descriptor <hashtable-type-spec>))
-
-(define <hashtable-type-spec>-rcd
-  (record-constructor-descriptor <hashtable-type-spec>))
-
 ;;; --------------------------------------------------------------------
 
 (define (make-hashtable-type-name ots)
@@ -4758,14 +4686,16 @@
 ;;types  defined  either  with  DEFINE-ENUMERATION   or  with  the  ENUMERATION  type
 ;;annotation.
 ;;
-(define-record-type (<enumeration-type-spec> make-enumeration-type-spec enumeration-type-spec?)
+(define-core-record-type <enumeration-type-spec>
   (nongenerative *8*vicare:expander:<enumeration-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
-    (immutable symbol*			enumeration-type-spec.symbol*)
+    (immutable	symbol*			enumeration-type-spec.symbol*)
 		;An proper list of symbols representing the enumeration universe.
-    (mutable memoised-length)
+    (mutable	memoised-length)
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
@@ -4803,12 +4733,6 @@
 
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <enumeration-type-spec>-rtd
-  (record-type-descriptor <enumeration-type-spec>))
-
-(define <enumeration-type-spec>-rcd
-  (record-constructor-descriptor <enumeration-type-spec>))
-
 ;;; --------------------------------------------------------------------
 
 (define (enumeration-type-spec.type-annotation-maker ots)
@@ -4831,10 +4755,10 @@
        #t))
 
 (define* (enumeration-type-spec.length {ots enumeration-type-spec?})
-  (or (<enumeration-type-spec>-memoised-length ots)
+  (or (enumeration-type-spec-memoised-length ots)
       (receive-and-return (len)
 	  (length (enumeration-type-spec.symbol* ots))
-	(<enumeration-type-spec>-memoised-length-set! ots len))))
+	(enumeration-type-spec-memoised-length-set! ots len))))
 
 (define* (enumeration-type-spec.for-all {des enumeration-type-spec?} {proc procedure?})
   (and (for-all proc (enumeration-type-spec.symbol* des))
@@ -4846,8 +4770,10 @@
 ;;This record-type  is used as syntactic  binding descriptor's value for  label types
 ;;defined with DEFINE-LABEL.
 ;;
-(define-record-type (<label-type-spec> make-label-type-spec label-type-spec?)
+(define-core-record-type <label-type-spec>
   (nongenerative *8*vicare:expander:<label-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4879,12 +4805,6 @@
       make-label-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <label-type-spec>-rtd
-  (record-type-descriptor <label-type-spec>))
-
-(define <label-type-spec>-rcd
-  (record-constructor-descriptor <label-type-spec>))
-
 (define (label-type-spec.type-annotation-maker ots)
   (object-type-spec.name ots))
 
@@ -4895,8 +4815,10 @@
 ;;types defined with DEFINE-INTERFACE.
 ;;
 
-(define-record-type (<interface-type-spec> make-interface-type-spec interface-type-spec?)
+(define-core-record-type <interface-type-spec>
   (nongenerative *8*vicare:expander:<interface-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -4931,12 +4853,6 @@
 
       make-interface-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define <interface-type-spec>-rtd
-  (record-type-descriptor <interface-type-spec>))
-
-(define <interface-type-spec>-rcd
-  (record-constructor-descriptor <interface-type-spec>))
 
 (define (interface-type-spec.type-annotation-maker ots)
   (object-type-spec.name ots))

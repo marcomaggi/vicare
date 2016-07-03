@@ -39,8 +39,10 @@
 
 ;;;; type definitions
 
-(define-record-type (<overloaded-function-spec> make-overloaded-function-spec overloaded-function-spec?)
+(define-core-record-type <overloaded-function-spec>
   (nongenerative vicare:expander:<overloaded-function-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (sealed #t)
   (fields
     (immutable	name-id				overloaded-function-spec.name-id)
@@ -63,13 +65,7 @@
     (lambda (make-record)
       (lambda* ({name.id identifier?} {ofd.id identifier?} {late-binding-function.id identifier?})
 	(make-record name.id ofd.id late-binding-function.id '() '()))))
-  #| end of DEFINE-RECORD-TYPE |# )
-
-(define <overloaded-function-spec>-rtd
-  (record-type-descriptor <overloaded-function-spec>))
-
-(define <overloaded-function-spec>-rcd
-  (record-constructor-descriptor <overloaded-function-spec>))
+  #| end of DEFINE-CORE-RECORD-TYPE |# )
 
 
 ;;;; utilities

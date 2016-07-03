@@ -37,6 +37,10 @@
     try					catch
     non-compound-sexp?			self-evaluating?
 
+    define-core-record-type
+    define-type-descriptors
+    strip-angular-parentheses
+
     cnd::define-core-condition-type
     cnd::&condition			cnd::&error
     cnd::&violation			cnd::&warning
@@ -165,6 +169,7 @@
 		  ratnum-positive?		ratnum-negative?
 		  exact-compnum?
 		  )
+    (ikarus records syntactic)
     (prefix (only (ikarus.compiler)
 		  eval-core
 		  compile-core-expr-to-thunk

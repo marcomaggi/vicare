@@ -42,7 +42,13 @@
     vicare-built-with-iconv-enabled
     vicare-built-with-posix-enabled
     vicare-built-with-glibc-enabled
-    vicare-built-with-linux-enabled)
+    vicare-built-with-linux-enabled
+
+
+    cond-boot-expansion
+    boot-building-normal-boot-image
+    boot-building-rotation-boot-image
+    inclusion-in-boot-image)
   (import (except (vicare)
 		  vicare-built-with-arguments-validation-enabled
 		  vicare-built-with-srfi-enabled
@@ -133,6 +139,58 @@
   (define (vicare-built-with-glibc-enabled)	VICARE_BUILT_WITH_GLIBC_ENABLED)
   (define (vicare-built-with-linux-enabled)	VICARE_BUILT_WITH_LINUX_ENABLED)
   #| end of module |# )
+
+
+;;;; conditional expansion for boot image
+
+(define-auxiliary-syntaxes
+  boot-building-normal-boot-image
+  boot-building-rotation-boot-image
+  inclusion-in-boot-image)
+
+(define-syntax (cond-boot-expansion stx)
+
+  ;;This is  true when the compiler  libraries are expanded  to be included in  a new
+  ;;boot image, either  normal or rotation.  It is false  when the compiler libraries
+  ;;are expanded to build a new boot image, not to be included in it.
+  ;;
+  (define expanding-for-inclusion-in-boot-image?
+    (equal? "yes" (getenv "BUILDING_FOR_INCLUSION_IN_BOOT_IMAGE")))
+
+  ;;This is meaningful only  when the compiler libraries are expanded  to build a new
+  ;;boot image, not  to be included in it.  It  is true when the new boot  image is a
+  ;;rotation one; it is false when the new boot image is a normal one.
+  ;;
+  (define expanding-to-build-new-rotation-boot-image?
+    (equal? "yes" (getenv "BUILDING_ROTATION_BOOT_IMAGE")))
+
+  (define (log description.stx)
+    (fprintf (current-error-port)
+	     "ikarus.compiler: conditional for ~a: ~a\n"
+	     (syntax->datum description.stx)
+	     (cond (expanding-for-inclusion-in-boot-image?
+		    "inclusion in a new boot image")
+		   (expanding-to-build-new-rotation-boot-image?
+		    "building a new rotation boot image")
+		   (else
+		    "building a new normal boot image"))))
+
+  (syntax-case stx (boot-building-normal-boot-image
+		    boot-building-rotation-boot-image
+		    inclusion-in-boot-image)
+    ((_ ?description
+	((inclusion-in-boot-image)	. ?inclusion-in-boot-body)
+	((boot-building-normal-boot-image)	. ?building-normal-body)
+	((boot-building-rotation-boot-image)	. ?building-rotation-body))
+     (begin
+       (log #'?description)
+       (cond (expanding-for-inclusion-in-boot-image?
+	      #'(begin . ?inclusion-in-boot-body))
+	     (expanding-to-build-new-rotation-boot-image?
+	      #'(begin . ?building-rotation-body))
+	     (else
+	      #'(begin . ?building-normal-body)))))
+    ))
 
 
 ;;;; done

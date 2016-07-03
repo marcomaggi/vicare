@@ -356,22 +356,22 @@
   (check-for-syntax-violation-subform
       (define-mixin <stuff>
 	(fields (mutable 1)))
-    => 1)
+    => (mutable 1))
 
   (check-for-syntax-violation-subform
       (define-mixin <stuff>
 	(fields (immutable 1)))
-    => 1)
+    => (immutable 1))
 
   (check-for-syntax-violation-subform
       (define-mixin <stuff>
 	(fields (mutable {1 <fixnum>})))
-    => {1 <fixnum>})
+    => (mutable {1 <fixnum>}))
 
   (check-for-syntax-violation-subform
       (define-mixin <stuff>
 	(fields (immutable {1 <fixnum>})))
-    => {1 <fixnum>})
+    => (immutable {1 <fixnum>}))
 
   (check-for-syntax-violation-subform
       (define-mixin <stuff>

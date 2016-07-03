@@ -23,6 +23,7 @@
 
 (module PSYNTAX-LAMBDA-SIGNATURES
   (<lambda-signature>
+   <lambda-signature>-rtd			<lambda-signature>-rcd
    make-lambda-signature			lambda-signature?
    lambda-signature=?
    lambda-signature.retvals			lambda-signature.retvals.specs
@@ -33,6 +34,7 @@
    lambda-signature.match-formals-against-operands
 
    <case-lambda-signature>
+   <case-lambda-signature>-rtd			<case-lambda-signature>-rcd
    make-case-lambda-signature			case-lambda-signature?
    case-lambda-signature=?
    case-lambda-signature.retvals		case-lambda-signature.clause-signature*
@@ -46,8 +48,10 @@
 
 ;;;; type definition: applicable object clause signature
 
-(define-record-type (<lambda-signature> make-lambda-signature lambda-signature?)
+(define-core-record-type <lambda-signature>
   (nongenerative vicare:expander:<lambda-signature>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable retvals	lambda-signature.retvals)
 		;An instance of "<type-signature>"  representing the signature of the
@@ -68,7 +72,7 @@
       (display " argvals=" port)
       (display (lambda-signature.argvals S) port)
       (display "]" port)))
-  #| end of DEFINE-RECORD-TYPE |# )
+  #| end of DEFINE-CORE-RECORD-TYPE |# )
 
 (define (not-empty-list-of-lambda-signatures? obj)
   (and (pair? obj)
@@ -183,8 +187,10 @@
 
 ;;;; type definition: applicable object signatures
 
-(define-record-type (<case-lambda-signature> make-case-lambda-signature case-lambda-signature?)
+(define-core-record-type <case-lambda-signature>
   (nongenerative vicare:expander:<case-lambda-signature>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable clause-signature*	case-lambda-signature.clause-signature*)
 		;A  proper list  of "<lambda-signature>"  instances representing  the
@@ -206,7 +212,7 @@
 		  (display #\space port))
 	(case-lambda-signature.clause-signature* S))
       (display "]" port)))
-  #| end of DEFINE-RECORD-TYPE |# )
+  #| end of DEFINE-CORE-RECORD-TYPE |# )
 
 ;;; --------------------------------------------------------------------
 

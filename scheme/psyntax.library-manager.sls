@@ -77,8 +77,10 @@
 
 ;;;; type definitions: library object
 
-(define-record-type (<library> make-library library?)
+(define-core-record-type <library>
   (nongenerative vicare:expander:library)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable uid library-uid)
 		;A  gensym  uniquely  identifying  this  interned  library;  it  also
@@ -190,9 +192,6 @@
   ;;   (%display (library-name S))
   ;;   (%display " filename=")	(%write (library-source-file-name S))
   ;;   (%display ">"))
-
-(define <library>-rtd (record-type-descriptor <library>))
-(define <library>-rcd (record-constructor-descriptor <library>))
 
 (define-list-of-type-predicate list-of-libraries? library?)
 

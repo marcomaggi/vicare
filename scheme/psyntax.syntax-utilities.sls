@@ -512,8 +512,10 @@
 
 ;;;; clause specification structs
 
-(define-record-type (<syntax-clause-spec> make-syntax-clause-spec syntax-clause-spec?)
+(define-core-record-type <syntax-clause-spec>
   (nongenerative vicare:<syntax-clause-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields (immutable keyword				syntax-clause-spec-keyword)
 		;An identifier representing the keyword for this clause.
 	  (immutable min-number-of-occurrences		syntax-clause-spec-min-number-of-occurrences)
@@ -593,9 +595,6 @@
 		      mutually-inclusive mutually-exclusive
 		      custom-data)))
       make-syntax-clause-spec)))
-
-(define <syntax-clause-spec>-rtd	(record-type-descriptor <syntax-clause-spec>))
-(define <syntax-clause-spec>-rcd	(record-constructor-descriptor <syntax-clause-spec>))
 
 (case-define* syntax-clauses-single-spec
   ((spec clauses)

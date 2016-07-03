@@ -92,6 +92,7 @@
 		  compar-symbol				compar-boolean
 		  compar-transcoder			compar-pointer
 		  #| end of EXCEPT |# )
+    (ikarus records syntactic)
     (only (vicare system $fx)
 	  $fxadd1)
     (only (vicare system $structs)
@@ -216,7 +217,9 @@
 ;;types: pairs, fixnums, strings, et cetera.  Lexical variables bound to instances of
 ;;this type should be called BTD (as in "built-in type descriptor").
 ;;
-(define-record-type (<core-type-descriptor> make-core-type-descriptor core-type-descriptor?)
+(define-core-record-type <core-type-descriptor>
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (nongenerative vicare:descriptors:<core-type-descriptor>)
   (sealed #t)
   (fields
@@ -252,12 +255,6 @@
       (%display "]")))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define <core-type-descriptor>-rtd
-  (record-type-descriptor <core-type-descriptor>))
-
-(define <core-type-descriptor>-rcd
-  (record-constructor-descriptor <core-type-descriptor>))
 
 ;;; --------------------------------------------------------------------
 

@@ -81,7 +81,9 @@
 
 ;;;; type definitions: qualified RHS base type
 
-(define-record-type (<qdef> dummy-make-qdef qdef?)
+(define-core-record-type (<qdef> dummy-make-qdef qdef?)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable input-form	qdef.input-form)
 		;A syntax object representing the original input form.
@@ -105,8 +107,10 @@
 
 ;;;; type definitions: qualified RHS general closure definition
 
-(define-record-type (<qdef-closure> dummy-make-qdef-closure qdef-closure?)
+(define-core-record-type (<qdef-closure> dummy-make-qdef-closure qdef-closure?)
   (parent <qdef>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable ots		qdef-closure.ots)
 		;An instance  of "<closure-type-spec>"  representing the type  of the
@@ -117,7 +121,7 @@
       (define* (make-qdef-closure input-form.stx {lhs.var-id identifier?} {lhs.ots closure-type-spec?})
 	((make-qdef input-form.stx lhs.var-id) lhs.ots))
       make-qdef-closure))
-  #| end of DEFINE-RECORD-TYPE |# )
+  #| end of DEFINE-CORE-RECORD-TYPE |# )
 
 (define* (qdef-closure.clause-signature* {qdef qdef-closure?})
   (case-lambda-signature.clause-signature* (closure-type-spec.signature (qdef-closure.ots qdef))))
@@ -125,8 +129,10 @@
 
 ;;;; type definitions: qualified RHS single-clause function definition
 
-(define-record-type (<qdef-defun> make-qdef-defun qdef-defun?)
+(define-core-record-type <qdef-defun>
   (parent <qdef-closure>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable formals			qdef-defun.standard-formals)
 		;A proper  or improper list  of syntax objects representing  a lambda
@@ -144,13 +150,15 @@
 ;;; --------------------------------------------------------------------
 ;;; standard function definition
 
-(define-record-type (<qdef-standard-defun> make-qdef-standard-defun qdef-standard-defun?)
+(define-core-record-type <qdef-standard-defun>
   ;;This type  is used to  represent standard  R6RS function definitions  from syntax
   ;;uses like:
   ;;
   ;;   (define/std (fun arg) body)
   ;;
   (parent <qdef-defun>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (protocol
     (lambda (make-qdef-defun)
       (define* (make-qdef-standard-defun input-form.stx {lhs.var-id identifier?} standard-formals.stx {body*.stx list?}
@@ -161,13 +169,15 @@
 ;;; --------------------------------------------------------------------
 ;;; typed function definition
 
-(define-record-type (<qdef-typed-defun> make-qdef-typed-defun qdef-typed-defun?)
+(define-core-record-type <qdef-typed-defun>
   ;;This type is used to represent typed function definitions from syntax uses like:
   ;;
   ;;   (define/typed ((brace fun <fixnum>) (brace arg <string>))
   ;;     body)
   ;;
   (parent <qdef-defun>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (protocol
     (lambda (make-qdef-defun)
       (define* (make-qdef-typed-defun input-form.stx {lhs.var-id identifier?} standard-formals.stx {body*.stx list?}
@@ -175,7 +185,7 @@
 	((make-qdef-defun input-form.stx lhs.var-id standard-formals.stx body*.stx lhs.ots)))
       make-qdef-typed-defun)))
 
-(define-record-type (<qdef-checked-defun> make-qdef-checked-defun qdef-checked-defun?)
+(define-core-record-type <qdef-checked-defun>
   ;;This type  is used  to represent  checked function  definitions from  syntax uses
   ;;like:
   ;;
@@ -183,6 +193,8 @@
   ;;     body)
   ;;
   (parent <qdef-defun>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (protocol
     (lambda (make-qdef-defun)
       (define* (make-qdef-checked-defun input-form.stx {lhs.var-id identifier?} standard-formals.stx {body*.stx list?}
@@ -193,8 +205,10 @@
 
 ;;;; type definitions: qualified RHS multiple-clause function definition
 
-(define-record-type (<qdef-case-defun> make-qdef-case-defun qdef-case-defun?)
+(define-core-record-type <qdef-case-defun>
   (parent <qdef-closure>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable formals*		qdef-case-defun.standard-formals*)
 		;A  proper  or  improper  list   of  syntax  objects  representing  a
@@ -213,7 +227,7 @@
 ;;; --------------------------------------------------------------------
 ;;; standard function definition, case variant
 
-(define-record-type (<qdef-standard-case-defun> make-qdef-standard-case-defun qdef-standard-case-defun?)
+(define-core-record-type <qdef-standard-case-defun>
   ;;This type  is used to represent  non-typed function definitions from  syntax uses
   ;;like:
   ;;
@@ -224,6 +238,8 @@
   ;;   (define ?lhs (case-lambda/std ?clause0 ?clause ...))
   ;;
   (parent <qdef-case-defun>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (protocol
     (lambda (make-qdef-case-defun)
       (define* (make-qdef-standard-case-defun input-form.stx {lhs.var-id identifier?} standard-formals*.stx {body**.stx list?}
@@ -234,7 +250,7 @@
 ;;; --------------------------------------------------------------------
 ;;; typed function definition
 
-(define-record-type (<qdef-typed-case-defun> make-qdef-typed-case-defun qdef-typed-case-defun?)
+(define-core-record-type <qdef-typed-case-defun>
   ;;This type is used to represent typed function definitions from syntax uses like:
   ;;
   ;;   (case-define/typed ?lhs ?clause0 ?clause ...)
@@ -244,6 +260,8 @@
   ;;   (define ?lhs (case-lambda/typed ?clause0 ?clause ...))
   ;;
   (parent <qdef-case-defun>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (protocol
     (lambda (make-qdef-case-defun)
       (define* (make-qdef-typed-case-defun input-form.stx {lhs.var-id identifier?} standard-formals*.stx {body**.stx list?}
@@ -251,7 +269,7 @@
 	((make-qdef-case-defun input-form.stx lhs.var-id standard-formals*.stx body**.stx lhs.ots)))
       make-qdef-typed-case-defun)))
 
-(define-record-type (<qdef-checked-case-defun> make-qdef-checked-case-defun qdef-checked-case-defun?)
+(define-core-record-type <qdef-checked-case-defun>
   ;;This type  is used  to represent  checked function  definitions from  syntax uses
   ;;like:
   ;;
@@ -262,6 +280,8 @@
   ;;   (define ?lhs (case-lambda/checked ?clause0 ?clause ...))
   ;;
   (parent <qdef-case-defun>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (protocol
     (lambda (make-qdef-case-defun)
       (define* (make-qdef-checked-case-defun input-form.stx {lhs.var-id identifier?} standard-formals*.stx {body**.stx list?}
@@ -272,7 +292,9 @@
 
 ;;;; type definitions: qualified RHS variable definition
 
-(define-record-type (<qdef-defvar> make-qdef-defvar qdef-defvar?)
+(define-core-record-type <qdef-defvar>
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <qdef>)
   (fields
     (mutable lhs.ots		qdef-defvar.lhs-ots qdef-defvar.lhs-ots-set!)
@@ -320,7 +342,7 @@
 ;;; --------------------------------------------------------------------
 ;;; standard variable definition
 
-(define-record-type (<qdef-standard-defvar> make-qdef-standard-defvar qdef-standard-defvar?)
+(define-core-record-type <qdef-standard-defvar>
   ;;This type  is used to  represent standard  R6RS variable definitions  from syntax
   ;;uses like:
   ;;
@@ -328,6 +350,8 @@
   ;;   (define/std ?var)
   ;;
   (parent <qdef-defvar>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (protocol
     (lambda (make-qdef-defvar)
       (define* (make-qdef-standard-defvar input-form.stx {lhs.var-id identifier?} init-expr? rhs.stx)
@@ -337,13 +361,15 @@
 ;;; --------------------------------------------------------------------
 ;;; typed variable definition
 
-(define-record-type (<qdef-typed-defvar> make-qdef-typed-defvar qdef-typed-defvar?)
+(define-core-record-type <qdef-typed-defvar>
   ;;This type is used to represent typed variable definitions from syntax uses like:
   ;;
   ;;   (define/typed   (brace ?var ?type) ?expr)
   ;;   (define/typed   (brace ?var ?type))
   ;;
   (parent <qdef-defvar>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (protocol
     (lambda (make-qdef-defvar)
       (define* (make-qdef-typed-defvar input-form.stx
@@ -352,7 +378,7 @@
 	((make-qdef-defvar input-form.stx lhs.var-id lhs.ots init-expr? rhs.stx)))
       make-qdef-typed-defvar)))
 
-(define-record-type (<qdef-checked-defvar> make-qdef-checked-defvar qdef-checked-defvar?)
+(define-core-record-type <qdef-checked-defvar>
   ;;This type  is used  to represent  checked variable  definitions from  syntax uses
   ;;like:
   ;;
@@ -360,6 +386,8 @@
   ;;   (define/checked (brace ?var ?type))
   ;;
   (parent <qdef-defvar>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (protocol
     (lambda (make-qdef-defvar)
       (define* (make-qdef-checked-defvar input-form.stx
@@ -371,7 +399,7 @@
 
 ;;;; type definitions: qualified RHS top-level expression
 
-(define-record-type (<qdef-top-expr> make-qdef-top-expr qdef-top-expr?)
+(define-core-record-type <qdef-top-expr>
   ;;This type is used to represent  expressions mixed with definitions (when they are
   ;;allowed).  For  example, when in a  top-level program's body the  expander parses
   ;;the forms:
@@ -385,6 +413,8 @@
   ;;by the code).
   ;;
   (parent <qdef>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (protocol
     (lambda (make-qdef)
       (define* (make-qdef-top-expr input-form.stx)
@@ -422,18 +452,18 @@
     (while-not-expanding-application-first-subform
      (let ((rtd (record-rtd qdef)))
        (cond
-	((eq? rtd (record-type-descriptor <qdef-standard-defun>))	(chi-defun/std	      qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-typed-defun>))		(chi-defun/typed      qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-checked-defun>))	(chi-defun/checked    qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-standard-defvar>))	(chi-defvar/std	      qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-typed-defvar>))		(chi-defvar/typed     qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-checked-defvar>))	(chi-defvar/checked   qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-top-expr>))		(if interaction?
-									    (chi-interaction-top-expr qdef lexenv.run lexenv.expand)
-									  (chi-top-expr qdef lexenv.run lexenv.expand)))
-	((eq? rtd (record-type-descriptor <qdef-standard-case-defun>))	(chi-case-defun/std     qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-typed-case-defun>))	(chi-case-defun/typed   qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-checked-case-defun>))	(chi-case-defun/checked qdef lexenv.run lexenv.expand))
+	((eq? rtd (<qdef-standard-defun> rtd))		(chi-defun/std	      qdef lexenv.run lexenv.expand))
+	((eq? rtd (<qdef-typed-defun> rtd))		(chi-defun/typed      qdef lexenv.run lexenv.expand))
+	((eq? rtd (<qdef-checked-defun> rtd))		(chi-defun/checked    qdef lexenv.run lexenv.expand))
+	((eq? rtd (<qdef-standard-defvar> rtd))		(chi-defvar/std	      qdef lexenv.run lexenv.expand))
+	((eq? rtd (<qdef-typed-defvar> rtd))		(chi-defvar/typed     qdef lexenv.run lexenv.expand))
+	((eq? rtd (<qdef-checked-defvar> rtd))		(chi-defvar/checked   qdef lexenv.run lexenv.expand))
+	((eq? rtd (<qdef-top-expr> rtd))		(if interaction?
+							    (chi-interaction-top-expr qdef lexenv.run lexenv.expand)
+							  (chi-top-expr qdef lexenv.run lexenv.expand)))
+	((eq? rtd (<qdef-standard-case-defun> rtd))	(chi-case-defun/std     qdef lexenv.run lexenv.expand))
+	((eq? rtd (<qdef-typed-case-defun> rtd))	(chi-case-defun/typed   qdef lexenv.run lexenv.expand))
+	((eq? rtd (<qdef-checked-case-defun> rtd))	(chi-case-defun/checked qdef lexenv.run lexenv.expand))
 	(else
 	 (assertion-violation __who__ "invalid QDEF type" qdef))))))
 

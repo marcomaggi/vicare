@@ -737,8 +737,10 @@
 
 ;;;; type signature: type definition
 
-(define-record-type (<type-signature> make-type-signature type-signature?)
+(define-core-record-type <type-signature>
   (nongenerative *0*vicare:expander:<type-signature>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (mutable specs
 	     type-signature.object-type-specs
@@ -771,12 +773,6 @@
       (%display "#[signature ")
       (%display (syntax->datum (type-signature.syntax-object S)))
       (%display "]"))))
-
-(define <type-signature>-rtd
-  (record-type-descriptor <type-signature>))
-
-(define <type-signature>-rcd
-  (record-constructor-descriptor <type-signature>))
 
 (define-list-of-type-predicate list-of-type-signatures? type-signature?)
 

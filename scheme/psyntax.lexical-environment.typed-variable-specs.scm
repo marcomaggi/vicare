@@ -22,28 +22,34 @@
 
 
 (module (<typed-variable-spec>
+	 <typed-variable-spec>-rtd			<typed-variable-spec>-rcd
 	 typed-variable-spec?
 	 typed-variable-spec.ots			typed-variable-spec.ots-set!
 
 	 <lexical-typed-variable-spec>
+	 <lexical-typed-variable-spec>-rtd		<lexical-typed-variable-spec>-rcd
 	 make-lexical-typed-variable-spec		lexical-typed-variable-spec?
 	 lexical-typed-variable-spec.lex
 	 lexical-typed-variable-spec.referenced?	lexical-typed-variable-spec.referenced?-set!
 	 lexical-typed-variable-spec.assigned?		lexical-typed-variable-spec.assigned?-set!
 
 	 <lexical-closure-variable-spec>
+	 <lexical-closure-variable-spec>-rtd		<lexical-closure-variable-spec>-rcd
 	 make-lexical-closure-variable-spec		lexical-closure-variable-spec?
 	 lexical-closure-variable-spec.replacements
 
 	 <global-typed-variable-spec>
+	 <global-typed-variable-spec>-rtd		<global-typed-variable-spec>-rcd
 	 make-global-typed-variable-spec		global-typed-variable-spec?
 	 global-typed-variable-spec.variable-loc
 
 	 <global-closure-variable-spec>
+	 <global-closure-variable-spec>-rtd		<global-closure-variable-spec>-rcd
 	 make-global-closure-variable-spec		global-closure-variable-spec?
 	 global-closure-variable-spec.replacements
 
 	 <core-prim-type-spec>
+	 <core-prim-type-spec>-rtd			<core-prim-type-spec>-rcd
 	 make-core-prim-type-spec			core-prim-type-spec?
 	 core-prim-type-spec.name			core-prim-type-spec.safety
 	 core-prim-type-spec.replacements
@@ -53,8 +59,10 @@
 
 ;;;; lexical variable specification: base type
 
-(define-record-type (<typed-variable-spec> dummy typed-variable-spec?)
+(define-core-record-type <typed-variable-spec>
   (nongenerative *0*vicare:expander:<typed-variable-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (mutable ots		typed-variable-spec.ots typed-variable-spec.ots-set!)
 		;An instance  of "<object-type-spec>"  representing the type  of this
@@ -65,13 +73,15 @@
       (define* (make-typed-variable-spec {ots object-type-spec?})
 	(make-record ots))
       make-typed-variable-spec))
-  #| end of DEFINE-RECORD-TYPE |# )
+  #| end of DEFINE-CORE-RECORD-TYPE |# )
 
 
 ;;;; local lexical variable specification
 
-(define-record-type (<lexical-typed-variable-spec> make-lexical-typed-variable-spec lexical-typed-variable-spec?)
+(define-core-record-type <lexical-typed-variable-spec>
   (nongenerative *0*vicare:expander:<lexical-typed-variable-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <typed-variable-spec>)
   (fields
     (immutable lex		lexical-typed-variable-spec.lex)
@@ -86,10 +96,12 @@
       (define* (make-lexical-typed-variable-spec {ots object-type-spec?} {lex gensym?})
 	((make-typed-variable-spec ots) lex #f #f))
       make-lexical-typed-variable-spec))
-  #| end of DEFINE-RECORD-TYPE |# )
+  #| end of DEFINE-CORE-RECORD-TYPE |# )
 
-(define-record-type (<lexical-closure-variable-spec> make-lexical-closure-variable-spec lexical-closure-variable-spec?)
+(define-core-record-type <lexical-closure-variable-spec>
   (nongenerative *0*vicare:expander:<lexical-closure-variable-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <lexical-typed-variable-spec>)
   (fields
     (immutable replacements	lexical-closure-variable-spec.replacements)
@@ -104,7 +116,7 @@
 	(({ots object-type-spec?} {lex gensym?} {replacements (or not vector?)})
 	 ((make-lexical-typed-variable-spec ots lex) replacements)))
       make-lexical-closure-variable-spec))
-  #| end of DEFINE-RECORD-TYPE |# )
+  #| end of DEFINE-CORE-RECORD-TYPE |# )
 
 
 ;;;; global lexical variable specification
@@ -117,8 +129,10 @@
 ;;*  One for  the type  specification,  which holds  a  reference to  an instance  of
 ;;"<global-typed-variable-spec>"; it pertains to the visit code.
 ;;
-(define-record-type (<global-typed-variable-spec> make-global-typed-variable-spec global-typed-variable-spec?)
+(define-core-record-type <global-typed-variable-spec>
   (nongenerative *0*vicare:expander:<global-typed-variable-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <typed-variable-spec>)
   (fields
     (immutable variable.loc	global-typed-variable-spec.variable-loc)
@@ -129,10 +143,12 @@
       (define* (make-global-typed-variable-spec {ots object-type-spec?} {variable.loc gensym?})
 	((make-typed-variable-spec ots) variable.loc))
       make-global-typed-variable-spec))
-  #| end of DEFINE-RECORD-TYPE |# )
+  #| end of DEFINE-CORE-RECORD-TYPE |# )
 
-(define-record-type (<global-closure-variable-spec> make-global-closure-variable-spec global-closure-variable-spec?)
+(define-core-record-type <global-closure-variable-spec>
   (nongenerative *0*vicare:expander:<global-closure-variable-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <global-typed-variable-spec>)
   (fields
     (immutable replacements	global-closure-variable-spec.replacements)
@@ -147,13 +163,15 @@
 	(({ots object-type-spec?} {variable.loc gensym?} {replacements (or not vector?)})
 	 ((make-global-typed-variable-spec ots variable.loc) replacements)))
       make-global-closure-variable-spec))
-  #| end of DEFINE-RECORD-TYPE |# )
+  #| end of DEFINE-CORE-RECORD-TYPE |# )
 
 
 ;;;; typed core primitive
 
-(define-record-type (<core-prim-type-spec> make-core-prim-type-spec core-prim-type-spec?)
+(define-core-record-type <core-prim-type-spec>
   (nongenerative *0*vicare:expander:<core-prim-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (parent <typed-variable-spec>)
   (fields
     (immutable name			core-prim-type-spec.name)

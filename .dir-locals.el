@@ -42,6 +42,7 @@
      (eval . (put 'case-descriptors-signature-structure*				'scheme-indent-function 1))
      (eval . (put 'case-specification							'scheme-indent-function 1))
      (eval . (put 'cond-with-predicates							'scheme-indent-function 1))
+     (eval . (put 'cond-boot-expansion							'scheme-indent-function 1))
      (eval . (put 'closure-type-spec.signature-set!					'scheme-indent-function 1))
      (eval . (put 'core-lang-builder							'scheme-indent-function 1))
      (eval . (put 'declare-core-primitive						'scheme-indent-function 2))
