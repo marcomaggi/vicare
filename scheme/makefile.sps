@@ -214,28 +214,6 @@
 	 BOOT-IMAGE-DAY-VERSION)
   (include "ikarus.config.scm" #t))
 
-;;; --------------------------------------------------------------------
-
-(define-syntax if-building-rotation-boot-image?
-  (lambda (stx)
-    (define rotating?
-      (equal? "yes" (getenv "BUILDING_ROTATION_BOOT_IMAGE")))
-    (define (%log description)
-      (fprintf (current-error-port)
-	       "makefile.sps: ~a: conditional for ~a boot image\n"
-	       description
-	       (if rotating? "rotation" "normal")))
-    (syntax-case stx ()
-      ((_ ?description ?true-body)
-       (begin
-	 (%log (syntax->datum #'?description))
-	 (if rotating? #'?true-body #'(module ()))))
-      ((_ ?description ?true-body ?false-body)
-       (begin
-	 (%log (syntax->datum #'?description))
-	 (if rotating? #'?true-body #'?false-body)))
-      )))
-
 
 ;;;; configuration inspection
 
@@ -6760,5 +6738,4 @@
 ;; Local Variables:
 ;; eval: (put 'time-it					'scheme-indent-function 1)
 ;; eval: (put 'each-for					'scheme-indent-function 1)
-;; eval: (put 'if-building-rotation-boot-image?		'scheme-indent-function 2)
 ;; End:
