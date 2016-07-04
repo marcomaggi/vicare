@@ -18,10 +18,11 @@
 #!r6rs
 (library (ikarus.compiler.helpers)
   (export
-    cond-compiler-expansion
-    boot-building-normal-boot-image
-    boot-building-rotation-boot-image
-    inclusion-in-boot-image
+    cond-boot-expansion
+    inclusion-in-normal-boot-image
+    inclusion-in-rotation-boot-image
+    bootstrapping-for-normal-boot-image
+    bootstrapping-for-rotation-boot-image
 
     sl-apply-label-func
     cond-expand					expand-time-gensym

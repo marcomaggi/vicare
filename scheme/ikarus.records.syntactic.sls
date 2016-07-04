@@ -42,21 +42,24 @@
 	  $struct-set!)
     (only (ikarus.options)
 	  cond-boot-expansion
-	  boot-building-normal-boot-image
-	  boot-building-rotation-boot-image
-	  inclusion-in-boot-image))
+	  inclusion-in-normal-boot-image
+	  inclusion-in-rotation-boot-image
+	  bootstrapping-for-normal-boot-image
+	  bootstrapping-for-rotation-boot-image))
 
   (cond-boot-expansion "auxiliary syntaxes for DEFINE-CORE-RECORD-TYPE"
-    ((inclusion-in-boot-image)
+    ((inclusion-in-normal-boot-image)
      (define-auxiliary-syntaxes define-type-descriptors strip-angular-parentheses))
-    ((boot-building-normal-boot-image)
+    ((inclusion-in-rotation-boot-image)
      (import (only (vicare)
 		   define-type-descriptors
 		   strip-angular-parentheses)))
-    ((boot-building-rotation-boot-image)
-     (import (only (vicare)
-		   define-type-descriptors
-		   strip-angular-parentheses))))
+    ((bootstrapping-for-normal-boot-image)
+     ;;This is never exercised.
+     (module ()))
+    ((bootstrapping-for-rotation-boot-image)
+     ;;This is never exercised.
+     (module ())))
 
 
 (define-syntax (define-core-record-type stx)
@@ -618,7 +621,17 @@
     (unless (vector-empty? first-item)
       (let ((uid (vector-ref first-item 0)))
 	(if (identifier? uid)
-	    (<parsing-results>-uid-set! results uid)
+	    (cond-boot-expansion "setting UID for non-generative record-type"
+	      ((inclusion-in-normal-boot-image)
+	       (<parsing-results>-uid-set! results uid))
+	      ((inclusion-in-rotation-boot-image)
+	       (<parsing-results>-uid-set! results (gensym)))
+	      ((bootstrapping-for-normal-boot-image)
+	       ;;This is never exercised.
+	       (<parsing-results>-uid-set! results uid))
+	      ((bootstrapping-for-rotation-boot-image)
+	       ;;This is never exercised.
+	       (<parsing-results>-uid-set! results uid)))
 	  (synner "expected empty clause or single identifier argument in NONGENERATIVE clause"
 		  (list (syntax-clause-spec-keyword clause-spec) uid)))))))
 

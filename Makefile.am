@@ -607,6 +607,7 @@ CLEANFILES		+= $(VICARE_NEW_BOOT) \
 VICARE_BOOT_PREREQUISITES	= \
 	vicare						\
 	scheme/ikarus.config.scm			\
+	scheme/cond-boot-expansion.scm			\
 	$(VICARE_BOOT_MAKEFILES)			\
 	typed-core-primitives-specs.scm			\
 	\
