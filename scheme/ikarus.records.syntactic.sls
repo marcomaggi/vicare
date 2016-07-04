@@ -625,7 +625,7 @@
 	      ((inclusion-in-normal-boot-image)
 	       (<parsing-results>-uid-set! results uid))
 	      ((inclusion-in-rotation-boot-image)
-	       (<parsing-results>-uid-set! results (gensym)))
+	       (<parsing-results>-uid-set! results (datum->syntax uid (gensym))))
 	      ((bootstrapping-for-normal-boot-image)
 	       ;;This is never exercised.
 	       (<parsing-results>-uid-set! results uid))

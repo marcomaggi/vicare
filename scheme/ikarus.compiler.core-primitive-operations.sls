@@ -116,7 +116,7 @@
   (define (main stx)
     (syntax-case stx ()
       ((?stx ?name ?interruptable ?clause* ...)
-       (let ((cases #'(?clause* ...)))
+       (let ((clauses.stx #'(?clause* ...)))
 	 (with-syntax
 	     ((COGEN-P		(%cogen-name #'?stx "pred"   #'?name))
 	      (COGEN-V		(%cogen-name #'?stx "value"  #'?name))
@@ -125,9 +125,9 @@
 				  (safe   #t)
 				  (unsafe #f))))
 	   (let-values
-	       (((P-handler P-handled?) (%generate-handler #'COGEN-P #'P cases))
-		((V-handler V-handled?) (%generate-handler #'COGEN-V #'V cases))
-		((E-handler E-handled?) (%generate-handler #'COGEN-E #'E cases)))
+	       (((P-handler P-handled?) (%generate-handler #'COGEN-P #'P clauses.stx))
+		((V-handler V-handled?) (%generate-handler #'COGEN-V #'V clauses.stx))
+		((E-handler E-handled?) (%generate-handler #'COGEN-E #'E clauses.stx)))
 	     #`(module (COGEN-P COGEN-V COGEN-E)
 		 (define COGEN-P
 		   (fluid-let-syntax ((__who__ (identifier-syntax (quote ?name))))
@@ -159,37 +159,68 @@
     ;;operation handler for EXECUTION-CONTEXT; a boolean value, true if the primitive
     ;;operation is implemented for EXECUTION-CONTEXT.
     ;;
-    (let ((clause* (%filter-cases execution-context clause*)))
-      (with-syntax
-	  (((CLAUSE ...) clause*))
-	(values #`(case-lambda
-		   CLAUSE ...
-		   ;;This case with any number  of arguments will cause the primitive
-		   ;;operation to jump  to the interrupt handler which  will call the
-		   ;;primitive  function.  This  way we  can integrate  the primitive
-		   ;;calls with few and simple arguments, while reverting to the full
-		   ;;function for applications to more arguments.
-		   (args
-		    (interrupt)))
-		(not (null? clause*))))))
+    (receive (selected-clause*.stx found-args-clause?)
+	(%filter-clauses-by-context execution-context clause*)
+      ;;In  the output  subform  representing the  handler function  we  may add  the
+      ;;case-lambda clause:
+      ;;
+      ;;   (args (interrupt))
+      ;;
+      ;;this causes  the primitive operation to  jump to the interrupt  handler which
+      ;;will call  the primitive function.  This  way we can integrate  the primitive
+      ;;calls with few and simple arguments, while reverting to the full function for
+      ;;applications to more arguments.
+      (let ((context-handled? (pair? selected-clause*.stx)))
+	(cond ((not context-handled?)
+	       (values #'(lambda args (interrupt))
+		       context-handled?))
 
-  (define (%filter-cases execution-context clause*)
-    ;;Extract from CLAUSE* the cases matching EXECUTION-CONTEXT among the possible P,
-    ;;V, E.  Return a list of CASE-LAMBDA clauses.
+	      (found-args-clause?
+	       (values #`(case-lambda . #,selected-clause*.stx)
+		       context-handled?))
+
+	      (else
+	       (values #`(case-lambda #,@selected-clause*.stx (args (interrupt)))
+		       context-handled?))))))
+
+  (define (%filter-clauses-by-context execution-context clauses.stx)
+    ;;Extract  from  CLAUSES.STX  the  cases  matching  EXECUTION-CONTEXT  among  the
+    ;;possible P, V, E.  Return a list of CASE-LAMBDA clauses.
     ;;
-    (syntax-case clause* ()
-      (() '())
-      ((((?PVE . ?arg*) ?body0 ?body ...) . ?rest)
-       (free-identifier=? #'?PVE execution-context)
-       (cons #'(?arg* ?body0 ?body ...)
-	     (%filter-cases execution-context #'?rest)))
-      ((?case . ?rest)
-       (%filter-cases execution-context #'?rest))))
+    (define found-args-clause? #f)
+    (define selected-clause*.stx
+      (let recur ((clauses.stx clauses.stx))
+	(syntax-case clauses.stx ()
+	  (() '())
+
+	  ((((?PVE . ?args) ?body0 ?body ...) . ?other-clauses)
+	   (if (free-identifier=? #'?PVE execution-context)
+	       ;;Matching context.
+	       (begin
+		 (when (identifier? #'?args)
+		   (set! found-args-clause? #t))
+		 (cons #'(?args ?body0 ?body ...)
+		       (recur #'?other-clauses)))
+	     ;;Correct syntax, non-matching context.  Just skip it.
+	     (recur #'?other-clauses)))
+
+	  ((?clause . ?other-clauses)
+	   (synner "single clause with invalid syntax" #'?clause))
+
+	  (_
+	   (synner "invalid clauses syntax")))))
+    (values selected-clause*.stx found-args-clause?))
 
   (define (%cogen-name stx infix name)
     (let* ((name.str  (symbol->string (syntax->datum name)))
 	   (cogen.str (string-append "cogen-" infix "-"  name.str)))
       (datum->syntax stx (string->symbol cogen.str))))
+
+  (case-define synner
+    ((message)
+     (synner message #f))
+    ((message subform)
+     (syntax-violation 'define-core-primitive-operation message stx subform)))
 
   (main stx))
 
@@ -6020,6 +6051,7 @@
 ;;; end of file
 ;;Local Variables:
 ;;mode: vicare
+;;eval: (font-lock-mode -1)
 ;;eval: (put 'make-conditional	'scheme-indent-function 2)
 ;;eval: (put 'make-shortcut	'scheme-indent-function 1)
 ;;eval: (put 'with-tmp		'scheme-indent-function 1)

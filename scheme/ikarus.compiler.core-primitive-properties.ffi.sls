@@ -36,7 +36,8 @@
 #!vicare
 (library (ikarus.compiler.core-primitive-properties.ffi)
   (export initialise-core-primitive-properties/ffi)
-  (import (except (vicare) unsafe)
+  (import (rnrs)
+    (ikarus.compiler.compat)
     (ikarus.compiler.core-primitive-properties.base)
     (ikarus.compiler.scheme-objects-ontology))
 

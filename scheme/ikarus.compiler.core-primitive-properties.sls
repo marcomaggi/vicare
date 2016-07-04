@@ -55,7 +55,8 @@
     application-attributes-result-false?
     application-attributes-identity?
     CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES)
-  (import (except (vicare) unsafe)
+  (import (rnrs)
+    (ikarus.compiler.compat)
     (ikarus.compiler.scheme-objects-ontology)
     (ikarus.compiler.core-primitive-properties.base)
     (ikarus.compiler.core-primitive-properties.configuration)

@@ -54,7 +54,7 @@
     compile-time-operand-core-type-error
     compile-time-retval-core-type-error
     compiler-internal-error)
-  (import (vicare)
+  (import (rnrs)
     (ikarus.compiler.compat))
 
 ;; (define begin-end-of-file

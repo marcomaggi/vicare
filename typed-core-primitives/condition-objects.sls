@@ -781,7 +781,7 @@
     (safe)
   (signatures
    ((<&who-value> <string> <top>)		=> <bottom>)
-   ((<&who-value> <string> <top> <top>)	=> <bottom>)))
+   ((<&who-value> <string> <top> <top>)		=> <bottom>)))
 
 (declare-core-primitive warning
     (safe)
@@ -813,7 +813,7 @@
 (declare-core-primitive procedure-signature-argument-violation
     (safe)
   (signatures
-   ((<&who-value> <string> <positive-fixnum> <top> <top>)	=> (<bottom>))))
+   ((<&who-value> <string> <positive-fixnum> <top> <top>)	=> <bottom>)))
 
 (declare-core-primitive assertion-error
     (safe)
@@ -821,22 +821,22 @@
    ((<top> <syntax-object>
 	   <non-negative-exact-integer> <non-negative-exact-integer>
 	   <non-negative-exact-integer> <non-negative-exact-integer>)
-    => (<bottom>))))
+    => <bottom>)))
 
 (declare-core-primitive procedure-arguments-consistency-violation
     (safe)
   (signatures
-   ((<&who-value> <string> . <list>)		=> (<bottom>))))
+   ((<&who-value> <string> . <list>)		=> <bottom>)))
 
 (declare-core-primitive procedure-arguments-consistency-violation/failed-expression
     (safe)
   (signatures
-   ((<&who-value> <string> <top> . <list>)	=> (<bottom>))))
+   ((<&who-value> <string> <top> . <list>)	=> <bottom>)))
 
 (declare-core-primitive procedure-signature-return-value-violation
     (safe)
   (signatures
-   ((<&who-value> <string> <non-negative-fixnum> <top> <top>)	=> (<bottom>))))
+   ((<&who-value> <string> <non-negative-fixnum> <top> <top>)	=> <bottom>)))
 
 /section)
 

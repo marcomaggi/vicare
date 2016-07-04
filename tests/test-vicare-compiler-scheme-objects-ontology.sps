@@ -27,9 +27,11 @@
 
 
 #!r6rs
-(import (vicare)
-  (ikarus.compiler.scheme-objects-ontology)
-  (vicare checks))
+(program (test-vicare-compiler-scheme-objects-ontology)
+  (options strict-r6rs)
+  (import (vicare)
+    (ikarus.compiler.scheme-objects-ontology)
+    (vicare checks))
 
 (import SCHEME-OBJECTS-ONTOLOGY)
 
@@ -610,6 +612,8 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;; Local Variables:

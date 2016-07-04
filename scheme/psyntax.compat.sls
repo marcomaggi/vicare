@@ -160,7 +160,7 @@
 		  ;;Maggi; Wed Sep 30, 2015)
 		  with-blocked-exceptions
 		  void-object?			stadalone-pair?
-		  circular-list?
+		  circular-list?		list-of-nestrings?
 
 		  reader-annotation?		reader-annotation-expression
 		  reader-annotation-stripped	reader-annotation-source
@@ -168,7 +168,7 @@
 
 		  ratnum-positive?		ratnum-negative?
 		  exact-compnum?
-		  )
+		  zero-compnum?			zero-cflonum?)
     (ikarus records syntactic)
     (prefix (only (ikarus.compiler)
 		  eval-core

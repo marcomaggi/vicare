@@ -115,6 +115,8 @@
 
 (module (chi-body*)
 
+  (define-module-who chi-body*)
+
 
 (define* (chi-body* body-form*.stx lexenv.run lexenv.expand
 		    rev-qdef* mod** kwd* export-spec* rib
@@ -122,11 +124,11 @@
   (if (pair? body-form*.stx)
       (let*-values
 	  (((body-form.stx)	(car body-form*.stx))
-	   ((type descr kwd)	(syntactic-form-type __who__ body-form.stx lexenv.run))
+	   ((type descr kwd)	(syntactic-form-type __module_who__ body-form.stx lexenv.run))
 	   ((kwd*)		(if (identifier? kwd)
 				    (cons kwd kwd*)
 				  kwd*)))
-	#;(debug-print __who__ body-form.stx)
+	#;(debug-print __module_who__ body-form.stx)
 	(parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	  (case type
 	    ((integrated-macro)
@@ -180,17 +182,17 @@
 			  rev-qdef* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((standalone-unbound-identifier)
-	     (error-unbound-identifier __who__ body-form.stx))
+	     (error-unbound-identifier __module_who__ body-form.stx))
 
 	    ((displaced-lexical)
-	     (syntax-violation __who__ "identifier out of context" body-form.stx
-			       (syntax-match body-form.stx ()
-				 ((?car . ?cdr)
-				  ?car)
-				 (?id
-				  (identifier? ?id)
-				  ?id)
-				 (_ #f))))
+	     (syntax-violation __module_who__ "identifier out of context"
+	       body-form.stx (syntax-match body-form.stx ()
+			       ((?car . ?cdr)
+				?car)
+			       (?id
+				(identifier? ?id)
+				?id)
+			       (_ #f))))
 
 	    (else
 	     ;;Any other expression.
@@ -436,7 +438,7 @@
 					       ((letrec-syntax)
 						(push-lexical-contour xrib x))
 					       (else
-						(assertion-violation __who__ "internal error" body-form.stx)))))
+						(assertion-violation __module_who__ "internal error" body-form.stx)))))
 				(eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
 							lexenv.run)))
 			 ?xrhs*)))
@@ -535,7 +537,7 @@
 				mix? shadow/redefine-bindings?))
 
     (else
-     (assertion-violation __who__
+     (assertion-violation __module_who__
        "internal error, invalid integrated-macro descriptor" (car body-form*.stx) descr))))
 
 

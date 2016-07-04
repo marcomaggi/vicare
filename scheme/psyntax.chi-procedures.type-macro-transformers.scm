@@ -1023,7 +1023,7 @@
 				    (raise
 				     (condition (make-who-condition __who__)
 						(make-message-condition message)
-						(make-syntax-violation input-form.stx)
+						(make-syntax-violation input-form.stx #f)
 						(make-syntax-violation ?target-signature subform)))))))
 	    (target.sig		(type-signature.untyped-to-top target.sig))
 	    (expr.psi		(chi-expr ?expr lexenv.run lexenv.expand))

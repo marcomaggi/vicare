@@ -176,7 +176,9 @@
 ;;NOTE  Libraries imported  here  are  interned in  the  internal library  collection
 ;;defined by the old  boot image.  Source libraries expanded later to  be part of the
 ;;boot image are interned in a separate library collection, BOOTSTRAP-COLLECTION.
-(import (vicare)
+(import (except (vicare)
+		constructor
+		type-predicate)
   ;;This library is from the old boot image.
   (prefix (only (psyntax system $all)
 		find-library-by-name
@@ -953,7 +955,7 @@
   (define-constant LIST-OF-CLAUSES
     (syntax-clauses-validate-specs
      (list (make-syntax-clause-spec #'constructor		0 1 0 1      '() '())
-	   (make-syntax-clause-spec #'predicate			0 1 1 1      '() '())
+	   (make-syntax-clause-spec #'type-predicate		0 1 1 1      '() '())
 	   (make-syntax-clause-spec #'hash-function		0 1 1 1      '() '())
 	   (make-syntax-clause-spec #'equality-predicate	0 1 1 1      '() '())
 	   (make-syntax-clause-spec #'comparison-procedure	0 1 1 1      '() '())
@@ -1002,7 +1004,7 @@
 		(unless (or (identifier? id) (boolean? id))
 		  (synner "invalid constructor specification" id))
 		(parsed-specs-constructor-set! parsed-specs id))))
-	   ((predicate)
+	   ((type-predicate)
 	    (let ((id (vector-ref arg 0)))
 	      (unless (or (identifier? id) (boolean? id))
 		(synner "invalid predicate specification" id))
@@ -1033,7 +1035,7 @@
 
   (main input-form.stx))
 
-(define-auxiliary-syntaxes constructor predicate hash methods)
+(define-auxiliary-syntaxes constructor type-predicate methods)
 
 ;;; --------------------------------------------------------------------
 

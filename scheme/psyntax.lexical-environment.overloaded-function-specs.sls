@@ -92,7 +92,7 @@
 		  (raise
 		   (condition (make-who-condition __who__)
 			      (make-message-condition "formals type signature already exists in overloaded function")
-			      (syntax-violation input-form.stx #f)))))
+			      (make-syntax-violation input-form.stx #f)))))
       (overloaded-function-spec.signature* lhs.ofs)))
   (overloaded-function-spec.signature*-set! lhs.ofs (cons spec.lambda-sig (overloaded-function-spec.signature* lhs.ofs)))
   (overloaded-function-spec.id*-set!        lhs.ofs (cons spec.id         (overloaded-function-spec.id*        lhs.ofs))))

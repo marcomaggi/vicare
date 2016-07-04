@@ -1446,7 +1446,7 @@ VICARE_TEST_SELECTED_FOREIGN_TESTS	= $(testdir)/foreign-test-*$(file)*.sps
 VICARE_TEST_SELECTED_DEMOS		= $(testdir)/demo-*$(file)*.sps
 
 VICARE_TEST_LIBRARY_PATH		= $(fasldir):$(VICARE_LIBRARY_PATH)
-VICARE_TEST_SOURCE_PATH			= $(testdir):$(slsdir):$(fasldir):$(srcdir)/scheme
+VICARE_TEST_SOURCE_PATH			= $(testdir):$(slsdir):$(fasldir):$(srcdir)/scheme:$(builddir)/scheme
 VICARE_TEST_LD_PATH			= $(builddir)/.libs:$(LD_LIBRARY_PATH)
 VICARE_TEST_DYLD_PATH			= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 

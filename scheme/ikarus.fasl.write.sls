@@ -384,7 +384,7 @@
 	 (put-tag (if x #\T #\F) port))
 	((eof-object? x)
 	 (put-tag #\E port))
-	((eq? x (void))
+	((void-object? x)
 	 (put-tag #\U port))
 	(else
 	 (assertion-violation who "not a fasl-writable immediate" x))))

@@ -73,7 +73,7 @@
 		  zero-flonum?
 		  positive-zero-flonum?			negative-zero-flonum?
 		  exact-compnum?			inexact-compnum?
-		  zero-compnum?				non-zero-compnum?
+		  zero-compnum?				non-zero-compnum?	non-zero-inexact-compnum?
 		  zero-cflonum?				non-zero-cflonum?
 		  hashtable-eq?				hashtable-eqv?
 		  hashtable-equiv?
@@ -83,6 +83,7 @@
 		  reader-annotation-expression		reader-annotation-stripped
 		  reader-annotation-source		reader-annotation-textual-position
 		  sentinel				sentinel?
+		  transcoder=?
 		  ;;
 		  compar-fixnum				compar-bignum
 		  compar-exact-integer			compar-ratnum
@@ -487,7 +488,7 @@
   (define-constant LIST-OF-CLAUSES
     (syntax-clauses-validate-specs
      (list (make-syntax-clause-spec #'constructor		0 1 0 1      '() '())
-	   (make-syntax-clause-spec #'predicate			0 1 1 1      '() '())
+	   (make-syntax-clause-spec #'type-predicate		0 1 1 1      '() '())
 	   (make-syntax-clause-spec #'equality-predicate	0 1 1 1      '() '())
 	   (make-syntax-clause-spec #'comparison-procedure	0 1 1 1      '() '())
 	   (make-syntax-clause-spec #'hash-function		0 1 1 1      '() '())
@@ -536,7 +537,7 @@
 		(unless (or (identifier? id) (boolean? id))
 		  (synner "invalid constructor specification" id))
 		(parsed-specs-constructor-set! parsed-specs id))))
-	   ((predicate)
+	   ((type-predicate)
 	    (let ((id (vector-ref arg 0)))
 	      (unless (or (identifier? id) (boolean? id))
 		(synner "invalid predicate specification" id))

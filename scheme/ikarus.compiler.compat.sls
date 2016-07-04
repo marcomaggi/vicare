@@ -43,6 +43,7 @@
     gensym				print-gensym
     gensym-prefix
     foreign-call
+    exact-integer?
     fxadd1				fxsub1
     fxnonnegative?
     fx=
@@ -53,6 +54,8 @@
     fxlogor				fxlogand
     fxlognot
     immediate?				bignum?
+    ratnum?				compnum?
+    cflonum?
     add1				sub1
     sll					sra
     make-list
@@ -67,6 +70,9 @@
     procedure-argument-violation
     expression-return-value-violation
     print-stderr-message
+    identifier-suffix			syntax->list
+    all-identifiers?
+    set-symbol-value!			symbol-value
 
     cnd::define-core-condition-type
     cnd::&condition			cnd::&assertion
@@ -178,7 +184,7 @@
 			 &condition
 			 &assertion)
 		   cnd::))
-   (define-syntax define-core-condition-type
+   (define-syntax cnd::define-core-condition-type
      (lambda (stx)
        (syntax-case stx ()
 	 ((_ ?type-name . ?body)

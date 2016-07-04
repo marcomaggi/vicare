@@ -36,7 +36,8 @@
 #!vicare
 (library (ikarus.compiler.core-primitive-properties.eval-and-environments)
   (export initialise-core-primitive-properties/eval-and-environments)
-  (import (except (vicare) unsafe)
+  (import (rnrs)
+    (ikarus.compiler.compat)
     (ikarus.compiler.core-primitive-properties.base)
     (ikarus.compiler.scheme-objects-ontology))
 

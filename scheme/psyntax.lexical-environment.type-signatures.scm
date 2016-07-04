@@ -2198,7 +2198,7 @@
 					      (else
 					       (core-prim-spec '<nebytevector> lexenv))))
 
-	  ((eq? datum (void))		(<void>-ots))
+	  ((void-object? datum)		(<void>-ots))
 	  (else				(<top>-ots)))))
 
 

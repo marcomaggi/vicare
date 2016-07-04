@@ -36,7 +36,8 @@
 #!vicare
 (library (ikarus.compiler.core-primitive-properties.symbols)
   (export initialise-core-primitive-properties/symbols)
-  (import (except (vicare) unsafe)
+  (import (rnrs)
+    (ikarus.compiler.compat)
     (ikarus.compiler.core-primitive-properties.base)
     (ikarus.compiler.scheme-objects-ontology))
 
