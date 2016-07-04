@@ -264,6 +264,15 @@
 			     (lambda (x) (make-graph x h))
 			   (record-type-field-names x)))
 			(else
+			 ;;NOTE The  code as  it is  now discards  some of  the field
+			 ;;values  in  the  RTD.   This is  fine  for  non-generative
+			 ;;record-types, because the full  RTD is built elsewhere and
+			 ;;retrieved from the UID when loading a fasl file.  It looks
+			 ;;wrong   for   generative  record-types,   but   generative
+			 ;;record-types  are *not*  persistent:  every  time we  call
+			 ;;MAKE-RECORD-TYPE-DESCRIPTOR for  a generative record-type,
+			 ;;we define  a new  record-type.  (Marco  Maggi; Mon  Jul 4,
+			 ;;2016)
 			 (let ((rtd ($struct-rtd x)))
 			   (cond ((eq? rtd (base-rtd))
 				  ;;this is a struct RTD

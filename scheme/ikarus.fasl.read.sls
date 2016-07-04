@@ -281,6 +281,17 @@
 		(fields		(make-vector field-count)))
 	   (let next-field ((i 0))
 	     (if ($fx= i field-count)
+		 ;;We need to remember  that this call to MAKE-RECORD-TYPE-DESCRIPTOR
+		 ;;will return  a previously  created RTD when  the operands  match a
+		 ;;previously created non-generative record-type.
+		 ;;
+		 ;;NOTE The code  as it is now  discards some of the  field values in
+		 ;;the RTD.   This is  fine for non-generative  record-types, because
+		 ;;the  full RTD  is built  elsewhere and  retrieved here.   It looks
+		 ;;wrong for generative record-types, but generative record-types are
+		 ;;*not* persistent:  every time we  call MAKE-RECORD-TYPE-DESCRIPTOR
+		 ;;for a generative record-type, we define a new record-type.  (Marco
+		 ;;Maggi; Mon Jul 4, 2016)
 		 (let ((rtd (make-record-type-descriptor name parent uid
 							 sealed? opaque? fields)))
 		   (when m (%put-mark m rtd))
