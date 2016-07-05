@@ -174,7 +174,6 @@
 		 )))))))
 
   (define-record-type options
-    (nongenerative)
     (fields (mutable uid-list-function-id))
     (protocol (lambda (make-record)
 		(lambda ()
@@ -382,7 +381,6 @@
 		 )))))))
 
   (define-record-type options
-    (nongenerative)
     (fields (mutable uid-list-function-id)
 	    (mutable reverse-before-methods?))
     (protocol (lambda (make-record)

@@ -159,8 +159,9 @@
   (define-values (foo-parent.id parent-rtd.id parent-rcd.id parent-rtd-definition parent-rcd-definition)
     (%make-parent-rtd+rcd-code clause*.stx foo input-form.stx synner))
 
-  ;;FOO-UID is a  symbol representing the record-type  UID; it is a  symbol even when
-  ;;the record-type is generative.  GENERATIVE?  can be true or false.
+  ;;FOO-UID  is a  syntactic identifier  representing the  record-type UID;  it is  a
+  ;;symbol even  when the  record-type is  generative.  GENERATIVE?   can be  true or
+  ;;false.
   (define-values (foo-uid generative?)
     (%get-uid foo clause*.stx synner))
 
@@ -445,11 +446,15 @@
      (synner "invalid record-type name specification" spec))))
 
 (define (%get-uid foo clause* synner)
+  ;;Return two values:  a syntactic identifier representing the UID;  a boolean, true
+  ;;if this record-type is generative.
+  ;;
   (let ((clause (%get-clause 'nongenerative clause*)))
     (syntax-match clause ()
       ((_)
        ;;This record-type is nongenerative.
-       (values (gensym (syntax->datum foo)) #f))
+       (values (datum->syntax foo (string->symbol (string-append "vicare:nongenerative:" (symbol->string (syntax->datum foo)))))
+	       #f))
       ((_ ?uid)
        ;;This record-type is nongenerative.
        (identifier? ?uid)
@@ -457,7 +462,8 @@
       ;;No matching clause found.  This record type will be non-generative.
       (#f
        ;;This record-type is generative.
-       (values (gensym (syntax->datum foo)) #t))
+       (values (datum->syntax foo (gensym (string-append "vicare:generative:" (symbol->string (syntax->datum foo)))))
+	       #t))
       (_
        (synner "expected symbol or no argument in NONGENERATIVE clause" clause)))))
 
