@@ -152,8 +152,10 @@
 
 ;;;; core expressions struct
 
-(define-record-type (<psi> make-psi psi?)
+(define-core-record-type <psi>
   (nongenerative vicare:expander:<psi>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable input-form		psi.input-form)
 		;The syntax object that originated this struct instance.  In the case
@@ -334,7 +336,7 @@
    splice-first-envelope?
    splice-first-envelope-form)
 
-  (define-record-type splice-first-envelope
+  (define-core-record-type splice-first-envelope
     (nongenerative vicare:expander:splice-first-envelope)
     (fields form))
 

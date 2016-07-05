@@ -250,84 +250,52 @@
 ;;undergoes while  expanded; there is  an instance of  this condition type  for every
 ;;transformation.
 ;;
-(define-condition-type &macro-expansion-trace
-    &condition
+(cnd::define-core-condition-type &macro-expansion-trace
+    cnd::&condition
   make-macro-expansion-trace macro-expansion-trace?
   (form macro-expansion-trace-form))
-(define &macro-expansion-trace-rtd
-  (record-type-descriptor &macro-expansion-trace))
-(define &macro-expansion-trace-rcd
-  (record-constructor-descriptor &macro-expansion-trace))
 
 ;;; --------------------------------------------------------------------
 
-(define-condition-type &syntactic-identifier
-    &condition
+(cnd::define-core-condition-type &syntactic-identifier
+    cnd::&condition
   make-syntactic-identifier-condition
   syntactic-identifier-condition?
   (syntactic-identifier		condition-syntactic-identifier))
-(define &syntactic-identifier-rtd
-  (record-type-descriptor &syntactic-identifier))
-(define &syntactic-identifier-rcd
-  (record-constructor-descriptor &syntactic-identifier))
 
-(define-condition-type &syntactic-binding-descriptor
-    &condition
+(cnd::define-core-condition-type &syntactic-binding-descriptor
+    cnd::&condition
   make-syntactic-binding-descriptor-condition
   syntactic-binding-descriptor-condition?
   (syntactic-binding-descriptor	condition-syntactic-binding-descriptor))
-(define &syntactic-binding-descriptor-rtd
-  (record-type-descriptor &syntactic-binding-descriptor))
-(define &syntactic-binding-descriptor-rcd
-  (record-constructor-descriptor &syntactic-binding-descriptor))
 
 ;;; --------------------------------------------------------------------
 
-(define-condition-type &syntactic-identifier-resolution
-    &violation
+(cnd::define-core-condition-type &syntactic-identifier-resolution
+    cnd::&violation
   make-syntactic-identifier-resolution-violation
   syntactic-identifier-resolution-violation?)
-(define &syntactic-identifier-resolution-rtd
-  (record-type-descriptor &syntactic-identifier-resolution))
-(define &syntactic-identifier-resolution-rcd
-  (record-constructor-descriptor &syntactic-identifier-resolution))
 
-(define-condition-type &syntactic-identifier-unbound
+(cnd::define-core-condition-type &syntactic-identifier-unbound
     &syntactic-identifier-resolution
   make-syntactic-identifier-unbound-condition
   syntactic-identifier-unbound-condition?)
-(define &syntactic-identifier-unbound-rtd
-  (record-type-descriptor &syntactic-identifier-unbound))
-(define &syntactic-identifier-unbound-rcd
-  (record-constructor-descriptor &syntactic-identifier-unbound))
 
-(define-condition-type &syntactic-identifier-out-of-context
+(cnd::define-core-condition-type &syntactic-identifier-out-of-context
     &syntactic-identifier-resolution
   make-syntactic-identifier-out-of-context-condition
   syntactic-identifier-out-of-context-condition?)
-(define &syntactic-identifier-out-of-context-rtd
-  (record-type-descriptor &syntactic-identifier-out-of-context))
-(define &syntactic-identifier-out-of-context-rcd
-  (record-constructor-descriptor &syntactic-identifier-out-of-context))
 
-(define-condition-type &syntactic-identifier-not-type-identifier
+(cnd::define-core-condition-type &syntactic-identifier-not-type-identifier
     &syntactic-identifier-resolution
   make-syntactic-identifier-not-type-identifier-condition
   syntactic-identifier-not-type-identifier-condition?)
-(define &syntactic-identifier-not-type-identifier-rtd
-  (record-type-descriptor &syntactic-identifier-not-type-identifier))
-(define &syntactic-identifier-not-type-identifier-rcd
-  (record-constructor-descriptor &syntactic-identifier-not-type-identifier))
 
-(define-condition-type &object-type-spec
-    &condition
+(cnd::define-core-condition-type &object-type-spec
+    cnd::&condition
   make-object-type-spec-condition
   object-type-spec-condition?
   (object-type-spec		condition-object-type-spec))
-(define &object-type-spec-rtd
-  (record-type-descriptor &object-type-spec))
-(define &object-type-spec-rcd
-  (record-constructor-descriptor &object-type-spec))
 
 ;;; --------------------------------------------------------------------
 
@@ -338,15 +306,11 @@
 ;;The value in the field SYNTAX-DEFINITION-EXPANDED-RHS must be a symbolic expression
 ;;representing the a core language expression.
 ;;
-(define-condition-type &syntax-definition-expanded-rhs
-    &condition
+(cnd::define-core-condition-type &syntax-definition-expanded-rhs
+    cnd::&condition
   make-syntax-definition-expanded-rhs-condition
   syntax-definition-expanded-rhs-condition?
   (syntax-definition-expanded-rhs	condition-syntax-definition-expanded-rhs))
-(define &syntax-definition-expanded-rhs-rtd
-  (record-type-descriptor &syntax-definition-expanded-rhs))
-(define &syntax-definition-expanded-rhs-rcd
-  (record-constructor-descriptor &syntax-definition-expanded-rhs))
 
 ;;This  is used  to describe  exceptions raised  while expanding  and evaluating  the
 ;;right-hand side (RHS) expression of a syntax definition (DEFINE-SYNTAX, LET-SYNTAX,
@@ -355,15 +319,11 @@
 ;;The  value in  field  SYNTAX-DEFINITION-EXPRESSION-RETURN-VALUE must  be the  value
 ;;returned by the evaluation of the RHS expression.
 ;;
-(define-condition-type &syntax-definition-expression-return-value
-    &condition
+(cnd::define-core-condition-type &syntax-definition-expression-return-value
+    cnd::&condition
   make-syntax-definition-expression-return-value-condition
   syntax-definition-expression-return-value-condition?
   (syntax-definition-expression-return-value	condition-syntax-definition-expression-return-value))
-(define &syntax-definition-expression-return-value-rtd
-  (record-type-descriptor &syntax-definition-expression-return-value))
-(define &syntax-definition-expression-return-value-rcd
-  (record-constructor-descriptor &syntax-definition-expression-return-value))
 
 
 ;;;; condition object types: descriptive objects, application forms
@@ -372,129 +332,89 @@
 ;;The single  argument to the  constructor must be  a syntax object  representing the
 ;;operator.
 ;;
-(define-condition-type &application-operator-expression
-    &condition
+(cnd::define-core-condition-type &application-operator-expression
+    cnd::&condition
   make-application-operator-expression-condition
   application-operator-expression-condition?
   (operator	condition-application-operator-expression))
-(define &application-operator-expression-rtd
-  (record-type-descriptor &application-operator-expression))
-(define &application-operator-expression-rcd
-  (record-constructor-descriptor &application-operator-expression))
 
 ;;This is used  to describe the syntax  objects acting as operands  in an application
 ;;form.  The  single argument  to the constructor  must be a  list of  syntax objects
 ;;representing the operands.
-(define-condition-type &application-operands-expressions
-    &condition
+(cnd::define-core-condition-type &application-operands-expressions
+    cnd::&condition
   make-application-operands-expressions-condition
   application-operands-expressions-condition?
   (operands	condition-application-operands-expressions))
-(define &application-operands-expressions-rtd
-  (record-type-descriptor &application-operands-expressions))
-(define &application-operands-expressions-rcd
-  (record-constructor-descriptor &application-operands-expressions))
 
 ;;This is used to hold a "<type-signature>" instance representing the types of values
 ;;returned  by an  expression  used  as operator  in  a  procedure application  form.
 ;;Examples: if  the operator  returns zero, two  or more values;  if the  operator is
 ;;marked as no-return; if the operator does not return a procedure.
 ;;
-(define-condition-type &application-operator-signature
-    &condition
+(cnd::define-core-condition-type &application-operator-signature
+    cnd::&condition
   make-application-operator-signature-condition
   application-operator-signature-condition?
   (signature	condition-application-operator-signature))
-(define &application-operator-signature-rtd
-  (record-type-descriptor &application-operator-signature))
-(define &application-operator-signature-rcd
-  (record-constructor-descriptor &application-operator-signature))
 
 ;;This is used to hold a "<type-signature>" instance representing the types of values
 ;;returned by an expression used as operand in procedure application form.  Examples:
 ;;if  the operand  returns zero,  two or  more values;  if the  operand is  marked as
 ;;no-return.
 ;;
-(define-condition-type &application-operand-signature
-    &condition
+(cnd::define-core-condition-type &application-operand-signature
+    cnd::&condition
   make-application-operand-signature-condition
   application-operand-signature-condition?
   (signature	condition-application-operand-signature))
-(define &application-operand-signature-rtd
-  (record-type-descriptor &application-operand-signature))
-(define &application-operand-signature-rcd
-  (record-constructor-descriptor &application-operand-signature))
 
 ;;This  is used  to describe  the type  identifier of  an argument  to function,  the
 ;;expected type of object used in the function call.
 ;;
-(define-condition-type &application-argument-type-name
-    &condition
+(cnd::define-core-condition-type &application-argument-type-name
+    cnd::&condition
   make-application-argument-type-name-condition
   application-argument-type-name-condition?
   (argument-type-name		condition-application-argument-type-name))
-(define &application-argument-type-name-rtd
-  (record-type-descriptor &application-argument-type-name))
-(define &application-argument-type-name-rcd
-  (record-constructor-descriptor &application-argument-type-name))
 
-(define-condition-type &application-argument-index
-    &condition
+(cnd::define-core-condition-type &application-argument-index
+    cnd::&condition
   make-application-argument-index-condition
   application-argument-index-condition?
   (application-argument-index	condition-application-argument-index))
-(define &application-argument-index-rtd
-  (record-type-descriptor &application-argument-index))
-(define &application-argument-index-rcd
-  (record-constructor-descriptor &application-argument-index))
 
 
 ;;;; condition object types: descriptive objects, type signatures
 
-(define-condition-type &type-signature
-    &condition
+(cnd::define-core-condition-type &type-signature
+    cnd::&condition
   make-type-signature-condition
   type-signature-condition?
   (type-signature		condition-type-signature))
-(define &type-signature-rtd
-  (record-type-descriptor &type-signature))
-(define &type-signature-rcd
-  (record-constructor-descriptor &type-signature))
 
-(define-condition-type &expected-type-signature
-    &condition
+(cnd::define-core-condition-type &expected-type-signature
+    cnd::&condition
   make-expected-type-signature-condition
   expected-type-signature-condition?
   (expected-type-signature	condition-expected-type-signature))
-(define &expected-type-signature-rtd
-  (record-type-descriptor &expected-type-signature))
-(define &expected-type-signature-rcd
-  (record-constructor-descriptor &expected-type-signature))
 
-(define-condition-type &returned-type-signature
-    &condition
+(cnd::define-core-condition-type &returned-type-signature
+    cnd::&condition
   make-returned-type-signature-condition
   returned-type-signature-condition?
   (returned-type-signature	condition-returned-type-signature))
-(define &returned-type-signature-rtd
-  (record-type-descriptor &returned-type-signature))
-(define &returned-type-signature-rcd
-  (record-constructor-descriptor &returned-type-signature))
 
 
 ;;;; condition object types: descriptive objects
 
 ;;This is used to describe a type's  method name involved in an exception.  The field
 ;;must be a symbol representing the method name.
-(define-condition-type &type-method-name
-    &condition
+(cnd::define-core-condition-type &type-method-name
+    cnd::&condition
   make-type-method-name-condition
   condition-type-method-name?
   (method-name condition-type-method-name))
-(define &type-method-name-rtd
-  (record-type-descriptor &type-method-name))
-(define &type-method-name-rcd
-  (record-constructor-descriptor &type-method-name))
 
 
 ;;;; condition object types: error objects
@@ -502,28 +422,20 @@
 ;;This  is used  to  describe exceptions  in  which  there is  a  mismatch between  a
 ;;resulting expression type signature and an expected one; this condition type should
 ;;be the root of all the condition types in this category.
-(define-condition-type &expand-time-type-signature-violation
-    &violation
+(cnd::define-core-condition-type &expand-time-type-signature-violation
+    cnd::&violation
   make-expand-time-type-signature-violation
   expand-time-type-signature-violation?)
-(define &expand-time-type-signature-violation-rtd
-  (record-type-descriptor &expand-time-type-signature-violation))
-(define &expand-time-type-signature-violation-rcd
-  (record-constructor-descriptor &expand-time-type-signature-violation))
 
-(define-condition-type &expand-time-type-signature-warning
-    &warning
+(cnd::define-core-condition-type &expand-time-type-signature-warning
+    cnd::&warning
   make-expand-time-type-signature-warning
   expand-time-type-signature-warning?)
-(define &expand-time-type-signature-warning-rtd
-  (record-type-descriptor &expand-time-type-signature-warning))
-(define &expand-time-type-signature-warning-rcd
-  (record-constructor-descriptor &expand-time-type-signature-warning))
 
 ;;; --------------------------------------------------------------------
 
-(define-condition-type &vicare-scheme-internal-error
-    &error
+(cnd::define-core-condition-type &vicare-scheme-internal-error
+    cnd::&error
   make-vicare-scheme-internal-error
   vicare-scheme-internal-error?)
 
@@ -532,90 +444,61 @@
 
 ;;Represents the error: wrong number of operands given to procedure application.
 ;;
-(define-condition-type &wrong-number-of-arguments-error
-    &error
+(cnd::define-core-condition-type &wrong-number-of-arguments-error
+    cnd::&error
   make-wrong-number-of-arguments-error-condition
   wrong-number-of-arguments-error-condition?)
-(define &wrong-number-of-arguments-error-rtd
-  (record-type-descriptor &wrong-number-of-arguments-error))
-(define &wrong-number-of-arguments-error-rcd
-  (record-constructor-descriptor &wrong-number-of-arguments-error))
 
 ;;Represents the number maximum arguments count a procedure accepts.
 ;;
-(define-condition-type &maximum-arguments-count
-    &condition
+(cnd::define-core-condition-type &maximum-arguments-count
+    cnd::&condition
   make-maximum-arguments-count-condition
   maximum-arguments-count-condition?
   (count	condition-maximum-arguments-count))
-(define &maximum-arguments-count-rtd
-  (record-type-descriptor &maximum-arguments-count))
-(define &maximum-arguments-count-rcd
-  (record-constructor-descriptor &maximum-arguments-count))
 
 ;;Represents the number minimum arguments count a procedure accepts.
 ;;
-(define-condition-type &minimum-arguments-count
-    &condition
+(cnd::define-core-condition-type &minimum-arguments-count
+    cnd::&condition
   make-minimum-arguments-count-condition
   minimum-arguments-count-condition?
   (count	condition-minimum-arguments-count))
-(define &minimum-arguments-count-rtd
-  (record-type-descriptor &minimum-arguments-count))
-(define &minimum-arguments-count-rcd
-  (record-constructor-descriptor &minimum-arguments-count))
 
 ;;Represents the number operands in a procedure application.
 ;;
-(define-condition-type &given-operands-count
-    &condition
+(cnd::define-core-condition-type &given-operands-count
+    cnd::&condition
   make-given-operands-count-condition
   given-operands-count-condition?
   (count	condition-given-operands-count))
-(define &given-operands-count-rtd
-  (record-type-descriptor &given-operands-count))
-(define &given-operands-count-rcd
-  (record-constructor-descriptor &given-operands-count))
 
 ;;Contains a list of "<type-signature>"  instances representing the possible types of
 ;;a closure's  arguments.  To be  used to represent  the possible tuples  of accepted
 ;;operands in a closure application.
 ;;
-(define-condition-type &procedure-arguments-signatures
-    &condition
+(cnd::define-core-condition-type &procedure-arguments-signatures
+    cnd::&condition
   make-procedure-arguments-signatures-condition
   procedure-arguments-signatures-condition?
   (signatures		condition-procedure-arguments-signatures))
-(define &procedure-arguments-signatures-rtd
-  (record-type-descriptor &procedure-arguments-signatures))
-(define &procedure-arguments-signatures-rcd
-  (record-constructor-descriptor &procedure-arguments-signatures))
 
 ;;Contains an instance  of "<type-signature>" representing the types  of the operands
 ;;in a procedure application.
 ;;
-(define-condition-type &application-operands-signature
-    &condition
+(cnd::define-core-condition-type &application-operands-signature
+    cnd::&condition
   make-application-operands-signature-condition
   application-operands-signature-condition?
   (signature		condition-application-operands-signature))
-(define &application-operands-signature-rtd
-  (record-type-descriptor &application-operands-signature))
-(define &application-operands-signature-rcd
-  (record-constructor-descriptor &application-operands-signature))
 
 
 ;;;; condition object types: warnings
 
-(define-condition-type &warning-unused-lexical-variable
-    &warning
+(cnd::define-core-condition-type &warning-unused-lexical-variable
+    cnd::&warning
   make-warning-unused-lexical-variable
   warning-unused-lexical-variable?)
-
-(define &warning-unused-lexical-variable-rtd
-  (record-type-descriptor &warning-unused-lexical-variable))
-(define &warning-unused-lexical-variable-rcd
-  (record-constructor-descriptor &warning-unused-lexical-variable))
 
 
 ;;;; exception raising functions

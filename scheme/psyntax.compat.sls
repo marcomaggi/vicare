@@ -37,6 +37,14 @@
     try					catch
     non-compound-sexp?			self-evaluating?
 
+    define-core-record-type
+    define-type-descriptors
+    strip-angular-parentheses
+
+    cnd::define-core-condition-type
+    cnd::&condition			cnd::&error
+    cnd::&violation			cnd::&warning
+
     (rename (records::record-type-printer-set!	record-type-printer-set!)
 	    (records::$record-type-printer-set!	$record-type-printer-set!)
 	    (records::record-printer		record-printer))
@@ -153,6 +161,7 @@
 		  with-blocked-exceptions
 		  void-object?			stadalone-pair?
 		  circular-list?		list-of-single-item?
+		  list-of-nestrings?
 
 		  reader-annotation?		reader-annotation-expression
 		  reader-annotation-stripped	reader-annotation-source
@@ -160,7 +169,8 @@
 
 		  ratnum-positive?		ratnum-negative?
 		  exact-compnum?
-		  )
+		  zero-compnum?			zero-cflonum?)
+    (ikarus records syntactic)
     (prefix (only (ikarus.compiler)
 		  eval-core
 		  compile-core-expr-to-thunk
@@ -183,6 +193,13 @@
 		    (vicare-built-with-arguments-validation-enabled
 		     enable-arguments-validation?))
 	    options::)
+    (prefix (only (ikarus conditions)
+		  define-core-condition-type
+		  &condition
+		  &error
+		  &violation
+		  &warning)
+	    cnd::)
     (ikarus.printing-messages)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Dec 26,
     ;;2015)

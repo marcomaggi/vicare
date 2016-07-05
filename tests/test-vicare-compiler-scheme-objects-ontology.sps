@@ -9,7 +9,7 @@
 ;;;	This file imports directly one of  the source libraries that compose the boot
 ;;;	image.
 ;;;
-;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -27,9 +27,12 @@
 
 
 #!r6rs
-(import (vicare)
-  (ikarus.compiler.scheme-objects-ontology)
-  (vicare checks))
+(program (test-vicare-compiler-scheme-objects-ontology)
+  (options strict-r6rs)
+  (import (vicare)
+    (ikarus.compiler.scheme-objects-ontology)
+    (vicare expander)
+    (vicare checks))
 
 (import SCHEME-OBJECTS-ONTOLOGY)
 
@@ -610,6 +613,8 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;; Local Variables:

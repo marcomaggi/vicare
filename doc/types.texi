@@ -5854,15 +5854,15 @@ The type of file descriptor values.  Its definition is equivalent to:
 @section Handling of void
 
 
-Expressions of type @class{void} are forbidden as operands in function
-applications and logic predicates.  For example:
+Expressions of type @class{void} are deprecated as operands in function
+applications and forbidden in logic predicates.  For example:
 
 @lisp
 (display (vector-set! (vector 1) 0 2))
 @end lisp
 
 @noindent
-raises an error because @func{vector-set!} returns the void value.  The
+raises a warning because @func{vector-set!} returns the void value.  The
 type @class{void} has no parent (it is @strong{not} a sub--type of
 @class{top}) and it should be like not--a--number for numeric
 computations.  Here are some consequences:
@@ -5887,8 +5887,8 @@ A void expression as operand of @syntax{and}, @syntax{or}, @syntax{xor}
 and test of @syntax{if} will cause an expand--time syntax violation.
 
 @item
-A void expression as operand of @syntax{not} will cause either an
-expand--time syntax violation or a run--time assertion violation.
+A void expression as operand of @syntax{not} will cause an expand--time
+syntax violation if the expander can determine the type of the operand.
 
 @item
 Remembering that @syntax{cond} and @syntax{case} return void when no
@@ -5904,6 +5904,9 @@ as operands.
 @item
 The syntax @syntax{set!} cannot be used as operand.
 @end itemize
+
+The only function that is allowed to have a void operand is the core
+primitive @func{void-object?}.
 
 @c page
 @node types mixins

@@ -59,7 +59,7 @@
 
   (check
       (expander::type-signature.syntax-object (type-of (new <keyword> (read))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'<keyword>))
 
   (void))

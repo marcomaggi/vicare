@@ -191,7 +191,8 @@
 	    $vector-self-copy-backwards!
 	    $vector-copy-source-range!
 	    $vector-copy-source-count!
-	    $fill-vector-from-list!)
+	    $fill-vector-from-list!
+	    $vector-set-void!)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate))
 

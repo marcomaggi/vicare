@@ -29,6 +29,7 @@
 (program (test)
   (options strict-r6rs)
   (import (vicare)
+    (vicare expander)
     (vicare checks))
 
 (check-set-mode! 'report-failed)

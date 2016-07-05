@@ -66,7 +66,9 @@
     signal-restarts-control-error
     &undefined-restart-error make-undefined-restart-error undefined-restart-error?
     raise-undefined-restart-error)
-  (import (vicare))
+  (import (vicare)
+    (prefix (vicare expander)
+	    xp::))
 
 
 (define-syntax (handler-case stx)
@@ -173,14 +175,14 @@
        (__synner__ "invalid clause" #'?clause))))
 
   (define (%process-typespec var spec)
-    (parse-logic-predicate-syntax spec
-				  (lambda (tag-id)
-				    (syntax-case tag-id ()
-				      (?tag
-				       (identifier? #'?tag)
-				       #`(is-a? #,var ?tag))
-				      (_
-				       (__synner__ "invalid typespec syntax" spec))))))
+    (xp::parse-logic-predicate-syntax spec
+				      (lambda (tag-id)
+					(syntax-case tag-id ()
+					  (?tag
+					   (identifier? #'?tag)
+					   #`(is-a? #,var ?tag))
+					  (_
+					   (__synner__ "invalid typespec syntax" spec))))))
 
   (main stx))
 
@@ -293,14 +295,14 @@
       ))
 
   (define (%process-single-typespec var spec)
-    (parse-logic-predicate-syntax spec
-				  (lambda (tag-id)
-				    (syntax-case tag-id ()
-				      (?tag
-				       (identifier? #'?tag)
-				       #`(is-a? #,var ?tag))
-				      (_
-				       (__synner__ "invalid typespec syntax" spec))))))
+    (xp::parse-logic-predicate-syntax spec
+				      (lambda (tag-id)
+					(syntax-case tag-id ()
+					  (?tag
+					   (identifier? #'?tag)
+					   #`(is-a? #,var ?tag))
+					  (_
+					   (__synner__ "invalid typespec syntax" spec))))))
 
   (main stx))
 

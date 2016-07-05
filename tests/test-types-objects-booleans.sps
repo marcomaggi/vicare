@@ -70,7 +70,7 @@
 
   (check
       (expander::type-signature.syntax-object (type-of (new <boolean> (read))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'<boolean>))
 
   #t)

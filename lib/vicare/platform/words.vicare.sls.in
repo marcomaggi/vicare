@@ -11,7 +11,7 @@
 ;;;	imported  by Vicare itself,  syntaxes whose  expansion reference
 ;;;	only bindings imported by Vicare itself.
 ;;;
-;;;Copyright (C) 2011-2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,7 +28,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (vicare platform words (0 4 2015 5 28))
   (export
 
@@ -174,8 +174,8 @@
     (vicare system $fx)
     (vicare system $bignums)
     (for (prefix (vicare platform configuration)
-		 config.)
-	 expand))
+		 config::)
+      expand))
 
 
 ;;;; helpers
@@ -230,6 +230,18 @@
 	 (non-negative? obj))))
 
 (define-syntax (declare-sign-predicates stx)
+  (define* (identifier-prefix prefix {id identifier?})
+    (datum->syntax id (string->symbol (string-append
+				       (cond ((string? prefix)
+					      prefix)
+					     ((symbol? prefix)
+					      (symbol->string prefix))
+					     ((identifier? prefix)
+					      (symbol->string (syntax->datum prefix)))
+					     (else
+					      (assertion-violation __who__
+						"expected string, symbol or identifier as prefix argument" prefix)))
+				       (symbol->string (syntax->datum id))))))
   (syntax-case stx ()
     ((_ ?pred)
      (with-syntax
@@ -248,7 +260,7 @@
 ;;;; syntaxes
 
 (define-syntax case-word-size
-  (if (= 4 config.wordsize)
+  (if (= 4 config::wordsize)
       (syntax-rules ()
 	((_ ((32) . ?body-32) ((64) . ?body-64))
 	 (begin . ?body-32)))

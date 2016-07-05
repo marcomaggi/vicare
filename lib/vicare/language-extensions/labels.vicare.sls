@@ -42,7 +42,9 @@
     nongenerative
     this)
   (import (vicare)
-    (vicare language-extensions mixins (0 4)))
+    (vicare language-extensions mixins (0 4))
+    (for (vicare expander)
+      expand))
 
 
 (define-syntax define-label

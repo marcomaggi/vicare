@@ -29,6 +29,7 @@
 (import (vicare)
   (prefix (vicare language-extensions makers) mk.)
   (prefix (libtest makers-lib) lib.)
+  (vicare expander)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

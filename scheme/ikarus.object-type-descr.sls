@@ -147,6 +147,7 @@
 		  exact-compnum?
 		  zero-compnum?
 		  zero-cflonum?)
+    (ikarus records syntactic)
     (only (ikarus.core-type-descr)
 	  core-type-descriptor?
 	  core-type-descriptor=?
@@ -333,9 +334,11 @@
 
 ;;;; compound type descriptors: compound condition-object types
 
-(define-record-type (<compound-condition-type-descr> make-compound-condition-type-descr compound-condition-type-descr?)
+(define-core-record-type <compound-condition-type-descr>
   (nongenerative vicare:type-descriptors:<compound-condition-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable	component-des*		compound-condition-type-descr.component-des*)
 		;A list of instances of "<record-type-descr>" describing the types of
@@ -348,12 +351,6 @@
 	(make-record component*.des #f))))
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <compound-condition-type-descr>-rtd
-  (record-type-descriptor <compound-condition-type-descr>))
-
-(define <compound-condition-type-descr>-rcd
-  (record-constructor-descriptor <compound-condition-type-descr>))
-
 ;;; --------------------------------------------------------------------
 
 (define* (compound-condition-type-descr.exists {compound-condition.des compound-condition-type-descr?} {proc procedure?})
@@ -363,10 +360,10 @@
   (for-all proc (compound-condition-type-descr.component-des* compound-condition.des)))
 
 (define* (compound-condition-type-descr.length {des compound-condition-type-descr?})
-  (or (<compound-condition-type-descr>-memoised-length des)
+  (or (compound-condition-type-descr-memoised-length des)
       (receive-and-return (len)
 	  (length (compound-condition-type-descr.component-des* des))
-	(<compound-condition-type-descr>-memoised-length-set! des len))))
+	(compound-condition-type-descr-memoised-length-set! des len))))
 
 (define* (compound-condition-type-descr=? {des1 compound-condition-type-descr?}
 					  {des2 compound-condition-type-descr?})
@@ -416,9 +413,11 @@
 
 ;;;; compound type descriptors: symbols enumeration
 
-(define-record-type (<enumeration-type-descr> make-enumeration-type-descr enumeration-type-descr?)
+(define-core-record-type <enumeration-type-descr>
   (nongenerative vicare:type-descriptors:<enumeration-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable	symbol*			enumeration-type-descr.symbol*)
     (mutable	memoised-length)
@@ -429,12 +428,6 @@
 	(make-record symbol* #f))))
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <enumeration-type-descr>-rtd
-  (record-type-descriptor <enumeration-type-descr>))
-
-(define <enumeration-type-descr>-rcd
-  (record-constructor-descriptor <enumeration-type-descr>))
-
 ;;; --------------------------------------------------------------------
 
 (define* (enumeration-type-descr.member? {des enumeration-type-descr?} {sym symbol?})
@@ -442,10 +435,10 @@
        #t))
 
 (define* (enumeration-type-descr.length {des enumeration-type-descr?})
-  (or (<enumeration-type-descr>-memoised-length des)
+  (or (enumeration-type-descr-memoised-length des)
       (receive-and-return (len)
 	  (length (enumeration-type-descr.symbol* des))
-	(<enumeration-type-descr>-memoised-length-set! des len))))
+	(enumeration-type-descr-memoised-length-set! des len))))
 
 (define* (enumeration-type-descr=? {des1 enumeration-type-descr?}
 				   {des2 enumeration-type-descr?})
@@ -477,9 +470,11 @@
 
 ;;;; compound type descriptors: closure
 
-(define-record-type (<closure-type-descr> make-closure-type-descr closure-type-descr?)
+(define-core-record-type <closure-type-descr>
   (nongenerative vicare:type-descriptors:<closure-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable signature	closure-type-descr.signature)
 		;An  instance of  "<case-lambda-descriptors>"  representing the  type
@@ -489,12 +484,6 @@
     (lambda (make-record)
       (lambda* ({signature case-lambda-descriptors?})
 	(make-record signature)))))
-
-(define <closure-type-descr>-rtd
-  (record-type-descriptor <closure-type-descr>))
-
-(define <closure-type-descr>-rcd
-  (record-constructor-descriptor <closure-type-descr>))
 
 ;;; --------------------------------------------------------------------
 
@@ -520,9 +509,11 @@
 
 ;;;; compound type descriptors: hashtables
 
-(define-record-type (<hashtable-type-descr> make-hashtable-type-descr hashtable-type-descr?)
+(define-core-record-type <hashtable-type-descr>
   (nongenerative vicare:type-descriptors:<hashtable-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable key-des			hashtable-type-descr.key-des)
 		;An instance of "<object-type-descr>" describing the type of keys.
@@ -530,28 +521,18 @@
 		;An instance of "<object-type-descr>" describing the type of values.
     #| end of FIELDS |# ))
 
-(define <hashtable-type-descr>-rtd
-  (record-type-descriptor <hashtable-type-descr>))
-
-(define <hashtable-type-descr>-rcd
-  (record-constructor-descriptor <hashtable-type-descr>))
-
 
 ;;;; compound type descriptors: pairs
 
-(define-record-type (<pair-type-descr> make-pair-type-descr pair-type-descr?)
+(define-core-record-type <pair-type-descr>
   (nongenerative vicare:type-descriptors:<pair-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable car-des		pair-type-descr.car-des)
     (immutable cdr-des		pair-type-descr.cdr-des)
     #| end of FIELDS |# ))
-
-(define <pair-type-descr>-rtd
-  (record-type-descriptor <pair-type-descr>))
-
-(define <pair-type-descr>-rcd
-  (record-constructor-descriptor <pair-type-descr>))
 
 (define (pair-type-descr?/list des)
   (and (pair-type-descr? des)
@@ -560,18 +541,14 @@
 
 ;;;; compound type descriptors: pairs of
 
-(define-record-type (<pair-of-type-descr> make-pair-of-type-descr pair-of-type-descr?)
+(define-core-record-type <pair-of-type-descr>
   (nongenerative vicare:type-descriptors:<pair-of-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable item-des		pair-of-type-descr.item-des)
     #| end of FIELDS |# ))
-
-(define <pair-of-type-descr>-rtd
-  (record-type-descriptor <pair-of-type-descr>))
-
-(define <pair-of-type-descr>-rcd
-  (record-constructor-descriptor <pair-of-type-descr>))
 
 ;;; --------------------------------------------------------------------
 
@@ -582,9 +559,11 @@
 
 ;;;; compound type descriptors: lists
 
-(define-record-type (<list-type-descr> make-list-type-descr list-type-descr?)
+(define-core-record-type <list-type-descr>
   (nongenerative vicare:type-descriptors:<list-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable	item-des*		list-type-descr.item-des*)
     (mutable	memoised-length)
@@ -595,12 +574,6 @@
 	(make-record item*.des #f))
       make-list-type-descr)))
 
-(define <list-type-descr>-rtd
-  (record-type-descriptor <list-type-descr>))
-
-(define <list-type-descr>-rcd
-  (record-constructor-descriptor <list-type-descr>))
-
 ;;; --------------------------------------------------------------------
 
 (define (make-null-or-list-type-descr item*.des)
@@ -609,10 +582,10 @@
     <null>-ctd))
 
 (define* (list-type-descr.length {des list-type-descr?})
-  (or (<list-type-descr>-memoised-length des)
+  (or (list-type-descr-memoised-length des)
       (receive-and-return (len)
 	  (length (list-type-descr.item-des* des))
-	(<list-type-descr>-memoised-length-set! des len))))
+	(list-type-descr-memoised-length-set! des len))))
 
 (define* (list-type-descr.list-of-single-item? {list.des list-type-descr?})
   (= 1 (list-type-descr.length list.des)))
@@ -632,25 +605,23 @@
 
 ;;;; compound type descriptors: lists of
 
-(define-record-type (<list-of-type-descr> make-list-of-type-descr list-of-type-descr?)
+(define-core-record-type <list-of-type-descr>
   (nongenerative vicare:type-descriptors:<list-of-type-descr>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable item-des		list-of-type-descr.item-des)
     #| end of FIELDS |# ))
 
-(define <list-of-type-descr>-rtd
-  (record-type-descriptor <list-of-type-descr>))
-
-(define <list-of-type-descr>-rcd
-  (record-constructor-descriptor <list-of-type-descr>))
-
 ;;; --------------------------------------------------------------------
 ;;; compound type descriptors: alists
 
-(define-record-type (<alist-type-descr> make-alist-type-descr alist-type-descr?)
+(define-core-record-type <alist-type-descr>
   (nongenerative vicare:type-descriptors:<alist-type-descr>)
   (parent <list-of-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable key-des			alist-type-descr.key-des)
 		;An instance of "<object-type-descr>" describing the type of keys.
@@ -663,18 +634,14 @@
 	((make-list-of-type-descr (make-pair-type-descr key-des val-des)) key-des val-des))))
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <alist-type-descr>-rtd
-  (record-type-descriptor <alist-type-descr>))
-
-(define <alist-type-descr>-rcd
-  (record-constructor-descriptor <alist-type-descr>))
-
 
 ;;;; compound type descriptors: vectors
 
-(define-record-type (<vector-type-descr> %make-vector-type-descr vector-type-descr?)
+(define-core-record-type (<vector-type-descr> %make-vector-type-descr vector-type-descr?)
   (nongenerative vicare:type-descriptors:<vector-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable	item-des*		vector-type-descr.item-des*)
     (mutable	memoised-length)
@@ -689,19 +656,13 @@
       <empty-vector>-ctd
     (%make-vector-type-descr item*.des)))
 
-(define <vector-type-descr>-rtd
-  (record-type-descriptor <vector-type-descr>))
-
-(define <vector-type-descr>-rcd
-  (record-constructor-descriptor <vector-type-descr>))
-
 ;;; --------------------------------------------------------------------
 
 (define* (vector-type-descr.length {des vector-type-descr?})
-  (or (<vector-type-descr>-memoised-length des)
+  (or (vector-type-descr-memoised-length des)
       (receive-and-return (len)
 	  (length (vector-type-descr.item-des* des))
-	(<vector-type-descr>-memoised-length-set! des len))))
+	(vector-type-descr-memoised-length-set! des len))))
 
 (define* (vector-type-descr.exists {des vector-type-descr?} {proc procedure?})
   (exists proc (vector-type-descr.item-des* des)))
@@ -712,25 +673,23 @@
 
 ;;;; compound type descriptors: vectors of
 
-(define-record-type (<vector-of-type-descr> make-vector-of-type-descr vector-of-type-descr?)
+(define-core-record-type <vector-of-type-descr>
   (nongenerative vicare:type-descriptors:<vector-of-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable item-des		vector-of-type-descr.item-des)
     #| end of FIELDS |# ))
 
-(define <vector-of-type-descr>-rtd
-  (record-type-descriptor <vector-of-type-descr>))
-
-(define <vector-of-type-descr>-rcd
-  (record-constructor-descriptor <vector-of-type-descr>))
-
 
 ;;;; compound type descriptors: union
 
-(define-record-type (<union-type-descr> %make-union-type-descr union-type-descr?)
+(define-core-record-type (<union-type-descr> %make-union-type-descr union-type-descr?)
   (nongenerative vicare:type-descriptors:<union-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable	item-des*	union-type-descr.item-des*)
     (mutable	memoised-length)
@@ -746,12 +705,6 @@
       (car item*.des)
     (%make-union-type-descr item*.des)))
 
-(define <union-type-descr>-rtd
-  (record-type-descriptor <union-type-descr>))
-
-(define <union-type-descr>-rcd
-  (record-constructor-descriptor <union-type-descr>))
-
 ;;; --------------------------------------------------------------------
 
 (define (union-type-descr.exists union.des proc)
@@ -761,10 +714,10 @@
   (for-all proc (union-type-descr.item-des* union.des)))
 
 (define* (union-type-descr.length {des union-type-descr?})
-  (or (<union-type-descr>-memoised-length des)
+  (or (union-type-descr-memoised-length des)
       (receive-and-return (len)
 	  (length (union-type-descr.item-des* des))
-	(<union-type-descr>-memoised-length-set! des len))))
+	(union-type-descr-memoised-length-set! des len))))
 
 (define* (union-type-descr=? {des1 union-type-descr?} {des2 union-type-descr?})
   ;;Return true if the two unions have the same components, otherwise return false.
@@ -790,9 +743,11 @@
 
 ;;;; compound type descriptors: intersection
 
-(define-record-type (<intersection-type-descr> %make-intersection-type-descr intersection-type-descr?)
+(define-core-record-type (<intersection-type-descr> %make-intersection-type-descr intersection-type-descr?)
   (nongenerative vicare:type-descriptors:<intersection-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable	item-des*	intersection-type-descr.item-des*)
     (mutable	memoised-length)
@@ -808,12 +763,6 @@
       (car item*.des)
     (%make-intersection-type-descr item*.des)))
 
-(define <intersection-type-descr>-rtd
-  (record-type-descriptor <intersection-type-descr>))
-
-(define <intersection-type-descr>-rcd
-  (record-constructor-descriptor <intersection-type-descr>))
-
 ;;; --------------------------------------------------------------------
 
 (define (intersection-type-descr.exists intersection.des proc)
@@ -823,10 +772,10 @@
   (for-all proc (intersection-type-descr.item-des* intersection.des)))
 
 (define* (intersection-type-descr.length {des intersection-type-descr?})
-  (or (<intersection-type-descr>-memoised-length des)
+  (or (intersection-type-descr-memoised-length des)
       (receive-and-return (len)
 	  (length (intersection-type-descr.item-des* des))
-	(<intersection-type-descr>-memoised-length-set! des len))))
+	(intersection-type-descr-memoised-length-set! des len))))
 
 (define* (intersection-type-descr=? {des1 intersection-type-descr?} {des2 intersection-type-descr?})
   ;;Return true if the two intersections have the same components, otherwise return false.
@@ -852,25 +801,23 @@
 
 ;;;; compound type descriptors: complement
 
-(define-record-type (<complement-type-descr> make-complement-type-descr complement-type-descr?)
+(define-core-record-type <complement-type-descr>
   (nongenerative vicare:type-descriptors:<complement-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable item-des		complement-type-descr.item-des)
     #| end of FIELDS |# ))
 
-(define <complement-type-descr>-rtd
-  (record-type-descriptor <complement-type-descr>))
-
-(define <complement-type-descr>-rcd
-  (record-constructor-descriptor <complement-type-descr>))
-
 
 ;;;; compound type descriptors: ancestor-of
 
-(define-record-type (<ancestor-of-type-descr> make-ancestor-of-type-descr ancestor-of-type-descr?)
+(define-core-record-type <ancestor-of-type-descr>
   (nongenerative vicare:type-descriptors:<ancestor-of-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable item-des		ancestor-of-type-descr.item-des)
     (immutable ancestor-des*	ancestor-of-type-descr.ancestor-des*)
@@ -879,12 +826,6 @@
     (lambda (make-record)
       (lambda (object.des)
 	(make-record object.des (object-type-descr.ancestor-des* object.des))))))
-
-(define <ancestor-of-type-descr>-rtd
-  (record-type-descriptor <ancestor-of-type-descr>))
-
-(define <ancestor-of-type-descr>-rcd
-  (record-constructor-descriptor <ancestor-of-type-descr>))
 
 ;;; --------------------------------------------------------------------
 
@@ -901,9 +842,11 @@
 
 ;;;; compound type descriptors: interfaces
 
-(define-record-type (<interface-type-descr> make-interface-type-descr interface-type-descr?)
+(define-core-record-type <interface-type-descr>
   (nongenerative vicare:type-descriptors:<interface-type-descr>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable	type-name			interface-type-descr.type-name)
 		;A symbol representing the name of this interface type.
@@ -968,12 +911,6 @@
 
       make-interface-type-descr))
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define <interface-type-descr>-rtd
-  (record-type-descriptor <interface-type-descr>))
-
-(define <interface-type-descr>-rcd
-  (record-constructor-descriptor <interface-type-descr>))
 
 
 ;;;; object-type descriptors: facilities

@@ -49,6 +49,7 @@
 		  make-method-late-binding-error
 		  make-overloaded-function-late-binding-error
 		  #| end of EXCEPT |# )
+    (ikarus records syntactic)
     (only (ikarus.core-type-descr)
 	  core-type-descriptor.parent
 	  core-type-descriptor.hash-function
@@ -269,20 +270,16 @@
 
 ;;;; overloaded functions: late binding
 
-(define-record-type (<overloaded-function-descriptor> make-overloaded-function-descriptor overloaded-function-descriptor?)
+(define-core-record-type <overloaded-function-descriptor>
   (nongenerative vicare:system:<overloaded-function-descriptor>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (mutable table		overloaded-function-descriptor.table overloaded-function-descriptor.table-set!)
 		;An alist  having an  instance of <closure-type-descr>  as key  and a
 		;procedure as value.
     #| end of FIELDS |# ))
-
-(define <overloaded-function-descriptor>-rtd
-  (record-type-descriptor <overloaded-function-descriptor>))
-
-(define <overloaded-function-descriptor>-rcd
-  (record-constructor-descriptor <overloaded-function-descriptor>))
 
 ;;; --------------------------------------------------------------------
 
@@ -324,6 +321,3 @@
 #| end of library |# )
 
 ;;; end of file
-;; Local Variables:
-;; eval: (put 'define-scheme-type		'scheme-indent-function 2)
-;; End:

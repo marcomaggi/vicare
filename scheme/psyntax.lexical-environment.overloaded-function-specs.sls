@@ -39,8 +39,10 @@
 
 ;;;; type definitions
 
-(define-record-type (<overloaded-function-spec> make-overloaded-function-spec overloaded-function-spec?)
+(define-core-record-type <overloaded-function-spec>
   (nongenerative vicare:expander:<overloaded-function-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (sealed #t)
   (fields
     (immutable	name-id				overloaded-function-spec.name-id)
@@ -63,13 +65,7 @@
     (lambda (make-record)
       (lambda* ({name.id identifier?} {ofd.id identifier?} {late-binding-function.id identifier?})
 	(make-record name.id ofd.id late-binding-function.id '() '()))))
-  #| end of DEFINE-RECORD-TYPE |# )
-
-(define <overloaded-function-spec>-rtd
-  (record-type-descriptor <overloaded-function-spec>))
-
-(define <overloaded-function-spec>-rcd
-  (record-constructor-descriptor <overloaded-function-spec>))
+  #| end of DEFINE-CORE-RECORD-TYPE |# )
 
 
 ;;;; utilities
@@ -96,7 +92,7 @@
 		  (raise
 		   (condition (make-who-condition __who__)
 			      (make-message-condition "formals type signature already exists in overloaded function")
-			      (syntax-violation input-form.stx #f)))))
+			      (make-syntax-violation input-form.stx #f)))))
       (overloaded-function-spec.signature* lhs.ofs)))
   (overloaded-function-spec.signature*-set! lhs.ofs (cons spec.lambda-sig (overloaded-function-spec.signature* lhs.ofs)))
   (overloaded-function-spec.id*-set!        lhs.ofs (cons spec.id         (overloaded-function-spec.id*        lhs.ofs))))

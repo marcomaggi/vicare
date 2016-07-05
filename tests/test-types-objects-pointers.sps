@@ -68,7 +68,7 @@
 
   (check
       (expander::type-signature.syntax-object (type-of (new <pointer> (read))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'<pointer>))
 
   (void))

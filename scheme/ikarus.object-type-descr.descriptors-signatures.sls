@@ -56,20 +56,16 @@
 
 ;;;; object-type descriptor signatures
 
-(define-record-type (<descriptors-signature> make-descriptors-signature descriptors-signature?)
+(define-core-record-type <descriptors-signature>
   (nongenerative vicare:type-descriptors:<descriptors-signature>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable object-type-descrs	descriptors-signature.object-type-descrs)
 		;A proper  or improper  list of object-type  descriptors representing
 		;the signatures of lambda formals.
     #| end of FIELDS |# ))
-
-(define <descriptors-signature>-rtd
-  (record-type-descriptor <descriptors-signature>))
-
-(define <descriptors-signature>-rcd
-  (record-constructor-descriptor <descriptors-signature>))
 
 ;;; --------------------------------------------------------------------
 
@@ -88,9 +84,11 @@
 
 ;;;; descriptors signatures for lambda procedures
 
-(define-record-type (<lambda-descriptors> make-lambda-descriptors lambda-descriptors?)
+(define-core-record-type <lambda-descriptors>
   (nongenerative vicare:type-descriptors:<lambda-descriptors>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable retvals	lambda-descriptors.retvals)
 		;An instance of  "<descriptors-signature>" representing the signature
@@ -99,12 +97,6 @@
 		;An instance of  "<descriptors-signature>" representing the signature
 		;of the formal values.
     #| end of FIELDS |# ))
-
-(define <lambda-descriptors>-rtd
-  (record-type-descriptor <lambda-descriptors>))
-
-(define <lambda-descriptors>-rcd
-  (record-constructor-descriptor <lambda-descriptors>))
 
 ;;; --------------------------------------------------------------------
 
@@ -219,9 +211,11 @@
 
 ;;;; descriptors signatures for case-lambda procedures
 
-(define-record-type (<case-lambda-descriptors> make-case-lambda-descriptors case-lambda-descriptors?)
+(define-core-record-type <case-lambda-descriptors>
   (nongenerative vicare:type-descriptors:<case-lambda-descriptors>)
   (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (fields
     (immutable clause-signature*	case-lambda-descriptors.clause-signature*)
 		;A   list  of   "<lambda-descriptors>"  instances   representing  the
@@ -232,12 +226,6 @@
       (lambda* ({clause*.sig not-empty-list-of-lambda-descriptors?})
 	(make-record clause*.sig))))
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define <case-lambda-descriptors>-rtd
-  (record-type-descriptor <case-lambda-descriptors>))
-
-(define <case-lambda-descriptors>-rcd
-  (record-constructor-descriptor <case-lambda-descriptors>))
 
 ;;; --------------------------------------------------------------------
 

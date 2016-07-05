@@ -176,7 +176,9 @@
 ;;NOTE  Libraries imported  here  are  interned in  the  internal library  collection
 ;;defined by the old  boot image.  Source libraries expanded later to  be part of the
 ;;boot image are interned in a separate library collection, BOOTSTRAP-COLLECTION.
-(import (vicare)
+(import (except (vicare)
+		constructor
+		type-predicate)
   ;;This library is from the old boot image.
   (prefix (only (psyntax system $all)
 		find-library-by-name
@@ -213,28 +215,6 @@
 	 BOOT-IMAGE-MONTH-VERSION
 	 BOOT-IMAGE-DAY-VERSION)
   (include "ikarus.config.scm" #t))
-
-;;; --------------------------------------------------------------------
-
-(define-syntax if-building-rotation-boot-image?
-  (lambda (stx)
-    (define rotating?
-      (equal? "yes" (getenv "BUILDING_ROTATION_BOOT_IMAGE")))
-    (define (%log description)
-      (fprintf (current-error-port)
-	       "makefile.sps: ~a: conditional for ~a boot image\n"
-	       description
-	       (if rotating? "rotation" "normal")))
-    (syntax-case stx ()
-      ((_ ?description ?true-body)
-       (begin
-	 (%log (syntax->datum #'?description))
-	 (if rotating? #'?true-body #'(module ()))))
-      ((_ ?description ?true-body ?false-body)
-       (begin
-	 (%log (syntax->datum #'?description))
-	 (if rotating? #'?true-body #'?false-body)))
-      )))
 
 
 ;;;; configuration inspection
@@ -387,6 +367,7 @@
     "ikarus.vectors.sls"
     "ikarus.hash-tables.sls"
     "ikarus.records.procedural.sls"
+    "ikarus.records.syntactic.sls"
     "ikarus.strings.sls"
     "ikarus.symbols.sls"
     "ikarus.unicode.sls"
@@ -974,7 +955,7 @@
   (define-constant LIST-OF-CLAUSES
     (syntax-clauses-validate-specs
      (list (make-syntax-clause-spec #'constructor		0 1 0 1      '() '())
-	   (make-syntax-clause-spec #'predicate			0 1 1 1      '() '())
+	   (make-syntax-clause-spec #'type-predicate		0 1 1 1      '() '())
 	   (make-syntax-clause-spec #'hash-function		0 1 1 1      '() '())
 	   (make-syntax-clause-spec #'equality-predicate	0 1 1 1      '() '())
 	   (make-syntax-clause-spec #'comparison-procedure	0 1 1 1      '() '())
@@ -1023,7 +1004,7 @@
 		(unless (or (identifier? id) (boolean? id))
 		  (synner "invalid constructor specification" id))
 		(parsed-specs-constructor-set! parsed-specs id))))
-	   ((predicate)
+	   ((type-predicate)
 	    (let ((id (vector-ref arg 0)))
 	      (unless (or (identifier? id) (boolean? id))
 		(synner "invalid predicate specification" id))
@@ -1054,7 +1035,7 @@
 
   (main input-form.stx))
 
-(define-auxiliary-syntaxes constructor predicate hash methods)
+(define-auxiliary-syntaxes constructor type-predicate methods)
 
 ;;; --------------------------------------------------------------------
 
@@ -2966,6 +2947,11 @@
     (&h_errno-rtd)
     (&h_errno-rcd)
     (h_errno-condition?				v $language)
+    (&i/o-wrong-fasl-header-error-rtd)
+    (&i/o-wrong-fasl-header-error-rcd)
+    (&i/o-wrong-fasl-header-error		v $language)
+    (make-i/o-wrong-fasl-header-error		v $language)
+    (i/o-wrong-fasl-header-error?		v $language)
 ;;;
     (&failed-expression				v $language)
     (&failed-expression-rtd)
@@ -4665,70 +4651,70 @@
 ;;; --------------------------------------------------------------------
 ;;; syntax utilities
 
-    (identifier->string				v $language)
-    (string->identifier				v $language)
-    (identifier-prefix				v $language)
-    (identifier-suffix				v $language)
-    (identifier-append				v $language)
-    (identifier-format				v $language)
-    (duplicate-identifiers?			v $language)
-    (delete-duplicate-identifiers		v $language)
-    (identifier-memq				v $language)
+    (identifier->string				$expander)
+    (string->identifier				$expander)
+    (identifier-prefix				$expander)
+    (identifier-suffix				$expander)
+    (identifier-append				$expander)
+    (identifier-format				$expander)
+    (duplicate-identifiers?			$expander)
+    (delete-duplicate-identifiers		$expander)
+    (identifier-memq				$expander)
 
-    (identifier-record-constructor		v $language)
-    (identifier-record-predicate		v $language)
-    (identifier-record-field-accessor		v $language)
-    (identifier-record-field-mutator		v $language)
+    (identifier-record-constructor		$expander)
+    (identifier-record-predicate		$expander)
+    (identifier-record-field-accessor		$expander)
+    (identifier-record-field-mutator		$expander)
 
-    (identifier-struct-constructor		v $language)
-    (identifier-struct-predicate		v $language)
-    (identifier-struct-field-accessor		v $language)
-    (identifier-struct-field-mutator		v $language)
+    (identifier-struct-constructor		$expander)
+    (identifier-struct-predicate		$expander)
+    (identifier-struct-field-accessor		$expander)
+    (identifier-struct-field-mutator		$expander)
 
-    (identifier-method-procname			v $language)
+    (identifier-method-procname			$expander)
 
-    (syntax-car					v $language)
-    (syntax-cdr					v $language)
-    (syntax->list				v $language)
-    (identifiers->list				v $language)
-    (all-identifiers?				v $language)
+    (syntax-car					$expander)
+    (syntax-cdr					$expander)
+    (syntax->list				$expander)
+    (identifiers->list				$expander)
+    (all-identifiers?				$expander)
 
-    (syntax->vector				v $language)
-    (parse-logic-predicate-syntax		v $language)
-    (syntax-unwrap				v $language)
-    (syntax-replace-id				v $language)
-    (syntax=?					v $language)
-    (identifier=symbol?				v $language)
-;;; (quoted-syntax-object?			v $language)
+    (syntax->vector				$expander)
+    (parse-logic-predicate-syntax		$expander)
+    (syntax-unwrap				$expander)
+    (syntax-replace-id				$expander)
+    (syntax=?					$expander)
+    (identifier=symbol?				$expander)
+;;; (quoted-syntax-object?			$expander)
 
-    (syntax-clauses-unwrap			v $language)
-    (syntax-clauses-filter			v $language)
-    (syntax-clauses-remove			v $language)
-    (syntax-clauses-partition			v $language)
-    (syntax-clauses-collapse			v $language)
-    (syntax-clauses-verify-at-least-once	v $language)
-    (syntax-clauses-verify-at-most-once		v $language)
-    (syntax-clauses-verify-exactly-once		v $language)
-    (syntax-clauses-verify-mutually-inclusive	v $language)
-    (syntax-clauses-verify-mutually-exclusive	v $language)
+    (syntax-clauses-unwrap			$expander)
+    (syntax-clauses-filter			$expander)
+    (syntax-clauses-remove			$expander)
+    (syntax-clauses-partition			$expander)
+    (syntax-clauses-collapse			$expander)
+    (syntax-clauses-verify-at-least-once	$expander)
+    (syntax-clauses-verify-at-most-once		$expander)
+    (syntax-clauses-verify-exactly-once		$expander)
+    (syntax-clauses-verify-mutually-inclusive	$expander)
+    (syntax-clauses-verify-mutually-exclusive	$expander)
 
     ;; clause specification structs
-    (<syntax-clause-spec>			v $language)
     (<syntax-clause-spec>-rtd)
     (<syntax-clause-spec>-rcd)
-    (make-syntax-clause-spec			v $language)
-    (syntax-clause-spec?			v $language)
-    (syntax-clause-spec-keyword			v $language)
-    (syntax-clause-spec-min-number-of-occurrences v $language)
-    (syntax-clause-spec-max-number-of-occurrences v $language)
-    (syntax-clause-spec-min-number-of-arguments	v $language)
-    (syntax-clause-spec-max-number-of-arguments	v $language)
-    (syntax-clause-spec-mutually-inclusive	v $language)
-    (syntax-clause-spec-mutually-exclusive	v $language)
-    (syntax-clause-spec-custom-data		v $language)
-    (syntax-clauses-single-spec			v $language)
-    (syntax-clauses-fold-specs			v $language)
-    (syntax-clauses-validate-specs		v $language)
+    (<syntax-clause-spec>			$expander)
+    (make-syntax-clause-spec			$expander)
+    (syntax-clause-spec?			$expander)
+    (syntax-clause-spec-keyword			$expander)
+    (syntax-clause-spec-min-number-of-occurrences $expander)
+    (syntax-clause-spec-max-number-of-occurrences $expander)
+    (syntax-clause-spec-min-number-of-arguments	$expander)
+    (syntax-clause-spec-max-number-of-arguments	$expander)
+    (syntax-clause-spec-mutually-inclusive	$expander)
+    (syntax-clause-spec-mutually-exclusive	$expander)
+    (syntax-clause-spec-custom-data		$expander)
+    (syntax-clauses-single-spec			$expander)
+    (syntax-clauses-fold-specs			$expander)
+    (syntax-clauses-validate-specs		$expander)
 
 ;;; --------------------------------------------------------------------
 ;;; library names
@@ -6762,5 +6748,4 @@
 ;; Local Variables:
 ;; eval: (put 'time-it					'scheme-indent-function 1)
 ;; eval: (put 'each-for					'scheme-indent-function 1)
-;; eval: (put 'if-building-rotation-boot-image?		'scheme-indent-function 2)
 ;; End:

@@ -1399,7 +1399,7 @@
   	((a b c)		'symbol)
   	((one two three)	=> (lambda (N) (vector N)))
   	(else			'else))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (vector #'two))
 
   (check	;with arrow
@@ -1407,7 +1407,7 @@
   	((a b c)		=> (lambda (N) (list N)))
   	((one two three)	=> (lambda (N) (vector N)))
   	(else			'else))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'a))
 
   (check	;with arrow multiple values
@@ -1415,7 +1415,7 @@
   	((a b c)		'symbol)
   	((one two three)	=> (lambda (N) N))
   	(else			'else))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'two)
 
 ;;; --------------------------------------------------------------------
@@ -1426,7 +1426,7 @@
 	((a b c)		'symbol)
 	((one two three)	'id)
 	(else			=> (lambda (N) (list #'else N))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'(else nine))
 
 ;;; --------------------------------------------------------------------

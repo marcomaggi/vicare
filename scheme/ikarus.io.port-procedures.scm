@@ -389,7 +389,8 @@
 	       (set-position! device.new-position)
 	       (set! port.device.position device.new-position)
 	       (debug-assert (zero? port.buffer.index))
-	       (debug-assert (zero? port.buffer.used-size))))
+	       (debug-assert (zero? port.buffer.used-size))
+	       (void)))
 	    ((and (boolean? set-position!) set-position!)
 	     ;;The  cookie's POS  field  holds  a value  representing  a correct  and
 	     ;;immutable  device position.   For this  port the  current position  is
@@ -406,7 +407,8 @@
 	    (else
 	     ;;If PORT does not  support the set port position (for  example: it is a
 	     ;;netword socket), we just reset the buffer to empty state.
-	     (port.buffer.reset-to-empty!))))))
+	     (port.buffer.reset-to-empty!)
+	     (void))))))
 
 
 ;;;; generic port functions

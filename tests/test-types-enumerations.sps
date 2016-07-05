@@ -103,7 +103,7 @@
       ((_ ?super ?sub => ?expected)
        (check
 	   (type-annotation-syntax (or ?super ?sub))
-	 (=> syntax=?)
+	 (=> expander::syntax=?)
 	 (syntax ?expected)))
       ))
 
@@ -135,7 +135,7 @@
       ((_ ?super ?sub => ?expected)
        (check
 	   (type-signature-union (?super) (?sub))
-	 (=> syntax=?)
+	 (=> expander::syntax=?)
 	 (syntax (?expected))))
       ))
 

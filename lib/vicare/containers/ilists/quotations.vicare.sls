@@ -33,7 +33,9 @@
 (library (vicare containers ilists quotations)
   (export iquote iquasiquote iunquote iunquote-splicing)
   (import (vicare)
-    (vicare containers ilists))
+    (vicare containers ilists)
+    (for (vicare expander)
+      expand))
 
 
 ;;;; auxiliary syntaxes

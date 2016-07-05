@@ -26,13 +26,21 @@
 		  least-fixnum
 		  fasl-read
 		  fasl-read-header
-		  fasl-read-object)
+		  fasl-read-object
+
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Sat Jul 2, 2016)
+		  make-i/o-wrong-fasl-header-error)
     (prefix (ikarus.code-objects)
 	    code-objects::)
     (only (ikarus.strings-table)
 	  intern-string)
     (only (vicare.foreign-libraries)
 	  dynamically-load-shared-object-from-identifier)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Jul 2,
+    ;;2016)
+    (only (ikarus conditions)
+	  make-i/o-wrong-fasl-header-error)
     (vicare system $fx)
     (vicare system $chars)
     (vicare system $flonums)
@@ -66,11 +74,6 @@
 
 (define* (fasl-read-header {port binary-input-port?})
   ($fasl-read-header port))
-
-(define-condition-type &i/o-wrong-fasl-header-error
-    &i/o
-  make-i/o-wrong-fasl-header-error
-  i/o-wrong-fasl-header-error?)
 
 (define* ($fasl-read-header port)
   (define (%assert-chars x y)
@@ -278,6 +281,17 @@
 		(fields		(make-vector field-count)))
 	   (let next-field ((i 0))
 	     (if ($fx= i field-count)
+		 ;;We need to remember  that this call to MAKE-RECORD-TYPE-DESCRIPTOR
+		 ;;will return  a previously  created RTD when  the operands  match a
+		 ;;previously created non-generative record-type.
+		 ;;
+		 ;;NOTE The code  as it is now  discards some of the  field values in
+		 ;;the RTD.   This is  fine for non-generative  record-types, because
+		 ;;the  full RTD  is built  elsewhere and  retrieved here.   It looks
+		 ;;wrong for generative record-types, but generative record-types are
+		 ;;*not* persistent:  every time we  call MAKE-RECORD-TYPE-DESCRIPTOR
+		 ;;for a generative record-type, we define a new record-type.  (Marco
+		 ;;Maggi; Mon Jul 4, 2016)
 		 (let ((rtd (make-record-type-descriptor name parent uid
 							 sealed? opaque? fields)))
 		   (when m (%put-mark m rtd))

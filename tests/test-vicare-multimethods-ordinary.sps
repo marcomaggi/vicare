@@ -29,6 +29,7 @@
   (import (vicare (0 4))
     (vicare language-extensions multimethods)
     (vicare language-extensions labels)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -147,7 +148,7 @@
 	(define-method ({fluff <string>} {O <fixnum>})
 	  (number->string O))
 	(.syntax-object (type-of (fluff 123))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'<list>)
 
   #;(check

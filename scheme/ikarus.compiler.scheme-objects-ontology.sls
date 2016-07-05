@@ -20,6 +20,13 @@
 #!vicare
 (library (ikarus.compiler.scheme-objects-ontology)
   (export SCHEME-OBJECTS-ONTOLOGY)
+  ;;Here we should import:
+  ;;
+  ;; (import (rnrs)
+  ;;   (ikarus.compiler.compat))
+  ;;
+  ;;but this library directly source by  a test file for testing purposes.  Importing
+  ;;"(vicare)" makes it easier to handle dependencies.
   (import (vicare))
 
 
@@ -289,6 +296,19 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax (define-underspecified-core-type stx)
+  (define* (identifier-suffix {id identifier?} suffix)
+    (datum->syntax id (string->symbol
+		       (string-append
+			(symbol->string (syntax->datum id))
+			(cond ((string? suffix)
+			       suffix)
+			      ((symbol? suffix)
+			       (symbol->string suffix))
+			      ((identifier? suffix)
+			       (symbol->string (syntax->datum suffix)))
+			      (else
+			       (assertion-violation __who__
+				 "expected string, symbol or identifier as suffix argument" suffix)))))))
   (syntax-case stx ()
     ((_ ?type-name ?instance-expr)
      (identifier? #'?type-name)
@@ -919,7 +939,7 @@
 	  ;;((struct?    x)  T:struct)
 	  ;;((record?    x)  T:record)
 
-	  ((eq? x (void))    T:void)
+	  ((void-object? x)  T:void)
 	  (else              T:object)))
 
   (define (%determine-numeric-constant-type x)

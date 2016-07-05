@@ -1981,7 +1981,7 @@
 	 named-case-lambda*-macro
 	 case-define*-macro)
 
-  (define-record-type argument-validation-spec
+  (define-core-record-type argument-validation-spec
     (nongenerative vicare:expander:argument-validation-spec)
     (fields arg-id
 		;Identifier  representing  the  formal  name of  the  argument  being
@@ -1994,7 +1994,7 @@
 		;Boolean.  True if this struct represents a rest or args argument.
 	    ))
 
-  (define-record-type retval-validation-spec
+  (define-core-record-type retval-validation-spec
     (nongenerative vicare:expander:retval-validation-spec)
     (fields rv-id
 		;Identifier representing the internal formal name of the return value

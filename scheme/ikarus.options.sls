@@ -42,7 +42,14 @@
     vicare-built-with-iconv-enabled
     vicare-built-with-posix-enabled
     vicare-built-with-glibc-enabled
-    vicare-built-with-linux-enabled)
+    vicare-built-with-linux-enabled
+
+    ;; conditional expansion
+    cond-boot-expansion
+    inclusion-in-normal-boot-image
+    inclusion-in-rotation-boot-image
+    bootstrapping-for-normal-boot-image
+    bootstrapping-for-rotation-boot-image)
   (import (except (vicare)
 		  vicare-built-with-arguments-validation-enabled
 		  vicare-built-with-srfi-enabled
@@ -136,6 +143,8 @@
 
 
 ;;;; done
+
+(include "cond-boot-expansion.scm" #t)
 
 ;; #!vicare
 ;; (define dummy

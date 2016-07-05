@@ -28,7 +28,7 @@
   (options typed-language)
   (import (vicare)
     (vicare language-extensions mixins)
-    #;(prefix (vicare expander) expander::)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -56,7 +56,7 @@
 		(fprintf (current-error-port) "~a\n" (condition-message E)))
 	      (syntax-violation-subform E))
 	     (else E)))
-       (=> syntax=?)
+       (=> expander::syntax=?)
        (syntax ?expected)))
     ))
 
@@ -356,22 +356,22 @@
   (check-for-syntax-violation-subform
       (define-mixin <stuff>
 	(fields (mutable 1)))
-    => 1)
+    => (mutable 1))
 
   (check-for-syntax-violation-subform
       (define-mixin <stuff>
 	(fields (immutable 1)))
-    => 1)
+    => (immutable 1))
 
   (check-for-syntax-violation-subform
       (define-mixin <stuff>
 	(fields (mutable {1 <fixnum>})))
-    => {1 <fixnum>})
+    => (mutable {1 <fixnum>}))
 
   (check-for-syntax-violation-subform
       (define-mixin <stuff>
 	(fields (immutable {1 <fixnum>})))
-    => {1 <fixnum>})
+    => (immutable {1 <fixnum>}))
 
   (check-for-syntax-violation-subform
       (define-mixin <stuff>

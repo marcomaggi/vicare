@@ -74,7 +74,7 @@
 		  zero-flonum?
 		  positive-zero-flonum?			negative-zero-flonum?
 		  exact-compnum?			inexact-compnum?
-		  zero-compnum?				non-zero-compnum?
+		  zero-compnum?				non-zero-compnum?	non-zero-inexact-compnum?
 		  zero-cflonum?				non-zero-cflonum?
 		  hashtable-eq?				hashtable-eqv?
 		  hashtable-equiv?
@@ -84,6 +84,7 @@
 		  reader-annotation-expression		reader-annotation-stripped
 		  reader-annotation-source		reader-annotation-textual-position
 		  sentinel				sentinel?
+		  transcoder=?
 		  ;;
 		  compar-fixnum				compar-bignum
 		  compar-exact-integer			compar-ratnum
@@ -93,6 +94,7 @@
 		  compar-symbol				compar-boolean
 		  compar-transcoder			compar-pointer
 		  #| end of EXCEPT |# )
+    (ikarus records syntactic)
     (only (vicare system $fx)
 	  $fxadd1)
     (only (vicare system $structs)
@@ -217,7 +219,9 @@
 ;;types: pairs, fixnums, strings, et cetera.  Lexical variables bound to instances of
 ;;this type should be called BTD (as in "built-in type descriptor").
 ;;
-(define-record-type (<core-type-descriptor> make-core-type-descriptor core-type-descriptor?)
+(define-core-record-type <core-type-descriptor>
+  (define-type-descriptors)
+  (strip-angular-parentheses)
   (nongenerative vicare:descriptors:<core-type-descriptor>)
   (sealed #t)
   (fields
@@ -253,12 +257,6 @@
       (%display "]")))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define <core-type-descriptor>-rtd
-  (record-type-descriptor <core-type-descriptor>))
-
-(define <core-type-descriptor>-rcd
-  (record-constructor-descriptor <core-type-descriptor>))
 
 ;;; --------------------------------------------------------------------
 
@@ -494,7 +492,7 @@
   (define-constant LIST-OF-CLAUSES
     (syntax-clauses-validate-specs
      (list (make-syntax-clause-spec #'constructor		0 1 0 1      '() '())
-	   (make-syntax-clause-spec #'predicate			0 1 1 1      '() '())
+	   (make-syntax-clause-spec #'type-predicate		0 1 1 1      '() '())
 	   (make-syntax-clause-spec #'equality-predicate	0 1 1 1      '() '())
 	   (make-syntax-clause-spec #'comparison-procedure	0 1 1 1      '() '())
 	   (make-syntax-clause-spec #'hash-function		0 1 1 1      '() '())
@@ -543,7 +541,7 @@
 		(unless (or (identifier? id) (boolean? id))
 		  (synner "invalid constructor specification" id))
 		(parsed-specs-constructor-set! parsed-specs id))))
-	   ((predicate)
+	   ((type-predicate)
 	    (let ((id (vector-ref arg 0)))
 	      (unless (or (identifier? id) (boolean? id))
 		(synner "invalid predicate specification" id))

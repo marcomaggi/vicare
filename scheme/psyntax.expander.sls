@@ -155,7 +155,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define-record-type (<expander-options> make-expander-options expander-options?)
+  (define-core-record-type <expander-options>
+    (define-type-descriptors)
+    (strip-angular-parentheses)
     (fields
       (immutable language	expander-options.language)
 		;A  symbol  representing  the  language under  which  to  expand  the
@@ -167,9 +169,6 @@
 	  (receive (language)
 	      (%parse-expander-options sexp)
 	    (make-record language))))))
-
-  (define <expander-options>-rtd (record-type-descriptor        <expander-options>))
-  (define <expander-options>-rcd (record-constructor-descriptor <expander-options>))
 
   (module (%parse-expander-options)
 
@@ -216,7 +215,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define-record-type (<compiler-options> make-compiler-options compiler-options?)
+  (define-core-record-type <compiler-options>
+    (define-type-descriptors)
+    (strip-angular-parentheses)
     (fields
       (immutable language	compiler-options.language)
 		;A  symbol  representing the  language  under  which to  compile  the
@@ -228,9 +229,6 @@
 	  (receive (language)
 	      (%parse-compiler-options sexp)
 	    (make-record language))))))
-
-  (define <compiler-options>-rtd (record-type-descriptor        <compiler-options>))
-  (define <compiler-options>-rcd (record-constructor-descriptor <compiler-options>))
 
   (module (%parse-compiler-options)
 

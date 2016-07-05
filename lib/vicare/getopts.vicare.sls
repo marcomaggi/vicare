@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009-2010, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2010, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -78,7 +78,9 @@
   (import (vicare)
     (vicare arguments validation)
     (vicare unsafe operations)
-    (vicare language-extensions syntaxes))
+    (vicare language-extensions syntaxes)
+    (for (vicare expander)
+      expand))
 
 
 ;;;; helpers

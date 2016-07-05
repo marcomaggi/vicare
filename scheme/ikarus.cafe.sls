@@ -173,7 +173,7 @@
 	;;Perform the PRINT.  Do nothing if all the values returned by EVAL are void.
 	(lambda v*
 	  (unless (andmap (lambda (v)
-			    (eq? v (void)))
+			    (void-object? v))
 			  v*)
 	    (with-exception-handler
 		(lambda (ex)

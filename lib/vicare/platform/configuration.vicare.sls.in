@@ -82,6 +82,9 @@
       (_
        (synner "invalid syntax"))))
 
+  (define (identifier=symbol? id sym)
+    (eq? (syntax->datum id) sym))
+
   (define (%normalise-body target-body else-body)
     (cond ((and target-body
 		(not (null? (syntax->datum target-body))))

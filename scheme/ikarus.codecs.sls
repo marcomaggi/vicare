@@ -97,7 +97,15 @@
 		  native-eol-style
 		  buffer-mode?
 		  #| end of EXCEPT |# )
-    (vicare system $transcoders)
+    (except (vicare system $transcoders)
+	    $transcoder=
+	    $transcoder<
+	    $transcoder<=
+	    $transcoder>
+	    $transcoder>=
+	    $transcoder!=
+	    $transcoder-max
+	    $transcoder-min)
     (vicare system $fx)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate

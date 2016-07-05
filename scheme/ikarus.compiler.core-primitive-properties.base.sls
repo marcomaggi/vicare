@@ -151,8 +151,8 @@
 
     declare-parameter
     declare-object-retriever)
-  (import (except (vicare)
-		  unsafe)
+  (import (rnrs)
+    (ikarus.compiler.compat)
     (only (vicare system $fx)
 	  $fxzero?
 	  $fxlogand

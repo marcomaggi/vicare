@@ -34,7 +34,8 @@
 	  this)
   (import (vicare)
     (prefix (vicare expander)			xp::)
-    (prefix (vicare system type-descriptors)	td::))
+    (prefix (vicare system type-descriptors)	td::)
+    (for (vicare expander) expand))
 
   (define-auxiliary-syntaxes method-prototype)
 

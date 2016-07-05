@@ -123,7 +123,10 @@
 
 		  ;; program name
 		  vicare-argv0
-		  vicare-argv0-string)
+		  vicare-argv0-string
+
+		  ;; base condition-object types
+		  &condition)
     (vicare system $fx)
     (vicare system $pairs)
     (vicare system $bytevectors)

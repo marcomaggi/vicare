@@ -8,26 +8,26 @@
 (define-scheme-type <top>
     #f
   (constructor <top>-constructor)
-  (predicate <top>-type-predicate)
+  (type-predicate <top>-type-predicate)
   (equality-predicate equal?)
   (hash-function object-hash))
 
 (define-scheme-type <untyped>
     #f
   (constructor <untyped>-constructor)
-  (predicate <untyped>-type-predicate)
+  (type-predicate <untyped>-type-predicate)
   (equality-predicate equal?)
   (hash-function object-hash))
 
 (define-scheme-type <void>
     #f
   (constructor void)
-  (predicate void-object?)
+  (type-predicate void-object?)
   (hash-function void-hash))
 
 (define-scheme-type <bottom>
     #f
-  (predicate always-false)
+  (type-predicate always-false)
   (hash-function object-hash))
 
 
@@ -36,19 +36,19 @@
 (define-scheme-type <eof>
     <top>
   (constructor eof-object)
-  (predicate eof-object?)
+  (type-predicate eof-object?)
   (hash-function eof-object-hash))
 
 (define-scheme-type <would-block>
     <top>
   (constructor would-block-object)
-  (predicate would-block-object?)
+  (type-predicate would-block-object?)
   (hash-function would-block-hash))
 
 (define-scheme-type <boolean>
     <top>
   (constructor <boolean>-constructor)
-  (predicate boolean?)
+  (type-predicate boolean?)
   (equality-predicate eq?)
   (comparison-procedure compar-boolean)
   (hash-function boolean-hash))
@@ -56,17 +56,17 @@
 (define-scheme-type <true>
     <boolean>
   (constructor #t)
-  (predicate true?))
+  (type-predicate true?))
 
 (define-scheme-type <false>
     <boolean>
   (constructor #t)
-  (predicate false?))
+  (type-predicate false?))
 
 (define-scheme-type <char>
     <top>
   (constructor integer->char)
-  (predicate char?)
+  (type-predicate char?)
   (hash-function char-hash)
   (comparison-procedure compar-char)
   (equality-predicate char=?)
@@ -78,7 +78,7 @@
 (define-scheme-type <symbol>
     <top>
   (constructor string->symbol)
-  (predicate symbol?)
+  (type-predicate symbol?)
   (hash-function symbol-hash)
   (comparison-procedure compar-symbol)
   (equality-predicate eq?)
@@ -94,13 +94,13 @@
 (define-scheme-type <gensym>
     <symbol>
   (constructor gensym)
-  (predicate gensym?)
+  (type-predicate gensym?)
   (equality-predicate eq?))
 
 (define-scheme-type <keyword>
     <top>
   (constructor symbol->keyword)
-  (predicate keyword?)
+  (type-predicate keyword?)
   (hash-function keyword-hash)
   (equality-predicate keyword=?)
   (methods
@@ -110,7 +110,7 @@
 (define-scheme-type <pointer>
     <top>
   (constructor integer->pointer)
-  (predicate pointer?)
+  (type-predicate pointer?)
   (equality-predicate pointer=?)
   (comparison-procedure compar-transcoder)
   (hash-function pointer-hash)
@@ -131,7 +131,7 @@
 (define-scheme-type <transcoder>
     <top>
   (constructor make-transcoder)
-  (predicate transcoder?)
+  (type-predicate transcoder?)
   (equality-predicate transcoder=?)
   (comparison-procedure compar-transcoder)
   (hash-function transcoder-hash)
@@ -145,60 +145,60 @@
 
 (define-scheme-type <procedure>
     <top>
-  (predicate procedure?))
+  (type-predicate procedure?))
 
 
 ;;; numeric types
 
 (define-scheme-type <number>
     <top>
-  (predicate number?)
+  (type-predicate number?)
   (equality-predicate =)
   (hash-function object-hash))
 
 (define-scheme-type <complex>
     <number>
   (constructor make-rectangular)
-  (predicate complex?)
+  (type-predicate complex?)
   (equality-predicate =))
 
 (define-scheme-type <real-valued>
     <complex>
-  (predicate real-valued?)
+  (type-predicate real-valued?)
   (equality-predicate =))
 
 (define-scheme-type <real>
     <real-valued>
-  (predicate real?)
+  (type-predicate real?)
   (equality-predicate =)
   (comparison-procedure compar-real))
 
 (define-scheme-type <rational-valued>
     <real>
-  (predicate rational-valued?)
+  (type-predicate rational-valued?)
   (equality-predicate =))
 
 (define-scheme-type <rational>
     <rational-valued>
-  (predicate  rational?)
+  (type-predicate  rational?)
   (equality-predicate =))
 
 ;;This "<integer-valued>" is a bit orphan: it is excluded from the hierarchy.
 ;;
 (define-scheme-type <integer-valued>
     <rational-valued>
-  (predicate integer-valued?)
+  (type-predicate integer-valued?)
   (equality-predicate =))
 
 ;;Notice that "<integer>" is a "<rational>", not an "<integer-valued>".
 ;;
 (define-scheme-type <integer>
     <rational>
-  (predicate integer?))
+  (type-predicate integer?))
 
 (define-scheme-type <exact-integer>
     <integer>
-  (predicate exact-integer?)
+  (type-predicate exact-integer?)
   (hash-function exact-integer-hash)
   (equality-predicate =)
   (comparison-procedure compar-exact-integer))
@@ -206,7 +206,7 @@
 (define-scheme-type <fixnum>
     <exact-integer>
   (constructor #t)
-  (predicate fixnum?)
+  (type-predicate fixnum?)
   (hash-function fixnum-hash)
   (comparison-procedure compar-fixnum)
   (equality-predicate fx=?))
@@ -214,7 +214,7 @@
 (define-scheme-type <flonum>
     <real>
   (constructor #t)
-  (predicate flonum?)
+  (type-predicate flonum?)
   (equality-predicate fl=?)
   (comparison-procedure compar-flonum)
   (hash-function flonum-hash))
@@ -222,7 +222,7 @@
 (define-scheme-type <ratnum>
     <rational>
   (constructor #t)
-  (predicate ratnum?)
+  (type-predicate ratnum?)
   (equality-predicate =)
   (comparison-procedure compar-ratnum)
   #;(hash-function ratnum-hash))
@@ -230,20 +230,20 @@
 (define-scheme-type <bignum>
     <exact-integer>
   (constructor #t)
-  (predicate bignum?)
+  (type-predicate bignum?)
   (equality-predicate =)
   (comparison-procedure compar-bignum))
 
 (define-scheme-type <compnum>
     <complex>
   (constructor #t)
-  (predicate compnum?)
+  (type-predicate compnum?)
   (equality-predicate =))
 
 (define-scheme-type <cflonum>
     <complex>
   (constructor #t)
-  (predicate cflonum?)
+  (type-predicate cflonum?)
   (equality-predicate =))
 
 ;;; --------------------------------------------------------------------
@@ -251,19 +251,19 @@
 (define-scheme-type <zero-fixnum>
     <fixnum>
   (constructor #t)
-  (predicate zero-fixnum?)
+  (type-predicate zero-fixnum?)
   (equality-predicate fx=?))
 
 (define-scheme-type <positive-fixnum>
     <fixnum>
   (constructor #t)
-  (predicate positive-fixnum?)
+  (type-predicate positive-fixnum?)
   (equality-predicate fx=?))
 
 (define-scheme-type <negative-fixnum>
     <fixnum>
   (constructor #t)
-  (predicate negative-fixnum?)
+  (type-predicate negative-fixnum?)
   (equality-predicate fx=?))
 
 ;;; --------------------------------------------------------------------
@@ -271,13 +271,13 @@
 (define-scheme-type <positive-bignum>
     <bignum>
   (constructor #t)
-  (predicate positive-bignum?)
+  (type-predicate positive-bignum?)
   (equality-predicate =))
 
 (define-scheme-type <negative-bignum>
     <bignum>
   (constructor #t)
-  (predicate negative-bignum?)
+  (type-predicate negative-bignum?)
   (equality-predicate =))
 
 ;;; --------------------------------------------------------------------
@@ -285,13 +285,13 @@
 (define-scheme-type <positive-ratnum>
     <ratnum>
   (constructor #t)
-  (predicate positive-ratnum?)
+  (type-predicate positive-ratnum?)
   (equality-predicate =))
 
 (define-scheme-type <negative-ratnum>
     <ratnum>
   (constructor #t)
-  (predicate negative-ratnum?)
+  (type-predicate negative-ratnum?)
   (equality-predicate =))
 
 ;;; --------------------------------------------------------------------
@@ -299,19 +299,19 @@
 (define-scheme-type <zero-flonum>
     <flonum>
   (constructor #t)
-  (predicate zero-flonum?)
+  (type-predicate zero-flonum?)
   (equality-predicate fl=?))
 
 (define-scheme-type <positive-zero-flonum>
     <zero-flonum>
   (constructor #t)
-  (predicate positive-zero-flonum?)
+  (type-predicate positive-zero-flonum?)
   (equality-predicate fl=?))
 
 (define-scheme-type <negative-zero-flonum>
     <zero-flonum>
   (constructor #t)
-  (predicate negative-zero-flonum?)
+  (type-predicate negative-zero-flonum?)
   (equality-predicate fl=?))
 
 ;;;
@@ -319,13 +319,13 @@
 (define-scheme-type <positive-flonum>
     <flonum>
   (constructor #t)
-  (predicate positive-flonum?)
+  (type-predicate positive-flonum?)
   (equality-predicate fl=?))
 
 (define-scheme-type <negative-flonum>
     <flonum>
   (constructor #t)
-  (predicate negative-flonum?)
+  (type-predicate negative-flonum?)
   (equality-predicate fl=?))
 
 ;;; --------------------------------------------------------------------
@@ -333,25 +333,25 @@
 (define-scheme-type <exact-compnum>
     <compnum>
   (constructor #t)
-  (predicate exact-compnum?)
+  (type-predicate exact-compnum?)
   (equality-predicate =))
 
 (define-scheme-type <inexact-compnum>
     <compnum>
   (constructor #t)
-  (predicate inexact-compnum?)
+  (type-predicate inexact-compnum?)
   (equality-predicate =))
 
 (define-scheme-type <zero-compnum>
     <inexact-compnum>
   (constructor #t)
-  (predicate zero-compnum?)
+  (type-predicate zero-compnum?)
   (equality-predicate =))
 
 (define-scheme-type <non-zero-inexact-compnum>
     <inexact-compnum>
   (constructor #t)
-  (predicate non-zero-inexact-compnum?)
+  (type-predicate non-zero-inexact-compnum?)
   (equality-predicate =))
 
 ;;; --------------------------------------------------------------------
@@ -359,13 +359,13 @@
 (define-scheme-type <zero-cflonum>
     <cflonum>
   (constructor #t)
-  (predicate zero-cflonum?)
+  (type-predicate zero-cflonum?)
   (equality-predicate =))
 
 (define-scheme-type <non-zero-cflonum>
     <cflonum>
   (constructor #t)
-  (predicate non-zero-cflonum?)
+  (type-predicate non-zero-cflonum?)
   (equality-predicate =))
 
 
@@ -374,7 +374,7 @@
 (define-scheme-type <string>
     <top>
   (constructor string)
-  (predicate string?)
+  (type-predicate string?)
   (equality-predicate string=?)
   (comparison-procedure compar-string)
   (hash-function string-hash)
@@ -442,14 +442,14 @@
 (define-scheme-type <empty-string>
     <string>
   (constructor <empty-string>-constructor)
-  (predicate empty-string?)
+  (type-predicate empty-string?)
   (equality-predicate string=?)
   (comparison-procedure compar-string))
 
 (define-scheme-type <nestring>
     <string>
   (constructor <nestring>-constructor)
-  (predicate nestring?)
+  (type-predicate nestring?)
   (equality-predicate string=?)
   (comparison-procedure compar-string)
   (methods
@@ -462,7 +462,7 @@
 (define-scheme-type <vector>
     <top>
   (constructor vector)
-  (predicate vector?)
+  (type-predicate vector?)
   (equality-predicate equal?)
   (methods
    (empty?			vector-empty?)
@@ -485,13 +485,13 @@
 (define-scheme-type <empty-vector>
     <vector>
   (constructor <empty-vector>-constructor)
-  (predicate <empty-vector>-type-predicate)
+  (type-predicate <empty-vector>-type-predicate)
   (equality-predicate equal?))
 
 (define-scheme-type <nevector>
     <vector>
   (constructor <nevector>-constructor)
-  (predicate <nevector>-type-predicate)
+  (type-predicate <nevector>-type-predicate)
   (equality-predicate equal?)
   (methods
    (ref				vector-ref)
@@ -500,68 +500,68 @@
 (define-scheme-type <bytevector>
     <top>
   (constructor make-bytevector)
-  (predicate bytevector?)
+  (type-predicate bytevector?)
   (hash-function bytevector-hash)
   (equality-predicate bytevector=?))
 
 (define-scheme-type <empty-bytevector>
     <bytevector>
   (constructor <empty-bytevector>-constructor)
-  (predicate <empty-bytevector>-type-predicate)
+  (type-predicate <empty-bytevector>-type-predicate)
   (equality-predicate bytevector=?))
 
 (define-scheme-type <nebytevector>
     <bytevector>
   (constructor <nebytevector>-constructor)
-  (predicate <nebytevector>-type-predicate)
+  (type-predicate <nebytevector>-type-predicate)
   (equality-predicate bytevector=?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <code>
     <top>
-  (predicate code?))
+  (type-predicate code?))
 
 
 ;;;; records and structs
 
 (define-scheme-type <struct>
     <top>
-  (predicate struct?)
+  (type-predicate struct?)
   (equality-predicate struct=?)
   (hash-function struct-hash))
 
 (define-scheme-type <struct-type-descriptor>
     <struct>
   (constructor make-struct-type)
-  (predicate struct-type-descriptor?)
+  (type-predicate struct-type-descriptor?)
   (equality-predicate struct=?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <record>
     <struct>
-  (predicate record?)
+  (type-predicate record?)
   (equality-predicate record=?)
   (hash-function record-hash))
 
 (define-scheme-type <record-type-descriptor>
     <struct>
   (constructor make-record-type-descriptor)
-  (predicate record-type-descriptor?)
+  (type-predicate record-type-descriptor?)
   (equality-predicate struct=?))
 
 (define-scheme-type <record-constructor-descriptor>
     <struct>
   (constructor make-record-constructor-descriptor)
-  (predicate record-constructor-descriptor?)
+  (type-predicate record-constructor-descriptor?)
   (equality-predicate struct=?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <opaque-record>
     <top>
-  (predicate always-false)
+  (type-predicate always-false)
   (equality-predicate record=?)
   (hash-function record-hash))
 
@@ -569,22 +569,22 @@
 
 (define-scheme-type <hashtable>
     <struct>
-  (predicate hashtable?))
+  (type-predicate hashtable?))
 
 (define-scheme-type <hashtable-eq>
     <hashtable>
   (constructor make-eq-hashtable)
-  (predicate hashtable-eq?))
+  (type-predicate hashtable-eq?))
 
 (define-scheme-type <hashtable-eqv>
     <hashtable>
   (constructor make-eqv-hashtable)
-  (predicate hashtable-eqv?))
+  (type-predicate hashtable-eqv?))
 
 (define-scheme-type <hashtable-equal>
     <hashtable>
   (constructor make-hashtable)
-  (predicate hashtable-equiv?))
+  (type-predicate hashtable-equiv?))
 
 ;;; --------------------------------------------------------------------
 
@@ -593,28 +593,28 @@
 ;;
 (define-scheme-type <condition>
     <record>
-  (predicate condition?)
+  (type-predicate condition?)
   (methods
    (print	print-condition)))
 
 (define-scheme-type <compound-condition>
     <condition>
   (constructor condition)
-  (predicate compound-condition?))
+  (type-predicate compound-condition?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <promise>
     <record>
   (constructor make-promise)
-  (predicate promise?)
+  (type-predicate promise?)
   (methods
    (force	force)))
 
 (define-scheme-type <enum-set>
     <struct>
   (constructor make-enumeration)
-  (predicate enum-set?)
+  (type-predicate enum-set?)
   (equality-predicate enum-set=?)
   (methods
    (list		enum-set->list)
@@ -635,7 +635,7 @@
 (define-scheme-type <utsname>
     <struct>
   (constructor uname)
-  (predicate utsname?)
+  (type-predicate utsname?)
   (equality-predicate struct=?)
   (methods
    (sysname		utsname-sysname)
@@ -649,7 +649,7 @@
 (define-scheme-type <memory-block>
     <struct>
   (constructor make-memory-block)
-  (predicate memory-block?)
+  (type-predicate memory-block?)
   (equality-predicate struct=?)
   (methods
    (pointer		memory-block-pointer)
@@ -660,7 +660,7 @@
 
 (define-scheme-type <stats>
     <struct>
-  (predicate stats?)
+  (type-predicate stats?)
   (equality-predicate struct=?)
   (methods
    (user-secs		stats-user-secs)
@@ -682,7 +682,7 @@
 (define-scheme-type <reader-annotation>
     <struct>
   (constructor get-annotated-datum)
-  (predicate reader-annotation?)
+  (type-predicate reader-annotation?)
   (equality-predicate struct=?)
   (methods
    (expression			reader-annotation-expression)
@@ -693,7 +693,7 @@
 (define-scheme-type <time>
     <struct>
   (constructor current-time)
-  (predicate time?)
+  (type-predicate time?)
   (equality-predicate struct=?)
   (methods
    (second		time-second)
@@ -705,7 +705,7 @@
 (define-scheme-type <sentinel>
     <struct>
   (constructor sentinel)
-  (predicate sentinel?)
+  (type-predicate sentinel?)
   (equality-predicate eq?))
 
 
@@ -713,7 +713,7 @@
 
 (define-scheme-type <port>
     <top>
-  (predicate port?)
+  (type-predicate port?)
   (equality-predicate eq?)
   (hash-function port-hash))
 
@@ -721,51 +721,51 @@
 
 (define-scheme-type <input-port>
     <port>
-  (predicate input-port?)
+  (type-predicate input-port?)
   (equality-predicate eq?))
 
 (define-scheme-type <output-port>
     <port>
-  (predicate output-port?)
+  (type-predicate output-port?)
   (equality-predicate eq?))
 
 (define-scheme-type <input/output-port>
     <port>
-  (predicate input/output-port?)
+  (type-predicate input/output-port?)
   (equality-predicate eq?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <textual-input-port>
     <input-port>
-  (predicate textual-input-port?)
+  (type-predicate textual-input-port?)
   (equality-predicate eq?))
 
 (define-scheme-type <textual-output-port>
     <output-port>
-  (predicate textual-output-port?)
+  (type-predicate textual-output-port?)
   (equality-predicate eq?))
 
 (define-scheme-type <textual-input/output-port>
     <input/output-port>
-  (predicate textual-input/output-port?)
+  (type-predicate textual-input/output-port?)
   (equality-predicate eq?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <binary-input-port>
     <input-port>
-  (predicate binary-input-port?)
+  (type-predicate binary-input-port?)
   (equality-predicate eq?))
 
 (define-scheme-type <binary-output-port>
     <output-port>
-  (predicate binary-output-port?)
+  (type-predicate binary-output-port?)
   (equality-predicate eq?))
 
 (define-scheme-type <binary-input/output-port>
     <input/output-port>
-  (predicate binary-input/output-port?)
+  (type-predicate binary-input/output-port?)
   (equality-predicate eq?))
 
 
@@ -774,7 +774,7 @@
 (define-scheme-type <list>
     <top>
   (constructor list)
-  (predicate list?)
+  (type-predicate list?)
   (equality-predicate equal?)
   (methods
    (length	length)))
@@ -782,7 +782,7 @@
 (define-scheme-type <nelist>
     <list>
   (constructor <nelist>-constructor)
-  (predicate <nelist>-type-predicate)
+  (type-predicate <nelist>-type-predicate)
   (equality-predicate equal?)
   (methods
    (car		car)
@@ -791,13 +791,13 @@
 (define-scheme-type <null>
     <list>
   (constructor #t)
-  (predicate null?)
+  (type-predicate null?)
   (equality-predicate eq?))
 
 (define-scheme-type <pair>
     <top>
   (constructor cons)
-  (predicate pair?)
+  (type-predicate pair?)
   (equality-predicate equal?)
   (methods
    (car		car)
@@ -808,7 +808,7 @@
 (define-scheme-type <ipair>
     <struct>
   (constructor ipair)
-  (predicate ipair?)
+  (type-predicate ipair?)
   ;;EQUAL? has hard-coded special support for immutable pairs.
   (equality-predicate equal?)
   (methods

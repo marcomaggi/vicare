@@ -416,7 +416,7 @@
 	   (synner-internal-error "invalid object from lexer" token)))))
 
 
-(define-record-type <token>
+(define-core-record-type <token>
   ;;This is the base type of tokens for Pratt parsing.
   ;;
   (fields (immutable semantic-value)
@@ -469,7 +469,7 @@
        (make-record semantic-value left-binding-power null-denotator left-denotator)))))
 
 
-(define-record-type <operand>
+(define-core-record-type <operand>
   ;;This is the type of operand tokens for Pratt parsing.  Conceptually, an operand
   ;;has both  left and right  binding powers set to  the minimum; the  previous and
   ;;next tokens decide whether an operand will bind to the left or right.
@@ -492,7 +492,7 @@
   (synner "operand found when an operator was expected" this-token))
 
 
-(define-record-type <operator>
+(define-core-record-type <operator>
   ;;This is  the type of  operator tokens for Pratt  parsing.  We decide  that only
   ;;identifiers are operators.
   ;;
@@ -504,7 +504,7 @@
        ((make-token id token-left-binding-power null-denotator left-denotator))))))
 
 
-(define-record-type <fixed-right-binding-power-operator>
+(define-core-record-type <fixed-right-binding-power-operator>
   ;;Record  type of  operators of  which  we know  the right-binding  power of  the
   ;;null-denotator  and left-denotator  procedures is  always the  same, no  matter
   ;;which next tokens come out of the lexer.
@@ -522,7 +522,7 @@
 	nud/led-right-binding-power)))))
 
 
-(define-record-type <infix-operator>
+(define-core-record-type <infix-operator>
   ;;This is the record type of binary infix operators.
   ;;
   (parent <fixed-right-binding-power-operator>)
@@ -555,7 +555,7 @@
 	  right-semantic-value)))
 
 
-(define-record-type <left-assoc-infix-operator>
+(define-core-record-type <left-assoc-infix-operator>
   ;;This is the record type of  left-associative binary infix operators like *.  To
   ;;be left-associative the operator X must act as follows:
   ;;
@@ -578,7 +578,7 @@
 			     nud/led-right-binding-power))))))
 
 
-(define-record-type <right-assoc-infix-operator>
+(define-core-record-type <right-assoc-infix-operator>
   ;;This is the record type of  right-associative binary infix operators like EXPT.
   ;;To be right-associative the operator X must act as follows:
   ;;
@@ -601,7 +601,7 @@
 			     nud/led-right-binding-power))))))
 
 
-(define-record-type <symmetric-left-assoc-infix-operator>
+(define-core-record-type <symmetric-left-assoc-infix-operator>
   ;;Record type  of left-associative binary  infix operators  of which we  know the
   ;;left-binding  power   of  the  token   and  the  right-binding  power   of  the
   ;;left-denotator procedure is  always the same, no matter which  next tokens come
@@ -618,7 +618,7 @@
        ((make-left-assoc-infix-operator id binding-power binding-power))))))
 
 
-(define-record-type <prefix-operator>
+(define-core-record-type <prefix-operator>
   ;;This is the record type of unary prefix operators like NOT.
   ;;
   (parent <fixed-right-binding-power-operator>)
@@ -675,7 +675,7 @@
   (synner "unary prefix operator has no left operand" this-token))
 
 
-(define-record-type <postfix-operator>
+(define-core-record-type <postfix-operator>
   ;;This  is  the  record type  of  unary  postfix  operators  like "!"  (which  is
   ;;factorial).
   ;;
@@ -700,7 +700,7 @@
   (list (<token>-semantic-value this-token) left-semantic-value))
 
 
-(define-record-type <left-assoc-infix/prefix-operator>
+(define-core-record-type <left-assoc-infix/prefix-operator>
   ;;This is the record type of operators that  can be used both as binary infix and
   ;;unary prefix.  Examples are the arithmetic operators + and -.
   ;;
@@ -713,7 +713,7 @@
 	 <prefix-operator>-nud <infix-operator>-led))))))
 
 
-(define-record-type <prefix/postfix-operator>
+(define-core-record-type <prefix/postfix-operator>
   ;;This is the base  record type for operators that can appear  in both prefix and
   ;;postfix position, for example the increment and decrement operators.
   ;;
@@ -739,7 +739,7 @@
 	left-semantic-value))
 
 
-(define-record-type <symmetric-prefix/postfix-operator>
+(define-core-record-type <symmetric-prefix/postfix-operator>
   ;;This  is the  record type  for operators  that can  appear in  both prefix  and
   ;;postfix position, for example the  increment and decrement operators, for which
   ;;we know  the token left-binding  power equals the  left-denotator right-binding
@@ -753,7 +753,7 @@
 				      binding-power binding-power))))))
 
 
-(define-record-type <passive-syntactic-token>
+(define-core-record-type <passive-syntactic-token>
   ;;This is the base  type of passive syntactic tokens.  These  tokens are meant to
   ;;be consumed by the NUD or LED of  operators; the NUD and LED of a passive token
   ;;are never called when correct input is parsed.
@@ -780,7 +780,7 @@
 	  this-token))
 
 
-(define-record-type <right-paren>
+(define-core-record-type <right-paren>
   ;;The right parenthesis  is meant to be  passively consumed by the NUD  or LED of
   ;;the left parenthesis.
   ;;
@@ -795,7 +795,7 @@
 	       (set! memoised V))))))))
 
 
-(define-record-type <comma>
+(define-core-record-type <comma>
   ;;The comma separator  is meant to be  passively consumed by the LED  of the left
   ;;parenthesis.
   ;;
@@ -810,7 +810,7 @@
 	       (set! memoised V))))))))
 
 
-(define-record-type <left-paren>
+(define-core-record-type <left-paren>
   ;;The left parenthesis is an operator.
   ;;
   (parent <fixed-right-binding-power-operator>)
@@ -942,7 +942,7 @@
 	   (synner-internal-error "invalid object from lexer" token)))))
 
 
-(define-record-type <colon>
+(define-core-record-type <colon>
   ;;The colon is the separator in the syntax:
   ;;
   ;;   ?test ? ?consequent : ?alternate
@@ -961,7 +961,7 @@
 	       (set! memoised V))))))))
 
 
-(define-record-type <question-mark>
+(define-core-record-type <question-mark>
   ;;The question mark is the operator in the ternary conditional expression syntax:
   ;;
   ;;   ?test ? ?consequent : ?alternate
