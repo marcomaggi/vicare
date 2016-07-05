@@ -870,7 +870,7 @@
 		   (psi.input-form rator.psi) (map psi.input-form rand*.psi)
 		   minimum-arguments-count given-operands-count)))))
       ;;All the operands must return a single value.
-      (let ((rands.sig (%validate-operands-for-single-return-value input-form.stx rand*.psi)))
+      (let ((rands.sig (%validate-operands-for-single-return-value input-form.stx rator.psi rand*.psi)))
 	;;Search for a clause whose signature matches the operands' types.
 	(%match-case-lambda-signature-against-operands input-form.stx lexenv.run lexenv.expand
 						       rator.psi rand*.psi
@@ -880,7 +880,7 @@
 
   (module (%validate-operands-for-single-return-value)
 
-    (define* (%validate-operands-for-single-return-value input-form.stx rand*.psi)
+    (define* (%validate-operands-for-single-return-value input-form.stx rator.psi rand*.psi)
       ;;In the  context of  INPUT-FORM.STX the  RAND*.PSI argument is  a list  of psi
       ;;instances  representing  the  already  expanded operand  expressions  for  an
       ;;operator application.  Check that such expressions return a single value.
@@ -911,9 +911,13 @@
 				"expression used as operand in procedure application is typed as not returning"))))
 		 (<top>-ots))
 		((<void>)
-		 ;;The expression is marked as returning void.
-		 (%handle-error "expression used as operand in procedure application is typed as returning void"
-				(<top>-ots)))
+		 ;;The expression  is marked as  returning void.   We do not  raise a
+		 ;;warning if the application has  the core primitive VOID-OBJECT? as
+		 ;;operator.
+		 (if (void-object?-id? (psi.input-form rator.psi))
+		     (<top>-ots)
+		   (%handle-error "expression used as operand in procedure application is typed as returning void"
+				  (<top>-ots))))
 		((single-value)
 		 ;;Single return value.  Good.
 		 => (lambda (rand.ots) rand.ots))

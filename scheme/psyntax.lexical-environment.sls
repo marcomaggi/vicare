@@ -344,7 +344,7 @@
     procedure-pred-id
     list-of-id				vector-of-id
     hashtable-id			alist-id
-    enumeration-id
+    enumeration-id			void-object?-id?
     define/checked-id			case-define/checked-id
     define/typed-id			case-define/typed-id
     define/std-id			case-define/std-id
@@ -2675,6 +2675,7 @@
   (define-core-prim-id-retriever hashtable-id		hashtable)
   (define-core-prim-id-retriever alist-id		alist)
   (define-core-prim-id-retriever enumeration-id		enumeration)
+  (define-core-prim-id-retriever void-object?-id	void-object?)
   ;;
   (define-core-prim-id-retriever define/checked-id	define/checked)
   (define-core-prim-id-retriever define/typed-id	define/typed)
@@ -2708,6 +2709,10 @@
 (define (brace-id? id)
   (and (identifier? id)
        (~free-identifier=? id (brace-id))))
+
+(define (void-object?-id? id)
+  (and (identifier? id)
+       (~free-identifier=? id (void-object?-id))))
 
 
 ;;;; public interface: identifiers handling
