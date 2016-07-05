@@ -43,7 +43,9 @@
     (prefix (only (vicare system type-descriptors)
 		  <interface-type-descr>
 		  make-interface-type-descr)
-	    td::))
+	    td::)
+    (for (vicare expander)
+      expand))
 
   (define-auxiliary-syntaxes method-prototype)
 

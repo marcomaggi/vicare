@@ -61,7 +61,7 @@
 
   (check
       (.syntax-object (type-of (new <ipair> (read) (read))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'(<ipair>))
 
   (void))

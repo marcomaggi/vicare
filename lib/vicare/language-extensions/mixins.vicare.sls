@@ -52,7 +52,9 @@
     hash-function
     mixins
     implements)
-  (import (vicare))
+  (import (vicare)
+    (for (vicare expander)
+      expand))
 
 
 (define-syntax define-mixin

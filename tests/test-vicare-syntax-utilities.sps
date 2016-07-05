@@ -28,6 +28,7 @@
 #!r6rs
 (import (vicare)
   (vicare unsafe operations)
+  (vicare expander)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

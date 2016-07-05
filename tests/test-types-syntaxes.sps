@@ -271,7 +271,7 @@
       ((_ ?expr => ?expected)
        (check
 	   ?expr
-	 (=> syntax=?)
+	 (=> expander::syntax=?)
 	 (syntax ?expected)))
       ))
 
@@ -3035,7 +3035,7 @@
       ((_ ?one ?two => ?expected)
        (check
 	   (type-annotation-common-ancestor ?one ?two)
-	 (=> syntax=?)
+	 (=> expander::syntax=?)
 	 (syntax ?expected)))
       ))
 
@@ -3063,7 +3063,7 @@
       ((_ ?one ?two => ?expected)
        (check
 	   (type-signature-common-ancestor ?one ?two)
-	 (=> syntax=?)
+	 (=> expander::syntax=?)
 	 (syntax ?expected)))
       ))
 
@@ -3103,7 +3103,7 @@
       ((_ ?expr => ?expected)
        (check
 	   ?expr
-	 (=> syntax=?)
+	 (=> expander::syntax=?)
 	 (syntax ?expected)))
       ))
 
@@ -3171,7 +3171,7 @@
       ((_ ?one => ?expected)
        (check
 	   (type-annotation-ancestors ?one)
-	 (=> syntax=?)
+	 (=> expander::syntax=?)
 	 (syntax ?expected)))
       ))
 
@@ -3222,7 +3222,7 @@
       ((_ ?expr => ?expected)
        (check
 	   ?expr
-	 (=> syntax=?)
+	 (=> expander::syntax=?)
 	 (syntax ?expected)))
       ))
 

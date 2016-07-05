@@ -28,7 +28,7 @@
   (options typed-language)
   (import (vicare)
     (vicare language-extensions mixins)
-    #;(prefix (vicare expander) expander::)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -56,7 +56,7 @@
 		(fprintf (current-error-port) "~a\n" (condition-message E)))
 	      (syntax-violation-subform E))
 	     (else E)))
-       (=> syntax=?)
+       (=> expander::syntax=?)
        (syntax ?expected)))
     ))
 

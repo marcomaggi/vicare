@@ -60,7 +60,7 @@
 
   (check
       (expander::type-signature.syntax-object (type-of (new <symbol> (read))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'<symbol>))
 
   (void))

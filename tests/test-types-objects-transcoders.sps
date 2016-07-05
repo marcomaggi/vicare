@@ -67,7 +67,7 @@
 
   (check
       (expander::type-signature.syntax-object (type-of (new <transcoder> (read) (read) (read))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'<transcoder>))
 
   (void))

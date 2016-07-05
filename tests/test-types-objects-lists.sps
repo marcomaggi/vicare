@@ -83,7 +83,7 @@
 	   ;;The  return value  of  a  TYPE-OF use  expansion  and  evaluation is  an
 	   ;;instance of "<type-signature>".
 	   (.syntax-object (type-of ?expression))
-	 (=> syntax=?)
+	 (=> expander::syntax=?)
 	 ;;When the expression is a CONDITION application: the expected tags value is
 	 ;;a list with a single item.
 	 ?expected-tags))
@@ -155,7 +155,7 @@
        ;;Here we test only type signature describing a single value.
        (check
 	   (type-annotation-syntax ?type-annotation)
-	 (=> syntax=?)
+	 (=> expander::syntax=?)
 	 #'?expected-tags))
       ))
 
@@ -221,12 +221,12 @@
 
   (check
       (.syntax-object (type-of (new <list> (read) (read))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((list <top> <top>)))
 
   (check
       (.syntax-object (type-of (new <list>)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'<null>))
 
 ;;; --------------------------------------------------------------------
@@ -237,19 +237,19 @@
 
   (check
       (.syntax-object (type-of (new <nelist> (read) (read))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((list <top> <top>)))
 
 ;;; --------------------------------------------------------------------
 
   (check
       (.syntax-object (type-of (list)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'<null>))
 
   (check
       (.syntax-object (type-of (list 1)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((list <positive-fixnum>)))
 
   #t)
@@ -306,7 +306,7 @@
 
   (check
       (expander::type-signature.syntax-object (type-of (new <list-of-chars> #\a #\b)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((list <char> <char>)))
 
   ;;Expand-time signature violation.  First operand.
@@ -421,7 +421,7 @@
 
   (check
       (expander::type-signature.syntax-object (type-of (new <list-of-strings> "a" "b")))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((list <nestring> <nestring>)))
 
   ;;Expand-time signature violation.  First operand.

@@ -71,12 +71,12 @@
 
     (check
 	(expander::type-signature.syntax-object (type-of (new alpha 1 2 3)))
-      (=> syntax=?)
+      (=> expander::syntax=?)
       (list #'alpha))
 
     (check
 	(expander::type-signature.syntax-object (type-of (make-alpha 1 2 3)))
-      (=> syntax=?)
+      (=> expander::syntax=?)
       (list #'alpha))
 
     (void))
@@ -103,7 +103,7 @@
 	  (constructor-signature
 	    (lambda (<fixnum> <string>) => (<duo>))))
 
-	(syntax=? (type-annotation-syntax (type-of (new <duo> 1 "ciao")))
+	(expander::syntax=? (type-annotation-syntax (type-of (new <duo> 1 "ciao")))
 		  #'<duo>))
     => #t)
 
@@ -191,7 +191,7 @@
 	(define-record-type duo
 	  (fields one two))
 	(expander::type-signature.syntax-object (type-of (is-a? (read) duo))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'<boolean>))
 
   (check
@@ -199,7 +199,7 @@
 	(define-record-type duo
 	  (fields one two))
 	(expander::type-signature.syntax-object (type-of (duo? (read)))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'<boolean>))
 
   (void))
@@ -1078,7 +1078,7 @@
 	  (new duo 1 2.3))
 	(values (expander::type-signature.syntax-object (type-of (.one O)))
 		(expander::type-signature.syntax-object (type-of (.two O)))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'<fixnum>)
     (list #'<flonum>))
 
@@ -1090,7 +1090,7 @@
 	  (new duo 1 2.3))
 	(values (expander::type-signature.syntax-object (type-of (duo-one O)))
 		(expander::type-signature.syntax-object (type-of (duo-two O)))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'<fixnum>)
     (list #'<flonum>))
 

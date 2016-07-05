@@ -52,7 +52,7 @@
 
   (check
       (expander::type-signature.syntax-object (type-of (new <top> (read))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'<top>))
 
 ;;; --------------------------------------------------------------------
@@ -92,13 +92,13 @@
   (check
       (let (({f <procedure>} (lambda (x) x)))
 	(expander::type-signature.syntax-object (type-of (f 1))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'<list>)
 
   (check
       (let (({f <procedure>} (unsafe-cast-signature (<procedure>) (lambda (x) x))))
 	(expander::type-signature.syntax-object (type-of f)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     (list #'<procedure>))
 
   #t)

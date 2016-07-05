@@ -57,36 +57,36 @@
 
   (check
       (expander::type-signature.syntax-object (type-of (lambda ({a <fixnum>}) a)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((lambda (<fixnum>) => (<fixnum>))))
 
   (check
       (expander::type-signature.syntax-object (type-of (lambda ({_ <fixnum>} {a <fixnum>}) a)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((lambda (<fixnum>) => (<fixnum>))))
 
   (check
       (expander::type-signature.syntax-object (type-of (lambda ({_ <fixnum> <string>} {a <fixnum>} {b <string>})
   							 (values a b))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((lambda (<fixnum> <string>) => (<fixnum> <string>))))
 
   (check
       (expander::type-signature.syntax-object (type-of (lambda ({_ (list-of <fixnum>)} {a <fixnum>} {b <fixnum>})
   							 (list a b))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((lambda (<fixnum> <fixnum>) => ((list-of <fixnum>)))))
 
   (check
       (expander::type-signature.syntax-object (type-of (lambda ({_ . (list-of <fixnum>)} {a <fixnum>} {b <fixnum>})
   							 (values a b))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((lambda (<fixnum> <fixnum>) => (list-of <fixnum>))))
 
   (check
       (expander::type-signature.syntax-object (type-of (lambda ({a <fixnum>} . {rest (list-of <fixnum>)})
   							 (values a rest))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((lambda (<fixnum> . (list-of <fixnum>)) => (<fixnum> (list-of <fixnum>)))))
 
 ;;; --------------------------------------------------------------------
@@ -97,7 +97,7 @@
 							  a)
 							 (({a <fixnum>} {b <string>})
 							  (list a b)))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((case-lambda
 	 ((<fixnum>)		=> (<fixnum>))
 	 ((<fixnum> <string>)	=> ((list <fixnum> <string>))))))
@@ -108,7 +108,7 @@
 							  (values a #f))
 							 (({_ <fixnum> <string>} {a <fixnum>} {b <string>})
 							  (values a b)))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((case-lambda
 	 ((<fixnum>)		=> (<fixnum> <false>))
 	 ((<fixnum> <string>)	=> (<fixnum> <string>)))))
@@ -119,7 +119,7 @@
 							  a)
 							 (({_ (list <fixnum> <string>)} {a <fixnum>} {b <string>})
 							  (list a b)))))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((case-lambda
 	 ((<fixnum>)		=> (<fixnum>))
 	 ((<fixnum> <string>)	=> ((list <fixnum> <string>))))))
@@ -130,14 +130,14 @@
       (internal-body
 	(define (fun {a <fixnum>}) a)
 	(expander::type-signature.syntax-object (type-of fun)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((lambda (<fixnum>) => (<fixnum>))))
 
   (check
       (internal-body
 	(define ({fun <fixnum>} {a <fixnum>}) a)
 	(expander::type-signature.syntax-object (type-of fun)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((lambda (<fixnum>) => (<fixnum>))))
 
   (check
@@ -145,7 +145,7 @@
 	(define ({fun <fixnum> <string>} {a <fixnum>} {b <string>})
 	  (values a b))
 	(expander::type-signature.syntax-object (type-of fun)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((lambda (<fixnum> <string>) => (<fixnum> <string>))))
 
   (check
@@ -153,7 +153,7 @@
 	(define ({fun (list-of <fixnum>)} {a <fixnum>} {b <fixnum>})
 	  (list a b))
 	(expander::type-signature.syntax-object (type-of fun)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((lambda (<fixnum> <fixnum>) => ((list-of <fixnum>)))))
 
   (check
@@ -161,7 +161,7 @@
 	(define ({fun . (list-of <fixnum>)} {a <fixnum>} {b <fixnum>})
 	  (values a b))
 	(expander::type-signature.syntax-object (type-of fun)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((lambda (<fixnum> <fixnum>) => (list-of <fixnum>))))
 
   (check
@@ -169,7 +169,7 @@
 	(define (fun {a <fixnum>} . {rest (list-of <fixnum>)})
 	  (values a rest))
 	(expander::type-signature.syntax-object (type-of fun)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((lambda (<fixnum> . (list-of <fixnum>)) => (<fixnum> (list-of <fixnum>)))))
 
 ;;; --------------------------------------------------------------------
@@ -182,7 +182,7 @@
 	  (({a <fixnum>} {b <string>})
 	   (list a b)))
 	(expander::type-signature.syntax-object (type-of fun)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((case-lambda
 	 ((<fixnum>)		=> (<fixnum>))
 	 ((<fixnum> <string>)	=> ((list <fixnum> <string>))))))
@@ -193,7 +193,7 @@
 	  (({_ <fixnum>} {a <fixnum>})
 	   a))
 	(expander::type-signature.syntax-object (type-of fun)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((lambda (<fixnum>)		=> (<fixnum>))))
 
   (check
@@ -204,7 +204,7 @@
 	  (({_ <fixnum> <string>} {a <fixnum>} {b <string>})
 	   (values a b)))
 	(expander::type-signature.syntax-object (type-of fun)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((case-lambda
 	 ((<fixnum>)		=> (<fixnum> <false>))
 	 ((<fixnum> <string>)	=> (<fixnum> <string>)))))
@@ -217,7 +217,7 @@
 	  (({_ (list <fixnum> <string>)} {a <fixnum>} {b <string>})
 	   (list a b)))
 	(expander::type-signature.syntax-object (type-of fun)))
-    (=> syntax=?)
+    (=> expander::syntax=?)
     #'((case-lambda
 	 ((<fixnum>)		=> (<fixnum>))
 	 ((<fixnum> <string>)	=> ((list <fixnum> <string>))))))

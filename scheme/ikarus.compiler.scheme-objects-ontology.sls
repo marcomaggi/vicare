@@ -296,6 +296,19 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax (define-underspecified-core-type stx)
+  (define* (identifier-suffix {id identifier?} suffix)
+    (datum->syntax id (string->symbol
+		       (string-append
+			(symbol->string (syntax->datum id))
+			(cond ((string? suffix)
+			       suffix)
+			      ((symbol? suffix)
+			       (symbol->string suffix))
+			      ((identifier? suffix)
+			       (symbol->string (syntax->datum suffix)))
+			      (else
+			       (assertion-violation __who__
+				 "expected string, symbol or identifier as suffix argument" suffix)))))))
   (syntax-case stx ()
     ((_ ?type-name ?instance-expr)
      (identifier? #'?type-name)

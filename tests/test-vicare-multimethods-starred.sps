@@ -28,6 +28,7 @@
   (options typed-language)
   (import (vicare)
     (vicare language-extensions multimethods)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)

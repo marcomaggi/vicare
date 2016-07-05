@@ -43,7 +43,7 @@
     ((_ ?expr => ?expected)
      (check
 	 (.syntax-object (type-of ?expr))
-       (=> syntax=?)
+       (=> expander::syntax=?)
        (syntax ?expected)))
     ))
 
@@ -53,7 +53,7 @@
      (check
 	 (with-result
 	   (.syntax-object (type-of ?expr)))
-       (=> syntax=?)
+       (=> expander::syntax=?)
        (syntax ?expected)))
     ))
 
