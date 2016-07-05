@@ -841,10 +841,10 @@
   (check
       (let ((R (make-<alpha> 1 2 3)))
 	(record-reset R)
-	(list (<alpha>-a R)
-	      (<alpha>-b R)
-	      (<alpha>-c R)))
-    => (list (void) (void) (void)))
+	(list (void-object? (<alpha>-a R))
+	      (void-object? (<alpha>-b R))
+	      (void-object? (<alpha>-c R))))
+    => '(#t #t #t))
 
   (check
       (try
@@ -900,20 +900,20 @@
 	(parametrise ((record-guardian-logger #t))
 	  (let ((S (make-<alpha> 1 2 3)))
 	    (check-pretty-print S)
-	    (collect)))
-      => (void))
+	    (void-object? (collect))))
+      => #t)
 
     (check
 	(let ((S (make-<alpha> 1 2 3)))
 	  (check-pretty-print S)
-	  (collect))
-      => (void))
+	  (void-object? (collect)))
+      => #t)
 
     (check
 	(let ((S (make-<alpha> 1 2 3)))
 	  (check-pretty-print S)
-	  (collect))
-      => (void))
+	  (void-object? (collect)))
+      => #t)
 
     (void))
 
@@ -932,8 +932,8 @@
 	  (fields one two))
 	(define O
 	  (make-duo 1 2))
-	(delete O))
-    => '#!void)
+	(void-object? (delete O)))
+    => #t)
 
   ;;No parent, this type with destructor.
   ;;
@@ -1494,8 +1494,9 @@
       (internal-body
 	(define-record-type alpha
 	  (fields a)
-	  (protocol (lambda (maker)
-		      (void))))
+	  (protocol
+	    (lambda (maker)
+	      (void))))
 	(make-alpha 1))
     => '(make-record-constructor-descriptor (#!void)))
 
