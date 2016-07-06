@@ -1125,7 +1125,7 @@
 	      (lambda ({O duo})
 		(fx+ (fixnum-hash (.one O))
 		     (fixnum-hash (.two O)))))))
-	(.hash (new duo 1 2)))
+	(hash (new duo 1 2)))
     => (fx+ (fixnum-hash 1)
 	    (fixnum-hash 2)))
 
@@ -1141,7 +1141,7 @@
 		(fx+ (fixnum-hash (.one O))
 		     (fixnum-hash (.two O)))))))
 	(let (({O <top>} (new duo 1 2)))
-	  (.hash O)))
+	  (hash O)))
     => (fx+ (fixnum-hash 1)
 	    (fixnum-hash 2)))
 
@@ -1161,7 +1161,7 @@
 	      (assert (not alpha-hash))
 	      (lambda ({O beta})
 		(fx+ (.a O) (.b O))))))
-	(.hash (new beta 1 2)))
+	(hash (new beta 1 2)))
     => 3)
 
   ;;Parent with hash function.  Early binding method call.
@@ -1181,7 +1181,7 @@
 	    (lambda ({alpha-hash (hash-function alpha)})
 	      (lambda ({O beta})
 		(fx+ (alpha-hash O) (.b O))))))
-	(.hash (new beta 1 2)))
+	(hash (new beta 1 2)))
     => 3)
 
   ;;Parent with hash function.  Early binding method call.  Call through methods.
@@ -1201,8 +1201,8 @@
 	    (lambda ({alpha-hash (hash-function alpha)})
 	      (lambda ({O beta})
 		(let (({A alpha} O))
-		  (fx+ (.hash A) (.b O)))))))
-	(.hash (new beta 1 2)))
+		  (fx+ (hash A) (.b O)))))))
+	(hash (new beta 1 2)))
     => 3)
 
   (void))

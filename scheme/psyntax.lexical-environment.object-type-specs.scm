@@ -2926,7 +2926,7 @@
 	       (destructor.stx		(bless `(internal-applicable-struct-type-destructor ,std)))
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id	#f)
-	       (hash-function.id	#f)
+	       (hash-function.id	(core-prim-id 'struct-hash))
 	       (implemented-interfaces	'()))
 	  ((make-object-type-spec name uids-list parent.ots struct-type-spec.type-annotation-maker
 				  constructor.id destructor.stx predicate.id
@@ -2989,12 +2989,24 @@
 					 (lambda ()
 					   (id->record-type-spec parent-name.id))))))
 	       (uids-list	(cons uid (object-type-spec.unique-identifiers parent.ots)))
-	       (constructor.stx	(or constructor.stx
-				    (bless `(record-constructor ,rcd-id))))
-	       (pred		(or predicate.stx make-record-type-predicate)))
+	       (constructor.stx	(syntax-match constructor.stx ()
+				  (#f
+				   (bless `(record-constructor ,rcd-id)))
+				  (_
+				   constructor.stx)))
+	       (pred		(syntax-match predicate.stx ()
+				  (#f
+				   make-record-type-predicate)
+				  (_
+				   predicate.stx)))
+	       (hash-func.id	(syntax-match hash-function.id ()
+				  (#f
+				   (core-prim-id 'record-hash))
+				  (_
+				   hash-function.id))))
 	  ((make-object-type-spec type-name uids-list parent.ots record-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx pred
-				  equality-predicate.id comparison-procedure.id hash-function.id
+				  equality-predicate.id comparison-procedure.id hash-func.id
 				  methods-table implemented-interfaces)
 	   rtd-id rcd-id super-protocol-id)))
       make-record-type-spec))

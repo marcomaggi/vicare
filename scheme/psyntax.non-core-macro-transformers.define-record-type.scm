@@ -248,11 +248,11 @@
     (%parse-method-clauses clause*.stx foo foo-for-id-generation synner))
 
   ;;False  or a  symbolic  expression (to  be BLESSed  later)  representing a  Scheme
-  ;;expression returning a closure object: the methods-retriever function.
-  (define methods-retriever-code.sexp
-    (%make-methods-retriever-code foo
-				  field-name*.sym field-method*
-				  methods-late-binding-alist))
+  ;;expression returning a closure object: the method-retriever function.
+  (define method-retriever-code.sexp
+    (%make-method-retriever-code foo parent-rtd.id
+				 field-name*.sym field-method*
+				 methods-late-binding-alist))
 
   ;;Null or  a proper  list of  syntactic identifiers representing  the names  of the
   ;;interfaces implemented by this record-type.
@@ -269,7 +269,7 @@
     (%make-rtd-definitions foo foo-rtd foo-uid generative? clause*.stx parent-rtd.id fields-vector-spec
 			   foo-destructor.id (%make-custom-printer-code clause*.stx foo synner)
 			   foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
-			   methods-retriever-code.sexp implemented-interfaces-table.sexp synner))
+			   method-retriever-code.sexp implemented-interfaces-table.sexp synner))
 
   ;;A  symbolic expression  representing  a  form which,  expanded  and evaluated  at
   ;;expand-time, returns the right-hand side of the record-type name's DEFINE-SYNTAX.
@@ -1512,29 +1512,48 @@
        (synner "invalid syntax in HASH-FUNCTION clause" clause)))))
 
 
-(define (%make-methods-retriever-code foo field-name*.sym field-method* methods-late-binding-alist)
+(define (%make-method-retriever-code foo parent-rtd.id
+				     field-name*.sym field-method* methods-late-binding-alist)
   ;;Return false  or a  symbolic expression  (to be  BLESSed later)  representing the
-  ;;Scheme definition of the methods-retriever function: a LAMBDA syntax use.
+  ;;Scheme definition of the method-retriever function: a LAMBDA syntax use.
   ;;
   ;;The methods retriever function is used when performing late binding of methods.
   ;;
-  (if (or (pair? methods-late-binding-alist)
-	  (pair? field-name*.sym))
-      (let ((method-name.sym (make-syntactic-identifier-for-temporary-variable "method-name")))
-	`(lambda/typed ({_ (or <false> <procedure>)} {,method-name.sym <symbol>})
-	   (case ,method-name.sym
-	     ;;First the methods...
-	     ,@(map (lambda (P)
-		      (let ((name	(car P))
-			    (procname	(cdr P)))
-			`((,name) ,procname)))
-		 methods-late-binding-alist)
-	     ;;... then the fields, so that the methods will be selected first.
-	     ,@(map (lambda (name procname)
-		      `((,name) ,procname))
-		 field-name*.sym field-method*)
-	     (else #f))))
-    #f))
+  ;;NOTE  The argument  FOO-HASH-FUNCTION.ID may  be false.   We make  it default  to
+  ;;RECORD-HASH.
+  ;;
+  (define method-name.id	(make-syntactic-identifier-for-temporary-variable "method-name"))
+  (define parent-retriever.id	(make-syntactic-identifier-for-temporary-variable "parent-retriever"))
+  (cond ((or (pair? methods-late-binding-alist)
+	     (pair? field-name*.sym))
+	 (let ((retriever-maker.sexp `(lambda/typed (,parent-retriever.id)
+					(lambda/typed ({_ (or <false> <procedure>)} {,method-name.id <symbol>})
+					  (case ,method-name.id
+					    ;;First the methods...
+					    ,@(map (lambda (P)
+						     (let ((name (car P))
+							   (proc (cdr P)))
+						       `((,name) ,proc)))
+						methods-late-binding-alist)
+					    ;;...  then  the   fields,  so  that  the
+					    ;;methods will be selected first.
+					    ,@(map (lambda (name procname)
+						     `((,name) ,procname))
+						field-name*.sym field-method*)
+					    (else
+					     (,parent-retriever.id ,method-name.id)))))))
+	   `(,retriever-maker.sexp ,(if parent-rtd.id
+					`($record-type-method-retriever ,parent-rtd.id)
+				      '(core-type-descriptor.method-retriever <record>-ctd)))))
+
+	(parent-rtd.id
+	 ;;This record-type has no methods, but it has a parent.
+	 `($record-type-method-retriever ,parent-rtd.id))
+
+	(else
+	 ;;This record-type  has no methods,  and no  parent.  The default  parent is
+	 ;;"<record>".
+	 '(core-type-descriptor.method-retriever <record>-ctd))))
 
 
 (define* (%make-type-name-syntactic-binding-form foo.id foo-uid make-foo.id foo?.id
@@ -1608,8 +1627,13 @@
 			    knil))
 		  '() field-name*.id operator*.id)))
 
+  (define hash-func.id
+    (or foo-hash-function.id
+	(core-prim-id 'record-hash)))
+
   (define foo-methods.table
-    (%make-alist-from-ids method-name*.sym method-procname*.id))
+    (%make-alist-from-ids (cons 'hash method-name*.sym)
+			  (cons hash-func.id method-procname*.id)))
 
   (define implemented-interfaces
     (if (null? implemented-interface*.id)
@@ -1631,7 +1655,8 @@
 			  (syntax ,foo?.id)
 			  (syntax ,foo-equality-predicate.id)
 			  (syntax ,foo-comparison-procedure.id)
-			  (syntax ,foo-hash-function.id)
+			  ,(and foo-hash-function.id
+				`(syntax ,foo-hash-function.id))
 			  ,foo-methods.table
 			  ,implemented-interfaces))
 

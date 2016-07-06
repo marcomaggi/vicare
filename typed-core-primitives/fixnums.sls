@@ -160,6 +160,7 @@
   (signatures
    ((<positive-fixnum>)			=> (<positive-fixnum>))
    ((<zero-fixnum>)			=> (<positive-fixnum>))
+   ((<non-negative-fixnum>)		=> (<positive-fixnum>))
    ((<fixnum>)				=> (<fixnum>))))
 
 (declare-core-primitive fxsub1
@@ -167,6 +168,7 @@
   (signatures
    ((<negative-fixnum>)			=> (<negative-fixnum>))
    ((<zero-fixnum>)			=> (<negative-fixnum>))
+   ((<non-positive-fixnum>)		=> (<negative-fixnum>))
    ((<fixnum>)				=> (<fixnum>))))
 
 (declare-fixnum-unary fxabs)

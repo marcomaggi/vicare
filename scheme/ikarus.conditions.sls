@@ -811,7 +811,7 @@
 				    #f
 				  #'(lambda (name)
 				      (case name
-					((?field) ?accessor)
+					((?field)	?accessor)
 					...
 					(else #f))))))
 	 ;;We use the records procedural layer  and the unsafe functions to make it
@@ -821,11 +821,11 @@
 	       ($make-record-type-descriptor-ex (quote ?name) (?parent-name rtd)
 						(quote UID) GENERATIVE? SEALED? OPAQUE?
 						'#((immutable ?field) ...) '#((#f . ?field) ...)
-						#f   ;destructor
-						#f   ;printer
-						#f   ;equality-predicate
-						#f   ;comparison-procedure
-						#f   ;hash-function
+						#f ;destructor
+						#f ;printer
+						#f ;equality-predicate
+						#f ;comparison-procedure
+						#f ;hash-function
 						METHOD-RETRIEVER
 						#f ;implemented-interfaces
 						))

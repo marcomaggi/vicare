@@ -104,6 +104,101 @@
   #t)
 
 
+(parametrise ((check-test-name	'hash-function))
+
+  ;;Fixnums
+  ;;
+  (begin
+    ;;Early binding.
+    ;;
+    (check
+	(hash 123)
+      => (fixnum-hash 123))
+
+    ;;Late binding.
+    ;;
+    (check
+	(let (({O <top>} 123))
+	  (hash O))
+      => (fixnum-hash 123))
+    #| end of BEGIN |# )
+
+  ;;Structs
+  ;;
+  (internal-body
+    (define-struct duo
+      (one two))
+
+    (define O
+      (make-duo 1 2))
+
+    ;;Early binding.
+    ;;
+    (check
+	(hash O)
+      => (struct-hash O))
+
+    ;;Late binding.
+    ;;
+    (check
+	(let (({O <top>} O))
+	  (hash O))
+      => (struct-hash O))
+    #| end of INTERNAL-BODY |# )
+
+  ;;Records without hash function.
+  ;;
+  (internal-body
+    (define-record-type duo
+      (fields one two))
+
+    (define O
+      (make-duo 1 2))
+
+    ;;Early binding.
+    ;;
+    (check
+	(hash O)
+      => (record-hash O))
+
+    ;;Late binding.
+    ;;
+    (check
+	(let (({O <top>} O))
+	  (hash O))
+      => (record-hash O))
+    #| end of INTERNAL-BODY |# )
+
+  ;;Records with hash function.
+  ;;
+  (internal-body
+    (define-record-type duo
+      (fields one two)
+      (hash-function
+	(lambda ()
+	  (lambda (obj)
+	    (fxadd1 (record-hash obj))))))
+
+    (define O
+      (make-duo 1 2))
+
+    ;;Early binding.
+    ;;
+    (check
+	(hash O)
+      => (+ 1 (record-hash O)))
+
+    ;;Late binding.
+    ;;
+    (check
+	(let (({O <top>} O))
+	  (hash O))
+      => (+ 1 (record-hash O)))
+    #| end of INTERNAL-BODY |# )
+
+  (void))
+
+
 ;;;; done
 
 (check-report)

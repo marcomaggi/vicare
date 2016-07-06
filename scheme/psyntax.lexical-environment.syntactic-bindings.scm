@@ -1091,7 +1091,7 @@
 	 (type-predicate.id		(core-prim-id (list-ref hard-coded-sexp 6)))
 	 (equality-predicate.id		#f)
 	 (comparison-procedure.id	#f)
-	 (hash-function.id		#f)
+	 (hash-function.id		(core-prim-id 'record-hash))
 	 (methods-table			(%alist-ref-or-null hard-coded-sexp 7))
 	 (implemented-interfaces	'())
 	 (ots				(make-record-type-spec type-name.id uid.sym

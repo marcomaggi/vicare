@@ -444,50 +444,44 @@
        (fx<=? obj +255)))
 
 
-;;;; built-in object-types descriptors: definitions
+;;;; built-in object-types descriptors: syntax utilities
 
 (define-syntax (define-scheme-type input-form.stx)
-  (case-define synner
-    ((message)
-     (syntax-violation (quote define-scheme-type) message input-form.stx #f))
-    ((message subform)
-     (syntax-violation (quote define-scheme-type) message input-form.stx subform)))
-
   (define (main stx)
     (syntax-case stx (methods)
-      ((?kwd ?type-name ?parent-name . ?clauses)
-       (let* ((clause*.stx	(syntax-clauses-unwrap #'?clauses synner))
-	      (clause*.stx	(syntax-clauses-collapse clause*.stx))
-	      (parsed-specs		(%parse-clauses clause*.stx))
-	      ;;
-	      (type-name.sym	(syntax->datum #'?type-name))
-	      (parent-name.sexp	(syntax->datum #'?parent-name))
-	      (type-uid.sym	(string->symbol (string-append "vicare:core-type:" (symbol->string type-name.sym))))
-	      (type-uids-list	(cons type-uid.sym (if parent-name.sexp
-						       (getprop parent-name.sexp 'type-uids-list)
-						     '()))))
-	 (define (%datum->syntax obj)
-	   (datum->syntax #'?type-name obj))
+      ((_ ?type-name ?parent-name . ?clauses)
+       (let* ((clause*.stx		(syntax-clauses-unwrap #'?clauses synner))
+	      (clause*.stx		(syntax-clauses-collapse clause*.stx))
+	      (parsed-specs		(%parse-clauses clause*.stx)))
 	 (define (%mk-ctd-name-id type.sym)
-	   (%datum->syntax (string->symbol (string-append (symbol->string type.sym) "-ctd"))))
-	 (putprop type-name.sym 'type-uids-list type-uids-list)
-	 ;;BTD stands for "Built-in Type Descriptor".
-	 (with-syntax
-	     ((CTD-NAME			(%mk-ctd-name-id type-name.sym))
-	      (PARENT-CTD-NAME		(and parent-name.sexp (%mk-ctd-name-id parent-name.sexp)))
-	      (TYPE-PREDICATE		(parsed-specs-type-predicate		parsed-specs))
-	      (EQUALITY-PREDICATE	(parsed-specs-equality-predicate	parsed-specs))
-	      (COMPARISON-PROCEDURE	(parsed-specs-comparison-procedure	parsed-specs))
-	      (HASH-FUNCTION		(parsed-specs-hash-function		parsed-specs))
-	      (TYPE-UIDS-LIST		#`(quote #,(%datum->syntax type-uids-list)))
-	      (RETRIEVER		(%make-methods-retriever-function parsed-specs)))
-	   #'(begin
-	       (define CTD-NAME
-		 (make-core-type-descriptor (quote ?type-name) PARENT-CTD-NAME
-					    TYPE-PREDICATE EQUALITY-PREDICATE COMPARISON-PROCEDURE HASH-FUNCTION
-					    TYPE-UIDS-LIST RETRIEVER))
-	       (export CTD-NAME)))))
+	   (datum->syntax #'?type-name (string->symbol (string-append (symbol->string type.sym) "-ctd"))))
+	 (let* ((type-name.sym		(syntax->datum #'?type-name))
+		(parent-name.sexp	(syntax->datum #'?parent-name))
+		(type-uid.sym		(string->symbol (string-append "vicare:core-type:" (symbol->string type-name.sym))))
+		(type-uids-list.sexp	(cons type-uid.sym (if parent-name.sexp
+							       (getprop parent-name.sexp 'type-uids-list)
+							     '())))
+		(parent-name.id		(and parent-name.sexp (%mk-ctd-name-id parent-name.sexp))))
+	   (putprop type-name.sym 'type-uids-list type-uids-list.sexp)
+	   ;;BTD stands for "Built-in Type Descriptor".
+	   (with-syntax
+	       ((CTD-NAME		(%mk-ctd-name-id type-name.sym))
+		(PARENT-CTD-NAME	parent-name.id)
+		(TYPE-PREDICATE		(parsed-specs-type-predicate		parsed-specs))
+		(EQUALITY-PREDICATE	(parsed-specs-equality-predicate	parsed-specs))
+		(COMPARISON-PROCEDURE	(parsed-specs-comparison-procedure	parsed-specs))
+		(HASH-FUNCTION		(parsed-specs-hash-function		parsed-specs))
+		(TYPE-UIDS-LIST		#`(quote #,(datum->syntax #'?type-name type-uids-list.sexp)))
+		(METHOD-RETRIEVER	(%make-method-retriever-function parsed-specs parent-name.id)))
+	     #'(begin
+		 (define CTD-NAME
+		   (make-core-type-descriptor (quote ?type-name) PARENT-CTD-NAME
+					      TYPE-PREDICATE EQUALITY-PREDICATE COMPARISON-PROCEDURE HASH-FUNCTION
+					      TYPE-UIDS-LIST METHOD-RETRIEVER))
+		 (export CTD-NAME))))))
       ))
+
+;;; --------------------------------------------------------------------
 
   (define-constant LIST-OF-CLAUSES
     (syntax-clauses-validate-specs
@@ -517,75 +511,106 @@
       (mutable hash-function)
 		;False or an identifier representing  the object hash function.  When
 		;#f: this object type has no hash function.
-      (mutable methods)
+      (mutable methods-table)
 		;A possibly empty proper list of method specifications.
       #| end of FIELDS |# )
     (protocol
       (lambda (make-record)
 	(lambda ()
-	  (make-record #f #f #f #f #f '()))))
+	  (make-record #f  ;constructor
+		       #f  ;type-predicate
+		       #f  ;equality-predicate
+		       #f  ;comparison-procedure
+		       #f  ;hash-function
+		       '() ;methods-table
+		       ))))
     #| end of DEFINE-RECORD-TYPE |# )
 
-  (define (%parse-clauses clause*.stx)
-    (syntax-clauses-fold-specs
-     (lambda* ({parsed-specs parsed-specs?} {clause-spec syntax-clause-spec?} args)
-       ;;ARGS is  a vector of  vectors holding the  values from the  clauses matching
-       ;;CLAUSE-SPEC.
-       (assert (fx=? 1 (vector-length args)))
-       (let ((arg (vector-ref args 0)))
-	 (case-identifiers (syntax-clause-spec-keyword clause-spec)
-	   ((constructor)
-	    (if (fxzero? (vector-length arg))
-		(parsed-specs-constructor-set! parsed-specs #f)
-	      (let ((id (vector-ref arg 0)))
-		(unless (or (identifier? id) (boolean? id))
-		  (synner "invalid constructor specification" id))
-		(parsed-specs-constructor-set! parsed-specs id))))
-	   ((type-predicate)
-	    (let ((id (vector-ref arg 0)))
-	      (unless (or (identifier? id) (boolean? id))
-		(synner "invalid predicate specification" id))
-	      (parsed-specs-type-predicate-set! parsed-specs id)))
-	   ((equality-predicate)
-	    (let ((id (vector-ref arg 0)))
-	      (unless (or (identifier? id) (not id))
-		(synner "invalid equality predicate specification" id))
-	      (parsed-specs-equality-predicate-set! parsed-specs id)))
-	   ((comparison-procedure)
-	    (let ((id (vector-ref arg 0)))
-	      (unless (or (identifier? id) (not id))
-		(synner "invalid comparison procedure specification" id))
-	      (parsed-specs-comparison-procedure-set! parsed-specs id)))
-	   ((hash-function)
-	    (let ((id (vector-ref arg 0)))
-	      (unless (or (identifier? id) (not id))
-		(synner "invalid hash function specification" id))
-	      (parsed-specs-hash-function-set! parsed-specs id)))
-	   ((methods)
-	    (syntax-case arg ()
-	      (#((?method-name ?method-implementation-procedure) ...)
-	       (parsed-specs-methods-set! parsed-specs #'((?method-name ?method-implementation-procedure) ...)))
-	      (_
-	       (synner "invalid syntax in METHODS clause" arg))))))
-       parsed-specs)
-     (make-parsed-specs) LIST-OF-CLAUSES clause*.stx))
+;;; --------------------------------------------------------------------
 
-  (define (%make-methods-retriever-function specs)
-    (syntax-case (parsed-specs-methods specs) ()
-      (() #f)
-      (((?method-name ?method-implementation-procedure) ...)
-       (with-syntax
-	   ((METHOD-NAME (datum->syntax #'?kwd 'method-name)))
-	 #'(lambda (METHOD-NAME)
-	     (case METHOD-NAME
-	       ((?method-name) ?method-implementation-procedure)
-	       ...
-	       (else #f)))))))
+  (define (%parse-clauses clause*.stx)
+    (syntax-clauses-fold-specs combine (make-parsed-specs) LIST-OF-CLAUSES clause*.stx))
+
+  (define* (combine {parsed-specs parsed-specs?} {clause-spec syntax-clause-spec?} args)
+    ;;ARGS  is a  vector of  vectors  holding the  values from  the clauses  matching
+    ;;CLAUSE-SPEC.
+    (assert (fx=? 1 (vector-length args)))
+    (let ((arg (vector-ref args 0)))
+      (case-identifiers (syntax-clause-spec-keyword clause-spec)
+	((constructor)
+	 (if (fxzero? (vector-length arg))
+	     (parsed-specs-constructor-set! parsed-specs #f)
+	   (let ((id (vector-ref arg 0)))
+	     (unless (or (identifier? id) (boolean? id))
+	       (synner "invalid constructor specification" id))
+	     (parsed-specs-constructor-set! parsed-specs id))))
+
+	((type-predicate)
+	 (let ((id (vector-ref arg 0)))
+	   (unless (or (identifier? id) (boolean? id))
+	     (synner "invalid type predicate specification" id))
+	   (parsed-specs-type-predicate-set! parsed-specs id)))
+
+	((equality-predicate)
+	 (let ((id (vector-ref arg 0)))
+	   (unless (or (identifier? id) (not id))
+	     (synner "invalid equality predicate specification" id))
+	   (parsed-specs-equality-predicate-set! parsed-specs id)))
+
+	((comparison-procedure)
+	 (let ((id (vector-ref arg 0)))
+	   (unless (or (identifier? id) (not id))
+	     (synner "invalid comparison procedure specification" id))
+	   (parsed-specs-comparison-procedure-set! parsed-specs id)))
+
+	((hash-function)
+	 (let ((id (vector-ref arg 0)))
+	   (unless (or (identifier? id) (not id))
+	     (synner "invalid hash function specification" id))
+	   (parsed-specs-hash-function-set! parsed-specs id)))
+
+	((methods)
+	 (syntax-case arg ()
+	   (#((?method-name ?method-implementation-procedure) ...)
+	    (parsed-specs-methods-table-set! parsed-specs #'(((?method-name) ?method-implementation-procedure) ...)))
+	   (_
+	    (synner "invalid syntax in METHODS clause" arg))))))
+    parsed-specs)
+
+;;; --------------------------------------------------------------------
+
+  (define (%make-method-retriever-function parsed-specs parent-name.id)
+    (with-syntax
+	(((HASH-METHOD-CLAUSE ...)	(cond ((parsed-specs-hash-function parsed-specs)
+					       => (lambda (hash-function.id)
+						    #`(((hash) #,hash-function.id))))
+					      (else '())))
+	 ((METHOD-CLAUSE ...)		(parsed-specs-methods-table parsed-specs)))
+
+      (if parent-name.id
+	  #`((lambda (parent-retriever)
+	       (lambda (method-name)
+		 (case method-name
+		   HASH-METHOD-CLAUSE ...
+		   METHOD-CLAUSE      ...
+		   (else
+		    (parent-retriever method-name)))))
+	     (core-type-descriptor.method-retriever #,parent-name.id))
+	#'(lambda (method-name)
+	    (case method-name HASH-METHOD-CLAUSE ... METHOD-CLAUSE ... (else #f))))))
+
+;;; --------------------------------------------------------------------
+
+  (case-define synner
+    ((message)
+     (synner message #f))
+    ((message subform)
+     (syntax-violation (quote define-scheme-type) message input-form.stx subform)))
 
   (main input-form.stx))
 
-;;; --------------------------------------------------------------------
-;;; built-in Scheme objects type descriptors
+
+;;;; built-in object-types descriptors: definitions
 
 (include "makefile.scheme-object-types.scm" #t)
 

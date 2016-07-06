@@ -28,6 +28,7 @@
 (library (ikarus.object-utilities)
   (export
     method-call-late-binding
+    hash-function-late-binding
     internal-delete
     ;; overloaded functions: late binding
     <overloaded-function-descriptor>-rtd
@@ -83,8 +84,8 @@
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
     ;;2015)
     (prefix (only (ikarus records procedural)
-		  record-type-method-retriever
-		  record-type-hash-function)
+		  $record-type-method-retriever
+		  $record-type-hash-function)
 	    system::)
     (prefix (only (psyntax system $all)
 		  internal-applicable-record-destructor
@@ -124,70 +125,22 @@
   (define (%error-scheme-type-has-no-matching-method)
     (%error "scheme type has no matching method"))
 
-  (define (%apply-hash-function hash-func)
-    (if (null? args)
-	(hash-func subject)
-      (procedure-argument-violation 'method-call-late-binding
-	"hash function requires a single operand" (cons subject args))))
-
   (define (%built-in-scheme-object-call btd)
-    (case method-name.sym
-      ((hash)
-       (let loop ((btd btd))
-	 (cond ((core-type-descriptor.hash-function btd)
-		=> %apply-hash-function)
-	       ((core-type-descriptor.parent btd)
-		=> loop)
-	       (else
-		(%apply-hash-function object-hash)))))
-      (else
-       (let loop ((btd btd))
-	 (cond ((core-type-descriptor.method-retriever btd)
-		=> (lambda (method-retriever)
-		     (cond ((method-retriever method-name.sym)
-			    => (lambda (proc)
-				 (apply proc subject args)))
-			   ((core-type-descriptor.parent btd)
-			    => loop)
-			   (else
-			    (%error-scheme-type-has-no-matching-method)))))
-	       ((core-type-descriptor.parent btd)
-		=> loop)
-	       (else
-		(%error-scheme-type-has-no-matching-method)))))))
+    (cond (((core-type-descriptor.method-retriever btd) method-name.sym)
+	   => (lambda (proc)
+		(apply proc subject args)))
+	  (else
+	   (%error-scheme-type-has-no-matching-method))))
 
   (define (%struct-object-call std)
-    (case method-name.sym
-      ((hash)
-       (%apply-hash-function struct-hash))
-      (else
-       (apply (structs::struct-field-method std method-name.sym) subject args))))
+    (apply (structs::struct-field-method std method-name.sym) subject args))
 
   (define (%record-object-call rtd)
-    (case method-name.sym
-      ((hash)
-       (let loop ((rtd rtd))
-	 (cond ((system::record-type-hash-function rtd)
-		=> %apply-hash-function)
-	       ((record-type-parent rtd)
-		=> loop)
-	       (else
-		(%apply-hash-function record-hash)))))
-      (else
-       (let loop ((rtd rtd))
-	 (cond ((system::record-type-method-retriever rtd)
-		=> (lambda (method-retriever)
-		     (cond ((method-retriever method-name.sym)
-			    => (lambda (proc)
-				 (apply proc subject args)))
-			   ((record-type-parent rtd)
-			    => loop)
-			   (else
-			    (%error-record-type-has-no-matching-method)))))
-	       ((record-type-parent rtd)
-		=> loop)
-	       (else
-		(%error-record-type-has-no-matching-method)))))))
+    (cond (((system::$record-type-method-retriever rtd) method-name.sym)
+	   => (lambda (proc)
+		(apply proc subject args)))
+	  (else
+	   (%error-record-type-has-no-matching-method))))
 
   (cond ((record-object? subject)
 	 ;;We use  $STRUCT-RTD because it does  not care about the  opaqueness of the
@@ -236,15 +189,93 @@
 
 	((struct? subject)	(%struct-object-call (structs::struct-std subject)))
 
-	((eq? subject (void))
+	((void-object? subject)
 	 (%built-in-scheme-object-call <void>-ctd))
-	((eq? subject (would-block-object))
+	((would-block-object? subject)
 	 (%built-in-scheme-object-call <would-block>-ctd))
-	((eq? subject (eof-object))
+	((eof-object? subject)
 	 (%built-in-scheme-object-call <eof>-ctd))
 
 	(else
 	 (%error-object-type-has-no-methods-table))))
+
+
+(define (hash-function-late-binding subject)
+  (define (%error)
+    (raise
+     (condition (make-method-late-binding-error)
+		(make-who-condition 'hash-function-late-binding)
+		(make-message-condition "object-type has no hash function")
+		(make-irritants-condition (list subject)))))
+
+  (define (%built-in-scheme-object-call btd)
+    (cond ((core-type-descriptor.hash-function btd)
+	   => (lambda (proc)
+		(proc subject)))
+	  (else
+	   (object-hash subject))))
+
+  (cond ((record-object? subject)
+	 ;;We use  $STRUCT-RTD because it does  not care about the  opaqueness of the
+	 ;;record object.
+	 (cond ((system::$record-type-hash-function ($struct-rtd subject))
+		=> (lambda (fun)
+		     (fun subject)))
+	       (else
+		(record-hash subject))))
+
+	((string?  subject)	(if (string-empty? subject)
+				    (%built-in-scheme-object-call <empty-string>-ctd)
+				  (%built-in-scheme-object-call <nestring>-ctd)))
+	((vector?  subject)	(if (vector-empty? subject)
+				    (%built-in-scheme-object-call <empty-vector>-ctd)
+				  (%built-in-scheme-object-call <nevector>-ctd)))
+	((list?    subject)	(if (pair? subject)
+				    (%built-in-scheme-object-call <nelist>-ctd)
+				  (%built-in-scheme-object-call <null>-ctd)))
+	((pair?    subject)	(%built-in-scheme-object-call <pair>-ctd))
+	((bytevector? subject)	(%built-in-scheme-object-call <bytevector>-ctd))
+
+	((fixnum?  subject)	(%built-in-scheme-object-call <fixnum>-ctd))
+	((flonum?  subject)	(%built-in-scheme-object-call <flonum>-ctd))
+	((ratnum?  subject)	(%built-in-scheme-object-call <ratnum>-ctd))
+	((bignum?  subject)	(%built-in-scheme-object-call <bignum>-ctd))
+	((compnum? subject)	(%built-in-scheme-object-call <compnum>-ctd))
+	((cflonum? subject)	(%built-in-scheme-object-call <cflonum>-ctd))
+
+	((port? subject)
+	 (cond ((textual-input/output-port? subject)	(%built-in-scheme-object-call <textual-input/output-port>-ctd))
+	       ((binary-input/output-port?  subject)	(%built-in-scheme-object-call <binary-input/output-port>-ctd))
+	       ((textual-output-port?       subject)	(%built-in-scheme-object-call <textual-output-port>-ctd))
+	       ((binary-output-port?        subject)	(%built-in-scheme-object-call <binary-output-port>-ctd))
+	       ((textual-input-port?        subject)	(%built-in-scheme-object-call <textual-input-port>-ctd))
+	       ((binary-input-port?         subject)	(%built-in-scheme-object-call <binary-input-port>-ctd))
+	       (else
+		(%error))))
+
+	((boolean? subject)	(%built-in-scheme-object-call <boolean>-ctd))
+	((char?    subject)	(%built-in-scheme-object-call <char>-ctd))
+	((symbol?  subject)
+	 (cond ((gensym? subject)
+		(%built-in-scheme-object-call <gensym>-ctd))
+	       (else
+		(%built-in-scheme-object-call <symbol>-ctd))))
+	((keyword? subject)	(%built-in-scheme-object-call <keyword>-ctd))
+	((pointer? subject)	(%built-in-scheme-object-call <pointer>-ctd))
+	((transcoder? subject)	(%built-in-scheme-object-call <transcoder>-ctd))
+
+	((struct? subject)
+	 (struct-hash subject))
+
+	((void-object? subject)
+	 (%built-in-scheme-object-call <void>-ctd))
+	((would-block-object? subject)
+	 (%built-in-scheme-object-call <would-block>-ctd))
+	((eof-object? subject)
+	 (%built-in-scheme-object-call <eof>-ctd))
+
+	(else
+	 (%error))))
 
 
 ;;;; delete fallback implementation

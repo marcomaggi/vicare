@@ -10157,6 +10157,11 @@ the following record--type has a parent defining a hash function:
 (.hash (new beta 1 2))) @result{} 3
 @end lisp
 
+The @code{.hash} method is always implemented and the syntax
+@syntax{hash-function} always returns a function because, when the
+record--type has no custom has function, the core primitive
+@func{record-hash} is used @ref{iklib hashtables hashfun, record-hash}.
+
 @c page
 @node iklib records defs methods
 @subsubsection Record--type methods
@@ -11034,6 +11039,10 @@ for the record @var{record}.
 A record--type's hash function is a function accepting as single
 argument an instance of the record--type; the return value is a
 non--negative fixnum representing the hash value of the record.
+
+When a record--type does not have a custom hash function: we can always
+use the core primitive @func{record-hash}, @ref{iklib hashtables
+hashfun, record-hash}.
 
 
 @defun record-type-hash-function-set! @var{rtd} @var{hash-func}

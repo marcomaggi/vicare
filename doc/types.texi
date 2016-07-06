@@ -3731,25 +3731,54 @@ The following syntactic bindings are exported by the library
 @library{vicare}.
 
 
-@deffn Syntax equality-predicate @meta{type}
+@defmac equality-predicate @meta{type}
 Return a function that can be used as equality predicate between
 instances of @meta{type}, which must be a type annotation.  If the type
 has no equality predicate: raise a syntax violation.
-@end deffn
+@end defmac
 
 
-@deffn Syntax comparison-procedure @meta{type}
+@defmac comparison-procedure @meta{type}
 Return a function that can be used as comparison procedure between
 instances of @meta{type}, which must be a type annotation.  If the type
 has no comparison procedure: raise a syntax violation.
-@end deffn
+@end defmac
 
 
-@deffn Syntax hash-function @meta{type}
+@defmac hash-function @meta{type}
 Return @false{} or a function that can be used as hash function for
 instances of @meta{type}, which must be a type annotation.  If the type
 has no hash function: raise a syntax violation.
-@end deffn
+@end defmac
+
+
+@defmac hash @meta{expr}
+When the expander succeeds in determining the type of @meta{expr} at
+expand--time: if there is a single return value, expand into an
+expression that computes and returns a hash value for the return value;
+otherwise raise a syntax violation.
+
+When the expander fails to determine the type of @meta{expr} at
+expand--time: expand into an expression that attempts, at run--time, to
+determine the type of the return value and compute and return a hash
+value for it.
+
+The hash function used by this syntax is:
+
+@itemize
+@item
+For core object--types: the one hard--coded in the object--type
+definition; for example: for fixnums it is @func{fixnum-hash}.
+
+@item
+For struct--types it is @func{struct-hash}.
+
+@item
+For record--types it is the one specified in the record--type definition
+with the @syntax{hash-function} clause; when no hash function is
+specified, @func{record-hash} is used.
+@end itemize
+@end defmac
 
 @c page
 @node types built-in

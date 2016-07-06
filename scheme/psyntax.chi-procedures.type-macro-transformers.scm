@@ -31,6 +31,7 @@
 	 hash-function-transformer
 	 equality-predicate-transformer
 	 comparison-procedure-transformer
+	 hash-transformer
 	 ;;
 	 type-of-transformer
 	 ;;
@@ -659,6 +660,100 @@
 		 expr.core
 		 arg*.core))
 	(make-type-signature/fully-unspecified))))
+
+  #| end of module |# )
+
+
+;;;; module core-macro-transformer: HASH
+
+(module (hash-transformer)
+
+  (define-module-who hash)
+
+  (define-core-transformer (hash input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function used  to expand Vicare's HASH syntaxes  from the top-level
+    ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
+    ;;of the given LEXENV; return a PSI struct.
+    ;;
+    (syntax-match input-form.stx ()
+      ((_ ?expr)
+       (let* ((expr.psi	(chi-expr ?expr lexenv.run lexenv.expand))
+	      (expr.sig	(psi.retvals-signature expr.psi)))
+	 (define-syntax-rule (%late-binding)
+	   (%expand-to-late-binding-method-call input-form.stx lexenv.run lexenv.expand
+						expr.psi))
+	 (define (%error message)
+	   (raise
+	    (condition (make-who-condition __module_who__)
+		       (make-message-condition message)
+		       (make-syntax-violation input-form.stx ?expr)
+		       (make-irritants-condition (list expr.sig)))))
+	 (case-type-signature-full-structure expr.sig
+	   ((<top>)
+	    (%late-binding))
+	   ((<untyped>)
+	    (%late-binding))
+
+	   ((single-value)
+	    => (lambda (expr.ots)
+		 (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
+						       ?expr expr.psi expr.ots)))
+
+	   (<bottom>
+	    (let ((common (condition
+			    (make-who-condition __module_who__)
+			    (make-message-condition "subject expression of hash syntax defined to never return")
+			    (make-syntax-violation input-form.stx ?expr)
+			    (make-irritants-condition (list expr.sig)))))
+	      (if (options::typed-language-enabled?)
+		  (raise (condition (make-expand-time-type-signature-violation) common))
+		(begin
+		  (raise-continuable (condition (make-expand-time-type-signature-warning) common))
+		  (%late-binding)))))
+
+	   (<list>
+	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
+	    ;;signature; we need to insert a run-time dispatch.
+	    (%late-binding))
+
+	   (else
+	    ;;We have determined at expand-time  that the expression returns multiple
+	    ;;values.
+	    (%error "subject expression of method call returns multiple values")))))
+
+      (_
+       (__synner__ "invalid syntax in macro use"))))
+
+;;; --------------------------------------------------------------------
+
+  (define* (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
+						 expr.stx expr.psi expr.ots)
+    (cond ((object-type-spec.applicable-hash-function expr.ots)
+	   => (lambda (hash-function.id)
+		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						   hash-function.id expr.psi '())))
+	  (else
+	   (raise
+	    (condition (make-who-condition __module_who__)
+		       (make-message-condition "undefined hash function for type of subject expression")
+		       (make-syntax-violation input-form.stx expr.stx)
+		       (make-application-operand-signature-condition (psi.retvals-signature expr.psi)))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%expand-to-late-binding-method-call input-form.stx lexenv.run lexenv.expand
+					       expr.psi)
+    ;;The  type of  the  values returned  by  the subject  expression  is unknown  at
+    ;;expand-time; so we  expand to an expression that searches  at run-time a method
+    ;;matching the  given name.  In other  words: we default to  "late binding" (also
+    ;;known as "run-time dispatching" at some level of abstract reasoning).
+    ;;
+    (let ((expr.core   (psi.core-expr expr.psi)))
+      (make-psi input-form.stx
+	(build-application input-form.stx
+	    (build-primref no-source 'hash-function-late-binding)
+	  (list expr.core))
+	(make-type-signature/single-value (core-prim-spec '<non-negative-fixnum>)))))
 
   #| end of module |# )
 
