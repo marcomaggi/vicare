@@ -964,7 +964,7 @@
 	;;unsafe record fields accessors
 	,@(map (lambda (unsafe-foo-x x field-type.ann)
 		 (let ((the-index	(%make-field-index-varname x))
-		       (record.sym	(make-syntactic-identifier-for-temporary-variable "?record")))
+		       (record.sym	(make-syntactic-identifier-for-temporary-variable "record")))
 		   `(define-syntax ,unsafe-foo-x
 		      (identifier-syntax
 		       (lambda/typed ((brace _ ,field-type.ann) (brace ,record.sym ,foo))
@@ -976,8 +976,8 @@
 	      (lambda (unsafe-field-mutator field-name.sym field-type.ann knil)
 		(if unsafe-field-mutator
 		    (cons (let ((the-index	(%make-field-index-varname field-name.sym))
-				(record.sym	(make-syntactic-identifier-for-temporary-variable "?record"))
-				(value.sym	(make-syntactic-identifier-for-temporary-variable "?new-value")))
+				(record.sym	(make-syntactic-identifier-for-temporary-variable "record"))
+				(value.sym	(make-syntactic-identifier-for-temporary-variable "new-value")))
 			    `(define-syntax ,unsafe-field-mutator
 			       (identifier-syntax
 				(lambda/typed ((brace _ <void>) (brace ,record.sym ,foo) (brace ,value.sym ,field-type.ann))
@@ -1658,8 +1658,9 @@
     ;;method names; as  values, the syntactic identifiers bound  to the object-type's
     ;;method implementation procedures.  Otherwise it raises an exception.
     ;;
-    (cond ((null? implemented-interface*.id)
-	   '())
+    #f
+    #;(cond ((null? implemented-interface*.id)
+	   '(quote ()))
 	  ((list-of-single-item? implemented-interface*.id)
 	   (let ((iface.id (car implemented-interface*.id)))
 	     `(quasisyntax (vector (unsyntax ,(%compose-interfaces-table-entry-code foo iface.id))))))

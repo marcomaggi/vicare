@@ -1055,7 +1055,7 @@
 		     #f     ;default-rcd
 		     destructor printer
 		     equality-predicate comparison-procedure hash-function
-		     method-retriever))
+		     method-retriever implemented-interfaces))
 	(%intern-nongenerative-rtd! uid rtd))))
 
   (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? fields normalised-fields
