@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for DEFINE-LABEL
+;;;Contents: tests for DEFINE-LABEL-TYPE
 ;;;Date: Mon Apr 25, 2016
 ;;;
 ;;;Abstract
@@ -32,7 +32,7 @@
     (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** test Vicare typed language: DEFINE-LABEL\n")
+(check-display "*** test Vicare typed language: DEFINE-LABEL-TYPE\n")
 
 
 ;;;; helpers
@@ -53,12 +53,12 @@
 
   ;;No predicate, so this is acts as synonym for "<fixnum>".
   ;;
-  (define-label <fx>
+  (define-label-type <fx>
     (parent <fixnum>))
 
   ;;No predicate, so this is acts as synonym for "<fixnum>".
   ;;
-  (define-label <pos-fx>
+  (define-label-type <pos-fx>
     (parent <fixnum>)
     (type-predicate
       (lambda ({parent? <type-predicate>})
@@ -167,7 +167,7 @@
 ;;; without type predicate
 
   (internal-body
-    (define-label <my-fixnum>
+    (define-label-type <my-fixnum>
       (parent <all-fixnums>))
 
     (check-for-true	(is-a? 123 <my-fixnum>))
@@ -179,7 +179,7 @@
 ;;; with type predicate
 
   (internal-body
-    (define-label <comparison-fixnum>
+    (define-label-type <comparison-fixnum>
       (parent <all-fixnums>)
       (type-predicate
 	(lambda ({parent? <type-predicate>})
@@ -240,7 +240,7 @@
 
   (check
       (internal-body
-	(define-label <my-fixnum>
+	(define-label-type <my-fixnum>
 	  (parent <all-fixnums>)
 	  (method (doit)
 	    999))
@@ -250,7 +250,7 @@
     => 123 999)
 
   (internal-body
-    (define-label <comparison-fixnum>
+    (define-label-type <comparison-fixnum>
       (parent <all-fixnums>)
       (type-predicate
 	(lambda ({parent? <type-predicate>})
@@ -280,7 +280,7 @@
   (check
       (internal-body
 
-	(define-label <my-string>
+	(define-label-type <my-string>
 	  (parent <string>)
 	  (case-method doit
 	    (({_ <my-string>} {suffix <string>})
@@ -296,7 +296,7 @@
   (check
       (internal-body
 
-	(define-label <my-string>
+	(define-label-type <my-string>
 	  (parent <string>)
 	  (case-method doit
 	    (({_ <my-string>} {suffix <string>})
@@ -318,7 +318,7 @@
 
   (check
       (internal-body
-	(define-label <peluche>
+	(define-label-type <peluche>
 	  (parent (list <symbol>))
 	  (method/overload (name)
 	    (car this))
@@ -338,7 +338,7 @@
 (parametrise ((check-test-name	'constructor))
 
   (internal-body
-    (define-label <twofx>
+    (define-label-type <twofx>
       (parent (vector <fixnum> <fixnum>))
       (constructor ({A <fixnum>} {B <fixnum>})
 	(vector A B))
@@ -379,7 +379,7 @@
   ;;Constructor with two clauses.
   ;;
   (internal-body
-    (define-label <some-fx>
+    (define-label-type <some-fx>
       (parent <nevector>)
       (constructor ({A <fixnum>} {B <fixnum>})
 	(vector A B))
@@ -408,7 +408,7 @@
 (parametrise ((check-test-name	'destructor))
 
   (internal-body
-    (define-label <twofx>
+    (define-label-type <twofx>
       (parent (vector <fixnum> <fixnum>))
       (constructor ({A <fixnum>} {B <fixnum>})
 	(vector A B))
@@ -444,11 +444,11 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (method (pussy)
 	    (list 'pussy (.name this))))
 
-	(define-label <peluche>
+	(define-label-type <peluche>
 	  (parent (list <symbol>))
 	  (method (name)
 	    (car this))
@@ -468,7 +468,7 @@
 
   (internal-body
 
-    (define-label <my-fixnum>
+    (define-label-type <my-fixnum>
       (parent <fixnum>))
 
     (check (type-annotation-matching <my-fixnum>	<my-fixnum>)		=> 'exact-match)
@@ -487,7 +487,7 @@
 
   (internal-body
 
-    (define-label <my-fixnum>
+    (define-label-type <my-fixnum>
       (parent <fixnum>)
       (equality-predicate
 	(lambda (parent-func)
@@ -503,7 +503,7 @@
 	(lambda ({parent-func (hash-function <fixnum>)})
 	  (lambda ({_ <non-negative-fixnum>} {obj <my-fixnum>})
 	    (fxadd1 (parent-func obj)))))
-      #| end of DEFINE-LABEL |# )
+      #| end of DEFINE-LABEL-TYPE |# )
 
     (check-for-true	((equality-predicate <my-fixnum>) 1 1))
     (check-for-false	((equality-predicate <my-fixnum>) 1 2))
@@ -526,7 +526,7 @@
   ;;
   (internal-body
 
-    (define-label <String>
+    (define-label-type <String>
       (parent <string>))
 
     (define {O <String>}
@@ -541,7 +541,7 @@
   ;;
   (internal-body
 
-    (define-label <String>
+    (define-label-type <String>
       (parent <string>)
       (hash-function
 	(lambda (parent-func)
@@ -561,7 +561,7 @@
   ;;
   (internal-body
 
-    (define-label <fx>
+    (define-label-type <fx>
       (parent <fixnum>)
       (method (incr)
 	(fxadd1 this)))
@@ -577,7 +577,7 @@
   ;;
   (internal-body
 
-    (define-label <String>
+    (define-label-type <String>
       (parent <string>)
       (case-method append
 	(({_ <String>} {suff <String>})
@@ -599,7 +599,7 @@
   ;;
   (internal-body
 
-    (define-label <comparison-fixnum>
+    (define-label-type <comparison-fixnum>
       (parent (or <non-negative-fixnum> <negative-fixnum>))
       (type-predicate
 	(lambda ({parent? <type-predicate>})
@@ -621,7 +621,7 @@
 ;;; constructor
 
   (internal-body
-    (define-label <vec>
+    (define-label-type <vec>
       (parent <nevector>)
       (constructor (a b)
 	(vector a b))
@@ -640,7 +640,7 @@
 
   (internal-body
 
-    (define-label <vec>
+    (define-label-type <vec>
       (parent <vector>)
       (destructor ({O <vec>})
 	`(deleted ,O)))

@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: implementation of DEFINE-LABEL
+;;;Contents: implementation of DEFINE-LABEL-TYPE
 ;;;Date: Mon Apr 25, 2016
 ;;;
 ;;;Abstract
@@ -28,7 +28,7 @@
 (library (vicare language-extensions labels (0 4 2016 6 1))
   (options typed-language)
   (export
-    define-label
+    define-label-type
     parent
     constructor
     destructor
@@ -47,7 +47,7 @@
       expand))
 
 
-(define-syntax define-label
+(define-syntax define-label-type
   (internal-body
     (import (only (psyntax system $all)
 		  make-label-type-spec)
@@ -55,7 +55,7 @@
 		    <syntactic-identifier>)
 	      expander::))
     (define-constant __module_who__
-      'define-label)
+      'define-label-type)
 
     (define-constant CLAUSE-SPEC*
       (syntax-clauses-validate-specs
@@ -202,7 +202,7 @@
 	   (%build-output (%parse-clauses (new <parsing-results> #'?type-name) #'?clauses synner))))
 
 	(_
-	 (synner "invalid DEFINE-LABEL syntax use"))))
+	 (synner "invalid DEFINE-LABEL-TYPE syntax use"))))
 
     (define ({%parse-clauses <parsing-results>} {results <parsing-results>} clauses.stx synner)
       (let* ((clause*.stx	(syntax-clauses-unwrap clauses.stx synner))
@@ -275,8 +275,8 @@
 
       (define (%splice-single-mixin {results <parsing-results>} mixin-name.id synner)
 	(let ((obj (retrieve-expand-time-value mixin-name.id)))
-	  (syntax-case obj (define-mixin)
-	    ((define-mixin ?mixin-name . ?clauses)
+	  (syntax-case obj (define-mixin-type)
+	    ((define-mixin-type ?mixin-name . ?clauses)
 	     (syntax-replace-id #'?clauses mixin-name.id (.type-name results)))
 	    (_
 	     (synner "identifier in MIXINS clause is not a mixin name" mixin-name.id)))))

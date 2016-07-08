@@ -394,7 +394,7 @@
 		   (let ((obj (retrieve-expand-time-value mixin-name.id)))
 		     (syntax-match obj ()
 		       ((?kwd ?mixin-name ?clause* ...)
-			(eq? 'define-mixin (syntax->datum ?kwd))
+			(eq? 'define-mixin-type (syntax->datum ?kwd))
 			(append (syntax-replace-id ?clause* mixin-name.id foo)
 				(mixin-recur (cdr mixin-name*.id))))
 		       (_

@@ -683,7 +683,7 @@
 
 (parametrise ((check-test-name	'labels))
 
-  (define-label <list-coords>
+  (define-label-type <list-coords>
     (nongenerative user:<list-coords>)
     (parent (list <flonum> <flonum> <flonum>))
     (method (x)
@@ -693,7 +693,7 @@
     (method (z)
       (list-ref this 2)))
 
-  (define-label <vector-coords>
+  (define-label-type <vector-coords>
     (nongenerative user:<vector-coords>)
     (parent (vector <flonum> <flonum> <flonum>))
     (method (x)

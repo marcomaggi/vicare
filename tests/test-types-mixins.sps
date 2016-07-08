@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for DEFINE-MIXINS
+;;;Contents: tests for DEFINE-MIXIN-TYPE
 ;;;Date: Wed Jun  1, 2016
 ;;;
 ;;;Abstract
@@ -32,7 +32,7 @@
     (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** test Vicare typed language: DEFINE-MIXINS\n")
+(check-display "*** test Vicare typed language: DEFINE-MIXIN-TYPES\n")
 
 
 ;;;; helpers
@@ -80,12 +80,12 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>)
+	(define-mixin-type <stuff>)
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>))
+    => '(define-mixin-type <stuff>))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff> (ciao))
+      (define-mixin-type <stuff> (ciao))
     => ((ciao)))
 
   #| end of PARAMETRISE |# )
@@ -95,20 +95,20 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (nongenerative))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff> (nongenerative)))
+    => '(define-mixin-type <stuff> (nongenerative)))
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (nongenerative stuff))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff> (nongenerative stuff)))
+    => '(define-mixin-type <stuff> (nongenerative stuff)))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(nongenerative 123))
     => (nongenerative 123))
 
@@ -119,13 +119,13 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (define-type-descriptors))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff> (define-type-descriptors)))
+    => '(define-mixin-type <stuff> (define-type-descriptors)))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(define-type-descriptors 123))
     => (define-type-descriptors 123))
 
@@ -136,13 +136,13 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (strip-angular-parentheses))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff> (strip-angular-parentheses)))
+    => '(define-mixin-type <stuff> (strip-angular-parentheses)))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(strip-angular-parentheses 123))
     => (strip-angular-parentheses 123))
 
@@ -153,20 +153,20 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (sealed #t))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff> (sealed #t)))
+    => '(define-mixin-type <stuff> (sealed #t)))
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (sealed #f))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff> (sealed #f)))
+    => '(define-mixin-type <stuff> (sealed #f)))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(sealed 123))
     => (sealed 123))
 
@@ -177,20 +177,20 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (opaque #t))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff> (opaque #t)))
+    => '(define-mixin-type <stuff> (opaque #t)))
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (opaque #f))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff> (opaque #f)))
+    => '(define-mixin-type <stuff> (opaque #f)))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(opaque 123))
     => (opaque 123))
 
@@ -201,20 +201,20 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (protocol
 	    (lambda (make-record)
 	      (lambda (a b)
 		(make-record a b)))))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (protocol
 	    (lambda (make-record)
 	      (lambda (a b)
 		(make-record a b))))))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(protocol 1 2 3))
     => (protocol 1 2 3))
 
@@ -225,20 +225,20 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (super-protocol
 	    (lambda (make-record)
 	      (lambda (a b)
 		(make-record a b)))))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (super-protocol
 	    (lambda (make-record)
 	      (lambda (a b)
 		(make-record a b))))))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(super-protocol 1 2 3))
     => (super-protocol 1 2 3))
 
@@ -249,19 +249,19 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (fields a b c))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (fields a b c)))
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (fields {a <fixnum>} b {c <string>})
 	  )
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (fields {a <fixnum>} b {c <string>})
 	  ))
 
@@ -269,24 +269,24 @@
   ;;
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (fields a b)
 	  (fields c))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (fields a b c)))
 
 ;;; --------------------------------------------------------------------
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (fields (mutable a)
 		  (immutable b)
 		  c)
 	  )
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (fields (mutable a)
 		  (immutable b)
 		  c)
@@ -294,13 +294,13 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (fields (mutable {a <fixnum>})
 		  (immutable {b <string>})
 		  c)
 	  )
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (fields (mutable {a <fixnum>})
 		  (immutable {b <string>})
 		  c)
@@ -310,13 +310,13 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (fields (mutable a <stuff>-a <stuff>-a-set!)
 		  (immutable b <stuff>-b)
 		  c)
 	  )
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (fields (mutable a <stuff>-a <stuff>-a-set!)
 		  (immutable b <stuff>-b)
 		  c)
@@ -324,13 +324,13 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (fields (mutable {a <fixnum>} <stuff>-a <stuff>-a-set!)
 		  (immutable {b <string>} <stuff>-b)
 		  c)
 	  )
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (fields (mutable {a <fixnum>} <stuff>-a <stuff>-a-set!)
 		  (immutable {b <string>} <stuff>-b)
 		  c)
@@ -339,52 +339,52 @@
 ;;; --------------------------------------------------------------------
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(fields 1))
     => 1)
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(fields a 1 c))
     => 1)
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(fields (ciao a)))
     => (ciao a))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(fields (mutable 1)))
     => (mutable 1))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(fields (immutable 1)))
     => (immutable 1))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(fields (mutable {1 <fixnum>})))
     => (mutable {1 <fixnum>}))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(fields (immutable {1 <fixnum>})))
     => (immutable {1 <fixnum>}))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(fields (immutable {a <fixnum>} 123)))
     => (immutable {a <fixnum>} 123))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(fields (mutable {a <fixnum>} 123 <stuff>-a-set!)))
     => (mutable {a <fixnum>} 123 <stuff>-a-set!))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(fields (mutable {a <fixnum>} <stuff>-a 123)))
     => (mutable {a <fixnum>} <stuff>-a 123))
 
@@ -395,18 +395,18 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (custom-printer
 	    (lambda (upper)
 	      (lambda args args))))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (custom-printer
 	    (lambda (upper)
 	      (lambda args args)))))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(custom-printer 1 2 3))
     => (custom-printer 1 2 3))
 
@@ -417,18 +417,18 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (type-predicate
 	    (lambda (upper)
 	      (lambda args args))))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (type-predicate
 	    (lambda (upper)
 	      (lambda args args)))))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(type-predicate 1 2 3))
     => (type-predicate 1 2 3))
 
@@ -439,18 +439,18 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (equality-predicate
 	    (lambda (upper)
 	      (lambda args args))))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (equality-predicate
 	    (lambda (upper)
 	      (lambda args args)))))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(equality-predicate 1 2 3))
     => (equality-predicate 1 2 3))
 
@@ -461,18 +461,18 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (comparison-procedure
 	    (lambda (upper)
 	      (lambda args args))))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (comparison-procedure
 	    (lambda (upper)
 	      (lambda args args)))))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(comparison-procedure 1 2 3))
     => (comparison-procedure 1 2 3))
 
@@ -483,18 +483,18 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (hash-function
 	    (lambda (upper)
 	      (lambda args args))))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (hash-function
 	    (lambda (upper)
 	      (lambda args args)))))
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(hash-function 1 2 3))
     => (hash-function 1 2 3))
 
@@ -505,23 +505,23 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (method (doit)
 	    (display this)))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (method (doit)
 	    (display this))))
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (method (doit)
 	    (display this))
 	  (method (done)
 	    (write this)))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (method (doit)
 	    (display this))
 	  (method (done)
@@ -534,23 +534,23 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (method/overload (doit)
 	    (display this)))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (method/overload (doit)
 	    (display this))))
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (method/overload (doit)
 	    (display this))
 	  (method/overload (done)
 	    (write this)))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (method/overload (doit)
 	    (display this))
 	  (method/overload (done)
@@ -563,26 +563,26 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (case-method doit
 	    (()
 	     (display this))))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (case-method doit
 	    (()
 	     (display this)))))
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (case-method doit
 	    (()
 	     (display this))
 	    (({P <port>})
 	     (display this P))))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (case-method doit
 	    (()
 	     (display this))
@@ -591,7 +591,7 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (case-method doit
 	    (()
 	     (display this)))
@@ -599,7 +599,7 @@
 	    (()
 	     (write this))))
 	(get-spec <stuff>))
-    => '(define-mixin <stuff>
+    => '(define-mixin-type <stuff>
 	  (case-method doit
 	    (()
 	     (display this)))
@@ -614,17 +614,17 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (implements <Thing>)
 	  (fields a b c)
 	  (method (doit)
 	    (display this)))
 
-	(define-mixin <fluff>
+	(define-mixin-type <fluff>
 	  (mixins <stuff>))
 
 	(get-spec <fluff>))
-    => '(define-mixin <fluff>
+    => '(define-mixin-type <fluff>
 	  (implements <Thing>)
 	  (fields a b c)
 	  (method (doit)
@@ -632,18 +632,18 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (implements <Thing>)
 	  (fields a b c)
 	  (method (doit)
 	    (display this)))
 
-	(define-mixin <fluff>
+	(define-mixin-type <fluff>
 	  (implements <Thong>)
 	  (mixins <stuff>))
 
 	(get-spec <fluff>))
-    => '(define-mixin <fluff>
+    => '(define-mixin-type <fluff>
 	  (implements <Thong> <Thing>)
 	  (fields a b c)
 	  (method (doit)
@@ -651,18 +651,18 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (implements <One> <Two>)
 	  (implements <Three> <Four>)
 	  (fields a b c)
 	  (method (doit)
 	    (display this)))
 
-	(define-mixin <fluff>
+	(define-mixin-type <fluff>
 	  (mixins <stuff>))
 
 	(get-spec <fluff>))
-    => '(define-mixin <fluff>
+    => '(define-mixin-type <fluff>
 	  (implements <One> <Two> <Three> <Four>)
 	  (fields a b c)
 	  (method (doit)
@@ -675,16 +675,16 @@
 
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (fields a b c)
 	  (method (doit)
 	    (display this)))
 
-	(define-mixin <fluff>
+	(define-mixin-type <fluff>
 	  (mixins <stuff>))
 
 	(get-spec <fluff>))
-    => '(define-mixin <fluff>
+    => '(define-mixin-type <fluff>
 	  (fields a b c)
 	  (method (doit)
 	    (display this))))
@@ -693,18 +693,18 @@
   ;;
   (check
       (internal-body
-	(define-mixin <stuff-1>
+	(define-mixin-type <stuff-1>
 	  (fields a b c))
 
-	(define-mixin <stuff-2>
+	(define-mixin-type <stuff-2>
 	  (method (doit)
 	    (display this)))
 
-	(define-mixin <fluff>
+	(define-mixin-type <fluff>
 	  (mixins <stuff-1> <stuff-2>))
 
 	(get-spec <fluff>))
-    => '(define-mixin <fluff>
+    => '(define-mixin-type <fluff>
 	  (fields a b c)
 	  (method (doit)
 	    (display this))))
@@ -713,55 +713,55 @@
   ;;
   (check
       (internal-body
-	(define-mixin <fields-1>
+	(define-mixin-type <fields-1>
 	  (fields a)
 	  (fields b))
 
-	(define-mixin <fields-2>
+	(define-mixin-type <fields-2>
 	  (mixins <fields-1>)
 	  (fields c)
 	  (fields d))
 
 	(get-spec <fields-2>))
-    => '(define-mixin <fields-2>
+    => '(define-mixin-type <fields-2>
 	  (fields a b c d)))
 
   ;;Multiple mixins with fields.
   ;;
   (check
       (internal-body
-	(define-mixin <fields-1>
+	(define-mixin-type <fields-1>
 	  (fields a b))
 
-	(define-mixin <fields-2>
+	(define-mixin-type <fields-2>
 	  (mixins <fields-1>)
 	  (fields c d))
 
-	(define-mixin <fields-3>
+	(define-mixin-type <fields-3>
 	  (mixins <fields-2>)
 	  (fields e f))
 
 	(get-spec <fields-3>))
-    => '(define-mixin <fields-3>
+    => '(define-mixin-type <fields-3>
 	  (fields a b c d e f)))
 
   ;;Two mixins imported with one MIXINS clause.
   ;;
   (check
       (internal-body
-	(define-mixin <stuff-1>
+	(define-mixin-type <stuff-1>
 	  (fields a b)
 	  (method (one) 1))
 
-	(define-mixin <stuff-2>
+	(define-mixin-type <stuff-2>
 	  (fields c d)
 	  (method (two) 2))
 
-	(define-mixin <fluff>
+	(define-mixin-type <fluff>
 	  (mixins <stuff-1> <stuff-2>))
 
 	(get-spec <fluff>))
-    => '(define-mixin <fluff>
+    => '(define-mixin-type <fluff>
 	  (fields a b c d)
 	  (method (one) 1)
 	  (method (two) 2)))
@@ -770,20 +770,20 @@
   ;;
   (check
       (internal-body
-	(define-mixin <stuff-1>
+	(define-mixin-type <stuff-1>
 	  (fields a b)
 	  (method (one) 1))
 
-	(define-mixin <stuff-2>
+	(define-mixin-type <stuff-2>
 	  (fields c d)
 	  (method (two) 2))
 
-	(define-mixin <fluff>
+	(define-mixin-type <fluff>
 	  (mixins <stuff-1>)
 	  (mixins <stuff-2>))
 
 	(get-spec <fluff>))
-    => '(define-mixin <fluff>
+    => '(define-mixin-type <fluff>
 	  (fields a b c d)
 	  (method (one) 1)
 	  (method (two) 2)))
@@ -792,17 +792,17 @@
   ;;
   (check
       (internal-body
-	(define-mixin <stuff-1>
+	(define-mixin-type <stuff-1>
 	  (fields a b)
 	  (method (one) 1))
 
-	(define-mixin <stuff-2>
+	(define-mixin-type <stuff-2>
 	  (mixins <stuff-1>)
 	  (fields c d)
 	  (method (two) 2))
 
 	(get-spec <stuff-2>))
-    => '(define-mixin <stuff-2>
+    => '(define-mixin-type <stuff-2>
 	  (fields a b c d)
 	  (method (one) 1)
 	  (method (two) 2)))
@@ -811,17 +811,17 @@
   ;;
   (check
       (internal-body
-	(define-mixin <stuff-1>
+	(define-mixin-type <stuff-1>
 	  (fields c d)
 	  (method (two) 2))
 
-	(define-mixin <stuff-2>
+	(define-mixin-type <stuff-2>
 	  (fields a b)
 	  (method (one) 1)
 	  (mixins <stuff-1>))
 
 	(get-spec <stuff-2>))
-    => '(define-mixin <stuff-2>
+    => '(define-mixin-type <stuff-2>
 	  (fields a b c d)
 	  (method (one) 1)
 	  (method (two) 2)))
@@ -830,20 +830,20 @@
   ;;
   (check
       (internal-body
-	(define-mixin <stuff-1>
+	(define-mixin-type <stuff-1>
 	  (fields a b)
 	  (method (one) 1))
 
-	(define-mixin <stuff-2>
+	(define-mixin-type <stuff-2>
 	  (mixins <stuff-1>)
 	  (fields c d)
 	  (method (two) 2))
 
-	(define-mixin <fluff>
+	(define-mixin-type <fluff>
 	  (mixins <stuff-2>))
 
 	(get-spec <fluff>))
-    => '(define-mixin <fluff>
+    => '(define-mixin-type <fluff>
 	  (fields a b c d)
 	  (method (one) 1)
 	  (method (two) 2)))
@@ -851,7 +851,7 @@
 ;;; --------------------------------------------------------------------
 
   (check-for-syntax-violation-subform
-      (define-mixin <stuff>
+      (define-mixin-type <stuff>
 	(mixins 123))
     => (mixins 123))
 
@@ -859,14 +859,14 @@
   ;;
   (check
       (internal-body
-	(define-mixin <a>
+	(define-mixin-type <a>
 	  (fields a))
 
-	(define-mixin <b>
+	(define-mixin-type <b>
 	  (mixins <a> <a>))
 
 	(get-spec <b>))
-    => '(define-mixin <b>
+    => '(define-mixin-type <b>
 	  (fields a a)))
 
   #| end of PARAMETRISE |# )
@@ -878,7 +878,7 @@
   ;;
   (check
       (internal-body
-	(define-mixin <stuff>
+	(define-mixin-type <stuff>
 	  (fields one two))
 
 	(define-record-type <duo>
@@ -895,13 +895,13 @@
   ;;
   (check
       (internal-body
-	(define-mixin <fields-1>
+	(define-mixin-type <fields-1>
 	  (fields a b))
 
-	(define-mixin <fields-2>
+	(define-mixin-type <fields-2>
 	  (fields c d))
 
-	(define-mixin <fields-3>
+	(define-mixin-type <fields-3>
 	  (fields e f))
 
 	(define-record-type <alpha>
@@ -919,14 +919,14 @@
   ;;
   (check
       (internal-body
-	(define-mixin <fields-1>
+	(define-mixin-type <fields-1>
 	  (fields a b))
 
-	(define-mixin <fields-2>
+	(define-mixin-type <fields-2>
 	  (mixins <fields-1>)
 	  (fields c d))
 
-	(define-mixin <fields-3>
+	(define-mixin-type <fields-3>
 	  (mixins <fields-2>)
 	  (fields e f))
 

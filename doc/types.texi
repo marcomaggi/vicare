@@ -5983,7 +5983,7 @@ with mixins.  The example above is equivalent to the following:
 (define-record-type <beta>
   (field b))
 
-(define-mixin <stuff>
+(define-mixin-type <stuff>
   (field v)
   (method (doit)
     (+ 1 (.v this))))
@@ -5998,7 +5998,7 @@ with mixins.  The example above is equivalent to the following:
 @end lisp
 
 @noindent
-the syntax use of @syntax{define-mixin} associates a set of clauses to
+the syntax use of @syntax{define-mixin-type} associates a set of clauses to
 the identifier @class{stuff}; when the @clause{mixins} clause is used in
 the body of a record--type definition:
 
@@ -6033,7 +6033,7 @@ expanded.
 @end deffn
 
 
-@deffn Syntax define-mixin @meta{mixin-name} @metao{clause} @meta{clause} ...
+@deffn Syntax define-mixin-type @meta{mixin-name} @metao{clause} @meta{clause} ...
 Associate a set of mixin clauses to the identifier @meta{mixin-name},
 which can be later referenced by a @clause{mixins} clause in the body of
 a class or label definition.
@@ -6043,7 +6043,7 @@ definition; the result is that the clauses of the selected mixins are
 added to the definition of the current mixin.
 
 The following clauses are accepted in the body of a
-@syntax{define-mixin}:
+@syntax{define-mixin-type}:
 
 @lisp
 define-type-descriptors strip-angular-parentheses
@@ -6310,7 +6310,7 @@ The following syntactic bindings are exported by the library
 @library{vicare language-extensions labels}.
 
 
-@deffn Syntax define-label @meta{type-name} @meta{clause} @dots{}
+@deffn Syntax define-label-type @meta{type-name} @meta{clause} @dots{}
 @deffnx {Auxiliary Syntax} nongenerative
 @deffnx {Auxiliary Syntax} parent
 @deffnx {Auxiliary Syntax} constructor
@@ -6386,7 +6386,7 @@ The following example defines a label @class{String} that is just a
 synonym for @class{string}:
 
 @lisp
-(define-label <String>
+(define-label-type <String>
   (parent <string>))
 
 (define @{O <String>@}
@@ -6400,7 +6400,7 @@ The following example defines a label to represent fixnums returned by
 comparison procedures (@samp{-1}, @samp{0}, @samp{+1}):
 
 @lisp
-(define-label <comparison-fixnum>
+(define-label-type <comparison-fixnum>
   (parent (or <non-negative-fixnum> <negative-fixnum>))
   (type-predicate
     (lambda (@{parent-pred <type-predicate>@})
@@ -6425,7 +6425,7 @@ Now let's define a custom hash function (we ignore the parent hash
 function that gets passed as @var{parent-hash} argument):
 
 @lisp
-(define-label <String>
+(define-label-type <String>
   (parent <string>)
   (hash-function
     (lambda (parent-hash)
@@ -6447,7 +6447,7 @@ function that gets passed as @var{parent-hash} argument):
 Let's define a label with a method to increment a fixnum.
 
 @lisp
-(define-label <fx>
+(define-label-type <fx>
   (parent <fixnum>)
   (method (incr)
     (fxadd1 this)))
@@ -6461,7 +6461,7 @@ Let's define a label with a method to increment a fixnum.
 Now let's define a method for appending prefixes and suffixes:
 
 @lisp
-(define-label <String>
+(define-label-type <String>
   (parent <string>)
   (case-method append
     ((@{_ <String>@} @{suff <String>@})
@@ -6486,7 +6486,7 @@ Now let's define a method for appending prefixes and suffixes:
 In the following example:
 
 @lisp
-(define-label <vec>
+(define-label-type <vec>
   (parent <nevector>)
   (constructor (a b)
     (vector a b))
@@ -6520,7 +6520,7 @@ inserted.
 Here we define a bogus destructor function:
 
 @lisp
-(define-label <vec>
+(define-label-type <vec>
   (parent <vector>)
   (destructor (@{O <vec>@})
     `(deleted ,O)))
@@ -6547,11 +6547,11 @@ following function definition:
 Here we show how to include mixin clauses in a label definition:
 
 @lisp
-(define-mixin <stuff>
+(define-mixin-type <stuff>
   (method (pussy)
     (list 'pussy (.name this))))
 
-(define-label <peluche>
+(define-label-type <peluche>
   (parent (list <symbol>))
   (method (name)
     (car this))

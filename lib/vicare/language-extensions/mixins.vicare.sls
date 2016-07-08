@@ -9,7 +9,7 @@
 ;;;	Mixins  are collections  of  clauses  to be  inserted  in  the definition  of
 ;;;	record-types.  They are meant to be used as follows:
 ;;;
-;;;	   (define-mixin <adder>
+;;;	   (define-mixin-type <adder>
 ;;;	     (method (add {self <adder>})
 ;;;	       (+ (.one self) (.two self))))
 ;;;
@@ -40,7 +40,7 @@
 (library (vicare language-extensions mixins (0 4 2016 6 1))
   (options typed-language)
   (export
-    define-mixin
+    define-mixin-type
     nongenerative fields sealed opaque protocol super-protocol
     method case-method method/overload
     define-type-descriptors
@@ -57,9 +57,9 @@
       expand))
 
 
-(define-syntax define-mixin
+(define-syntax define-mixin-type
   (internal-body
-    (define-constant __module_who__ 'define-mixin)
+    (define-constant __module_who__ 'define-mixin-type)
 
     (define-constant CLAUSE-SPEC*
       (syntax-clauses-validate-specs
@@ -93,7 +93,7 @@
 	((_ ?type-name . ?clauses)
 	 (%parse-clauses #'?type-name #'?clauses synner))
 	(_
-	 (synner "invalid DEFINE-MIXIN syntax use"))))
+	 (synner "invalid DEFINE-MIXIN-TYPE syntax use"))))
 
     (define (%parse-clauses type-name.id clauses.stx synner)
       (unless (identifier? type-name.id)
@@ -106,7 +106,7 @@
 						      '() ;REV-PARSED-CLAUSE*.STX, list of parsed clauses
 						      CLAUSE-SPEC* clause*.stx synner))))
 	#`(define-syntax #,type-name.id
-	    (make-expand-time-value (cons* (syntax define-mixin) (syntax #,type-name.id) (syntax #,clause*.stx))))))
+	    (make-expand-time-value (cons* (syntax define-mixin-type) (syntax #,type-name.id) (syntax #,clause*.stx))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -150,8 +150,8 @@
 
       (define (%splice-single-mixin type-name.id mixin-name.id synner)
 	(let ((obj (retrieve-expand-time-value mixin-name.id)))
-	  (syntax-case obj (define-mixin)
-	    ((define-mixin ?mixin-name . ?clauses)
+	  (syntax-case obj (define-mixin-type)
+	    ((define-mixin-type ?mixin-name . ?clauses)
 	     (syntax-replace-id #'?clauses mixin-name.id type-name.id))
 	    (_
 	     (synner "identifier in MIXINS clause is not a mixin name" mixin-name.id)))))
