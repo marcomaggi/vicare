@@ -6118,7 +6118,7 @@ Fine, but the code is not type--checked at expand--time.  Enter
 interfaces.  Let's modify the code as follows:
 
 @lisp
-(define-interface <Sequence>
+(define-interface-type <Sequence>
   (method-prototype first
     (lambda () => (<top>))))
 
@@ -6165,7 +6165,7 @@ Object--types in the same inheritance chain can implement the same
 interface.  Example:
 
 @lisp
-(define-interface <Arith>
+(define-interface-type <Arith>
   (method-prototype add
     (lambda () => (<number>))))
 
@@ -6193,7 +6193,7 @@ It is @strong{not} mandatory for interface types to require method
 prototypes.  Example:
 
 @lisp
-(define-interface <Stringer>
+(define-interface-type <Stringer>
   (method (to-string)
     (with-output-to-string
       (lambda ()
@@ -6227,7 +6227,7 @@ The following syntactic bindings are exported by the library
 the same ones exported by @library{vicare}.
 
 
-@deffn Syntax define-interface @meta{name} @meta{clause} @dots{}
+@deffn Syntax define-interface-type @meta{name} @meta{clause} @dots{}
 @deffnx {Auxiliary Syntax} method-prototype
 @deffnx {Auxiliary Syntax} method
 @deffnx {Auxiliary Syntax} case-method
@@ -6265,7 +6265,7 @@ Interface type descriptors}.  Example:
 (import (prefix (vicare system type-descriptors)
                 td::))
 
-(define-interface <Stuff>
+(define-interface-type <Stuff>
   (method-prototype red
     (lambda () => (<top>)))
   (method (blue)

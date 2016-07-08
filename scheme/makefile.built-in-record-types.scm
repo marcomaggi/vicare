@@ -152,6 +152,7 @@
    (constructor-stx			object-type-spec.constructor-stx)
    (destructor-stx			object-type-spec.destructor-stx)
    (type-predicate-stx			object-type-spec.type-predicate-stx)
+   (implemented-interfaces		object-type-spec.implemented-interfaces)
    (equality-predicate			object-type-spec.equality-predicate)
    (comparison-procedure		object-type-spec.comparison-procedure)
    (hash-function			object-type-spec.hash-function)
@@ -292,7 +293,8 @@
     <object-type-spec>
   make-interface-type-spec interface-type-spec?
   (methods
-   (method-prototypes-table	interface-type-spec.method-prototypes-table)))
+   (method-prototypes-table	interface-type-spec.method-prototypes-table)
+   (type-descriptor-id		interface-type-spec.type-descriptor-id)))
 
 ;;; --------------------------------------------------------------------
 
@@ -335,7 +337,8 @@
    (hash-function			core-type-descriptor.hash-function)
    (uid					core-type-descriptor.uid)
    (uids-list				core-type-descriptor.uids-list)
-   (method-retriever			core-type-descriptor.method-retriever)))
+   (method-retriever			core-type-descriptor.method-retriever)
+   (implemented-interfaces		core-type-descriptor.implemented-interfaces)))
 
 ;;; --------------------------------------------------------------------
 

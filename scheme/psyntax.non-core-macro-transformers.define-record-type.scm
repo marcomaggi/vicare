@@ -254,15 +254,15 @@
 				 field-name*.sym field-method*
 				 methods-late-binding-alist))
 
-  ;;Null or  a proper  list of  syntactic identifiers representing  the names  of the
+  ;;Null  or a  proper  list of  "<interface-type-spec>"  instances representing  the
   ;;interfaces implemented by this record-type.
-  (define implemented-interface*.id
-    (%get-implemented-interface-names clause*.stx synner))
+  (define implemented-interface*.ots
+    (%get-implemented-interface-specs clause*.stx synner))
 
   ;;Null or a proper  list of forms representing the code needed  to verify that this
   ;;record-type actually implements the specified interfaces.
   (define implemented-interfaces-table.sexp
-    (%make-implemented-interfaces-table-code foo implemented-interface*.id))
+    (%make-implemented-interfaces-table-code foo implemented-interface*.ots))
 
   ;;Null or a list of definitions to build at run-time the record-type descriptor.
   (define foo-rtd-definitions
@@ -280,7 +280,7 @@
 					    foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
 					    (append method-name*.sym	field-name*.sym)
 					    (append method-procname*.id	field-method*)
-					    implemented-interface*.id))
+					    implemented-interface*.ots))
 
   (bless
    `(module (,foo
@@ -503,15 +503,30 @@
       (_
        (synner "expected closure type signature argument in CONSTRUCTOR-SIGNATURE clause" clause)))))
 
-(define (%get-implemented-interface-names clause* synner)
+(define (%get-implemented-interface-specs clause* synner)
   (let loop ((clause*	clause*)
 	     (iface*	'()))
     (syntax-match clause* (implements)
       (()
-       (cond ((duplicate-identifiers? iface*)
-	      => (lambda (id)
-		   (synner "implemented interface declared multiple times" id)))
-	     (else iface*)))
+       (begin
+	 (cond ((duplicate-identifiers? iface*)
+		=> (lambda (id)
+		     (synner "implemented interface declared multiple times" id))))
+	 (map (lambda (iface.id)
+		(let ((iface.ots (with-exception-handler
+				     (lambda (E)
+				       (let* ((msg "error dereferencing implemented interface name")
+					      (msg (if (message-condition? E)
+						       (string-append msg ": " (condition-message E))
+						     msg)))
+					 (synner msg iface.id)))
+				   (lambda ()
+				     (type-annotation->object-type-spec iface.id)))))
+		  (if (interface-type-spec? iface.ots)
+		      iface.ots
+		    (synner "expected interface-type name as argument in IMPLEMENTS clause" iface.id))))
+	   iface*)))
+
       (((implements ?interface* ...) . ?clauses)
        (begin
 	 (for-all (lambda (obj)
@@ -519,6 +534,7 @@
 		      (synner "expected interface identifier as argument in IMPLEMENTS clause" obj)))
 	   ?interface*)
 	 (loop ?clauses (append ?interface* iface*))))
+
       ((_ . ?clauses)
        (loop ?clauses iface*)))))
 
@@ -1563,7 +1579,7 @@
 						 foo-comparison-procedure.id
 						 foo-hash-function.id
 						 method-name*.sym method-procname*.id
-						 implemented-interface*.id)
+						 implemented-interface*.ots)
   ;;Build and return symbolic expression (to  be BLESSed later) representing a Scheme
   ;;expression which, expanded and evaluated  at expand-time, returns the record-type
   ;;name's syntactic binding's descriptor.
@@ -1597,8 +1613,8 @@
   ;;METHOD-PROCNAME*.ID  must be  null or  list  of identifiers  bound to  procedures
   ;;implementing the methods.
   ;;
-  ;;IMPLEMENTED-INTERFACE*.ID  null  or  a   proper  list  of  syntactic  identifiers
-  ;;representing the interfaces that this record-type implements.
+  ;;IMPLEMENTED-INTERFACE*.OTS  null  or  a proper  list  of  "<interface-type-spec>"
+  ;;instances representing the interfaces that this record-type implements.
   ;;
   (define (%make-alist-from-ids field-name*.id operator*.id)
     ;;We want to return a  symbolic expression representing the following expand-time
@@ -1636,11 +1652,11 @@
 			  (cons hash-func.id method-procname*.id)))
 
   (define implemented-interfaces
-    (if (null? implemented-interface*.id)
+    (if (null? implemented-interface*.ots)
 	'(quote ())
-      `(list ,@(map (lambda (iface.id)
-		      `(syntax ,iface.id))
-		 implemented-interface*.id))))
+      `(list ,@(map (lambda (iface.ots)
+		      `(quote ,iface.ots))
+		 implemented-interface*.ots))))
 
   `(make-record-type-spec (syntax ,foo.id)
 			  (quote ,foo-uid)
@@ -1663,17 +1679,17 @@
 
 (module (%make-implemented-interfaces-table-code)
 
-  (define (%make-implemented-interfaces-table-code foo implemented-interface*.id)
+  (define (%make-implemented-interfaces-table-code foo implemented-interface*.ots)
     ;;Return false  or a symbolic  expression (to  be blessed later)  representing an
     ;;expression  which,   expanded  and  evaluated,  will   return  the  record-type
     ;;implemented interfaces table.
     ;;
-    ;;This expression  must return  a vector  have one  item for  each interface-type
+    ;;This expression  must return a vector  having one item for  each interface-type
     ;;implemented by this record-type, with format:
     ;;
-    ;;   #((?interface-name . ?method-retriever) ...)
+    ;;   #((?interface-uid . ?method-retriever) ...)
     ;;
-    ;;where: ?INTERFACE-NAME is  the UID of the  interface-type; ?METHOD-RETRIEVER is
+    ;;where: ?INTERFACE-UID  is the UID  of the interface-type;  ?METHOD-RETRIEVER is
     ;;the method retriever function for  the method implementation procedures defined
     ;;by this record-type.
     ;;
@@ -1685,7 +1701,7 @@
     ;;
     #f
     #;(cond ((null? implemented-interface*.id)
-	   '(quote ()))
+    '(quote ()))
 	  ((list-of-single-item? implemented-interface*.id)
 	   (let ((iface.id (car implemented-interface*.id)))
 	     `(quasisyntax (vector (unsyntax ,(%compose-interfaces-table-entry-code foo iface.id))))))

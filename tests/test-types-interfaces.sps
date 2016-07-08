@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for DEFINE-INTERFACE
+;;;Contents: tests for DEFINE-INTERFACE-TYPE
 ;;;Date: Sat Jun 25, 2016
 ;;;
 ;;;Abstract
@@ -32,7 +32,7 @@
     (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** test Vicare typed language: interfaces and define-interface\n")
+(check-display "*** test Vicare typed language: interfaces and define-interface-type\n")
 
 
 ;;;; helpers
@@ -66,15 +66,394 @@
   (when bool
     (fprintf (current-error-port) "~a\n" str)))
 
+
+(parametrise ((check-test-name	'interface-parent))
+
+  ;;Two levels.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <parentI>
+	  (method-prototype doit
+	    (lambda (<number>) => (<string>))))
+
+	(define-interface-type <childI>
+	  (parent <parentI>))
+
+	(values (type-annotation-super-and-sub? <parentI> <childI>)
+		(type-annotation-super-and-sub? <childI> <parentI>)
+		(type-annotation-matching <parentI> <childI>)
+		(type-annotation-matching <childI> <parentI>)))
+    => #t #f 'exact-match 'no-match)
+
+  ;;Three levels.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <granpaI>
+	  (method-prototype doit
+	    (lambda (<number>) => (<string>))))
+
+	(define-interface-type <dadI>
+	  (parent <granpaI>))
+
+	(define-interface-type <childI>
+	  (parent <dadI>))
+
+	(values (type-annotation-super-and-sub? <granpaI> <granpaI>)
+		(type-annotation-super-and-sub? <granpaI> <dadI>)
+		(type-annotation-super-and-sub? <granpaI> <childI>)
+		(type-annotation-super-and-sub? <dadI> <granpaI>)
+		(type-annotation-super-and-sub? <dadI> <dadI>)
+		(type-annotation-super-and-sub? <dadI> <childI>)
+		(type-annotation-super-and-sub? <childI> <granpaI>)
+		(type-annotation-super-and-sub? <childI> <dadI>)
+		(type-annotation-super-and-sub? <childI> <childI>)
+		(type-annotation-matching <granpaI> <granpaI>)
+		(type-annotation-matching <granpaI> <dadI>)
+		(type-annotation-matching <granpaI> <childI>)
+		(type-annotation-matching <dadI> <granpaI>)
+		(type-annotation-matching <dadI> <dadI>)
+		(type-annotation-matching <dadI> <childI>)
+		(type-annotation-matching <childI> <granpaI>)
+		(type-annotation-matching <childI> <dadI>)
+		(type-annotation-matching <childI> <childI>)))
+    => #t #t #t
+    #f #t #t
+    #f #f #t
+    'exact-match 'exact-match 'exact-match
+    'no-match 'exact-match 'exact-match
+    'no-match 'no-match 'exact-match)
+
+  (void))
 
 
-(parametrise ((check-test-name	'basic))
+(parametrise ((check-test-name	'interface-implements))
+
+  ;;An interface-type implements another interface-type.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <implementeD>
+	  (method-prototype doit
+	    (lambda (<string>) => (<number>))))
+
+	(define-interface-type <implementeR>
+	  (implements <implementeD>)
+	  (method-prototype doit
+	    (lambda (<string>) => (<number>))))
+
+	(values (type-annotation-super-and-sub? <implementeD> <implementeR>)
+		(type-annotation-super-and-sub? <implementeR> <implementeD>)
+		(type-annotation-matching <implementeD> <implementeR>)
+		(type-annotation-matching <implementeR> <implementeD>)))
+    => #t #f 'exact-match 'no-match)
+
+  ;;An  interface-type implements  another interface-type.   <B> implements  <I>, the
+  ;;parent of <B> has the method prototypes.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <I>
+	  (method-prototype doit
+	    (lambda (<string>) => (<number>))))
+
+	(define-interface-type <A>
+	  (method-prototype doit
+	    (lambda (<string>) => (<number>))))
+
+	(define-interface-type <B>
+	  (parent <A>)
+	  (implements <I>))
+
+	(values (type-annotation-super-and-sub? <I> <A>)
+		(type-annotation-super-and-sub? <I> <B>)
+		(type-annotation-super-and-sub? <A> <I>)
+		(type-annotation-super-and-sub? <B> <I>)
+		(type-annotation-matching <I> <A>)
+		(type-annotation-matching <I> <B>)
+		(type-annotation-matching <A> <I>)
+		(type-annotation-matching <B> <I>)))
+    => #f #t #f #f 'no-match 'exact-match 'no-match 'no-match)
+
+  ;;An interface-type  implements another interface-type.  <A>  implements <subI>, it
+  ;;has all the methods in <superI> and <subI>.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <superI>
+	  (method-prototype super-doit
+	    (lambda (<string>) => (<number>))))
+
+	(define-interface-type <subI>
+	  (parent <superI>)
+	  (method-prototype sub-doit
+	    (lambda (<string>) => (<fixnum>))))
+
+	(define-interface-type <A>
+	  (implements <subI>)
+	  (method-prototype super-doit
+	    (lambda (<string>) => (<number>)))
+	  (method-prototype sub-doit
+	    (lambda (<string>) => (<fixnum>)))
+	  #| end of DEFINE-INTERFACE-TYPE |# )
+
+	(values (type-annotation-super-and-sub? <superI> <A>)
+		(type-annotation-super-and-sub? <subI>   <A>)
+		(type-annotation-super-and-sub? <A> <superI>)
+		(type-annotation-super-and-sub? <A> <subI>)
+		(type-annotation-matching <superI> <A>)
+		(type-annotation-matching <subI>   <A>)
+		(type-annotation-matching <A> <superI>)
+		(type-annotation-matching <A> <subI>)))
+    => #t #t #f #f 'exact-match 'exact-match 'no-match 'no-match)
+
+  ;;An interface-type implements another interface-type.  <B> implements <subI>.  <B>
+  ;;and its parent <A> have has all the methods in <superI> and <subI>.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <superI>
+	  (method-prototype super-doit
+	    (lambda (<string>) => (<number>))))
+
+	(define-interface-type <subI>
+	  (parent <superI>)
+	  (method-prototype sub-doit
+	    (lambda (<string>) => (<fixnum>))))
+
+	(define-interface-type <A>
+	  (method-prototype super-doit
+	    (lambda (<string>) => (<number>)))
+	  #| end of DEFINE-INTERFACE-TYPE |# )
+
+	(define-interface-type <B>
+	  (parent <A>)
+	  (implements <subI>)
+	  (method-prototype sub-doit
+	    (lambda (<string>) => (<fixnum>)))
+	  #| end of DEFINE-INTERFACE-TYPE |# )
+
+	(values (type-annotation-super-and-sub? <superI> <A>)
+		(type-annotation-super-and-sub? <superI> <B>)
+		(type-annotation-super-and-sub? <subI>   <A>)
+		(type-annotation-super-and-sub? <subI>   <B>)
+		(type-annotation-super-and-sub? <A> <superI>)
+		(type-annotation-super-and-sub? <A> <subI>)
+		(type-annotation-super-and-sub? <B> <superI>)
+		(type-annotation-super-and-sub? <B> <subI>)
+		(type-annotation-matching <superI> <A>)
+		(type-annotation-matching <superI> <B>)
+		(type-annotation-matching <subI>   <A>)
+		(type-annotation-matching <subI>   <B>)
+		(type-annotation-matching <A> <superI>)
+		(type-annotation-matching <A> <subI>)
+		(type-annotation-matching <B> <superI>)
+		(type-annotation-matching <B> <subI>)))
+    => #f #t #f #t #f #f #f #f
+    'no-match 'exact-match 'no-match 'exact-match
+    'no-match 'no-match 'no-match 'no-match)
+
+  ;;An interface-type implements  another interface-type and the  interfaces that the
+  ;;latter implements.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <A>
+	  (method-prototype red		(lambda () => (<fixnum>)))
+	  #| end of interface |# )
+
+	(define-interface-type <B>
+	  (implements <A>)
+	  (method-prototype red		(lambda () => (<fixnum>)))
+	  (method-prototype blue	(lambda () => (<symbol>)))
+	  #| end of interface |# )
+
+	(define-interface-type <C>
+	  (implements <B>)
+	  (method-prototype red		(lambda () => (<fixnum>)))
+	  (method-prototype blue	(lambda () => (<symbol>)))
+	  #| end of interface |# )
+
+	(values (type-annotation-super-and-sub? <A> <B>)
+		(type-annotation-super-and-sub? <A> <C>)
+		(type-annotation-super-and-sub? <B> <A>)
+		(type-annotation-super-and-sub? <B> <C>)
+		(type-annotation-super-and-sub? <C> <A>)
+		(type-annotation-super-and-sub? <C> <B>)
+		))
+    => #t #t #f #t #f #f)
+
+  (void))
+
+
+(parametrise ((check-test-name	'record-implements))
+
+  ;;A record-type implements an interface-type.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <implementeD>
+	  (method-prototype doit
+	    (lambda (<string>) => (<number>))))
+
+	(define-record-type <implementeR>
+	  (implements <implementeD>)
+	  (method ({doit <number>} {S <string>})
+	    1))
+
+	(values (type-annotation-super-and-sub? <implementeD> <implementeR>)
+		(type-annotation-super-and-sub? <implementeR> <implementeD>)
+		(type-annotation-matching <implementeD> <implementeR>)
+		(type-annotation-matching <implementeR> <implementeD>)))
+    => #t #f 'exact-match 'no-match)
+
+  ;;A record-type  implements an interface-type.   <B> implements <I>, the  parent of
+  ;;<B> has the methods.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <I>
+	  (method-prototype doit
+	    (lambda (<string>) => (<number>))))
+
+	(define-record-type <A>
+	  (method ({doit <number>} {S <string>})
+	    1))
+
+	(define-record-type <B>
+	  (parent <A>)
+	  (implements <I>))
+
+	(values (type-annotation-super-and-sub? <I> <A>)
+		(type-annotation-super-and-sub? <I> <B>)
+		(type-annotation-super-and-sub? <A> <I>)
+		(type-annotation-super-and-sub? <B> <I>)
+		(type-annotation-matching <I> <A>)
+		(type-annotation-matching <I> <B>)
+		(type-annotation-matching <A> <I>)
+		(type-annotation-matching <B> <I>)))
+    => #f #t #f #f 'no-match 'exact-match 'no-match 'no-match)
+
+  ;;A record-type  implements an interface-type.   <A> implements <subI>, it  has all
+  ;;the methods in <superI> and <subI>.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <superI>
+	  (method-prototype super-doit
+	    (lambda (<string>) => (<number>))))
+
+	(define-interface-type <subI>
+	  (parent <superI>)
+	  (method-prototype sub-doit
+	    (lambda (<string>) => (<fixnum>))))
+
+	(define-record-type <A>
+	  (implements <subI>)
+	  (method ({super-doit <number>} {S <string>})
+	    1)
+	  (method ({sub-doit <fixnum>} {S <string>})
+	    1)
+	  #| end of DEFINE-INTERFACE-TYPE |# )
+
+	(values (type-annotation-super-and-sub? <superI> <A>)
+		(type-annotation-super-and-sub? <subI>   <A>)
+		(type-annotation-super-and-sub? <A> <superI>)
+		(type-annotation-super-and-sub? <A> <subI>)
+		(type-annotation-matching <superI> <A>)
+		(type-annotation-matching <subI>   <A>)
+		(type-annotation-matching <A> <superI>)
+		(type-annotation-matching <A> <subI>)))
+    => #t #t #f #f
+    'exact-match 'exact-match 'no-match 'no-match)
+
+  ;;A record-type implements an interface-type.   <B> implements <subI>.  <B> and its
+  ;;parent <A> have has all the methods in <superI> and <subI>.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <superI>
+	  (method-prototype super-doit
+	    (lambda (<string>) => (<number>))))
+
+	(define-interface-type <subI>
+	  (parent <superI>)
+	  (method-prototype sub-doit
+	    (lambda (<string>) => (<fixnum>))))
+
+	(define-record-type <A>
+	  (method ({super-doit <number>} {S <string>})
+	    1)
+	  #| end of DEFINE-INTERFACE-TYPE |# )
+
+	(define-record-type <B>
+	  (parent <A>)
+	  (implements <subI>)
+	  (method ({sub-doit <fixnum>} {S <string>})
+	    1)
+	  #| end of DEFINE-INTERFACE-TYPE |# )
+
+	(values (type-annotation-super-and-sub? <superI> <A>)
+		(type-annotation-super-and-sub? <superI> <B>)
+		(type-annotation-super-and-sub? <subI>   <A>)
+		(type-annotation-super-and-sub? <subI>   <B>)
+		(type-annotation-super-and-sub? <A> <superI>)
+		(type-annotation-super-and-sub? <A> <subI>)
+		(type-annotation-super-and-sub? <B> <superI>)
+		(type-annotation-super-and-sub? <B> <subI>)
+		(type-annotation-matching <superI> <A>)
+		(type-annotation-matching <superI> <B>)
+		(type-annotation-matching <subI>   <A>)
+		(type-annotation-matching <subI>   <B>)
+		(type-annotation-matching <A> <superI>)
+		(type-annotation-matching <A> <subI>)
+		(type-annotation-matching <B> <superI>)
+		(type-annotation-matching <B> <subI>)))
+    => #f #t  #f #t  #f #f  #f #f
+    'no-match 'exact-match 'no-match 'exact-match
+    'no-match 'no-match 'no-match 'no-match)
+
+  ;;A record-type  implements an  interface-type and the  interfaces that  the latter
+  ;;implements.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <A>
+	  (method-prototype red		(lambda () => (<fixnum>)))
+	  #| end of interface |# )
+
+	(define-interface-type <B>
+	  (implements <A>)
+	  (method-prototype red		(lambda () => (<fixnum>)))
+	  (method-prototype blue	(lambda () => (<symbol>)))
+	  #| end of interface |# )
+
+	(define-record-type <C>
+	  (implements <B>)
+	  (method ({red  <fixnum>}) 1)
+	  (method ({blue <symbol>}) 'ciao)
+	  #| end of interface |# )
+
+	(values (type-annotation-super-and-sub? <A> <B>)
+		(type-annotation-super-and-sub? <A> <C>)
+		(type-annotation-super-and-sub? <B> <A>)
+		(type-annotation-super-and-sub? <B> <C>)
+		(type-annotation-super-and-sub? <C> <A>)
+		(type-annotation-super-and-sub? <C> <B>)
+		))
+    => #t #t #f #t #f #f)
+
+  (void))
+
+
+#;(parametrise ((check-test-name	'record-type-basic))
 
   ;;Basic example.
   ;;
   (check
       (internal-body
-	(define-interface <Arith>
+	(define-interface-type <Arith>
 	  (method-prototype add
 	    (lambda () => (<number>))))
 
@@ -90,44 +469,17 @@
 	(fun (new <duo>  1 2)))
     => 3)
 
-  ;;Interface with no method prototypes.
-  ;;
-  (check
-      (internal-body
-	(define-interface <Stringer>
-	  (method (to-string)
-	    (with-output-to-string
-	      (lambda ()
-		(display this)))))
-
-	(define-record-type <duo>
-	  (implements <Stringer>)
-	  (fields one two)
-	  (custom-printer
-	    (lambda ({this <duo>} port sub-printer)
-	      (display "#[duo "    port)
-	      (display (.one this) port)
-	      (display #\space     port)
-	      (display (.two this) port)
-	      (display #\]         port))))
-
-	(define (fun {O <Stringer>})
-	  (.to-string O))
-
-	(fun (new <duo>  1 2)))
-    => "#[duo 1 2]")
-
   (void))
 
 
-(parametrise ((check-test-name	'errors))
+#;(parametrise ((check-test-name	'record-type-errors))
 
   ;;Attempt to instantiate interface.
   ;;
   (check
       (try
 	  (%eval '(internal-body
-		    (define-interface <Arith>
+		    (define-interface-type <Arith>
 		      (method-prototype add
 			(lambda () => (<number>))))
 
@@ -139,11 +491,11 @@
 	  (else E)))
     => '<Arith>)
 
-  ;;Run-time type validation failure cause by APPLY.
+  ;;Run-time type validation failure caused by APPLY.
   ;;
   (check
       (internal-body
-	(define-interface <Arith>
+	(define-interface-type <Arith>
 	  (method-prototype add
 	    (lambda () => (<number>))))
 
@@ -186,7 +538,7 @@
   (check
       (try
 	  (%eval '(internal-body
-		    (define-interface <Arith>
+		    (define-interface-type <Arith>
 		      (method-prototype add
 			(lambda () => (<number>))))
 
@@ -223,13 +575,45 @@
   (void))
 
 
-(parametrise ((check-test-name	'multiple-implementations))
+#;(parametrise ((check-test-name	'default-methods))
+
+  ;;Interface with no method prototypes.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <Stringer>
+	  (method (to-string)
+	    (with-output-to-string
+	      (lambda ()
+		(display this)))))
+
+	(define-record-type <duo>
+	  (implements <Stringer>)
+	  (fields one two)
+	  (custom-printer
+	    (lambda ({this <duo>} port sub-printer)
+	      (display "#[duo "    port)
+	      (display (.one this) port)
+	      (display #\space     port)
+	      (display (.two this) port)
+	      (display #\]         port))))
+
+	(define (fun {O <Stringer>})
+	  (.to-string O))
+
+	(fun (new <duo>  1 2)))
+    => "#[duo 1 2]")
+
+  (void))
+
+
+#;(parametrise ((check-test-name	'multiple-implementations))
 
   ;;Two record-types in a hierarchy both implement the same interface.
   ;;
   (check
       (internal-body
-	(define-interface <Arith>
+	(define-interface-type <Arith>
 	  (method-prototype add
 	    (lambda () => (<number>))))
 
@@ -256,49 +640,13 @@
   (void))
 
 
-(parametrise ((check-test-name	'interface-implements))
-
-  ;;An interface-type implements another interface type with its own methods.
-  ;;
-  (check
-      (internal-body
-	(define-interface <Red>
-	  (method-prototype red
-	    (lambda () => (<number>))))
-
-	(define-interface <Colors>
-	  (implements <Red>)
-	  (method-prototype value
-	    (lambda () => (<number>)))
-	  (method ({red <number>})
-	    (.value this)))
-
-	(define-record-type <value>
-	  (implements <Colors>)
-	  (fields {value <number>}))
-
-	(define (fun {O <Colors>})
-	  (pleasure O))
-
-	(define (pleasure {O <Red>})
-	  (.red O))
-
-	(define O
-	  (new <value> 123))
-
-	(fun O))
-    => 123)
-
-  (void))
-
-
-(parametrise ((check-test-name	'nongenerative))
+#;(parametrise ((check-test-name	'nongenerative))
 
   ;;NONGENERATIVE clause with explicit UID.
   ;;
   (check
       (internal-body
-	(define-interface <Arith>
+	(define-interface-type <Arith>
 	  (nongenerative test-1:<Arith>)
 	  (method-prototype add
 	    (lambda () => (<number>))))
@@ -319,7 +667,7 @@
   ;;
   (check
       (internal-body
-	(define-interface <Arith>
+	(define-interface-type <Arith>
 	  (nongenerative)
 	  (method-prototype add
 	    (lambda () => (<number>))))
@@ -340,14 +688,14 @@
   (void))
 
 
-(parametrise ((check-test-name	'type-descriptor))
+#;(parametrise ((check-test-name	'type-descriptor))
 
   (import (prefix (vicare system type-descriptors)
 		  td::))
 
   (check
       (internal-body
-	(define-interface <Stuff>
+	(define-interface-type <Stuff>
 	  (method-prototype red
 	    (lambda () => (<top>)))
 	  (method (blue)
@@ -362,7 +710,7 @@
 
   (check
       (internal-body
-	(define-interface <Stuff>
+	(define-interface-type <Stuff>
 	  (method-prototype red
 	    (lambda () => (<top>)))
 	  (method (blue)
@@ -377,9 +725,9 @@
   (void))
 
 
-(parametrise ((check-test-name	'misc))
+#;(parametrise ((check-test-name	'misc))
 
-  (define-interface <Sequence>
+  (define-interface-type <Sequence>
     (method-prototype length	(lambda () => (<non-negative-exact-integer>)))
     (method-prototype first	(lambda () => (<char>)))
     (method-prototype ref	(lambda (<non-negative-exact-integer>) => (<char>)))
@@ -430,14 +778,14 @@
   (void))
 
 
-(parametrise ((check-test-name	'instantiable-bodies))
+#;(parametrise ((check-test-name	'instantiable-bodies))
 
   ;;Generic interfaces through instantiable bodies.
   ;;
   (check
       (internal-body
 	(define-instantiable-body define-iface-arith
-	  (define-interface <Iface>
+	  (define-interface-type <Iface>
 	    (method-prototype add
 	      (lambda () => (<type-name>)))))
 
@@ -478,7 +826,7 @@
   (check
       (internal-body
 	(define-instantiable-body define-iface-arith
-	  (define-interface <Iface>
+	  (define-interface-type <Iface>
 	    (method-prototype add
 	      (lambda () => (<type-name>)))))
 
@@ -515,7 +863,7 @@
   (void))
 
 
-(parametrise ((check-test-name	'doc))
+#;(parametrise ((check-test-name	'doc))
 
   ;;No-interfaces example
   ;;
@@ -563,7 +911,7 @@
   ;;
   (internal-body
 
-    (define-interface <Sequence>
+    (define-interface-type <Sequence>
       (method-prototype first
 	(lambda () => (<top>))))
 

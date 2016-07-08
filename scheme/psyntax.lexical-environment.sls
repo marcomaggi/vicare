@@ -233,6 +233,7 @@
     <interface-type-spec>
     make-interface-type-spec				interface-type-spec?
     interface-type-spec.method-prototypes-table
+    assert-implemented-interface-type-and-implementer-interface-type
     build-table-for-interface-and-compliant-object-type
 ;;;
     ;; typed variable specification: base type

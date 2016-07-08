@@ -85,6 +85,11 @@
   (signatures
    ((<core-type-descriptor>)		=> (<type-method-retriever>))))
 
+(declare-core-primitive core-type-descriptor.implemented-interfaces
+    (safe)
+  (signatures
+   ((<core-type-descriptor>)		=> ((vector-of (pair <symbol> <type-method-retriever>))))))
+
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive core-type-descriptor=?

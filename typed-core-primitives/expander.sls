@@ -690,12 +690,26 @@
 
 (declare-type-predicate object-type-spec?		<object-type-spec>)
 
+(declare-core-primitive object-type-spec.implemented-interfaces
+    (safe)
+  (signatures
+   ((<object-type-spec>)		=> ((list-of <syntactic-identifier>)))))
+
+;;; --------------------------------------------------------------------
+
 (declare-core-primitive make-type-annotation
     (safe)
   (signatures
    ((<syntax-object>)	=> (<object-type-spec>)))
   (attributes
    ((_)			effect-free result-true)))
+
+(declare-core-primitive type-annotation->object-type-spec
+    (safe)
+  (signatures
+   ((<syntax-object>)				=> (<object-type-spec>))
+   ((<syntax-object> <list>)			=> (<object-type-spec>))
+   ((<syntax-object> <list> <syntax-object>)	=> (<object-type-spec>))))
 
 ;;; --------------------------------------------------------------------
 
@@ -908,8 +922,9 @@
    ((<syntactic-identifier>		     ;type-name
      <symbol>				     ;uid
      <syntactic-identifier>		     ;type-descriptor-name
-     (alist <symbol> <closure-type-spec>)    ;requested methods table
-     (alist <symbol> <syntactic-identifier>) ;implemented methods table
+     (or <false> <syntactic-identifier>)     ;parent-name-id
+     (alist <symbol> <closure-type-spec>)    ;method-prototypes-table
+     (alist <symbol> <syntactic-identifier>) ;methods-table
      (list-of <syntactic-identifier>))	     ;implemented-interfaces
     => (<interface-type-spec>))))
 
@@ -929,6 +944,11 @@
     (safe)
   (signatures
    ((<syntactic-identifier> <syntactic-identifier>)	=> ((alist <symbol> <syntactic-identifier>)))))
+
+(declare-core-primitive assert-implemented-interface-type-and-implementer-interface-type
+    (safe)
+  (signatures
+   ((<interface-type-spec> <interface-type-spec>)	=> <list>)))
 
 ;;; --------------------------------------------------------------------
 ;;; operations on type specs

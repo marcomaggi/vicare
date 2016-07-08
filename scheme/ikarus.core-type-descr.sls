@@ -35,6 +35,7 @@
     core-type-descriptor.comparison-procedure	core-type-descriptor.hash-function
     core-type-descriptor.uid
     core-type-descriptor.uids-list		core-type-descriptor.method-retriever
+    core-type-descriptor.implemented-interfaces
     core-type-descriptor=?			core-type-descriptor.ancestor-des*
     core-type-descriptor.parent-and-child?
 
@@ -246,6 +247,11 @@
 		;If this  type has methods: a  procedure to be applied  to the method
 		;name  (a symbol)  to  retrieve the  method implementation  function;
 		;otherwise false.
+    (immutable implemented-interfaces	core-type-descriptor.implemented-interfaces)
+		;False  or  a  vector   of  pairs  representing  the  interface-types
+		;implemented by this  object-type.  Each pair has: as car  the UID of
+		;an interface-type; as cdr a method retriever procedure to be used by
+		;the interface method callers.
     #| end of FIELDS |# )
 
   (custom-printer
@@ -472,12 +478,13 @@
 		(COMPARISON-PROCEDURE	(parsed-specs-comparison-procedure	parsed-specs))
 		(HASH-FUNCTION		(parsed-specs-hash-function		parsed-specs))
 		(TYPE-UIDS-LIST		#`(quote #,(datum->syntax #'?type-name type-uids-list.sexp)))
-		(METHOD-RETRIEVER	(%make-method-retriever-function parsed-specs parent-name.id)))
+		(METHOD-RETRIEVER	(%make-method-retriever-function parsed-specs parent-name.id))
+		(IMPLEMENTED-INTERFACES	#f))
 	     #'(begin
 		 (define CTD-NAME
 		   (make-core-type-descriptor (quote ?type-name) PARENT-CTD-NAME
 					      TYPE-PREDICATE EQUALITY-PREDICATE COMPARISON-PROCEDURE HASH-FUNCTION
-					      TYPE-UIDS-LIST METHOD-RETRIEVER))
+					      TYPE-UIDS-LIST METHOD-RETRIEVER IMPLEMENTED-INTERFACES))
 		 (export CTD-NAME))))))
       ))
 
