@@ -283,6 +283,10 @@
       (and (pair-of-type-spec? object.ots)
 	   (object-type-spec.list-type-spec? (pair-of-type-spec.item-ots object.ots)))))
 
+(define (object-type-spec.compatible-list-type-spec? object.ots)
+  (or (object-type-spec.list-type-spec? object.ots)
+      (object-type-spec.compatible-super-and-sub? (<list>-ots) object.ots)))
+
 ;;; --------------------------------------------------------------------
 
 (define-syntax cond-with-predicates
@@ -1367,8 +1371,8 @@
 	    (cond-with-predicates super.ots
 	      (list-type-spec?		#t)
 	      (list-of-type-spec?	#t)
-	      (pair-type-spec?		(object-type-spec.list-type-spec? (pair-type-spec.cdr-ots     super.ots)))
-	      (pair-of-type-spec?	(object-type-spec.list-type-spec? (pair-of-type-spec.item-ots super.ots)))
+	      (pair-type-spec?		(object-type-spec.compatible-list-type-spec? (pair-type-spec.cdr-ots     super.ots)))
+	      (pair-of-type-spec?	(object-type-spec.compatible-list-type-spec? (pair-of-type-spec.item-ots super.ots)))
 	      (else
 	       (object-type-spec.matching-super-and-sub? sub.ots super.ots))))
 
@@ -1379,8 +1383,8 @@
 	    (cond-with-predicates super.ots
 	      (list-type-spec?		#t)
 	      (list-of-type-spec?	#t)
-	      (pair-type-spec?		(object-type-spec.list-type-spec? (pair-type-spec.cdr-ots     super.ots)))
-	      (pair-of-type-spec?	(object-type-spec.list-type-spec? (pair-of-type-spec.item-ots super.ots)))
+	      (pair-type-spec?		(object-type-spec.compatible-list-type-spec? (pair-type-spec.cdr-ots     super.ots)))
+	      (pair-of-type-spec?	(object-type-spec.compatible-list-type-spec? (pair-of-type-spec.item-ots super.ots)))
 	      (else
 	       (object-type-spec.matching-super-and-sub? sub.ots super.ots))))
 
@@ -1479,8 +1483,8 @@
 	 ;;(matching <list> <top>)			=> possible-match
 	 (cond-with-predicates sub.ots
 	   (<pair>-ots?		#t)
-	   (pair-type-spec?	(pair-type-spec?/list    sub.ots))
-	   (pair-of-type-spec?	(pair-of-type-spec?/list sub.ots))
+	   (pair-type-spec?	(pair-type-spec?/compatible-list    sub.ots))
+	   (pair-of-type-spec?	(pair-of-type-spec?/compatible-list sub.ots))
 	   (else
 	    (%matching-sub/union/intersection/complement/ancestor-of super.ots sub.ots))))
 
@@ -1495,8 +1499,8 @@
 	 (cond-with-predicates sub.ots
 	   (<list>-ots?		#t)
 	   (<pair>-ots?		#t)
-	   (pair-type-spec?	(pair-type-spec?/list    sub.ots))
-	   (pair-of-type-spec?	(pair-of-type-spec?/list sub.ots))
+	   (pair-type-spec?	(pair-type-spec?/compatible-list    sub.ots))
+	   (pair-of-type-spec?	(pair-of-type-spec?/compatible-list sub.ots))
 	   (list-of-type-spec?	#t)
 	   (else
 	    (%matching-sub/union/intersection/complement/ancestor-of super.ots sub.ots))))
@@ -1766,13 +1770,13 @@
       (pair-type-spec?
        ;;(matching (list-of <fixnum>) (pair <number> <null>))	=> possible-match
        (and (super-and-sub? (list-of-type-spec.item-ots super.ots) (pair-type-spec.car-ots sub.ots))
-	    (super-and-sub? super.ots                               (pair-type-spec.cdr-ots sub.ots))))
+	    (super-and-sub? super.ots                              (pair-type-spec.cdr-ots sub.ots))))
 
       (pair-of-type-spec?
        ;;(matching (list-of <list>) (pair-of <nelist>))		=> possible-match
        (let ((sub-item.ots (pair-of-type-spec.item-ots sub.ots)))
 	 (and (super-and-sub? (list-of-type-spec.item-ots super.ots) sub-item.ots)
-	      (super-and-sub? super.ots                               sub-item.ots))))
+	      (super-and-sub? super.ots                              sub-item.ots))))
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.ots sub.ots))))
@@ -1787,7 +1791,7 @@
 	       (vector-type-spec.length   sub.ots))
 	    (for-all super-and-sub?
 	      (vector-type-spec.item-ots* super.ots)
-	      (vector-type-spec.item-ots* sub.ots))))
+	      (vector-type-spec.item-ots*   sub.ots))))
 
       (vector-of-type-spec?
        ;;(matching (vector <fixnum>) (vector-of <number>))	=> possible-match
@@ -4005,6 +4009,10 @@
   (and (pair-type-spec? ots)
        (object-type-spec.list-type-spec? (pair-type-spec.cdr-ots ots))))
 
+(define (pair-type-spec?/compatible-list ots)
+  (and (pair-type-spec? ots)
+       (object-type-spec.compatible-list-type-spec? (pair-type-spec.cdr-ots ots))))
+
 
 ;;;; homogeneous pair object spec
 ;;
@@ -4093,6 +4101,10 @@
 (define (pair-of-type-spec?/list ots)
   (and (pair-of-type-spec? ots)
        (object-type-spec.list-type-spec? (pair-of-type-spec.item-ots ots))))
+
+(define (pair-of-type-spec?/compatible-list ots)
+  (and (pair-of-type-spec? ots)
+       (object-type-spec.compatible-list-type-spec? (pair-of-type-spec.item-ots ots))))
 
 
 ;;;; heterogeneous list object spec
