@@ -42,7 +42,7 @@
   (export
     define-mixin-type
     nongenerative fields sealed opaque protocol super-protocol
-    method case-method method/overload
+    method
     define-type-descriptors
     strip-angular-parentheses
     custom-printer
@@ -76,8 +76,6 @@
 	(new <syntax-clause-spec> #'fields			0 +inf.0 1 +inf.0 '() '())
 	;;
 	(new <syntax-clause-spec> #'method			0 +inf.0 2 +inf.0 '() '())
-	(new <syntax-clause-spec> #'case-method			0 +inf.0 2 +inf.0 '() '())
-	(new <syntax-clause-spec> #'method/overload		0 +inf.0 2 +inf.0 '() '())
 	;;
 	(new <syntax-clause-spec> #'custom-printer		0 1      1 1      '() '())
 	(new <syntax-clause-spec> #'type-predicate		0 1      1 1      '() '())
@@ -173,8 +171,6 @@
 	 ((fields)			%process-clause/fields)
 	 ;;
 	 ((method)			%process-clause/method)
-	 ((case-method)			%process-clause/case-method)
-	 ((method/overload)		%process-clause/method-overload)
 	 ;;
 	 ((custom-printer)		%process-clause/custom-printer)
 	 ((type-predicate)		%process-clause/type-predicate)
@@ -408,83 +404,6 @@
 	   #'(method (?who . ?formals) ?body0 ?body ...)))
 	(#(?stuff ...)
 	 (synner "invalid method specification" #'(method ?stuff ...)))))
-
-;;; --------------------------------------------------------------------
-
-    (define (%process-clause/case-method type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-      ;;This clause can  be present multiple times.  Each input  clause must have the
-      ;;format:
-      ;;
-      ;;   (case-method ?who . ?case-method-clauses)
-      ;;
-      ;;and we expect ARGS to have the format:
-      ;;
-      ;;   #(#(?who ?case-method-clause0 ?case-method-clause ...))
-      ;;
-      (vector-fold-left (lambda (rev-parsed-clause*.stx arg)
-			  (cons (%process-case-method-spec arg synner)
-				rev-parsed-clause*.stx))
-	rev-parsed-clause*.stx
-	args))
-
-    (define (%process-case-method-spec arg synner)
-      ;;We expect ARG to have the format:
-      ;;
-      ;;   #(?who ?case-method-clause0 ?case-method-clause ...)
-      ;;
-      (syntax-case arg ()
-	(#(?who ?case-method-clause0 ?case-method-clause ...)
-	 (begin
-	   (unless (identifier? #'?who)
-	     (synner "expected identifier as method name" #'?who))
-	   (for-each (lambda (method-clause.stx)
-		       (syntax-case method-clause.stx ()
-			 ((?formals ?body0 ?body ...)
-			  (void))
-			 (synner "invalid method clause" method-clause.stx)))
-	     (syntax->list #'(?case-method-clause0 ?case-method-clause ...)))
-	   #'(case-method ?who ?case-method-clause0 ?case-method-clause ...)))
-	(#(?stuff ...)
-	 (synner "invalid method specification" #'(case-method ?stuff ...)))))
-
-;;; --------------------------------------------------------------------
-
-    (define (%process-clause/method-overload type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-      ;;This clause can  be present multiple times.  Each input  clause must have the
-      ;;format:
-      ;;
-      ;;   (method/overload (?who . ?formals) . ?body)
-      ;;
-      ;;and we expect ARGS to have the format:
-      ;;
-      ;;   #(#((?who . ?formals) . ?body) ...)
-      ;;
-      (vector-fold-left (lambda (rev-parsed-clause*.stx arg)
-			  (cons (%process-method-overload-spec arg synner)
-				rev-parsed-clause*.stx))
-	rev-parsed-clause*.stx
-	args))
-
-    (define (%process-method-overload-spec arg synner)
-      ;;We expect ARG to have the format:
-      ;;
-      ;;   #((?who . ?formals) . ?body)
-      ;;
-      (syntax-case arg ()
-	(#((?who . ?formals) ?body0 ?body ...)
-	 (begin
-	   (syntax-case #'?who (brace)
-	     (?method-name
-	      (identifier? #'?method-name)
-	      (void))
-	     ((brace ?method-name . ?rv-types)
-	      (identifier? #'?method-name)
-	      (void))
-	     (_
-	      (synner "invalid method name and/or return values specification" #'?who)))
-	   #'(method/overload (?who . ?formals) ?body0 ?body ...)))
-	(#(?stuff ...)
-	 (synner "invalid method specification" #'(method/overload ?stuff ...)))))
 
 ;;; --------------------------------------------------------------------
 

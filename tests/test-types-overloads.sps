@@ -112,9 +112,9 @@
 
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
-	  (method/overload (get-a)
+	  (method (get-a)
 	    (alpha-a this))
-	  (method/overload (get-b)
+	  (method (get-b)
 	    (alpha-b this)))
 
 	(define {O alpha}
@@ -130,13 +130,13 @@
 
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
-	  (method/overload (get-a)
+	  (method (get-a)
 	    (alpha-a this))
-	  (method/overload (get-b)
+	  (method (get-b)
 	    (alpha-b this))
-	  (method/overload (set-a v)
+	  (method (set-a v)
 	    (alpha-a-set! this v))
-	  (method/overload (set-b v)
+	  (method (set-b v)
 	    (alpha-b-set! this v)))
 
 	(define {O alpha}
@@ -149,7 +149,7 @@
     => 10 20)
 
 ;;; --------------------------------------------------------------------
-;;; calling parent's method/overloads
+;;; calling parent's methods
 
   ;;Record-type with parent.
   ;;
@@ -158,14 +158,14 @@
 
 	(define-record-type duo
 	  (fields one two)
-	  (method/overload (sum-them)
+	  (method (sum-them)
 	    (+ (duo-one this)
 	       (duo-two this))))
 
 	(define-record-type trio
 	  (parent duo)
 	  (fields three)
-	  (method/overload (mul-them)
+	  (method (mul-them)
 	    (* (duo-one this)
 	       (duo-two this)
 	       (trio-three this))))
@@ -184,14 +184,14 @@
 
 	(define-record-type duo
 	  (fields one two)
-	  (method/overload (sum-them)
+	  (method (sum-them)
 	    (+ (duo-one this)
 	       (duo-two this))))
 
 	(define-record-type trio
 	  (parent duo)
 	  (fields three)
-	  (method/overload (mul-them)
+	  (method (mul-them)
 	    (* (duo-one this)
 	       (duo-two this)
 	       (trio-three this))))
@@ -199,7 +199,7 @@
 	(define-record-type quater
 	  (parent trio)
 	  (fields four)
-	  (method/overload (list-them)
+	  (method (list-them)
 	    (list (duo-one this)
 		  (duo-two this)
 		  (trio-three this)
@@ -221,9 +221,9 @@
 
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
-	  (method/overload (get-a)
+	  (method (get-a)
 	    (alpha-a this))
-	  (method/overload (get-b)
+	  (method (get-b)
 	    (alpha-b this)))
 
 	(define {O alpha}
@@ -238,13 +238,13 @@
 
 	(define-record-type alpha
 	  (fields (mutable a) (mutable b))
-	  (method/overload (get-a)
+	  (method (get-a)
 	    (alpha-a this))
-	  (method/overload (get-b)
+	  (method (get-b)
 	    (alpha-b this))
-	  (method/overload (set-a v)
+	  (method (set-a v)
 	    (alpha-a-set! this v))
-	  (method/overload (set-b v)
+	  (method (set-b v)
 	    (alpha-b-set! this v)))
 
 	(define {O alpha}
@@ -264,11 +264,11 @@
 
 	(define-record-type alpha
 	  (fields a b)
-	  (method/overload (doit {A <fixnum>})
+	  (method (doit {A <fixnum>})
 	    (list (.a this) (.b this) 'fixnum A))
-	  (method/overload (doit {A <symbol>})
+	  (method (doit {A <symbol>})
 	    (list (.a this) (.b this) 'symbol A))
-	  (method/overload (doit {A <number>} {B <number>})
+	  (method (doit {A <number>} {B <number>})
 	    (list (.a this) (.b this) 'numbers A B)))
 
 	(define {O alpha}
@@ -283,9 +283,9 @@
       (internal-body
 	(define-record-type <duo>
 	  (fields one two)
-	  (method/overload (doit)
+	  (method (doit)
 	    (+ (.one this) (.two this)))
-	  (method/overload (doit {C <number>})
+	  (method (doit {C <number>})
 	    (* C (+ (.one this) (.two this)))))
 
 	(define O
@@ -442,16 +442,16 @@
       (internal-body
 	(define-record-type <alpha>
 	  (fields a)
-	  (method/overload (doit)
+	  (method (doit)
 	    (.a this))
-	  (method/overload (doit {S <symbol>})
+	  (method (doit {S <symbol>})
 	    (list S (.a this))))
 
 	(define-record-type <beta>
 	  (fields b)
-	  (method/overload (doit)
+	  (method (doit)
 	    (.b this))
-	  (method/overload (doit {S <symbol>})
+	  (method (doit {S <symbol>})
 	    (list S (.b this))))
 
 	(define (those O)

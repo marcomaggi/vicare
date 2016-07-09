@@ -128,12 +128,14 @@
   ;;Build and return a core language  expression that, compiled and evaluated, return
   ;;an empty copy of the OFS argument.
   ;;
-  (let ((name.id	(overloaded-function-spec.name-id ofs))
-	(ofd.id		(overloaded-function-spec.ofd-id  ofs)))
+  (let ((name.id			(overloaded-function-spec.name-id ofs))
+	(ofd.id				(overloaded-function-spec.ofd-id  ofs))
+	(late-binding-function.id	(overloaded-function-spec.late-binding-function-id ofs)))
     (build-application no-source
 	(build-primref no-source 'make-overloaded-function-spec)
       (list (build-data no-source name.id)
-	    (build-data no-source ofd.id)))))
+	    (build-data no-source ofd.id)
+	    (build-data no-source late-binding-function.id)))))
 
 
 ;;;; done

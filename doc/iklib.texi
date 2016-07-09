@@ -9661,8 +9661,6 @@ Reset to void all the fields of a structure.
 @deffn Syntax define-record-type @meta{name-spec} @meta{record-clause} @dots{}
 @deffnx {Auxiliary Syntax} fields @meta{field-spec} @dots{}
 @deffnx {Auxiliary Syntax} method
-@deffnx {Auxiliary Syntax} case-method
-@deffnx {Auxiliary Syntax} method/overload
 @deffnx {Auxiliary Syntax} super-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} destructor-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} constructor-signature @meta{signature}
@@ -10168,21 +10166,13 @@ record--type has no custom has function, the core primitive
 
 
 @cindex @clause{method}, record--type definition clause
-@cindex @clause{case-method}, record--type definition clause
-@cindex @clause{method/overload}, record--type definition clause
 
 
-The syntactic bindings @clause{method} and @clause{case-method} are used
-as clause keywords in @syntax{define-record-type} to define methods for
-a record type; each can be used any number of times in the same
-@syntax{define-record-type} macro use.  These clauses are accepted by
-@syntax{define-record-type} only when the language is non--strict
-@rnrs{6}.
-
-The syntactic binding @clause{method/overload} is used as clause keyword
-in @syntax{define-record-type} to define methods implemented as
-overloaded functions.  This clause is meant to be used with the typed
-language.
+The syntactic binding @clause{method} is used as clause keyword in
+@syntax{define-record-type} to define methods for a record type; it can
+be used any number of times in the same @syntax{define-record-type}
+macro use.  These clauses are accepted by @syntax{define-record-type}
+only when the language is non--strict @rnrs{6}.
 
 We can think of @clause{method} as acting like @syntax{define} with
 regard to the syntax of arguments to function; the first argument to a
@@ -10199,49 +10189,30 @@ the fluid syntax @syntax{this}.  For example:
     (* (duo-one this)
        (duo-two this))))
 
-(define @{O duo@}
+(define O
   (make-duo 1 2))
 
 (method-call sum-them O)        @result{} 3
 @end lisp
 
-The clause @clause{case-method} is similar, we can think of it as acting
-like @syntax{case-define}:
-
-@lisp
-(define-record-type alpha
-  (fields (mutable a))
-  (case-method on-a
-    (()
-     (alpha-a this))
-    ((new-val)
-     (alpha-a-set! this new-val))))
-
-(define @{O alpha@}
-  (new alpha 1))
-
-(method-call on-a O)            @result{} 1
-(method-call on-a O 2)
-(method-call on-a O)            @result{} 2
-@end lisp
-
-The clause @clause{method/overload} is similar to @clause{method}, but
-allows multiple function specialisations linked to the same method name:
+The clause @clause{method} allows the definition of overloaded
+functions, with multiple function specialisations linked to the same
+method name:
 
 @lisp
 (define-record-type alpha
   (fields a b)
 
-  (method/overload (doit @{A <fixnum>@})
+  (method (doit @{A <fixnum>@})
     (list (alpha-a this) (alpha-b this) 'fixnum A))
 
-  (method/overload (doit @{A <symbol>@})
+  (method (doit @{A <symbol>@})
     (list (alpha-a this) (alpha-b this) 'symbol A))
 
-  (method/overload (doit @{A <number>@} @{B <number>@})
+  (method (doit @{A <number>@} @{B <number>@})
     (list (alpha-a this) (alpha-b this) 'numbers A B)))
 
-(define @{O alpha@}
+(define O
   (make-alpha 1 2))
 
 (method-call doit O 123)        @result{} (1 2 fixnum 123)
@@ -10249,54 +10220,33 @@ allows multiple function specialisations linked to the same method name:
 (method-call doit O 3 4)        @result{} (1 2 numbers 3 4)
 @end lisp
 
-Overloaded methods are an expand--time feature: these methods are
-@strong{not} available for late binding.
-
 The syntax @syntax{method-call} searches for a record--type's methods by
 comparing the symbols with @func{eq?} (@strong{not} the syntactic
 identifiers with @func{free-identifier=?}).  @ref{types syntaxes
 methods, Calling object--type methods}.
 
 When used with records: if a method with the given name is not found,
-@syntax{method-call} searches for a field with the given name, but only
-if the number of arguments is right; field accessors and mutators are
-methods automatically.  The syntax of @syntax{method-call} is:
+@syntax{method-call} searches for a field with the given name; field
+accessors and mutators are methods automatically.  The syntax of
+@syntax{method-call} is:
 
 @example
 (method-call @meta{name} @meta{subject-expr} @meta{arg} ...)
 @end example
 
 @noindent
-and this is what it does for records when no matching method is found:
+when there are no @meta{arg} arguments the syntax is compatible with a
+field accessor call; when there is a single @meta{arg} argument the
+syntax is compatible with a field mutator call.
 
-@itemize
-@item
-If there are @strong{no} arguments @meta{arg}, then a field with name
-@meta{name} is searched and, if found, the form is expanded to an
-application of the field's accessor:
-
-@example
-(@meta{accessor} @meta{subject-expr})
-@end example
-
-@item
-If there is @strong{only one} argument @meta{arg}, then a field with
-name @meta{name} is searched and, if the field is found and it is
-mutable, the form is expanded to an application of the field's mutator:
-
-@example
-(@meta{mutator} @meta{subject-expr} @meta{arg})
-@end example
-@end itemize
-
-So the above @clause{case-method} example can just be rewritten as:
+So we can access and mutate fields as follows:
 
 @lisp
 (define-record-type alpha
   (fields (mutable a)))
 
-(define @{O alpha@}
-  (new alpha 1))
+(define O
+  (make-alpha 1))
 
 (method-call a O)            @result{} 1
 (method-call a O 2)
@@ -10310,8 +10260,8 @@ and with dot notation (@pxref{types syntaxes methods, Dot notation}):
 (define-record-type alpha
   (fields (mutable a)))
 
-(define @{O alpha@}
-  (new alpha 1))
+(define O
+  (make-alpha 1))
 
 (.a O)          @result{} 1
 (.a O 2)

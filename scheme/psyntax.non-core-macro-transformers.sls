@@ -187,8 +187,6 @@
   (declare destructor-protocol)
   (declare custom-printer)
   (declare method)
-  (declare case-method)
-  (declare method/overload)
   (declare define-type-descriptors)
   (declare strip-angular-parentheses)
   (declare type-predicate)

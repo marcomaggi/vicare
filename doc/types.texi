@@ -2294,13 +2294,11 @@ predicate function.
 
 
 The following keyword syntactic bindings are involved in the definition
-and use of methods: @clause{method}, @clause{case-method},
-@clause{method/overload}, @syntax{method-call}.  In addition the
-function @func{method-call-late-binding} performs a method call with
+and use of methods: @clause{method}, @syntax{method-call}.  In addition
+the function @func{method-call-late-binding} performs a method call with
 ``late binding'' (run--time dispatching).
 
-The keywords @clause{method}, @clause{case-method} and
-@clause{method/overload} are used in @syntax{define-record-type} to
+The keyword @clause{method} is used in @syntax{define-record-type} to
 define methods for a record type (@pxref{iklib records defs methods,
 Record--type methods}).  For example:
 
@@ -6048,8 +6046,7 @@ The following clauses are accepted in the body of a
 @lisp
 define-type-descriptors strip-angular-parentheses
 nongenerative implements
-sealed opaque protocol super-protocol fields
-method case-method method/overload
+sealed opaque protocol super-protocol fields method
 custom-printer type-predicate equality-predicate
 comparison-procedure hash-function
 @end lisp
@@ -6222,16 +6219,13 @@ prototypes.  Example:
 
 
 The following syntactic bindings are exported by the library
-@library{vicare language-extensions interfaces}.  The syntactic bindings
-@clause{method}, @clause{case-method} and @clause{method/overload} are
-the same ones exported by @library{vicare}.
+@library{vicare language-extensions interfaces}.  The syntactic binding
+@clause{method} is the same one exported by @library{vicare}.
 
 
 @deffn Syntax define-interface-type @meta{name} @meta{clause} @dots{}
 @deffnx {Auxiliary Syntax} method-prototype
 @deffnx {Auxiliary Syntax} method
-@deffnx {Auxiliary Syntax} case-method
-@deffnx {Auxiliary Syntax} method/overload
 Define a new interface type bound to the syntactic identifier
 @meta{name}.  Interfaces can implement methods, case--methods and
 overloaded methods of their own, with the same syntax used for
@@ -6320,8 +6314,6 @@ The following syntactic bindings are exported by the library
 @deffnx {Auxiliary Syntax} comparison-procedure
 @deffnx {Auxiliary Syntax} hash-function
 @deffnx {Auxiliary Syntax} method
-@deffnx {Auxiliary Syntax} case-method
-@deffnx {Auxiliary Syntax} method/overload
 @deffnx {Auxiliary Syntax} mixins
 Define a new label type.  @meta{type-name} must be a syntactic
 identifier representing the label name.
@@ -6335,8 +6327,7 @@ The following clauses can be used in the same way they are used in
 @lisp
 parent type-predicate
 equality-predicate comparison-procedure hash-function
-method case-method method/overload
-mixins
+method mixins
 @end lisp
 
 @noindent
@@ -6463,11 +6454,10 @@ Now let's define a method for appending prefixes and suffixes:
 @lisp
 (define-label-type <String>
   (parent <string>)
-  (case-method append
-    ((@{_ <String>@} @{suff <String>@})
-     (string-append this suff))
-    ((@{_ <String>@} @{pref <String>@} @{suff <String>@})
-     (string-append pref this suff))))
+  (method (@{append <String>@} @{suff <String>@})
+    (string-append this suff))
+  (method (@{append <String>@} @{pref <String>@} @{suff <String>@})
+    (string-append pref this suff)))
 
 (define @{O <String>@}
   "ciao")

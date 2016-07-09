@@ -606,135 +606,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'case-method-syntax))
-
-  (check
-      (internal-body
-
-	(define-record-type alpha
-	  (fields (mutable a) (mutable b))
-	  (case-method get-a
-	    (()
-	     (alpha-a this)))
-	  (case-method get-b
-	    (()
-	     (alpha-b this))))
-
-	(define {O alpha}
-	  (make-alpha 1 2))
-
-	(values (method-call get-a O)
-		(method-call get-b O)))
-    => 1 2)
-
-  (check
-      (internal-body
-
-	(define-record-type alpha
-	  (fields (mutable a) (mutable b))
-	  (case-method on-a
-	    (()
-	     (alpha-a this))
-	    ((v)
-	     (alpha-a-set! this v)))
-	  (case-method on-b
-	    (()
-	     (alpha-b this))
-	    ((v)
-	     (alpha-b-set! this v))))
-
-	(define {O alpha}
-	  (make-alpha 1 2))
-
-	(method-call on-a O 10)
-	(method-call on-b O 20)
-	(values (method-call on-a O)
-		(method-call on-b O)))
-    => 10 20)
-
-;;; --------------------------------------------------------------------
-;;; dot notation
-
-  (check
-      (internal-body
-
-	(define-record-type alpha
-	  (fields (mutable a) (mutable b))
-	  (case-method on-a
-	    (()
-	     (alpha-a this)))
-	  (case-method on-b
-	    (()
-	     (alpha-b this))))
-
-	(define {O alpha}
-	  (make-alpha 1 2))
-
-	(values (.on-a O)
-		(.on-b O)))
-    => 1 2)
-
-  (check
-      (internal-body
-
-	(define-record-type alpha
-	  (fields (mutable a) (mutable b))
-	  (case-method on-a
-	    (()
-	     (alpha-a this))
-	    ((v)
-	     (alpha-a-set! this v)))
-	  (case-method on-b
-	    (()
-	     (alpha-b this))
-	    ((v)
-	     (alpha-b-set! this v))))
-
-	(define {O alpha}
-	  (make-alpha 1 2))
-
-	(.on-a O 10)
-	(.on-b O 20)
-	(values (.on-a O)
-		(.on-b O)))
-    => 10 20)
-
-;;; --------------------------------------------------------------------
-;;; misc method examples
-
-  (check
-      (internal-body
-
-	(define-record-type alpha
-	  (fields a b)
-	  (case-method doit
-	    ((c d)
-	     (+ (alpha-a this) (alpha-b this) c d))))
-
-	(define {O alpha}
-	  (make-alpha 1 2))
-
-	(.doit O 3 4))
-    => (+ 1 2 3 4))
-
-  (check
-      (internal-body
-
-	(define-record-type alpha
-	  (fields a b)
-	  (case-method doit
-	    (arg*
-	     (apply + (alpha-a this) (alpha-b this) arg*))))
-
-	(define {O alpha}
-	  (make-alpha 1 2))
-
-	(.doit O 3 4))
-    => (+ 1 2 3 4))
-
-  #t)
-
-
 (parametrise ((check-test-name	'methods-late-binding))
 
 ;;; METHOD-CALL, late binding, calling methods
@@ -1054,6 +925,70 @@
 		(method-call-late-binding 'e O)
 		(method-call-late-binding 'f O)))
     => 11 22 33 44 55 66)
+
+  (void))
+
+
+(parametrise ((check-test-name	'overloaded-methods))
+
+  ;;Early binding.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a)
+	  (method (doit)
+	    (.a this))
+	  (method (doit {O <fixnum>})
+	    (+ O (.doit this))))
+
+	(define {O alpha}
+	  (new alpha 1))
+
+	(values (.doit O)
+		(.doit O 10)))
+    => 1 11)
+
+  ;;Late binding.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a)
+	  (method (doit)
+	    (.a this))
+	  (method (doit {O <fixnum>})
+	    (+ O (.doit this))))
+
+	(define {O <top>}
+	  (new alpha 1))
+
+	(values (.doit O)
+		(.doit O 10)))
+    => 1 11)
+
+  ;;Late binding.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a)
+	  (method (doit)
+	    (.a this))
+	  (method (doit {O <fixnum>})
+	    (+ O (.doit this))))
+
+	(define {O <top>}
+	  (new alpha 1))
+
+	(define (fun {O <top>})
+	  (.doit O))
+
+	(fun O))
+    => 1)
 
   (void))
 

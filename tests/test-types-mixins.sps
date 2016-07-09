@@ -530,82 +530,31 @@
   #| end of PARAMETRISE |# )
 
 
-(parametrise ((check-test-name	'method/overload))
+(parametrise ((check-test-name	'method))
 
   (check
       (internal-body
 	(define-mixin-type <stuff>
-	  (method/overload (doit)
+	  (method (doit)
 	    (display this)))
 	(get-spec <stuff>))
     => '(define-mixin-type <stuff>
-	  (method/overload (doit)
+	  (method (doit)
 	    (display this))))
 
   (check
       (internal-body
 	(define-mixin-type <stuff>
-	  (method/overload (doit)
+	  (method (doit)
 	    (display this))
-	  (method/overload (done)
+	  (method (done)
 	    (write this)))
 	(get-spec <stuff>))
     => '(define-mixin-type <stuff>
-	  (method/overload (doit)
+	  (method (doit)
 	    (display this))
-	  (method/overload (done)
+	  (method (done)
 	    (write this))))
-
-  #| end of PARAMETRISE |# )
-
-
-(parametrise ((check-test-name	'case-method))
-
-  (check
-      (internal-body
-	(define-mixin-type <stuff>
-	  (case-method doit
-	    (()
-	     (display this))))
-	(get-spec <stuff>))
-    => '(define-mixin-type <stuff>
-	  (case-method doit
-	    (()
-	     (display this)))))
-
-  (check
-      (internal-body
-	(define-mixin-type <stuff>
-	  (case-method doit
-	    (()
-	     (display this))
-	    (({P <port>})
-	     (display this P))))
-	(get-spec <stuff>))
-    => '(define-mixin-type <stuff>
-	  (case-method doit
-	    (()
-	     (display this))
-	    (({P <port>})
-	     (display this P)))))
-
-  (check
-      (internal-body
-	(define-mixin-type <stuff>
-	  (case-method doit
-	    (()
-	     (display this)))
-	  (case-method done
-	    (()
-	     (write this))))
-	(get-spec <stuff>))
-    => '(define-mixin-type <stuff>
-	  (case-method doit
-	    (()
-	     (display this)))
-	  (case-method done
-	    (()
-	     (write this)))))
 
   #| end of PARAMETRISE |# )
 

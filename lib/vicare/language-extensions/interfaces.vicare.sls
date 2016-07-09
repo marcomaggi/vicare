@@ -29,8 +29,7 @@
 (library (vicare language-extensions interfaces (0 4 2016 6 25))
   (options typed-language)
   (export define-interface-type
-	  method case-method method/overload
-	  method-prototype implements import
+	  method method-prototype implements import
 	  this
 
 	  &interface-method-late-binding-error
@@ -143,8 +142,6 @@
       (new <syntax-clause-spec> #'implements		0 +inf.0 0 +inf.0 '() '())
       (new <syntax-clause-spec> #'method-prototype	0 +inf.0 2 2      '() '())
       (new <syntax-clause-spec> #'method		0 +inf.0 2 +inf.0 '() '())
-      (new <syntax-clause-spec> #'case-method		0 +inf.0 2 +inf.0 '() '())
-      (new <syntax-clause-spec> #'method/overload	0 +inf.0 2 +inf.0 '() '())
       #| end of LIST |# )))
 
 ;;; --------------------------------------------------------------------
@@ -418,8 +415,6 @@
   (define (combine {results <parsing-results>} {clause-spec <syntax-clause-spec>} {args <parsed-args>})
     ((case-identifiers (.keyword clause-spec)
        ((method)		%process-clause/method)
-       ((case-method)		%process-clause/case-method)
-       ((method/overload)	%process-clause/method-overload)
        ((method-prototype)	%process-clause/method-prototype)
        ((nongenerative)		%process-clause/nongenerative)
        ((implements)		%process-clause/implements)
@@ -620,120 +615,24 @@
 	(#(?stuff ...)
 	 (synner "invalid METHOD specification" #'(method ?stuff ...)))))
 
+    (define (%parse-method-who {results <parsing-results>} who.stx synner)
+      (syntax-case who.stx (brace)
+	(?method-name
+	 (identifier? #'?method-name)
+	 (let ((method-procname.id (identifier-method-procname (.type-name results) #'?method-name)))
+	   (values #'?method-name method-procname.id method-procname.id)))
+	((brace ?method-name . ?rv-types)
+	 (identifier? #'?method-name)
+	 (let ((method-procname.id (identifier-method-procname (.type-name results) #'?method-name)))
+	   (values #'?method-name method-procname.id #`(brace #,method-procname.id . ?rv-types))))
+	(_
+	 (synner "invalid method name specification" who.stx))))
+
     #| end of module: %PROCESS-CLAUSE/METHOD-PROTOTYPE |# )
 
 ;;; --------------------------------------------------------------------
 
-  (module (%process-clause/case-method)
-
-    (define (%process-clause/case-method {results <parsing-results>} {args <parsed-args>})
-      ;;This clause can  be present multiple times.  Each input  clause must have the
-      ;;format:
-      ;;
-      ;;   (case-method ?who . ?case-method-clauses)
-      ;;
-      ;;and we expect ARGS to have the format:
-      ;;
-      ;;   #(#(?who ?case-method-clause0 ?case-method-clause ...) ...)
-      ;;
-      (vector-fold-left (lambda (results arg)
-			  (%process-case-method-spec results arg synner))
-	results args))
-
-    (define (%process-case-method-spec {results <parsing-results>} arg synner)
-      ;;We expect the ARG argument to have the format:
-      ;;
-      ;;   #(?who ?case-method-clause0 ?case-method-clause ...)
-      ;;
-      (syntax-case arg ()
-	(#(?who ?case-method-clause0 ?case-method-clause ...)
-	 (let* ((method-name.id	#'?who)
-		(method-procname.id	(identifier-method-procname (.type-name results) #'?who))
-		(clause*.stx		(map (lambda (clause.stx)
-					       (%add-this-to-clause-formals results clause.stx synner))
-					  (syntax->list #'(?case-method-clause0 ?case-method-clause ...)))))
-	   ;; (.push-definition!	results #`(case-define/checked #,method-procname.id . #,clause*.stx))
-	   ;; (.push-default-prototype! results (vector method-name.id method-procname.id signature.ots))
-	   results))
-
-	(#(?stuff ...)
-	 (synner "invalid CASE-METHOD specification" #'(case-method ?stuff ...)))))
-
-    (define (%add-this-to-clause-formals {results <parsing-results>} clause.stx synner)
-      (syntax-case clause.stx (brace)
-	((((brace ?underscore . ?rv-types) . ?formals) ?body0 ?body ...)
-	 (%underscore-id? #'?underscore)
-	 #`(({?underscore . ?rv-types} {subject #,(.type-name results)} . ?formals)
-	    (fluid-let-syntax ((this (identifier-syntax subject)))
-	      ?body0 ?body ...)))
-
-	((?formals ?body0 ?body ...)
-	 #`(({subject #,(.type-name results)} . ?formals)
-	    (fluid-let-syntax ((this (identifier-syntax subject)))
-	      ?body0 ?body ...)))
-	(_
-	 (synner "invalid CASE-METHOD clause syntax" clause.stx))))
-
-    (define (%underscore-id? stx)
-      (and (identifier? stx)
-	   (eq? '_ (syntax->datum stx))))
-
-    #| end of module: %PROCESS-CASE-METHOD-SPEC |# )
-
-;;; --------------------------------------------------------------------
-
-  (module (%process-clause/method-overload)
-
-    (define (%process-clause/method-overload {results <parsing-results>} {args <parsed-args>})
-      ;;This clause can  be present multiple times.  Each input  clause must have the
-      ;;format:
-      ;;
-      ;;   (method/overload (?who . ?formals) . ?body)
-      ;;
-      ;;and we expect ARGS to have the format:
-      ;;
-      ;;   #(#((?who . ?formals) . ?body) ...)
-      ;;
-      (vector-fold-left (lambda (results arg)
-			  (%process-method-overload-spec results arg synner))
-	results args))
-
-    (define (%process-method-overload-spec {results <parsing-results>} arg synner)
-      ;;We expect the ARG argument to have the format:
-      ;;
-      ;;   #((?who . ?formals) . ?body)
-      ;;
-      (syntax-case arg ()
-	(#((?who . ?formals) ?body0 ?body ...)
-	 (receive (method-name.id method-procname.id method-who.stx)
-	     (%parse-method-who results #'?who synner)
-	   ;; (.push-definition! results #`(define/overload (#,method-who.stx {subject #,(.type-name results)} . ?formals)
-	   ;; 				    (fluid-let-syntax ((this (identifier-syntax subject)))
-	   ;; 				      ?body0 ?body ...)))
-	   ;; (.push-default-prototype! results (vector method-name.id method-procname.id signature.ots))
-	   results))
-
-	(#(?stuff ...)
-	 (synner "invalid METHOD/OVERLOAD specification" #'(method/overload ?stuff ...)))))
-
-    #| end of module: %PROCESS-CLAUSE/METHOD-OVERLOAD |# )
-
-;;; --------------------------------------------------------------------
-
-  (define (%parse-method-who {results <parsing-results>} who.stx synner)
-    (syntax-case who.stx (brace)
-      (?method-name
-       (identifier? #'?method-name)
-       (let ((method-procname.id (identifier-method-procname (.type-name results) #'?method-name)))
-	 (values #'?method-name method-procname.id method-procname.id)))
-      ((brace ?method-name . ?rv-types)
-       (identifier? #'?method-name)
-       (let ((method-procname.id (identifier-method-procname (.type-name results) #'?method-name)))
-	 (values #'?method-name method-procname.id #`(brace #,method-procname.id . ?rv-types))))
-      (_
-       (synner "invalid method name specification" who.stx))))
-
-  (define (%build-nongenerative-uid type-name.id)
+  (define ({%build-nongenerative-uid xp::<syntactic-identifier>} type-name.id)
     ;;Build and  return a symbol to  be used as  UID for this interface-type  for the
     ;;case of: non-generative type.
     ;;
@@ -741,7 +640,7 @@
 		   (string->symbol (string-append "vicare:nongenerative:"
 						  (symbol->string (syntax->datum type-name.id))))))
 
-  (define (%build-generative-uid type-name.id)
+  (define ({%build-generative-uid xp::<syntactic-identifier>} type-name.id)
     ;;Build and  return a symbol to  be used as  UID for this interface-type  for the
     ;;case of: generative type.
     ;;

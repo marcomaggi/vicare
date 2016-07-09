@@ -275,54 +275,15 @@
   (void))
 
 
-(parametrise ((check-test-name	'case-methods))
-
-  (check
-      (internal-body
-
-	(define-label-type <my-string>
-	  (parent <string>)
-	  (case-method doit
-	    (({_ <my-string>} {suffix <string>})
-	     (string-append this suffix))))
-
-	(define {O <my-string>}
-	  "ciao")
-
-	(values (.doit O " mamma")
-		(.doit (.doit O " mamma") " ho")))
-    => "ciao mamma" "ciao mamma ho")
-
-  (check
-      (internal-body
-
-	(define-label-type <my-string>
-	  (parent <string>)
-	  (case-method doit
-	    (({_ <my-string>} {suffix <string>})
-	     (string-append this suffix))
-	    (({_ <my-string>} {prefix <string>} {suffix <string>})
-	     (string-append prefix this suffix))))
-
-	(define {O <my-string>}
-	  "ciao")
-
-	(values (.doit O "hey, " " mamma")
-		(.doit (.doit O " mamma") " ho")))
-    => "hey, ciao mamma" "ciao mamma ho")
-
-  (void))
-
-
 (parametrise ((check-test-name	'overloaded-methods))
 
   (check
       (internal-body
 	(define-label-type <peluche>
 	  (parent (list <symbol>))
-	  (method/overload (name)
+	  (method (name)
 	    (car this))
-	  (method/overload (name attr)
+	  (method (name attr)
 	    (list attr (car this))))
 
 	(define {O <peluche>}
@@ -579,11 +540,10 @@
 
     (define-label-type <String>
       (parent <string>)
-      (case-method append
-	(({_ <String>} {suff <String>})
-	 (string-append this suff))
-	(({_ <String>} {pref <String>} {suff <String>})
-	 (string-append pref this suff))))
+      (method ({append <String>} {suff <String>})
+	(string-append this suff))
+      (method ({append <String>} {pref <String>} {suff <String>})
+	(string-append pref this suff)))
 
     (define {O <String>}
       "ciao")
