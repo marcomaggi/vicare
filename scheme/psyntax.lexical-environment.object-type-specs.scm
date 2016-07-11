@@ -143,7 +143,7 @@
 	 <closure-type-spec>-rtd			<closure-type-spec>-rcd
 	 make-closure-type-spec				closure-type-spec?
 	 closure-type-spec.signature			closure-type-spec.set-new-retvals-when-untyped!
-	 closure-type-spec.thunk?
+	 closure-type-spec.thunk?			closure-type-spec.join
 	 closure-type-spec.super-and-sub?
 	 closure-type-spec.match-formals-against-operands
 
@@ -3899,6 +3899,10 @@
 							   {operands.sig type-signature?})
   (case-lambda-signature.match-formals-against-operands (closure-type-spec.signature formals.ots) operands.sig))
 
+(define* (closure-type-spec.join {ots1 closure-type-spec?} {ots2 closure-type-spec?})
+  (make-closure-type-spec (case-lambda-signature.join (closure-type-spec.signature ots1)
+						      (closure-type-spec.signature ots2))))
+
 
 ;;;; heterogeneous pair object spec
 ;;
@@ -4823,7 +4827,12 @@
     (immutable	method-prototypes-table		interface-type-spec.method-prototypes-table)
 		;Alist having as keys symbols representing method names and as values
 		;"<closure-type-spec>" instances  representing the  methods' required
-		;type signatures.
+		;type signatures.  This alist includes: the method prototypes defined
+		;by this interface-type; the method  prototypes defined by the parent
+		;type.
+		;
+		;If an  object-type implements  a concrete method  for each  entry in
+		;this alist: that object-type implements this interface-type.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
@@ -4832,13 +4841,15 @@
 					 {implemented-interfaces list-of-interface-type-specs?})
 	;;The  argument  METHOD-PROTOTYPES-TABLE must  be  an  alist having  as  keys
 	;;symbols  representing  method  names and  as  values  "<closure-type-spec>"
-	;;instances representing the methods' required type signatures.
+	;;instances representing  the methods' required type  signatures.  This alist
+	;;includes: the method prototypes defined  by this interface-type; the method
+	;;prototypes defined by the parent type.
 	;;
 	;;The  argument METHODS-TABLE  must  be  an alist  having:  as keys,  symbols
 	;;representing the  method names; as  values, syntactic identifiers  bound to
 	;;the method  implementation functions.  The method  implementation functions
 	;;will   perform  run-time   dynamic  dispatch   to  the   concrete  method's
-	;;implementations.
+	;;implementations.  This table does *not* include the parent's methods.
 	;;
 	;;The argument IMPLEMENTED-INTERFACES must be a list of syntactic identifiers
 	;;bound  to  the  interface-type   specifications  that  this  interface-type
@@ -4878,7 +4889,11 @@
 
   (define* (interface-type-spec.super-and-sub? {super-iface.ots interface-type-spec?} {sub.ots object-type-spec?})
     ;;Return true if  the interface specification SUPER-IFACE.OTS is  a super-type of
-    ;;the object-type specification SUB.OTS.
+    ;;the object-type specification SUB.OTS; otherwise return false.
+    ;;
+    ;;SUB.OTS is  a sub-type of  SUPER-IFACE.OTS if:  SUPER-IFACE.OTS is equal  to an
+    ;;item in SUB.OTS's field IMPLEMENTED-INTERFACES;  or SUPER-IFACE.OTS is equal to
+    ;;an item in SUB.OTS's parent's field IMPLEMENTED-INTERFACES; and so on.
     ;;
     ;;Use case: this  function is used when, in a  function application, we determine
     ;;if an operand's type is sub-type  of the corresponding argument's type and: the
@@ -4937,6 +4952,11 @@
     ;;When  this  function   is  successful:  SUPER-IFACE.OTS  is   a  super-type  of
     ;;SUB-IFACE.OTS.
     ;;
+    ;;NOTE  We   need  to   remember  that   the  field   METHOD-PROTOTYPES-TABLE  of
+    ;;"<interface-type-spec>" holds an  entry for each method  in the interface-type,
+    ;;the interface-type's parent, the  interface-type's grand-parent, et cetera.  So
+    ;;there is no need to traverse the hierarchy.
+    ;;
     (for-each
 	(lambda (super-method-prototype-entry)
 	  ;;SUPER-METHOD-PROTOTYPE-ENTRY  is   a  pair  having:  as   car,  a  symbol
@@ -4945,11 +4965,7 @@
 	  (object-type-spec.compatible-method-stx super-iface.ots sub-iface.ots
 						  (car super-method-prototype-entry)
 						  (cdr super-method-prototype-entry)))
-      (interface-type-spec.method-prototypes-table super-iface.ots))
-    (cond ((object-type-spec.parent-ots super-iface.ots)
-	   => (lambda (super-parent.ots)
-		(when (interface-type-spec? super-parent.ots)
-		  (assert-implemented-interface-type-and-implementer-interface-type super-parent.ots sub-iface.ots))))))
+      (interface-type-spec.method-prototypes-table super-iface.ots)))
 
   (define (object-type-spec.compatible-method-stx super-iface.ots sub-iface.ots
 						  super-method-name.sym super-method-prototype.ots)
@@ -4959,7 +4975,7 @@
     ;;instance  of   "<closure-type-spec>"  describing  the  requested   method  type
     ;;signature.
     ;;
-    ;;If SUPER-METHOD-NAME.SYM is EQ?  to an SUB-IFACE.OTS's method name: compare the
+    ;;If SUPER-METHOD-NAME.SYM is EQ?  to  a SUB-IFACE.OTS's method name: compare the
     ;;implemented  method's type  specification with  SUPER-METHOD-PROTOTYPE.OTS, the
     ;;comparison   is   successful   if   the  specification   is   a   sub-type   of
     ;;SUPER-METHOD-PROTOTYPE.OTS.   If  the  signatures   are  mismatched:  raise  an
@@ -4986,12 +5002,8 @@
 			(object-type-spec.name sub-iface.ots)
 			(object-type-spec.name super-iface.ots)
 			super-method-name.sym
-			(object-type-spec.type-annotation sub-method-prototype.ots)
-			(object-type-spec.type-annotation super-method-prototype.ots))))))))
-	  ((object-type-spec.parent-ots sub-iface.ots)
-	   => (lambda (sub-parent.ots)
-		(when (interface-type-spec? sub-parent.ots)
-		  (recursion sub-parent.ots))))
+			(object-type-spec.type-annotation super-method-prototype.ots)
+			(object-type-spec.type-annotation sub-method-prototype.ots))))))))
 	  (else
 	   (raise
 	    (condition
@@ -5008,7 +5020,39 @@
 
 
 (module (build-table-for-interface-and-compliant-object-type)
-
+  ;;This function must be used when, at expand-time, we define a new object-type that
+  ;;is  meant  to implement  an  interface-type.   It is  used  in  the expansion  of
+  ;;DEFINE-RECORD-TYPE.
+  ;;
+  ;;How do we do  it?  First we build a full methods table  holding an entry for each
+  ;;method in the METHOD-PROTOTYPES-TABLE of IFACE.OTS.  We look for matching methods
+  ;;in: OBJECT.OTS itself, OBJECT.OTS's parent, OBJECT.OTS's grand-parent, et cetera.
+  ;;
+  ;;Building the  methods table  makes sure that  OBJECT.OTS actually  implements the
+  ;;interface-type  IFACE.OTS.   So  we  can  build the  method  retriever  for  this
+  ;;interface-type and the associated pair:
+  ;;
+  ;;   (?interface-uid . ?method-retriever)
+  ;;
+  ;;Now,  it  is  automatic  that  OBJECT.OTS  also  implements:  IFACE.OTS's  parent
+  ;;interface-type, IFACE.OTS's  grand-parent interface-type, et cetera.   It is also
+  ;;automatic  that OBJECT.OTS  also implements:  the interface-types  implemented by
+  ;;IFACE.OTS,   the  interface-types   implemented   by   IFACE.OTS's  parent,   the
+  ;;interface-types implemented by IFACE.OTS's grand-parent, et cetera.
+  ;;
+  ;;So   we   traverse  the   hierarchy   of   IFACE.OTS  parents   and   implemented
+  ;;interface-types, building a list of "<interface-type-spec>" instances.  Then, for
+  ;;each interface-type we build a method retriever and the associated pair.  We look
+  ;;for methods in  the full methods table, comparing methods  prototypes just by the
+  ;;symbol representing the name.
+  ;;
+  ;;Finally we put all the pairs in a vector and append to it OBJECT.OTS's vector.
+  ;;
+  ;;NOTE   We  need   to   remember  that   the   field  METHOD-PROTOTYPES-TABLE   of
+  ;;"<interface-type-spec>" holds an entry for each method in the interface-type, the
+  ;;interface-type's parent, the interface-type's  grand-parent, et cetera.  So there
+  ;;is no need to traverse the hierarchy to gather the full list of required methods.
+  ;;
   (define __module_who__
     'build-table-for-interface-and-compliant-object-type)
 
@@ -5018,10 +5062,6 @@
     ;;identifier  bound  to  an  object-type specification.   Verify  that  the  type
     ;;specification bound  to SUB-TYPE.ID  implements all the  methods needed  by the
     ;;interface type bound to SUPER-IFACE.ID; otherwise raise an exception.
-    ;;
-    ;;This function  must be used when,  at expand-time, we define  a new object-type
-    ;;that  is meant  to implement  an interface.   For example,  it is  used in  the
-    ;;expansion of DEFINE-RECORD-TYPE.
     ;;
     ;;When  successful return  an alist  having:  as keys,  symbols representing  the
     ;;interface-type's method  names; as values,  the syntactic identifiers  bound to
@@ -5105,28 +5145,6 @@
 	       (object-type-spec.type-annotation super-method-prototype.ots)))))))
 
   #| end of module: BUILD-TABLE-FOR-INTERFACE-AND-COMPLIANT-OBJECT-TYPE |# )
-
-
-;;;; condition-object type for interface-types validation
-
-(define-condition-type &interface-implementation-missing-method-violation
-    &violation
-  make-interface-implementation-missing-method-violation
-  interface-implementation-missing-method-violation?
-  (object-type-name			interface-implementation-missing-method-violation.object-type-name)
-  (interface-type-name			interface-implementation-missing-method-violation.interface-type-name)
-  (method-name				interface-implementation-missing-method-violation.method-name)
-  (interface-type-method-signature	interface-implementation-missing-method-violation.interface-type-method-signature))
-
-(define-condition-type &interface-implementation-mismatching-method-violation
-    &violation
-  make-interface-implementation-mismatching-method-violation
-  interface-implementation-mismatching-method-violation?
-  (object-type-name			interface-implementation-mismatching-method-violation.object-type-name)
-  (interface-type-name			interface-implementation-mismatching-method-violation.interface-type-name)
-  (method-name				interface-implementation-mismatching-method-violation.method-name)
-  (object-type-method-signature		interface-implementation-mismatching-method-violation.object-type-method-signature)
-  (interface-type-method-signature	interface-implementation-mismatching-method-violation.interface-type-method-signature))
 
 
 ;;;; type annotations

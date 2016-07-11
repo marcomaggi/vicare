@@ -648,12 +648,11 @@
 (declare-core-primitive make-interface-type-descr
     (safe)
   (signatures
-   ((<symbol>		;type-name
-     <symbol>		;uid
-     (list-of <symbol>)	;method-prototype-names
-     (list-of <symbol>)	;implemented-method-names
-     (list-of <symbol>) ;implemented-interface-uids
-     <procedure>)	;method-retriever-function
+   ((<symbol>		      ;type-name
+     <symbol>		      ;uid
+     (list-of <symbol>)	      ;implemented-interface-uids
+     (list-of <symbol>)	      ;method-prototype-names
+     <type-method-retriever>) ;method-retriever-function
     => (<interface-type-descr>))))
 
 (declare-type-predicate interface-type-descr?	<interface-type-descr>)
@@ -668,17 +667,12 @@
   (signatures
    ((<interface-type-descr>)		=> (<symbol>))))
 
-(declare-core-primitive interface-type-descr.method-prototype-names
-    (safe)
-  (signatures
-   ((<interface-type-descr>)		=> ((list-of <symbol>)))))
-
-(declare-core-primitive interface-type-descr.implemented-method-names
-    (safe)
-  (signatures
-   ((<interface-type-descr>)		=> ((list-of <symbol>)))))
-
 (declare-core-primitive interface-type-descr.implemented-interface-uids
+    (safe)
+  (signatures
+   ((<interface-type-descr>)		=> ((list-of <symbol>)))))
+
+(declare-core-primitive interface-type-descr.method-prototype-names
     (safe)
   (signatures
    ((<interface-type-descr>)		=> ((list-of <symbol>)))))

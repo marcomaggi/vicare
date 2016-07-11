@@ -617,6 +617,33 @@
     &warning
   make-warning-unused-lexical-variable warning-unused-lexical-variable?)
 
+;;; --------------------------------------------------------------------
+
+(define-built-in-condition-type &interface-implementation-violation
+    &violation
+  make-interface-implementation-violation
+  interface-implementation-violation?
+  (methods
+   (object-type-name			interface-implementation-violation.object-type-name)
+   (interface-type-name			interface-implementation-violation.interface-type-name)))
+
+(define-built-in-condition-type &interface-implementation-method-violation
+    &interface-implementation-violation
+  make-interface-implementation-method-violation interface-implementation-method-violation?
+  (methods
+   (interface-method-name	interface-implementation-violation.interface-method-name)
+   (interface-method-signature	interface-implementation-violation.interface-type-method-signature)))
+
+(define-built-in-condition-type &interface-implementation-missing-method-violation
+    &interface-implementation-method-violation
+  make-interface-implementation-missing-method-violation interface-implementation-missing-method-violation?)
+
+(define-built-in-condition-type &interface-implementation-mismatching-method-violation
+    &interface-implementation-method-violation
+  make-interface-implementation-mismatching-method-violation interface-implementation-mismatching-method-violation?
+  (methods
+   (object-method-signature	interface-implementation-mismatching-method-violation.object-method-signature)))
+
 
 ;;;; Vicare specific, compiler stuff
 

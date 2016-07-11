@@ -140,7 +140,7 @@
     <closure-type-spec>-rtd				<closure-type-spec>-rcd
     make-closure-type-spec				closure-type-spec?
     closure-type-spec.signature				closure-type-spec.set-new-retvals-when-untyped!
-    closure-type-spec.thunk?
+    closure-type-spec.thunk?				closure-type-spec.join
 
     <struct-type-spec>
     <struct-type-spec>-rtd				<struct-type-spec>-rcd
@@ -617,6 +617,35 @@
     &warning-unused-lexical-variable-rcd
     make-warning-unused-lexical-variable
     warning-unused-lexical-variable?
+
+    &interface-implementation-violation-rtd
+    &interface-implementation-violation-rcd
+    &interface-implementation-violation
+    make-interface-implementation-violation
+    interface-implementation-violation?
+    interface-implementation-violation.object-type-name
+    interface-implementation-violation.interface-type-name
+
+    &interface-implementation-method-violation-rtd
+    &interface-implementation-method-violation-rcd
+    &interface-implementation-method-violation
+    make-interface-implementation-method-violation
+    interface-implementation-method-violation?
+    interface-implementation-violation.interface-method-name
+    interface-implementation-violation.interface-type-method-signature
+
+    &interface-implementation-missing-method-violation-rtd
+    &interface-implementation-missing-method-violation-rcd
+    &interface-implementation-missing-method-violation
+    make-interface-implementation-missing-method-violation
+    interface-implementation-missing-method-violation?
+
+    &interface-implementation-mismatching-method-violation-rtd
+    &interface-implementation-mismatching-method-violation-rcd
+    &interface-implementation-mismatching-method-violation
+    make-interface-implementation-mismatching-method-violation
+    interface-implementation-mismatching-method-violation?
+    interface-implementation-mismatching-method-violation.object-method-signature
 
     assertion-error
     syntax-violation/internal-error

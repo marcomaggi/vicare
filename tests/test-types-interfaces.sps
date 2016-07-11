@@ -29,6 +29,7 @@
   (import (vicare)
     (vicare language-extensions interfaces)
     (vicare language-extensions instantiable-bodies)
+    (prefix (vicare expander) xp::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -284,6 +285,51 @@
 		))
     => #t #t #f #t #f #f)
 
+;;; --------------------------------------------------------------------
+;;; errors
+
+  ;;An interface-type fails to implement another interface-type: missing method.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-interface-type <implementeD>
+		      (method-prototype doit
+			(lambda (<string>) => (<number>))))
+
+		    (define-interface-type <implementeR>
+		      (implements <implementeD>))
+
+		    (type-annotation-super-and-sub? <implementeD> <implementeR>)))
+	(catch E
+	  ((xp::&interface-implementation-missing-method-violation)
+	   (%print-message #t (condition-message E))
+	   #t)
+	  (else E)))
+    => #t)
+
+  ;;An interface-type fails to implement another interface-type: mismatching method.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-interface-type <implementeD>
+		      (method-prototype doit
+			(lambda (<string>) => (<number>))))
+
+		    (define-interface-type <implementeR>
+		      (implements <implementeD>)
+		      (method-prototype doit
+			(lambda (<string>) => (<symbol>))))
+
+		    (type-annotation-super-and-sub? <implementeD> <implementeR>)))
+	(catch E
+	  ((xp::&interface-implementation-mismatching-method-violation)
+	   (%print-message #t (condition-message E))
+	   #t)
+	  (else E)))
+    => #t)
+
   (void))
 
 
@@ -443,6 +489,51 @@
 		(type-annotation-super-and-sub? <C> <B>)
 		))
     => #t #t #f #t #f #f)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  ;;A record-type fails to implement another interface-type: missing method.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-interface-type <implementeD>
+		      (method-prototype doit
+			(lambda (<string>) => (<number>))))
+
+		    (define-record-type <implementeR>
+		      (implements <implementeD>))
+
+		    (type-annotation-super-and-sub? <implementeD> <implementeR>)))
+	(catch E
+	  ((xp::&interface-implementation-missing-method-violation)
+	   (%print-message #t (condition-message E))
+	   #t)
+	  (else E)))
+    => #t)
+
+  ;;A record-type fails to implement another interface-type: mismatching method.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-interface-type <implementeD>
+		      (method-prototype doit
+			(lambda (<string>) => (<number>))))
+
+		    (define-record-type <implementeR>
+		      (implements <implementeD>)
+		      (method ({doit <symbol>} {S <string>})
+			'ciao))
+
+		    (type-annotation-super-and-sub? <implementeD> <implementeR>)))
+	(catch E
+	  ((xp::&interface-implementation-mismatching-method-violation)
+	   (%print-message #t (condition-message E))
+	   #t)
+	  (else E)))
+    => #t)
 
   (void))
 

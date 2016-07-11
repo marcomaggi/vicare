@@ -232,6 +232,37 @@
 
 ;;; --------------------------------------------------------------------
 
+     &interface-implementation-violation-rtd
+     &interface-implementation-violation-rcd
+     &interface-implementation-violation
+     make-interface-implementation-violation
+     interface-implementation-violation?
+     interface-implementation-violation.object-type-name
+     interface-implementation-violation.interface-type-name
+
+     &interface-implementation-method-violation-rtd
+     &interface-implementation-method-violation-rcd
+     &interface-implementation-method-violation
+     make-interface-implementation-method-violation
+     interface-implementation-method-violation?
+     interface-implementation-violation.interface-method-name
+     interface-implementation-violation.interface-type-method-signature
+
+     &interface-implementation-missing-method-violation-rtd
+     &interface-implementation-missing-method-violation-rcd
+     &interface-implementation-missing-method-violation
+     make-interface-implementation-missing-method-violation
+     interface-implementation-missing-method-violation?
+
+     &interface-implementation-mismatching-method-violation-rtd
+     &interface-implementation-mismatching-method-violation-rcd
+     &interface-implementation-mismatching-method-violation
+     make-interface-implementation-mismatching-method-violation
+     interface-implementation-mismatching-method-violation?
+     interface-implementation-mismatching-method-violation.object-method-signature
+
+;;; --------------------------------------------------------------------
+
      assertion-error
      syntax-violation/internal-error
      assertion-violation/internal-error
@@ -499,6 +530,64 @@
     cnd::&warning
   make-warning-unused-lexical-variable
   warning-unused-lexical-variable?)
+
+
+;;;; condition-object type for interface-types validation
+
+;;This  condition-object  type is  used  to  represent interface-type  implementation
+;;violations.
+;;
+(cnd::define-core-condition-type &interface-implementation-violation
+    cnd::&violation
+  make-interface-implementation-violation
+  interface-implementation-violation?
+  (object-type-name			interface-implementation-violation.object-type-name)
+		;A syntactic identifier representing the object-type name that failed
+		;to implement an interface.
+  (interface-type-name			interface-implementation-violation.interface-type-name)
+		;A syntactic identifier representing the interface-type name.
+  #| end of CND::DEFINE-CORE-CONDITION-TYPE |# )
+
+;;This  condition-object  type is  used  to  represent interface-type  implementation
+;;violations due to a method implementation failure.
+;;
+(cnd::define-core-condition-type &interface-implementation-method-violation
+    &interface-implementation-violation
+  make-interface-implementation-method-violation
+  interface-implementation-method-violation?
+  (interface-method-name	interface-implementation-violation.interface-method-name)
+		;A symbol representing an interface-type's method name.
+  (interface-method-signature	interface-implementation-violation.interface-type-method-signature)
+		;An instance  of "<closure-type-spec>" representing the  signature of
+		;the interface-type's method.
+  #| end of CND::DEFINE-CORE-CONDITION-TYPE |# )
+
+;;This  condition-object  type is  used  to  represent interface-type  implementation
+;;violations due to a missing method.  The constructor is called with:
+;;
+;;   (make-interface-implementation-missing-method-violation
+;;      ?object-type-name ?interface-type-name
+;;      ?interface-method-name ?interface-method-signature)
+;;
+(cnd::define-core-condition-type &interface-implementation-missing-method-violation
+    &interface-implementation-method-violation
+  make-interface-implementation-missing-method-violation
+  interface-implementation-missing-method-violation?)
+
+;;This  condition-object  type is  used  to  represent interface-type  implementation
+;;violations due to a mismatching method signature.
+;;
+;;   (make-interface-implementation-mismatching-method-violation
+;;      ?object-type-name ?interface-type-name
+;;      ?interface-method-name ?interface-method-signature
+;;      ?object-method-signature)
+;;
+(cnd::define-core-condition-type &interface-implementation-mismatching-method-violation
+    &interface-implementation-method-violation
+  make-interface-implementation-mismatching-method-violation
+  interface-implementation-mismatching-method-violation?
+  (object-method-signature	interface-implementation-mismatching-method-violation.object-method-signature)
+  #| end of CND::DEFINE-CORE-CONDITION-TYPE |# )
 
 
 ;;;; exception raising functions

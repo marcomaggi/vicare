@@ -40,6 +40,7 @@
    case-lambda-signature.retvals		case-lambda-signature.clause-signature*
    case-lambda-signature.min-and-max-argvals
    case-lambda-signature.super-and-sub?		case-lambda-signature.match-formals-against-operands
+   case-lambda-signature.join
 
    #| end of exports |# )
 
@@ -327,6 +328,14 @@
 		   (else
 		    state)))
       'no-match (case-lambda-signature.clause-signature* formals.ots))))
+
+;;; --------------------------------------------------------------------
+
+(define* (case-lambda-signature.join {spec1 case-lambda-signature?} {spec2 case-lambda-signature?})
+  (make-case-lambda-signature
+   (delete-duplicates (append (case-lambda-signature.clause-signature* spec1)
+			      (case-lambda-signature.clause-signature* spec2))
+		      lambda-signature=?)))
 
 
 ;;;; done

@@ -4209,9 +4209,8 @@
     (interface-type-descr?			$type-descriptors)
     (interface-type-descr.type-name		$type-descriptors)
     (interface-type-descr.uid			$type-descriptors)
-    (interface-type-descr.method-prototype-names $type-descriptors)
-    (interface-type-descr.implemented-method-names $type-descriptors)
     (interface-type-descr.implemented-interface-uids $type-descriptors)
+    (interface-type-descr.method-prototype-names $type-descriptors)
     (interface-type-descr.method-retriever	$type-descriptors)
 ;;;
     (<union-type-descr>-rtd)
@@ -5056,6 +5055,7 @@
     (make-closure-type-spec				$expander)
     (closure-type-spec?					$expander)
     (closure-type-spec.signature			$expander)
+    (closure-type-spec.join				$expander)
 
     (<label-type-spec>-rtd)
     (<label-type-spec>-rcd)
@@ -5281,6 +5281,35 @@
     (&warning-unused-lexical-variable			$expander)
     (make-warning-unused-lexical-variable		$expander)
     (warning-unused-lexical-variable?			$expander)
+;;;
+    (&interface-implementation-violation-rtd)
+    (&interface-implementation-violation-rcd)
+    (&interface-implementation-violation			$expander)
+    (make-interface-implementation-violation			$expander)
+    (interface-implementation-violation?			$expander)
+    (interface-implementation-violation.object-type-name	$expander)
+    (interface-implementation-violation.interface-type-name	$expander)
+
+    (&interface-implementation-method-violation-rtd)
+    (&interface-implementation-method-violation-rcd)
+    (&interface-implementation-method-violation			$expander)
+    (make-interface-implementation-method-violation		$expander)
+    (interface-implementation-method-violation?			$expander)
+    (interface-implementation-violation.interface-method-name	$expander)
+    (interface-implementation-violation.interface-type-method-signature $expander)
+
+    (&interface-implementation-missing-method-violation-rtd)
+    (&interface-implementation-missing-method-violation-rcd)
+    (&interface-implementation-missing-method-violation		$expander)
+    (make-interface-implementation-missing-method-violation	$expander)
+    (interface-implementation-missing-method-violation?		$expander)
+
+    (&interface-implementation-mismatching-method-violation-rtd)
+    (&interface-implementation-mismatching-method-violation-rcd)
+    (&interface-implementation-mismatching-method-violation	$expander)
+    (make-interface-implementation-mismatching-method-violation	$expander)
+    (interface-implementation-mismatching-method-violation?	$expander)
+    (interface-implementation-mismatching-method-violation.object-method-signature $expander)
 ;;;
     ;;These are for internal use in the expander.
     (<expander-options>-rtd)

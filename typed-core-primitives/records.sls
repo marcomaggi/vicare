@@ -210,6 +210,11 @@
   (signatures
    ((<record-type-descriptor>)		=> ((vector-of <symbol>)))))
 
+(declare-core-primitive record-type-implemented-interfaces
+    (safe)
+  (signatures
+   ((<record-type-descriptor>)		=> ((or <false> (vector-of (pair <symbol> <type-method-retriever>)))))))
+
 ;;; --------------------------------------------------------------------
 ;;; record-type procedures
 

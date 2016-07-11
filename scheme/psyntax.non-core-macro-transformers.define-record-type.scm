@@ -1653,7 +1653,7 @@
     ;;
     #f
     #;(cond ((null? implemented-interface*.id)
-    '(quote ()))
+	   '(quote ()))
 	  ((list-of-single-item? implemented-interface*.id)
 	   (let ((iface.id (car implemented-interface*.id)))
 	     `(quasisyntax (vector (unsyntax ,(%compose-interfaces-table-entry-code foo iface.id))))))

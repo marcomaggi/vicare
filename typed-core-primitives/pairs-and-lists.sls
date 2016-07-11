@@ -161,9 +161,8 @@
     (safe)
   (signatures
    (()					=> (<null>))
-   ((list-of <list>)			=> (<nelist>))
+   ((list-of <list>)			=> (<list>))
    ;;In general the result may be an improper list.
-   ((<top> . <list>)			=> (<pair>))
    (<list>				=> (<top>)))
   (attributes
    ;;This is foldable because it returns null itself.

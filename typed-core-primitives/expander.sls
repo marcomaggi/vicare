@@ -681,7 +681,7 @@
 /section)
 
 
-;;;; object type specifications
+;;;; object-type specifications
 
 (section
 
@@ -694,6 +694,11 @@
     (safe)
   (signatures
    ((<object-type-spec>)		=> ((list-of <syntactic-identifier>)))))
+
+(declare-core-primitive object-type-spec.type-annotation
+    (safe)
+  (signatures
+   ((<object-type-spec>)		=> (<syntax-object>))))
 
 ;;; --------------------------------------------------------------------
 
@@ -794,6 +799,34 @@
     (safe)
   (signatures
    ((<enumeration-type-spec> <symbol>)	=> (<boolean>))))
+
+;;; --------------------------------------------------------------------
+;;; <closure-type-spec>
+
+(declare-core-rtd <closure-type-spec>-rtd)
+(declare-core-rcd <closure-type-spec>-rcd)
+
+(declare-type-predicate closure-type-spec?		<closure-type-spec>)
+
+(declare-core-primitive closure-type-spec.thunk?
+    (safe)
+  (signatures
+   ((<closure-type-spec>)		=> (<boolean>))))
+
+(declare-core-primitive closure-type-spec.super-and-sub?
+    (safe)
+  (signatures
+   ((<closure-type-spec> <closure-type-spec>)	=> (<boolean>))))
+
+(declare-core-primitive closure-type-spec.match-formals-against-operands
+    (safe)
+  (signatures
+   ((<closure-type-spec> <type-signature>)	=> ((enumeration exact-match possible-match no-match)))))
+
+(declare-core-primitive closure-type-spec.join
+    (safe)
+  (signatures
+   ((<closure-type-spec> <closure-type-spec>)	=> (<closure-type-spec>))))
 
 ;;; --------------------------------------------------------------------
 
@@ -912,6 +945,7 @@
 (declare-type-predicate label-type-spec?	<label-type-spec>)
 
 ;;; --------------------------------------------------------------------
+;;; <interface-type-spec>
 
 (declare-core-rtd <interface-type-spec>-rtd)
 (declare-core-rcd <interface-type-spec>-rcd)
@@ -953,15 +987,17 @@
 ;;; --------------------------------------------------------------------
 ;;; operations on type specs
 
-  (declare-core-primitive union-of-type-specs
-      (safe)
-    (signatures
-     ((list-of <object-type-spec>)	=> (<object-type-spec>))))
+(declare-core-primitive union-of-type-specs
+    (safe)
+  (signatures
+   ((list-of <object-type-spec>)	=> (<object-type-spec>))))
 
-  /section)
+/section)
 
 
 ;;;; type signatures
+
+(section
 
 (declare-type-predicate		type-signature?			<type-signature>)
 (declare-list-of-type-predicate	list-of-type-signatures?	<type-signature>)
@@ -1053,8 +1089,12 @@
   (signatures
    ((list-of <type-signature>)		=> (<type-signature>))))
 
+/section)
+
 
 ;;;; condition object types
+
+(section
 
 (declare-core-rtd &syntactic-identifier-rtd)
 (declare-core-rcd &syntactic-identifier-rcd)
@@ -1199,6 +1239,85 @@
 (declare-core-rcd &expand-time-type-signature-warning-rcd)
 ;;make-expand-time-type-signature-warning
 (declare-condition-type-predicate expand-time-type-signature-warning?	&expand-time-type-signature-warning)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd &interface-implementation-violation-rtd)
+(declare-core-rcd &interface-implementation-violation-rcd)
+
+(declare-core-primitive make-interface-implementation-violation
+    (safe)
+  (signatures
+   ((<syntactic-identifier> <syntactic-identifier>)	=> (&interface-implementation-violation))))
+
+(declare-condition-type-predicate interface-implementation-violation?	&interface-implementation-violation)
+
+(declare-core-primitive interface-implementation-violation.object-type-name
+    (safe)
+  (signatures
+   ((&interface-implementation-violation)	=> (<syntactic-identifier>))))
+
+(declare-core-primitive interface-implementation-violation.interface-type-name
+    (safe)
+  (signatures
+   ((&interface-implementation-violation)	=> (<syntactic-identifier>))))
+
+;;;
+
+(declare-core-rtd &interface-implementation-method-violation-rtd)
+(declare-core-rcd &interface-implementation-method-violation-rcd)
+
+(declare-core-primitive make-interface-implementation-method-violation
+    (safe)
+  (signatures
+   ((<syntactic-identifier> <syntactic-identifier> <symbol> <closure-type-spec>)
+    => (&interface-implementation-method-violation))))
+
+(declare-condition-type-predicate interface-implementation-method-violation?	&interface-implementation-method-violation)
+
+(declare-core-primitive interface-implementation-violation.interface-method-name
+    (safe)
+  (signatures
+   ((&interface-implementation-method-violation)	=> (<symbol>))))
+
+(declare-core-primitive interface-implementation-violation.interface-type-method-signature
+    (safe)
+  (signatures
+   ((&interface-implementation-method-violation)	=> (<closure-type-spec>))))
+
+;;;
+
+(declare-core-rtd &interface-implementation-missing-method-violation-rtd)
+(declare-core-rcd &interface-implementation-missing-method-violation-rcd)
+
+(declare-core-primitive make-interface-implementation-missing-method-violation
+    (safe)
+  (signatures
+   ((<syntactic-identifier> <syntactic-identifier> <symbol> <closure-type-spec>)
+    => (&interface-implementation-missing-method-violation))))
+
+(declare-condition-type-predicate interface-implementation-missing-method-violation?	&interface-implementation-missing-method-violation)
+
+;;;
+
+(declare-core-rtd &interface-implementation-mismatching-method-violation-rtd)
+(declare-core-rcd &interface-implementation-mismatching-method-violation-rcd)
+
+(declare-core-primitive make-interface-implementation-mismatching-method-violation
+    (safe)
+  (signatures
+   ((<syntactic-identifier> <syntactic-identifier> <symbol> <closure-type-spec> <closure-type-spec>)
+    => (&interface-implementation-mismatching-method-violation))))
+
+(declare-condition-type-predicate interface-implementation-mismatching-method-violation?
+				  &interface-implementation-mismatching-method-violation)
+
+(declare-core-primitive interface-implementation-mismatching-method-violation.object-method-signature
+    (safe)
+  (signatures
+   ((&interface-implementation-mismatching-method-violation)	=> (<closure-type-spec>))))
+
+/section)
 
 
 ;;;; done

@@ -36,6 +36,7 @@
     __who__				brace
     try					catch
     non-compound-sexp?			self-evaluating?
+    delete-duplicates
 
     define-core-record-type
     define-type-descriptors
@@ -349,6 +350,22 @@
       (would-block-object?	x)
       (unbound-object?		x)
       (bwp-object?		x)))
+
+;;; --------------------------------------------------------------------
+
+(case-define delete-duplicates
+  ((ell)
+   (delete-duplicates ell equal?))
+  ((ell item=)
+   (if (pair? ell)
+       (let* ((x        (car ell))
+	      (tail     (cdr ell))
+	      (new-tail (delete-duplicates (remp (lambda (y) (item= x y)) tail)
+					   item=)))
+	 (if (eq? tail new-tail)
+	     ell
+	   (cons x new-tail)))
+     '())))
 
 
 ;;;; lists of symbols

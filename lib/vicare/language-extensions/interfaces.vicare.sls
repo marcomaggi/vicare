@@ -148,18 +148,22 @@
 
   (define-record-type <method-prototype>
     (fields
-      (immutable	{name		xp::<syntactic-identifier>})
+      (immutable	{name-id	xp::<syntactic-identifier>})
 		;A syntactic identifier representing the method name.
-      (immutable	{procname	xp::<syntactic-identifier>})
-		;A syntactic  identifier to be  bound to the  method's implementation
-		;procedure.
+      (immutable	{name-sym	<symbol>})
+		;A symbol representing the method name.
       (immutable	{signature	xp::<closure-type-spec>})
 		;An  instance   of  "<closure-type-spec>"  representing   the  method
 		;signature.
       #| end of FIELDS |# )
 
     (constructor-signature
-      (lambda (xp::<syntactic-identifier> xp::<syntactic-identifier> xp::<closure-type-spec>) => (<method-prototype>)))
+      (lambda (xp::<syntactic-identifier> xp::<closure-type-spec>) => (<method-prototype>)))
+
+    (protocol
+      (lambda (make-record)
+	(lambda (name-id signature)
+	  (make-record name-id (syntax->datum name-id) signature))))
 
     (method (signature-annotation)
       ;;Return a syntax object representing the method's signature type annotation.
@@ -182,7 +186,7 @@
       (mutable		definitions)
 		;Proper  list of  syntax objects  representing definition  forms that
 		;must go in the output of this macro.
-      (mutable		required-prototypes)
+      (mutable		parsed-prototypes)
 		;A   list   of   "<method-prototype>"  instances   representing   the
 		;required-method specifications.  This list  holds an object for each
 		;method that must  be implemented by the  object-types that implement
@@ -198,6 +202,10 @@
 		;A   list   of   "<method-prototype>"  instances   representing   the
 		;default-method specifications.   This list holds an  object for each
 		;default method implemented by this interface-type.
+      (mutable		methods-table)
+		;An  alist having:  as keys,  symbols representing  method names;  as
+		;values,  syntactic identifiers  bound to  the method  implementation
+		;functions.
       #| end of FIELDS |# )
 
     (protocol
@@ -208,9 +216,10 @@
 		       #f  ;parent-ots
 		       '() ;implemented-interfaces
 		       '() ;definitions
-		       '() ;required-prototypes
+		       '() ;parsed-prototypes
 		       '() ;method-prototypes-table
 		       '() ;default-prototypes
+		       '() ;methods-table
 		       ))))
 
     (constructor-signature
@@ -270,14 +279,14 @@
 				   implemented-iface.ots implementer-iface.ots))
 			IMPLEMENTED-INTERFACES-OTS))))))))
 
-    ;; (method (implemented-interface-uids)
-    ;; 	;;Return  a syntax  object  representing an  expression  which, expanded  and
-    ;; 	;;evaluated, returns a  proper list of symbols representing the  list of UIDs
-    ;; 	;;associated to the implemented interfaces.
-    ;; 	;;
-    ;; 	#`(list #,@(map (lambda (id)
-    ;; 			  #`(car (type-unique-identifiers #,id)))
-    ;; 		     (.implemented-interfaces this))))
+    (method (implemented-interface-uids-stx)
+      ;;Return  a syntax  object  representing an  expression  which, expanded  and
+      ;;evaluated, returns a  proper list of symbols representing the  list of UIDs
+      ;;associated to the implemented interfaces.
+      ;;
+      #`(list #,@(map (lambda (iface.ots)
+			#`(car (type-unique-identifiers #,(xp::object-type-spec.type-annotation iface.ots))))
+		   (.implemented-interfaces this))))
 
     ;; ------------------------------------------------------------
 
@@ -285,7 +294,7 @@
       ;;Register a  method prototype's  specification parsed from  a METHOD-PROTOTYPE
       ;;clause.  Further validations will be performed later.
       ;;
-      (.required-prototypes this (cons proto (.required-prototypes this))))
+      (.parsed-prototypes this (cons proto (.parsed-prototypes this))))
 
     (method (method-prototypes-table-stx)
       ;;Build and return  a syntax object representing an  expression which, expanded
@@ -302,23 +311,51 @@
     (method (methods-table-stx)
       ;;Build and return  a syntax object representing an  expression which, expanded
       ;;and evaluated, builds a methods  table for this interface-type specification.
+      ;;The table will be stored in the "<interface-type-spec>" instance representing
+      ;;this interface-type and used at expand-time.
       ;;
       ;;The table is an alist having: as keys, symbols representing the method names;
       ;;as  values,   syntactic  identifiers  bound  to   the  method  implementation
       ;;functions.  The method implementation functions will perform run-time dynamic
       ;;dispatch to the concrete method's implementations.
       ;;
-      ;;The table will be stored in the "<interface-type-spec>" instance representing
-      ;;this interface-type  and used at expand-time;  it includes only an  entry for
-      ;;each method  prototype defined  in this  interface-type, the  parent's method
-      ;;prototypes are left out.
-      ;;
-      (if (null? (.required-prototypes this))
+      (if (null? (.methods-table this))
 	  #'(quote ())
-	#`(list . #,(map (lambda ({proto <method-prototype>})
-			   #`(cons (quote  #,(.name     proto))
-				   (syntax #,(.procname proto))))
-		      (.required-prototypes this)))))
+	#`(list . #,(map (lambda (entry)
+			   #`(cons (quote  #,(datum->syntax (.type-name this) (car entry)))
+				   (syntax #,(cdr entry))))
+		      (.methods-table this)))))
+
+    (method (method-prototype-names-stx)
+      ;;Build and return  a syntax object representing an  expression which, expanded
+      ;;and evaluated,  returns a list  of symbols representing the  prototype names.
+      ;;The list will be stored in the run-time interface-type type-descriptor.
+      ;;
+      (if (null? (.methods-table this))
+	  #'(quote ())
+	#`(list . #,(map (lambda (entry)
+			   (datum->syntax (.type-name this) (car entry)))
+		      (.methods-table this)))))
+
+    (method (method-retriever-stx)
+      ;;Build and return  a syntax object representing an  expression which, expanded
+      ;;and evaluated, returns a method  retriever procedure for this interface-type.
+      ;;The procedure will be stored in the run-time interface-type type-descriptor.
+      ;;
+      ;;NOTE  the   METHODS-TABLE  holds   an  entry  for   every  method   in:  this
+      ;;interface-type,   this    interface-type's   parent,    this   interface-type
+      ;;grand-parent's, et cetera.  So the method retriever procedure does *not* call
+      ;;the parent's method retriever when a method is not found.
+      ;;
+      #`(lambda (method-name)
+	  (case method-name
+	    #,@(map (lambda (entry)
+		      (with-syntax
+			  ((METHOD-NAME	(datum->syntax (.type-name this) (car entry)))
+			   (PROCNAME	(cdr entry)))
+			#'((METHOD-NAME) PROCNAME)))
+		 (.methods-table this))
+	    (else #f))))
 
     ;; ------------------------------------------------------------
 
@@ -326,37 +363,68 @@
       ;;After  all   the  clauses  have  been   parsed,  we  need  to   perform  some
       ;;post-processing finalisation.  This method does it.
       ;;
-      (define parent-method-prototypes-table
-	(if (.parent-ots this)
-	    (let (({parent.ots <interface-type-spec>} (.parent-ots this)))
-	      ;;The  parent's  method prototypes  table  becomes  the base  for  this
-	      ;;interface-type's table.
-	      (.method-prototypes-table parent.ots))
-	  '()))
 
       ;;If there is no UID: generate one.
       (.uid this (or (.uid this) (%build-generative-uid (.type-name this))))
 
-      (.method-prototypes-table this
-	(fold-left (lambda (method-prototypes-table {proto <method-prototype>})
-		     (let ((method-name.sym (syntax->datum (.name proto))))
-		       ;;Check   for  duplicate   method   names   with  the   parent's
-		       ;;specification.   We want  a descriptive  error message,  so we
-		       ;;check both the parent's table and this type's table.
-		       (cond ((assq method-name.sym parent-method-prototypes-table)
-			      (synner "duplicate method name between this interface-type and its parent"
-				      method-name.sym)))
-		       ;;Check for duplicate method names in the defined methods.
-		       (cond ((assq method-name.sym method-prototypes-table)
-			      (synner "duplicate method name in interface-type definition" method-name.sym)))
-		       ;;For  every required-method  prototype  we  create the  dynamic
-		       ;;dispatch function.
-		       (.push-definition! this
-			 #`(define/std (#,(.procname proto) subject . args)
-			     (interface-method-call-late-binding (quote #,(.uid this)) (quote #,(.name proto)) subject args)))
-		       ;;Add an entry to the method prototypes table.
-		       (acons method-name.sym (.signature proto) method-prototypes-table)))
-	  parent-method-prototypes-table (.required-prototypes this)))
+      (let* ((raw-method-prototypes-table
+	      (let ((parent-method-prototypes-table
+		     (if (.parent-ots this)
+			 (let (({parent.ots <interface-type-spec>} (.parent-ots this)))
+			   (.method-prototypes-table parent.ots))
+		       '()))
+		    (this-method-prototypes-table
+		     (fold-left (lambda (method-prototypes-table {proto <method-prototype>})
+				  (acons (.name-sym proto) (.signature proto) method-prototypes-table))
+		       '() (.parsed-prototypes this))))
+		(append this-method-prototypes-table parent-method-prototypes-table)))
+	     (group*
+	      ;;GROUP*  is a  list of  alists.  Every  alist is  composed by  entries
+	      ;;having the same method name.
+	      (if (pair? raw-method-prototypes-table)
+		  (begin
+		    (let recur ((first (car raw-method-prototypes-table))
+				(spec* (cdr raw-method-prototypes-table)))
+		      (receive (group rest)
+			  (partition (lambda (entry)
+				       (eq? (car first) (car entry)))
+			    spec*)
+			(cons (cons first group)
+			      (if (pair? rest)
+				  (recur (car rest) (cdr rest))
+				'())))))
+		'())))
+	(.method-prototypes-table this
+	  ;;Here we compress every alist in GROUP* into a single entry.
+	  (map (lambda (group)
+		 (if (list-of-single-item? group)
+		     (car group)
+		   (cons (caar group)
+			 (fold-left (lambda (closure-spec1 entry2)
+				      (xp::closure-type-spec.join closure-spec1 (cdr entry2)))
+			   (cdar group)
+			   (cdr group)))))
+	    group*))
+
+	;;Build the  methods table.  An  alist having: as keys,  symbols representing
+	;;method  names;  as  values,  syntactic  identifiers  bound  to  the  method
+	;;implementation functions.
+	(.methods-table this
+	  (map (lambda (entry)
+		 (let ((method-name.sym (car entry)))
+		   (cons method-name.sym (xp::identifier-method-procname (.type-name this) method-name.sym))))
+	    (.method-prototypes-table this)))
+
+	;;For every method prototype we create the dynamic dispatch function.
+	(for-each (lambda (entry)
+		    (with-syntax
+			((UID		(.uid this))
+			 (METHOD-NAME	(datum->syntax (.type-name this) (car entry)))
+			 (PROCNAME	(cdr entry)))
+		      (.push-definition! this
+			#`(define/std (PROCNAME subject . args)
+			    (interface-method-call-late-binding (quote UID) (quote METHOD-NAME) subject args)))))
+	  (.methods-table this)))
 
       #| end of FINALISE |# )
 
@@ -386,20 +454,24 @@
   (define (%build-output {results <parsing-results>})
     (.finalise results)
     (with-syntax
-	((TYPE-NAME				(.type-name			results))
-	 (UID					(.uid				results))
-	 (TYPE-DESCRIPTOR			(.type-descriptor-id		results))
-	 (PARENT-OTS				(.parent-ots			results))
-	 (METHOD-PROTOTYPES-TABLE		(.method-prototypes-table-stx	results))
-	 (IMPLEMENTED-INTERFACES		(.implemented-interfaces-ots	results))
-	 (METHODS-TABLE				(.methods-table-stx		results))
-	 ((DEFINITION ...)			(.definitions			results))
-	 ((INTERFACE-VALIDATION-FORM ...)	(.interface-validation-forms	results)))
+	((TYPE-NAME				(.type-name				results))
+	 (UID					(.uid					results))
+	 (TYPE-DESCRIPTOR			(.type-descriptor-id			results))
+	 (PARENT-OTS				(.parent-ots				results))
+	 (METHOD-PROTOTYPES-TABLE		(.method-prototypes-table-stx		results))
+	 (IMPLEMENTED-INTERFACES		(.implemented-interfaces-ots		results))
+	 (METHODS-TABLE				(.methods-table-stx			results))
+	 ((DEFINITION ...)			(.definitions				results))
+	 ((INTERFACE-VALIDATION-FORM ...)	(.interface-validation-forms		results))
+	 ;;
+	 (IMPLEMENTED-INTERFACE-UIDS		(.implemented-interface-uids-stx	results))
+	 (METHOD-PROTOTYPE-NAMES		(.method-prototype-names-stx		results))
+	 (METHOD-RETRIEVER			(.method-retriever-stx			results)))
       #'(module (TYPE-NAME)
-	  ;; (define/typed {TYPE-DESCRIPTOR td::<interface-type-descr>}
-	  ;;   (td::make-interface-type-descr (quote TYPE-NAME) (quote UID)
-	  ;; 				     (quote METHOD-PROTOTYPE-NAMES) (quote IMPLEMENTED-METHOD-NAMES)
-	  ;; 				     IMPLEMENTED-INTERFACE-UIDS METHOD-RETRIEVER))
+	  (define/typed {TYPE-DESCRIPTOR td::<interface-type-descr>}
+	    (td::make-interface-type-descr (quote TYPE-NAME) (quote UID)
+					   (quote METHOD-PROTOTYPE-NAMES) IMPLEMENTED-INTERFACE-UIDS
+					   METHOD-RETRIEVER))
 	  (define-syntax TYPE-NAME
 	    (xp::make-interface-type-spec (syntax TYPE-NAME) (quote UID) (syntax TYPE-DESCRIPTOR) (quote PARENT-OTS)
 					  METHOD-PROTOTYPES-TABLE METHODS-TABLE IMPLEMENTED-INTERFACES))
@@ -546,10 +618,9 @@
       (syntax-case arg ()
 	(#(?method-name ?signature)
 	 (identifier? #'?method-name)
-	 (let* ((signature.stx	(%add-bottom-arguments #'?signature synner))
-		(signature.ots	(xp::type-annotation->object-type-spec signature.stx))
-		(method-procname.id	(xp::identifier-method-procname (.type-name results) #'?method-name)))
-	   (.push-required-prototype! results (new <method-prototype> #'?method-name method-procname.id signature.ots))
+	 (let* ((signature.stx		(%add-bottom-arguments #'?signature synner))
+		(signature.ots		(xp::type-annotation->object-type-spec signature.stx)))
+	   (.push-required-prototype! results (new <method-prototype> #'?method-name signature.ots))
 	   results))
 
 	(#(?stuff ...)

@@ -452,9 +452,8 @@
   (methods
    (type-name			interface-type-descr.type-name)
    (uid				interface-type-descr.uid)
-   (method-prototype-names	interface-type-descr.method-prototype-names)
-   (implemented-method-names	interface-type-descr.implemented-method-names)
    (implemented-interface-uids	interface-type-descr.implemented-interface-uids)
+   (method-prototype-names	interface-type-descr.method-prototype-names)
    (method-retriever		interface-type-descr.method-retriever)))
 
 ;;; --------------------------------------------------------------------
