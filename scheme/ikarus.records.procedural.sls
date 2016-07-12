@@ -300,7 +300,8 @@
 		;False  or  a  vector   of  pairs  representing  the  interface-types
 		;implemented by this  record-type.  Each pair has: as car  the UID of
 		;an interface-type; as cdr a method retriever procedure to be used by
-		;the interface method callers.
+		;the  interface method  callers.   The vector  includes the  parent's
+		;vector.
    ))
 
 #;(module ()
@@ -1030,14 +1031,21 @@
 			 method-retriever implemented-interfaces)
     ;;Build and return a new instance of RTD struct.
     ;;
-    (let* ((fields-number	($vector-length normalised-fields))
-	   (total-fields-number	(if parent-rtd
-				    (fx+ fields-number ($<rtd>-total-fields-number parent-rtd))
-				  fields-number))
-	   (first-field-index	(if parent-rtd
-				    ($<rtd>-total-fields-number parent-rtd)
-				  0))
-	   (opaque?		(or opaque? (and parent-rtd ($<rtd>-opaque? parent-rtd)))))
+    (let* ((fields-number		($vector-length normalised-fields))
+	   (total-fields-number		(if parent-rtd
+					    (fx+ fields-number ($<rtd>-total-fields-number parent-rtd))
+					  fields-number))
+	   (first-field-index		(if parent-rtd
+					    ($<rtd>-total-fields-number parent-rtd)
+					  0))
+	   (opaque?			(or opaque? (and parent-rtd ($<rtd>-opaque? parent-rtd))))
+	   (implemented-interfaces	(if implemented-interfaces
+					    (if (and parent-rtd (<rtd>-implemented-interfaces parent-rtd))
+						(vector-append implemented-interfaces (<rtd>-implemented-interfaces parent-rtd))
+					      implemented-interfaces)
+					  (if parent-rtd
+					      (<rtd>-implemented-interfaces parent-rtd)
+					    implemented-interfaces))))
       (receive-and-return (rtd)
 	  ;;We  use  "$struct"  rather  than  "make-<rtd>"  to  avoid  crashes  while
 	  ;;initialising the boot  image!!!  This way we separate  this function from

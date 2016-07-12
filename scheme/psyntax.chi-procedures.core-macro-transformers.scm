@@ -3814,7 +3814,7 @@
 		  (lambda ()
 		    (id->object-type-spec ?type-id lexenv.run)))))
        (make-psi input-form.stx
-	 (build-data no-source (object-type-spec.unique-identifiers ots))
+	 (build-data no-source (object-type-spec.uids-list ots))
 	 (make-type-signature/single-value (make-list-of-type-spec (<symbol>-ots))))))
     (_
      (__synner__ "invalid syntax in macro use"))))

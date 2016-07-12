@@ -303,7 +303,7 @@
 		    (type-annotation-super-and-sub? <implementeD> <implementeR>)))
 	(catch E
 	  ((xp::&interface-implementation-missing-method-violation)
-	   (%print-message #t (condition-message E))
+	   (%print-message #f (condition-message E))
 	   #t)
 	  (else E)))
     => #t)
@@ -325,7 +325,7 @@
 		    (type-annotation-super-and-sub? <implementeD> <implementeR>)))
 	(catch E
 	  ((xp::&interface-implementation-mismatching-method-violation)
-	   (%print-message #t (condition-message E))
+	   (%print-message #f (condition-message E))
 	   #t)
 	  (else E)))
     => #t)
@@ -508,7 +508,7 @@
 		    (type-annotation-super-and-sub? <implementeD> <implementeR>)))
 	(catch E
 	  ((xp::&interface-implementation-missing-method-violation)
-	   (%print-message #t (condition-message E))
+	   (%print-message #f (condition-message E))
 	   #t)
 	  (else E)))
     => #t)
@@ -530,7 +530,7 @@
 		    (type-annotation-super-and-sub? <implementeD> <implementeR>)))
 	(catch E
 	  ((xp::&interface-implementation-mismatching-method-violation)
-	   (%print-message #t (condition-message E))
+	   (%print-message #f (condition-message E))
 	   #t)
 	  (else E)))
     => #t)
@@ -538,27 +538,257 @@
   (void))
 
 
-#;(parametrise ((check-test-name	'record-type-basic))
+(parametrise ((check-test-name	'record-type-calls))
 
-  ;;Basic example.
+  ;;The record-type "<blue>" implements the interface-type "<IOne>".
+  ;;
+  ;;   <blue> +++> <IOne>
   ;;
   (check
       (internal-body
-	(define-interface-type <Arith>
-	  (method-prototype add
+	(define-interface-type <IOne>
+	  (method-prototype ione-doit
 	    (lambda () => (<number>))))
 
-	(define-record-type <duo>
-	  (implements <Arith>)
-	  (fields one two)
-	  (method ({add <number>})
-	    (+ (.one this) (.two this))))
+	(define-record-type <blue>
+	  (implements <IOne>)
+	  (fields val)
+	  (method ({ione-doit <number>})
+	    (+ 10 (.val this))))
 
-	(define (fun {O <Arith>})
-	  (.add O))
+	(define (fun {O <IOne>})
+	  (.ione-doit O))
 
-	(fun (new <duo>  1 2)))
-    => 3)
+	(fun (new <blue> 1)))
+    => 11)
+
+;;; --------------------------------------------------------------------
+;;; interface-types parents
+
+  ;;The record-type "<blue>" implements the interface-types "<IOne>" and "<ITwo>".
+  ;;
+  ;;               <IOne>
+  ;;                  ^
+  ;;                  |
+  ;;   <blue> +++> <ITwo>
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <IOne>
+	  (method-prototype ione-doit
+	    (lambda () => (<number>))))
+
+	(define-interface-type <ITwo>
+	  (parent <IOne>)
+	  (method-prototype itwo-doit
+	    (lambda () => (<symbol>))))
+
+	(define-record-type <blue>
+	  (implements <ITwo>)
+	  (fields val)
+	  (method ({ione-doit <number>})
+	    (+ 10 (.val this)))
+	  (method ({itwo-doit <symbol>})
+	    'ciao))
+
+	(define (fun-1 {O <IOne>})
+	  (.ione-doit O))
+
+	(define (fun-2 {O <ITwo>})
+	  (vector (.ione-doit O)
+		  (.itwo-doit O)))
+
+	(define O
+	  (new <blue> 1))
+
+	(values (fun-1 O) (fun-2 O)))
+    => 11 '#(11 ciao))
+
+;;; --------------------------------------------------------------------
+;;; record-type parents
+
+  ;;The record-type "<dark-blue>" inherits  the implementation of the interface-types
+  ;;"<IOne>" and "<ITwo>".
+  ;;
+  ;;               <IOne>
+  ;;                  ^
+  ;;                  |
+  ;;   <blue> +++> <ITwo>
+  ;;     ^
+  ;;     |
+  ;;   <dark-blue>
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <IOne>
+	  (method-prototype ione-doit
+	    (lambda () => (<number>))))
+
+	(define-interface-type <ITwo>
+	  (parent <IOne>)
+	  (method-prototype itwo-doit
+	    (lambda () => (<symbol>))))
+
+	(define-record-type <blue>
+	  (implements <ITwo>)
+	  (fields val)
+	  (method ({ione-doit <number>})
+	    (+ 10 (.val this)))
+	  (method ({itwo-doit <symbol>})
+	    'ciao))
+
+	(define-record-type <dark-blue>
+	  (parent <blue>))
+
+	(define (fun-1 {O <IOne>})
+	  (.ione-doit O))
+
+	(define (fun-2 {O <ITwo>})
+	  (vector (.ione-doit O)
+		  (.itwo-doit O)))
+
+	(define O
+	  (new <dark-blue> 1))
+
+	(values (fun-1 O) (fun-2 O)))
+    => 11 '#(11 ciao))
+
+  ;;The record-type "<dark-blue>" implements the interface-type "<ITwo>" and inherits
+  ;;the implementation of the interface-type "<IOne>".
+  ;;
+  ;;   <blue> +++> <IOne>
+  ;;     ^
+  ;;     |
+  ;;   <dark-blue> +++> <ITwo>
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <IOne>
+	  (method-prototype ione-doit
+	    (lambda () => (<number>))))
+
+	(define-interface-type <ITwo>
+	  (method-prototype itwo-doit
+	    (lambda () => (<symbol>))))
+
+	(define-record-type <blue>
+	  (implements <IOne>)
+	  (fields val)
+	  (method ({ione-doit <number>})
+	    (+ 10 (.val this))))
+
+	(define-record-type <dark-blue>
+	  (parent <blue>)
+	  (implements <ITwo>)
+	  (method ({itwo-doit <symbol>})
+	    'ciao))
+
+	(define (fun-1 {O <IOne>})
+	  (.ione-doit O))
+
+	(define (fun-2 {O <ITwo>})
+	  (.itwo-doit O))
+
+	(define O
+	  (new <dark-blue> 1))
+
+	(values (fun-1 O) (fun-2 O)))
+    => 11 'ciao)
+
+;;; --------------------------------------------------------------------
+;;; interface-types implementations
+
+  ;;The record-type "<blue>" implements the interface-types "<IOne>" and "<ITwo>".
+  ;;
+  ;;   <blue> +++> <ITwo> +++> <IOne>
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <IOne>
+	  (method-prototype ione-doit
+	    (lambda () => (<number>))))
+
+	(define-interface-type <ITwo>
+	  (implements <IOne>)
+	  (method-prototype ione-doit
+	    (lambda () => (<number>)))
+	  (method-prototype itwo-doit
+	    (lambda () => (<symbol>))))
+
+	(define-record-type <blue>
+	  (implements <ITwo>)
+	  (fields val)
+	  (method ({ione-doit <number>})
+	    (+ 10 (.val this)))
+	  (method ({itwo-doit <symbol>})
+	    'ciao))
+
+	(define (fun-1 {O <IOne>})
+	  (.ione-doit O))
+
+	(define (fun-2 {O <ITwo>})
+	  (vector (.ione-doit O)
+		  (.itwo-doit O)))
+
+	(define O
+	  (new <blue> 1))
+
+	(values (fun-1 O) (fun-2 O)))
+    => 11 '#(11 ciao))
+
+  ;;The record-type "<blue>" implements the interface-types "<IOne>", "<ITwo>" and "<IThree>".
+  ;;
+  ;;               <IOne> +++> <IThree>
+  ;;                  ^
+  ;;                  |
+  ;;   <blue> +++> <ITwo>
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <IThree>
+	  (method-prototype ithree-doit
+	    (lambda () => (<string>))))
+
+	(define-interface-type <IOne>
+	  (implements <IThree>)
+	  (method-prototype ione-doit
+	    (lambda () => (<number>)))
+	  (method-prototype ithree-doit
+	    (lambda () => (<string>))))
+
+	(define-interface-type <ITwo>
+	  (parent <IOne>)
+	  (method-prototype itwo-doit
+	    (lambda () => (<symbol>))))
+
+	(define-record-type <blue>
+	  (implements <ITwo>)
+	  (fields val)
+	  (method ({ione-doit <number>})
+	    (+ 10 (.val this)))
+	  (method ({itwo-doit <symbol>})
+	    'ciao)
+	  (method ({ithree-doit <string>})
+	    "hello"))
+
+	(define (fun-1 {O <IOne>})
+	  (vector (.ione-doit O)
+		  (.ithree-doit O)))
+
+	(define (fun-2 {O <ITwo>})
+	  (vector (.ione-doit O)
+		  (.itwo-doit O)
+		  (.ithree-doit O)))
+
+	(define (fun-3 {O <IThree>})
+	  (.ithree-doit O))
+
+	(define O
+	  (new <blue> 1))
+
+	(values (fun-1 O) (fun-2 O) (fun-3 O)))
+    => '#(11 "hello") '#(11 ciao "hello") "hello")
+
 
   (void))
 

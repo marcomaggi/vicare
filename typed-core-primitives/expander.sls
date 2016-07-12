@@ -974,10 +974,10 @@
   (signatures
    ((<interface-type-spec>)		=> ((alist <symbol> <closure-type-spec>)))))
 
-(declare-core-primitive build-table-for-interface-and-compliant-object-type
+(declare-core-primitive build-table-for-interface-types-and-implementer-object-type
     (safe)
   (signatures
-   ((<syntactic-identifier> <syntactic-identifier>)	=> ((alist <symbol> <syntactic-identifier>)))))
+   (((list-of <interface-type-spec>) <object-type-spec>)	=> (<top>))))
 
 (declare-core-primitive assert-implemented-interface-type-and-implementer-interface-type
     (safe)

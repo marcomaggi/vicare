@@ -400,7 +400,7 @@
      (or <false> <comparison-procedure>)   ;comparison-procedure
      (or <false> <hash-function>)	   ;hash-function
      (or <false> <type-method-retriever>)  ;method-retriever
-     (or <false> <type-method-retriever>)) ;implemented-interfaces
+     (or <false> (vector-of (pair <symbol> <type-method-retriever>)))) ;implemented-interfaces
     => (<record-type-descriptor>))))
 
 ;;; --------------------------------------------------------------------

@@ -944,7 +944,7 @@
 				       (lambda ()
 					 (id->object-type-spec parent-name.id (make-empty-lexenv))))))
 	     (uids-list		(cons uid.sym (if parent.ots
-						  (object-type-spec.unique-identifiers parent.ots)
+						  (object-type-spec.uids-list parent.ots)
 						'())))
 	     (type-name.ots	(make-core-type-spec type-name.id uids-list parent.ots
 						     constructor.stx type-predicate.stx

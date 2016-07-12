@@ -146,7 +146,7 @@
   #f object-type-spec?
   (methods
    (name				object-type-spec.name)
-   (unique-identifiers			object-type-spec.unique-identifiers)
+   (uids-list				object-type-spec.uids-list)
    (type-annotation			object-type-spec.type-annotation)
    (parent-ots				object-type-spec.parent-ots)
    (constructor-stx			object-type-spec.constructor-stx)

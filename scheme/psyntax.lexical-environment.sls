@@ -115,7 +115,7 @@
     <object-type-spec>-rtd				<object-type-spec>-rcd
     object-type-spec?
     object-type-spec.name				object-type-spec.type-annotation
-    object-type-spec.parent-ots				object-type-spec.unique-identifiers
+    object-type-spec.parent-ots				object-type-spec.uids-list
     object-type-spec.constructor-stx			object-type-spec.destructor-stx
     object-type-spec.type-predicate-stx			object-type-spec.equality-predicate
     object-type-spec.comparison-procedure		object-type-spec.hash-function
@@ -234,7 +234,7 @@
     make-interface-type-spec				interface-type-spec?
     interface-type-spec.method-prototypes-table
     assert-implemented-interface-type-and-implementer-interface-type
-    build-table-for-interface-and-compliant-object-type
+    build-table-for-interface-types-and-implementer-object-type
 ;;;
     ;; typed variable specification: base type
     <typed-variable-spec>

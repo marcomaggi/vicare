@@ -1645,14 +1645,30 @@
     ;;the method retriever function for  the method implementation procedures defined
     ;;by this record-type.
     ;;
-    ;;The core primitive BUILD-TABLE-FOR-INTERFACE-AND-COMPLIANT-OBJECT-TYPE verifies
-    ;;that the record-type actually  implements the interface-type.  When successful:
-    ;;it returns an alist having:  as keys, symbols representing the interface-type's
-    ;;method names; as  values, the syntactic identifiers bound  to the object-type's
-    ;;method implementation procedures.  Otherwise it raises an exception.
+    ;;The core  primitive BUILD-TABLE-FOR-INTERFACE-TYPES-AND-IMPLEMENTER-OBJECT-TYPE
+    ;;verifies  that the  record-type actually  implements the  interface-type.  When
+    ;;successful:  it returns  an alist  having:  as keys,  symbols representing  the
+    ;;interface-type's method  names; as values,  the syntactic identifiers  bound to
+    ;;the  object-type's method  implementation procedures.   Otherwise it  raises an
+    ;;exception.
     ;;
-    #f
-    #;(cond ((null? implemented-interface*.id)
+    (if (null? implemented-interface*.ots)
+	#f
+      (let ((macro.id		(make-syntactic-identifier-for-temporary-variable "macro"))
+	    (stx.id		(make-syntactic-identifier-for-temporary-variable "stx"))
+	    (object-type-ots.id	(make-syntactic-identifier-for-temporary-variable "object-type.ots")))
+	`(let-syntax
+	     ((,macro.id (lambda (,stx.id)
+			   (quasisyntax
+			    (vector (unsyntax-splicing
+				     (build-table-for-interface-types-and-implementer-object-type
+				      (quote ,implemented-interface*.ots)
+				      (type-annotation->object-type-spec (syntax ,foo)))))))))
+	   (,macro.id)))))
+
+#|
+  (define (%make-implemented-interfaces-table-code foo implemented-interface*.ots)
+    (cond ((null? implemented-interface*.id)
 	   '(quote ()))
 	  ((list-of-single-item? implemented-interface*.id)
 	   (let ((iface.id (car implemented-interface*.id)))
@@ -1677,7 +1693,7 @@
 	  (method-procname.id	(make-syntactic-identifier-for-temporary-variable "method-procname"))
 	  (entry.id		(make-syntactic-identifier-for-temporary-variable "entry")))
       `(let* ((,interface-uid.id    (car (type-unique-identifiers ,iface.id)))
-	      (,methods-table.id    (build-table-for-interface-and-compliant-object-type ,iface.id ,foo))
+	      (,methods-table.id    (build-table-for-interface-types-and-implementer-object-type ,iface.id ,foo))
 	      (,method-retriever.id (quasisyntax
 				     (lambda (,method-name.id)
 				       (case ,method-name.id
@@ -1689,6 +1705,7 @@
 					    ,methods-table.id))
 					 (else #f))))))
 	 (cons (unsyntax ,interface-uid.id) (unsyntax ,method-retriever.id)))))
+|#
 
   #| end of module: %MAKE-IMPLEMENTED-INTERFACES-TABLE-CODE |# )
 

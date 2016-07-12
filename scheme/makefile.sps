@@ -4900,7 +4900,7 @@
     (<object-type-spec>					$expander)
     (object-type-spec?					$expander)
     (object-type-spec.name				$expander)
-    (object-type-spec.unique-identifiers		$expander)
+    (object-type-spec.uids-list				$expander)
     (object-type-spec.type-annotation			$expander)
     (object-type-spec.parent-ots			$expander)
     (object-type-spec.constructor-stx			$expander)
@@ -5070,7 +5070,7 @@
     (interface-type-spec?				$expander)
     (interface-type-spec.type-descriptor-id		$expander)
     (interface-type-spec.method-prototypes-table	$expander)
-    (build-table-for-interface-and-compliant-object-type $expander)
+    (build-table-for-interface-types-and-implementer-object-type $expander)
     (assert-implemented-interface-type-and-implementer-interface-type $expander)
 ;;;
     (<type-signature>-rtd)
