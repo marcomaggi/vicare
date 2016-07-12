@@ -140,6 +140,7 @@
 (declare-core-rtd &late-binding-error-rtd)
 (declare-core-rtd &method-late-binding-error-rtd)
 (declare-core-rtd &overloaded-function-late-binding-error-rtd)
+(declare-core-rtd &interface-method-late-binding-error-rtd)
 ;;;
 (declare-core-rtd &one-based-return-value-index-rtd)
 (declare-core-rtd &out-of-memory-error-rtd)
@@ -223,6 +224,7 @@
 (declare-core-rcd &late-binding-error-rcd)
 (declare-core-rcd &method-late-binding-error-rcd)
 (declare-core-rcd &overloaded-function-late-binding-error-rcd)
+(declare-core-rcd &interface-method-late-binding-error-rcd)
 ;;;
 (declare-core-rcd &one-based-return-value-index-rcd)
 (declare-core-rcd &out-of-memory-error-rcd)
@@ -299,7 +301,6 @@
   (declare make-non-reinstatable-violation		&non-reinstatable)
   (declare make-late-binding-error			&late-binding-error)
   (declare make-method-late-binding-error		&method-late-binding-error)
-  (declare make-overloaded-function-late-binding-error	&overloaded-function-late-binding-error)
   #| end of LET-SYNTAX |# )
 
 (declare-core-primitive make-who-condition
@@ -558,6 +559,11 @@
   (signatures
    (()						=> (&utf8-string-encoding))))
 
+(declare-core-primitive make-overloaded-function-late-binding-error
+    (safe)
+  (signatures
+   ((<symbol> <symbol> <top> <type-descriptor>)	=> (&overloaded-function-late-binding-error))))
+
 /section)
 
 
@@ -604,6 +610,7 @@
 (declare-condition-type-predicate late-binding-error?			&late-binding-error)
 (declare-condition-type-predicate method-late-binding-error?		&method-late-binding-error)
 (declare-condition-type-predicate overloaded-function-late-binding-error?	&overloaded-function-late-binding-error)
+(declare-condition-type-predicate interface-method-late-binding-error?		&interface-method-late-binding-error)
 
 (declare-condition-type-predicate procedure-signature-argument-violation?	&procedure-signature-argument-violation)
 (declare-condition-type-predicate procedure-signature-return-value-violation?	&procedure-signature-return-value-violation)
@@ -673,6 +680,11 @@
   (declare source-position-column	&source-position		<exact-integer>)
 
   (declare condition-one-based-return-value-index	&one-based-return-value-index	<positive-fixnum>)
+
+  (declare interface-method-late-binding-error.interface-uid	&interface-method-late-binding-error  <symbol>)
+  (declare interface-method-late-binding-error.method-name	&interface-method-late-binding-error  <symbol>)
+  (declare interface-method-late-binding-error.subject		&interface-method-late-binding-error  <top>)
+  (declare interface-method-late-binding-error.type-descriptor	&interface-method-late-binding-error  <type-descriptor>)
 
   (declare procedure-signature-argument-violation.one-based-argument-index
 	   &procedure-signature-argument-violation	      <positive-fixnum>)

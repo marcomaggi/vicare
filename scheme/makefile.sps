@@ -3032,11 +3032,23 @@
     (&late-binding-error				v $language)
     (make-late-binding-error				v $language)
     (late-binding-error?				v $language)
+    ;;
     (&method-late-binding-error-rtd)
     (&method-late-binding-error-rcd)
     (&method-late-binding-error				v $language)
     (make-method-late-binding-error			v $language)
     (method-late-binding-error?				v $language)
+    ;;
+    (&interface-method-late-binding-error-rtd)
+    (&interface-method-late-binding-error-rcd)
+    (&interface-method-late-binding-error		v $language)
+    (make-interface-method-late-binding-error		v $language)
+    (interface-method-late-binding-error?		v $language)
+    (interface-method-late-binding-error.interface-uid	v $language)
+    (interface-method-late-binding-error.method-name	v $language)
+    (interface-method-late-binding-error.subject	v $language)
+    (interface-method-late-binding-error.type-descriptor v $language)
+    ;;
     (&overloaded-function-late-binding-error-rtd)
     (&overloaded-function-late-binding-error-rcd)
     (&overloaded-function-late-binding-error		v $language)
@@ -3274,7 +3286,6 @@
     (hash-function				v $language)
     (method					v $language)
     (hash					v $language)
-    (hash-function-late-binding)
     (rcd-rtd					v $language)
     (rcd-parent-rcd				v $language)
     (record-field-mutable?			v r ri)
@@ -3919,6 +3930,9 @@
     (<&who-value>				v $language)
 
 ;;; --------------------------------------------------------------------
+
+    (hash-function-late-binding			$type-descriptors)
+    (interface-method-call-late-binding		$type-descriptors)
 
     ;;Scheme-type descriptor record-type
     (<core-type-descriptor>-rtd)
@@ -6095,7 +6109,6 @@
     (set!/initialise)
     (make-overloaded-function-spec)
     (overloaded-function-spec.register-specialisation!)
-
     ))
 
 

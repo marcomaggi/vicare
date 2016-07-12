@@ -29,6 +29,7 @@
   (export
     method-call-late-binding
     hash-function-late-binding
+    interface-method-call-late-binding
     internal-delete
     ;; overloaded functions: late binding
     <overloaded-function-descriptor>-rtd
@@ -49,12 +50,15 @@
 		  record-type-hash-function
 		  make-method-late-binding-error
 		  make-overloaded-function-late-binding-error
+		  make-interface-method-late-binding-error
 		  #| end of EXCEPT |# )
     (ikarus records syntactic)
     (only (ikarus.core-type-descr)
+	  core-type-descriptor?
 	  core-type-descriptor.parent
 	  core-type-descriptor.hash-function
 	  core-type-descriptor.method-retriever
+	  core-type-descriptor.implemented-interfaces
 	  ;;
 	  <empty-string>-ctd <nestring>-ctd
 	  <empty-vector>-ctd <nevector>-ctd
@@ -74,7 +78,8 @@
     ;;2016)
     (only (ikarus conditions)
 	  make-method-late-binding-error
-	  make-overloaded-function-late-binding-error)
+	  make-overloaded-function-late-binding-error
+	  make-interface-method-late-binding-error)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
     ;;2015)
     (prefix (only (ikarus structs)
@@ -87,6 +92,9 @@
 		  $record-type-method-retriever
 		  $record-type-hash-function)
 	    system::)
+    (prefix (only (ikarus records procedural)
+		  record-type-implemented-interfaces)
+	    td::)
     (prefix (only (psyntax system $all)
 		  internal-applicable-record-destructor
 		  ;;FIXME To be uncommented at  the next boot image rotation.  (Marco
@@ -276,6 +284,65 @@
 
 	(else
 	 (%error))))
+
+
+;;;; run-time utilities: run-time interface method application
+
+(module (interface-method-call-late-binding)
+
+  (define* (interface-method-call-late-binding interface.uid method-name.sym subject operands)
+    ;;Implement run-time dynamic dispatching of method calls to interface types.
+    ;;
+    ;;The argument INTERFACE.UID must be the UID of the interface-type.  The argument
+    ;;METHOD-NAME.SYM must  be a  symbol representing  the name  of the  method.  The
+    ;;argument SUBJECT must be the subject of the method call, the value that will be
+    ;;bound to THIS.  The argument OPERANDS must  be a list of additional operands to
+    ;;be appended to the call after SUBJECT.
+    ;;
+    (let ((des (td::type-descriptor-of subject)))
+      (define (%error-no-interfaces)
+	(%error "the subject's object-type does not implement interfaces"
+		interface.uid method-name.sym subject des operands))
+      (%method-call des (or (cond ((record-type-descriptor? des)
+				   (td::record-type-implemented-interfaces des))
+				  ((core-type-descriptor? des)
+				   (core-type-descriptor.implemented-interfaces des))
+				  (else
+				   (%error-no-interfaces)))
+			    (%error-no-interfaces))
+		    interface.uid method-name.sym subject operands)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%method-call des table interface.uid method-name.sym subject operands)
+    (cond ((vector-find (lambda (entry)
+			  (eq? (car entry) interface.uid))
+	     table)
+	   => (lambda (table-entry)
+		;;TABLE-ENTRY is a pair having: as  car, the interface UID; as cdr, a
+		;;method retriever procedure.
+		(cond (((cdr table-entry) method-name.sym)
+		       => (lambda (method-implementation)
+			    ;;Method found.   Apply it  to the operands  and return
+			    ;;the application's return values.
+			    (apply method-implementation subject operands)))
+		      (else
+		       (%error "the subject's object-type descriptor does not implement the requested interface method"
+			       interface.uid method-name.sym subject des operands)))))
+	  (else
+	   (%error "the subject's object-type descriptor does not implement the requested interface"
+		   interface.uid method-name.sym subject des operands))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error message interface.uid method-name.sym subject des operands)
+    (raise
+     (condition (make-interface-method-late-binding-error interface.uid method-name.sym subject des)
+		(make-who-condition 'interface-method-call-late-binding)
+		(make-message-condition message)
+		(make-irritants-condition operands))))
+
+  #| end of module: INTERFACE-METHOD-CALL-LATE-BINDING |# )
 
 
 ;;;; delete fallback implementation

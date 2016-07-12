@@ -119,6 +119,17 @@
   (signatures
    ((<symbol> <top> . <list>)		=> <list>)))
 
+(declare-core-primitive interface-method-call-late-binding
+    (safe)
+  (signatures
+   ((<symbol>	;interface.uid
+     <symbol>	;method-name.sym
+     <top>	;subject
+     <list>)	;operands
+    => <list>)))
+
+;;; --------------------------------------------------------------------
+
 (declare-core-primitive internal-delete
     (safe)
   (signatures

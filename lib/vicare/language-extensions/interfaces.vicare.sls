@@ -28,98 +28,15 @@
 #!vicare
 (library (vicare language-extensions interfaces (0 4 2016 6 25))
   (options typed-language)
-  (export define-interface-type
-	  method method-prototype implements import
-	  this
-
-	  &interface-method-late-binding-error
-	  make-interface-method-late-binding-error
-	  interface-method-late-binding-error?
-	  interface-method-late-binding-error.interface-uid
-	  interface-method-late-binding-error.method-name
-	  interface-method-late-binding-error.subject
-	  interface-method-late-binding-error.type-descriptor)
+  (export
+    define-interface-type this
+    method method-prototype implements parent)
   (import (vicare)
     (prefix (vicare expander)			xp::)
     (prefix (vicare system type-descriptors)	td::)
     (for (vicare expander) expand))
 
   (define-auxiliary-syntaxes method-prototype)
-
-
-;;;; run-time utilities: run-time interface method application
-
-(module (interface-method-call-late-binding
-	 &interface-method-late-binding-error
-	 make-interface-method-late-binding-error
-	 interface-method-late-binding-error?
-	 interface-method-late-binding-error.interface-uid
-	 interface-method-late-binding-error.method-name
-	 interface-method-late-binding-error.subject
-	 interface-method-late-binding-error.type-descriptor)
-
-  (define* (interface-method-call-late-binding interface.uid method-name.sym subject operands)
-    ;;Implement run-time dynamic dispatching of method calls to interface types.
-    ;;
-    ;;The argument INTERFACE.UID must be the UID of the interface-type.  The argument
-    ;;METHOD-NAME.SYM must  be a  symbol representing  the name  of the  method.  The
-    ;;argument SUBJECT must be the subject of the method call, the value that will be
-    ;;bound to THIS.  The argument OPERANDS must  be a list of additional operands to
-    ;;be appended to the call after SUBJECT.
-    ;;
-    (let ((des (td::type-descriptor-of subject)))
-      (define (%error-no-interfaces)
-	(%error "the subject's object-type does not implement interfaces"
-		interface.uid method-name.sym subject des operands))
-      (%method-call des (or (cond ((record-type-descriptor? des)
-				   (td::record-type-implemented-interfaces des))
-				  ((td::core-type-descriptor? des)
-				   (td::core-type-descriptor.implemented-interfaces des))
-				  (else
-				   (%error-no-interfaces)))
-			    (%error-no-interfaces))
-		    interface.uid method-name.sym subject operands)))
-
-;;; --------------------------------------------------------------------
-
-  (define (%method-call des table interface.uid method-name.sym subject operands)
-    (cond ((vector-find (lambda (entry)
-			  (eq? (car entry) interface.uid))
-	     table)
-	   => (lambda (table-entry)
-		;;TABLE-ENTRY is a pair having: as  car, the interface UID; as cdr, a
-		;;method retriever procedure.
-		(cond (((cdr table-entry) method-name.sym)
-		       => (lambda (method-implementation)
-			    ;;Method found.   Apply it  to the operands  and return
-			    ;;the application's return values.
-			    (apply method-implementation subject operands)))
-		      (else
-		       (%error "the subject's object-type descriptor does not implement the requested interface method"
-			       interface.uid method-name.sym subject des operands)))))
-	  (else
-	   (%error "the subject's object-type descriptor does not implement the requested interface"
-		   interface.uid method-name.sym subject des operands))))
-
-;;; --------------------------------------------------------------------
-
-  (define-condition-type &interface-method-late-binding-error
-      &method-late-binding-error
-    make-interface-method-late-binding-error
-    interface-method-late-binding-error?
-    (interface-uid	interface-method-late-binding-error.interface-uid)
-    (method-name	interface-method-late-binding-error.method-name)
-    (subject		interface-method-late-binding-error.subject)
-    (descriptor		interface-method-late-binding-error.type-descriptor))
-
-  (define (%error message interface.uid method-name.sym subject des operands)
-    (raise
-     (condition (make-interface-method-late-binding-error interface.uid method-name.sym subject des)
-		(make-who-condition 'interface-method-call-late-binding)
-		(make-message-condition message)
-		(make-irritants-condition operands))))
-
-  #| end of module: INTERFACE-METHOD-CALL-LATE-BINDING |# )
 
 
 (define-syntax (define-interface-type input-form.stx)
@@ -423,7 +340,7 @@
 			 (PROCNAME	(cdr entry)))
 		      (.push-definition! this
 			#`(define/std (PROCNAME subject . args)
-			    (interface-method-call-late-binding (quote UID) (quote METHOD-NAME) subject args)))))
+			    (td::interface-method-call-late-binding (quote UID) (quote METHOD-NAME) subject args)))))
 	  (.methods-table this)))
 
       #| end of FINALISE |# )
@@ -633,13 +550,13 @@
 
 	((case-lambda ?clause-signature0 ?clause-signature ...)
 	 #`(case-lambda
-	     #,(map (lambda (clause.stx)
-		      (syntax-case clause.stx ()
-			((?formals => ?retvals)
-			 #'((<bottom> . ?formals) => ?retvals))
-			(_
-			 (synner "invalid method prototype signature" signature.stx))))
-		 (syntax->list #'(?clause-signature0 ?clause-signature ...)))))
+	     #,@(map (lambda (clause.stx)
+		       (syntax-case clause.stx (=>)
+			 ((?formals => ?retvals)
+			  #'((<bottom> . ?formals) => ?retvals))
+			 (_
+			  (synner "invalid method prototype signature" signature.stx))))
+		  (syntax->list #'(?clause-signature0 ?clause-signature ...)))))
 
 	(_
 	 (synner "invalid method prototype signature" signature.stx))))

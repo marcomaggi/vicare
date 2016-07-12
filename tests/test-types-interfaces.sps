@@ -285,6 +285,73 @@
 		))
     => #t #t #f #t #f #f)
 
+  ;;The  interface-type  "<IThree>"  implements   the  interface-types  "<IOne>"  and
+  ;;"<ITwo>".   "<IThree>"  implements  the  "composite"  method  from  "<IOne>"  and
+  ;;"<ITwo>" with multiple METHOD-PROTOTYPE clauses.
+  ;;
+  ;;                 <IOne>
+  ;;                    ^
+  ;;                    |
+  ;;   <IThree> +++> <ITwo>
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <IOne>
+	  (method-prototype doit
+	    (lambda (<fixnum>) => (<string>))))
+
+	(define-interface-type <ITwo>
+	  (parent <IOne>)
+	  (method-prototype doit
+	    (lambda (<flonum>) => (<string>))))
+
+	(define-interface-type <IThree>
+	  (implements <ITwo>)
+	  (method-prototype doit (lambda (<fixnum>) => (<string>)))
+	  (method-prototype doit (lambda (<flonum>) => (<string>))))
+
+	(values (type-annotation-super-and-sub? <IOne> <IThree>)
+		(type-annotation-super-and-sub? <IOne> <ITwo>)
+		(type-annotation-super-and-sub? <ITwo> <IThree>)
+		(type-annotation-super-and-sub? <IThree> <IOne>)
+		(type-annotation-super-and-sub? <ITwo> <IOne>)
+		(type-annotation-super-and-sub? <IThree> <ITwo>)))
+    => #t #t #t #f #f #f)
+
+  ;;The  interface-type  "<IThree>"  implements   the  interface-types  "<IOne>"  and
+  ;;"<ITwo>".   "<IThree>"  implements  the  "composite"  method  from  "<IOne>"  and
+  ;;"<ITwo>" with a single METHOD-PROTOTYPE clause.
+  ;;
+  ;;                 <IOne>
+  ;;                    ^
+  ;;                    |
+  ;;   <IThree> +++> <ITwo>
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <IOne>
+	  (method-prototype doit
+	    (lambda (<fixnum>) => (<string>))))
+
+	(define-interface-type <ITwo>
+	  (parent <IOne>)
+	  (method-prototype doit
+	    (lambda (<flonum>) => (<string>))))
+
+	(define-interface-type <IThree>
+	  (implements <ITwo>)
+	  (method-prototype doit (case-lambda
+				   ((<fixnum>) => (<string>))
+				   ((<flonum>) => (<string>)))))
+
+	(values (type-annotation-super-and-sub? <IOne> <IThree>)
+		(type-annotation-super-and-sub? <IOne> <ITwo>)
+		(type-annotation-super-and-sub? <ITwo> <IThree>)
+		(type-annotation-super-and-sub? <IThree> <IOne>)
+		(type-annotation-super-and-sub? <ITwo> <IOne>)
+		(type-annotation-super-and-sub? <IThree> <ITwo>)))
+    => #t #t #t #f #f #f)
+
 ;;; --------------------------------------------------------------------
 ;;; errors
 
@@ -604,6 +671,83 @@
 	(values (fun-1 O) (fun-2 O)))
     => 11 '#(11 ciao))
 
+  ;;The record-type  "<blue>" implements  the interface-types "<IOne>"  and "<ITwo>".
+  ;;"<blue>" implements the "composite" method from "<IOne>" and "<ITwo>".
+  ;;
+  ;;               <IOne>
+  ;;                  ^
+  ;;                  |
+  ;;   <blue> +++> <ITwo>
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <IOne>
+	  (method-prototype doit
+	    (lambda (<fixnum>) => (<string>))))
+
+	(define-interface-type <ITwo>
+	  (parent <IOne>)
+	  (method-prototype doit
+	    (lambda (<flonum>) => (<string>))))
+
+	(define-record-type <blue>
+	  (implements <ITwo>)
+	  (method ({doit <string>} {O <fixnum>})
+	    (fixnum->string O))
+	  (method ({doit <string>} {O <flonum>})
+	    (flonum->string O)))
+
+	(define (fun-1 {O <IOne>})
+	  (.doit O 123))
+
+	(define (fun-2 {O <ITwo>})
+	  (vector (.doit O 123)
+		  (.doit O 4.5)))
+
+	(define O
+	  (new <blue>))
+
+	(values (fun-1 O) (fun-2 O)))
+    => "123" '#("123" "4.5"))
+
+  ;;Both  the record-types  "<blue>" and  "<dark-blue>" implement  the interface-type
+  ;;"<IOne>".  For  instances of  "<dark-blue>": the implementation  in "<dark-blue>"
+  ;;shadows the one in "<blue>".
+  ;;
+  ;;   <blue> +++> <IOne>
+  ;;      ^          ^
+  ;;      |          +
+  ;;   <dark-blue> +++
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <IOne>
+	  (method-prototype ione-doit
+	    (lambda () => (<number>))))
+
+	(define-record-type <blue>
+	  (implements <IOne>)
+	  (method ({ione-doit <number>})
+	    11))
+
+	(define-record-type <dark-blue>
+	  (parent <blue>)
+	  (implements <IOne>)
+	  (method ({ione-doit <number>})
+	    22))
+
+	(define (fun {O <IOne>})
+	  (.ione-doit O))
+
+	(define O
+	  (new <blue>))
+
+	(define P
+	  (new <dark-blue>))
+
+	(values (fun O) (fun P)))
+    => 11 22)
+
 ;;; --------------------------------------------------------------------
 ;;; record-type parents
 
@@ -793,7 +937,7 @@
   (void))
 
 
-#;(parametrise ((check-test-name	'record-type-errors))
+(parametrise ((check-test-name	'record-type-errors))
 
   ;;Attempt to instantiate interface.
   ;;
@@ -887,9 +1031,9 @@
 		      (method ({add <number>})
 			(+ (.one this) (.two this))))))
 	(catch E
-	  ((&assertion)
+	  ((&syntax)
 	   (%print-message #f (condition-message E))
-	   (syntax->datum (car (condition-irritants E))))
+	   (syntax->datum (syntax-violation-subform E)))
 	  (else E)))
     => '<fixnum>)
 
@@ -928,7 +1072,7 @@
   (void))
 
 
-#;(parametrise ((check-test-name	'multiple-implementations))
+(parametrise ((check-test-name	'multiple-implementations))
 
   ;;Two record-types in a hierarchy both implement the same interface.
   ;;
@@ -961,7 +1105,7 @@
   (void))
 
 
-#;(parametrise ((check-test-name	'nongenerative))
+(parametrise ((check-test-name	'nongenerative))
 
   ;;NONGENERATIVE clause with explicit UID.
   ;;
@@ -1009,7 +1153,7 @@
   (void))
 
 
-#;(parametrise ((check-test-name	'type-descriptor))
+(parametrise ((check-test-name	'type-descriptor))
 
   (import (prefix (vicare system type-descriptors)
 		  td::))
@@ -1046,7 +1190,7 @@
   (void))
 
 
-#;(parametrise ((check-test-name	'misc))
+(parametrise ((check-test-name	'misc))
 
   (define-interface-type <Sequence>
     (method-prototype length	(lambda () => (<non-negative-exact-integer>)))
@@ -1054,12 +1198,11 @@
     (method-prototype ref	(lambda (<non-negative-exact-integer>) => (<char>)))
     (method ({just-length <non-negative-exact-integer>})
       (.length this))
-    (case-method just-item
-      (({_ <char>})
-       (.ref this 0))
-      (({_ <char>} {idx <non-negative-exact-integer>})
-       (.ref this idx)))
-    (method/overload (doit)
+    (method ({just-item <char>})
+      (.ref this 0))
+    (method ({just-item <char>} {idx <non-negative-exact-integer>})
+       (.ref this idx))
+    (method (doit)
       this))
 
   (define-record-type <str>
@@ -1099,7 +1242,7 @@
   (void))
 
 
-#;(parametrise ((check-test-name	'instantiable-bodies))
+(parametrise ((check-test-name	'instantiable-bodies))
 
   ;;Generic interfaces through instantiable bodies.
   ;;
@@ -1184,7 +1327,7 @@
   (void))
 
 
-#;(parametrise ((check-test-name	'doc))
+(parametrise ((check-test-name	'doc))
 
   ;;No-interfaces example
   ;;

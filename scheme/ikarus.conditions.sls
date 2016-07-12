@@ -210,6 +210,15 @@
     make-overloaded-function-late-binding-error
     overloaded-function-late-binding-error?
 
+    &interface-method-late-binding-error-rtd
+    &interface-method-late-binding-error-rcd
+    make-interface-method-late-binding-error
+    interface-method-late-binding-error?
+    interface-method-late-binding-error.interface-uid
+    interface-method-late-binding-error.method-name
+    interface-method-late-binding-error.subject
+    interface-method-late-binding-error.type-descriptor
+
     ;; string encoding and decoding
     ;;&string-encoding
     &string-encoding-rtd
@@ -568,6 +577,16 @@
 		  &overloaded-function-late-binding-error
 		  make-overloaded-function-late-binding-error
 		  overloaded-function-late-binding-error?
+
+		  &interface-method-late-binding-error-rtd
+		  &interface-method-late-binding-error-rcd
+		  &interface-method-late-binding-error
+		  make-interface-method-late-binding-error
+		  interface-method-late-binding-error?
+		  interface-method-late-binding-error.interface-uid
+		  interface-method-late-binding-error.method-name
+		  interface-method-late-binding-error.subject
+		  interface-method-late-binding-error.type-descriptor
 
 		  ;; string encoding and decoding
 		  &string-encoding
@@ -1359,6 +1378,15 @@
 (define-core-condition-type &overloaded-function-late-binding-error
     &late-binding-error
   make-overloaded-function-late-binding-error overloaded-function-late-binding-error?)
+
+(define-core-condition-type &interface-method-late-binding-error
+    &method-late-binding-error
+  make-interface-method-late-binding-error
+  interface-method-late-binding-error?
+  (interface-uid	interface-method-late-binding-error.interface-uid)
+  (method-name		interface-method-late-binding-error.method-name)
+  (subject		interface-method-late-binding-error.subject)
+  (descriptor		interface-method-late-binding-error.type-descriptor))
 
 
 ;;; Vicare specific condition types: string encoding and decoding
