@@ -4309,7 +4309,7 @@ binding:
 
 @noindent
 we see that the syntactic identifiers created by @syntax{syntax} in the
-@syntax{begin-for-expand} have the same list of marks and the same list
+@syntax{begin-for-syntax} have the same list of marks and the same list
 of @rib{} objects.
 
 Let's see the @rib{} objects:
@@ -4605,7 +4605,7 @@ so the expansion/evaluation phases are @strong{not} distinguished in the
 has its @lexenv{}; phase 1 and the other phases have their @lexenv{}.
 
 Let's try to resolve the identifiers using the inferior @lexenv{} from
-the @syntax{begin-for-expand}:
+the @syntax{begin-for-syntax}:
 
 @lisp
 (internal-body

@@ -1629,85 +1629,38 @@
 			  ,implemented-interfaces))
 
 
-(module (%make-implemented-interfaces-table-code)
-
-  (define (%make-implemented-interfaces-table-code foo implemented-interface*.ots)
-    ;;Return false  or a symbolic  expression (to  be blessed later)  representing an
-    ;;expression  which,   expanded  and  evaluated,  will   return  the  record-type
-    ;;implemented interfaces table.
-    ;;
-    ;;This expression  must return a vector  having one item for  each interface-type
-    ;;implemented by this record-type, with format:
-    ;;
-    ;;   #((?interface-uid . ?method-retriever) ...)
-    ;;
-    ;;where: ?INTERFACE-UID  is the UID  of the interface-type;  ?METHOD-RETRIEVER is
-    ;;the method retriever function for  the method implementation procedures defined
-    ;;by this record-type.
-    ;;
-    ;;The core  primitive BUILD-TABLE-FOR-INTERFACE-TYPES-AND-IMPLEMENTER-OBJECT-TYPE
-    ;;verifies  that the  record-type actually  implements the  interface-type.  When
-    ;;successful:  it returns  an alist  having:  as keys,  symbols representing  the
-    ;;interface-type's method  names; as values,  the syntactic identifiers  bound to
-    ;;the  object-type's method  implementation procedures.   Otherwise it  raises an
-    ;;exception.
-    ;;
-    (if (null? implemented-interface*.ots)
-	#f
-      (let ((macro.id		(make-syntactic-identifier-for-temporary-variable "macro"))
-	    (stx.id		(make-syntactic-identifier-for-temporary-variable "stx"))
-	    (object-type-ots.id	(make-syntactic-identifier-for-temporary-variable "object-type.ots")))
-	`(let-syntax
-	     ((,macro.id (lambda (,stx.id)
-			   (quasisyntax
-			    (vector (unsyntax-splicing
-				     (build-table-for-interface-types-and-implementer-object-type
-				      (quote ,implemented-interface*.ots)
-				      (type-annotation->object-type-spec (syntax ,foo)))))))))
-	   (,macro.id)))))
-
-#|
-  (define (%make-implemented-interfaces-table-code foo implemented-interface*.ots)
-    (cond ((null? implemented-interface*.id)
-	   '(quote ()))
-	  ((list-of-single-item? implemented-interface*.id)
-	   (let ((iface.id (car implemented-interface*.id)))
-	     `(quasisyntax (vector (unsyntax ,(%compose-interfaces-table-entry-code foo iface.id))))))
-	  (else
-	   (let ((iface.id	(make-syntactic-identifier-for-temporary-variable "iface"))
-		 (knil.id	(make-syntactic-identifier-for-temporary-variable "knil")))
-	     `(quasisyntax
-	       (vector (unsyntax-splicing
-			(fold-left (lambda (,knil.id ,iface.id)
-				     (cons ,(%compose-interfaces-table-entry-code foo iface.id)
-					   ,knil.id))
-			  '() (list . ,(map (lambda (id)
-					      `(syntax ,id))
-					 implemented-interface*.id))))))))))
-
-  (define (%compose-interfaces-table-entry-code foo iface.id)
-    (let ((methods-table.id	(make-syntactic-identifier-for-temporary-variable "methods-table"))
-	  (method-retriever.id	(make-syntactic-identifier-for-temporary-variable "method-retriever"))
-	  (interface-uid.id	(make-syntactic-identifier-for-temporary-variable "interface-uid"))
-	  (method-name.id	(make-syntactic-identifier-for-temporary-variable "method-name"))
-	  (method-procname.id	(make-syntactic-identifier-for-temporary-variable "method-procname"))
-	  (entry.id		(make-syntactic-identifier-for-temporary-variable "entry")))
-      `(let* ((,interface-uid.id    (car (type-unique-identifiers ,iface.id)))
-	      (,methods-table.id    (build-table-for-interface-types-and-implementer-object-type ,iface.id ,foo))
-	      (,method-retriever.id (quasisyntax
-				     (lambda (,method-name.id)
-				       (case ,method-name.id
-					 (unsyntax-splicing
-					  (map (lambda (,entry.id)
-						 (let ((,method-name.id		(car ,entry.id))
-						       (,method-procname.id	(cdr ,entry.id)))
-						   (quasisyntax (((unsyntax ,method-name.id)) (unsyntax ,method-procname.id)))))
-					    ,methods-table.id))
-					 (else #f))))))
-	 (cons (unsyntax ,interface-uid.id) (unsyntax ,method-retriever.id)))))
-|#
-
-  #| end of module: %MAKE-IMPLEMENTED-INTERFACES-TABLE-CODE |# )
+(define (%make-implemented-interfaces-table-code foo implemented-interface*.ots)
+  ;;Return  false or  a symbolic  expression (to  be BLESSed  later) representing  an
+  ;;expression  which,   expanded  and  evaluated,  will   return  the  record-type's
+  ;;implemented interfaces table.
+  ;;
+  ;;This expression  must return  a vector  having one  item for  each interface-type
+  ;;implemented by this record-type, with format:
+  ;;
+  ;;   #((?interface-uid . ?method-retriever) ...)
+  ;;
+  ;;where: ?INTERFACE-UID is the UID  of the interface-type; ?METHOD-RETRIEVER is the
+  ;;method retriever  function for  the method  implementation procedures  defined by
+  ;;this record-type.
+  ;;
+  ;;The  core  primitive  BUILD-TABLE-FOR-INTERFACE-TYPES-AND-IMPLEMENTER-OBJECT-TYPE
+  ;;verifies  that  the record-type  actually  implements  the interface-type.   When
+  ;;successful:  it  returns an  alist  having:  as  keys, symbols  representing  the
+  ;;interface-type's method names; as values,  the syntactic identifiers bound to the
+  ;;object-type's  method   implementation  procedures.    Otherwise  it   raises  an
+  ;;exception.
+  ;;
+  (if (null? implemented-interface*.ots)
+      #f
+    (let ((macro.id		(make-syntactic-identifier-for-temporary-variable "macro"))
+	  (stx.id		(make-syntactic-identifier-for-temporary-variable "stx"))
+	  (object-type-ots.id	(make-syntactic-identifier-for-temporary-variable "object-type.ots")))
+      `(expand-time-expr
+	(quasisyntax
+	 (vector (unsyntax-splicing
+		  (build-table-for-interface-types-and-implementer-object-type
+		   (quote ,implemented-interface*.ots)
+		   (type-annotation->object-type-spec (syntax ,foo))))))))))
 
 
 ;;;; done

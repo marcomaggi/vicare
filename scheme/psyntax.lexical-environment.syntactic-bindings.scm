@@ -146,7 +146,7 @@
    syntactic-binding-descriptor/global-overloaded-function.ofs
 
 ;;; BEGIN-FOR-SYNTAX visit code
-   make-syntactic-binding-descriptor/begin-for-expand
+   make-syntactic-binding-descriptor/begin-for-syntax
    syntactic-binding-descriptor/begin-for-syntax?
 
    #| end of exports |# )
@@ -1396,7 +1396,7 @@
 
 ;;;; syntactic binding descriptor: BEGIN-FOR-SYNTAX forms
 
-(define* (make-syntactic-binding-descriptor/begin-for-expand visit-code.core)
+(define* (make-syntactic-binding-descriptor/begin-for-syntax visit-code.core)
   ;;Build and  return a  syntactic binding  descriptor representing  visit code  in a
   ;;BEGIN-FOR-SYNTAX syntax use.
   ;;

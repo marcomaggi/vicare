@@ -536,6 +536,20 @@
      (%chi-trailing-expressions body-form*.stx lexenv.run lexenv.expand rev-qdef* mod** kwd* export-spec* rib
 				mix? shadow/redefine-bindings?))
 
+    ((expand-time-expr)
+     ;;Vicare's  EXPAND-TIME-EXPR   integrated-macro  use.    First  we   check  with
+     ;;SYNTAX-MATCH  that the  syntax is  correct, then  we build  the core  language
+     ;;expression.
+     ;;
+     (syntax-match body-form.stx ()
+       ((_ ?expand-time-expr)
+	(let ((new-body-form.stx (compiler::eval-core (expanded->core (expand-macro-transformer ?expand-time-expr lexenv.expand)))))
+	  (chi-body* (cons new-body-form.stx (cdr body-form*.stx))
+		     lexenv.run lexenv.expand
+		     rev-qdef* mod** kwd* export-spec*
+		     rib mix? shadow/redefine-bindings?)))
+       ))
+
     (else
      (assertion-violation __module_who__
        "internal error, invalid integrated-macro descriptor" (car body-form*.stx) descr))))
@@ -715,7 +729,7 @@
   ;;
   ;;The input form is a BEGIN-FOR-SYNTAX syntax use:
   ;;
-  ;;   (begin-for-expand ?expr0 ?expr ...)
+  ;;   (begin-for-syntax ?expr0 ?expr ...)
   ;;
   ;;We expand the  expressions using LEXENV.EXPAND as LEXENV for  run-time, much like
   ;;what we do  when evaluating the right-hand side of  a DEFINE-SYNTAX, but handling
@@ -801,7 +815,7 @@
 	    (%go-on lexenv.run lexenv.expand^)
 	  (begin
 	    (compiler::eval-core (expanded->core visit-code.core))
-	    (let* ((bfs.des	(make-syntactic-binding-descriptor/begin-for-expand visit-code.core))
+	    (let* ((bfs.des	(make-syntactic-binding-descriptor/begin-for-syntax visit-code.core))
 		   (bfs.lab	(generate-label-gensym "begin-for-syntax-label"))
 		   (lexenv.run^	(push-entry-on-lexenv bfs.lab bfs.des lexenv.run)))
 	      (%go-on lexenv.run^ lexenv.expand^)))))))
@@ -2023,7 +2037,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%generate-registration-visit-code lhs.id spec.id spec.lambda-sig lexenv.run)
-    (let* ((regis.des	(make-syntactic-binding-descriptor/begin-for-expand
+    (let* ((regis.des	(make-syntactic-binding-descriptor/begin-for-syntax
 			 (build-application no-source
 			     (build-primref no-source 'overloaded-function-spec.register-specialisation!)
 			   (list (build-data no-source lhs.id)

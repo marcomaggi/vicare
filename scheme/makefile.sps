@@ -642,6 +642,7 @@
     (letrec-syntax				(integrated-macro . letrec-syntax))
     (stale-when					(integrated-macro . stale-when))
     (begin-for-syntax				(integrated-macro . begin-for-syntax))
+    (expand-time-expr				(integrated-macro . expand-time-expr))
 
 ;;;Core macros that can appear only in an expression.
     ,@(process-core-macros
@@ -3626,6 +3627,7 @@
     (with-current-dynamic-environment		v $language)
 ;;;
     (begin-for-syntax				v $language)
+    (expand-time-expr				v $language)
 ;;;
     (__who__					v $language)
     (__synner__					v $language)

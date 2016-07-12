@@ -980,6 +980,17 @@
 			(else						"a non-expression"))
 		      " was found where an expression was expected")))
 
+	 ((expand-time-expr)
+	  ;;Vicare's  EXPAND-TIME-EXPR integrated-macro  use.   First  we check  with
+	  ;;SYNTAX-MATCH that the syntax is correct,  then we build the core language
+	  ;;expression.
+	  ;;
+	  (syntax-match expr.stx ()
+	    ((_ ?expand-time-expr)
+	     (let ((expr.stx (compiler::eval-core (expanded->core (expand-macro-transformer ?expand-time-expr lexenv.expand)))))
+	       (chi-expr expr.stx lexenv.run lexenv.expand)))
+	    ))
+
 	 (else
 	  (assertion-violation __module_who__
 	    "internal error, invalid integrated-macro descriptor" expr.stx descr))))

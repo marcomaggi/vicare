@@ -3082,6 +3082,25 @@ by other code evaluated for expand:
 @end deffn
 
 
+@deffn Syntax expand-time-expr @meta{expr}
+Evaluated the expression @meta{expr} at expand--time, expecting it to
+return a syntax object; then expand such syntax object and insert the
+result in the invoke code.  This syntax can be used both in definition
+context and in expression context.
+
+@lisp
+(expand-time-expr 1)
+@expansion{} 1
+
+(expand-time-expr #'1)
+@expansion{} 1
+
+(expand-time-expr #'(define a 1))
+a   @result{} 1
+@end lisp
+@end deffn
+
+
 @deffn Syntax set-cons! @meta{who} @meta{obj}
 Expand to:
 
@@ -3195,7 +3214,7 @@ example will also work:
 (define-syntax (doit stx)
   (syntactic-binding-getprop #'ciao 'a))
 
-(begin-for-expand
+(begin-for-syntax
   (syntactic-binding-putprop #'ciao 'a 123))
 
 (doit)          @result{} 123
@@ -3223,7 +3242,7 @@ we can do:
 (let-syntax ((ciao (lambda (stx) #t)))
   (define-syntax (doit stx)
     (syntactic-binding-getprop #'ciao 'a))
-  (begin-for-expand
+  (begin-for-syntax
     (syntactic-binding-putprop #'ciao 'a 123))
   (doit))
 @result{} 123
@@ -3238,7 +3257,7 @@ To define a binding property for a lexical variable bound by
 (define-syntax (doit stx)
   (syntactic-binding-getprop #'ciao 'a))
 
-(begin-for-expand
+(begin-for-syntax
   (syntactic-binding-putprop #'ciao 'a 123))
 
 (doit)          @result{} 123
@@ -3251,7 +3270,7 @@ and for one bound by @func{let}:
 (let ((ciao "ciao"))
   (define-syntax (doit stx)
     (syntactic-binding-getprop #'ciao 'a))
-  (begin-for-expand
+  (begin-for-syntax
     (syntactic-binding-putprop #'ciao 'a 123))
   (doit))
 @result{} 123
