@@ -323,7 +323,7 @@
 
   (define ofd
     (receive-and-return (ofd)
-	(make-overloaded-function-descriptor (list (cons doit-string.des doit-string)))
+	(make-overloaded-function-descriptor 'doit (list (cons doit-string.des doit-string)))
       (overloaded-function-descriptor.register! ofd doit-fixnum.des doit-fixnum)))
 
 ;;; --------------------------------------------------------------------

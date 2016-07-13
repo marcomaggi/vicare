@@ -453,6 +453,7 @@
    (type-name			interface-type-descr.type-name)
    (uid				interface-type-descr.uid)
    (implemented-interface-uids	interface-type-descr.implemented-interface-uids)
+   (parent-type-descriptor	interface-type-descr.parent-type-descriptor)
    (method-prototype-names	interface-type-descr.method-prototype-names)
    (method-retriever		interface-type-descr.method-retriever)))
 

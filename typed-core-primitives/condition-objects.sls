@@ -686,6 +686,9 @@
   (declare interface-method-late-binding-error.subject		&interface-method-late-binding-error  <top>)
   (declare interface-method-late-binding-error.type-descriptor	&interface-method-late-binding-error  <type-descriptor>)
 
+  (declare overloaded-function-late-binding-error.overloaded-function-descriptor
+	   $overloaded-function-late-binding-error		<overloaded-function-descriptor>)
+
   (declare procedure-signature-argument-violation.one-based-argument-index
 	   &procedure-signature-argument-violation	      <positive-fixnum>)
   (declare procedure-signature-argument-violation.failed-expression

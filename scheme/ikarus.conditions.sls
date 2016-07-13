@@ -209,6 +209,7 @@
     &overloaded-function-late-binding-error-rcd
     make-overloaded-function-late-binding-error
     overloaded-function-late-binding-error?
+    overloaded-function-late-binding-error.overloaded-function-descriptor
 
     &interface-method-late-binding-error-rtd
     &interface-method-late-binding-error-rcd
@@ -577,6 +578,7 @@
 		  &overloaded-function-late-binding-error
 		  make-overloaded-function-late-binding-error
 		  overloaded-function-late-binding-error?
+		  overloaded-function-late-binding-error.overloaded-function-descriptor
 
 		  &interface-method-late-binding-error-rtd
 		  &interface-method-late-binding-error-rcd
@@ -1377,7 +1379,8 @@
 
 (define-core-condition-type &overloaded-function-late-binding-error
     &late-binding-error
-  make-overloaded-function-late-binding-error overloaded-function-late-binding-error?)
+  make-overloaded-function-late-binding-error overloaded-function-late-binding-error?
+  (overloaded-function-descriptor	overloaded-function-late-binding-error.overloaded-function-descriptor))
 
 (define-core-condition-type &interface-method-late-binding-error
     &method-late-binding-error

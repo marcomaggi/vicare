@@ -280,6 +280,15 @@
 
 ;;; --------------------------------------------------------------------
 
+   ((interface-type-descr? super.des)
+    (and (interface-type-descr? sub.des)
+	 (interface-type-descr=? super.des sub.des)))
+
+   ((interface-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
    (else #f)))
 
 
@@ -302,7 +311,8 @@
   (define* (object-type-descr.matching-super-and-sub? super.des sub.des)
     (cond
      ((eq? super.des sub.des))
-     ((core-type-descriptor? sub.des)		(%matching-sub/core-type-descr   super.des sub.des))
+     ((core-type-descriptor? sub.des)		(%matching-sub/core-type-descr      super.des sub.des))
+     ((interface-type-descr? sub.des)		(%matching-sub/interface-type-descr super.des sub.des))
      (else
       (case-descriptor super.des
 	(core-type-descriptor?			(%matching-super/core-type-descr super.des sub.des))
@@ -322,7 +332,10 @@
 	(intersection-type-descr?		(%matching-super/intersection-type-descriptor super.des sub.des))
 	(complement-type-descr?			(%matching-super/complement-type-descriptor   super.des sub.des))
 	(ancestor-of-type-descr?		(%matching-super/ancestor-of-type-descriptor  super.des sub.des))
-	(else					#f)))))
+	(else
+	 (cond-with-predicates super.des
+	   (interface-type-descr?	(%matching-super/interface-type-descr super.des sub.des))
+	   (else			#f)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -412,6 +425,9 @@
 	     ;;(super-and-sub? (pair-of <top>) <pair>)
 	     (and (<pair>-ctd? sub.des)
 		  (<top>-ctd? (pair-of-type-descr.item-des super.des))))
+
+	    (interface-type-descr?
+	     (%matching-super/interface-type-descr super.des sub.des))
 
 	    (else #f))))
 
@@ -885,6 +901,18 @@
        (ancestor-of-type-descr.exists super.des
 	 (lambda (ancestor-super.des)
 	   (object-type-descr=? ancestor-super.des sub.des))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%matching-super/interface-type-descr super.des sub.des)
+    (interface-type-descr.super-and-sub? super.des sub.des))
+
+  (define (%matching-sub/interface-type-descr super.des sub.des)
+    (cond-with-predicates super.des
+      (interface-type-descr?
+       (%matching-super/interface-type-descr super.des sub.des))
+      (<top>-ctd?	#t)
+      (else		#f)))
 
 ;;; --------------------------------------------------------------------
 

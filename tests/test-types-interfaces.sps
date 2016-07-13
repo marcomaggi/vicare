@@ -1040,9 +1040,10 @@
   (void))
 
 
-#;(parametrise ((check-test-name	'default-methods))
+(parametrise ((check-test-name	'default-methods))
 
-  ;;Interface with no method prototypes.
+  ;;The record-type  "<duo>" implements the  interface-type "<Stringer>" which  has a
+  ;;default method TO-STRING.
   ;;
   (check
       (internal-body
@@ -1068,6 +1069,136 @@
 
 	(fun (new <duo>  1 2)))
     => "#[duo 1 2]")
+
+  ;;The record-type  "<duo>" implements the  interface-type "<Stringer>" which  has a
+  ;;default method TO-STRING.  "<duo>" implements the method by itself.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <Stringer>
+	  (method ({to-string <string>})
+	    (with-output-to-string
+	      (lambda ()
+		(display this)))))
+
+	(define-record-type <duo>
+	  (implements <Stringer>)
+	  (fields one two)
+	  (method ({to-string <string>})
+	    (with-output-to-string
+	      (lambda ()
+		(display "#[duo ")
+		(display (.one this))
+		(display #\space)
+		(display (.two this))
+		(display #\])))))
+
+	(define (fun {O <Stringer>})
+	  (.to-string O))
+
+	(fun (new <duo>  1 2)))
+    => "#[duo 1 2]")
+
+  ;;The record-type  "<duo>" implements the  interface-type "<Stringer>" which  has a
+  ;;default   method  TO-STRING.    The  default   method  implementation   calls  an
+  ;;interface-type's method implemented by the record-type.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <Stringer>
+	  (method-prototype value
+	    (lambda () => (<top>)))
+	  (method (doit)
+	    (.value this)))
+
+	(define-record-type <duo>
+	  (implements <Stringer>)
+	  (fields one two)
+	  (method ({value <top>})
+	    (.one this)))
+
+	(define (fun {O <Stringer>})
+	  (.doit O))
+
+	(fun (new <duo> 1 2)))
+    => 1)
+
+  ;;The  record-type "<blue>"  implements  the interface-type  "<IOne>"  which has  a
+  ;;default method doit-ione.   The default method implementation attempts  to call a
+  ;;method from the record-type.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-interface-type <IOne>
+		      (method (doit-ione)
+			(.val this)))
+
+		    (define-record-type <duo>
+		      (implements <IOne>)
+		      (fields val))
+
+		    (define (fun {O <IOne>})
+		      (.doit-ione O))
+
+		    (fun (new <blue> 1))))
+	(catch E
+	  ((&syntax)
+	   (syntax->datum (syntax-violation-form E)))
+	  (else E)))
+    => '(method-call val this))
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  ;;The  interface  type  "<ITwo>"  inherits  from "<IOne>"  a  method  with  default
+  ;;implementation and tries to extend it with a method prototype.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-interface-type <IOne>
+		      (method ({doit <number>})
+			1))
+
+		    (define-interface-type <ITwo>
+		      (parent <IOne>)
+		      (method-prototype doit
+			(lambda (<string>) => (<number>))))
+
+		    (void)))
+	(catch E
+	  ((&syntax)
+	   #;(print-condition E)
+	   (%print-message #f (condition-message E))
+	   (syntax-violation-subform E))
+	  (else E)))
+    => 'doit)
+
+  ;;The  interface type  "<ITwo>"  inherits  from "<IOne>"  a  method having  default
+  ;;implementation and tries to  extend it with and tries to extend  it with a method
+  ;;having default implementation.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-interface-type <IOne>
+		      (method ({doit <number>})
+			1))
+
+		    (define-interface-type <ITwo>
+		      (parent <IOne>)
+		      (method ({doit <number>} {S <string>})
+			2))
+
+		    (void)))
+	(catch E
+	  ((&syntax)
+	   #;(print-condition E)
+	   (%print-message #f (condition-message E))
+	   (syntax-violation-subform E))
+	  (else E)))
+    => 'doit)
 
   (void))
 
@@ -1162,9 +1293,7 @@
       (internal-body
 	(define-interface-type <Stuff>
 	  (method-prototype red
-	    (lambda () => (<top>)))
-	  (method (blue)
-	    2))
+	    (lambda () => (<top>))))
 
 	(define itd
 	  (type-descriptor <Stuff>))
@@ -1177,67 +1306,13 @@
       (internal-body
 	(define-interface-type <Stuff>
 	  (method-prototype red
-	    (lambda () => (<top>)))
-	  (method (blue)
-	    2))
+	    (lambda () => (<top>))))
 
 	(define itd
 	  (type-descriptor <Stuff>))
 
 	(procedure? (td::interface-type-descr.method-retriever itd)))
     => #t)
-
-  (void))
-
-
-(parametrise ((check-test-name	'misc))
-
-  (define-interface-type <Sequence>
-    (method-prototype length	(lambda () => (<non-negative-exact-integer>)))
-    (method-prototype first	(lambda () => (<char>)))
-    (method-prototype ref	(lambda (<non-negative-exact-integer>) => (<char>)))
-    (method ({just-length <non-negative-exact-integer>})
-      (.length this))
-    (method ({just-item <char>})
-      (.ref this 0))
-    (method ({just-item <char>} {idx <non-negative-exact-integer>})
-       (.ref this idx))
-    (method (doit)
-      this))
-
-  (define-record-type <str>
-    (implements <Sequence>)
-    (fields {str <string>})
-    (method ({length <non-negative-fixnum>})
-      (string-length (.str this)))
-    (method ({first  <char>})
-      (string-ref    (.str this) 0))
-    (method ({ref    <char>} {idx <non-negative-exact-integer>})
-      (string-ref    (.str this) idx)))
-
-  (define (fun {O <Sequence>})
-    (.length O))
-
-;;; --------------------------------------------------------------------
-
-  (check (type-annotation-matching <Sequence> <Sequence>)	=> 'exact-match)
-  (check (type-annotation-matching <Sequence> <str>)		=> 'exact-match)
-  (check (type-annotation-matching <str> <Sequence>)		=> 'no-match)
-  (check (type-annotation-matching <Sequence> <fixnum>)		=> 'no-match)
-  (check (type-annotation-matching <fixnum> <Sequence>)		=> 'no-match)
-
-  (check-for-true	(type-annotation-super-and-sub? <Sequence> <Sequence>))
-  (check-for-true	(type-annotation-super-and-sub? <Sequence> <str>))
-  (check-for-false	(type-annotation-super-and-sub? <str> <Sequence>))
-  (check-for-false	(type-annotation-super-and-sub? <Sequence> <fixnum>))
-  (check-for-false	(type-annotation-super-and-sub? <fixnum> <Sequence>))
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let ((O (new <str> "ciao")))
-	(fun O))
-    => 4)
 
   (void))
 

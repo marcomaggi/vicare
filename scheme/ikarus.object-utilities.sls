@@ -290,7 +290,7 @@
 
 (module (interface-method-call-late-binding)
 
-  (define* (interface-method-call-late-binding interface.uid method-name.sym subject operands)
+  (define* (interface-method-call-late-binding interface.uid method-name.sym default-implementation subject operands)
     ;;Implement run-time dynamic dispatching of method calls to interface types.
     ;;
     ;;The argument INTERFACE.UID must be the UID of the interface-type.  The argument
@@ -310,11 +310,12 @@
 				  (else
 				   (%error-no-interfaces)))
 			    (%error-no-interfaces))
-		    interface.uid method-name.sym subject operands)))
+		    interface.uid method-name.sym default-implementation
+		    subject operands)))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%method-call des table interface.uid method-name.sym subject operands)
+  (define (%method-call des table interface.uid method-name.sym default-implementation subject operands)
     (cond ((vector-find (lambda (entry)
 			  (eq? (car entry) interface.uid))
 	     table)
@@ -326,6 +327,8 @@
 			    ;;Method found.   Apply it  to the operands  and return
 			    ;;the application's return values.
 			    (apply method-implementation subject operands)))
+		      (default-implementation
+			(apply default-implementation subject operands))
 		      (else
 		       (%error "the subject's object-type descriptor does not implement the requested interface method"
 			       interface.uid method-name.sym subject des operands)))))
@@ -374,7 +377,9 @@
   (define-type-descriptors)
   (strip-angular-parentheses)
   (fields
-    (mutable table		overloaded-function-descriptor.table overloaded-function-descriptor.table-set!)
+    (immutable	name		overloaded-function-descriptor.name)
+		;Symbol representing the overloaded function name.
+    (mutable	table		overloaded-function-descriptor.table overloaded-function-descriptor.table-set!)
 		;An alist  having an  instance of <closure-type-descr>  as key  and a
 		;procedure as value.
     #| end of FIELDS |# ))
@@ -404,10 +409,10 @@
 	      (apply (cdr entry) operand*)))
 	(else
 	 (raise
-	  (condition (make-overloaded-function-late-binding-error)
-		     (make-who-condition __who__)
+	  (condition (make-who-condition __who__)
 		     (make-message-condition "no function matching the operands in overloaded function application")
-		     (make-irritants-condition (list over.des operand*)))))))
+		     (make-overloaded-function-late-binding-error over.des)
+		     (make-irritants-condition operand*))))))
 
 
 ;;;; done

@@ -298,7 +298,9 @@
 
 (define-built-in-condition-type &overloaded-function-late-binding-error
     &late-binding-error
-  make-overloaded-function-late-binding-error overloaded-function-late-binding-error?)
+  make-overloaded-function-late-binding-error overloaded-function-late-binding-error?
+  (methods
+   (overloaded-function-descriptor	overloaded-function-late-binding-error.overloaded-function-descriptor)))
 
 (define-built-in-condition-type &interface-method-late-binding-error
     &method-late-binding-error

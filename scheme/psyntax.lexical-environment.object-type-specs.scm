@@ -252,6 +252,7 @@
 	 <interface-type-spec>-rtd			<interface-type-spec>-rcd
 	 <interface-type-spec>
 	 make-interface-type-spec			interface-type-spec?
+	 interface-type-spec.type-descriptor-id
 	 interface-type-spec.method-prototypes-table
 	 assert-implemented-interface-type-and-implementer-interface-type
 	 build-table-for-interface-types-and-implementer-object-type
@@ -4825,11 +4826,19 @@
     (immutable	type-descriptor-id		interface-type-spec.type-descriptor-id)
 		;A syntactic identifier bound to the run-time type descriptor.
     (immutable	method-prototypes-table		interface-type-spec.method-prototypes-table)
-		;Alist having as keys symbols representing method names and as values
-		;"<closure-type-spec>" instances  representing the  methods' required
-		;type signatures.  This alist includes: the method prototypes defined
-		;by this interface-type; the method  prototypes defined by the parent
-		;type.
+		;Alist having: as keys, symbols representing method names; as values,
+		;pairs with the format:
+		;
+		;   (?closure-ots . ?has-default)
+		;
+		;where:   ?CLOSURE-OTS  is   an  instance   of  "<closure-type-spec>"
+		;representing the methods' required  type signature; ?HASH-DEFAULT is
+		;a   boolean,  true   if  this   method  prototype   has  a   default
+		;implementation.
+		;
+		;This  alist   includes:  the  method  prototypes   defined  by  this
+		;interface-type, the method prototypes  defined by the parent's type,
+		;the method prototypes defined by the grand-parent's type, et cetera.
 		;
 		;If an  object-type implements  a concrete method  for each  entry in
 		;this alist: that object-type implements this interface-type.
@@ -4839,11 +4848,8 @@
       (define* (make-interface-type-spec {type-name.id identifier?} {uid symbol?} {type-descriptor.id identifier?}
 					 parent-name.ots method-prototypes-table methods-table
 					 {implemented-interfaces list-of-interface-type-specs?})
-	;;The  argument  METHOD-PROTOTYPES-TABLE must  be  an  alist having  as  keys
-	;;symbols  representing  method  names and  as  values  "<closure-type-spec>"
-	;;instances representing  the methods' required type  signatures.  This alist
-	;;includes: the method prototypes defined  by this interface-type; the method
-	;;prototypes defined by the parent type.
+	;;The  argument METHOD-PROTOTYPES-TABLE  must  be an  alist  having with  the
+	;;format of the METHOD-PROTOTYPES-TABLE field.
 	;;
 	;;The  argument METHODS-TABLE  must  be  an alist  having:  as keys,  symbols
 	;;representing the  method names; as  values, syntactic identifiers  bound to
@@ -4963,12 +4969,14 @@
 	  ;;representing    the   method    name;    as   cdr,    an   instance    of
 	  ;;"<closure-type-spec>" representing the method's required type signature.
 	  (object-type-spec.compatible-method-stx super-iface.ots sub-iface.ots
-						  (car super-method-prototype-entry)
-						  (cdr super-method-prototype-entry)))
+						  (car  super-method-prototype-entry)
+						  (cadr super-method-prototype-entry)
+						  (cddr super-method-prototype-entry)))
       (interface-type-spec.method-prototypes-table super-iface.ots)))
 
-  (define (object-type-spec.compatible-method-stx super-iface.ots sub-iface.ots
-						  super-method-name.sym super-method-prototype.ots)
+  (define* (object-type-spec.compatible-method-stx super-iface.ots sub-iface.ots
+						   super-method-name.sym super-method-prototype.ots
+						   super-method-has-default?)
     ;;SUB-IFACE.OTS must be the instance  of "<interface-type-spec>" that is meant to
     ;;implement the interface-type SUPER-IFACE.OTS.   SUPER-METHOD-NAME.SYM must be a
     ;;symbol  representing the  method name.   SUPER-METHOD-PROTOTYPE.OTS must  be an
@@ -4986,12 +4994,13 @@
     ;;
     (define-syntax-rule (recursion ?sub-parent-ots)
       (object-type-spec.compatible-method-stx super-iface.ots ?sub-parent-ots
-					      super-method-name.sym super-method-prototype.ots))
+					      super-method-name.sym super-method-prototype.ots
+					      super-method-has-default?))
     (cond ((assq super-method-name.sym (interface-type-spec.method-prototypes-table sub-iface.ots))
 	   ;;The name is known; extract the  symbolic expression from the alist entry
 	   ;;and return it.
 	   => (lambda (sub-method-prototype-entry)
-		(let ((sub-method-prototype.ots (cdr sub-method-prototype-entry)))
+		(let ((sub-method-prototype.ots (cadr sub-method-prototype-entry)))
 		  (unless (object-type-spec.matching-super-and-sub? super-method-prototype.ots sub-method-prototype.ots)
 		    (raise
 		     (condition
@@ -4999,22 +5008,24 @@
 		       (make-message-condition "interface-type does not implement the specified interface-type: \
                                                 mismatching method implementation")
 		       (make-interface-implementation-mismatching-method-violation
-			(object-type-spec.name sub-iface.ots)
-			(object-type-spec.name super-iface.ots)
+			(object-type-spec.name sub-iface.ots)	;object-type-name
+			(object-type-spec.name super-iface.ots) ;interface-type-name
 			super-method-name.sym
-			(object-type-spec.type-annotation super-method-prototype.ots)
-			(object-type-spec.type-annotation sub-method-prototype.ots))))))))
+			(object-type-spec.type-annotation super-method-prototype.ots) ;interface-method-signature
+			(object-type-spec.type-annotation   sub-method-prototype.ots) ;object-method-signature
+			)))))))
 	  (else
-	   (raise
-	    (condition
-	      (make-who-condition __module_who__)
-	      (make-message-condition "interface-type does not implement the specified interface-type: \
-                                       missing method implementation")
-	      (make-interface-implementation-missing-method-violation
-	       (object-type-spec.name sub-iface.ots)
-	       (object-type-spec.name super-iface.ots)
-	       super-method-name.sym
-	       (object-type-spec.type-annotation super-method-prototype.ots)))))))
+	   (unless super-method-has-default?
+	     (raise
+	      (condition
+		(make-who-condition __module_who__)
+		(make-message-condition "interface-type does not implement the specified interface-type: \
+                                         missing method implementation")
+		(make-interface-implementation-missing-method-violation
+		 (object-type-spec.name sub-iface.ots)
+		 (object-type-spec.name super-iface.ots)
+		 super-method-name.sym
+		 (object-type-spec.type-annotation super-method-prototype.ots))))))))
 
   #| end of module: ASSERT-IMPLEMENTED-INTERFACE-TYPE-AND-IMPLEMENTER-INTERFACE-TYPE |# )
 
@@ -5100,12 +5111,14 @@
       (fold-left (lambda (table super-method-prototype-entry)
 		   (cons (object-type-spec.compatible-method-stx iface.ots object.ots object.ots
 								 (car super-method-prototype-entry)
-								 (cdr super-method-prototype-entry))
+								 (cadr super-method-prototype-entry)
+								 (cddr super-method-prototype-entry))
 			 table))
 	'() (interface-type-spec.method-prototypes-table iface.ots)))
 
     (define (object-type-spec.compatible-method-stx iface.ots object.ots current.ots
-						    super-method-name.sym super-method-prototype.ots)
+						    super-method-name.sym super-method-prototype.ots
+						    super-method-has-default?)
       ;;SUPER-METHOD-NAME.SYM  must  be  a   symbol  representing  the  method  name.
       ;;SUPER-METHOD-PROTOTYPE.OTS  must  be  an  instance  of  "<closure-type-spec>"
       ;;describing the requested method's type signature.
@@ -5126,7 +5139,8 @@
       ;;
       (define-syntax-rule (recursion ?parent.ots)
 	(object-type-spec.compatible-method-stx iface.ots object.ots ?parent.ots
-						super-method-name.sym super-method-prototype.ots))
+						super-method-name.sym super-method-prototype.ots
+						super-method-has-default?))
       (cond ((assq super-method-name.sym (object-type-spec.methods-table current.ots))
 	     => (lambda (entry)
 		  (let* ((sub-method-procname.id	(cdr entry))
@@ -5138,27 +5152,30 @@
 		       (condition
 			 (make-who-condition __module_who__)
 			 (make-message-condition "object-type does not implement the specified interface-type: \
-                                                mismatching method implementation")
+                                                  mismatching method implementation")
 			 (make-interface-implementation-mismatching-method-violation
-			  (object-type-spec.name object.ots)
-			  (object-type-spec.name iface.ots)
+			  (object-type-spec.name object.ots) ;object-type-name
+			  (object-type-spec.name iface.ots)  ;interface-type-name
 			  super-method-name.sym
-			  (object-type-spec.type-annotation sub-method-procedure.ots)
-			  (object-type-spec.type-annotation super-method-prototype.ots))))))))
+			  (object-type-spec.type-annotation super-method-prototype.ots) ;interface-method-signature
+			  (object-type-spec.type-annotation   sub-method-procedure.ots) ;object-method-signature
+			  )))))))
 	    ((object-type-spec.parent-ots current.ots)
 	     => (lambda (parent.ots)
 		  (recursion parent.ots)))
 	    (else
-	     (raise
-	      (condition
-		(make-who-condition __module_who__)
-		(make-message-condition "object-type does not implement the specified interface-type: \
-                                       missing method implementation")
-		(make-interface-implementation-missing-method-violation
-		 (object-type-spec.name object.ots)
-		 (object-type-spec.name iface.ots)
-		 super-method-name.sym
-		 (object-type-spec.type-annotation super-method-prototype.ots)))))))
+	     (if super-method-has-default?
+		 (cons super-method-name.sym #f)
+	       (raise
+		(condition
+		  (make-who-condition __module_who__)
+		  (make-message-condition "object-type does not implement the specified interface-type: \
+                                         missing method implementation")
+		  (make-interface-implementation-missing-method-violation
+		   (object-type-spec.name object.ots)
+		   (object-type-spec.name iface.ots)
+		   super-method-name.sym
+		   (object-type-spec.type-annotation super-method-prototype.ots))))))))
 
     #| end of module: %BUILD-FULL-METHODS-TABLE |# )
 

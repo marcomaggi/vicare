@@ -122,10 +122,11 @@
 (declare-core-primitive interface-method-call-late-binding
     (safe)
   (signatures
-   ((<symbol>	;interface.uid
-     <symbol>	;method-name.sym
-     <top>	;subject
-     <list>)	;operands
+   ((<symbol>		      ;interface.uid
+     <symbol>		      ;method-name.sym
+     (or <false> <procedure>) ;default-implementation
+     <top>		      ;subject
+     <list>)		      ;operands
     => <list>)))
 
 ;;; --------------------------------------------------------------------
@@ -659,11 +660,12 @@
 (declare-core-primitive make-interface-type-descr
     (safe)
   (signatures
-   ((<symbol>		      ;type-name
-     <symbol>		      ;uid
-     (list-of <symbol>)	      ;implemented-interface-uids
-     (list-of <symbol>)	      ;method-prototype-names
-     <type-method-retriever>) ;method-retriever-function
+   ((<symbol>				 ;type-name
+     <symbol>				 ;uid
+     (or <false> <interface-type-descr>) ;parent-type-descriptor
+     (list-of <symbol>)			 ;implemented-interface-uids
+     (list-of <symbol>)			 ;method-prototype-names
+     <type-method-retriever>)		 ;method-retriever-function
     => (<interface-type-descr>))))
 
 (declare-type-predicate interface-type-descr?	<interface-type-descr>)
@@ -692,6 +694,11 @@
     (safe)
   (signatures
    ((<interface-type-descr>)		=> (<type-method-retriever>))))
+
+(declare-core-primitive interface-type-descr.parent-type-descriptor
+    (safe)
+  (signatures
+   ((<interface-type-descr>)		=> ((or <false> <interface-type-descr>)))))
 
 
 ;;;; object type descriptors: utilities
@@ -750,7 +757,7 @@
     (safe)
   (signatures
    #;(((alist <lambda-descriptors> <procedure>))		=> (<overloaded-function-descriptor>))
-   ((<list>)					=> (<overloaded-function-descriptor>))))
+   ((<symbol> <list>)				=> (<overloaded-function-descriptor>))))
 
 (declare-type-predicate overloaded-function-descriptor?		<overloaded-function-descriptor>)
 

@@ -3055,6 +3055,7 @@
     (&overloaded-function-late-binding-error		v $language)
     (make-overloaded-function-late-binding-error	v $language)
     (overloaded-function-late-binding-error?		v $language)
+    (overloaded-function-late-binding-error.overloaded-function-descriptor v $language)
 ;;;
     (lookahead-char				v r ip)
     (lookahead-u8				v r ip)
@@ -4225,6 +4226,7 @@
     (interface-type-descr?			$type-descriptors)
     (interface-type-descr.type-name		$type-descriptors)
     (interface-type-descr.uid			$type-descriptors)
+    (interface-type-descr.parent-type-descriptor $type-descriptors)
     (interface-type-descr.implemented-interface-uids $type-descriptors)
     (interface-type-descr.method-prototype-names $type-descriptors)
     (interface-type-descr.method-retriever	$type-descriptors)
@@ -5072,6 +5074,7 @@
     (closure-type-spec?					$expander)
     (closure-type-spec.signature			$expander)
     (closure-type-spec.join				$expander)
+    (make-closure-type-spec/from-typed-formals		$expander)
 
     (<label-type-spec>-rtd)
     (<label-type-spec>-rcd)

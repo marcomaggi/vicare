@@ -141,6 +141,7 @@
     make-closure-type-spec				closure-type-spec?
     closure-type-spec.signature				closure-type-spec.set-new-retvals-when-untyped!
     closure-type-spec.thunk?				closure-type-spec.join
+    make-closure-type-spec/from-typed-formals
 
     <struct-type-spec>
     <struct-type-spec>-rtd				<struct-type-spec>-rcd
@@ -232,6 +233,7 @@
     <interface-type-spec>-rtd				<interface-type-spec>-rcd
     <interface-type-spec>
     make-interface-type-spec				interface-type-spec?
+    interface-type-spec.type-descriptor-id
     interface-type-spec.method-prototypes-table
     assert-implemented-interface-type-and-implementer-interface-type
     build-table-for-interface-types-and-implementer-object-type
@@ -734,6 +736,14 @@
 (include "psyntax.lexical-environment.typed-variable-specs.scm"	#t)
 
 (include "psyntax.lexical-environment.overloaded-function-specs.sls"	#t)
+
+;;; --------------------------------------------------------------------
+
+(define* (make-closure-type-spec/from-typed-formals input-form.stx)
+  (import PSYNTAX-TYPE-SYNTAX-OBJECTS)
+  (receive (standard-formals.stx lambda-signature)
+      (syntax-object.parse-typed-clambda-clause-formals input-form.stx)
+    (make-closure-type-spec (make-case-lambda-signature (list lambda-signature)))))
 
 
 ;;;; syntactic bindings core definitions

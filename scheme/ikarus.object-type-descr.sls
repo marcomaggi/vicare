@@ -111,6 +111,7 @@
     <interface-type-descr>-rtd			<interface-type-descr>-rcd
     make-interface-type-descr			interface-type-descr?
     interface-type-descr.type-name		interface-type-descr.uid
+    interface-type-descr.parent-type-descriptor
     interface-type-descr.implemented-interface-uids
     interface-type-descr.method-prototype-names
     interface-type-descr.method-retriever
@@ -145,7 +146,8 @@
 		  ratnum-negative?
 		  exact-compnum?
 		  zero-compnum?
-		  zero-cflonum?)
+		  zero-cflonum?
+		  record-type-implemented-interfaces)
     (ikarus records syntactic)
     (only (ikarus.core-type-descr)
 	  core-type-descriptor?
@@ -154,6 +156,7 @@
 	  core-type-descriptor.parent
 	  core-type-descriptor.ancestor-des*
 	  core-type-descriptor.parent-and-child?
+	  core-type-descriptor.implemented-interfaces
 	  ;;;
 	  <void>-ctd				<top>-ctd			<bottom>-ctd
 	  <true>-ctd				<false>-ctd
@@ -173,7 +176,8 @@
 	  <condition>-ctd			<compound-condition>-ctd
 	  <hashtable>-ctd)
     (only (ikarus records procedural)
-	  $rtd-subtype?)
+	  $rtd-subtype?
+	  record-type-implemented-interfaces)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Jun 3,
     ;;2016)
     (only (ikarus ratnums)
@@ -851,6 +855,9 @@
 		;A symbol representing the name of this interface type.
     (immutable	uid				interface-type-descr.uid)
 		;A unique identifier associated to this type descriptor.
+    (immutable	parent-type-descriptor		interface-type-descr.parent-type-descriptor)
+		;False or  an instance  of "<interface-type-descr>"  representing the
+		;parent of this interface-type.
     (immutable	implemented-interface-uids	interface-type-descr.implemented-interface-uids)
 		;A  list  of   symbols  representing  the  UIDs   of  the  interfaces
 		;implemented by this interface-type.
@@ -869,14 +876,16 @@
     #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
-      (define* (make-interface-type-descr {type-name symbol?} {uid symbol?} implemented-interface-uids
+      (define* (make-interface-type-descr {type-name symbol?} {uid symbol?} parent-type-descriptor
+					  implemented-interface-uids
 					  method-prototype-names {method-retriever procedure?})
 	(if (symbol-bound? uid)
 	    (receive-and-return (des)
 		(symbol-value uid)
 	      (%validate-old-descriptor-against-arguments des type-name uid implemented-interface-uids method-prototype-names))
 	  (receive-and-return (des)
-	      (make-record type-name uid implemented-interface-uids method-prototype-names method-retriever)
+	      (make-record type-name uid parent-type-descriptor
+			   implemented-interface-uids method-prototype-names method-retriever)
 	    (set-symbol-value! uid des))))
 
       (define (%validate-old-descriptor-against-arguments des type-name uid implemented-interface-uids method-prototype-names)
@@ -902,6 +911,53 @@
 
       make-interface-type-descr))
   #| end of DEFINE-RECORD-TYPE |# )
+
+;;; --------------------------------------------------------------------
+
+(define* (interface-type-descr=? {des1 interface-type-descr?} {des2 interface-type-descr?})
+  (eq? (interface-type-descr.uid des1) (interface-type-descr.uid des2)))
+
+
+(module (interface-type-descr.super-and-sub?)
+
+  (define* (interface-type-descr.super-and-sub? {super-iface.des interface-type-descr?} sub.des)
+    ;;Return true if the interface-type descriptor SUPER-IFACE.DES is a super-type of
+    ;;the object-type descriptor SUB.DES; otherwise return false.
+    ;;
+    (cond ((interface-type-descr? sub.des)
+	   (%super-iface-and-sub-iface? super-iface.des sub.des))
+	  ((record-type-descriptor? sub.des)
+	   (%super-iface-and-sub-record-type? super-iface.des sub.des))
+	  ((core-type-descriptor? sub.des)
+	   (%super-iface-and-sub-core-type?   super-iface.des sub.des))
+	  (else #f)))
+
+  (define (%super-iface-and-sub-iface? super-iface.des sub-iface.des)
+    (or (eq? super-iface.des sub-iface.des)
+	(interface-type-descr=? super-iface.des sub-iface.des)
+	(memq (interface-type-descr.uid super-iface.des)
+	      (interface-type-descr.implemented-interface-uids sub-iface.des))
+	(cond ((interface-type-descr.parent-type-descriptor sub-iface.des)
+	       => (lambda (sub-parent.des)
+		    (and (interface-type-descr? sub-parent.des)
+			 (%super-iface-and-sub-iface? super-iface.des sub-parent.des))))
+	      (else #f))))
+
+  (define (%super-iface-and-sub-record-type? super-iface.des sub-record.des)
+    (and (let ((super-iface.uid (interface-type-descr.uid super-iface.des)))
+	   (vector-exists (lambda (implementation-pair)
+			    (eq? super-iface.uid (car implementation-pair)))
+	     (record-type-implemented-interfaces sub-record.des)))
+	 #t))
+
+  (define (%super-iface-and-sub-core-type? super-iface.des sub-core.des)
+    (and (let ((super-iface.uid (interface-type-descr.uid super-iface.des)))
+	   (vector-exists (lambda (implementation-pair)
+			    (eq? super-iface.uid (car implementation-pair)))
+	     (core-type-descriptor.implemented-interfaces sub-core.des)))
+	 #t))
+
+  #| end of module: INTERFACE-TYPE-DESCR.SUPER-AND-SUB? |# )
 
 
 ;;;; object-type descriptors: facilities

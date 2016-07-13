@@ -333,8 +333,9 @@
 
 (define* (case-lambda-signature.join {spec1 case-lambda-signature?} {spec2 case-lambda-signature?})
   (make-case-lambda-signature
-   (delete-duplicates (append (case-lambda-signature.clause-signature* spec1)
-			      (case-lambda-signature.clause-signature* spec2))
+   (delete-duplicates (delete-duplicates (append (case-lambda-signature.clause-signature* spec1)
+						 (case-lambda-signature.clause-signature* spec2))
+					 lambda-signature=?)
 		      lambda-signature=?)))
 
 

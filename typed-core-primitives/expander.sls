@@ -700,6 +700,11 @@
   (signatures
    ((<object-type-spec>)		=> (<syntax-object>))))
 
+(declare-core-primitive object-type-spec.uids-list
+    (safe)
+  (signatures
+   ((<object-type-spec>)		=> ((list-of <symbol>)))))
+
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive make-type-annotation
@@ -828,6 +833,11 @@
   (signatures
    ((<closure-type-spec> <closure-type-spec>)	=> (<closure-type-spec>))))
 
+(declare-core-primitive make-closure-type-spec/from-typed-formals
+    (safe)
+  (signatures
+   ((<syntax-object>)				=> (<closure-type-spec>))))
+
 ;;; --------------------------------------------------------------------
 
 (declare-core-rtd <pair-type-spec>-rtd)
@@ -953,13 +963,13 @@
 (declare-core-primitive make-interface-type-spec
     (safe)
   (signatures
-   ((<syntactic-identifier>		     ;type-name
-     <symbol>				     ;uid
-     <syntactic-identifier>		     ;type-descriptor-name
-     (or <false> <syntactic-identifier>)     ;parent-name-id
-     (alist <symbol> <closure-type-spec>)    ;method-prototypes-table
-     (alist <symbol> <syntactic-identifier>) ;methods-table
-     (list-of <syntactic-identifier>))	     ;implemented-interfaces
+   ((<syntactic-identifier>				   ;type-name
+     <symbol>						   ;uid
+     <syntactic-identifier>				   ;type-descriptor-name
+     (or <false> <syntactic-identifier>)		   ;parent-name-id
+     (alist <symbol> (pair <closure-type-spec> <boolean>)) ;method-prototypes-table
+     (alist <symbol> <syntactic-identifier>)		   ;methods-table
+     (list-of <syntactic-identifier>))			   ;implemented-interfaces
     => (<interface-type-spec>))))
 
 (declare-type-predicate interface-type-spec?	<interface-type-spec>)

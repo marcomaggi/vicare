@@ -1962,6 +1962,7 @@
 				 (make-closure-type-spec (make-case-lambda-signature (list spec.lambda-sig)))))
 	     (input-form.stx	(bless `(define/std ,ofd.id
 					  (make-overloaded-function-descriptor
+					   (quote ,ofd.id)
 					   (list (cons (car (case-lambda-descriptors.clause-signature*
 							     (closure-type-descr.signature (type-descriptor ,spec.ann))))
 						       ,spec.id)))))))
