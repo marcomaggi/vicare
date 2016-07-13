@@ -6066,10 +6066,14 @@ instances of an object--type can be used in a generic expression,
 because they implement all the needed methods and such methods can be
 called at run--time through dynamic dispatching.
 
+Interfaces are implemented half in the boot image and half in the
+library @library{vicare language-extensions interfaces}.
+
 @menu
 * types interfaces intro::      Introduction to interfaces.
 * types interfaces defs::       Defining interfaces.
 * types interfaces descr::      Interfaces type descriptors.
+* types interfaces examples::   Interfaces by examples.
 @end menu
 
 @c page
@@ -6164,9 +6168,7 @@ example, it is impossible for label types to implement interfaces.
 
 
 The following syntactic bindings are exported by the library
-@library{vicare language-extensions interfaces}.  The syntactic bindings
-@clause{nongenerative}, @clause{parent}, @clause{implements},
-@clause{method} are the same ones exported by @library{vicare}.
+@library{vicare language-extensions interfaces}.
 
 
 @deffn Syntax define-interface-type @meta{name} @meta{clause} @dots{}
@@ -6176,8 +6178,13 @@ The following syntactic bindings are exported by the library
 @deffnx {Auxiliary Syntax} method-prototype
 @deffnx {Auxiliary Syntax} method
 Define a new interface type bound to the syntactic identifier
-@meta{name}.  Interfaces cannot be instantiated: attempting to do it
-will raise an expand--time exception.
+@meta{name}.  The syntactic bindings @clause{nongenerative},
+@clause{parent}, @clause{implements}, @clause{method} are the same ones
+exported by @library{vicare} and are reexported by the library
+@library{vicare language-extensions interfaces}.
+
+Interfaces cannot be instantiated: attempting to do it will raise an
+expand--time exception.
 
 A use of the clause @clause{nongenerative} must have one of the formats:
 
@@ -6275,6 +6282,604 @@ Interface type descriptors}.  Example:
 
 (td::interface-type-descr.type-name itd)
 @result{} <Stuff>
+@end lisp
+
+@c page
+@node types interfaces examples
+@subsection Interfaces by examples
+
+
+Let's illustrate the features and limitations of interface--types by
+examples.
+
+Whenever an interface inherits from another interface, it obviously
+becomes its sub--type:
+
+@lisp
+(define-interface-type <IParent>
+  (method-prototype doit
+    (lambda (<number>) => (<string>))))
+
+(define-interface-type <IChild>
+  (parent <IParent>))
+
+(type-annotation-super-and-sub? <IParent> <IChild>) @result{} #t
+(type-annotation-super-and-sub? <IChild> <IParent>) @result{} #f
+@end lisp
+
+An interface can implement another interface; the implementer must
+declare a matching method prototype for every method prototype of the
+implemented.  The method prototype of the implementer must be a
+sub--type of the method prototype of the implemented.  Given that:
+
+@lisp
+(type-annotation-super-and-sub?
+  (lambda (<nestring>) => (<number>))
+  (lambda (<string>)   => (<fixnum>)))
+@result{} #t
+@end lisp
+
+@noindent
+we can define:
+
+@lisp
+(define-interface-type <IOne>
+  (method-prototype doit
+    (lambda (<nestring>) => (<number>))))
+
+(define-interface-type <ITwo>
+  (implements <IOne>)
+  (method-prototype doit
+    (lambda (<string>) => (<fixnum>))))
+
+(type-annotation-super-and-sub? <IOne> <ITwo>) @result{} #t
+(type-annotation-super-and-sub? <ITwo> <IOne>) @result{} #f
+@end lisp
+
+An interface can inherit method prototypes from another interface and
+use those to implement another interface:
+
+@lisp
+(define-interface-type <I>
+  (method-prototype doit
+    (lambda (<string>) => (<number>))))
+
+(define-interface-type <A>
+  (method-prototype doit
+    (lambda (<string>) => (<number>))))
+
+(define-interface-type <B>
+  (parent <A>)
+  (implements <I>))
+
+(type-annotation-super-and-sub? <I> <A>) @result{} #f
+(type-annotation-super-and-sub? <I> <B>) @result{} #t
+(type-annotation-super-and-sub? <A> <I>) @result{} #f
+(type-annotation-super-and-sub? <B> <I>) @result{} #f
+@end lisp
+
+If the interface @class{ISub} inherits from @class{ISuper}, to implement
+@class{ISub} the interface @class{A} has to declare a method for every
+method in @class{ISub} and @class{ISuper}:
+
+@lisp
+(define-interface-type <ISuper>
+  (method-prototype super-doit
+    (lambda (<string>) => (<number>))))
+
+(define-interface-type <ISub>
+  (parent <ISuper>)
+  (method-prototype sub-doit
+    (lambda (<string>) => (<fixnum>))))
+
+(define-interface-type <A>
+  (implements <ISub>)
+  (method-prototype super-doit
+    (lambda (<string>) => (<number>)))
+  (method-prototype sub-doit
+    (lambda (<string>) => (<fixnum>))))
+
+(type-annotation-super-and-sub? <ISuper> <A>) @result{} #t
+(type-annotation-super-and-sub? <ISub>   <A>) @result{} #t
+(type-annotation-super-and-sub? <A> <ISuper>) @result{} #f
+(type-annotation-super-and-sub? <A> <ISub>)   @result{} #f
+@end lisp
+
+Interface @class{B} implements interface @class{A}; interface @class{C}
+implements interface @class{B}; automatically, interface @class{C}
+implements interface @class{A}:
+
+@lisp
+(define-interface-type <A>
+  (method-prototype red         (lambda () => (<fixnum>))))
+
+(define-interface-type <B>
+  (implements <A>)
+  (method-prototype red         (lambda () => (<fixnum>)))
+  (method-prototype blue        (lambda () => (<symbol>))))
+
+(define-interface-type <C>
+  (implements <B>)
+  (method-prototype red         (lambda () => (<fixnum>)))
+  (method-prototype blue        (lambda () => (<symbol>))))
+
+(type-annotation-super-and-sub? <A> <B>) @result{} #t
+(type-annotation-super-and-sub? <A> <C>) @result{} #t
+(type-annotation-super-and-sub? <B> <A>) @result{} #f
+(type-annotation-super-and-sub? <B> <C>) @result{} #t
+(type-annotation-super-and-sub? <C> <A>) @result{} #f
+(type-annotation-super-and-sub? <C> <B>) @result{} #f
+@end lisp
+
+An interface that inherits from another interface can ``extend'' its
+method prototypes with additional signatures.  The interface
+@class{IThree} implements the interfaces @class{IOne} and @class{ITwo}.
+@class{IThree} implements the ``composite'' method from @class{IOne} and
+@class{ITwo} with multiple @clause{method-prototype} clauses:
+
+@lisp
+;;
+;;                 <IOne>
+;;                    ^
+;;                    |
+;;   <IThree> +++> <ITwo>
+;;
+(define-interface-type <IOne>
+  (method-prototype doit
+    (lambda (<fixnum>) => (<string>))))
+
+(define-interface-type <ITwo>
+  (parent <IOne>)
+  (method-prototype doit
+    (lambda (<flonum>) => (<string>))))
+
+(define-interface-type <IThree>
+  (implements <ITwo>)
+  (method-prototype doit (lambda (<fixnum>) => (<string>)))
+  (method-prototype doit (lambda (<flonum>) => (<string>))))
+
+(type-annotation-super-and-sub? <IOne>   <IThree>) @result{} #t
+(type-annotation-super-and-sub? <IOne>   <ITwo>)   @result{} #t
+(type-annotation-super-and-sub? <ITwo>   <IThree>) @result{} #t
+(type-annotation-super-and-sub? <IThree> <IOne>)   @result{} #f
+(type-annotation-super-and-sub? <ITwo>   <IOne>)   @result{} #f
+(type-annotation-super-and-sub? <IThree> <ITwo>)   @result{} #f
+@end lisp
+
+@noindent
+the same as above, but with a single @clause{method-prototype} clause:
+
+@lisp
+(define-interface-type <IOne>
+  (method-prototype doit
+    (lambda (<fixnum>) => (<string>))))
+
+(define-interface-type <ITwo>
+  (parent <IOne>)
+  (method-prototype doit
+    (lambda (<flonum>) => (<string>))))
+
+(define-interface-type <IThree>
+  (implements <ITwo>)
+  (method-prototype doit
+    (case-lambda
+      ((<fixnum>) => (<string>))
+      ((<flonum>) => (<string>)))))
+@end lisp
+
+A record--type can implement an interface by defining a concrete method
+for every method prototype:
+
+@lisp
+(define-interface-type <IOne>
+  (method-prototype doit
+    (lambda (<string>) => (<number>))))
+
+(define-record-type <blue>
+  (implements <IOne>)
+  (method (@{doit <number>@} @{S <string>@})
+    1))
+
+(type-annotation-super-and-sub? <IOne> <blue>) @result{} #t
+(type-annotation-super-and-sub? <blue> <IOne>) @result{} #f
+@end lisp
+
+A record--type can inherit from another record--type and use its
+parent's methods to implement an interface:
+
+@lisp
+(define-interface-type <I>
+  (method-prototype doit
+    (lambda (<string>) => (<number>))))
+
+(define-record-type <A>
+  (method (@{doit <number>@} @{S <string>@})
+    1))
+
+(define-record-type <B>
+  (parent <A>)
+  (implements <I>))
+
+(type-annotation-super-and-sub? <I> <A>) @result{} #f
+(type-annotation-super-and-sub? <I> <B>) @result{} #t
+(type-annotation-super-and-sub? <A> <I>) @result{} #f
+(type-annotation-super-and-sub? <B> <I>) @result{} #f
+@end lisp
+
+A record--type must implement a method for every method prototype in the
+interface and its parents:
+
+@lisp
+(define-interface-type <ISuper>
+  (method-prototype super-doit
+    (lambda (<string>) => (<number>))))
+
+(define-interface-type <ISub>
+  (parent <ISuper>)
+  (method-prototype sub-doit
+    (lambda (<string>) => (<fixnum>))))
+
+(define-record-type <A>
+  (implements <ISub>)
+  (method (@{super-doit <number>@} @{S <string>@})
+    1)
+  (method (@{sub-doit <fixnum>@} @{S <string>@})
+    1))
+
+(type-annotation-super-and-sub? <ISuper> <A>) @result{} #t
+(type-annotation-super-and-sub? <ISub>   <A>) @result{} #t
+(type-annotation-super-and-sub? <A> <ISuper>) @result{} #f
+(type-annotation-super-and-sub? <A> <ISub>)   @result{} #f
+@end lisp
+
+The record--type @class{C} implements interface @class{B}; the interface
+@class{B} implements interface @class{A}; automatically, @class{C}
+implements @class{A}:
+
+@lisp
+(define-interface-type <A>
+  (method-prototype red
+    (lambda () => (<fixnum>))))
+
+(define-interface-type <B>
+  (implements <A>)
+  (method-prototype red
+    (lambda () => (<fixnum>)))
+  (method-prototype blue
+    (lambda () => (<symbol>))))
+
+(define-record-type <C>
+  (implements <B>)
+  (method (@{red  <fixnum>@})
+    1)
+  (method (@{blue <symbol>@})
+    'ciao))
+
+(type-annotation-super-and-sub? <A> <B>) @result{} #t
+(type-annotation-super-and-sub? <A> <C>) @result{} #t
+(type-annotation-super-and-sub? <B> <A>) @result{} #f
+(type-annotation-super-and-sub? <B> <C>) @result{} #t
+(type-annotation-super-and-sub? <C> <A>) @result{} #f
+(type-annotation-super-and-sub? <C> <B>) @result{} #f
+@end lisp
+
+The record--type @class{dark-blue} inherits from @class{blue} the
+implementation of the interfaces @class{IOne} and @class{ITwo}:
+
+@lisp
+;;
+;;               <IOne>
+;;                  ^
+;;                  |
+;;   <blue> +++> <ITwo>
+;;     ^
+;;     |
+;;   <dark-blue>
+
+(define-interface-type <IOne>
+  (method-prototype ione-doit
+    (lambda () => (<number>))))
+
+(define-interface-type <ITwo>
+  (parent <IOne>)
+  (method-prototype itwo-doit
+    (lambda () => (<symbol>))))
+
+(define-record-type <blue>
+  (implements <ITwo>)
+  (fields val)
+  (method (@{ione-doit <number>@})
+    (+ 10 (.val this)))
+  (method (@{itwo-doit <symbol>@})
+    'ciao))
+
+(define-record-type <dark-blue>
+  (parent <blue>))
+
+(define (fun-1 @{O <IOne>@})
+  (.ione-doit O))
+
+(define (fun-2 @{O <ITwo>@})
+  (vector (.ione-doit O)
+          (.itwo-doit O)))
+
+(define O
+  (new <dark-blue> 1))
+
+(fun-1 O)       @result{} 11
+(fun-2 O)       @result{} #(11 ciao)
+@end lisp
+
+The record--type @class{dark-blue} implements the interface @class{ITwo}
+and inherits from @class{blue} the implementation of the interface
+@class{IOne}:
+
+@lisp
+;;   <blue> +++> <IOne>
+;;     ^
+;;     |
+;;   <dark-blue> +++> <ITwo>
+
+(define-interface-type <IOne>
+  (method-prototype ione-doit
+    (lambda () => (<number>))))
+
+(define-interface-type <ITwo>
+  (method-prototype itwo-doit
+    (lambda () => (<symbol>))))
+
+(define-record-type <blue>
+  (implements <IOne>)
+  (fields val)
+  (method (@{ione-doit <number>@})
+    (+ 10 (.val this))))
+
+(define-record-type <dark-blue>
+  (parent <blue>)
+  (implements <ITwo>)
+  (method (@{itwo-doit <symbol>@})
+    'ciao))
+
+(define (fun-1 @{O <IOne>@})
+  (.ione-doit O))
+
+(define (fun-2 @{O <ITwo>@})
+  (.itwo-doit O))
+
+(define O
+  (new <dark-blue> 1))
+
+(fun-1 O)       @result{} 11
+(fun-2 O)       @result{} ciao
+@end lisp
+
+The record--type @class{blue} implements the interface @class{ITwo}, its
+parent @class{IOne}, and automatically the interface @class{IThree}
+implemented by @class{IOne}:
+
+@lisp
+;;               <IOne> +++> <IThree>
+;;                  ^
+;;                  |
+;;   <blue> +++> <ITwo>
+
+(define-interface-type <IThree>
+  (method-prototype ithree-doit
+    (lambda () => (<string>))))
+
+(define-interface-type <IOne>
+  (implements <IThree>)
+  (method-prototype ione-doit
+    (lambda () => (<number>)))
+  (method-prototype ithree-doit
+    (lambda () => (<string>))))
+
+(define-interface-type <ITwo>
+  (parent <IOne>)
+  (method-prototype itwo-doit
+    (lambda () => (<symbol>))))
+
+(define-record-type <blue>
+  (implements <ITwo>)
+  (fields val)
+  (method (@{ione-doit <number>@})
+    (+ 10 (.val this)))
+  (method (@{itwo-doit <symbol>@})
+    'ciao)
+  (method (@{ithree-doit <string>@})
+    "hello"))
+
+(define (fun-1 @{O <IOne>@})
+  (vector (.ione-doit O)
+          (.ithree-doit O)))
+
+(define (fun-2 @{O <ITwo>@})
+  (vector (.ione-doit O)
+          (.itwo-doit O)
+          (.ithree-doit O)))
+
+(define (fun-3 @{O <IThree>@})
+  (.ithree-doit O))
+
+(define O
+  (new <blue> 1))
+
+(fun-1 O)       @result{} #(11 "hello")
+(fun-2 O)       @result{} #(11 ciao "hello")
+(fun-3 O)       @result{} "hello"
+@end lisp
+
+Two record--types in a hierarchy both implement the same interface:
+
+@lisp
+(define-interface-type <Arith>
+  (method-prototype add
+    (lambda () => (<number>))))
+
+(define-record-type <duo>
+  (implements <Arith>)
+  (fields one two)
+  (method (@{add <number>@})
+    (+ (.one this) (.two this))))
+
+(define-record-type <trio>
+  (parent <duo>)
+  (implements <Arith>)
+  (fields three)
+  (method (@{add <number>@})
+    (+ (.one this) (.two this) (.three this))))
+
+(define (fun @{O <Arith>@})
+  (.add O))
+
+(fun (new <duo>  1 2))          @result{} 3
+(fun (new <trio> 1 2 3))        @result{} 6
+@end lisp
+
+The record--type @class{duo} implements the interface @class{Stringer}
+which has a default method @code{to-string}:
+
+@lisp
+(define-interface-type <Stringer>
+  (method (to-string)
+    (with-output-to-string
+      (lambda ()
+        (display this)))))
+
+(define-record-type <duo>
+  (implements <Stringer>)
+  (fields one two)
+  (custom-printer
+    (lambda (@{this <duo>@} port sub-printer)
+      (display "#[duo "    port)
+      (display (.one this) port)
+      (display #\space     port)
+      (display (.two this) port)
+      (display #\]         port))))
+
+(define (fun @{O <Stringer>@})
+  (.to-string O))
+
+(fun (new <duo> 1 2))   @result{} "#[duo 1 2]"
+@end lisp
+
+The record--type @class{duo} implements the interface @class{Stringer}
+which has a default method @code{to-string}; @class{duo} implements the
+method by itself:
+
+@lisp
+(define-interface-type <Stringer>
+  (method (@{to-string <string>@})
+    (with-output-to-string
+      (lambda ()
+        (display this)))))
+
+(define-record-type <duo>
+  (implements <Stringer>)
+  (fields one two)
+  (method (@{to-string <string>@})
+    (with-output-to-string
+      (lambda ()
+        (display "#[duo ")
+        (display (.one this))
+        (display #\space)
+        (display (.two this))
+        (display #\])))))
+
+(define (fun @{O <Stringer>@})
+  (.to-string O))
+
+(fun (new <duo> 1 2))   @result{} "#[duo 1 2]"
+@end lisp
+
+Default methods have a limitation: they cannot extend other methods.
+The following definitions will raise an expand--time exception:
+
+@lisp
+(define-interface-type <IOne>
+  (method (@{doit <number>@})
+    1))
+
+(define-interface-type <ITwo>
+  (parent <IOne>)
+  (method-prototype doit
+    (lambda (<string>) => (<number>))))
+@end lisp
+
+@noindent
+because we cannot extend the default method @code{doit} in @class{IOne}
+with a method prototype in @class{ITwo}.  The following definitions will
+raise an expand--time exception:
+
+@lisp
+(define-interface-type <IOne>
+  (method-prototype doit
+    (lambda (<string>) => (<number>))))
+
+(define-interface-type <ITwo>
+  (parent <IOne>)
+  (method (@{doit <number>@})
+    1))
+@end lisp
+
+@noindent
+because we cannot extend the method prototype @code{doit} in
+@class{IOne} with a default method in @class{ITwo}.  The following
+definitions will raise an expand--time exception:
+
+@lisp
+(define-interface-type <IOne>
+  (method (@{doit <number>@})
+    1))
+
+(define-interface-type <ITwo>
+  (parent <IOne>)
+  (method (@{doit <number>@} @{S <string>@})
+    2))
+@end lisp
+
+@noindent
+because we cannot extend the default method @code{doit} in @class{IOne}
+with the default method @code{doit} in @class{ITwo}.
+
+Here we use an ``instantiable body'' to define a ``generic'' interface--type:
+
+@lisp
+(import (vicare language-extensions instantiable-bodies))
+
+(define-instantiable-body define-iface-arith
+  (define-interface-type <Iface>
+    (method-prototype add
+      (lambda () => (<type-name>)))))
+
+(begin
+  (define-iface-arith
+    ((<Iface>             <NumberArith>)
+     (<type-name>         <number>)))
+  (define (nfun @{O <NumberArith>@})
+    (.add O)))
+
+(begin
+  (define-iface-arith
+    ((<Iface>             <StringArith>)
+     (<type-name>         <string>)))
+  (define (sfun @{O <StringArith>@})
+    (.add O)))
+
+(define-record-type <duo>
+  (implements <NumberArith>)
+  (fields one two)
+  (method (@{add <number>@})
+    (+ (.one this) (.two this))))
+
+(define-record-type <string-duo>
+  (implements <StringArith>)
+  (fields one two)
+  (method (@{add <string>@})
+    (string-append (.one this) (.two this))))
+
+(nfun (new <duo> 1 2))                  @result{} 3
+(sfun (new <string-duo> "hel" "lo"))    @result{} "hello"
 @end lisp
 
 @c page
