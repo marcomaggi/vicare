@@ -10426,7 +10426,7 @@ In a use of the syntax @syntax{define-record-type}, the definition
 clause:
 
 @lisp
-(implements @metao{interface-name} ...)
+(implements @meta{interface-name} ...)
 @end lisp
 
 @noindent
@@ -10435,11 +10435,68 @@ interfaces implemented by this record--type's, @ref{types interfaces,
 Interface types}.  The clause @clause{implements} is meant to be used
 with the typed language.
 
-A record--type implements an interface when it implements all the method
-prototypes included in the interface definition.  The
-@clause{implements} clause causes a validation of the record--type's
+A record--type implements an interface when it implements a method for
+each method prototype included in the interface--type definition; the
+record--type can miss the implementation of interface--type methods
+having a default implementation.  A record--type method matches an
+interface--type method prototype when: record--type method's type
+signature is a sub--type of the method prototype.
+
+The @clause{implements} clause causes a validation of the record--type's
 implemented methods against the interface's method prototypes: if a
-mismatch occurs, an exception is raised at expand--time.
+mismatch occurs, or a method is missing, an exception is raised at
+expand--time.
+
+Here is a simple example in which the record--type @class{blue}
+implements the interface @class{IOne}; the function @func{fun} can be
+applied to any object whose type implements the interface @class{IOne}:
+
+@lisp
+(define-interface-type <IOne>
+  (method-prototype ione-doit
+    (lambda () => (<number>))))
+
+(define-record-type <blue>
+  (implements <IOne>)
+  (fields val)
+  (method (@{ione-doit <number>@})
+    (+ 10 (.val this))))
+
+(define (fun @{O <IOne>@})
+  (.ione-doit O))
+
+(fun (new <blue> 1)))
+@result{} 11
+@end lisp
+
+Another example in which the record--type @class{duo} implements the
+interface--type @class{Stringer} which has a method @samp{to-string}
+with default implementation:
+
+@lisp
+(define-interface-type <Stringer>
+  (method (to-string)
+    (with-output-to-string
+      (lambda ()
+        (display this)))))
+
+(define-record-type <duo>
+  (implements <Stringer>)
+  (fields one two)
+  (custom-printer
+    (lambda (@{this <duo>@} port sub-printer)
+      (display "#[duo "    port)
+      (display (.one this) port)
+      (display #\space     port)
+      (display (.two this) port)
+      (display #\]         port))))
+
+(define (fun @{O <Stringer>@})
+  (.to-string O))
+
+(fun (new <duo> 1 2)))
+@result{} "#[duo 1 2]"
+@end lisp
 
 @c page
 @node iklib records predicates

@@ -6061,7 +6061,7 @@ comparison-procedure hash-function
 @cindex @library{vicare language-extensions interfaces}, library
 
 
-@dfn{Interfaces} are a mechanism to verify, at expand--time, that
+The @dfn{interfaces} are a mechanism to verify, at expand--time, that
 instances of an object--type can be used in a generic expression,
 because they implement all the needed methods and such methods can be
 called at run--time through dynamic dispatching.
@@ -6158,81 +6158,66 @@ happen @strong{only} if the expander is able to determine the type of
 @meta{operand}; this validation cannot happen at run--time, so, for
 example, it is impossible for label types to implement interfaces.
 
-Object--types in the same inheritance chain can implement the same
-interface.  Example:
-
-@lisp
-(define-interface-type <Arith>
-  (method-prototype add
-    (lambda () => (<number>))))
-
-(define-record-type <duo>
-  (implements <Arith>)
-  (fields one two)
-  (method (@{add <number>@})
-    (+ (.one this) (.two this))))
-
-(define-record-type <trio>
-  (parent <duo>)
-  (implements <Arith>)
-  (fields three)
-  (method (@{add <number>@})
-    (+ (.one this) (.two this) (.three this))))
-
-(define (fun @{O <Arith>@})
-  (.add O))
-
-(fun (new <duo>  1 2))          @result{} 3
-(fun (new <trio> 1 2 3))        @result{} 6
-@end lisp
-
-It is @strong{not} mandatory for interface types to require method
-prototypes.  Example:
-
-@lisp
-(define-interface-type <Stringer>
-  (method (to-string)
-    (with-output-to-string
-      (lambda ()
-        (display this)))))
-
-(define-record-type <duo>
-  (implements <Stringer>)
-  (fields one two)
-  (custom-printer
-    (lambda (@{this <duo>@} port sub-printer)
-      (display "#[duo "    port)
-      (display (.one this) port)
-      (display #\space     port)
-      (display (.two this) port)
-      (display #\]         port))))
-
-(define (fun @{O <Stringer>@})
-  (.to-string O))
-
-(fun (new <duo>  1 2)))         @result{} "#[duo 1 2]")
-@end lisp
-
 @c page
 @node types interfaces defs
 @subsection Defining interfaces
 
 
 The following syntactic bindings are exported by the library
-@library{vicare language-extensions interfaces}.  The syntactic binding
-@clause{method} is the same one exported by @library{vicare}.
+@library{vicare language-extensions interfaces}.  The syntactic bindings
+@clause{nongenerative}, @clause{parent}, @clause{implements},
+@clause{method} are the same ones exported by @library{vicare}.
 
 
 @deffn Syntax define-interface-type @meta{name} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} nongenerative
+@deffnx {Auxiliary Syntax} parent
+@deffnx {Auxiliary Syntax} implements
 @deffnx {Auxiliary Syntax} method-prototype
 @deffnx {Auxiliary Syntax} method
 Define a new interface type bound to the syntactic identifier
-@meta{name}.  Interfaces can implement methods, case--methods and
-overloaded methods of their own, with the same syntax used for
-record--types.  Interfaces cannot be instantiated: attempting to do it
+@meta{name}.  Interfaces cannot be instantiated: attempting to do it
 will raise an expand--time exception.
 
-The clause @clause{method-prototype} must be used as follows:
+A use of the clause @clause{nongenerative} must have one of the formats:
+
+@lisp
+(nongenerative)
+(nongenerative @meta{uid})
+@end lisp
+
+@noindent
+when used it causes the interface--type to be non--generative.  This
+concept is the same as for record--types, so usually we do want to
+define non--generative interface--types.
+
+A use of the clause @clause{parent} must have the format:
+
+@lisp
+(parent @meta{parent-name})
+@end lisp
+
+@noindent
+and causes the new interface--type to become a sub--type of
+@meta{parent-name}, which must be a syntactic identifier representing
+the name of an already defined interface--type.  An object--type
+implementing the interface @meta{name} must also implement all the
+methods required by the interface @meta{parent-name}.
+
+A use of the clause @clause{implements} must have format:
+
+@lisp
+(implements @meta{iface-name} ...)
+@end lisp
+
+@noindent
+and declares that an object--type implementing the interface--type
+@meta{name} also implements all the methods in the interface--types
+@meta{iface-name}.  The definition of @meta{name} must include a
+@clause{method-prototype} clause for each method required by the
+interfaces @meta{iface-name}, with matching type signatures.
+
+A use of the clause @clause{method-prototype} must have format:
 
 @lisp
 (method-prototype @meta{method-name} @meta{signature})
@@ -6244,6 +6229,23 @@ method and @meta{signature} is a @syntax{lambda} or @syntax{case-lambda}
 type annotation representing the type signature of the method.  Any
 object--type that implements an interface, must implement all the
 methods with signatures that are sub--types of the method prototypes.
+
+A use of the clause @clause{method} must have format:
+
+@lisp
+(method (@meta{who} . @meta{formals})
+  . @meta{body})
+
+(method ((brace @meta{who} . @meta{rv-types}) . @meta{formals})
+  . @meta{body})
+@end lisp
+
+@noindent
+which is the same syntax for @syntax{define-record-type}.  The clause
+@clause{method} defines a required method prototype which also has a
+default implementation.  An object--type implementing the interface
+@meta{name} is allowed not to implement a method matching an interface
+prototype with default implementation.
 @end deffn
 
 @c page

@@ -1067,7 +1067,7 @@
 	(define (fun {O <Stringer>})
 	  (.to-string O))
 
-	(fun (new <duo>  1 2)))
+	(fun (new <duo> 1 2)))
     => "#[duo 1 2]")
 
   ;;The record-type  "<duo>" implements the  interface-type "<Stringer>" which  has a
