@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives posix)
   (export typed-core-primitives.posix)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.posix)

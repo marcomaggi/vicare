@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives bignums)
   (export typed-core-primitives.bignums)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.bignums)

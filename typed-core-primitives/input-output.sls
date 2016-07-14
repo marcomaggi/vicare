@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives input-output)
   (export typed-core-primitives.input-output)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.input-output)

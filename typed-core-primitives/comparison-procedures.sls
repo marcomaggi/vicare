@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives comparison-procedures)
   (export typed-core-primitives.comparison-procedures)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.comparison-procedures)

@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives generic-primitives)
   (export typed-core-primitives.generic-primitives)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.generic-primitives)

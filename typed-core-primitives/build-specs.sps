@@ -26,7 +26,7 @@
 
 #!vicare
 (program (build-specs)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives annotation-objects)
     (typed-core-primitives bignums)
     (typed-core-primitives booleans)

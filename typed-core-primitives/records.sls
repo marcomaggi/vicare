@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives records)
   (export typed-core-primitives.records)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.records)

@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives booleans)
   (export typed-core-primitives.booleans)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.booleans)

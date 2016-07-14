@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives symbols)
   (export typed-core-primitives.symbols)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.symbols)

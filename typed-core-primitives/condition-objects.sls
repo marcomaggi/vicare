@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives condition-objects)
   (export typed-core-primitives.condition-objects)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.condition-objects)

@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives code-objects)
   (export typed-core-primitives.code-objects)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.code-objects)

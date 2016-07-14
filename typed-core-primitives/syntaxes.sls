@@ -143,11 +143,18 @@
     declare-object-retriever
 
     ;; auxiliary keywords
-    safe				unsafe
-    signatures				attributes
-    replacements
-    list-of				vector-of)
-  (import (vicare))
+    safe unsafe
+    signatures attributes replacements
+    <top> <bottom> <list> <nelist>
+    pair pair-of list-of nelist-of vector-of
+    alist hashtable enumeration
+    type-predicate equality-predicate comparison-procedure hash-function)
+  (import (except (vicare)
+		  signatures attributes replacements safe unsafe
+		  <top> <bottom> <list> <nelist>
+		  pair pair-of list-of nelist-of vector-of
+		  alist hashtable enumeration
+		  type-predicate equality-predicate comparison-procedure hash-function))
 
 
 ;;;; helpers
@@ -266,9 +273,12 @@
 
 ;;;; basic definition syntaxes
 
-;;The syntactic binding UNSAFE is already exported by (vicare).
-(define-auxiliary-syntaxes signatures attributes replacements safe
-  list-of vector-of)
+(define-auxiliary-syntaxes signatures attributes replacements
+  safe unsafe
+  <top> <bottom> <list> <nelist>
+  pair pair-of list-of nelist-of vector-of
+  alist hashtable enumeration
+  type-predicate equality-predicate comparison-procedure hash-function)
 
 (define-syntax (declare-core-primitive stx)
   (define (main input-form.stx)
@@ -347,7 +357,7 @@
     ;;signature, with the identifiers "_" replaced with "<top>" or "<list>".
     ;;
     (let recur ((sig type-signature.stx))
-      (syntax-case sig (<bottom> <list> <nelist> <bottom> list list-of pair pair-of)
+      (syntax-case sig (<bottom> <list> <nelist> list list-of pair pair-of)
 	(()
 	 '())
 

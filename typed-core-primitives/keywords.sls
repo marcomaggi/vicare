@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives keywords)
   (export typed-core-primitives.keywords)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.keywords)

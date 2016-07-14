@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives compnums)
   (export typed-core-primitives.compnums)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.compnums)

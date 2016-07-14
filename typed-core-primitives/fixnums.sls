@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives fixnums)
   (export typed-core-primitives.fixnums)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.fixnums)

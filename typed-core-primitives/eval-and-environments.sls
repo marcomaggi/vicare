@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives eval-and-environments)
   (export typed-core-primitives.eval-and-environments)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.eval-and-environments)

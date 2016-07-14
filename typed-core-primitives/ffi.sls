@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives ffi)
   (export typed-core-primitives.ffi)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.ffi)

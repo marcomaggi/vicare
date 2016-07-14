@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives ratnums)
   (export typed-core-primitives.ratnums)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.ratnums)

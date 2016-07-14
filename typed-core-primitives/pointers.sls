@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives pointers)
   (export typed-core-primitives.pointers)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.pointers)

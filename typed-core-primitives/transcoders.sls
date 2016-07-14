@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives transcoders)
   (export typed-core-primitives.transcoders)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.transcoders)

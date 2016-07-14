@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives numerics)
   (export typed-core-primitives.numerics)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.numerics)

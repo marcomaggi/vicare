@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives expander)
   (export typed-core-primitives.expander)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.expander)

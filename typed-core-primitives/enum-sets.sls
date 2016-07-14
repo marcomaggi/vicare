@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives enum-sets)
   (export typed-core-primitives.enum-sets)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.enum-sets)

@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives environment-inquiry)
   (export typed-core-primitives.environment-inquiry)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.environment-inquiry)

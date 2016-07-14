@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives cflonums)
   (export typed-core-primitives.cflonums)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.cflonums)

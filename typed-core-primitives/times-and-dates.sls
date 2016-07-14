@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives times-and-dates)
   (export typed-core-primitives.times-and-dates)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.times-and-dates)

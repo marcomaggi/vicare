@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives structs)
   (export typed-core-primitives.structs)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.structs)

@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives pairs-and-lists)
   (export typed-core-primitives.pairs-and-lists)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.pairs-and-lists)

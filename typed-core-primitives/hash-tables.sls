@@ -25,7 +25,7 @@
 #!vicare
 (library (typed-core-primitives hash-tables)
   (export typed-core-primitives.hash-tables)
-  (import (vicare)
+  (import (rnrs)
     (typed-core-primitives syntaxes))
 
 (define (typed-core-primitives.hash-tables)
