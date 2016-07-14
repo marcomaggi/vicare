@@ -199,16 +199,16 @@
 	    (__WHO__        (datum->syntax #'?ctx '__who__)))
 	 #'(struct-case ?constant
 	     ((constant obj)
-	      (unless (or (fixnum?        obj)
-			  (object?        obj)
-			  (code-loc?      obj)
-			  (foreign-label? obj)
-			  (closure-maker? obj)
-			  (bignum?        obj))
-		(compiler-internal-error __MODULE_WHO__ __WHO__
-		  "invalid Scheme object in CONSTANT struct as ASM-INSTR operand"
-		  (unparse-recordised-code/sexp ?asm-instr)
-		  (unparse-recordised-code/sexp ?constant)))))))
+	      (or (or (fixnum?        obj)
+		      (object?        obj)
+		      (code-loc?      obj)
+		      (foreign-label? obj)
+		      (closure-maker? obj)
+		      (bignum?        obj))
+		  (compiler-internal-error __MODULE_WHO__ __WHO__
+		    "invalid Scheme object in CONSTANT struct as ASM-INSTR operand"
+		    (unparse-recordised-code/sexp ?asm-instr)
+		    (unparse-recordised-code/sexp ?constant)))))))
       ))
 
   (define-syntax (A-constant/offset stx)
@@ -221,12 +221,12 @@
 	    (__WHO__        (datum->syntax #'?ctx '__who__)))
 	 #'(struct-case ?constant
 	     ((constant obj)
-	      (unless (or (fixnum? obj)
-			  (bignum? obj))
-		(compiler-internal-error __MODULE_WHO__ __WHO__
-		  "invalid Scheme object in CONSTANT struct as ASM-INSTR operand representing offset"
-		  (unparse-recordised-code/sexp ?asm-instr)
-		  (unparse-recordised-code/sexp ?constant)))))))
+	      (or (or (fixnum? obj)
+		      (bignum? obj))
+		  (compiler-internal-error __MODULE_WHO__ __WHO__
+		    "invalid Scheme object in CONSTANT struct as ASM-INSTR operand representing offset"
+		    (unparse-recordised-code/sexp ?asm-instr)
+		    (unparse-recordised-code/sexp ?constant)))))))
       ))
 
 ;;; --------------------------------------------------------------------
@@ -2307,4 +2307,5 @@
 ;; eval: (put 'make-conditional		'scheme-indent-function 2)
 ;; eval: (put 'struct-case		'scheme-indent-function 1)
 ;; eval: (put 'set-for-each		'scheme-indent-function 1)
+;; eval: (put 'compiler-internal-error	'scheme-indent-function 2)
 ;; End:
