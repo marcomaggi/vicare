@@ -470,7 +470,8 @@
 	((10)	"")
 	((2)	"#b")
 	((8)	"#o")
-	((16)	"#x")))
+	((16)	"#x")
+	(else	"")))
     (define-constant RADIX-10?
       (fx=? 10 RADIX))
     (let* ((ls   (map (lambda (x)

@@ -209,6 +209,11 @@
   (attributes
    ((_)				effect-free result-true)))
 
+(declare-core-primitive $unintern-gensym
+    (unsafe)
+  (signatures
+   ((<symbol>)			=> (<void>))))
+
 ;;; --------------------------------------------------------------------
 ;;; components
 

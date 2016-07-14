@@ -71,6 +71,27 @@
 (declare-type-predicate textual-output-port?		<textual-output-port>)
 (declare-type-predicate textual-input/output-port?	<textual-input/output-port>)
 
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((<top>)		=> (<boolean>)))))
+		)))
+  (declare open-input-port?)
+  (declare open-output-port?)
+  (declare open-textual-port?)
+  (declare open-binary-port?)
+  (declare open-input/output-port?)
+  (declare open-binary-input-port?)
+  (declare open-textual-input-port?)
+  (declare open-binary-output-port?)
+  (declare open-textual-output-port?)
+  (declare open-binary-input/output-port?)
+  (declare open-textual-input/output-port?)
+  #| end of LET-SYNTAX |# )
+
 (declare-core-primitive port-eof?
     (safe)
   (signatures

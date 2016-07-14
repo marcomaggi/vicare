@@ -49,9 +49,12 @@
 ;;;; helpers
 
 (define-fluid-syntax __synner__
-  (identifier-syntax #f)
-  #;(lambda (stx)
-    (syntax-violation '__synner__ "unset fluid syntax" stx)))
+  (identifier-syntax
+   (lambda (stx)
+     (syntax-violation '__synner__ "unset fluid syntax" stx))))
+;; (define-fluid-syntax __synner__
+;;   (lambda (stx)
+;;     (syntax-violation '__synner__ "unset fluid syntax" stx)))
 
 (define-syntax define-core-transformer
   ;;We expect the table to be a proper list  and the entries in the table to have the

@@ -727,7 +727,7 @@
 	   (write-object-port x p marks-table next-mark-idx)
 	   next-mark-idx)
 
-	  ((eq? x (void))
+	  ((void-object? x)
 	   (write-char* "#!void" p)
 	   next-mark-idx)
 

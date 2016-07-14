@@ -172,7 +172,8 @@
 
 (section
 
-(declare-object-retriever command-line	(list-of <string>))
+(declare-object-retriever command-line		(list-of <string>))
+(declare-parameter command-line-arguments	(list-of <string>))
 
 (declare-core-primitive exit
     (safe)

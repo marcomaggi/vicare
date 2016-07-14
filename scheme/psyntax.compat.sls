@@ -160,7 +160,7 @@
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Wed Sep 30, 2015)
 		  with-blocked-exceptions
-		  void-object?			stadalone-pair?
+		  stadalone-pair?
 		  circular-list?		list-of-single-item?
 		  list-of-nestrings?
 
@@ -330,9 +330,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (void-object? obj)
-  (eq? obj (void)))
-
 (define (non-compound-sexp? obj)
   (or (null? obj)
       (self-evaluating? obj)
@@ -346,7 +343,7 @@
       (boolean?			x)
       (bytevector?		x)
       (keyword?			x)
-      (eq? x (void))
+      (void-object?		x)
       (would-block-object?	x)
       (unbound-object?		x)
       (bwp-object?		x)))

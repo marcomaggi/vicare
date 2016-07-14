@@ -449,7 +449,8 @@
   (%memory-block-destructor B)
   ($set-memory-block-pointer! B (null-pointer))
   ($set-memory-block-size!    B 0)
-  ($set-memory-block-owner?!  B #f))
+  ($set-memory-block-owner?!  B #f)
+  (void))
 
 
 ;;; shared libraries interface

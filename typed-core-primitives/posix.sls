@@ -47,6 +47,10 @@
 (declare-object-predicate file-string-pathname?)
 (declare-object-predicate file-bytevector-pathname?)
 
+(declare-object-predicate list-of-pathnames?)
+(declare-object-predicate list-of-string-pathnames?)
+(declare-object-predicate list-of-bytevector-pathnames?)
+
 (let-syntax
     ((declare (syntax-rules ()
 		((_ ?who)

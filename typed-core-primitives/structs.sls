@@ -220,6 +220,11 @@
    ;;Not foldable: it must return a new struct every time.
    ((_ _)				effect-free result-true)))
 
+(declare-core-primitive $make-clean-struct
+    (unsafe)
+  (signatures
+   ((<struct-type-descriptor>)		=> (<struct>))))
+
 ;;; --------------------------------------------------------------------
 ;;; predicates
 

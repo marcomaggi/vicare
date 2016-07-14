@@ -51,6 +51,23 @@
 
 (declare-parameter post-gc-hooks	(list-of <procedure>))
 
+(declare-core-primitive scheme-heap-nursery-size
+    (safe)
+  (signatures
+   (()					=> (<non-negative-exact-integer>))
+   ((<non-negative-exact-integer>)	=> (<non-negative-exact-integer>))))
+
+(declare-core-primitive scheme-stack-size
+    (safe)
+  (signatures
+   (()					=> (<non-negative-exact-integer>))
+   ((<non-negative-exact-integer>)	=> (<non-negative-exact-integer>))))
+
+(declare-core-primitive $arg-list
+    (safe)
+  (signatures
+   (()					=> (<top>))))
+
 /section)
 
 

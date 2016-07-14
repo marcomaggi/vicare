@@ -128,6 +128,11 @@
   (attributes
    (()						effect-free result-true)))
 
+(declare-core-primitive memory-block-reset
+    (safe)
+  (signatures
+   ((<memory-block>)			=> (<void>))))
+
 (declare-core-primitive memory-block?/not-null
     (safe)
   (signatures

@@ -454,7 +454,19 @@
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-string-binary-comparison $string=)
+(declare-string-binary-comparison $string=	unsafe)
+(declare-string-binary-comparison $string!=	unsafe)
+
+(declare-string-binary-comparison $string<=	unsafe)
+(declare-string-binary-comparison $string<	unsafe)
+(declare-string-binary-comparison $string>=	unsafe)
+(declare-string-binary-comparison $string>	unsafe)
+
+(declare-string-binary-comparison $string-ci<=	unsafe)
+(declare-string-binary-comparison $string-ci<	unsafe)
+(declare-string-binary-comparison $string-ci=	unsafe)
+(declare-string-binary-comparison $string-ci>=	unsafe)
+(declare-string-binary-comparison $string-ci>	unsafe)
 
 (declare-core-primitive $string-max
     (unsafe)

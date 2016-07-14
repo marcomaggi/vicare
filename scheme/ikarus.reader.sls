@@ -2878,11 +2878,14 @@
      (die/p port 'vicare-reader msg . irritants))
    (define-syntax-rule (%error-1 msg . irritants)
      (die/p-1 port 'vicare-reader msg . irritants))
-   (define-syntax-rule (%paren-symbol->char paren)
+   (define (%paren-symbol->char paren)
      (case paren
        ((rparen) #\))
        ((rbrack) #\])
-       ((rbrace) #\})))
+       ((rbrace) #\})
+       (else
+	(assertion-violation '%paren-symbol->char
+	  "internal error, expected closed parenthesis character" paren))))
    (define (%mismatched-paren-error wrong-paren)
      (%error (format "mismatching parenthesis while reading list, \
                      expecting \"~a\" found \"~a\""

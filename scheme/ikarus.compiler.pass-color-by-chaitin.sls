@@ -105,18 +105,18 @@
        (with-syntax
 	   ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
 	    (__WHO__        (datum->syntax #'?ctx '__who__)))
-	 #'(unless (or (register? ?operand)
-		       (fvar?     ?operand)
-		       (and (constant? ?operand)
-			    (A-constant ?operand ?asm-instr))
-		       (and (disp?  ?operand)
-			    (A-disp ?operand ?asm-instr))
-		       (and (var?   ?operand)
-			    (A-var  ?operand ?asm-instr)))
-	     (compiler-internal-error __MODULE_WHO__ __WHO__
-	       "invalid ASM-INSTR operand"
-	       (unparse-recordised-code/sexp ?asm-instr)
-	       (unparse-recordised-code/sexp ?operand)))))
+	 #'(or (or (register? ?operand)
+		   (fvar?     ?operand)
+		   (and (constant? ?operand)
+			(A-constant ?operand ?asm-instr))
+		   (and (disp?  ?operand)
+			(A-disp ?operand ?asm-instr))
+		   (and (var?   ?operand)
+			(A-var  ?operand ?asm-instr)))
+	       (compiler-internal-error __MODULE_WHO__ __WHO__
+		 "invalid ASM-INSTR operand"
+		 (unparse-recordised-code/sexp ?asm-instr)
+		 (unparse-recordised-code/sexp ?operand)))))
       ))
 
   (define-syntax (A-var stx)
@@ -127,12 +127,12 @@
        (with-syntax
 	   ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
 	    (__WHO__        (datum->syntax #'?ctx '__who__)))
-	 #'(unless (and (var? ?var)
-			(not (var-loc ?var)))
-	     (compiler-internal-error __MODULE_WHO__ __WHO__
-	       "invalid VAR struct as ASM-INSTR operand"
-	       (unparse-recordised-code/sexp ?asm-instr)
-	       (unparse-recordised-code/sexp ?var)))))
+	 #'(or (and (var? ?var)
+		    (not (var-loc ?var)))
+	       (compiler-internal-error __MODULE_WHO__ __WHO__
+		 "invalid VAR struct as ASM-INSTR operand"
+		 (unparse-recordised-code/sexp ?asm-instr)
+		 (unparse-recordised-code/sexp ?var)))))
       ))
 
   (module (A-disp)
@@ -156,16 +156,16 @@
 	 (with-syntax
 	     ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
 	      (__WHO__        (datum->syntax #'?ctx '__who__)))
-	   #'(unless (or (and (constant? ?objref)
-			      (A-constant ?objref ?asm-instr))
-			 (fvar?     ?objref)
-			 (register? ?objref)
-			 (and (var?  ?objref)
-			      (A-var ?objref ?asm-instr)))
-	       (compiler-internal-error __MODULE_WHO__ __WHO__
-		 "invalid OBJREF field in DISP struct as ASM-INSTR operand"
-		 (unparse-recordised-code/sexp ?asm-instr)
-		 (unparse-recordised-code/sexp ?objref)))))
+	   #'(or (or (and (constant? ?objref)
+			  (A-constant ?objref ?asm-instr))
+		     (fvar?     ?objref)
+		     (register? ?objref)
+		     (and (var?  ?objref)
+			  (A-var ?objref ?asm-instr)))
+		 (compiler-internal-error __MODULE_WHO__ __WHO__
+		   "invalid OBJREF field in DISP struct as ASM-INSTR operand"
+		   (unparse-recordised-code/sexp ?asm-instr)
+		   (unparse-recordised-code/sexp ?objref)))))
 	))
 
     (define-syntax (A-disp-offset stx)
@@ -176,15 +176,15 @@
 	 (with-syntax
 	     ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
 	      (__WHO__        (datum->syntax #'?ctx '__who__)))
-	   #'(unless (or (and (constant? ?offset)
-			      (A-constant ?offset ?asm-instr))
-			 (register? ?offset)
-			 (and (var? ?offset)
-			      (A-var ?offset ?asm-instr)))
-	       (compiler-internal-error __MODULE_WHO__ __WHO__
-		 "invalid OFFSET field in DISP struct as ASM-INSTR operand"
-		 (unparse-recordised-code/sexp ?asm-instr)
-		 (unparse-recordised-code/sexp ?offset)))))
+	   #'(or (or (and (constant? ?offset)
+			  (A-constant ?offset ?asm-instr))
+		     (register? ?offset)
+		     (and (var? ?offset)
+			  (A-var ?offset ?asm-instr)))
+		 (compiler-internal-error __MODULE_WHO__ __WHO__
+		   "invalid OFFSET field in DISP struct as ASM-INSTR operand"
+		   (unparse-recordised-code/sexp ?asm-instr)
+		   (unparse-recordised-code/sexp ?offset)))))
 	))
 
     #| end of module: A-disp |# )
