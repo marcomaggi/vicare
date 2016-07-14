@@ -188,7 +188,26 @@
     (only (ikarus numerics complex-numbers)
 	  exact-compnum?
 	  zero-compnum?
-	  zero-cflonum?))
+	  zero-cflonum?)
+    (only (ikarus.options)
+	  cond-boot-expansion
+	  inclusion-in-normal-boot-image
+	  inclusion-in-rotation-boot-image
+	  bootstrapping-for-normal-boot-image
+	  bootstrapping-for-rotation-boot-image))
+
+  (cond-boot-expansion "miscellaneous syntactic bindings"
+    ((inclusion-in-normal-boot-image)
+     (import (only (vicare)
+		   identifier-suffix)))
+    ((inclusion-in-rotation-boot-image)
+     (import (only (vicare expander)
+		   identifier-suffix)))
+    ((bootstrapping-for-normal-boot-image)
+     (void))
+    ((bootstrapping-for-rotation-boot-image)
+     (void)))
+
 
 
 ;;;; helpers

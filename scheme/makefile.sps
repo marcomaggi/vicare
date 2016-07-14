@@ -216,6 +216,40 @@
 	 BOOT-IMAGE-DAY-VERSION)
   (include "ikarus.config.scm" #t))
 
+(include "cond-boot-expansion.scm" #t)
+
+
+;;;; syntactic bindings
+
+(cond-boot-expansion "miscellaneous syntactic bindings"
+  ((inclusion-in-normal-boot-image)
+   (void))
+
+  ((inclusion-in-rotation-boot-image)
+   (void))
+
+  ((bootstrapping-for-normal-boot-image)
+   (import (only (vicare)
+		 syntax-clauses-unwrap
+		 syntax-clauses-collapse
+		 syntax-clauses-validate-specs
+		 syntax-clauses-fold-specs
+		 syntax-clauses-validate-specs
+		 syntax-clause-spec-keyword
+		 syntax-clause-spec?
+		 make-syntax-clause-spec)))
+
+  ((bootstrapping-for-rotation-boot-image)
+   (import (only (vicare expander)
+		 syntax-clauses-unwrap
+		 syntax-clauses-collapse
+		 syntax-clauses-validate-specs
+		 syntax-clauses-fold-specs
+		 syntax-clauses-validate-specs
+		 syntax-clause-spec-keyword
+		 syntax-clause-spec?
+		 make-syntax-clause-spec))))
+
 
 ;;;; configuration inspection
 

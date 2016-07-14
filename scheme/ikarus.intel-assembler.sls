@@ -22,14 +22,12 @@
   (export
     assemble-sources
     assembler-property-key)
-  (import (except (vicare)
-		  fixnum-width
-		  greatest-fixnum
-		  least-fixnum)
+  (import (rnrs)
     ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
     ;;everything here without loading external  libraries.  (Marco Maggi; Thu Sep 25,
     ;;2014)
     (ikarus.compiler.condition-types)
+    (ikarus.compiler.compat)
     (prefix (ikarus.code-objects)
 	    code-objects::)
     (except (vicare system $codes)

@@ -61,6 +61,35 @@
      ;;This is never exercised.
      (module ())))
 
+  (cond-boot-expansion "miscellaneous syntactic bindings"
+    ((inclusion-in-normal-boot-image)
+     (import (only (vicare)
+		   syntax-clauses-unwrap
+		   syntax-clauses-collapse
+		   syntax-clauses-validate-specs
+		   syntax-clauses-fold-specs
+		   syntax-clauses-validate-specs
+		   syntax-clause-spec-keyword
+		   syntax-clause-spec?
+		   make-syntax-clause-spec)))
+
+    ((inclusion-in-rotation-boot-image)
+     (import (only (vicare expander)
+		   syntax-clauses-unwrap
+		   syntax-clauses-collapse
+		   syntax-clauses-validate-specs
+		   syntax-clauses-fold-specs
+		   syntax-clauses-validate-specs
+		   syntax-clause-spec-keyword
+		   syntax-clause-spec?
+		   make-syntax-clause-spec)))
+
+    ((bootstrapping-for-normal-boot-image)
+     (void))
+
+    ((bootstrapping-for-rotation-boot-image)
+     (void)))
+
 
 (define-syntax (define-core-record-type stx)
   ;;This implementation is used to define record-types in the boot image.

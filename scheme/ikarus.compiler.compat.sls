@@ -63,16 +63,18 @@
     set-car!				set-cdr!
     set-cons!
     vector-exists			vector-for-all
-    getprop				putprop
     bwp-object?				void-object?
     void
     reset-symbol-proc!
     procedure-argument-violation
     expression-return-value-violation
     print-stderr-message
+    putprop				getprop
+    property-list			remprop
     identifier-suffix			syntax->list
     all-identifiers?
     set-symbol-value!			symbol-value
+    code?
 
     cnd::define-core-condition-type
     cnd::&condition			cnd::&assertion
@@ -94,6 +96,38 @@
 ;;;; helper syntaxes
 
 (include "cond-boot-expansion.scm" #t)
+
+
+;;;; stuff
+
+(cond-boot-expansion "miscellaneous syntactic bindings"
+  ((inclusion-in-normal-boot-image)
+   (import (only (vicare)
+		 all-identifiers?
+		 identifier-suffix
+		 syntax->list)))
+
+  ((inclusion-in-rotation-boot-image)
+   (import (only (vicare expander)
+		 all-identifiers?
+		 identifier-suffix
+		 syntax->list)))
+
+  ((bootstrapping-for-normal-boot-image)
+   ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
+   ;;build a normal boot image.
+   (import (only (vicare)
+		 all-identifiers?
+		 identifier-suffix
+		 syntax->list)))
+
+  ((bootstrapping-for-rotation-boot-image)
+   ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
+   ;;build a rotation boot image.
+   (import (only (vicare expander)
+		 all-identifiers?
+		 identifier-suffix
+		 syntax->list))))
 
 
 ;;;; reader annotation objects API
