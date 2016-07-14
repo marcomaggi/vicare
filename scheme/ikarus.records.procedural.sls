@@ -206,17 +206,18 @@
   ;;  |----|----|----|------------
   ;;
   (name
-		;Symbol representing the record type name, for debugging purposes.
+		;0.   Symbol  representing  the   record  type  name,  for  debugging
+		;purposes.
    total-fields-number
-		;Total number of fields, including the fields of the parents.
+		;1.  Total number of fields, including the fields of the parents.
    fields-number
-		;This  subtype's  number  of  fields, excluding  the  fields  of  the
+		;2.  This  subtype's number  of fields, excluding  the fields  of the
 		;parents.
    first-field-index
-		;The  index of  the first  field  of this  subtype in  the layout  of
+		;3.  The index  of the first field  of this subtype in  the layout of
 		;instances; it is the total number of fields of the parent type.  The
 		;field  indexes  are defined  for  use  by the  primitive  operations
-		;$STRUCT-REF and  $STRUCT-SET!.
+		;$STRUCT-REF and $STRUCT-SET!.
 		;
 		;The  layout of  a  record  instance of  type  Y  with the  following
 		;definition:
@@ -237,22 +238,22 @@
 		;so this field holds 0 in the <RTD>  of X and it holds 3 in the <RTD>
 		;of Y.
    parent
-		;False or instance  of <RTD> structure; it is  the parent record-type
-		;descriptor.
+		;4.   False  or  instance  of  <RTD>  structure;  it  is  the  parent
+		;record-type descriptor.
    sealed?
-		;Boolean, true if this record type is sealed.
+		;5.  Boolean, true if this record type is sealed.
    opaque?
-		;Boolean, true if this record type is opaque.
+		;6.  Boolean, true if this record type is opaque.
    uid
-		;Scheme symbol  acting as unique  record type identifier.   The field
-		;"value" of the UID holds a reference to this <RTD>.
+		;7.   Scheme symbol  acting as  unique record  type identifier.   The
+		;field "value" of the UID holds a reference to this <RTD>.
    uids-list
-		;A  proper list  of symbols  representing the  type hierarcy  of this
+		;8.  A proper list of symbols  representing the type hierarcy of this
 		;record-type.
    generative?
-		;True if this record type is generative.
+		;9.  True if this record type is generative.
    fields
-		;Scheme vector, normalised fields specification.
+		;10.  Scheme vector, normalised fields specification.
 		;
 		;It is a vector with an element  for each field defined by this <RTD>
 		;(not the fields of the supertypes).   The elements have the order in
@@ -269,35 +270,36 @@
 		;   #((#t . a) (#f . b) (#f . c))
 		;
    initialiser
-		;Function used to initialise the  fields of an already allocated R6RS
-		;record.   This function  is  the same  for every  record-constructor
+		;11.  Function used to initialise  the fields of an already allocated
+		;R6RS record.  This function is the same for every record-constructor
 		;descriptor.
    default-protocol
-		;False or function.  When a function: it must be the default protocol
-		;function  used when  a record-constructor  descriptor does  not have
-		;one.
+		;12.  False  or function.  When  a function:  it must be  the default
+		;protocol function used when a record-constructor descriptor does not
+		;have one.
    default-rcd
-		;False  or an  instance  of <RCD>,  a record-constructor  descriptor.
+		;13.  False or an instance of <RCD>, a record-constructor descriptor.
 		;When an  RCD: it  is used  whenever an  RCD for  a subtype  is built
 		;without specifying a specific RCD.
    destructor
-		;False or a function, accepting  one argument, to be invoked whenever
-		;the record instance is garbage collected.
+		;14.   False or  a function,  accepting one  argument, to  be invoked
+		;whenever the record instance is garbage collected.
    printer
-		;A  function, accepting  two arguments,  to be  invoked whenever  the
+		;15.  A function, accepting two arguments, to be invoked whenever the
 		;record instance is  printed.  The first argument is  the record, the
 		;second argument is a textual output port.
    equality-predicate
-		;False or an equality predicate for this record-object type.
+		;16.  False or an equality predicate for this record-object type.
    comparison-procedure
-		;False or a comparison procedure for this record-object type.
+		;17.  False or a comparison procedure for this record-object type.
    hash-function
-		;False or a hash function for this record-object type.
+		;18.  False or a hash function for this record-object type.
    method-retriever
-		;False or  a function,  accepting a method  name as  single argument,
-		;returning a method's implementation function as single return value.
+		;19.   False  or  a  function,  accepting a  method  name  as  single
+		;argument,  returning a  method's implementation  function as  single
+		;return value.
    implemented-interfaces
-		;False  or  a  vector   of  pairs  representing  the  interface-types
+		;20.  False  or a  vector of  pairs representing  the interface-types
 		;implemented by this  record-type.  Each pair has: as car  the UID of
 		;an interface-type; as cdr a method retriever procedure to be used by
 		;the  interface method  callers.   The vector  includes the  parent's
@@ -1461,19 +1463,19 @@
 			  (else
 			   (list (record-type-field-names rtd))))))))
 
-(define-equality/sorting-predicate record=?	$record=	non-opaque-record?)
+(define-equality/sorting-predicate record=?	$record=	record-object?)
 
 (define ($record= obj1 obj2)
   ;;Return true if OBJ1  and OBJ2 are two R6RS records having the  same RTD and equal
-  ;;field values according to EQV?.
+  ;;field values according to EQUAL?.
   ;;
   (let ((rtd1 ($struct-rtd obj1)))
     (and (eq? rtd1 ($struct-rtd obj2))
 	 (let ((len ($vector-length ($<rtd>-fields rtd1))))
 	   (let loop ((i 0))
 	     (or ($fx= i len)
-		 (and (eqv? ($struct-ref obj1 i)
-			    ($struct-ref obj2 i))
+		 (and (equal? ($struct-ref obj1 i)
+			      ($struct-ref obj2 i))
 		      (loop ($fxadd1 i)))))))))
 
 (define* (record-reset {x non-opaque-record?})

@@ -10065,9 +10065,9 @@ clause:
 
 @noindent
 allows the specification of an expression @meta{expr} which must
-evaluate to a custom equality predicate protocol function for instances
-of the record--type; @ref{iklib records equality}, for details on
-record's equality predicates.
+evaluate to a custom equality--predicate protocol--function for
+instances of the record--type; @ref{iklib records equality}, for the
+@api{} that manipulates record's equality predicates.
 
 If the record--type has a parent: the protocol function is applied to
 the equality predicate of the parent (or @false{} if the parent has no
@@ -10077,6 +10077,49 @@ becomes the equality predicate of the record--type.
 If the record--type has no parent: the protocol function is called as a
 thunk and the resulting value must be a function, which becomes the
 equality predicate of the record--type.
+
+The equality predicate is used when comparing records of the same
+record--type with @func{equal?}, but @strong{not} with @func{eqv?}.
+
+In the following example, we define a custom equality predicate that
+just compares all the fields; the only difference between the default
+equality predicate @func{record=?} and this implementation, is that this
+one compares the fields using @func{=} rather than @func{equal?}:
+
+@lisp
+(define-record-type <duo>
+  (fields one two)
+  (equality-predicate
+    (lambda ()
+      (lambda (A B)
+        (and (= (<duo>-one A)
+                (<duo>-one B))
+             (= (<duo>-two A)
+                (<duo>-two B)))))))
+
+(equal? (make-<duo> 1 2) (make-<duo> 1 2))      @result{} #t
+(equal? (make-<duo> 1 2) (make-<duo> 1 99))     @result{} #f
+@end lisp
+
+In the following example, we define a custom equality predicate that
+compares only some of the fields:
+
+@lisp
+(define-record-type <duo>
+  (fields one two)
+  (equality-predicate
+    (lambda ()
+      (lambda (A B)
+        (= (<duo>-one A)
+           (<duo>-one B))))))
+
+(equal? (make-<duo> 1 2) (make-<duo> 1 99))     @result{} #t
+(equal? (make-<duo> 1 2) (make-<duo> 99 2))     @result{} #f
+@end lisp
+
+@noindent
+this kind of equality predicate is especially useful, for example, when
+some fields are used to memoise values.
 
 @c page
 @node iklib records defs comparison
@@ -11121,7 +11164,8 @@ The following bindings are exported by the library @library{vicare}.
 
 @defun record=? @vari{record} @varii{record}
 Return true if @vari{record} and @varii{record} are two @rnrs{6} records
-having the same @rtd{} and equal field values according to @func{eqv?}.
+having the same @rtd{} and equal field values according to
+@func{equal?}.
 @end defun
 
 

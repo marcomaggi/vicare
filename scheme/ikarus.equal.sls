@@ -44,7 +44,8 @@
     (only (vicare system $pointers)
 	  $pointer=)
     (only (vicare system $structs)
-	  $struct-rtd)
+	  $struct-rtd
+	  $struct-ref)
     (only (vicare system $keywords)
 	  $keyword=?)
     (only (ikarus.immutable-pairs)
@@ -67,6 +68,12 @@
         ($fx>=     >=)
         ($fx<=     <=)
         ($fx=      =))))
+
+  ;;FIXME To be uncommented  at the next boot image rotation.   (Marco Maggi; Thu Jul
+  ;;14, 2016)
+  ;;
+  (define ($record-type-equality-predicate reco)
+    ($struct-ref reco 16))
 
 
 (define (equal? x y)
@@ -144,20 +151,17 @@
 		  k
 		(let ((k (pre? (icar x) (icar y) (- k 1))))
 		  (and k (pre? (icdr x) (icdr y) k))))))
-	;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Wed
-	;;Apr 6, 2016)
-	;;
-        ;; ((record-object? x)
-        ;;  (and (record-object? y)
-        ;;       (let ((rtdx ($struct-rtd x))
-        ;;             (rtdy ($struct-rtd y)))
-        ;;         (and (eq? rtdx rtdy)
-        ;;              (cond (($record-type-equality-predicate rtdx)
-        ;;                     => (lambda (equal-pred)
-        ;;                          (equal-pred x y)))
-        ;;                    (else
-        ;;                     (record=? x y)))))
-        ;;       k))
+        ((record-object? x)
+         (and (record-object? y)
+              (let ((rtdx ($struct-rtd x))
+                    (rtdy ($struct-rtd y)))
+                (and (eq? rtdx rtdy)
+                     (cond (($record-type-equality-predicate rtdx)
+                            => (lambda (equal-pred)
+                                 (equal-pred x y)))
+                           (else
+                            (record=? x y)))))
+              k))
 	((struct? x)
 	 (and (struct? y)
 	      (struct=? x y)
@@ -222,20 +226,17 @@
 		 0
 	       (let ((k (e? (icar x) (icar y) (- k 1))))
 		 (and k (e? (icdr x) (icdr y) k))))))
-       ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Wed
-       ;;Apr 6, 2016)
-       ;;
-       ;; ((record-object? x)
-       ;;  (and (record-object? y)
-       ;;       (let ((rtdx ($struct-rtd x))
-       ;;             (rtdy ($struct-rtd y)))
-       ;;         (and (eq? rtdx rtdy)
-       ;;              (cond (($record-type-equality-predicate rtdx)
-       ;;                     => (lambda (equal-pred)
-       ;;                          (equal-pred x y)))
-       ;;                    (else
-       ;;                     (record=? x y)))))
-       ;;       k))
+       ((record-object? x)
+        (and (record-object? y)
+             (let ((rtdx ($struct-rtd x))
+                   (rtdy ($struct-rtd y)))
+               (and (eq? rtdx rtdy)
+                    (cond (($record-type-equality-predicate rtdx)
+                           => (lambda (equal-pred)
+                                (equal-pred x y)))
+                          (else
+                           (record=? x y)))))
+             k))
        ((struct? x)
 	(and (struct? y)
 	     (struct=? x y)
@@ -283,20 +284,17 @@
 	  (and (ipair? y)
 	       (let ((k (e? (icar x) (icar y) k)))
 		 (and k (e? (icdr x) (icdr y) k)))))
-	 ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Wed
-	 ;;Apr 6, 2016)
-	 ;;
-	 ;; ((record-object? x)
-	 ;;  (and (record-object? y)
-	 ;;       (let ((rtdx ($struct-rtd x))
-	 ;;             (rtdy ($struct-rtd y)))
-	 ;;         (and (eq? rtdx rtdy)
-	 ;;              (cond (($record-type-equality-predicate rtdx)
-	 ;;                     => (lambda (equal-pred)
-	 ;;                          (equal-pred x y)))
-	 ;;                    (else
-	 ;;                     (record=? x y)))))
-	 ;;       k))
+	 ((record-object? x)
+	  (and (record-object? y)
+	       (let ((rtdx ($struct-rtd x))
+	             (rtdy ($struct-rtd y)))
+	         (and (eq? rtdx rtdy)
+	              (cond (($record-type-equality-predicate rtdx)
+	                     => (lambda (equal-pred)
+	                          (equal-pred x y)))
+	                    (else
+	                     (record=? x y)))))
+	       k))
 	 ((struct? x)
 	  (and (struct? y)
 	       (struct=? x y)

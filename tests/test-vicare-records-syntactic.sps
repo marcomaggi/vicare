@@ -799,6 +799,7 @@
      (struct=? P Q)))
 
 ;;; --------------------------------------------------------------------
+;;; equal?
 
   (check-for-true
    (let ((P (make-<alpha> 1 2 3)))
@@ -814,7 +815,46 @@
 	 (Q (make-<alpha> 1 2 9)))
      (equal? P Q)))
 
+;;;
+
+  (check
+      (internal-body
+	(define-record-type <duo>
+	  (fields one two)
+	  (equality-predicate
+	    (lambda ()
+	      (lambda (A B)
+		(and (= (<duo>-one A)
+			(<duo>-one B))
+		     (= (<duo>-two A)
+			(<duo>-two B)))))))
+
+	(values (equal? (make-<duo> 1 2)
+			(make-<duo> 1 2))
+		(equal? (make-<duo> 1 2)
+			(make-<duo> 1 99))))
+    => #t #f)
+
+  ;;Custom equality predicate that compares only one field.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <duo>
+	  (fields one two)
+	  (equality-predicate
+	    (lambda ()
+	      (lambda (A B)
+		(= (<duo>-one A)
+		   (<duo>-one B))))))
+
+	(values (equal? (make-<duo> 1 2)
+			(make-<duo> 1 99))
+		(equal? (make-<duo> 1 2)
+			(make-<duo> 99 2))))
+    => #t #f)
+
 ;;; --------------------------------------------------------------------
+;;; eqv?
 
   (check-for-true
    (let ((P (make-<alpha> 1 2 3)))
@@ -829,6 +869,52 @@
    (let ((P (make-<alpha> 1 2 3))
 	 (Q (make-<alpha> 1 2 9)))
      (eqv? P Q)))
+
+;;;
+
+  ;;EQV? does *not* use the equality predicate.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <duo>
+	  (fields one two)
+	  (equality-predicate
+	    (lambda ()
+	      (lambda (A B)
+		(and (= (<duo>-one A)
+			(<duo>-one B))
+		     (= (<duo>-two A)
+			(<duo>-two B)))))))
+
+	(values (let ((X (make-<duo> 1 2)))
+		  (eqv? X X))
+		(eqv? (make-<duo> 1 2)
+		      (make-<duo> 1 2))
+		(eqv? (make-<duo> 1 2)
+		      (make-<duo> 1 99))))
+    => #t #f #f)
+
+  ;;EQV? does *not* use the equality predicate.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <duo>
+	  (fields one two)
+	  (equality-predicate
+	    (lambda ()
+	      (lambda (A B)
+		(= (<duo>-one A)
+		   (<duo>-one B))))))
+
+	(values (let ((X (make-<duo> 1 2)))
+		  (eqv? X X))
+		(eqv? (make-<duo> 1 2)
+		      (make-<duo> 1 2))
+		(eqv? (make-<duo> 1 2)
+		      (make-<duo> 1 99))
+		(eqv? (make-<duo> 1 2)
+		      (make-<duo> 99 2))))
+    => #t #f #f #f)
 
   #t)
 

@@ -5637,7 +5637,7 @@ value.  The following bindings are exported by the library
 
 @deffn {Unsafe Operation} $record= @vari{reco} @varii{reco}
 Return @true{} if the arguments are equal field by field according to
-@func{eqv?}; otherwise return @false{}.
+@func{equal?}; otherwise return @false{}.
 @end deffn
 
 
