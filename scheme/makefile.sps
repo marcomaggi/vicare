@@ -3931,6 +3931,7 @@
     (<code>					v $language)
     (<memory-block>				v $language)
     (<ipair>					v $language)
+    (<tcbucket>					v $language)
 
     (<record>					v $language)
     (<record-type-descriptor>			v $language)
@@ -4033,6 +4034,7 @@
     (<integer>-ctd				$type-descriptors)
     (<ipair>-ctd				$type-descriptors)
     (<keyword>-ctd				$type-descriptors)
+    (<tcbucket>-ctd				$type-descriptors)
     (<list>-ctd					$type-descriptors)
     (<memory-block>-ctd				$type-descriptors)
     (<negative-bignum>-ctd			$type-descriptors)
