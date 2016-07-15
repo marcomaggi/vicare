@@ -372,6 +372,54 @@
 
 (section
 
+;;; tail-conc buckets
+
+(declare-core-primitive $make-tcbucket
+    (unsafe)
+  (signatures
+   ((<pair> <top> <top> (or <tcbucket> <non-negative-fixnum>))
+    => (<tcbucket>))))
+
+;;;
+
+(declare-core-primitive $tcbucket-key
+    (unsafe)
+  (signatures
+   ((<tcbucket>)		=> (<top>))))
+
+(declare-core-primitive $tcbucket-val
+    (unsafe)
+  (signatures
+   ((<tcbucket>)		=> (<top>))))
+
+(declare-core-primitive $tcbucket-next
+    (unsafe)
+  (signatures
+   ((<tcbucket>)		=> ((or <tcbucket> <non-negative-fixnum>)))))
+
+;;;
+
+(declare-core-primitive $set-tcbucket-tconc!
+    (unsafe)
+  (signatures
+   ((<tcbucket> <pair>)			=> (<void>))))
+
+(declare-core-primitive $set-tcbucket-key!
+    (unsafe)
+  (signatures
+   ((<tcbucket> <top>)		=> (<void>))))
+
+(declare-core-primitive $set-tcbucket-val!
+    (unsafe)
+  (signatures
+   ((<tcbucket> <top>)		=> (<void>))))
+
+(declare-core-primitive $set-tcbucket-next!
+    (unsafe)
+  (signatures
+   ((<tcbucket> (or <tcbucket> <non-negative-fixnum>))	=> (<void>))))
+
+;;; --------------------------------------------------------------------
 ;;; hash functions
 
 (let-syntax

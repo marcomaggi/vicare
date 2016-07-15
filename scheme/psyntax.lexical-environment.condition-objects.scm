@@ -222,6 +222,18 @@
      make-expand-time-type-signature-warning
      expand-time-type-signature-warning?
 
+     &expand-time-type-signature-warning-void-operand
+     &expand-time-type-signature-warning-void-operand-rtd
+     &expand-time-type-signature-warning-void-operand-rcd
+     make-expand-time-type-signature-warning-void-operand
+     expand-time-type-signature-warning-void-operand?
+
+     &expand-time-type-signature-warning-not-returning
+     &expand-time-type-signature-warning-not-returning-rtd
+     &expand-time-type-signature-warning-not-returning-rcd
+     make-expand-time-type-signature-warning-not-returning
+     expand-time-type-signature-warning-not-returning?
+
 ;;; --------------------------------------------------------------------
 
      &warning-unused-lexical-variable
@@ -446,6 +458,7 @@
   make-type-method-name-condition
   condition-type-method-name?
   (method-name condition-type-method-name))
+		;A symbol representing the method name.
 
 
 ;;;; condition object types: error objects
@@ -462,6 +475,16 @@
     cnd::&warning
   make-expand-time-type-signature-warning
   expand-time-type-signature-warning?)
+
+(cnd::define-core-condition-type &expand-time-type-signature-warning-void-operand
+    &expand-time-type-signature-warning
+  make-expand-time-type-signature-warning-void-operand
+  expand-time-type-signature-warning-void-operand?)
+
+(cnd::define-core-condition-type &expand-time-type-signature-warning-not-returning
+    &expand-time-type-signature-warning
+  make-expand-time-type-signature-warning-not-returning
+  expand-time-type-signature-warning-not-returning?)
 
 ;;; --------------------------------------------------------------------
 

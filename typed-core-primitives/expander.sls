@@ -1234,21 +1234,51 @@
 
 (declare-core-rtd &type-method-name-rtd)
 (declare-core-rcd &type-method-name-rcd)
-;;make-type-method-name-condition
 (declare-condition-type-predicate condition-type-method-name?	&type-method-name)
-;;condition-type-method-name
+
+(declare-core-primitive make-type-method-name-condition
+    (safe)
+  (signatures
+   ((<symbol>)			=> (&type-method-name))))
+
+(declare-core-primitive condition-type-method-name
+    (safe)
+  (signatures
+   ((&type-method-name)		=> (<symbol>))))
 
 ;;; --------------------------------------------------------------------
 
 (declare-core-rtd &expand-time-type-signature-violation-rtd)
 (declare-core-rcd &expand-time-type-signature-violation-rcd)
-;;make-expand-time-type-signature-violation
 (declare-condition-type-predicate expand-time-type-signature-violation?	&expand-time-type-signature-violation)
+(declare-core-primitive make-expand-time-type-signature-violation
+    (safe)
+  (signatures
+   (()			=> (&expand-time-type-signature-violation))))
 
 (declare-core-rtd &expand-time-type-signature-warning-rtd)
 (declare-core-rcd &expand-time-type-signature-warning-rcd)
-;;make-expand-time-type-signature-warning
 (declare-condition-type-predicate expand-time-type-signature-warning?	&expand-time-type-signature-warning)
+(declare-core-primitive make-expand-time-type-signature-warning
+    (safe)
+  (signatures
+   (()			=> (&expand-time-type-signature-warning))))
+
+(declare-core-rtd &expand-time-type-signature-warning-void-operand-rtd)
+(declare-core-rcd &expand-time-type-signature-warning-void-operand-rcd)
+(declare-condition-type-predicate expand-time-type-signature-warning-void-operand? &expand-time-type-signature-warning-void-operand)
+(declare-core-primitive make-expand-time-type-signature-warning-void-operand
+    (safe)
+  (signatures
+   (()			=> (&expand-time-type-signature-warning-void-operand))))
+
+(declare-core-rtd &expand-time-type-signature-warning-not-returning-rtd)
+(declare-core-rcd &expand-time-type-signature-warning-not-returning-rcd)
+(declare-condition-type-predicate expand-time-type-signature-warning-not-returning? &expand-time-type-signature-warning-not-returning)
+(declare-core-primitive make-expand-time-type-signature-warning-not-returning
+    (safe)
+  (signatures
+   (()			=> (&expand-time-type-signature-warning-not-returning))))
 
 ;;; --------------------------------------------------------------------
 

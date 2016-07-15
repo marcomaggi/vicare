@@ -5547,8 +5547,18 @@
       (asm 'mset buck (K off-tcbucket-next)  (V-simple-operand next))
       buck)))
 
+ (define-core-primitive-operation tcbucket? safe
+   ((P x)
+    (sec-tag-test (V-simple-operand x) vector-mask vector-tag pair-mask pair-tag))
+   ((E x)
+    (nop)))
+
 ;;; --------------------------------------------------------------------
 ;;; accessors
+
+ (define-core-primitive-operation $tcbucket-tconc unsafe
+   ((V buck)
+    (asm 'mref (V-simple-operand buck) (K off-tcbucket-tconc))))
 
  (define-core-primitive-operation $tcbucket-key unsafe
    ((V buck)
@@ -5565,6 +5575,10 @@
 ;;; --------------------------------------------------------------------
 ;;; mutators
 
+ (define-core-primitive-operation $set-tcbucket-tconc! unsafe
+   ((E buck val)
+    (mem-assign val (V-simple-operand buck) off-tcbucket-tconc)))
+
  (define-core-primitive-operation $set-tcbucket-key! unsafe
    ((E buck val)
     (mem-assign val (V-simple-operand buck) off-tcbucket-key)))
@@ -5576,10 +5590,6 @@
  (define-core-primitive-operation $set-tcbucket-next! unsafe
    ((E buck val)
     (mem-assign val (V-simple-operand buck) off-tcbucket-next)))
-
- (define-core-primitive-operation $set-tcbucket-tconc! unsafe
-   ((E buck val)
-    (mem-assign val (V-simple-operand buck) off-tcbucket-tconc)))
 
  /section)
 

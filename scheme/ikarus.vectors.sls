@@ -212,10 +212,11 @@
     ((_ (?predicate ?arg ...))
      (identifier? #'?who)
      (if (vicare-built-with-arguments-validation-enabled)
-	 #'(unless (?predicate ?arg ...)
-	     (procedure-arguments-consistency-violation __who__
-	       "failed precondition"
-	       '(?predicate ?arg ...) ?arg ...))
+	 #'(?predicate ?arg ...)
+	 ;; #'(unless (?predicate ?arg ...)
+	 ;;     (procedure-arguments-consistency-violation __who__
+	 ;;       "failed precondition"
+	 ;;       '(?predicate ?arg ...) ?arg ...))
        #'(void)))
 
     ;;Multiple preconditions.

@@ -101,6 +101,10 @@
     (only (vicare system $structs)
 	  $struct-rtd
 	  $set-std-printer!)
+    ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Fri Jul
+    ;;15, 2016)
+    ;; (only (vicare system $tcbuckets)
+    ;; 	  tcbucket?)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Apr 12,
     ;;2016)
     (only (ikarus booleans)

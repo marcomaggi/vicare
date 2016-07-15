@@ -316,6 +316,8 @@
 
 ;;;; library expansion, safe procedures
 
+(declare-parameter current-library-collection	<procedure>)
+
 (declare-parameter current-library-expander	<procedure>)
 
 (declare-core-primitive expand-library

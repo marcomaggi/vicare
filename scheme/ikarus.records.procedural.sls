@@ -272,7 +272,7 @@
    initialiser
 		;11.  Function used to initialise  the fields of an already allocated
 		;R6RS record.  This function is the same for every record-constructor
-		;descriptor.
+		;descriptor of this record-type.
    default-protocol
 		;12.  False  or function.  When  a function:  it must be  the default
 		;protocol function used when a record-constructor descriptor does not
@@ -1060,9 +1060,9 @@
 	    ($struct (type-descriptor <rtd>) name
 		     total-fields-number fields-number first-field-index
 		     parent-rtd sealed? opaque? uid uids-list generative? normalised-fields
-		     (void) ;initialiser
-		     #f     ;default-protocol
-		     #f     ;default-rcd
+		     #f ;initialiser
+		     #f	;default-protocol
+		     #f	;default-rcd
 		     destructor printer
 		     equality-predicate comparison-procedure hash-function
 		     method-retriever implemented-interfaces))

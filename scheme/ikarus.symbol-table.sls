@@ -99,12 +99,11 @@
 ;;This is the actual table used at run-time.  Notice that the mask is always one less
 ;;than the vector size.
 ;;
-;;By experiments it  has been determined that, after initialising  the table with the
-;;symbols from the  boot process, the number  of buckets is 4096.   (Marco Maggi; Oct
-;;31, 2011)
+;;NOTE By experiments it has been  determined that, after initialising the table with
+;;the symbols from  the boot process, the  number of buckets is  4096.  (Marco Maggi;
+;;Oct 31, 2011)
 ;;
-(define THE-SYMBOL-TABLE
-  (void))
+(define THE-SYMBOL-TABLE)
 
 (define MAX-NUMBER-OF-BUCKETS
   (fxdiv (greatest-fixnum) 2))

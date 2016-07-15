@@ -207,6 +207,70 @@
 /section)
 
 
+;;;; engines
+
+(section
+
+(declare-core-primitive $interrupted?
+    (unsafe)
+  (signatures
+   (()			=> (<boolean>))))
+
+(declare-core-primitive $unset-interrupted!
+    (unsafe)
+  (signatures
+   (()			=> (<void>))))
+
+(declare-core-primitive $do-event
+    (unsafe)
+  (signatures
+   (()			=> <list>)))
+
+/section)
+
+
+;;;; routines
+
+(section
+
+(declare-core-primitive $make-call-with-values-procedure
+    (unsafe)
+  (signatures
+   (()			=> (<procedure>))))
+
+(declare-core-primitive $make-values-procedure
+    (unsafe)
+  (signatures
+   (()			=> (<procedure>))))
+
+(declare-core-primitive $fp-at-base
+    (unsafe)
+  (signatures
+   (()			=> (<boolean>))))
+
+(declare-core-primitive $current-frame
+    (unsafe)
+  (signatures
+   (()			=> (<top>))))
+
+(declare-core-primitive $seal-frame-and-call
+    (unsafe)
+  (signatures
+   ((<procedure>)	=> <list>)))
+
+(declare-core-primitive $frame->continuation
+    (unsafe)
+  (signatures
+   ((<top>)		=> (<procedure>))))
+
+(declare-core-primitive $$apply
+    (unsafe)
+  (signatures
+   ((<procedure> . <list>)	=> <list>)))
+
+/section)
+
+
 ;;;; done
 
 #| end of define |# )

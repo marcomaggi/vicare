@@ -230,7 +230,7 @@
   (declare-symbol-accessor $symbol-plist		<list>)
   (declare-symbol-accessor $symbol-proc			<top>)
   (declare-symbol-accessor $symbol-string		<string>)
-  (declare-symbol-accessor $symbol-unique-string	<string>)
+  (declare-symbol-accessor $symbol-unique-string	(or <false> <string>))
   (declare-symbol-accessor $symbol-value		<top>)
   #| end of LET-SYNTAX |# )
 
@@ -246,14 +246,8 @@
   (declare-symbol-mutator $set-symbol-proc!		<top>)
   (declare-symbol-mutator $set-symbol-string!		<string>)
   (declare-symbol-mutator $set-symbol-plist!		<list>)
-  #;(declare-symbol-mutator $set-symbol-unique-string!	<string/false>)
+  (declare-symbol-mutator $set-symbol-unique-string!	(or <string> <false>))
   #| end of LET-SYNTAX |# )
-
-(declare-core-primitive ?who
-    (unsafe)
-  (signatures
-   ((<symbol> <string>)	=> (<void>))
-   ((<symbol> <false>)	=> (<void>))))
 
 ;;; --------------------------------------------------------------------
 ;;; property lists

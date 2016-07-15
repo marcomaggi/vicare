@@ -614,6 +614,18 @@
     make-expand-time-type-signature-warning
     expand-time-type-signature-warning?
 
+    &expand-time-type-signature-warning-void-operand
+    &expand-time-type-signature-warning-void-operand-rtd
+    &expand-time-type-signature-warning-void-operand-rcd
+    make-expand-time-type-signature-warning-void-operand
+    expand-time-type-signature-warning-void-operand?
+
+    &expand-time-type-signature-warning-not-returning-rtd
+    &expand-time-type-signature-warning-not-returning-rcd
+    &expand-time-type-signature-warning-not-returning
+    make-expand-time-type-signature-warning-not-returning
+    expand-time-type-signature-warning-not-returning?
+
     &warning-unused-lexical-variable
     &warning-unused-lexical-variable-rtd
     &warning-unused-lexical-variable-rcd

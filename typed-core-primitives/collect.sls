@@ -68,6 +68,12 @@
   (signatures
    (()					=> (<top>))))
 
+(declare-core-primitive $collect-key
+    (safe)
+  (signatures
+   (()					=> (<gensym>))
+   ((<gensym>)				=> (<void>))))
+
 /section)
 
 

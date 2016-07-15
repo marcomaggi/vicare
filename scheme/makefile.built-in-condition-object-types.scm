@@ -521,6 +521,14 @@
     &warning
   make-expand-time-type-signature-warning expand-time-type-signature-warning?)
 
+(define-built-in-condition-type &expand-time-type-signature-warning-void-operand
+    &expand-time-type-signature-warning
+  make-expand-time-type-signature-warning-void-operand expand-time-type-signature-warning-void-operand?)
+
+(define-built-in-condition-type &expand-time-type-signature-warning-not-returning
+    &expand-time-type-signature-warning
+  make-expand-time-type-signature-warning-not-returning expand-time-type-signature-warning-not-returning?)
+
 ;;; --------------------------------------------------------------------
 
 (define-built-in-condition-type &type-signature

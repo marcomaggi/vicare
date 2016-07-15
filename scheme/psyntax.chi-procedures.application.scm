@@ -315,7 +315,7 @@
 	 ((typed)
 	  (raise		(condition (make-expand-time-type-signature-violation)	(common))))
 	 ((default)
-	  (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	  (raise-continuable	(condition (make-expand-time-type-signature-warning-not-returning)	(common)))
 	  (%build-default-application))
 	 ((strict-r6rs)
 	  (%build-default-application)))))
@@ -474,9 +474,13 @@
 			   (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
 	   (case-expander-language
 	     ((typed)
-	      (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	      (raise
+	       (condition (make-expand-time-type-signature-violation)
+			  (common))))
 	     ((default)
-	      (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	      (raise-continuable
+	       (condition (make-expand-time-type-signature-warning-not-returning)
+			  (common)))
 	      (%build-default-application))
 	     ((strict-r6rs)
 	      (%build-default-application)))))
@@ -661,7 +665,7 @@
        ;;The operand expression will not return.
        (when (options::warn-about-not-returning-expressions)
 	 (raise-continuable
-	  (condition (make-expand-time-type-signature-warning)
+	  (condition (make-expand-time-type-signature-warning-not-returning)
 		     (make-who-condition __module_who__)
 		     (make-message-condition "expression used as operand in procedure application is typed as not returning")
 		     (make-syntax-violation input-form.stx (psi.input-form producer.psi))
@@ -899,14 +903,17 @@
 		  (make-message-condition message)
 		  (make-syntax-violation input-form.stx (psi.input-form rand.psi))
 		  (make-application-operand-signature-condition rand.sig)))
-	      (define (%handle-error message rv)
-		(%error (lambda () (common-condition-objects message)) rv))
+	      (case-define %handle-error
+		((message rv)
+		 (%error (lambda () (common-condition-objects message)) rv))
+		((message rv cnd)
+		 (%error (lambda () (common-condition-objects message)) rv cnd)))
 	      (case-type-signature-full-structure rand.sig
 		(<bottom>
 		 ;;The operand expression will not return.
 		 (when (options::warn-about-not-returning-expressions)
 		   (raise-continuable
-		    (condition (make-expand-time-type-signature-warning)
+		    (condition (make-expand-time-type-signature-warning-not-returning)
 			       (common-condition-objects
 				"expression used as operand in procedure application is typed as not returning"))))
 		 (<top>-ots))
@@ -917,7 +924,8 @@
 		 (if (void-object?-id? (psi.input-form rator.psi))
 		     (<top>-ots)
 		   (%handle-error "expression used as operand in procedure application is typed as returning void"
-				  (<top>-ots))))
+				  (<top>-ots)
+				  (make-expand-time-type-signature-warning-void-operand))))
 		((single-value)
 		 ;;Single return value.  Good.
 		 => (lambda (rand.ots) rand.ots))
@@ -938,15 +946,18 @@
 				(<top>-ots)))))
 	 rand*.psi)))
 
-    (define (%error common rv)
-      (case-expander-language
-	((typed)
-	 (raise			(condition (make-expand-time-type-signature-violation) (common))))
-	((default)
-	 (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
-	 rv)
-	((strict-r6rs)
-	 rv)))
+    (case-define %error
+      ((common rv)
+       (%error common rv #f))
+      ((common rv cnd)
+       (case-expander-language
+	 ((typed)
+	  (raise		(condition (or cnd (make-expand-time-type-signature-violation)) (common))))
+	 ((default)
+	  (raise-continuable	(condition (or cnd (make-expand-time-type-signature-warning))   (common)))
+	  rv)
+	 ((strict-r6rs)
+	  rv))))
 
     #| end of module: %VALIDATE-OPERANDS-FOR-SINGLE-RETURN-VALUE |# )
 
