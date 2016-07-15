@@ -24,7 +24,12 @@
     (ikarus.compiler.typedefs)
     (ikarus.compiler.condition-types)
     (ikarus.compiler.system-value)
-    (ikarus.compiler.scheme-objects-ontology))
+    (ikarus.compiler.scheme-objects-ontology)
+    ;;For debugging purposes.
+    ;;
+    ;; (only (ikarus.compiler.unparse-recordised-code)
+    ;; 	  unparse-recordized-code)
+    #| end of imports |# )
 
 
 ;;;; recordisation compiler pass
@@ -311,7 +316,9 @@
 	       ((letrec)
 		(make-recbind  prel* rhs*^ body^))
 	       ((letrec*)
-		(make-rec*bind prel* rhs*^ body^))))))))
+		(make-rec*bind prel* rhs*^ body^))
+	       (else
+		(assertion-violation __module_who__ "internal error, wrong core language keyword" X))))))))
 
     ;;Synopsis: (library-letrec* ((?lex ?loc ?rhs) ...) ?body)
     ;;
