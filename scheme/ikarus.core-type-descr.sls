@@ -101,10 +101,8 @@
     (only (vicare system $structs)
 	  $struct-rtd
 	  $set-std-printer!)
-    ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Fri Jul
-    ;;15, 2016)
-    ;; (only (vicare system $tcbuckets)
-    ;; 	  tcbucket?)
+    (only (vicare system $tcbuckets)
+     	  tcbucket?)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Apr 12,
     ;;2016)
     (only (ikarus booleans)
@@ -216,41 +214,15 @@
 		  ;;Maggi; Tue Dec 15, 2015)
 		  #;record-type-method-retriever)
 	    system::)
-    (only (ikarus.options)
-	  cond-boot-expansion
-	  inclusion-in-normal-boot-image
-	  inclusion-in-rotation-boot-image
-	  bootstrapping-for-normal-boot-image
-	  bootstrapping-for-rotation-boot-image))
-
-  (cond-boot-expansion "miscellaneous syntactic bindings"
-    ((inclusion-in-normal-boot-image)
-     (import (only (vicare expander)
-		   syntax-clauses-unwrap
-		   syntax-clauses-collapse
-		   syntax-clauses-validate-specs
-		   syntax-clauses-fold-specs
-		   syntax-clauses-validate-specs
-		   syntax-clause-spec-keyword
-		   syntax-clause-spec?
-		   make-syntax-clause-spec)))
-
-    ((inclusion-in-rotation-boot-image)
-     (import (only (vicare expander)
-		   syntax-clauses-unwrap
-		   syntax-clauses-collapse
-		   syntax-clauses-validate-specs
-		   syntax-clauses-fold-specs
-		   syntax-clauses-validate-specs
-		   syntax-clause-spec-keyword
-		   syntax-clause-spec?
-		   make-syntax-clause-spec)))
-
-    ((bootstrapping-for-normal-boot-image)
-     (void))
-
-    ((bootstrapping-for-rotation-boot-image)
-     (void)))
+    (only (vicare expander)
+	  syntax-clauses-unwrap
+	  syntax-clauses-collapse
+	  syntax-clauses-validate-specs
+	  syntax-clauses-fold-specs
+	  syntax-clauses-validate-specs
+	  syntax-clause-spec-keyword
+	  syntax-clause-spec?
+	  make-syntax-clause-spec))
 
 
 ;;;; built-in object-types descriptor

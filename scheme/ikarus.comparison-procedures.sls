@@ -73,12 +73,6 @@
 		  compar-pointer
 
 		  #| end of EXCEPT |# )
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Apr 26,
-    ;;2016)
-    (prefix (only (ikarus codecs)
-		  transcoder=?
-		  transcoder<?)
-	    codecs::)
     (only (vicare system $transcoders)
 	  $transcoder->data))
 
@@ -134,7 +128,7 @@
 ;;;; misc comparison
 
 (define-compar compar-pointer		pointer?	pointer=?		pointer<?)
-(define-compar compar-transcoder	transcoder?	codecs::transcoder=?	codecs::transcoder<?)
+(define-compar compar-transcoder	transcoder?	transcoder=?		transcoder<?)
 
 (define* (compar-boolean {A boolean?} {B boolean?})
   (cond ((and A B)	0)

@@ -569,10 +569,7 @@
 
 (define-scheme-type <tcbucket>
     <top>
-  ;;FIXME To be switched at the next  boot image rotation.  (Marco Maggi; Fri Jul 15,
-  ;;2016)
-  #;(type-predicate tcbucket?)
-  (type-predicate always-false))
+  (type-predicate tcbucket?))
 
 (define-scheme-type <hashtable>
     <struct>

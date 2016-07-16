@@ -185,9 +185,18 @@
 		current-library-collection)
 	  bootstrap::)
   (prefix (only (vicare expander)
-		generate-descriptive-gensyms?)
+		generate-descriptive-gensyms?
+		syntax-clauses-unwrap
+		syntax-clauses-collapse
+		syntax-clauses-validate-specs
+		syntax-clauses-fold-specs
+		syntax-clauses-validate-specs
+		syntax-clause-spec-keyword
+		syntax-clause-spec?
+		make-syntax-clause-spec)
 	  expander::)
-
+  (prefix (vicare libraries)
+	  libraries::)
   ;;The following libraries are read, expanded and compiled from the source tree.
   (prefix (ikarus.options)
 	  option::)
@@ -215,42 +224,6 @@
   (include "ikarus.config.scm" #t))
 
 (include "cond-boot-expansion.scm" #t)
-
-
-;;;; syntactic bindings
-
-(cond-boot-expansion "miscellaneous syntactic bindings"
-  ((inclusion-in-normal-boot-image)
-   (void))
-
-  ((inclusion-in-rotation-boot-image)
-   (void))
-
-  ((bootstrapping-for-normal-boot-image)
-   (import (only (vicare expander)
-		 syntax-clauses-unwrap
-		 syntax-clauses-collapse
-		 syntax-clauses-validate-specs
-		 syntax-clauses-fold-specs
-		 syntax-clauses-validate-specs
-		 syntax-clause-spec-keyword
-		 syntax-clause-spec?
-		 make-syntax-clause-spec)
-     (prefix (vicare libraries)
-	     libraries::)))
-
-  ((bootstrapping-for-rotation-boot-image)
-   (import (only (vicare expander)
-		 syntax-clauses-unwrap
-		 syntax-clauses-collapse
-		 syntax-clauses-validate-specs
-		 syntax-clauses-fold-specs
-		 syntax-clauses-validate-specs
-		 syntax-clause-spec-keyword
-		 syntax-clause-spec?
-		 make-syntax-clause-spec)
-     (prefix (vicare libraries)
-	     libraries::))))
 
 
 ;;;; configuration inspection
@@ -956,8 +929,8 @@
     (syntax-case stx ()
       ((?kwd ?type-name ?parent-name . ?clauses)
        (let* ((type-name.str	(symbol->string (syntax->datum #'?type-name)))
-	      (clause*.stx	(syntax-clauses-unwrap #'?clauses synner))
-	      (clause*.stx	(syntax-clauses-collapse clause*.stx))
+	      (clause*.stx	(expander::syntax-clauses-unwrap #'?clauses synner))
+	      (clause*.stx	(expander::syntax-clauses-collapse clause*.stx))
 	      (parsed-specs	(%parse-clauses clause*.stx)))
 	 (%validate-parent #'?parent-name)
 	 (with-syntax
@@ -989,13 +962,13 @@
 	      #'?parent-name)))
 
   (define-constant LIST-OF-CLAUSES
-    (syntax-clauses-validate-specs
-     (list (make-syntax-clause-spec #'constructor		0 1 0 1      '() '())
-	   (make-syntax-clause-spec #'type-predicate		0 1 1 1      '() '())
-	   (make-syntax-clause-spec #'hash-function		0 1 1 1      '() '())
-	   (make-syntax-clause-spec #'equality-predicate	0 1 1 1      '() '())
-	   (make-syntax-clause-spec #'comparison-procedure	0 1 1 1      '() '())
-	   (make-syntax-clause-spec #'methods			0 1 1 +inf.0 '() '()))))
+    (expander::syntax-clauses-validate-specs
+     (list (expander::make-syntax-clause-spec #'constructor		0 1 0 1      '() '())
+	   (expander::make-syntax-clause-spec #'type-predicate		0 1 1 1      '() '())
+	   (expander::make-syntax-clause-spec #'hash-function		0 1 1 1      '() '())
+	   (expander::make-syntax-clause-spec #'equality-predicate	0 1 1 1      '() '())
+	   (expander::make-syntax-clause-spec #'comparison-procedure	0 1 1 1      '() '())
+	   (expander::make-syntax-clause-spec #'methods			0 1 1 +inf.0 '() '()))))
 
   (define-record-type parsed-specs
     (fields
@@ -1026,13 +999,13 @@
     #| end of DEFINE-RECORD-TYPE |# )
 
   (define (%parse-clauses clause*.stx)
-    (syntax-clauses-fold-specs
-     (lambda* ({parsed-specs parsed-specs?} {clause-spec syntax-clause-spec?} args)
+    (expander::syntax-clauses-fold-specs
+     (lambda* ({parsed-specs parsed-specs?} {clause-spec expander::syntax-clause-spec?} args)
        ;;ARGS is  a vector of  vectors holding the  values from the  clauses matching
        ;;CLAUSE-SPEC.
        (assert (fx=? 1 (vector-length args)))
        (let ((arg (vector-ref args 0)))
-	 (case-identifiers (syntax-clause-spec-keyword clause-spec)
+	 (case-identifiers (expander::syntax-clause-spec-keyword clause-spec)
 	   ((constructor)
 	    (if (fxzero? (vector-length arg))
 		(parsed-specs-constructor-set! parsed-specs #f)
@@ -1174,9 +1147,7 @@
     ($symbols		(vicare system $symbols)		#f	#t)
     ($keywords		(vicare system $keywords)		#f	#t)
     ($structs		(vicare system $structs)		#f	#t)
-    ;;FIXME To be changed to required at the next boot image rotation.  (Marco Maggi;
-    ;;Wed Apr 6, 2016)
-    ($records		(vicare system $records)		#f	#f)
+    ($records		(vicare system $records)		#f	#t)
     ($pointers		(vicare system $pointers)		#f	#t)
     ($codes		(vicare system $codes)			#f	#t)
     ($tcbuckets		(vicare system $tcbuckets)		#f	#t)
@@ -1203,10 +1174,6 @@
     ($programs		(vicare programs)			#t	#f)
     ($language		(vicare language-extensions)		#t	#f)
     ($posix		(vicare language-extensions posix)	#t	#t)
-;;;
-    ;;FIXME  This library  "$tag-types"  is to  be  removed at  the  next boot  image
-    ;;rotation in the typed language branch.  (Marco Maggi; Tue Dec 15, 2015)
-    ($tag-types		(vicare expander tag-type-specs)	#t	#t)
     ($expander		(vicare expander)			#t	#t)))
 
 
@@ -1937,10 +1904,9 @@
     ($set-std-symbol!				$structs)
     ($set-std-destructor!			$structs)
 
-    ;;FIXME To be switched at the next boot image rotation.  (Marco Maggi; Wed Apr 6,
-    ;;2016)
-    ($record-guardian				$structs)
-    #;($record-guardian				$records)
+    ;;FIXME "$structs" to be removed at  the next boot image rotation.  (Marco Maggi;
+    ;;Wed Apr 6, 2016)
+    ($record-guardian				$structs $records)
 
     ($make-record-type-descriptor)
     ($make-record-type-descriptor-ex)

@@ -69,6 +69,9 @@
     hashtable->alist
     alist->hashtable!
 
+    ;; buckets
+    tcbucket?
+
     ;; unsafe operations
     $string-hash		$string-ci-hash
     $symbol-hash		$bytevector-hash
@@ -128,7 +131,11 @@
     (vicare system $vectors)
     (only (vicare system $transcoders)
 	  $transcoder->data)
-    (vicare system $tcbuckets)
+    (except (vicare system $tcbuckets)
+	    tcbucket?)
+    (prefix (only (vicare system $tcbuckets)
+		  tcbucket?)
+	    sys::)
     (only (vicare system $structs)
 	  $set-std-printer!)
     (only (ikarus unique-objects)
@@ -149,6 +156,9 @@
 
 (define (%not-void? obj)
   (not (void-object? obj)))
+
+(define (tcbucket? obj)
+  (sys::tcbucket? obj))
 
 
 ;;;; data structure

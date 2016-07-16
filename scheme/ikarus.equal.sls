@@ -36,11 +36,8 @@
   (import (except (vicare)
 		  equal?
 		  ipair? icar icdr)
-    ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Wed Apr
-    ;;6, 2016)
-    ;;
     ;; (only (vicare system $records)
-    ;; 	  $record-type-equality-predicate)
+    ;;  	  $record-type-equality-predicate)
     (only (vicare system $pointers)
 	  $pointer=)
     (only (vicare system $structs)
@@ -69,9 +66,6 @@
         ($fx<=     <=)
         ($fx=      =))))
 
-  ;;FIXME To be uncommented  at the next boot image rotation.   (Marco Maggi; Thu Jul
-  ;;14, 2016)
-  ;;
   (define ($record-type-equality-predicate reco)
     ($struct-ref reco 16))
 

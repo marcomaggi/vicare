@@ -85,90 +85,15 @@
     inclusion-in-rotation-boot-image
     bootstrapping-for-normal-boot-image
     bootstrapping-for-rotation-boot-image)
-  (import (except (vicare)
-		  reader-annotation?
-		  reader-annotation-source
-		  reader-annotation-stripped)
+  (import (vicare)
+    (only (vicare expander)
+	  all-identifiers?
+	  identifier-suffix
+	  syntax->list)
     (only (ikarus.printing-messages)
 	  print-stderr-message))
 
-
-;;;; helper syntaxes
-
-(include "cond-boot-expansion.scm" #t)
-
-
-;;;; stuff
-
-(cond-boot-expansion "miscellaneous syntactic bindings"
-  ((inclusion-in-normal-boot-image)
-   (import (only (vicare expander)
-		 all-identifiers?
-		 identifier-suffix
-		 syntax->list)))
-
-  ((inclusion-in-rotation-boot-image)
-   (import (only (vicare expander)
-		 all-identifiers?
-		 identifier-suffix
-		 syntax->list)))
-
-  ((bootstrapping-for-normal-boot-image)
-   ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
-   ;;build a normal boot image.
-   (import (only (vicare expander)
-		 all-identifiers?
-		 identifier-suffix
-		 syntax->list)))
-
-  ((bootstrapping-for-rotation-boot-image)
-   ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
-   ;;build a rotation boot image.
-   (import (only (vicare expander)
-		 all-identifiers?
-		 identifier-suffix
-		 syntax->list))))
-
-
-;;;; reader annotation objects API
-
-;;FIXME To  be removed at the  next boot image  rotation.  (Marco Maggi; Sat  Dec 26,
-;;2015)
-(cond-boot-expansion "reader annotation object API"
-  ((inclusion-in-normal-boot-image)
-   (import (only (ikarus.reader)
-		 reader-annotation?
-		 reader-annotation-source
-		 reader-annotation-stripped)))
-
-  ;; ((inclusion-in-normal-boot-image)
-  ;;  ;;This is used  when the compiler's source  code is expanded for  inclusion in the
-  ;;  ;;boot image.
-  ;;  (define reader-annotation?			annotation?)
-  ;;  (define reader-annotation-source		annotation-source)
-  ;;  (define reader-annotation-stripped		annotation-stripped))
-
-  ((inclusion-in-rotation-boot-image)
-   (import (only (ikarus.reader)
-		 reader-annotation?
-		 reader-annotation-source
-		 reader-annotation-stripped)))
-
-  ((bootstrapping-for-normal-boot-image)
-   ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
-   ;;build a normal boot image.
-   (import (only (vicare)
-		 reader-annotation?
-		 reader-annotation-source
-		 reader-annotation-stripped)))
-
-  ((bootstrapping-for-rotation-boot-image)
-   ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
-   ;;build a rotation boot image.
-   (import (only (vicare)
-		 reader-annotation?
-		 reader-annotation-source
-		 reader-annotation-stripped))))
+  (include "cond-boot-expansion.scm" #t)
 
 
 ;;;; condition-object definition

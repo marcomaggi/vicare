@@ -29,9 +29,7 @@
   (export define-core-record-type
 	  define-type-descriptors
 	  strip-angular-parentheses)
-  (import (except (vicare)
-		  define-type-descriptors
-		  strip-angular-parentheses)
+  (import (vicare)
     (only (ikarus records procedural)
 	  $make-record-type-descriptor-ex
 	  $make-record-constructor-descriptor
@@ -40,57 +38,17 @@
 	  $struct?
 	  $struct-ref
 	  $struct-set!)
-    (only (ikarus.options)
-	  cond-boot-expansion
-	  inclusion-in-normal-boot-image
-	  inclusion-in-rotation-boot-image
-	  bootstrapping-for-normal-boot-image
-	  bootstrapping-for-rotation-boot-image))
+    (only (vicare expander)
+	  syntax-clauses-unwrap
+	  syntax-clauses-collapse
+	  syntax-clauses-validate-specs
+	  syntax-clauses-fold-specs
+	  syntax-clauses-validate-specs
+	  syntax-clause-spec-keyword
+	  syntax-clause-spec?
+	  make-syntax-clause-spec))
 
-  (cond-boot-expansion "auxiliary syntaxes for DEFINE-CORE-RECORD-TYPE"
-    ((inclusion-in-normal-boot-image)
-     (import (only (vicare)
-		   define-type-descriptors
-		   strip-angular-parentheses)))
-    ((inclusion-in-rotation-boot-image)
-     (import (only (vicare)
-		   define-type-descriptors
-		   strip-angular-parentheses))a)
-    ((bootstrapping-for-normal-boot-image)
-     ;;This is never exercised.
-     (module ()))
-    ((bootstrapping-for-rotation-boot-image)
-     ;;This is never exercised.
-     (module ())))
-
-  (cond-boot-expansion "miscellaneous syntactic bindings"
-    ((inclusion-in-normal-boot-image)
-     (import (only (vicare expander)
-		   syntax-clauses-unwrap
-		   syntax-clauses-collapse
-		   syntax-clauses-validate-specs
-		   syntax-clauses-fold-specs
-		   syntax-clauses-validate-specs
-		   syntax-clause-spec-keyword
-		   syntax-clause-spec?
-		   make-syntax-clause-spec)))
-
-    ((inclusion-in-rotation-boot-image)
-     (import (only (vicare expander)
-		   syntax-clauses-unwrap
-		   syntax-clauses-collapse
-		   syntax-clauses-validate-specs
-		   syntax-clauses-fold-specs
-		   syntax-clauses-validate-specs
-		   syntax-clause-spec-keyword
-		   syntax-clause-spec?
-		   make-syntax-clause-spec)))
-
-    ((bootstrapping-for-normal-boot-image)
-     (void))
-
-    ((bootstrapping-for-rotation-boot-image)
-     (void)))
+  (include "cond-boot-expansion.scm" #t)
 
 
 (define-syntax (define-core-record-type stx)
