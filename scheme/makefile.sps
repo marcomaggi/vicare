@@ -184,8 +184,6 @@
 		find-library-by-name
 		current-library-collection)
 	  bootstrap::)
-  (prefix (vicare libraries)
-	  libraries::)
   (prefix (only (vicare expander)
 		generate-descriptive-gensyms?)
 	  expander::)
@@ -237,7 +235,11 @@
 		 syntax-clauses-validate-specs
 		 syntax-clause-spec-keyword
 		 syntax-clause-spec?
-		 make-syntax-clause-spec)))
+		 make-syntax-clause-spec)
+     (prefix (vicare libraries)
+	     libraries::))
+   (define (libraries::library-typed-locs lib)
+     '()))
 
   ((bootstrapping-for-rotation-boot-image)
    (import (only (vicare expander)
@@ -248,7 +250,9 @@
 		 syntax-clauses-validate-specs
 		 syntax-clause-spec-keyword
 		 syntax-clause-spec?
-		 make-syntax-clause-spec))))
+		 make-syntax-clause-spec)
+     (prefix (vicare libraries)
+	     libraries::))))
 
 
 ;;;; configuration inspection
@@ -6261,10 +6265,14 @@
     ;;the  top-level lexical  syntactic bindings  defined by  the library  body.  The
     ;;syntactic bindings representing macros are discarded.
     ;;
+    ;;TYPED-LOCS: An  alist holding one  entry for  each typed global  variable.  The
+    ;;keys are the syntactic binding's label  gensyms; the values are the loc gensyms
+    ;;holding the variable's value.
+    ;;
     ;;Notice that, from  the results of library expansion, we  discard the visit code
     ;;and all the library descriptors representing the library dependencies.
     ;;
-    (receive (name* invoke-code* export-subst global-env)
+    (receive (name* invoke-code* export-subst global-env typed-locs)
 	(make-init-code)
       (debug-printf "\nSource libraries expansion\n")
       (for-each (lambda (file)
@@ -6274,7 +6282,7 @@
 		  (process-libraries-from-file
 		   (string-append BOOT-IMAGE-FILES-SOURCE-DIR "/" file)
 		   (lambda (library-sexp)
-		     (receive (name code subst env)
+		     (receive (name code subst env typlocs)
 			 (boot-library-expand library-sexp)
                        ;; (when (equal? name '(ikarus records procedural))
                        ;;   (when (file-exists? "/tmp/marco/ikarus.records.procedural.invoke-code.scm")
@@ -6284,13 +6292,17 @@
                        ;;       (parametrise ((print-gensym #f)
                        ;;                     (print-graph #f))
                        ;;         (pretty-print code (current-output-port))))))
-		       (set! name*        (cons name name*))
-		       (set! invoke-code* (cons code invoke-code*))
-		       (set! export-subst (append subst export-subst))
-		       (set! global-env   (append env   global-env))))))
+		       ;; (debug-print 'export-subst subst)
+		       ;; (debug-print 'global-env env)
+		       ;; (debug-print 'invoke-code code)
+		       (set! name*		(cons name name*))
+		       (set! invoke-code*	(cons code invoke-code*))
+		       (set! export-subst	(append subst	export-subst))
+		       (set! global-env		(append env	global-env))
+		       (set! typed-locs		(append typlocs	typed-locs))))))
 	files)
       (receive (export-subst global-env export-primlocs)
-	  (make-system-data (prune-subst export-subst global-env) global-env)
+	  (make-system-data (prune-subst export-subst global-env) global-env typed-locs)
 	(receive (primlocs-lib-name primlocs-lib-code)
 	    (build-global-init-library export-subst global-env export-primlocs)
 	  (values (reverse (cons* (car name*)        primlocs-lib-name (cdr name*)))
@@ -6308,6 +6320,8 @@
 	      (processor obj)
 	      (recur (get-annotated-datum port))))
 	(close-input-port port))))
+
+;;; --------------------------------------------------------------------
 
   (define (make-init-code)
     ;;The first  code to  run when  initialising the boot  image must  initialise the
@@ -6347,6 +6361,8 @@
     ;;
     ;;4. GLOBAL-ENV represents the global bindings  defined by the library body.  For
     ;;"(ikarus.init)" there is only one: $INIT-SYMBOL-VALUE!.
+    ;;
+    ;;5. TYPED-LOCS maps labels to value loc gensyms for typed variables.  Null here.
     ;;
     ;;The procedure $INIT-SYMBOL-VALUE! has the following signature:
     ;;
@@ -6408,7 +6424,12 @@
        ;;This is an EXPORT-SUBST with a single entry.
        `(($init-symbol-value! . ,label))
        ;;This is a GLOBAL-ENV with a single entry.
-       `((,label . (global . ,loc))))))
+       `((,label . (global . ,loc)))
+       ;;This is the TYPED-LOCS alist.
+       '()
+       #| end of VALUES |# )))
+
+;;; --------------------------------------------------------------------
 
   (define (prune-subst srclibs.export-subst srclibs.global-env)
     ;;Remove from SRCLIBS.EXPORT-SUBST all re-exported identifiers (those with labels
@@ -6425,78 +6446,85 @@
 	   (cons (car srclibs.export-subst)
 		 (prune-subst (cdr srclibs.export-subst) srclibs.global-env)))))
 
-  (define* (make-system-data srclibs.export-subst srclibs.global-env)
-    ;;SRCLIBS.EXPORT-SUBST has  an entry for each  core primitive to export  from all
-    ;;the source  libraries in the boot  image.  SRCLIBS.GLOBAL-ENV has an  entry for
-    ;;each top-level  syntactic binding  from all  the source  libraries in  the boot
-    ;;image.
-    ;;
-    ;;Return the following values:
-    ;;
-    ;;1. TOTAL.EXPORT-SUBST: an EXPORT-SUBST alist with entries:
-    ;;
-    ;;   (?prim-name  . ?label)
-    ;;   (?macro-name . ?label)
-    ;;
-    ;;2. TOTAL.GLOBAL-ENV: a GLOBAL-ENV alist with entries:
-    ;;
-    ;;   (?label . (core-prim . ?prim-name))
-    ;;   (?label . ?macro-binding)
-    ;;
-    ;;3. TOTAL.EXPORT-PRIMLOCS: an EXPORT-PRIMLOCS alist with entries:
-    ;;
-    ;;   (?prim-name . ?loc)
-    ;;
-    (define (macro-identifier? x)
-      (and (or (assq x VICARE-CORE-SYNTACTIC-BINDING-DESCRIPTORS)
-	       (assq x VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS))
-	   #t))
-    (define (non-syntax-identifier? x)
-      (not (macro-identifier? x)))
-    (let ((total-export-subst-clt    (make-collection))
-	  (total-global-env-clt      (make-collection))
-	  (total-export-primlocs-clt (make-collection)))
+;;; --------------------------------------------------------------------
 
-      ;;Build entries  in the EXPORT-SUBST  and GLOBAL-ENV of built-in  libraries, to
-      ;;represent the syntactic bindings of built-in syntaxes.  Here we also generate
-      ;;the label  gensyms for  the exported  syntaxes.  The  expected format  of the
-      ;;entries is:
-      ;;
-      ;;   (?built-in-macro-name	(?built-in-macro-name))
-      ;;   (?core-macro-name		(core-macro	. ?core-macro-name))
-      ;;   (?non-core-macro-name	(macro		. ?non-core-macro-name))
-      ;;   (?fluid-macro-name		($fluid		. ?fluid-macro-name))
-      ;;   (?record-type-name		($core-record-type-name	. ...)
-      ;;   (?condition-object-name	($core-condition-object-type-name . ...)
-      ;;
-      ;;and others.  We accumulate in the  subst and env collections the associations
-      ;;name/label and label/descriptor.
-      ;;
-      (each-for VICARE-CORE-SYNTACTIC-BINDING-DESCRIPTORS
-	(lambda (entry)
-	  (let* ((name	(car  entry))
-		 (descr	(cadr entry))
-		 (label	(gensym (string-append "prim-label." (symbol->string name)))))
-	    (total-export-subst-clt (cons name  label))
-	    (total-global-env-clt   (cons label descr)))))
-      (each-for VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS
-	(lambda (entry)
-	  (let* ((name	(car  entry))
-		 (descr	(cadr entry))
-		 (label	(gensym (string-append "prim-label." (symbol->string name)))))
-	    (total-export-subst-clt (cons name  label))
-	    (total-global-env-clt   (cons label descr)))))
-      (each-for VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS-DEFAULTS
-	(lambda (entry)
-	  (let* ((label	(car  entry))
-		 (descr	(cadr entry)))
-	    (total-global-env-clt   (cons label descr)))))
+  (module (make-system-data)
+    (define __module_who__ 'make-system-data)
 
-      ;;Build entries in the EXPORT-SUBST, GLOBAL-ENV and EXPORT-PRIMLOCS of built-in
-      ;;libraries, to represent  the syntactic bindings of  built-in core primitives.
-      ;;The  core primitive  are functions  or constant  values like  the record-type
-      ;;descriptors.  The core primitive's label gensyms and loc gensyms are the ones
-      ;;already generated while expanding the source libraries.
+    (define* (make-system-data srclibs.export-subst srclibs.global-env srclibs.typed-locs)
+      ;;From all the source libraries in  the boot image: SRCLIBS.EXPORT-SUBST has an
+      ;;entry for each core primitive to  export; SRCLIBS.GLOBAL-ENV has an entry for
+      ;;each top-level  syntactic binding; SRCLIBS.TYPED-LOCS  has an entry  for each
+      ;;"global-typed" and "global-typed-mutable" core primitive.
+      ;;
+      ;;Return the following values:
+      ;;
+      ;;1. TOTAL.EXPORT-SUBST: an EXPORT-SUBST alist with entries:
+      ;;
+      ;;   (?prim-name  . ?label)
+      ;;   (?macro-name . ?label)
+      ;;
+      ;;2. TOTAL.GLOBAL-ENV: a GLOBAL-ENV alist with entries:
+      ;;
+      ;;   (?label . (core-prim . ?prim-name))
+      ;;   (?label . ?macro-binding)
+      ;;
+      ;;3. TOTAL.EXPORT-PRIMLOCS: an EXPORT-PRIMLOCS alist with entries:
+      ;;
+      ;;   (?prim-name . ?loc)
+      ;;
+      (let ((total-export-subst-clt    (make-collection))
+	    (total-global-env-clt      (make-collection))
+	    (total-export-primlocs-clt (make-collection)))
+
+	;;Build entries in the EXPORT-SUBST  and GLOBAL-ENV of built-in libraries, to
+	;;represent  the  syntactic bindings  of  built-in  syntaxes.  Here  we  also
+	;;generate the label gensyms for  the exported syntaxes.  The expected format
+	;;of the entries is:
+	;;
+	;;   (?built-in-macro-name	(?built-in-macro-name))
+	;;   (?core-macro-name		(core-macro	. ?core-macro-name))
+	;;   (?non-core-macro-name	(macro		. ?non-core-macro-name))
+	;;   (?fluid-macro-name		($fluid		. ?fluid-macro-name))
+	;;   (?record-type-name		($core-record-type-name	. ...)
+	;;   (?condition-object-name	($core-condition-object-type-name . ...)
+	;;
+	;;and  others.   We   accumulate  in  the  subst  and   env  collections  the
+	;;associations name/label and label/descriptor.
+	;;
+	(each-for VICARE-CORE-SYNTACTIC-BINDING-DESCRIPTORS
+	  (lambda (entry)
+	    (let* ((name	(car  entry))
+		   (descr	(cadr entry))
+		   (label	(gensym (string-append "prim-label." (symbol->string name)))))
+	      (total-export-subst-clt (cons name  label))
+	      (total-global-env-clt   (cons label descr)))))
+	(each-for VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS
+	  (lambda (entry)
+	    (let* ((name	(car  entry))
+		   (descr	(cadr entry))
+		   (label	(gensym (string-append "prim-label." (symbol->string name)))))
+	      (total-export-subst-clt (cons name  label))
+	      (total-global-env-clt   (cons label descr)))))
+	(each-for VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS-DEFAULTS
+	  (lambda (entry)
+	    (let* ((label	(car  entry))
+		   (descr	(cadr entry)))
+	      (total-global-env-clt   (cons label descr)))))
+	(each-for IDENTIFIER->LIBRARY-MAP
+	  (lambda (identifier.libs)
+	    (make-system-data/core-prim identifier.libs srclibs.export-subst srclibs.global-env srclibs.typed-locs
+					total-export-subst-clt total-global-env-clt total-export-primlocs-clt)))
+
+	(values (total-export-subst-clt) (total-global-env-clt) (total-export-primlocs-clt))))
+
+    (define* (make-system-data/core-prim identifier.libs srclibs.export-subst srclibs.global-env srclibs.typed-locs
+					 total-export-subst-clt total-global-env-clt total-export-primlocs-clt)
+      ;;Build entries in the EXPORT-SUBST, GLOBAL-ENV and EXPORT-PRIMLOCS collections
+      ;;of  built-in  libraries,   to  represent  the  syntactic   bindings  of  core
+      ;;primitives.  The  core primitives are  functions or constant values  like the
+      ;;record-type descriptors.  The core primitive's  label gensyms and loc gensyms
+      ;;are the ones already generated while expanding the source libraries.
       ;;
       ;;For  every exported  core  primitive we  expect  an entry  to  be present  in
       ;;SRCLIBS.GLOBAL-ENV with the format:
@@ -6517,61 +6545,96 @@
       ;;
       ;;     (?prim-name . ?loc)
       ;;
-      (each-for IDENTIFIER->LIBRARY-MAP
-	(lambda (identifier.libs)
-	  (define prim-name
-	    (car identifier.libs))
-	  (when (non-syntax-identifier? prim-name)
-	    (cond ((assq prim-name (total-export-subst-clt))
-		   (error __who__ "identifier exported twice?" prim-name))
+      ;;NOTE  For  the  case  of  core  primitives  whose  syntactic  binding's  type
+      ;;descriptor  is of  type "global",  we expect  the GLOBAL-ENV  entry from  the
+      ;;source library to have the format:
+      ;;
+      ;;   (?label . (global . ?value-loc))
+      ;;
+      ;;and  we  get the  ?VALUE-LOC  gensym  for  inclusion in  the  EXPORT-PRIMLOCS
+      ;;collection.
+      ;;
+      ;;NOTE  For  the  case  of  core  primitives  whose  syntactic  binding's  type
+      ;;descriptor is of type "global-typed", we expect the GLOBAL-ENV entry from the
+      ;;source library to have the format:
+      ;;
+      ;;   (?label . (global-typed . ?type-descriptor-loc))
+      ;;
+      ;;where ?TYPE-DESCRIPTOR-LOC is a loc gensym  holding a reference to the global
+      ;;variable's type  descriptor (an  expand-time value  initialised by  the visit
+      ;;code).   The  loc gensym  holding  the  actual  variable's  value is  in  the
+      ;;TYPED-LOCS alist with an entry of the format:
+      ;;
+      ;;   (?label . ?value-loc)
+      ;;
+      ;;and  we  get the  ?VALUE-LOC  gensym  for  inclusion in  the  EXPORT-PRIMLOCS
+      ;;collection.
+      ;;
+      (define prim-name (car identifier.libs))
+      (when (non-syntax-identifier? prim-name)
+	(cond ((assq prim-name (total-export-subst-clt))
+	       (error __module_who__ "identifier exported twice?" prim-name))
 
-		  ((assq prim-name srclibs.export-subst)
-		   ;;Primitive defined (exported) within the compiled libraries.
-		   => (lambda (name.label)
-			(unless (pair? name.label)
-			  (error __who__ "invalid exports" name.label prim-name))
-			(let ((label (cdr name.label)))
-			  (cond ((assq label srclibs.global-env)
-				 => (lambda (label.descr)
-				      (let ((descr (cdr label.descr)))
-					(case (car descr)
-					  ((global global-typed)
-					   ;;Here we expect DESCR to have the format:
-					   ;;
-					   ;;   (global       . ?loc)
-					   ;;   (global-typed . ?loc)
-					   ;;
-					   (total-export-subst-clt
-					    (cons prim-name label))
-					   (total-global-env-clt
-					    (cons label
-						  (cond ((assq prim-name VICARE-TYPED-CORE-PRIMITIVES)
+	      ((assq prim-name srclibs.export-subst)
+	       ;;Primitive defined (exported) within the compiled libraries.
+	       => (lambda (name.label)
+		    (unless (pair? name.label)
+		      (error __module_who__ "invalid exports" name.label prim-name))
+		    (let ((label (cdr name.label)))
+		      (cond ((assq label srclibs.global-env)
+			     => (lambda (label.descr)
+				  (let* ((descr		(cdr label.descr))
+					 (descr.type	(car descr)))
+				    (case descr.type
+				      ((global global-typed)
+				       (total-export-subst-clt
+					(cons prim-name label))
+				       (total-global-env-clt
+					(cons label
+					      (cond ((assq prim-name VICARE-TYPED-CORE-PRIMITIVES)
+						     => cdr)
+						    (else
+						     (cons 'core-prim prim-name)))))
+				       (total-export-primlocs-clt
+					(cons prim-name
+					      (if (eq? 'global-typed descr.type)
+						  (cond ((assq label srclibs.typed-locs)
 							 => cdr)
 							(else
-							 (cons 'core-prim prim-name)))))
-					   (total-export-primlocs-clt (cons prim-name (cdr descr))))
-					  (else
-					   (error __who__ "invalid binding for identifier" label.descr prim-name))))))
-				(else
-				 (error __who__
-				   "binding from the export list not present in the global environment"
-				   prim-name label))))))
+							 (error __module_who__
+							   "missing value loc in typed-locs alist"
+							   label.descr prim-name)))
+						(cdr descr)))))
+				      (else
+				       (error __module_who__ "invalid binding for identifier" label.descr prim-name))))))
+			    (else
+			     (error __module_who__
+			       "binding from the export list not present in the global environment"
+			       prim-name label))))))
 
-		  (else
-		   ;;Core  primitive with  no  backing definition  from the  expanded
-		   ;;libraries;  we assume  it  is  defined in  other  strata of  the
-		   ;;system.
-		   ;;
-		   #;(fprintf (console-error-port) "undefined primitive ~s\n" prim-name)
-		   (let ((label (gensym (string-append "prim-label." (symbol->string prim-name)))))
-		     (total-export-subst-clt (cons prim-name label))
-		     (total-global-env-clt   (cons label
-						   (cond ((assq prim-name VICARE-TYPED-CORE-PRIMITIVES)
-							  => cdr)
-							 (else
-							  (cons 'core-prim prim-name)))))))))))
+	      (else
+	       ;;Core  primitive  with  no   backing  definition  from  the  expanded
+	       ;;libraries; we assume it is defined in other strata of the system.
+	       ;;
+	       #;(fprintf (console-error-port) "undefined primitive ~s\n" prim-name)
+	       (let ((label (gensym (string-append "prim-label." (symbol->string prim-name)))))
+		 (total-export-subst-clt (cons prim-name label))
+		 (total-global-env-clt   (cons label (cond ((assq prim-name VICARE-TYPED-CORE-PRIMITIVES)
+							    => cdr)
+							   (else
+							    (cons 'core-prim prim-name))))))))))
 
-      (values (total-export-subst-clt) (total-global-env-clt) (total-export-primlocs-clt))))
+    (define (macro-identifier? x)
+      (and (or (assq x VICARE-CORE-SYNTACTIC-BINDING-DESCRIPTORS)
+	       (assq x VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS))
+	   #t))
+
+    (define (non-syntax-identifier? x)
+      (not (macro-identifier? x)))
+
+    #| end of module: MAKE-SYSTEM-DATA |# )
+
+;;; --------------------------------------------------------------------
 
   (module (build-global-init-library)
 
@@ -6594,7 +6657,8 @@
       ;;init)" and expand it.  This library:
       ;;
       ;;* Iterates the symbol names  representing primitive functions exported by the
-      ;;boot image, storing the associated loc gensym in their "value" slot.
+      ;;boot image,  putting the associated  loc gensym  in their property  list with
+      ;;SYSTEM-VALUE-GENSYM key.
       ;;
       ;;*  Initialises  the  compiler  parameter  CURRENT-PRIMITIVE-LOCATIONS  to  an
       ;;appropriate function.  This way the compile  can retrieve the loc gensym from
@@ -6666,7 +6730,7 @@
       ;;Expand the library in CODE; we know that the EXPORT form is empty, so we know
       ;;that the last two values returned by BOOT-LIBRARY-EXPAND are empty.
       ;;
-      (receive (name invoke-code empty-subst empty-env)
+      (receive (name invoke-code empty-subst empty-env typed-locs)
 	  (boot-library-expand library-sexp)
 	(values name invoke-code)))
 
@@ -6775,11 +6839,17 @@
     ;;GLOBAL-ENV -
     ;;   Represents the global bindings defined by the library body.
     ;;
+    ;;TYPED-LOCS -
+    ;;	 An alist holding one entry for each typed global variable.  The keys are the
+    ;;	 syntactic  binding's label gensyms; the  values are the loc  gensyms holding
+    ;;	 the variable's value.
+    ;;
     (let ((lib (libraries::expand-library library-sexp)))
       (values (libraries::library-name         lib)
 	      (libraries::library-invoke-code  lib)
 	      (libraries::library-export-subst lib)
-	      (libraries::library-global-env   lib))))
+	      (libraries::library-global-env   lib)
+	      (libraries::library-typed-locs   lib))))
 
   #| end of module: EXPAND-ALL |# )
 
@@ -6830,12 +6900,16 @@
       (let ((port (open-file-output-port BOOT-FILE-NAME (file-options no-fail))))
 	(time-it "code generation and serialization"
 	  (lambda ()
-	    (debug-printf "\nCompiling and writing to fasl (one code object for each library form): ")
+	    (debug-printf "\nCompiling and writing to fasl (one code object for each library form):\n")
 	    (for-each (lambda (name core)
 			;; (begin
 			;;   (print-gensym #f)
 			;;   (when (equal? name '(ikarus chars))
 			;;     (pretty-print (syntax->datum core))))
+			;; (when (equal? name '(ikarus numerics generic-arithmetic))
+			;;   (with-output-to-file "generic-arith"
+			;;     (lambda ()
+			;;       (pretty-print (syntax->datum core)))))
 			(debug-printf "compiling: ~s\n" name)
 			(compiler::compile-core-expr-to-port core port))
 	      name*

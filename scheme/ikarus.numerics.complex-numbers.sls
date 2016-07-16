@@ -69,6 +69,9 @@
 
 ;;;; helpers
 
+;; (define dummy-here
+;;   (foreign-call "ikrt_scheme_print" /))
+
 ;;From Wikipedia.
 (define greek-pi	3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679)
 (define greek-pi/2	(/ greek-pi 2.0))
@@ -282,7 +285,8 @@
 ;;;; done
 
 ;; #!vicare
-;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.complex-numbers"))
+;; (define end-of-file-dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.complex-numbers")))
 
 #| end of library |# )
 

@@ -1632,7 +1632,8 @@
   (initialise-buffer-size-parameters)
   (initialise-io-ports))
 
-;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.io end"))
+;; (define end-of-file-dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.io end")))
 
 #| end of library |# )
 

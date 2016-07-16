@@ -447,6 +447,12 @@
 
 ;;;; done
 
+;; (define dummy-at-end
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.bitwise.misc end")))
+
 #| end of library |# )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (font-lock-mode -1)
+;; End:

@@ -357,7 +357,11 @@
 	     (loc* ($map/stx cadr  bind*))    ;list of loc gensyms
 	     (rhs* ($map/stx caddr bind*)))   ;list of bindings right-hand sides
 	 (with-prelex-structs-in-plists (prel* lex*)
-	   ($for-each/stx set-prelex-global-location! prel* loc*)
+	   (for-each (lambda (prel loc)
+		       ;; (when (string=? "lex./" (symbol->string (prelex-name prel)))
+		       ;; 	 (debug-print 'recordise-library-letrec-/ (prelex-name prel) loc))
+		       (set-prelex-global-location! prel loc))
+	     prel* loc*)
 	   (let* ((rhs*^ ($map/stx E rhs* lex*))
 		  (body^ (E body ctxt)))
 	     (make-rec*bind prel* rhs*^ body^))))))

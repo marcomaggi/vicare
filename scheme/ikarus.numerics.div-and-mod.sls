@@ -227,7 +227,8 @@
 ;;;; done
 
 ;; #!vicare
-;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.div-and-mod"))
+;; (define end-of-file-dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.div-and-mod")))
 
 #| end of library |# )
 

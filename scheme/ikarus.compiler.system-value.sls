@@ -31,6 +31,9 @@
 
 (cond-boot-expansion "system-value API definition"
   ((inclusion-in-normal-boot-image)
+   ;;This is  used when  the compiler's source  code is expanded  for inclusion  in a
+   ;;normal boot image.
+   ;;
    (define SYSTEM-VALUE-GENSYM
      ;;Notice that this  gensym is generated a-new every time  the boot image source
      ;;code is expanded.
@@ -75,6 +78,9 @@
 ;;; --------------------------------------------------------------------
 
   ((inclusion-in-rotation-boot-image)
+   ;;This is  used when  the compiler's source  code is expanded  for inclusion  in a
+   ;;rotation boot image.
+   ;;
    (define SYSTEM-VALUE-GENSYM
      ;;Notice that this  gensym is generated a-new every time  the boot image source
      ;;code is expanded.
@@ -119,6 +125,8 @@
 ;;; --------------------------------------------------------------------
 
   ((bootstrapping-for-normal-boot-image)
+   ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
+   ;;build a normal boot image.
    (import (prefix (only (vicare compiler)
 			 system-value
 			 system-value-gensym)
@@ -132,6 +140,8 @@
 ;;; --------------------------------------------------------------------
 
   ((bootstrapping-for-rotation-boot-image)
+   ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
+   ;;build a rotation boot image.
    (import (only (vicare compiler)
 		 system-value
 		 system-value-gensym))

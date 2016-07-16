@@ -2650,7 +2650,8 @@
 
 ;;;; done
 
-;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.bytevectors end"))
+;; (define end-of-file-dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.bytevectors end")))
 
 #| end of library |#  )
 

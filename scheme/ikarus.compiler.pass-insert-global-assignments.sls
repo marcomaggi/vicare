@@ -155,6 +155,8 @@
 	   body)
 	  ((prelex-global-location (car lhs*))
 	   => (lambda (loc)
+		;; (when (string=? "lex./" (symbol->string (prelex-name (car lhs*))))
+		;;   (debug-print 'insert-compiler-pass-init (prelex-name (car lhs*)) loc))
 		(make-seq (make-funcall SET-PRIMREF (list (make-constant loc) (car lhs*)))
 			  (%insert-assignments (cdr lhs*) body INIT-PRIMREF))))
 	  (else
@@ -164,6 +166,8 @@
     ($fold-right/stx (lambda (lhs tail)
 		       (cond ((prelex-global-location lhs)
 			      => (lambda (loc)
+				   ;; (when (string=? "lex./" (symbol->string (prelex-name (car lhs*))))
+				   ;;   (debug-print 'insert-compiler-pass-set (prelex-name (car lhs*)) loc))
 				   (make-seq
 				    (make-funcall pref (list (make-constant loc) lhs))
 				    tail)))

@@ -117,9 +117,9 @@
 		;The GLOBAL-ENV  representing the  top-level bindings defined  by the
 		;library body.
     (immutable typed-locs	library-typed-locs)
-		;Alist   mapping  label   gensyms  of   whose  descriptor   has  type
-		;"global-typed" or  "global-typed-mutable" to the loc  gensyms of the
-		;actual variables.
+		;Alist mapping label gensyms whose descriptor has type "global-typed"
+		;or  "global-typed-mutable"   to  the  loc  gensyms   of  the  actual
+		;variables.
     (mutable visit-state	library-visit-state library.visit-state-set!)
 		;When set  to a  procedure: it is  the thunk to  call to  compile and
 		;evaluate the visit  code.  When set to something  else: this library
@@ -577,11 +577,23 @@
 	(let* ((label      (car label.descriptor))
 	       (type.value (cdr label.descriptor))
 	       (descr      (case (car type.value)
-			     ((global global-typed global-typed-mutable
+			     ((global
+			       global-typed global-typed-mutable
 			       global-macro global-macro! global-etv
 			       global-object-type-name global-overloaded-function)
+			      ;;We need  to remember that for  the cases GLOBAL-TYPED
+			      ;;and  GLOBAL-TYPED-MUTABLE, the  GLOBAL-ENV entry  has
+			      ;;the format:
+			      ;;
+			      ;;   (?label . (global-typed         . ?type-descriptor-loc))
+			      ;;   (?label . (global-typed-mutable . ?type-descriptor-loc))
+			      ;;
+			      ;;where ?TYPE-DESCRIPTOR-LOC is a  loc gensym holding a
+			      ;;reference to  the global variable's  type descriptor.
+			      ;;The loc gensym holding the actual variable's value is
+			      ;;in the TYPED-LOCS field of the "<library>" instance.
 			      (cons* (car type.value) lib (cdr type.value)))
-			     (($module $fluid $synonym global-mutable )
+			     (($module $fluid $synonym global-mutable)
 			      type.value)
 			     ;;This  function is  used  also to  intern the  built-in
 			     ;;libraries.   So the  types  used by  the boot  image's

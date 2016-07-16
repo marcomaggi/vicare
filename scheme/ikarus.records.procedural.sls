@@ -1807,7 +1807,7 @@
 
 ;; #!vicare
 ;; (define dummy
-;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.records.procedural")))
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.records.procedural end")))
 
 #| end of library |# )
 
