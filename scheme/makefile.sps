@@ -227,7 +227,7 @@
    (void))
 
   ((bootstrapping-for-normal-boot-image)
-   (import (only (vicare)
+   (import (only (vicare expander)
 		 syntax-clauses-unwrap
 		 syntax-clauses-collapse
 		 syntax-clauses-validate-specs
@@ -237,9 +237,7 @@
 		 syntax-clause-spec?
 		 make-syntax-clause-spec)
      (prefix (vicare libraries)
-	     libraries::))
-   (define (libraries::library-typed-locs lib)
-     '()))
+	     libraries::)))
 
   ((bootstrapping-for-rotation-boot-image)
    (import (only (vicare expander)

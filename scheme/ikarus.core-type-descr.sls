@@ -225,7 +225,7 @@
 
   (cond-boot-expansion "miscellaneous syntactic bindings"
     ((inclusion-in-normal-boot-image)
-     (import (only (vicare)
+     (import (only (vicare expander)
 		   syntax-clauses-unwrap
 		   syntax-clauses-collapse
 		   syntax-clauses-validate-specs

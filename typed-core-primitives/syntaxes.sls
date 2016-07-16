@@ -154,7 +154,10 @@
 		  <top> <bottom> <list> <nelist>
 		  pair pair-of list-of nelist-of vector-of
 		  alist hashtable enumeration
-		  type-predicate equality-predicate comparison-procedure hash-function))
+		  type-predicate equality-predicate comparison-procedure hash-function)
+    (only (vicare expander)
+	  syntax->list
+	  all-identifiers?))
 
 
 ;;;; helpers

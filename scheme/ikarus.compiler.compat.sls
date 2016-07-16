@@ -102,7 +102,7 @@
 
 (cond-boot-expansion "miscellaneous syntactic bindings"
   ((inclusion-in-normal-boot-image)
-   (import (only (vicare)
+   (import (only (vicare expander)
 		 all-identifiers?
 		 identifier-suffix
 		 syntax->list)))
@@ -116,7 +116,7 @@
   ((bootstrapping-for-normal-boot-image)
    ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
    ;;build a normal boot image.
-   (import (only (vicare)
+   (import (only (vicare expander)
 		 all-identifiers?
 		 identifier-suffix
 		 syntax->list)))
@@ -157,13 +157,10 @@
   ((bootstrapping-for-normal-boot-image)
    ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
    ;;build a normal boot image.
-   (import (rename (only (vicare)
-			 annotation?
-			 annotation-source
-			 annotation-stripped)
-		   (annotation?			reader-annotation?)
-		   (annotation-source		reader-annotation-source)
-		   (annotation-stripped		reader-annotation-stripped))))
+   (import (only (vicare)
+		 reader-annotation?
+		 reader-annotation-source
+		 reader-annotation-stripped)))
 
   ((bootstrapping-for-rotation-boot-image)
    ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to

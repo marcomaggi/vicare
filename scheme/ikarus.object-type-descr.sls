@@ -198,7 +198,7 @@
 
   (cond-boot-expansion "miscellaneous syntactic bindings"
     ((inclusion-in-normal-boot-image)
-     (import (only (vicare)
+     (import (only (vicare expander)
 		   identifier-suffix)))
     ((inclusion-in-rotation-boot-image)
      (import (only (vicare expander)

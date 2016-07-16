@@ -49,11 +49,13 @@
 
   (cond-boot-expansion "auxiliary syntaxes for DEFINE-CORE-RECORD-TYPE"
     ((inclusion-in-normal-boot-image)
-     (define-auxiliary-syntaxes define-type-descriptors strip-angular-parentheses))
-    ((inclusion-in-rotation-boot-image)
      (import (only (vicare)
 		   define-type-descriptors
 		   strip-angular-parentheses)))
+    ((inclusion-in-rotation-boot-image)
+     (import (only (vicare)
+		   define-type-descriptors
+		   strip-angular-parentheses))a)
     ((bootstrapping-for-normal-boot-image)
      ;;This is never exercised.
      (module ()))
@@ -63,7 +65,7 @@
 
   (cond-boot-expansion "miscellaneous syntactic bindings"
     ((inclusion-in-normal-boot-image)
-     (import (only (vicare)
+     (import (only (vicare expander)
 		   syntax-clauses-unwrap
 		   syntax-clauses-collapse
 		   syntax-clauses-validate-specs
