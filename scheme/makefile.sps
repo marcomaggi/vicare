@@ -6568,7 +6568,23 @@
       ;;   (?label . ?value-loc)
       ;;
       ;;and  we  get the  ?VALUE-LOC  gensym  for  inclusion in  the  EXPORT-PRIMLOCS
-      ;;collection.
+      ;;collection.   The  GLOBAL-ENV  entry  we  prepare  here  is  built  from  the
+      ;;descriptor in the alist VICARE-TYPED-CORE-PRIMITIVES, which contains the core
+      ;;primitive  type specification  in the  form  of a  symbolic expression.   The
+      ;;format of VICARE-TYPED-CORE-PRIMITIVES entries is:
+      ;;
+      ;;   (?prim-name . ($core-prim-typed . ?specs-vector))
+      ;;
+      ;;where:  ?PRIM-NAME  is  a  symbol representing  the  public  primitive  name;
+      ;;?SPECS-VECTOR is a vector with format:
+      ;;
+      ;;   #(?prim-name ?safe ?type-signatures ?replacements)
+      ;;
+      ;;where:  ?SAFE   is  a  boolean,   true  if   the  core  primitive   is  safe;
+      ;;?TYPE-SIGNATURES  is a  list of  symbolic expressions  representing the  type
+      ;;signatures for  the arguments  and return values;  ?REPLACEMENTS is  a vector
+      ;;holding  the  public  names of  primitives  that  can  be  used in  place  of
+      ;;?PRIM-NAME when the operands' types match a type signature's arguments.
       ;;
       (define prim-name (car identifier.libs))
       (when (non-syntax-identifier? prim-name)
