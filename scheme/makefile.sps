@@ -1158,16 +1158,16 @@
     ($hashtables	(vicare system $hashtables)		#f	#t)
     ($runtime		(vicare system $runtime)		#f	#t)
 ;;;
-    ($type-descriptors	(vicare system type-descriptors)	#t	#f)
+    ($type-descriptors	(vicare system type-descriptors)	#t	#t)
     ;;FIXME To  be made required after  the next boot image  rotation.  (Marco Maggi;
     ;;Sun Jul 17, 2016)
-    ($options		(vicare system options)			#t	#f)
+    ($options		(vicare system options)			#t	#t)
     ;;FIXME To  be made required after  the next boot image  rotation.  (Marco Maggi;
     ;;Sun Jul 17, 2016)
-    ($code-objects	(vicare system code-objects)		#t	#f)
+    ($code-objects	(vicare system code-objects)		#t	#t)
     ;;FIXME To  be made required after  the next boot image  rotation.  (Marco Maggi;
     ;;Sun Jul 17, 2016)
-    ($posix		(vicare system posix)			#t	#f)
+    ($posix		(vicare system posix)			#t	#t)
     ;;FIXME To be removed after the next  boot image rotation.  (Marco Maggi; Sun Jul
     ;;17, 2016)
     ($old-posix		(vicare language-extensions posix)	#t	#t)

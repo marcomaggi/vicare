@@ -124,6 +124,8 @@
     (vicare system $fx)
     (vicare system $pairs)
     (vicare system $structs)
+    (only (vicare system $records)
+	  $record-guardian)
     (vicare system $symbols)
     (vicare system $vectors)
     (only (vicare language-extensions syntaxes)
