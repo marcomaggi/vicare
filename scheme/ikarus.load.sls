@@ -72,6 +72,10 @@
 		  read-library-from-port)
 	    reader.)
     (psyntax.library-utils)
+    (prefix (only (ikarus.options)
+		  print-loaded-libraries?
+		  print-library-debug-messages?)
+	    options::)
     (only (ikarus fasl read)
 	  fasl-read-header
 	  fasl-read-object)
@@ -81,6 +85,18 @@
 
 
 ;;;; helpers and arguments validation
+
+(define (print-loaded-library-message template . args)
+  (when (or (options::print-loaded-libraries?)
+	    (options::print-library-debug-messages?))
+    ;;We do not want an exception from the I/O layer to ruin things.
+    (with-blocked-exceptions
+	(lambda ()
+	  (let ((P (current-error-port)))
+	    (display "vicare: " P)
+	    (apply fprintf P template args)
+	    (newline P)
+	    (flush-output-port P))))))
 
 (define (%false-or-file-string-pathname? S)
   (or (not S)
@@ -264,9 +280,9 @@
 	   (loop))))
 
   ;;Keep the library names aligned!!!
-  (define (%print-loading-library  port) (print-library-info-message "loading:  ~a" (port-id port)))
-  (define (%print-loaded-library   port) (print-library-info-message "loaded:   ~a" (port-id port)))
-  (define (%print-rejected-library port) (print-library-info-message "rejected: ~a" (port-id port)))
+  (define (%print-loading-library  port) (print-library-info-message   "loading:  ~a" (port-id port)))
+  (define (%print-loaded-library   port) (print-loaded-library-message "loaded:   ~a" (port-id port)))
+  (define (%print-rejected-library port) (print-library-info-message   "rejected: ~a" (port-id port)))
 
   (define (%file-locator-resolution-error libref failed-list pending-libraries)
     (raise

@@ -301,7 +301,6 @@
   (declare make-non-reinstatable-violation		&non-reinstatable)
   (declare make-late-binding-error			&late-binding-error)
   (declare make-method-late-binding-error		&method-late-binding-error)
-  (declare make-interface-method-late-binding-error	&interface-method-late-binding-error)
   #| end of LET-SYNTAX |# )
 
 (declare-core-primitive make-who-condition
@@ -559,6 +558,11 @@
     (safe)
   (signatures
    (()						=> (&utf8-string-encoding))))
+
+(declare-core-primitive make-interface-method-late-binding-error
+    (safe)
+  (signatures
+   ((<symbol> <symbol> <top> <type-descriptor>)	=> (&interface-method-late-binding-error))))
 
 (declare-core-primitive make-overloaded-function-late-binding-error
     (safe)
