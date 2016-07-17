@@ -24,11 +24,6 @@
     debug-print-enabled?
     debug-print			debug-print*)
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Fri Apr 15, 2016)
-		  sentinel?
-		  ;;;
-
 		  pretty-print			pretty-print*
 		  pretty-width
 
@@ -47,11 +42,7 @@
 		  record-ref)
 	    records::)
     (only (ikarus.pretty-formats)
-	  get-fmt)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Apr 15,
-    ;;2016)
-    (only (ikarus unique-objects)
-	  sentinel?))
+	  get-fmt))
 
 
 ;;;; helpers

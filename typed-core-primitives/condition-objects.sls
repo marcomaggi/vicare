@@ -301,6 +301,7 @@
   (declare make-non-reinstatable-violation		&non-reinstatable)
   (declare make-late-binding-error			&late-binding-error)
   (declare make-method-late-binding-error		&method-late-binding-error)
+  (declare make-interface-method-late-binding-error	&interface-method-late-binding-error)
   #| end of LET-SYNTAX |# )
 
 (declare-core-primitive make-who-condition

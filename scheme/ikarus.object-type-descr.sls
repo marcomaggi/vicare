@@ -142,11 +142,8 @@
 
     #| end of EXPORTS |# )
   (import (except (vicare)
-		  ratnum-positive?
-		  ratnum-negative?
-		  exact-compnum?
-		  zero-compnum?
-		  zero-cflonum?
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Sun Jul 17, 2016)
 		  record-type-implemented-interfaces)
     (ikarus records syntactic)
     (only (ikarus.core-type-descr)
@@ -177,18 +174,9 @@
 	  <hashtable>-ctd)
     (only (ikarus records procedural)
 	  $rtd-subtype?
+	  ;;FIXME To be  removed at the next boot image  rotation.  (Marco Maggi; Sun
+	  ;;Jul 17, 2016)
 	  record-type-implemented-interfaces)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Jun 3,
-    ;;2016)
-    (only (ikarus ratnums)
-	  ratnum-positive?
-	  ratnum-negative?)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Jun 3,
-    ;;2016)
-    (only (ikarus numerics complex-numbers)
-	  exact-compnum?
-	  zero-compnum?
-	  zero-cflonum?)
     (only (vicare expander)
 	  identifier-suffix))
 

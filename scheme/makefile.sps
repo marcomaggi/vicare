@@ -3320,6 +3320,9 @@
     (record-type-comparison-procedure-set!	v $language)
     (record-type-hash-function			v $language)
     (record-type-hash-function-set!		v $language)
+    (record-type-method-retriever		v $language)
+    (record-type-method-retriever-set!		v $language)
+    (record-type-implemented-interfaces		v $language)
     (record-type-compose-equality-predicate)
     (record-type-compose-comparison-procedure)
     (record-type-compose-hash-function)
@@ -3955,9 +3958,6 @@
     (core-type-descriptor=?			$type-descriptors)
     (core-type-descriptor.ancestor-des*		$type-descriptors)
     (core-type-descriptor.parent-and-child?	$type-descriptors)
-
-    ;; record-type utilities
-    (record-type-implemented-interfaces		$type-descriptors)
 
     ;;scheme-type descriptors
     (<bignum>-ctd				$type-descriptors)
@@ -6129,8 +6129,6 @@
     (internal-applicable-struct-type-destructor)
     (internal-applicable-record-type-destructor)
     (internal-applicable-record-destructor)
-    (record-type-method-retriever)
-    (record-type-method-retriever-set!)
     (object-type-spec-override-predicate)
     (set!/initialise)
     (make-overloaded-function-spec)

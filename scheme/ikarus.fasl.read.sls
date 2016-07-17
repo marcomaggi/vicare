@@ -26,21 +26,13 @@
 		  least-fixnum
 		  fasl-read
 		  fasl-read-header
-		  fasl-read-object
-
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Sat Jul 2, 2016)
-		  make-i/o-wrong-fasl-header-error)
+		  fasl-read-object)
     (prefix (ikarus.code-objects)
 	    code-objects::)
     (only (ikarus.strings-table)
 	  intern-string)
     (only (vicare.foreign-libraries)
 	  dynamically-load-shared-object-from-identifier)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Jul 2,
-    ;;2016)
-    (only (ikarus conditions)
-	  make-i/o-wrong-fasl-header-error)
     (vicare system $fx)
     (vicare system $chars)
     (vicare system $flonums)

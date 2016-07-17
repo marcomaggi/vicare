@@ -358,11 +358,7 @@
 (declare-core-primitive expression-return-value-violation
     (safe)
   (signatures
-   ;;FIXME This  is the  correct signature to  use at the  next boot  image rotation.
-   ;;(Marco Maggi; Tue Feb 23, 2016)
-   ;;
-   ;;(([or T:false T:string T:symbol] T:string T:fixnum . _)	=> (T:void))
-   (([or T:false T:string T:symbol] T:string . _)	=> (T:void))))
+   (([or T:false T:string T:symbol] T:string T:fixnum . _)	=> (T:void))))
 
 
 ;;;; done

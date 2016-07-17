@@ -43,14 +43,8 @@
   (import (except (vicare)
 		  method-call-late-binding
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Tue Dec 15, 2015)
-		  struct-field-method
-		  struct-std
-		  record-type-method-retriever
-		  record-type-hash-function
-		  make-method-late-binding-error
+		  ;;Maggi; Sun Jul 17, 2016)
 		  make-overloaded-function-late-binding-error
-		  make-interface-method-late-binding-error
 		  #| end of EXCEPT |# )
     (ikarus records syntactic)
     (only (ikarus.core-type-descr)
@@ -74,32 +68,18 @@
     (only (vicare system $structs)
 	  $struct-rtd
 	  $set-std-printer!)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Jun 17,
-    ;;2016)
+    (only (vicare system $records)
+	  $record-type-method-retriever
+	  $record-type-hash-function)
     (only (ikarus conditions)
-	  make-method-late-binding-error
-	  make-overloaded-function-late-binding-error
-	  make-interface-method-late-binding-error)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
-    ;;2015)
-    (prefix (only (ikarus structs)
-		  struct-field-method
-		  struct-std)
-	    structs::)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
-    ;;2015)
-    (prefix (only (ikarus records procedural)
-		  $record-type-method-retriever
-		  $record-type-hash-function)
-	    system::)
+	  ;;FIXME To be  removed at the next boot image  rotation.  (Marco Maggi; Sun
+	  ;;Jul 17, 2016)
+	  make-overloaded-function-late-binding-error)
     (prefix (only (ikarus records procedural)
 		  record-type-implemented-interfaces)
 	    td::)
     (prefix (only (psyntax system $all)
-		  internal-applicable-record-destructor
-		  ;;FIXME To be uncommented at  the next boot image rotation.  (Marco
-		  ;;Maggi; Tue Dec 15, 2015)
-		  #;record-type-method-retriever)
+		  internal-applicable-record-destructor)
 	    system::)
     (prefix (only (ikarus.object-type-descr)
 		  lambda-descriptors?
@@ -141,10 +121,10 @@
 	   (%error-scheme-type-has-no-matching-method))))
 
   (define (%struct-object-call std)
-    (apply (structs::struct-field-method std method-name.sym) subject args))
+    (apply (struct-field-method std method-name.sym) subject args))
 
   (define (%record-object-call rtd)
-    (cond (((system::$record-type-method-retriever rtd) method-name.sym)
+    (cond ((($record-type-method-retriever rtd) method-name.sym)
 	   => (lambda (proc)
 		(apply proc subject args)))
 	  (else
@@ -195,7 +175,7 @@
 	((pointer? subject)	(%built-in-scheme-object-call <pointer>-ctd))
 	((transcoder? subject)	(%built-in-scheme-object-call <transcoder>-ctd))
 
-	((struct? subject)	(%struct-object-call (structs::struct-std subject)))
+	((struct? subject)	(%struct-object-call (struct-std subject)))
 
 	((void-object? subject)
 	 (%built-in-scheme-object-call <void>-ctd))
@@ -226,7 +206,7 @@
   (cond ((record-object? subject)
 	 ;;We use  $STRUCT-RTD because it does  not care about the  opaqueness of the
 	 ;;record object.
-	 (cond ((system::$record-type-hash-function ($struct-rtd subject))
+	 (cond (($record-type-hash-function ($struct-rtd subject))
 		=> (lambda (fun)
 		     (fun subject)))
 	       (else

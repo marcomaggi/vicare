@@ -35,11 +35,8 @@
   (export equal?)
   (import (except (vicare)
 		  equal?)
-    ;;FIXME To be  included at the next  boot image rotation.  (Marco  Maggi; Sun Jul
-    ;;17, 2016)
-    ;;
-    ;; (only (vicare system $records)
-    ;;  	  $record-type-equality-predicate)
+    (only (vicare system $records)
+      	  $record-type-equality-predicate)
     (only (vicare system $pointers)
 	  $pointer=)
     (only (vicare system $structs)
@@ -65,11 +62,6 @@
         ($fx>=     >=)
         ($fx<=     <=)
         ($fx=      =))))
-
-  ;;FIXME To be removed  at the next boot image rotation.  (Marco  Maggi; Sun Jul 17,
-  ;;2016)
-  (define ($record-type-equality-predicate reco)
-    ($struct-ref reco 16))
 
 
 (define (equal? x y)

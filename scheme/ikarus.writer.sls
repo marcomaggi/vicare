@@ -31,11 +31,6 @@
     ;;These are needed by PRETTY-PRINT.
     traverse			TRAVERSAL-HELPERS)
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Fri Apr 15, 2016)
-		  sentinel?
-		  ;;;
-
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum
@@ -51,16 +46,7 @@
 	  base-rtd
 	  $struct-rtd)
     (only (vicare system $codes)
-	  $code-annotation)
-    (prefix (only (ikarus records procedural)
-		  rcd-rtd
-		  rcd-parent-rcd
-		  record-ref)
-	    records::)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Apr 15,
-    ;;2016)
-    (only (ikarus unique-objects)
-	  sentinel?))
+	  $code-annotation))
 
   (include "ikarus.wordsize.scm" #t)
 
@@ -546,7 +532,7 @@
 	       (fields.len	(vector-length fields.vec)))
 	  (let loop ((field.idx 0))
 	    (when (fx<? field.idx fields.len)
-	      (traverse (records::record-ref reco field.idx) marks-table)
+	      (traverse (record-ref reco field.idx) marks-table)
 	      (loop (fxadd1 field.idx)))))))
 
     (define* (%traverse-custom-record reco marks-table printer)
@@ -1278,7 +1264,7 @@
 	     (write-char #\] port)
 	     next-mark-idx)
 	  (let* ((field-nam  (vector-ref fields.vec fields.idx))
-		 (field-val  (records::record-ref record fields.idx)))
+		 (field-val  (record-ref record fields.idx)))
 	    (write-char #\space port)
 	    (let ((next-mark-idx (write-object field-nam port write-style? marks-table next-mark-idx)))
 	      (write-char #\= port)
@@ -1342,7 +1328,7 @@
 	(%write-struct-fields rtd 1 (cdr (struct-type-field-names std)) port write-style? marks-table next-mark-idx)))
 
     (define (%write-r6rs-record-constructor-descriptor rcd port write-style? marks-table next-mark-idx)
-      (let ((rtd (records::rcd-rtd rcd)))
+      (let ((rtd (rcd-rtd rcd)))
 	(write-char* "#[rcd " port)
 	(write-char* (symbol->string (record-type-name rtd)) port)
 	(write-char #\space port)
@@ -1351,7 +1337,7 @@
 	  (write-char #\space port)
 	  (write-char* "parent-rcd=" port)
 	  (begin0
-	      (write-object (records::rcd-parent-rcd rcd) port write-style? marks-table next-mark-idx)
+	      (write-object (rcd-parent-rcd rcd) port write-style? marks-table next-mark-idx)
 	    (write-char #\] port)))))
 
     (define (%write-vicare-struct stru port write-style? marks-table next-mark-idx)

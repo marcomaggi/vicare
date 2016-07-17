@@ -14985,7 +14985,8 @@ hash function.
 
 @defun record-hash @var{reco}
 Hash function for @rnrs{6} records.  This is a very low quality hash
-function.
+function.  Notice that it does @strong{not} use the custom hash function
+of @var{reco} (if any).
 @end defun
 
 
