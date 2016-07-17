@@ -98,9 +98,6 @@
     (prefix (only (ikarus.pointers)
 		  initialise-pointers-stuff)
 	    pointers::)
-    (prefix (only (ikarus.io)
-		  initialise-input/output-facilities)
-	    io::)
     (prefix (only (ikarus.pretty-formats)
 		  initialise-pretty-formats)
 	    pretty-formats::)
@@ -1229,7 +1226,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   ($initialize-interned-strings-table!)
 
   (pointers::initialise-pointers-stuff)
-  (io::initialise-input/output-facilities)
   (cafe-input-port (console-input-port))
   (pretty-formats::initialise-pretty-formats)
 

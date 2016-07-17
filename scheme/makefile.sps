@@ -1157,7 +1157,6 @@
     ($options		(vicare system options)			#t	#t)
     ($code-objects	(vicare system code-objects)		#t	#t)
     ($posix		(vicare system posix)			#t	#t)
-    #;($old-posix		(vicare language-extensions posix)	#t	#t)
 ;;;
     ($compiler		(vicare compiler)			#t	#t)
     ($expander		(vicare expander)			#t	#t)

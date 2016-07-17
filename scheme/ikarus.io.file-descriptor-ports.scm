@@ -912,16 +912,26 @@
   ;;output.   Whether  the port  supports  the  PORT-POSITION and  SET-PORT-POSITION!
   ;;operations is implementation dependent.
   ;;
-  (%file-descriptor->output-port 1 0
-				 "*stdout*" (output-file-buffer-size) #f #f __who__))
+  (let ((fd		1)
+	(attributes	0)
+	(port-id	"*stdout*")
+	(buffer.size	(output-file-buffer-size))
+	(transcoder	#f)
+	(close		#f))
+    (%file-descriptor->output-port fd attributes port-id buffer.size transcoder close __who__)))
 
 (define* (standard-error-port)
   ;;Defined  by R6RS.   Return a  new binary  output port  connected to  the standard
   ;;error.   Whether  the  port  supports the  PORT-POSITION  and  SET-PORT-POSITION!
   ;;operations is implementation dependent.
   ;;
-  (%file-descriptor->output-port 2 0
-				 "*stderr*" (output-file-buffer-size) #f #f __who__))
+  (let ((fd		2)
+	(attributes	0)
+	(port-id	"*stderr*")
+	(buffer.size	(output-file-buffer-size))
+	(transcoder	#f)
+	(close		#f))
+    (%file-descriptor->output-port fd attributes port-id buffer.size transcoder close __who__)))
 
 ;;; --------------------------------------------------------------------
 
@@ -933,12 +943,12 @@
   ;;is implementation dependent.
   ;;
   (make-parameter
-      #f
+      (transcoded-port (standard-input-port)  (native-transcoder))
     (lambda (obj)
-      (if (textual-input-port? obj)
+      (if (open-textual-input-port? obj)
 	  obj
 	(procedure-argument-violation 'current-input-port
-	  "expected textual input port as parameter value" obj)))))
+	  "expected open textual input port as parameter value" obj)))))
 
 (define current-output-port
   ;;Defined by  R6RS.  Hold the default  textual port for regular  output.  Normally,
@@ -950,12 +960,12 @@
   ;;does, the transcoder is implementation dependent.
   ;;
   (make-parameter
-      #f
+      (transcoded-port (standard-output-port) (native-transcoder))
     (lambda (obj)
-      (if (textual-output-port? obj)
+      (if (open-textual-output-port? obj)
 	  obj
 	(procedure-argument-violation 'current-output-port
-	  "expected textual input port as parameter value" obj)))))
+	  "expected open textual output port as parameter value" obj)))))
 
 (define current-error-port
   ;;Defined by R6RS.  Hold the default textual port for error output.  Normally, this
@@ -967,64 +977,59 @@
   ;;does, the transcoder is implementation dependent.
   ;;
   (make-parameter
-      #f
+      (receive-and-return (port)
+	  (transcoded-port (standard-error-port)  (native-transcoder))
+	(set-port-buffer-mode! port (buffer-mode line)))
     (lambda (obj)
-      (if (textual-output-port? obj)
+      (if (open-textual-output-port? obj)
 	  obj
 	(procedure-argument-violation 'current-error-port
-	  "expected textual input port as parameter value" obj)))))
+	  "expected open textual output port as parameter value" obj)))))
 
 ;;; --------------------------------------------------------------------
 
-(define %console-input-port	#f)
-(define %console-output-port	#f)
-(define %console-error-port	#f)
+(module (console-input-port
+	 console-output-port
+	 console-error-port)
 
-(case-define* console-input-port
-  ;;Defined by Ikarus.   Return the default textual error port:  the default value of
-  ;;the parameter CURRENT-INPUT-PORT; each call  returns the same port.  When applied
-  ;;to an argument:  the argument must be  a textual output port and  it replaces the
-  ;;old value; the old port is left untouched (it is not closed).
-  ;;
-  (()
-   %console-input-port)
-  (({P textual-input-port?})
-   (set! %console-input-port P)))
+  (define %console-input-port	(current-input-port))
+  (define %console-output-port	(current-output-port))
+  (define %console-error-port	(current-error-port))
 
-(case-define* console-output-port
-  ;;Defined by Ikarus.  Return the default  textual output port: the default value of
-  ;;the parameter CURRENT-OUTPUT-PORT; each call returns the same port.  When applied
-  ;;to an argument:  the argument must be  a textual output port and  it replaces the
-  ;;old value; the old port is left untouched (it is not closed).
-  ;;
-  (()
-   %console-output-port)
-  (({P textual-output-port?})
-   (set! %console-output-port P)))
+  (case-define* console-input-port
+    ;;Defined by Ikarus.  Return the default textual error port: the default value of
+    ;;the  parameter  CURRENT-INPUT-PORT; each  call  returns  the same  port.   When
+    ;;applied to  an argument:  the argument  must be  a textual  output port  and it
+    ;;replaces the old value; the old port is left untouched (it is not closed).
+    ;;
+    (()
+     %console-input-port)
+    (({P open-textual-input-port?})
+     (set! %console-input-port P)))
 
-(case-define* console-error-port
-  ;;Defined by Ikarus.   Return the default textual error port:  the default value of
-  ;;the parameter CURRENT-ERROR-PORT; each call  returns the same port.  When applied
-  ;;to an argument:  the argument must be  a textual output port and  it replaces the
-  ;;old value; the old port is left untouched (it is not closed).
-  ;;
-  (()
-   %console-error-port)
-  (({P textual-output-port?})
-   (set! %console-error-port P)))
+  (case-define* console-output-port
+    ;;Defined by Ikarus.   Return the default textual output port:  the default value
+    ;;of the  parameter CURRENT-OUTPUT-PORT; each  call returns the same  port.  When
+    ;;applied to  an argument:  the argument  must be  a textual  output port  and it
+    ;;replaces the old value; the old port is left untouched (it is not closed).
+    ;;
+    (()
+     %console-output-port)
+    (({P open-textual-output-port?})
+     (set! %console-output-port P)))
 
-;;; --------------------------------------------------------------------
+  (case-define* console-error-port
+    ;;Defined by Ikarus.  Return the default textual error port: the default value of
+    ;;the  parameter  CURRENT-ERROR-PORT; each  call  returns  the same  port.   When
+    ;;applied to  an argument:  the argument  must be  a textual  output port  and it
+    ;;replaces the old value; the old port is left untouched (it is not closed).
+    ;;
+    (()
+     %console-error-port)
+    (({P open-textual-output-port?})
+     (set! %console-error-port P)))
 
-(define (initialise-io-ports)
-  ;;This function is needed to allow easy rotation of boot images.
-  ;;
-  (current-input-port	(transcoded-port (standard-input-port)  (native-transcoder)))
-  (current-output-port	(transcoded-port (standard-output-port) (native-transcoder)))
-  (current-error-port	(transcoded-port (standard-error-port)  (native-transcoder)))
-  (set-port-buffer-mode! (current-error-port) (buffer-mode line))
-  (set! %console-input-port	(current-input-port))
-  (set! %console-output-port	(current-output-port))
-  (set! %console-error-port	(current-error-port)))
+  #| end of module |# )
 
 
 ;;;; done
