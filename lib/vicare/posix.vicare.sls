@@ -22,7 +22,7 @@
     cond-expand
 
     ;; errno and h_errno codes handling
-    (rename (posix.errno->string	errno->string))
+    (rename (posix::errno->string	errno->string))
     strerror
     h_errno->string			h_strerror
     &errno				make-errno-condition
@@ -142,28 +142,28 @@
     directory-stream-pathname		directory-stream-pointer
     directory-stream-fd			directory-stream-closed?
 
-    ;; reexported from (vicare language-extensions posix)
-    (deprefix (posix.split-pathname-root-and-tail
-	       posix.search-file-in-environment-path
-	       posix.search-file-in-list-path
-	       posix.split-pathname
-	       posix.split-pathname-bytevector
-	       posix.split-pathname-string
-	       posix.split-search-path
-	       posix.split-search-path-bytevector
-	       posix.split-search-path-string
-	       posix.file-absolute-pathname?
-	       posix.file-relative-pathname?
-	       posix.file-pathname?
-	       posix.file-string-pathname?
-	       posix.file-bytevector-pathname?
-	       posix.file-colon-search-path?
-	       posix.file-string-colon-search-path?
-	       posix.file-bytevector-colon-search-path?
-	       posix.list-of-pathnames?
-	       posix.list-of-string-pathnames?
-	       posix.list-of-bytevector-pathnames?)
-	      posix.)
+    ;; reexported from (vicare system posix)
+    (deprefix (posix::split-pathname-root-and-tail
+	       posix::search-file-in-environment-path
+	       posix::search-file-in-list-path
+	       posix::split-pathname
+	       posix::split-pathname-bytevector
+	       posix::split-pathname-string
+	       posix::split-search-path
+	       posix::split-search-path-bytevector
+	       posix::split-search-path-string
+	       posix::file-absolute-pathname?
+	       posix::file-relative-pathname?
+	       posix::file-pathname?
+	       posix::file-string-pathname?
+	       posix::file-bytevector-pathname?
+	       posix::file-colon-search-path?
+	       posix::file-string-colon-search-path?
+	       posix::file-bytevector-colon-search-path?
+	       posix::list-of-pathnames?
+	       posix::list-of-string-pathnames?
+	       posix::list-of-bytevector-pathnames?)
+	      posix::)
 
     ;; file descriptors
     open				close
@@ -435,7 +435,7 @@
 		  remove		time
 		  read			write
 		  truncate)
-    (prefix (only (vicare language-extensions posix)
+    (prefix (only (vicare system posix)
 		  errno->string
 		  split-pathname-root-and-tail
 		  search-file-in-environment-path
@@ -457,16 +457,16 @@
 		  list-of-pathnames?
 		  list-of-string-pathnames?
 		  list-of-bytevector-pathnames?)
-	    posix.)
+	    posix::)
     (vicare language-extensions syntaxes)
     (vicare platform constants)
     (vicare arguments validation)
     (vicare arguments general-c-buffers)
     (prefix (vicare unsafe capi)
-	    capi.)
+	    capi::)
     (vicare unsafe operations)
     (prefix (vicare platform words)
-	    words.)
+	    words::)
     (vicare language-extensions cond-expand))
 
 
@@ -492,20 +492,20 @@
 (define (%struct-timespec? obj)
   (and (struct-timespec? obj)
        (let ((sec (struct-timespec-tv_sec obj)))
-	 (and (words.signed-long? sec)
+	 (and (words::signed-long? sec)
 	      (<= 0 sec)))
        (let ((nsec (struct-timespec-tv_nsec obj)))
-	 (and (words.signed-long? nsec)
+	 (and (words::signed-long? nsec)
 	      (<= 0 nsec 999999999)))))
 ;;;                      876543210
 
 (define (%struct-timeval? obj)
   (and (struct-timeval? obj)
        (let ((sec (struct-timeval-tv_sec obj)))
-	 (and (words.signed-long? sec)
+	 (and (words::signed-long? sec)
 	      (<= 0 sec)))
        (let ((usec (struct-timeval-tv_usec obj)))
-	 (and (words.signed-long? usec)
+	 (and (words::signed-long? usec)
 	      (<= 0 usec 999999)))))
 ;;;                   876543210
 
@@ -518,29 +518,29 @@
   (and (struct-itimerspec? obj)
        (let ((T (struct-itimerspec-it_interval obj)))
 	 (and (struct-timespec? T)
-	      (words.signed-long? (struct-timespec-tv_sec  T))
-	      (words.signed-long? (struct-timespec-tv_nsec T))))
+	      (words::signed-long? (struct-timespec-tv_sec  T))
+	      (words::signed-long? (struct-timespec-tv_nsec T))))
        (let ((T (struct-itimerspec-it_value obj)))
 	 (and (struct-timespec? T)
-	      (words.signed-long? (struct-timespec-tv_sec  T))
-	      (words.signed-long? (struct-timespec-tv_nsec T))))))
+	      (words::signed-long? (struct-timespec-tv_sec  T))
+	      (words::signed-long? (struct-timespec-tv_nsec T))))))
 
 (define (%valid-struct-mq-attr? obj)
   (and (struct-mq-attr? obj)
-       (words.signed-long? (struct-mq-attr-mq_flags   obj))
-       (words.signed-long? (struct-mq-attr-mq_maxmsg  obj))
-       (words.signed-long? (struct-mq-attr-mq_msgsize obj))
-       (words.signed-long? (struct-mq-attr-mq_curmsgs obj))))
+       (words::signed-long? (struct-mq-attr-mq_flags   obj))
+       (words::signed-long? (struct-mq-attr-mq_maxmsg  obj))
+       (words::signed-long? (struct-mq-attr-mq_msgsize obj))
+       (words::signed-long? (struct-mq-attr-mq_curmsgs obj))))
 
 (define (%valid-struct-rlimit? obj)
   (and (struct-rlimit? obj)
-       (words.word-s64? (struct-rlimit-rlim_cur obj))
-       (words.word-s64? (struct-rlimit-rlim_max obj))))
+       (words::word-s64? (struct-rlimit-rlim_cur obj))
+       (words::word-s64? (struct-rlimit-rlim_max obj))))
 
 (define (%valid-struct-rusage? obj)
   (define-inline (field? ?val)
     (let ((val ?val))
-      (or (not val) (words.signed-long? val))))
+      (or (not val) (words::signed-long? val))))
   (and (struct-rusage? obj)
        (%struct-timeval? (struct-rusage-ru_utime obj))
        (%struct-timeval? (struct-rusage-ru_stime obj))
@@ -634,12 +634,12 @@
   (assertion-violation who "expected struct stat instance as argument" obj))
 
 (define-argument-validation (secs who obj)
-  (words.word-u32? obj)
+  (words::word-u32? obj)
   (assertion-violation who
     "expected exact integer in the range [0, 2^32-1] as seconds count argument" obj))
 
 (define-argument-validation (nsecs who obj)
-  (and (words.word-u32? obj)
+  (and (words::word-u32? obj)
        (<= 0 obj 999999999))
 ;;;              987654321
   (assertion-violation who
@@ -700,7 +700,7 @@
     "expected exact integer or 32-bit bytevector as network address argument" obj))
 
 (define-argument-validation (signed-int/boolean who obj)
-  (or (boolean? obj) (words.signed-int? obj))
+  (or (boolean? obj) (words::signed-int? obj))
   (assertion-violation who
     "expected boolean or exact integer in platform's \"int\" range as argument" obj))
 
@@ -746,12 +746,12 @@
   (assertion-violation who "expected pointer as semaphore argument" obj))
 
 (define-argument-validation (clockid_t who obj)
-  (words.signed-long? obj)
+  (words::signed-long? obj)
   (assertion-violation who
     "expected exact integer representing clockid_t as argument" obj))
 
 (define-argument-validation (timer_t who obj)
-  (words.signed-long? obj)
+  (words::signed-long? obj)
   (assertion-violation who
     "expected exact integer representing timer_t as argument" obj))
 
@@ -781,9 +781,9 @@
     (if errno
 	(if (boolean? errno)
 	    "unknown errno code (#t)"
-	  (let ((msg (capi.posix-strerror errno)))
+	  (let ((msg (capi::posix-strerror errno)))
 	    (if msg
-		(string-append (posix.errno->string errno) ": " (utf8->string msg))
+		(string-append (posix::errno->string errno) ": " (utf8->string msg))
 	      (string-append "unknown errno code " (number->string (- errno))))))
       "no error")))
 
@@ -975,7 +975,7 @@
     (with-arguments-validation (who)
 	((string  key)
 	 (string  val))
-      (unless (capi.posix-setenv (string->utf8 key)
+      (unless (capi::posix-setenv (string->utf8 key)
 				 (string->utf8 val)
 				 overwrite)
 	(error who "cannot setenv" key val overwrite))))))
@@ -984,7 +984,7 @@
   (define who 'unsetenv)
   (with-arguments-validation (who)
       ((string  key))
-    (capi.posix-unsetenv (string->utf8 key))))
+    (capi::posix-unsetenv (string->utf8 key))))
 
 (define (environ-table)
   (environ->table (environ)))
@@ -1013,10 +1013,10 @@
 ;;;; process identifiers
 
 (define (getpid)
-  (capi.posix-getpid))
+  (capi::posix-getpid))
 
 (define (getppid)
-  (capi.posix-getppid))
+  (capi::posix-getppid))
 
 
 ;;;; executing and forking processes
@@ -1025,7 +1025,7 @@
   (define who 'system)
   (with-arguments-validation (who)
       ((string  x))
-    (let ((rv (capi.posix-system (string->utf8 x))))
+    (let ((rv (capi::posix-system (string->utf8 x))))
       (if ($fx< rv 0)
 	  (%raise-errno-error who rv x)
 	rv))))
@@ -1034,7 +1034,7 @@
   (case-lambda
    (()
     (define who 'fork)
-    (let ((rv (capi.posix-fork)))
+    (let ((rv (capi::posix-fork)))
       (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv))))
@@ -1043,7 +1043,7 @@
     (with-arguments-validation (who)
 	((procedure  parent-proc)
 	 (procedure  child-proc))
-      (let ((rv (capi.posix-fork)))
+      (let ((rv (capi::posix-fork)))
 	(cond (($fxzero? rv)
 	       (child-proc))
 	      (($fx< rv 0)
@@ -1060,7 +1060,7 @@
        (list-of-strings	argv))
     (close-ports-in-close-on-exec-mode)
     (with-pathnames ((filename.bv filename))
-      (let ((rv (capi.posix-execv filename.bv (map string->utf8 argv))))
+      (let ((rv (capi::posix-execv filename.bv (map string->utf8 argv))))
 	(if ($fx< rv 0)
 	    (%raise-errno-error __who__ rv filename argv)
 	  rv)))))
@@ -1082,7 +1082,7 @@
        (list-of-strings	env))
     (close-ports-in-close-on-exec-mode)
     (with-pathnames ((filename.bv filename))
-      (let ((rv (capi.posix-execve filename.bv
+      (let ((rv (capi::posix-execve filename.bv
 				   (map string->utf8 argv)
 				   (map string->utf8 env))))
 	(if ($fx< rv 0)
@@ -1099,7 +1099,7 @@
        (list-of-strings	argv))
     (close-ports-in-close-on-exec-mode)
     (with-pathnames ((filename.bv filename))
-      (let ((rv (capi.posix-execvp filename.bv (map string->utf8 argv))))
+      (let ((rv (capi::posix-execvp filename.bv (map string->utf8 argv))))
 	(if ($fx< rv 0)
 	    (%raise-errno-error who rv filename argv)
 	  rv)))))
@@ -1111,7 +1111,7 @@
   (with-arguments-validation (__who__)
       ((pid	pid)
        (fixnum	options))
-    (let ((rv (capi.posix-waitpid pid options)))
+    (let ((rv (capi::posix-waitpid pid options)))
       (cond ((not rv)
 	     ;;The flag WNOHANG was used in OPTIONS and no child has exited.
 	     rv)
@@ -1123,7 +1123,7 @@
 
 (define (wait)
   (define who 'wait)
-  (let ((rv (capi.posix-wait)))
+  (let ((rv (capi::posix-wait)))
     (if ($fx< rv 0)
 	(%raise-errno-error who rv)
       rv)))
@@ -1136,13 +1136,13 @@
 				     (with-arguments-validation (who)
 					 ((fixnum  status))
 				       (?primitive status)))))))
-  (define-termination-status WIFEXITED		capi.posix-WIFEXITED)
-  (define-termination-status WEXITSTATUS	capi.posix-WEXITSTATUS)
-  (define-termination-status WIFSIGNALED	capi.posix-WIFSIGNALED)
-  (define-termination-status WTERMSIG		capi.posix-WTERMSIG)
-  (define-termination-status WCOREDUMP		capi.posix-WCOREDUMP)
-  (define-termination-status WIFSTOPPED		capi.posix-WIFSTOPPED)
-  (define-termination-status WSTOPSIG		capi.posix-WSTOPSIG))
+  (define-termination-status WIFEXITED		capi::posix-WIFEXITED)
+  (define-termination-status WEXITSTATUS	capi::posix-WEXITSTATUS)
+  (define-termination-status WIFSIGNALED	capi::posix-WIFSIGNALED)
+  (define-termination-status WTERMSIG		capi::posix-WTERMSIG)
+  (define-termination-status WCOREDUMP		capi::posix-WCOREDUMP)
+  (define-termination-status WIFSTOPPED		capi::posix-WIFSTOPPED)
+  (define-termination-status WSTOPSIG		capi::posix-WSTOPSIG))
 
 
 ;;;; interprocess signal handling
@@ -1151,7 +1151,7 @@
   (define who 'raise-signal)
   (with-arguments-validation (who)
       ((signal	signum))
-    (let ((rv (capi.posix-raise signum)))
+    (let ((rv (capi::posix-raise signum)))
       (when ($fx< rv 0)
 	(%raise-errno-error who rv signum (interprocess-signal->string signum))))))
 
@@ -1160,12 +1160,12 @@
   (with-arguments-validation (who)
       ((pid	pid)
        (signal	signum))
-    (let ((rv (capi.posix-kill pid signum)))
+    (let ((rv (capi::posix-kill pid signum)))
       (when ($fx< rv 0)
 	(%raise-errno-error who rv signum (interprocess-signal->string signum))))))
 
 (define (pause)
-  (capi.posix-pause))
+  (capi::posix-pause))
 
 ;;; --------------------------------------------------------------------
 
@@ -1237,7 +1237,7 @@
     (with-arguments-validation (who)
 	((signal	signo)
 	 (siginfo_t	siginfo))
-      (let ((rv (capi.posix-sigwaitinfo signo siginfo)))
+      (let ((rv (capi::posix-sigwaitinfo signo siginfo)))
 	(if ($fx<= 0 rv)
 	    (values rv siginfo)
 	  (%raise-errno-error who rv signo siginfo)))))))
@@ -1252,7 +1252,7 @@
 	((signal	signo)
 	 (siginfo_t	siginfo)
 	 (timespec	timeout))
-      (let ((rv (capi.posix-sigtimedwait signo siginfo timeout)))
+      (let ((rv (capi::posix-sigtimedwait signo siginfo timeout)))
 	(if ($fx<= 0 rv)
 	    (values rv siginfo)
 	  (%raise-errno-error who rv signo siginfo timeout)))))))
@@ -1260,19 +1260,19 @@
 ;;; --------------------------------------------------------------------
 
 (define (signal-bub-init)
-  (capi.posix-signal-bub-init))
+  (capi::posix-signal-bub-init))
 
 (define (signal-bub-final)
-  (capi.posix-signal-bub-final))
+  (capi::posix-signal-bub-final))
 
 (define (signal-bub-acquire)
-  (capi.posix-signal-bub-acquire))
+  (capi::posix-signal-bub-acquire))
 
 (define (signal-bub-delivered? signum)
   (define who 'signal-bub-delivered?)
   (with-arguments-validation (who)
       ((signal	signum))
-    (capi.posix-signal-bub-delivered? signum)))
+    (capi::posix-signal-bub-delivered? signum)))
 
 (define (signal-bub-all-delivered)
   (let recur ((i 0))
@@ -1329,7 +1329,7 @@
       ((pathname  pathname))
     (with-pathnames ((pathname.bv pathname))
       (let* ((S  (%make-stat))
-	     (rv (capi.posix-stat pathname.bv S)))
+	     (rv (capi::posix-stat pathname.bv S)))
 	(if ($fx< rv 0)
 	    (%raise-errno-error/filename who rv pathname)
 	  S)))))
@@ -1340,7 +1340,7 @@
       ((pathname  pathname))
     (with-pathnames ((pathname.bv pathname))
       (let* ((S  (%make-stat))
-	     (rv (capi.posix-lstat pathname.bv S)))
+	     (rv (capi::posix-lstat pathname.bv S)))
 	(if ($fx< rv 0)
 	    (%raise-errno-error/filename who rv pathname)
 	  S)))))
@@ -1350,7 +1350,7 @@
   (with-arguments-validation (who)
       ((file-descriptor  fd))
     (let* ((S  (%make-stat))
-	   (rv (capi.posix-lstat fd S)))
+	   (rv (capi::posix-lstat fd S)))
       (if ($fx< rv 0)
 	  (%raise-errno-error who rv fd)
 	S))))
@@ -1374,16 +1374,16 @@
 				      rv
 				    (%raise-errno-error/filename who rv pathname))))))))
 			))))
-  (define-file-is file-is-directory?		capi.posix-file-is-directory?)
-  (define-file-is file-is-char-device?		capi.posix-file-is-char-device?)
-  (define-file-is file-is-block-device?		capi.posix-file-is-block-device?)
-  (define-file-is file-is-regular-file?		capi.posix-file-is-regular-file?)
-  (define-file-is file-is-symbolic-link?	capi.posix-file-is-symbolic-link?)
-  (define-file-is file-is-socket?		capi.posix-file-is-socket?)
-  (define-file-is file-is-fifo?			capi.posix-file-is-fifo?)
-  (define-file-is file-is-message-queue?	capi.posix-file-is-message-queue?)
-  (define-file-is file-is-semaphore?		capi.posix-file-is-semaphore?)
-  (define-file-is file-is-shared-memory?	capi.posix-file-is-shared-memory?))
+  (define-file-is file-is-directory?		capi::posix-file-is-directory?)
+  (define-file-is file-is-char-device?		capi::posix-file-is-char-device?)
+  (define-file-is file-is-block-device?		capi::posix-file-is-block-device?)
+  (define-file-is file-is-regular-file?		capi::posix-file-is-regular-file?)
+  (define-file-is file-is-symbolic-link?	capi::posix-file-is-symbolic-link?)
+  (define-file-is file-is-socket?		capi::posix-file-is-socket?)
+  (define-file-is file-is-fifo?			capi::posix-file-is-fifo?)
+  (define-file-is file-is-message-queue?	capi::posix-file-is-message-queue?)
+  (define-file-is file-is-semaphore?		capi::posix-file-is-semaphore?)
+  (define-file-is file-is-shared-memory?	capi::posix-file-is-shared-memory?))
 
 (let-syntax
     ((define-file-is (syntax-rules ()
@@ -1409,7 +1409,7 @@
       ((pathname  pathname)
        (fixnum	  how))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-access pathname.bv how)))
+      (let ((rv (capi::posix-access pathname.bv how)))
 	(if (boolean? rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname how))))))
@@ -1432,7 +1432,7 @@
   (with-arguments-validation (who)
       ((pathname pathname))
     (with-pathnames ((pathname.bv pathname))
-      (let ((v (capi.posix-file-size pathname.bv)))
+      (let ((v (capi::posix-file-size pathname.bv)))
 	(if (>= v 0)
 	    v
 	  (%raise-errno-error/filename who v pathname))))))
@@ -1454,9 +1454,9 @@
 					 ($vector-ref timespec 1))
 				    (%raise-errno-error/filename who rv pathname))))))
 			  ))))
-  (define-file-time file-atime	capi.posix-file-atime)
-  (define-file-time file-mtime	capi.posix-file-mtime)
-  (define-file-time file-ctime	capi.posix-file-ctime))
+  (define-file-time file-atime	capi::posix-file-atime)
+  (define-file-time file-mtime	capi::posix-file-mtime)
+  (define-file-time file-ctime	capi::posix-file-ctime))
 
 
 ;;;; file system attributes mutators
@@ -1468,7 +1468,7 @@
        (pid       owner)
        (gid	  group))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-chown pathname.bv owner group)))
+      (let ((rv (capi::posix-chown pathname.bv owner group)))
 	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname owner group))))))
@@ -1479,7 +1479,7 @@
       ((file-descriptor	fd)
        (pid		owner)
        (gid		group))
-    (let ((rv (capi.posix-fchown fd owner group)))
+    (let ((rv (capi::posix-fchown fd owner group)))
       (if ($fxzero? rv)
 	  rv
 	(%raise-errno-error who rv fd owner group)))))
@@ -1492,7 +1492,7 @@
       ((pathname  pathname)
        (fixnum    mode))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-chmod pathname.bv mode)))
+      (let ((rv (capi::posix-chmod pathname.bv mode)))
 	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname mode))))))
@@ -1502,7 +1502,7 @@
   (with-arguments-validation (who)
       ((file-descriptor fd)
        (fixnum		mode))
-    (let ((rv (capi.posix-fchmod fd mode)))
+    (let ((rv (capi::posix-fchmod fd mode)))
       (if ($fxzero? rv)
 	  rv
 	(%raise-errno-error who rv fd mode)))))
@@ -1513,10 +1513,10 @@
   (define who 'umask)
   (with-arguments-validation (who)
       ((fixnum  mask))
-    (capi.posix-umask mask)))
+    (capi::posix-umask mask)))
 
 (define (getumask)
-  (capi.posix-getumask))
+  (capi::posix-getumask))
 
 ;;; --------------------------------------------------------------------
 
@@ -1527,7 +1527,7 @@
        (secfx     atime)
        (secfx     mtime))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-utime pathname.bv atime mtime)))
+      (let ((rv (capi::posix-utime pathname.bv atime mtime)))
 	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname atime mtime))))))
@@ -1541,7 +1541,7 @@
        (secfx     mtime.sec)
        (usecfx    mtime.usec))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-utimes pathname.bv atime.sec atime.usec mtime.sec mtime.usec)))
+      (let ((rv (capi::posix-utimes pathname.bv atime.sec atime.usec mtime.sec mtime.usec)))
 	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname atime.sec atime.usec mtime.sec mtime.usec))))))
@@ -1555,7 +1555,7 @@
        (secfx     mtime.sec)
        (usecfx    mtime.usec))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-lutimes pathname.bv atime.sec atime.usec mtime.sec mtime.usec)))
+      (let ((rv (capi::posix-lutimes pathname.bv atime.sec atime.usec mtime.sec mtime.usec)))
 	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname atime.sec atime.usec mtime.sec mtime.usec))))))
@@ -1568,7 +1568,7 @@
        (usecfx    atime.usec)
        (secfx     mtime.sec)
        (usecfx    mtime.usec))
-    (let ((rv (capi.posix-futimes fd atime.sec atime.usec mtime.sec mtime.usec)))
+    (let ((rv (capi::posix-futimes fd atime.sec atime.usec mtime.sec mtime.usec)))
       (if ($fxzero? rv)
 	  rv
 	(%raise-errno-error who rv fd atime.sec atime.usec mtime.sec mtime.usec)))))
@@ -1583,7 +1583,7 @@
        (pathname  new-pathname))
     (with-pathnames ((old-pathname.bv old-pathname)
 		     (new-pathname.bv new-pathname))
-      (let ((rv (capi.posix-link old-pathname.bv new-pathname.bv)))
+      (let ((rv (capi::posix-link old-pathname.bv new-pathname.bv)))
 	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv old-pathname new-pathname))))))
@@ -1595,7 +1595,7 @@
        (pathname  link-pathname))
     (with-pathnames ((file-pathname.bv file-pathname)
 		     (link-pathname.bv link-pathname))
-      (let ((rv (capi.posix-symlink file-pathname.bv link-pathname.bv)))
+      (let ((rv (capi::posix-symlink file-pathname.bv link-pathname.bv)))
 	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv file-pathname link-pathname))))))
@@ -1605,7 +1605,7 @@
   (with-arguments-validation (who)
       ((pathname  link-pathname))
     (with-pathnames ((link-pathname.bv link-pathname))
-      (let ((rv (capi.posix-readlink link-pathname.bv)))
+      (let ((rv (capi::posix-readlink link-pathname.bv)))
 	(if (bytevector? rv)
 	    rv
 	  (%raise-errno-error/filename who rv link-pathname))))))
@@ -1618,7 +1618,7 @@
   (with-arguments-validation (who)
       ((pathname  pathname))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-realpath pathname.bv)))
+      (let ((rv (capi::posix-realpath pathname.bv)))
 	(if (bytevector? rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname))))))
@@ -1633,7 +1633,7 @@
   (with-arguments-validation (who)
       ((pathname pathname))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-unlink pathname.bv)))
+      (let ((rv (capi::posix-unlink pathname.bv)))
 	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname))))))
 
@@ -1642,7 +1642,7 @@
   (with-arguments-validation (who)
       ((pathname pathname))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-remove pathname.bv)))
+      (let ((rv (capi::posix-remove pathname.bv)))
 	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname))))))
 
@@ -1653,7 +1653,7 @@
        (pathname  new-pathname))
     (with-pathnames ((old-pathname.bv old-pathname)
 		     (new-pathname.bv new-pathname))
-      (let ((rv (capi.posix-rename old-pathname.bv new-pathname.bv)))
+      (let ((rv (capi::posix-rename old-pathname.bv new-pathname.bv)))
 	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv old-pathname new-pathname))))))
 
@@ -1666,7 +1666,7 @@
       ((pathname  pathname)
        (fixnum	  mode))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-mkdir pathname.bv mode)))
+      (let ((rv (capi::posix-mkdir pathname.bv mode)))
 	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname mode))))))
 
@@ -1712,20 +1712,20 @@
   (with-arguments-validation (who)
       ((pathname  pathname))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-rmdir pathname.bv)))
+      (let ((rv (capi::posix-rmdir pathname.bv)))
 	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname))))))
 
 (define (getcwd)
   (define who 'getcwd)
-  (let ((rv (capi.posix-getcwd)))
+  (let ((rv (capi::posix-getcwd)))
     (if (bytevector? rv)
 	rv
       (%raise-errno-error who rv))))
 
 (define (getcwd/string)
   (define who 'getcwd)
-  (let ((rv (capi.posix-getcwd)))
+  (let ((rv (capi::posix-getcwd)))
     (if (bytevector? rv)
 	((filename->string-func) rv)
       (%raise-errno-error who rv))))
@@ -1735,7 +1735,7 @@
   (with-arguments-validation (who)
       ((pathname  pathname))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-chdir pathname.bv)))
+      (let ((rv (capi::posix-chdir pathname.bv)))
 	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname))))))
 
@@ -1743,7 +1743,7 @@
   (define who 'fchdir)
   (with-arguments-validation (who)
       ((file-descriptor  fd))
-    (let ((rv (capi.posix-fchdir fd)))
+    (let ((rv (capi::posix-fchdir fd)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv fd)))))
 
@@ -1769,7 +1769,7 @@
 	(when stream
 	  (unless (directory-stream-closed? stream)
 	    (set-directory-stream-closed?! stream #t)
-	    (capi.posix-closedir (directory-stream-pointer stream)))
+	    (capi::posix-closedir (directory-stream-pointer stream)))
 	  (close-garbage-collected-directory-streams))))
     (post-gc-hooks (cons close-garbage-collected-directory-streams (post-gc-hooks)))
     G))
@@ -1779,7 +1779,7 @@
   (with-arguments-validation (who)
       ((pathname  pathname))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-opendir pathname.bv)))
+      (let ((rv (capi::posix-opendir pathname.bv)))
 	(if (fixnum? rv)
 	    (%raise-errno-error/filename who rv pathname)
 	  (receive-and-return (stream)
@@ -1790,7 +1790,7 @@
   (define who 'fdopendir)
   (with-arguments-validation (who)
       ((file-descriptor  fd))
-    (let ((rv (capi.posix-fdopendir fd)))
+    (let ((rv (capi::posix-fdopendir fd)))
       (if (fixnum? rv)
 	  (%raise-errno-error who rv fd)
 	(receive-and-return (stream)
@@ -1802,7 +1802,7 @@
   (with-arguments-validation (who)
       ((directory-stream       stream)
        (open-directory-stream  stream))
-    (let ((rv (capi.posix-readdir (directory-stream-pointer stream))))
+    (let ((rv (capi::posix-readdir (directory-stream-pointer stream))))
       (cond ((fixnum? rv)
 	     (set-directory-stream-closed?! stream #t)
 	     (%raise-errno-error who rv stream))
@@ -1821,7 +1821,7 @@
       ((directory-stream stream))
     (unless (directory-stream-closed? stream)
       (set-directory-stream-closed?! stream #t)
-      (let ((rv (capi.posix-closedir (directory-stream-pointer stream))))
+      (let ((rv (capi::posix-closedir (directory-stream-pointer stream))))
 	(unless ($fxzero? rv)
 	  (%raise-errno-error who rv stream))))))
 
@@ -1832,14 +1832,14 @@
   (with-arguments-validation (who)
       ((directory-stream       stream)
        (open-directory-stream  stream))
-    (capi.posix-rewinddir (directory-stream-pointer stream))))
+    (capi::posix-rewinddir (directory-stream-pointer stream))))
 
 (define (telldir stream)
   (define who 'telldir)
   (with-arguments-validation (who)
       ((directory-stream       stream)
        (open-directory-stream  stream))
-    (capi.posix-telldir (directory-stream-pointer stream))))
+    (capi::posix-telldir (directory-stream-pointer stream))))
 
 (define (seekdir stream pos)
   (define who 'rewinddir)
@@ -1847,7 +1847,7 @@
       ((directory-stream	stream)
        (open-directory-stream	stream)
        (dirpos			pos))
-    (capi.posix-seekdir (directory-stream-pointer stream) pos)))
+    (capi::posix-seekdir (directory-stream-pointer stream) pos)))
 
 
 ;;;; file descriptors
@@ -1859,7 +1859,7 @@
        (fixnum    flags)
        (fixnum    mode))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-open pathname.bv flags mode)))
+      (let ((rv (capi::posix-open pathname.bv flags mode)))
 	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname flags mode))))))
@@ -1868,7 +1868,7 @@
   (define who 'close)
   (with-arguments-validation (who)
       ((file-descriptor  fd))
-    (let ((rv (capi.posix-close fd)))
+    (let ((rv (capi::posix-close fd)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv fd)))))
 
@@ -1881,7 +1881,7 @@
     (with-arguments-validation (who)
 	((file-descriptor	fd)
 	 (general-c-buffer*	buffer size))
-      (let ((rv (capi.posix-read fd buffer size)))
+      (let ((rv (capi::posix-read fd buffer size)))
 	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv fd)))))))
@@ -1892,7 +1892,7 @@
       ((file-descriptor		fd)
        (general-c-buffer*	buffer size)
        (off_t		 off))
-    (let ((rv (capi.posix-pread fd buffer size off)))
+    (let ((rv (capi::posix-pread fd buffer size off)))
       (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv fd)))))
@@ -1907,7 +1907,7 @@
 	((file-descriptor	fd)
 	 (general-c-string*	buffer size))
       (with-general-c-strings ((buffer^ buffer))
-	(let ((rv (capi.posix-write fd buffer^ size)))
+	(let ((rv (capi::posix-write fd buffer^ size)))
 	  (if ($fx<= 0 rv)
 	      rv
 	    (%raise-errno-error who rv fd))))))))
@@ -1919,7 +1919,7 @@
        (general-c-string*	buffer size)
        (off_t			off))
     (with-general-c-strings ((buffer^ buffer))
-      (let ((rv (capi.posix-pwrite fd buffer^ size off)))
+      (let ((rv (capi::posix-pwrite fd buffer^ size off)))
 	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv fd))))))
@@ -1930,7 +1930,7 @@
       ((file-descriptor  fd)
        (off_t		 off)
        (fixnum		 whence))
-    (let ((rv (capi.posix-lseek fd off whence)))
+    (let ((rv (capi::posix-lseek fd off whence)))
       (if (negative? rv)
 	  (%raise-errno-error who rv fd off whence)
 	rv))))
@@ -1942,7 +1942,7 @@
   (with-arguments-validation (who)
       ((file-descriptor		fd)
        (list-of-bytevectors	buffers))
-    (let ((rv (capi.posix-readv fd buffers)))
+    (let ((rv (capi::posix-readv fd buffers)))
       (if (negative? rv)
 	  (%raise-errno-error who rv fd buffers)
 	rv))))
@@ -1952,7 +1952,7 @@
   (with-arguments-validation (who)
       ((file-descriptor		fd)
        (list-of-bytevectors	buffers))
-    (let ((rv (capi.posix-writev fd buffers)))
+    (let ((rv (capi::posix-writev fd buffers)))
       (if (negative? rv)
 	  (%raise-errno-error who rv fd buffers)
 	rv))))
@@ -1968,7 +1968,7 @@
        (list-of-fds	except-fds)
        (secfx		sec)
        (usecfx		usec))
-    (let ((rv (capi.posix-select nfds read-fds write-fds except-fds sec usec)))
+    (let ((rv (capi::posix-select nfds read-fds write-fds except-fds sec usec)))
       (if (fixnum? rv)
 	  (if ($fxzero? rv)
 	      (values '() '() '()) ;timeout expired
@@ -2001,7 +2001,7 @@
 	      (and e port)))))
 
 (define ($select-fd who fd sec usec)
-  (let ((rv (capi.posix-select-fd fd sec usec)))
+  (let ((rv (capi::posix-select-fd fd sec usec)))
     (cond (($fxzero? rv) ;timeout expired
 	   (values #f #f #f))
 	  (($fx< 0 rv) ;success
@@ -2030,7 +2030,7 @@
     ($select-fd-readable? who (port-fd port) sec usec)))
 
 (define ($select-fd-readable? who fd sec usec)
-  (let ((rv (capi.posix-select-fd-readable? fd sec usec)))
+  (let ((rv (capi::posix-select-fd-readable? fd sec usec)))
     (if (fixnum? rv)
 	(%raise-errno-error who rv fd sec usec)
       rv)))
@@ -2054,7 +2054,7 @@
     ($select-fd-writable? who (port-fd port) sec usec)))
 
 (define ($select-fd-writable? who fd sec usec)
-  (let ((rv (capi.posix-select-fd-writable? fd sec usec)))
+  (let ((rv (capi::posix-select-fd-writable? fd sec usec)))
     (if (fixnum? rv)
 	(%raise-errno-error who rv fd sec usec)
       rv)))
@@ -2078,7 +2078,7 @@
     ($select-fd-exceptional? who (port-fd port) sec usec)))
 
 (define ($select-fd-exceptional? who fd sec usec)
-  (let ((rv (capi.posix-select-fd-exceptional? fd sec usec)))
+  (let ((rv (capi::posix-select-fd-exceptional? fd sec usec)))
     (if (fixnum? rv)
 	(%raise-errno-error who rv fd sec usec)
       rv)))
@@ -2090,7 +2090,7 @@
   (with-arguments-validation (who)
       ((poll-fds	fds)
        (signed-int	timeout))
-    (let ((rv (capi.posix-poll fds timeout)))
+    (let ((rv (capi::posix-poll fds timeout)))
       (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv fds timeout)))))
@@ -2107,7 +2107,7 @@
 	((file-descriptor	fd)
 	 (fixnum		command)
 	 (fixnum/pointer/false	arg))
-      (let ((rv (capi.posix-fcntl fd command arg)))
+      (let ((rv (capi::posix-fcntl fd command arg)))
 	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv fd command arg)))))))
@@ -2122,7 +2122,7 @@
 	((file-descriptor	fd)
 	 (fixnum		command)
 	 (fixnum/pointer/false	arg))
-      (let ((rv (capi.posix-ioctl fd command arg)))
+      (let ((rv (capi::posix-ioctl fd command arg)))
 	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv fd command arg)))))))
@@ -2133,7 +2133,7 @@
   (define who 'fd-set-non-blocking-mode!)
   (with-arguments-validation (who)
       ((file-descriptor		fd))
-    (let ((rv (capi.posix-fd-set-non-blocking-mode fd)))
+    (let ((rv (capi::posix-fd-set-non-blocking-mode fd)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv fd)))))
 
@@ -2141,7 +2141,7 @@
   (define who 'fd-unset-non-blocking-mode!)
   (with-arguments-validation (who)
       ((file-descriptor		fd))
-    (let ((rv (capi.posix-fd-unset-non-blocking-mode fd)))
+    (let ((rv (capi::posix-fd-unset-non-blocking-mode fd)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv fd)))))
 
@@ -2149,7 +2149,7 @@
   (define who 'fd-in-non-blocking-mode?)
   (with-arguments-validation (who)
       ((file-descriptor		fd))
-    (let ((rv (capi.posix-fd-ref-non-blocking-mode fd)))
+    (let ((rv (capi::posix-fd-ref-non-blocking-mode fd)))
       (if (boolean? rv)
 	  rv
 	(%raise-errno-error who rv fd)))))
@@ -2160,7 +2160,7 @@
   (define who 'fd-set-close-on-exec-mode!)
   (with-arguments-validation (who)
       ((file-descriptor		fd))
-    (let ((rv (capi.posix-fd-set-close-on-exec-mode fd)))
+    (let ((rv (capi::posix-fd-set-close-on-exec-mode fd)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv fd)))))
 
@@ -2168,7 +2168,7 @@
   (define who 'fd-unset-close-on-exec-mode!)
   (with-arguments-validation (who)
       ((file-descriptor		fd))
-    (let ((rv (capi.posix-fd-unset-close-on-exec-mode fd)))
+    (let ((rv (capi::posix-fd-unset-close-on-exec-mode fd)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv fd)))))
 
@@ -2176,7 +2176,7 @@
   (define who 'fd-in-close-on-exec-mode?)
   (with-arguments-validation (who)
       ((file-descriptor		fd))
-    (let ((rv (capi.posix-fd-ref-close-on-exec-mode fd)))
+    (let ((rv (capi::posix-fd-ref-close-on-exec-mode fd)))
       (if (boolean? rv)
 	  rv
 	(%raise-errno-error who rv fd)))))
@@ -2187,7 +2187,7 @@
   (define who 'dup)
   (with-arguments-validation (who)
       ((file-descriptor  fd))
-    (let ((rv (capi.posix-dup fd)))
+    (let ((rv (capi::posix-dup fd)))
       (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv fd)))))
@@ -2197,7 +2197,7 @@
   (with-arguments-validation (who)
       ((file-descriptor  old)
        (file-descriptor  new))
-    (let ((rv (capi.posix-dup2 old new)))
+    (let ((rv (capi::posix-dup2 old new)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv old new)))))
 
@@ -2205,7 +2205,7 @@
 
 (define (pipe)
   (define who 'pipe)
-  (let ((rv (capi.posix-pipe)))
+  (let ((rv (capi::posix-pipe)))
     (if (pair? rv)
 	(values ($car rv) ($cdr rv))
       (%raise-errno-error who rv))))
@@ -2216,7 +2216,7 @@
       ((pathname  pathname)
        (fixnum    mode))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-mkfifo pathname.bv mode)))
+      (let ((rv (capi::posix-mkfifo pathname.bv mode)))
 	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname mode))))))
 
@@ -2228,7 +2228,7 @@
       ((pathname	pathname)
        (off_t		length))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-truncate pathname.bv length)))
+      (let ((rv (capi::posix-truncate pathname.bv length)))
 	(unless ($fxzero? rv)
 	  (%raise-errno-error who rv pathname length))))))
 
@@ -2237,7 +2237,7 @@
   (with-arguments-validation (who)
       ((file-descriptor	fd)
        (off_t		length))
-    (let ((rv (capi.posix-ftruncate fd length)))
+    (let ((rv (capi::posix-ftruncate fd length)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv fd length)))))
 
@@ -2249,7 +2249,7 @@
       ((file-descriptor	fd)
        (signed-int	cmd)
        (off_t		len))
-    (let ((rv (capi.posix-lockf fd cmd len)))
+    (let ((rv (capi::posix-lockf fd cmd len)))
       (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv fd cmd len)))))
@@ -2486,7 +2486,7 @@
     ;;
     (cond ((port-fd port)
 	   => (lambda (fd)
-		(let ((rv (capi.posix-fd-set-close-on-exec-mode fd)))
+		(let ((rv (capi::posix-fd-set-close-on-exec-mode fd)))
 		  (when ($fx< rv 0)
 		    (%raise-errno-error __who__ rv port))))))
     (weak-hashtable-set! TABLE port #f))
@@ -2496,7 +2496,7 @@
     ;;
     (cond ((port-fd port)
 	   => (lambda (fd)
-		(let ((rv (capi.posix-fd-unset-close-on-exec-mode fd)))
+		(let ((rv (capi::posix-fd-unset-close-on-exec-mode fd)))
 		  (when ($fx< rv 0)
 		    (%raise-errno-error __who__ rv port))))))
     (weak-hashtable-delete! TABLE port))
@@ -2556,32 +2556,32 @@
 (define sizeof-fd-set
   (case-lambda
    (()
-    (capi.posix-sizeof-fd-set 1))
+    (capi::posix-sizeof-fd-set 1))
    ((count)
     (define who 'sizeof-fd-set)
     (with-arguments-validation (who)
 	((positive-fixnum	count))
-      (capi.posix-sizeof-fd-set count)))))
+      (capi::posix-sizeof-fd-set count)))))
 
 (define make-fd-set-bytevector
   (case-lambda
    (()
-    (capi.posix-make-fd-set-bytevector 1))
+    (capi::posix-make-fd-set-bytevector 1))
    ((count)
     (define who 'make-fd-set-bytevector)
     (with-arguments-validation (who)
 	((positive-fixnum	count))
-      (capi.posix-make-fd-set-bytevector count)))))
+      (capi::posix-make-fd-set-bytevector count)))))
 
 (define make-fd-set-pointer
   (case-lambda
    (()
-    (capi.posix-make-fd-set-pointer 1))
+    (capi::posix-make-fd-set-pointer 1))
    ((count)
     (define who 'make-fd-set-pointer)
     (with-arguments-validation (who)
 	((positive-fixnum	count))
-      (capi.posix-make-fd-set-pointer count)))))
+      (capi::posix-make-fd-set-pointer count)))))
 
 (define make-fd-set-memory-block
   (case-lambda
@@ -2592,7 +2592,7 @@
     (with-arguments-validation (who)
 	((positive-fixnum	count))
       (let ((mb (make-memory-block (null-pointer) 0)))
-	(if (capi.posix-make-fd-set-memory-block! mb count)
+	(if (capi::posix-make-fd-set-memory-block! mb count)
 	    mb
 	  #f))))))
 
@@ -2607,7 +2607,7 @@
     (with-arguments-validation (who)
 	((general-c-buffer	fd-set)
 	 (non-negative-fixnum	idx))
-      (capi.posix-fd-zero fd-set idx)))))
+      (capi::posix-fd-zero fd-set idx)))))
 
 (define FD_SET
   (case-lambda
@@ -2619,7 +2619,7 @@
 	((file-descriptor	fd)
 	 (general-c-buffer	fd-set)
 	 (non-negative-fixnum	idx))
-      (capi.posix-fd-set fd fd-set idx)))))
+      (capi::posix-fd-set fd fd-set idx)))))
 
 (define FD_CLR
   (case-lambda
@@ -2631,7 +2631,7 @@
 	((file-descriptor	fd)
 	 (general-c-buffer	fd-set)
 	 (non-negative-fixnum	idx))
-      (capi.posix-fd-clr fd fd-set idx)))))
+      (capi::posix-fd-clr fd fd-set idx)))))
 
 (define FD_ISSET
   (case-lambda
@@ -2643,7 +2643,7 @@
 	((file-descriptor	fd)
 	 (general-c-buffer	fd-set)
 	 (non-negative-fixnum	idx))
-      (capi.posix-fd-isset fd fd-set idx)))))
+      (capi::posix-fd-isset fd fd-set idx)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2656,7 +2656,7 @@
        (general-c-buffer/false	except-fds)
        (secfx			sec)
        (usecfx			usec))
-    (let ((rv (capi.posix-select-from-sets nfds read-fds write-fds except-fds sec usec)))
+    (let ((rv (capi::posix-select-from-sets nfds read-fds write-fds except-fds sec usec)))
       (if (fixnum? rv)
 	  (if ($fxzero? rv)
 	      (values #f #f #f) ;timeout expired
@@ -2671,7 +2671,7 @@
        (general-c-buffer	fd-sets)
        (secfx			sec)
        (usecfx			usec))
-    (let ((rv (capi.posix-select-from-sets-array nfds fd-sets sec usec)))
+    (let ((rv (capi::posix-select-from-sets-array nfds fd-sets sec usec)))
       (if (fixnum? rv)
 	  (if ($fxzero? rv)
 	      #f ;timeout expired
@@ -2707,7 +2707,7 @@
        (fixnum		flags)
        (file-descriptor	fd)
        (off_t		offset))
-    (let ((rv (capi.posix-mmap address length protect flags fd offset)))
+    (let ((rv (capi::posix-mmap address length protect flags fd offset)))
       (if (pointer? rv)
 	  rv
 	(%raise-errno-error who rv address length protect flags fd offset)))))
@@ -2717,7 +2717,7 @@
   (with-arguments-validation (who)
       ((pointer	address)
        (size_t	length))
-    (let ((rv (capi.posix-munmap address length)))
+    (let ((rv (capi::posix-munmap address length)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv address length)))))
 
@@ -2727,7 +2727,7 @@
       ((pointer	address)
        (size_t	length)
        (fixnum	flags))
-    (let ((rv (capi.posix-msync address length flags)))
+    (let ((rv (capi::posix-msync address length flags)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv address length flags)))))
 
@@ -2738,7 +2738,7 @@
        (size_t	length)
        (size_t	new-length)
        (fixnum	flags))
-    (let ((rv (capi.posix-mremap address length new-length flags)))
+    (let ((rv (capi::posix-mremap address length new-length flags)))
       (if (pointer? rv)
 	  rv
 	(%raise-errno-error who rv address length new-length flags)))))
@@ -2749,7 +2749,7 @@
       ((pointer	address)
        (size_t	length)
        (fixnum	advice))
-    (let ((rv (capi.posix-madvise address length advice)))
+    (let ((rv (capi::posix-madvise address length advice)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv address length advice)))))
 
@@ -2759,7 +2759,7 @@
       ((pointer	address)
        (size_t	length)
        (fixnum	prot))
-    (let ((rv (capi.posix-mprotect address length prot)))
+    (let ((rv (capi::posix-mprotect address length prot)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv address length)))))
 
@@ -2768,7 +2768,7 @@
   (with-arguments-validation (who)
       ((pointer		address)
        (size_t		length))
-    (let ((rv (capi.posix-mlock address length)))
+    (let ((rv (capi::posix-mlock address length)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv address length)))))
 
@@ -2777,7 +2777,7 @@
   (with-arguments-validation (who)
       ((pointer		address)
        (size_t		length))
-    (let ((rv (capi.posix-munlock address length)))
+    (let ((rv (capi::posix-munlock address length)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv address length)))))
 
@@ -2785,13 +2785,13 @@
   (define who 'mlock)
   (with-arguments-validation (who)
       ((fixnum		flags))
-    (let ((rv (capi.posix-mlockall flags)))
+    (let ((rv (capi::posix-mlockall flags)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv flags)))))
 
 (define (munlockall)
   (define who 'mlock)
-  (let ((rv (capi.posix-munlockall)))
+  (let ((rv (capi::posix-munlockall)))
     (unless ($fxzero? rv)
       (%raise-errno-error who rv))))
 
@@ -2805,7 +2805,7 @@
        (fixnum		oflag)
        (fixnum		mode))
     (with-pathnames ((name.bv name))
-      (let ((rv (capi.posix-shm-open name.bv oflag mode)))
+      (let ((rv (capi::posix-shm-open name.bv oflag mode)))
 	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv name oflag mode))))))
@@ -2815,7 +2815,7 @@
   (with-arguments-validation (who)
       ((pathname	name))
     (with-pathnames ((name.bv name))
-      (let ((rv (capi.posix-shm-unlink name.bv)))
+      (let ((rv (capi::posix-shm-unlink name.bv)))
 	(unless ($fxzero? rv)
 	  (%raise-errno-error who rv name))))))
 
@@ -2823,7 +2823,7 @@
 ;;;; POSIX semaphores
 
 (define (sizeof-sem_t)
-  (capi.posix-sizeof-sem_t))
+  (capi::posix-sizeof-sem_t))
 
 ;;; --------------------------------------------------------------------
 
@@ -2839,7 +2839,7 @@
 	 (fixnum		mode)
 	 (unsigned-int	value))
       (with-pathnames ((name.bv name))
-	(let ((rv (capi.posix-sem-open name.bv oflag mode value)))
+	(let ((rv (capi::posix-sem-open name.bv oflag mode value)))
 	  (if (pointer? rv)
 	      rv
 	    (%raise-errno-error who rv name oflag mode value))))))))
@@ -2848,7 +2848,7 @@
   (define who 'sem-close)
   (with-arguments-validation (who)
       ((semaphore	sem))
-    (let ((rv (capi.posix-sem-close sem)))
+    (let ((rv (capi::posix-sem-close sem)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv sem)))))
 
@@ -2857,7 +2857,7 @@
   (with-arguments-validation (who)
       ((pathname	name))
     (with-pathnames ((name.bv name))
-      (let ((rv (capi.posix-sem-unlink name.bv)))
+      (let ((rv (capi::posix-sem-unlink name.bv)))
 	(unless ($fxzero? rv)
 	  (%raise-errno-error who rv name.bv))))))
 
@@ -2872,7 +2872,7 @@
     (with-arguments-validation (who)
 	((semaphore	sem)
 	 (unsigned-int	value))
-      (let ((rv (capi.posix-sem-init sem pshared value)))
+      (let ((rv (capi::posix-sem-init sem pshared value)))
 	(if (pointer? rv)
 	    rv
 	  (%raise-errno-error who rv sem pshared value)))))))
@@ -2881,7 +2881,7 @@
   (define who 'sem-destroy)
   (with-arguments-validation (who)
       ((semaphore	sem))
-    (let ((rv (capi.posix-sem-destroy sem)))
+    (let ((rv (capi::posix-sem-destroy sem)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv sem)))))
 
@@ -2891,7 +2891,7 @@
   (define who 'sem-post)
   (with-arguments-validation (who)
       ((semaphore	sem))
-    (let ((rv (capi.posix-sem-post sem)))
+    (let ((rv (capi::posix-sem-post sem)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv sem)))))
 
@@ -2899,7 +2899,7 @@
   (define who 'sem-wait)
   (with-arguments-validation (who)
       ((semaphore	sem))
-    (let ((rv (capi.posix-sem-wait sem)))
+    (let ((rv (capi::posix-sem-wait sem)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv sem)))))
 
@@ -2907,7 +2907,7 @@
   (define who 'sem-trywait)
   (with-arguments-validation (who)
       ((semaphore	sem))
-    (let ((rv (capi.posix-sem-close sem)))
+    (let ((rv (capi::posix-sem-close sem)))
       (if (boolean? rv)
 	  rv
 	(%raise-errno-error who rv sem)))))
@@ -2917,7 +2917,7 @@
   (with-arguments-validation (who)
       ((semaphore	sem)
        (timespec	abs-timeout))
-    (let ((rv (capi.posix-sem-timedwait sem abs-timeout)))
+    (let ((rv (capi::posix-sem-timedwait sem abs-timeout)))
       (if (boolean? rv)
 	  rv
 	(%raise-errno-error who rv sem abs-timeout)))))
@@ -2926,7 +2926,7 @@
   (define who 'sem-getvalue)
   (with-arguments-validation (who)
       ((semaphore	sem))
-    (let ((rv (capi.posix-sem-getvalue sem)))
+    (let ((rv (capi::posix-sem-getvalue sem)))
       (if (pair? rv)
 	  (car rv)
 	(%raise-errno-error who rv sem)))))
@@ -2961,7 +2961,7 @@
 	 (fixnum	mode)
 	 (mq-attr/false	attr))
       (with-pathnames ((name.bv name))
-	(let ((rv (capi.posix-mq-open name.bv oflag mode attr)))
+	(let ((rv (capi::posix-mq-open name.bv oflag mode attr)))
 	  (if ($fx<= 0 rv)
 	      rv
 	    (%raise-errno-error who rv name oflag mode attr))))))))
@@ -2970,7 +2970,7 @@
   (define who 'mq-close)
   (with-arguments-validation (who)
       ((message-queue-descriptor	mq))
-    (let ((rv (capi.posix-mq-close mq)))
+    (let ((rv (capi::posix-mq-close mq)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv mq)))))
 
@@ -2979,7 +2979,7 @@
   (with-arguments-validation (who)
       ((pathname name))
     (with-pathnames ((name.bv name))
-      (let ((rv (capi.posix-mq-unlink name.bv)))
+      (let ((rv (capi::posix-mq-unlink name.bv)))
 	(unless ($fxzero? rv)
 	  (%raise-errno-error who rv name))))))
 
@@ -2989,7 +2989,7 @@
       ((message-queue-descriptor	mqd)
        (bytevector			message)
        (unsigned-int			priority))
-    (let ((rv (capi.posix-mq-send mqd message priority)))
+    (let ((rv (capi::posix-mq-send mqd message priority)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv mqd message priority)))))
 
@@ -3000,7 +3000,7 @@
        (bytevector			message)
        (unsigned-int			priority)
        (timespec			epoch-timeout))
-    (let ((rv (capi.posix-mq-timedsend mqd message priority epoch-timeout)))
+    (let ((rv (capi::posix-mq-timedsend mqd message priority epoch-timeout)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv mqd message priority epoch-timeout)))))
 
@@ -3009,7 +3009,7 @@
   (with-arguments-validation (who)
       ((message-queue-descriptor	mqd)
        (bytevector			message))
-    (let ((rv (capi.posix-mq-receive mqd message)))
+    (let ((rv (capi::posix-mq-receive mqd message)))
       (if (pair? rv)
 	  (values (car rv) (cdr rv))
 	(%raise-errno-error who rv mqd message)))))
@@ -3020,7 +3020,7 @@
       ((message-queue-descriptor	mqd)
        (bytevector			message)
        (timespec			epoch-timeout))
-    (let ((rv (capi.posix-mq-timedreceive mqd message epoch-timeout)))
+    (let ((rv (capi::posix-mq-timedreceive mqd message epoch-timeout)))
       (if (pair? rv)
 	  (values (car rv) (cdr rv))
 	(%raise-errno-error who rv mqd message epoch-timeout)))))
@@ -3035,7 +3035,7 @@
 	((message-queue-descriptor	mqd)
 	 (mq-attr			new-attr)
 	 (mq-attr			old-attr))
-      (let ((rv (capi.posix-mq-setattr mqd new-attr old-attr)))
+      (let ((rv (capi::posix-mq-setattr mqd new-attr old-attr)))
 	(if ($fxzero? rv)
 	    old-attr
 	  (%raise-errno-error who rv new-attr old-attr)))))))
@@ -3049,7 +3049,7 @@
     (with-arguments-validation (who)
 	((message-queue-descriptor	mqd)
 	 (mq-attr			attr))
-      (let ((rv (capi.posix-mq-getattr mqd attr)))
+      (let ((rv (capi::posix-mq-getattr mqd attr)))
 	(if ($fxzero? rv)
 	    attr
 	  (%raise-errno-error who rv attr)))))))
@@ -3106,7 +3106,7 @@
       ((clockid_t		clock-id)
        #;(sigevent/false	sev))
     (let* ((sev #f)
-	   (rv  (capi.posix-timer-create clock-id sev)))
+	   (rv  (capi::posix-timer-create clock-id sev)))
       (if (pair? rv)
 	  ($car rv)
 	(%raise-errno-error who rv clock-id sev)))))
@@ -3115,7 +3115,7 @@
   (define who 'timer-delete)
   (with-arguments-validation (who)
       ((timer_t	timer-id))
-    (let ((rv (capi.posix-timer-delete timer-id)))
+    (let ((rv (capi::posix-timer-delete timer-id)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv timer-id)))))
 
@@ -3130,7 +3130,7 @@
 	 (fixnum		flags)
 	 (itimerspec		new-timer-spec)
 	 (itimerspec/false	old-timer-spec))
-      (let ((rv (capi.posix-timer-settime timer-id flags new-timer-spec old-timer-spec)))
+      (let ((rv (capi::posix-timer-settime timer-id flags new-timer-spec old-timer-spec)))
 	(if ($fxzero? rv)
 	    old-timer-spec
 	  (%raise-errno-error who rv timer-id flags new-timer-spec old-timer-spec)))))))
@@ -3144,7 +3144,7 @@
     (with-arguments-validation (who)
 	((timer_t	timer-id)
 	 (itimerspec	curr-timer-spec))
-      (let ((rv (capi.posix-timer-gettime timer-id curr-timer-spec)))
+      (let ((rv (capi::posix-timer-gettime timer-id curr-timer-spec)))
 	(if ($fxzero? rv)
 	    curr-timer-spec
 	  (%raise-errno-error who rv timer-id curr-timer-spec)))))))
@@ -3153,7 +3153,7 @@
   (define who 'timer-getoverrun)
   (with-arguments-validation (who)
       ((timer_t		timer-id))
-    (let ((rv (capi.posix-timer-getoverrun timer-id)))
+    (let ((rv (capi::posix-timer-getoverrun timer-id)))
       (if (<= 0 rv)
 	  rv
 	(%raise-errno-error who rv timer-id)))))
@@ -3166,7 +3166,7 @@
   (with-arguments-validation (who)
       ((clockid_t	clock-id)
        (timespec	T))
-    (let ((rv (capi.posix-clock-getres clock-id T)))
+    (let ((rv (capi::posix-clock-getres clock-id T)))
       (if ($fxzero? rv)
 	  T
 	(%raise-errno-error who rv clock-id T)))))
@@ -3176,7 +3176,7 @@
   (with-arguments-validation (who)
       ((clockid_t	clock-id)
        (timespec	T))
-    (let ((rv (capi.posix-clock-gettime clock-id T)))
+    (let ((rv (capi::posix-clock-gettime clock-id T)))
       (if ($fxzero? rv)
 	  T
 	(%raise-errno-error who rv clock-id T)))))
@@ -3186,7 +3186,7 @@
   (with-arguments-validation (who)
       ((clockid_t	clock-id)
        (timespec	T))
-    (let ((rv (capi.posix-clock-settime clock-id T)))
+    (let ((rv (capi::posix-clock-settime clock-id T)))
       (if ($fxzero? rv)
 	  T
 	(%raise-errno-error who rv clock-id T)))))
@@ -3195,7 +3195,7 @@
   (define who 'clock-getcpuclockid)
   (with-arguments-validation (who)
       ((pid	pid))
-    (let ((rv (capi.posix-clock-getcpuclockid pid)))
+    (let ((rv (capi::posix-clock-getcpuclockid pid)))
       (if (pair? rv)
 	  (car rv)
 	(%raise-errno-error who rv pid)))))
@@ -3208,13 +3208,13 @@
   (with-arguments-validation (who)
       ((pathname	pathname))
     (with-pathnames ((pathname.bv pathname))
-      (capi.posix-make-sockaddr_un pathname.bv))))
+      (capi::posix-make-sockaddr_un pathname.bv))))
 
 (define (sockaddr_un.pathname addr)
   (define who 'sockaddr_un.pathname)
   (with-arguments-validation (who)
       ((bytevector	addr))
-    (let ((rv (capi.posix-sockaddr_un.pathname addr)))
+    (let ((rv (capi::posix-sockaddr_un.pathname addr)))
       (if (bytevector? rv)
 	  rv
 	(error who "expected bytevector holding \"struct sockaddr_un\" as argument" addr)))))
@@ -3229,13 +3229,13 @@
   (with-arguments-validation (who)
       ((bytevector	addr)
        (fixnum		port))
-    (capi.posix-make-sockaddr_in addr port)))
+    (capi::posix-make-sockaddr_in addr port)))
 
 (define (sockaddr_in.in_addr sockaddr)
   (define who 'sockaddr_in.in_addr)
   (with-arguments-validation (who)
       ((bytevector	sockaddr))
-    (let ((rv (capi.posix-sockaddr_in.in_addr sockaddr)))
+    (let ((rv (capi::posix-sockaddr_in.in_addr sockaddr)))
       (if (bytevector? rv)
 	  rv
 	(error who "expected bytevector holding \"struct sockaddr_in\" as argument" sockaddr)))))
@@ -3244,7 +3244,7 @@
   (define who 'sockaddr_in.in_addr.number)
   (with-arguments-validation (who)
       ((bytevector	sockaddr))
-    (cond ((capi.posix-sockaddr_in.in_addr.number sockaddr))
+    (cond ((capi::posix-sockaddr_in.in_addr.number sockaddr))
 	  (else
 	   (error who "expected bytevector holding \"struct sockaddr_in\" as argument" sockaddr)))))
 
@@ -3252,7 +3252,7 @@
   (define who 'sockaddr_in.in_port)
   (with-arguments-validation (who)
       ((bytevector	sockaddr))
-    (let ((rv (capi.posix-sockaddr_in.in_port sockaddr)))
+    (let ((rv (capi::posix-sockaddr_in.in_port sockaddr)))
       (if (fixnum? rv)
 	  rv
 	(error who "expected bytevector holding \"struct sockaddr_in\" as argument" sockaddr)))))
@@ -3264,13 +3264,13 @@
   (with-arguments-validation (who)
       ((bytevector	addr)
        (fixnum		port))
-    (capi.posix-make-sockaddr_in6 addr port)))
+    (capi::posix-make-sockaddr_in6 addr port)))
 
 (define (sockaddr_in6.in6_addr sockaddr)
   (define who 'sockaddr_in6.in6_addr)
   (with-arguments-validation (who)
       ((bytevector	sockaddr))
-    (let ((rv (capi.posix-sockaddr_in6.in6_addr sockaddr)))
+    (let ((rv (capi::posix-sockaddr_in6.in6_addr sockaddr)))
       (if (bytevector? rv)
 	  rv
 	(error who "expected bytevector holding \"struct sockaddr_in6\" as argument" sockaddr)))))
@@ -3279,7 +3279,7 @@
   (define who 'sockaddr_in6.in6_port)
   (with-arguments-validation (who)
       ((bytevector	sockaddr))
-    (let ((rv (capi.posix-sockaddr_in6.in6_port sockaddr)))
+    (let ((rv (capi::posix-sockaddr_in6.in6_port sockaddr)))
       (if (fixnum? rv)
 	  rv
 	(error who "expected bytevector holding \"struct sockaddr_in6\" as argument" sockaddr)))))
@@ -3287,10 +3287,10 @@
 ;;; --------------------------------------------------------------------
 
 (define (in6addr_loopback)
-  (capi.posix-in6addr_loopback))
+  (capi::posix-in6addr_loopback))
 
 (define (in6addr_any)
-  (capi.posix-in6addr_any))
+  (capi::posix-in6addr_any))
 
 ;;; --------------------------------------------------------------------
 
@@ -3298,7 +3298,7 @@
   (define who 'inet-aton)
   (with-arguments-validation (who)
       ((string/bytevector  dotted-quad))
-    (let ((rv (capi.posix-inet_aton (if (string? dotted-quad)
+    (let ((rv (capi::posix-inet_aton (if (string? dotted-quad)
 					(string->utf8 dotted-quad)
 				      dotted-quad))))
       (if (bytevector? rv)
@@ -3311,7 +3311,7 @@
   (define who 'inet-ntoa)
   (with-arguments-validation (who)
       ((bytevector  addr))
-    (capi.posix-inet_ntoa addr)))
+    (capi::posix-inet_ntoa addr)))
 
 (define (inet-ntoa/string addr)
   (utf8->string (inet-ntoa addr)))
@@ -3323,7 +3323,7 @@
   (with-arguments-validation (who)
       ((af-inet		   af)
        (string/bytevector  presentation))
-    (let ((rv (capi.posix-inet_pton af (if (string? presentation)
+    (let ((rv (capi::posix-inet_pton af (if (string? presentation)
 					   (string->utf8 presentation)
 					 presentation))))
       (if (bytevector? rv)
@@ -3335,7 +3335,7 @@
   (with-arguments-validation (who)
       ((af-inet	    af)
        (bytevector  addr))
-    (let ((rv (capi.posix-inet_ntop af addr)))
+    (let ((rv (capi::posix-inet_ntop af addr)))
       (if (bytevector? rv)
 	  rv
 	(error who "invalid arguments" af addr)))))
@@ -3349,25 +3349,25 @@
   (define who 'htonl)
   (with-arguments-validation (who)
       ((word-u32	host-long))
-    (capi.posix-htonl host-long)))
+    (capi::posix-htonl host-long)))
 
 (define (htons host-short)
   (define who 'htons)
   (with-arguments-validation (who)
       ((word-u16	host-short))
-    (capi.posix-htons host-short)))
+    (capi::posix-htons host-short)))
 
 (define (ntohl host-long)
   (define who 'ntohl)
   (with-arguments-validation (who)
       ((word-u32	host-long))
-    (capi.posix-ntohl host-long)))
+    (capi::posix-ntohl host-long)))
 
 (define (ntohs host-short)
   (define who 'ntohs)
   (with-arguments-validation (who)
       ((word-u16	host-short))
-    (capi.posix-ntohs host-short)))
+    (capi::posix-ntohs host-short)))
 
 ;;; --------------------------------------------------------------------
 
@@ -3413,7 +3413,7 @@
   (define who 'gethostbyname)
   (with-arguments-validation (who)
       ((string/bytevector  hostname))
-    (let ((rv (capi.posix-gethostbyname (type-descriptor struct-hostent)
+    (let ((rv (capi::posix-gethostbyname (type-descriptor struct-hostent)
 					(if (bytevector? hostname)
 					    hostname
 					  (string->utf8 hostname)))))
@@ -3428,7 +3428,7 @@
   (with-arguments-validation (who)
       ((string/bytevector  hostname)
        (af-inet		   addrtype))
-    (let ((rv (capi.posix-gethostbyname2 (type-descriptor struct-hostent)
+    (let ((rv (capi::posix-gethostbyname2 (type-descriptor struct-hostent)
 					 (if (bytevector? hostname)
 					     hostname
 					   (string->utf8 hostname))
@@ -3443,7 +3443,7 @@
   (define who 'gethostbyaddr)
   (with-arguments-validation (who)
       ((bytevector  addr))
-    (let ((rv (capi.posix-gethostbyaddr (type-descriptor struct-hostent) addr)))
+    (let ((rv (capi::posix-gethostbyaddr (type-descriptor struct-hostent) addr)))
       (if (fixnum? rv)
 	  (%raise-h_errno-error who rv addr)
 	(begin
@@ -3451,7 +3451,7 @@
 	  rv)))))
 
 (define (host-entries)
-  (capi.posix-host-entries (type-descriptor struct-hostent)))
+  (capi::posix-host-entries (type-descriptor struct-hostent)))
 
 ;;; --------------------------------------------------------------------
 
@@ -3508,7 +3508,7 @@
      (with-bytevectors/or-false
 	 ((node.bv	node)
 	  (service.bv	service))
-       (let ((rv (capi.posix-getaddrinfo (type-descriptor struct-addrinfo)
+       (let ((rv (capi::posix-getaddrinfo (type-descriptor struct-addrinfo)
 					 node.bv service.bv hints)))
 	 (if (fixnum? rv)
 	     (raise
@@ -3521,7 +3521,7 @@
   (define who 'gai-strerror)
   (with-arguments-validation (who)
       ((fixnum   code))
-    (ascii->string (capi.posix-gai_strerror code))))
+    (ascii->string (capi::posix-gai_strerror code))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3546,7 +3546,7 @@
   (with-arguments-validation (who)
       ((string/bytevector	name))
     (with-bytevectors ((name.bv name))
-      (let ((rv (capi.posix-getprotobyname (type-descriptor struct-protoent) name.bv)))
+      (let ((rv (capi::posix-getprotobyname (type-descriptor struct-protoent) name.bv)))
 	(if (not rv)
 	    (error who "unknown network protocol" name)
 	  rv)))))
@@ -3555,13 +3555,13 @@
   (define who 'getprotobynumber)
   (with-arguments-validation (who)
       ((fixnum	number))
-    (let ((rv (capi.posix-getprotobynumber (type-descriptor struct-protoent) number)))
+    (let ((rv (capi::posix-getprotobynumber (type-descriptor struct-protoent) number)))
       (if (not rv)
 	  (error who "unknown network protocol" number)
 	rv))))
 
 (define (protocol-entries)
-  (capi.posix-protocol-entries (type-descriptor struct-protoent)))
+  (capi::posix-protocol-entries (type-descriptor struct-protoent)))
 
 ;;; --------------------------------------------------------------------
 
@@ -3593,7 +3593,7 @@
        (string/bytevector	protocol))
     (with-bytevectors ((name.bv		name)
 		       (protocol.bv	protocol))
-      (let ((rv (capi.posix-getservbyname servent-rtd name.bv protocol.bv)))
+      (let ((rv (capi::posix-getservbyname servent-rtd name.bv protocol.bv)))
 	(if (not rv)
 	    (error who "unknown network service" name protocol)
 	  rv)))))
@@ -3604,13 +3604,13 @@
       ((fixnum			port)
        (string/bytevector	protocol))
     (with-bytevectors ((protocol.bv protocol))
-      (let ((rv (capi.posix-getservbyport servent-rtd port protocol.bv)))
+      (let ((rv (capi::posix-getservbyport servent-rtd port protocol.bv)))
 	(if (not rv)
 	    (error who "unknown network service" port protocol)
 	  rv)))))
 
 (define (service-entries)
-  (capi.posix-service-entries servent-rtd))
+  (capi::posix-service-entries servent-rtd))
 
 ;;; --------------------------------------------------------------------
 
@@ -3651,7 +3651,7 @@
   (with-arguments-validation (who)
       ((string/bytevector  name))
     (with-bytevectors ((name.bv  name))
-      (let ((rv (capi.posix-getnetbyname netent-rtd name.bv)))
+      (let ((rv (capi::posix-getnetbyname netent-rtd name.bv)))
 	(if (not rv)
 	    (error who "unknown network" name)
 	  (%netaddr->bytevector rv))))))
@@ -3664,13 +3664,13 @@
     (let* ((net	(if (bytevector? net)
 		    (bytevector-u32-ref net 0 (endianness big))
 		  net))
-	   (rv	(capi.posix-getnetbyaddr netent-rtd net type)))
+	   (rv	(capi::posix-getnetbyaddr netent-rtd net type)))
       (if (not rv)
 	  (error who "unknown network" net type)
 	(%netaddr->bytevector rv)))))
 
 (define (network-entries)
-  (map %netaddr->bytevector (capi.posix-network-entries netent-rtd)))
+  (map %netaddr->bytevector (capi::posix-network-entries netent-rtd)))
 
 ;;; --------------------------------------------------------------------
 
@@ -3680,7 +3680,7 @@
       ((fixnum	namespace)
        (fixnum	style)
        (fixnum	protocol))
-    (let ((rv (capi.posix-socket namespace style protocol)))
+    (let ((rv (capi::posix-socket namespace style protocol)))
       (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv namespace style protocol)))))
@@ -3690,7 +3690,7 @@
   (with-arguments-validation (who)
       ((file-descriptor	sock)
        (fixnum		how))
-    (let ((rv (capi.posix-shutdown sock how)))
+    (let ((rv (capi::posix-shutdown sock how)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock how)))))
 
@@ -3700,7 +3700,7 @@
       ((fixnum	namespace)
        (fixnum	style)
        (fixnum	protocol))
-    (let ((rv (capi.posix-socketpair namespace style protocol)))
+    (let ((rv (capi::posix-socketpair namespace style protocol)))
       (if (pair? rv)
 	  (values ($car rv) ($cdr rv))
 	(%raise-errno-error who rv namespace style protocol)))))
@@ -3712,7 +3712,7 @@
   (with-arguments-validation (who)
       ((file-descriptor	sock)
        (bytevector	sockaddr))
-    (let ((rv (capi.posix-connect sock sockaddr)))
+    (let ((rv (capi::posix-connect sock sockaddr)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock sockaddr)))))
 
@@ -3721,7 +3721,7 @@
   (with-arguments-validation (who)
       ((file-descriptor	sock)
        (fixnum		max-pending-conns))
-    (let ((rv (capi.posix-listen sock max-pending-conns)))
+    (let ((rv (capi::posix-listen sock max-pending-conns)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock max-pending-conns)))))
 
@@ -3729,7 +3729,7 @@
   (define who 'accept)
   (with-arguments-validation (who)
       ((file-descriptor	sock))
-    (let ((rv (capi.posix-accept sock)))
+    (let ((rv (capi::posix-accept sock)))
       (cond ((pair? rv)
 	     (values ($car rv) ($cdr rv)))
 	    (($fx= rv EWOULDBLOCK)
@@ -3742,7 +3742,7 @@
   (with-arguments-validation (who)
       ((file-descriptor	sock)
        (bytevector	sockaddr))
-    (let ((rv (capi.posix-bind sock sockaddr)))
+    (let ((rv (capi::posix-bind sock sockaddr)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock sockaddr)))))
 
@@ -3752,7 +3752,7 @@
   (define who 'getpeername)
   (with-arguments-validation (who)
       ((file-descriptor	sock))
-    (let ((rv (capi.posix-getpeername sock)))
+    (let ((rv (capi::posix-getpeername sock)))
       (if (bytevector? rv)
 	  rv
 	(%raise-errno-error who rv sock)))))
@@ -3761,7 +3761,7 @@
   (define who 'getsockname)
   (with-arguments-validation (who)
       ((file-descriptor	sock))
-    (let ((rv (capi.posix-getsockname sock)))
+    (let ((rv (capi::posix-getsockname sock)))
       (if (bytevector? rv)
 	  rv
 	(%raise-errno-error who rv sock)))))
@@ -3775,7 +3775,7 @@
        (general-c-string*	buffer size)
        (fixnum			flags))
     (with-general-c-strings ((buffer^ buffer))
-      (let ((rv (capi.posix-send sock buffer^ size flags)))
+      (let ((rv (capi::posix-send sock buffer^ size flags)))
 	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv sock buffer size flags))))))
@@ -3786,7 +3786,7 @@
       ((file-descriptor		sock)
        (general-c-buffer*	buffer size)
        (fixnum			flags))
-    (let ((rv (capi.posix-recv sock buffer size flags)))
+    (let ((rv (capi::posix-recv sock buffer size flags)))
       (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv sock buffer size flags)))))
@@ -3801,7 +3801,7 @@
        (fixnum			flags)
        (bytevector		addr))
     (with-general-c-strings ((buffer^ buffer))
-      (let ((rv (capi.posix-sendto sock buffer^ size flags addr)))
+      (let ((rv (capi::posix-sendto sock buffer^ size flags addr)))
 	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv sock buffer size flags addr))))))
@@ -3812,7 +3812,7 @@
       ((file-descriptor		sock)
        (general-c-buffer*	buffer size)
        (fixnum			flags))
-    (let ((rv (capi.posix-recvfrom sock buffer size flags)))
+    (let ((rv (capi::posix-recvfrom sock buffer size flags)))
       (if (pair? rv)
 	  (values ($car rv) ($cdr rv))
 	(%raise-errno-error who rv sock buffer size flags)))))
@@ -3826,7 +3826,7 @@
        (fixnum		level)
        (fixnum		option)
        (bytevector	optval))
-    (let ((rv (capi.posix-getsockopt sock level option optval)))
+    (let ((rv (capi::posix-getsockopt sock level option optval)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock level option optval)))))
 
@@ -3836,7 +3836,7 @@
       ((file-descriptor	sock)
        (fixnum		level)
        (fixnum		option))
-    (let ((rv (capi.posix-getsockopt/int sock level option)))
+    (let ((rv (capi::posix-getsockopt/int sock level option)))
       (if (pair? rv)
 	  ($car rv)
 	(%raise-errno-error who rv sock level option)))))
@@ -3847,7 +3847,7 @@
       ((file-descriptor	sock)
        (fixnum		level)
        (fixnum		option))
-    (let ((rv (capi.posix-getsockopt/size_t sock level option)))
+    (let ((rv (capi::posix-getsockopt/size_t sock level option)))
       (if (pair? rv)
 	  ($car rv)
 	(%raise-errno-error who rv sock level option)))))
@@ -3861,7 +3861,7 @@
        (fixnum		level)
        (fixnum		option)
        (bytevector	optval))
-    (let ((rv (capi.posix-setsockopt sock level option optval)))
+    (let ((rv (capi::posix-setsockopt sock level option optval)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock level option optval)))))
 
@@ -3872,7 +3872,7 @@
        (fixnum			level)
        (fixnum			option)
        (signed-int/boolean	optval))
-    (let ((rv (capi.posix-setsockopt/int sock level option optval)))
+    (let ((rv (capi::posix-setsockopt/int sock level option optval)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock level option optval)))))
 
@@ -3883,7 +3883,7 @@
        (fixnum	level)
        (fixnum	option)
        (size_t	optval))
-    (let ((rv (capi.posix-setsockopt/size_t sock level option optval)))
+    (let ((rv (capi::posix-setsockopt/size_t sock level option optval)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock level option optval)))))
 
@@ -3895,7 +3895,7 @@
       ((file-descriptor		sock)
        (boolean			onoff)
        (fixnum			linger))
-    (let ((rv (capi.posix-setsockopt/linger sock onoff linger)))
+    (let ((rv (capi::posix-setsockopt/linger sock onoff linger)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock onoff linger)))))
 
@@ -3903,7 +3903,7 @@
   (define who 'getsockopt/linger)
   (with-arguments-validation (who)
       ((file-descriptor  sock))
-    (let ((rv (capi.posix-getsockopt/linger sock)))
+    (let ((rv (capi::posix-getsockopt/linger sock)))
       (if (pair? rv)
 	  (values ($car rv) ($cdr rv))
 	(%raise-errno-error who rv sock)))))
@@ -4074,19 +4074,19 @@
 ;;;; users and groups
 
 (define (getuid)
-  (capi.posix-getuid))
+  (capi::posix-getuid))
 
 (define (getgid)
-  (capi.posix-getgid))
+  (capi::posix-getgid))
 
 (define (geteuid)
-  (capi.posix-geteuid))
+  (capi::posix-geteuid))
 
 (define (getegid)
-  (capi.posix-getegid))
+  (capi::posix-getegid))
 
 (define (getgroups)
-  (let ((rv (capi.posix-getgroups)))
+  (let ((rv (capi::posix-getgroups)))
     (if (pair? rv)
 	rv
       (%raise-errno-error 'getgroups rv))))
@@ -4097,7 +4097,7 @@
   (define who 'seteuid)
   (with-arguments-validation (who)
       ((fixnum	uid))
-    (let ((rv (capi.posix-seteuid uid)))
+    (let ((rv (capi::posix-seteuid uid)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv uid)))))
 
@@ -4105,7 +4105,7 @@
   (define who 'setuid)
   (with-arguments-validation (who)
       ((fixnum	uid))
-    (let ((rv (capi.posix-setuid uid)))
+    (let ((rv (capi::posix-setuid uid)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv uid)))))
 
@@ -4114,7 +4114,7 @@
   (with-arguments-validation (who)
       ((fixnum	real-uid)
        (fixnum	effective-uid))
-    (let ((rv (capi.posix-setreuid real-uid effective-uid)))
+    (let ((rv (capi::posix-setreuid real-uid effective-uid)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv real-uid effective-uid)))))
 
@@ -4124,7 +4124,7 @@
   (define who 'setegid)
   (with-arguments-validation (who)
       ((fixnum	gid))
-    (let ((rv (capi.posix-setegid gid)))
+    (let ((rv (capi::posix-setegid gid)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv gid)))))
 
@@ -4132,7 +4132,7 @@
   (define who 'setgid)
   (with-arguments-validation (who)
       ((fixnum	gid))
-    (let ((rv (capi.posix-setgid gid)))
+    (let ((rv (capi::posix-setgid gid)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv gid)))))
 
@@ -4141,17 +4141,17 @@
   (with-arguments-validation (who)
       ((fixnum	real-gid)
        (fixnum	effective-gid))
-    (let ((rv (capi.posix-setregid real-gid effective-gid)))
+    (let ((rv (capi::posix-setregid real-gid effective-gid)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv real-gid effective-gid)))))
 
 ;;; --------------------------------------------------------------------
 
 (define (getlogin)
-  (capi.posix-getlogin))
+  (capi::posix-getlogin))
 
 (define (getlogin/string)
-  (let ((rv (capi.posix-getlogin)))
+  (let ((rv (capi::posix-getlogin)))
     (and rv (ascii->string rv))))
 
 ;;; --------------------------------------------------------------------
@@ -4186,17 +4186,17 @@
   (define who 'getpwuid)
   (with-arguments-validation (who)
       ((fixnum	uid))
-    (capi.posix-getpwuid passwd-rtd uid)))
+    (capi::posix-getpwuid passwd-rtd uid)))
 
 (define (getpwnam name)
   (define who 'getpwnam)
   (with-arguments-validation (who)
       ((string/bytevector  name))
     (with-bytevectors ((name.bv name))
-      (capi.posix-getpwnam passwd-rtd name.bv))))
+      (capi::posix-getpwnam passwd-rtd name.bv))))
 
 (define (user-entries)
-  (capi.posix-user-entries passwd-rtd))
+  (capi::posix-user-entries passwd-rtd))
 
 ;;; --------------------------------------------------------------------
 
@@ -4223,32 +4223,32 @@
   (define who 'getgrgid)
   (with-arguments-validation (who)
       ((fixnum	gid))
-    (capi.posix-getgrgid group-rtd gid)))
+    (capi::posix-getgrgid group-rtd gid)))
 
 (define (getgrnam name)
   (define who 'getgrnam)
   (with-arguments-validation (who)
       ((string/bytevector  name))
     (with-bytevectors ((name.bv name))
-      (capi.posix-getgrnam group-rtd name.bv))))
+      (capi::posix-getgrnam group-rtd name.bv))))
 
 (define (group-entries)
-  (capi.posix-group-entries group-rtd))
+  (capi::posix-group-entries group-rtd))
 
 
 ;;;; job control
 
 (define (ctermid)
-  (capi.posix-ctermid))
+  (capi::posix-ctermid))
 
 (define (ctermid/string)
-  (ascii->string (capi.posix-ctermid)))
+  (ascii->string (capi::posix-ctermid)))
 
 ;;; --------------------------------------------------------------------
 
 (define (setsid)
   (define who 'setsid)
-  (let ((rv (capi.posix-setsid)))
+  (let ((rv (capi::posix-setsid)))
     (if ($fx<= 0 rv)
 	rv
       (%raise-errno-error who rv))))
@@ -4257,14 +4257,14 @@
   (define who 'getsid)
   (with-arguments-validation (who)
       ((fixnum  pid))
-    (let ((rv (capi.posix-getsid pid)))
+    (let ((rv (capi::posix-getsid pid)))
       (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv pid)))))
 
 (define (getpgrp)
   (define who 'getpgrp)
-  (let ((rv (capi.posix-getpgrp)))
+  (let ((rv (capi::posix-getpgrp)))
     (if ($fx<= 0 rv)
 	rv
       (%raise-errno-error who rv))))
@@ -4274,7 +4274,7 @@
   (with-arguments-validation (who)
       ((fixnum  pid)
        (fixnum  pgid))
-    (let ((rv (capi.posix-setpgid pid pgid)))
+    (let ((rv (capi::posix-setpgid pid pgid)))
       (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv pid pgid)))))
@@ -4285,7 +4285,7 @@
   (define who 'tcgetpgrp)
   (with-arguments-validation (who)
       ((file-descriptor	fd))
-    (let ((rv (capi.posix-tcgetpgrp fd)))
+    (let ((rv (capi::posix-tcgetpgrp fd)))
       (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv fd)))))
@@ -4295,7 +4295,7 @@
   (with-arguments-validation (who)
       ((file-descriptor	fd)
        (fixnum		pgid))
-    (let ((rv (capi.posix-tcsetpgrp fd pgid)))
+    (let ((rv (capi::posix-tcsetpgrp fd pgid)))
       (unless ($fx<= 0 rv)
 	(%raise-errno-error who rv fd pgid)))))
 
@@ -4303,7 +4303,7 @@
   (define who 'tcgetsid)
   (with-arguments-validation (who)
       ((file-descriptor	fd))
-    (let ((rv (capi.posix-tcgetsid fd)))
+    (let ((rv (capi::posix-tcgetsid fd)))
       (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv fd)))))
@@ -4416,10 +4416,10 @@
 ;;; --------------------------------------------------------------------
 
 (define (clock)
-  (exact (capi.posix-clock)))
+  (exact (capi::posix-clock)))
 
 (define (times)
-  (let ((S (capi.posix-times tms-rtd)))
+  (let ((S (capi::posix-times tms-rtd)))
     (set-struct-tms-tms_utime!  S (exact (struct-tms-tms_utime  S)))
     (set-struct-tms-tms_stime!  S (exact (struct-tms-tms_stime  S)))
     (set-struct-tms-tms_cutime! S (exact (struct-tms-tms_cutime S)))
@@ -4429,11 +4429,11 @@
 ;;; --------------------------------------------------------------------
 
 (define (time)
-  (exact (capi.posix-time)))
+  (exact (capi::posix-time)))
 
 (define (gettimeofday)
   (define who 'gettimeofday)
-  (let ((rv (capi.posix-gettimeofday (type-descriptor struct-timeval))))
+  (let ((rv (capi::posix-gettimeofday (type-descriptor struct-timeval))))
     (if (struct-timeval? rv)
 	rv
       (%raise-errno-error who rv))))
@@ -4444,7 +4444,7 @@
   (define who 'localtime)
   (with-arguments-validation (who)
       ((exact-integer	time))
-    (let ((rv (capi.posix-localtime (type-descriptor struct-tm) time)))
+    (let ((rv (capi::posix-localtime (type-descriptor struct-tm) time)))
       (or rv
 	  (%raise-posix-error who "invalid time specification" time)))))
 
@@ -4452,7 +4452,7 @@
   (define who 'gmtime)
   (with-arguments-validation (who)
       ((exact-integer	time))
-    (let ((rv (capi.posix-gmtime (type-descriptor struct-tm) time)))
+    (let ((rv (capi::posix-gmtime (type-descriptor struct-tm) time)))
       (or rv
 	  (%raise-posix-error who "invalid time specification" time)))))
 
@@ -4460,7 +4460,7 @@
   (define who 'timelocal)
   (with-arguments-validation (who)
       ((struct-tm  tm))
-    (let ((rv (capi.posix-timelocal tm)))
+    (let ((rv (capi::posix-timelocal tm)))
       (if rv
 	  (exact rv)
 	(%raise-posix-error who "invalid broken time specification" tm)))))
@@ -4469,7 +4469,7 @@
   (define who 'timegm)
   (with-arguments-validation (who)
       ((struct-tm  tm))
-    (let ((rv (capi.posix-timegm tm)))
+    (let ((rv (capi::posix-timegm tm)))
       (if rv
 	  (exact rv)
 	(%raise-posix-error who "invalid broken time specification" tm)))))
@@ -4480,7 +4480,7 @@
       ((string/bytevector  template)
        (struct-tm          tm))
     (with-bytevectors ((template.bv template))
-      (let ((rv (capi.posix-strftime template.bv tm)))
+      (let ((rv (capi::posix-strftime template.bv tm)))
 	(or rv
 	    (%raise-posix-error who "invalid time conversion request" template tm))))))
 
@@ -4495,7 +4495,7 @@
   (with-arguments-validation (who)
       ((secs	secs)
        (nsecs	nsecs))
-    (let ((rv (capi.posix-nanosleep secs nsecs)))
+    (let ((rv (capi::posix-nanosleep secs nsecs)))
       (if (pair? rv)
 	  (values (car rv) (cdr rv))
 	(%raise-errno-error who rv secs nsecs)))))
@@ -4507,7 +4507,7 @@
   (with-arguments-validation (who)
       ((fixnum		which)
        (itimerval	new))
-    (let ((rv (capi.posix-setitimer which new)))
+    (let ((rv (capi::posix-setitimer which new)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv which new)))))
 
@@ -4518,7 +4518,7 @@
     (let* ((old (make-struct-itimerval
 		 (make-struct-timeval 0 0)
 		 (make-struct-timeval 0 0)))
-	   (rv  (capi.posix-getitimer which old)))
+	   (rv  (capi::posix-getitimer which old)))
       (if ($fxzero? rv)
 	  old
 	(%raise-errno-error who rv which old)))))
@@ -4527,7 +4527,7 @@
   (define who 'alarm)
   (with-arguments-validation (who)
       ((unsigned-int	seconds))
-    (capi.posix-alarm seconds)))
+    (capi::posix-alarm seconds)))
 
 
 ;;;; system configuration
@@ -4536,7 +4536,7 @@
   (define who 'sysconf)
   (with-arguments-validation (who)
       ((signed-int	parameter))
-    (let ((rv (capi.posix-sysconf parameter)))
+    (let ((rv (capi::posix-sysconf parameter)))
       (if rv
 	  (if (negative? rv)
 	      (%raise-errno-error who rv parameter)
@@ -4551,7 +4551,7 @@
       ((string/bytevector	pathname)
        (signed-int		parameter))
     (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-pathconf pathname.bv parameter)))
+      (let ((rv (capi::posix-pathconf pathname.bv parameter)))
 	(if rv
 	    (if (negative? rv)
 		(%raise-errno-error who rv pathname parameter)
@@ -4563,7 +4563,7 @@
   (with-arguments-validation (who)
       ((file-descriptor	fd)
        (signed-int	parameter))
-    (let ((rv (capi.posix-fpathconf fd parameter)))
+    (let ((rv (capi::posix-fpathconf fd parameter)))
       (if rv
 	  (if (negative? rv)
 	      (%raise-errno-error who rv fd parameter)
@@ -4576,7 +4576,7 @@
   (define who 'confstr)
   (with-arguments-validation (who)
       ((signed-int	parameter))
-    (let ((rv (capi.posix-confstr parameter)))
+    (let ((rv (capi::posix-confstr parameter)))
       (if (bytevector? rv)
 	  rv
 	(%raise-errno-error who rv parameter)))))
@@ -4708,7 +4708,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-inline-constant RLIM_INFINITY
-  (capi.posix-RLIM_INFINITY))
+  (capi::posix-RLIM_INFINITY))
 
 (define getrlimit
   (case-lambda
@@ -4719,7 +4719,7 @@
     (with-arguments-validation (who)
 	((signed-int	resource)
 	 (rlimit	rlimit))
-      (let ((rv (capi.posix-getrlimit resource rlimit)))
+      (let ((rv (capi::posix-getrlimit resource rlimit)))
 	(if ($fxzero? rv)
 	    rlimit
 	  (%raise-errno-error who rv resource rlimit)))))))
@@ -4729,7 +4729,7 @@
   (with-arguments-validation (who)
       ((signed-int	resource)
        (rlimit		rlimit))
-    (let ((rv (capi.posix-setrlimit resource rlimit)))
+    (let ((rv (capi::posix-setrlimit resource rlimit)))
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv resource rlimit)))))
 
@@ -4744,7 +4744,7 @@
     (with-arguments-validation (who)
 	((signed-int	processes)
 	 (rusage	rusage))
-      (let ((rv (capi.posix-getrusage processes rusage)))
+      (let ((rv (capi::posix-getrusage processes rusage)))
 	(if ($fxzero? rv)
 	    rusage
 	  (%raise-errno-error who rv processes rusage)))))))
@@ -4821,11 +4821,11 @@
     ;;An unset PATH is equivalent to the search path "/bin:/usr/bin"; an
     ;;empty PATH is equivalent to the search path "."
     ;;
-    (let* ((PATH	(capi.posix-getenv #ve(ascii "PATH")))
+    (let* ((PATH	(capi::posix-getenv #ve(ascii "PATH")))
 	   (PATH-LIST	(if PATH
 			    (if ($fxzero? ($bytevector-length PATH))
 				'(#ve(ascii "."))
-			      (posix.split-search-path-bytevector PATH))
+			      (posix::split-search-path-bytevector PATH))
 			  DEFAULT-PATH-LIST)))
       (let next-directory ((PATH-LIST PATH-LIST))
 	(if (null? PATH-LIST)

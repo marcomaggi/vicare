@@ -4815,7 +4815,7 @@
       ;;We expect CONTENTS to be null or a list of annotated datums.
       (bless
        `(stale-when (internal-body
-		      (import (prefix (only (vicare language-extensions posix)
+		      (import (prefix (only (vicare system posix)
 					    file-modification-time)
 				      posix::))
 		      (or (not (file-exists? ,pathname))

@@ -116,11 +116,6 @@
 		  record-type-compose-equality-predicate
 		  record-type-compose-comparison-procedure
 		  record-type-compose-hash-function)
-    ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Wed Apr
-    ;;6, 2016)
-    ;;
-    ;; (only (vicare system $records)
-    ;; 	  $record-guardian)
     (vicare system $fx)
     (vicare system $pairs)
     (vicare system $structs)

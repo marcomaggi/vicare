@@ -190,11 +190,6 @@
 	  expander::)
   (prefix (vicare libraries)
 	  libraries::)
-  ;;FIXME To be  removed after the next  boot image rotation.  (Marco  Maggi; Sun Jul
-  ;;17, 2016)
-  (prefix (only (psyntax system $all)
-		current-library-collection)
-	  libraries::)
   ;;The following libraries are read, expanded and compiled from the source tree.
   (prefix (ikarus.options)
 	  options::)
@@ -1159,17 +1154,9 @@
     ($runtime		(vicare system $runtime)		#f	#t)
 ;;;
     ($type-descriptors	(vicare system type-descriptors)	#t	#t)
-    ;;FIXME To  be made required after  the next boot image  rotation.  (Marco Maggi;
-    ;;Sun Jul 17, 2016)
     ($options		(vicare system options)			#t	#t)
-    ;;FIXME To  be made required after  the next boot image  rotation.  (Marco Maggi;
-    ;;Sun Jul 17, 2016)
     ($code-objects	(vicare system code-objects)		#t	#t)
-    ;;FIXME To  be made required after  the next boot image  rotation.  (Marco Maggi;
-    ;;Sun Jul 17, 2016)
     ($posix		(vicare system posix)			#t	#t)
-    ;;FIXME To be removed after the next  boot image rotation.  (Marco Maggi; Sun Jul
-    ;;17, 2016)
     ($old-posix		(vicare language-extensions posix)	#t	#t)
 ;;;
     ($compiler		(vicare compiler)			#t	#t)

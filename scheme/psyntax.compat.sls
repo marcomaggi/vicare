@@ -242,7 +242,7 @@
     ;;2016)
     (only (ikarus strings)
 	  list-of-nestrings?)
-    (prefix (only (vicare language-extensions posix)
+    (prefix (only (vicare system posix)
 		  getenv
 		  file-string-pathname?
 		  list-of-string-pathnames?

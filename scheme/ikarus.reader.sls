@@ -26,10 +26,6 @@
     reader-annotation-expression	reader-annotation-stripped
     reader-annotation-source		reader-annotation-textual-position
 
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Dec 26,
-    ;;2015)
-    (rename (reader-annotation?		annotation?))
-
     ;; internal bindings only for Vicare
     read-libraries-from-file		read-script-from-file
     read-library-from-file		read-library-from-port)
@@ -58,7 +54,7 @@
     (only (ikarus records procedural)
 	  $record-type-printer-set!)
     (prefix (vicare platform words) words.)
-    (only (vicare language-extensions posix)
+    (only (vicare system posix)
 	  file-string-pathname?))
 
 ;; (define enter-dummy
