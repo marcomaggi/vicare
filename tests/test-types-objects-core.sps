@@ -181,7 +181,7 @@
 
     (define O
       (make-duo 1 2))
-#|
+
     ;;Early binding.
     ;;
     (check
@@ -194,7 +194,7 @@
 	(let (({O <top>} O))
 	  (hash O))
       => (+ 1 (record-hash O)))
-|#
+
     (void))
 
   (void))
