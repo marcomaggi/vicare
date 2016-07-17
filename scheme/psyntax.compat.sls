@@ -46,10 +46,6 @@
     cnd::&condition			cnd::&error
     cnd::&violation			cnd::&warning
 
-    (rename (records::record-type-printer-set!	record-type-printer-set!)
-	    (records::$record-type-printer-set!	$record-type-printer-set!)
-	    (records::record-printer		record-printer))
-
     for-each-in-order
     define-struct			make-struct-type
     struct-type-symbol
@@ -79,7 +75,7 @@
     ratnum-positive?			ratnum-negative?
     bignum-positive?			bignum-negative?
     uuid
-    standalone-pair?			exact-compnum?
+    exact-compnum?
     zero-compnum?			zero-cflonum?
     procedure-arguments-consistency-violation
     last-pair				enum-set?
@@ -156,21 +152,7 @@
     $vector-length $vector-empty? $vector-ref $vector-set!
     $putprop $getprop $remprop $property-list
     $symbol-value $set-symbol-value!)
-  (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Wed Sep 30, 2015)
-		  with-blocked-exceptions
-		  stadalone-pair?
-		  circular-list?		list-of-single-item?
-		  list-of-nestrings?
-
-		  reader-annotation?		reader-annotation-expression
-		  reader-annotation-stripped	reader-annotation-source
-		  reader-annotation-textual-position
-
-		  ratnum-positive?		ratnum-negative?
-		  exact-compnum?
-		  zero-compnum?			zero-cflonum?)
+  (import (vicare)
     (ikarus records syntactic)
     (prefix (only (ikarus.compiler)
 		  eval-core
@@ -203,45 +185,6 @@
 		  &warning)
 	    cnd::)
     (ikarus.printing-messages)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Dec 26,
-    ;;2015)
-    (only (ikarus.reader)
-	  reader-annotation?
-	  reader-annotation-expression
-	  reader-annotation-stripped
-	  reader-annotation-source
-	  reader-annotation-textual-position)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Jan 2,
-    ;;2016)
-    (only (ikarus pairs)
-	  standalone-pair?)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Mar 19,
-    ;;2016)
-    (only (ikarus lists)
-	  list-of-single-item?
-	  circular-list?)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 27,
-    ;;2016)
-    (only (ikarus ratnums)
-	  ratnum-positive?
-	  ratnum-negative?)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Mon Jan 4,
-    ;;2016)
-    (only (ikarus numerics complex-numbers)
-	  exact-compnum?
-	  zero-compnum?
-	  zero-cflonum?)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Oct 2,
-    ;;2015)
-    (prefix (only (ikarus records procedural)
-		  record-type-printer-set!
-		  $record-type-printer-set!
-		  record-printer)
-	    records::)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sun May 8,
-    ;;2016)
-    (only (ikarus strings)
-	  list-of-nestrings?)
     (prefix (only (vicare system posix)
 		  getenv
 		  file-string-pathname?
@@ -415,19 +358,6 @@
 	   ((SYM (datum->syntax (syntax here) sym)))
 	 (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
 	 (syntax (quote SYM)))))))
-
-;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Thu  Mar 5,
-;;2015)
-;;
-(define-syntax with-blocked-exceptions
-  (syntax-rules ()
-    ((_ ?thunk)
-     (call/cc
-	 (lambda (reinstate-with-blocked-exceptions-continuation)
-	   (with-exception-handler
-	       reinstate-with-blocked-exceptions-continuation
-	     ?thunk))))
-    ))
 
 
 ;;;; done

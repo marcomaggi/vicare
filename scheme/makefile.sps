@@ -2247,6 +2247,7 @@
     (list?					v r ba se)
     (list-of-single-item?			v $language)
     (circular-list?				v $language)
+    (standalone-pair?				v $language)
     (log					v r ba se)
     (magnitude					v r ba se)
     (make-polar					v r ba se)

@@ -141,10 +141,7 @@
     object-type-descr.matching-formal-and-operand
 
     #| end of EXPORTS |# )
-  (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Sun Jul 17, 2016)
-		  record-type-implemented-interfaces)
+  (import (vicare)
     (ikarus records syntactic)
     (only (ikarus.core-type-descr)
 	  core-type-descriptor?
@@ -173,10 +170,7 @@
 	  <condition>-ctd			<compound-condition>-ctd
 	  <hashtable>-ctd)
     (only (ikarus records procedural)
-	  $rtd-subtype?
-	  ;;FIXME To be  removed at the next boot image  rotation.  (Marco Maggi; Sun
-	  ;;Jul 17, 2016)
-	  record-type-implemented-interfaces)
+	  $rtd-subtype?)
     (only (vicare expander)
 	  identifier-suffix))
 
