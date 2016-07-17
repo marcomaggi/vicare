@@ -34,8 +34,10 @@
 (library (ikarus.equal)
   (export equal?)
   (import (except (vicare)
-		  equal?
-		  ipair? icar icdr)
+		  equal?)
+    ;;FIXME To be  included at the next  boot image rotation.  (Marco  Maggi; Sun Jul
+    ;;17, 2016)
+    ;;
     ;; (only (vicare system $records)
     ;;  	  $record-type-equality-predicate)
     (only (vicare system $pointers)
@@ -44,9 +46,7 @@
 	  $struct-rtd
 	  $struct-ref)
     (only (vicare system $keywords)
-	  $keyword=?)
-    (only (ikarus.immutable-pairs)
-	  ipair? icar icdr))
+	  $keyword=?))
 
   (module UNSAFE
     (< <= > >= = + - vector-ref vector-length car cdr)
@@ -66,6 +66,8 @@
         ($fx<=     <=)
         ($fx=      =))))
 
+  ;;FIXME To be removed  at the next boot image rotation.  (Marco  Maggi; Sun Jul 17,
+  ;;2016)
   (define ($record-type-equality-predicate reco)
     ($struct-ref reco 16))
 

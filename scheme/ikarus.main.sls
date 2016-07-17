@@ -59,7 +59,7 @@
 		  generate-descriptive-labels?
 		  perform-core-type-inference?
 		  perform-unsafe-primrefs-introduction?
-		  strict-r6rs)
+		  strict-r6rs-compilation)
 	    compiler::options::)
     (prefix (only (ikarus.debugger)
 		  guarded-start)
@@ -681,10 +681,10 @@
 		  (compiler::options::generate-debug-calls #f))
 
 		 (("strict-r6rs")
-		  (compiler::options::strict-r6rs #t)
+		  (compiler::options::strict-r6rs-compilation #t)
 		  (psyntax::expander-language 'strict-r6rs))
 		 (("no-strict-r6rs")
-		  (compiler::options::strict-r6rs #f)
+		  (compiler::options::strict-r6rs-compilation #f)
 		  (psyntax::expander-language 'default))
 
 		 (("drop-assertions")

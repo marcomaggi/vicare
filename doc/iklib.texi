@@ -398,7 +398,8 @@ process.
 @section Configuration options inspection
 
 
-The following bindings are exported by the library @library{vicare}.
+The following bindings are exported by the library @library{vicare
+system options}.
 
 
 @defun vicare-built-with-arguments-validation-enabled

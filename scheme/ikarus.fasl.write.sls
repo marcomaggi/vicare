@@ -19,8 +19,7 @@
   (export
     fasl-write
     fasl-write-header
-    fasl-write-object
-    writing-boot-image?)
+    fasl-write-object)
   (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
@@ -43,21 +42,38 @@
     (only (vicare system $structs)
 	  base-rtd
 	  $struct-rtd)
+    ;;FIXME To be  included at the next  boot image rotation.  (Marco  Maggi; Sun Jul
+    ;;17, 2016)
+    ;;
+    ;; (prefix (vicare system code-objects)
+    ;; 	    code-objects::)
+    ;;
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Jul 17,
+    ;;2016)
     (prefix (ikarus.code-objects)
     	    code-objects::)
+    ;;FIXME To be  included at the next  boot image rotation.  (Marco  Maggi; Sun Jul
+    ;;17, 2016)
+    ;;
+    ;; (prefix (only (vicare system options)
+    ;; 		  debug-mode-enabled?
+    ;; 		  writing-boot-image?)
+    ;; 	    options::)
+    ;;
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Jul 17,
+    ;;2016)
     (prefix (only (ikarus.options)
-		  debug-mode-enabled?)
-	    option.))
+		  debug-mode-enabled?
+		  writing-boot-image?)
+	    options::))
 
-  (include "ikarus.wordsize.scm" #t)
+  (module (wordsize case-word-size)
+    (include "ikarus.wordsize.scm" #t))
 
 
 ;;;; helpers
 
 (define who 'fasl-write)
-
-(define writing-boot-image?
-  (make-parameter #f))
 
 (define fxshift
   (case-word-size
@@ -511,7 +527,7 @@
 	 (write-int ($code-size x) port)
 	 ;;Write a fixnum representing the number of free variables in the code.
 	 (write-int (bitwise-arithmetic-shift-left ($code-freevars x) fxshift) port)
-	 (let ((next-mark (if (option.debug-mode-enabled?)
+	 (let ((next-mark (if (options::debug-mode-enabled?)
 			      ;;Write   a  Scheme   object   representing  the   code
 			      ;;annotation.
 			      (%write-single-object ($code-annotation x) next-mark)
@@ -541,12 +557,12 @@
 
 	((struct? x)
 	 (cond ((record-type-descriptor? x)
-		(if (writing-boot-image?)
+		(if (options::writing-boot-image?)
 		    (assertion-violation who
 		      "invalid R6RS record-type descriptor as boot image object" x)
 		  (%write-r6rs-record-type-descriptor x next-mark)))
 	       ((record-object? x)
-	       	(if (writing-boot-image?)
+	       	(if (options::writing-boot-image?)
 	       	    (assertion-violation who
 	       	      "invalid R6RS record as boot image object" x)
 		  (let ((rtd ($struct-rtd x)))

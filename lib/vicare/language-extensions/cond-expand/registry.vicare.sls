@@ -12,7 +12,9 @@
     (for (prefix (vicare language-extensions cond-expand platform-features) platform.)
       run expand)
     (for (prefix (vicare language-extensions cond-expand configuration-features) config.)
-      run expand))
+      run expand)
+    (for (vicare system options)
+      expand))
 
 
 (define-syntax make-expand-time-features

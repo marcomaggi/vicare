@@ -41,7 +41,7 @@
     (except (vicare system $codes)
 	    code-reloc-vector->sexp)
     (prefix (vicare platform words)
-	    words.))
+	    words::))
 
 
 ;;;; helpers
@@ -108,7 +108,7 @@
 (define* (code-size {x code?})
   ($code-size x))
 
-(define* (code-set! {code code?} {idx fixnum?} {octet words.word-u8?})
+(define* (code-set! {code code?} {idx fixnum?} {octet words::word-u8?})
   (preconditions
    (code-object-and-index? code idx))
   ($code-set! code idx octet))

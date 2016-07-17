@@ -180,8 +180,9 @@
 		  core-expr->assembly-code
 		  optimize-level)
 	    compiler::)
-    (prefix (only (ikarus.compiler)
-		  strict-r6rs)
+    (prefix (rename (only (ikarus.compiler)
+			  strict-r6rs-compilation)
+		    (strict-r6rs-compilation	strict-r6rs))
 	    compiler::options::)
     (prefix (rename (only (ikarus.options)
 			  debug-mode-enabled?

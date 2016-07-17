@@ -48,7 +48,7 @@
     check-compiler-pass-preconditions
     enabled-function-application-integration?
     generate-descriptive-labels?
-    (rename (options::strict-r6rs strict-r6rs))
+    (rename (options::strict-r6rs strict-r6rs-compilation))
 
     ;; middle pass inspection
     assembler-output

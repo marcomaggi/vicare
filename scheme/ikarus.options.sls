@@ -34,6 +34,7 @@
 
     debug-mode-enabled?
     drop-assertions?
+    writing-boot-image?
     strict-r6rs
     ;; vicare configuration options
     vicare-built-with-arguments-validation-enabled
@@ -51,6 +52,8 @@
     bootstrapping-for-normal-boot-image
     bootstrapping-for-rotation-boot-image)
   (import (except (vicare)
+		  ;;FIXME These excepts  are to be removed after the  next boot image
+		  ;;rotation.  (Marco Maggi; Sun Jul 17, 2016)
 		  vicare-built-with-arguments-validation-enabled
 		  vicare-built-with-srfi-enabled
 		  vicare-built-with-ffi-enabled
@@ -58,6 +61,8 @@
 		  vicare-built-with-posix-enabled
 		  vicare-built-with-glibc-enabled
 		  vicare-built-with-linux-enabled))
+
+  (include "cond-boot-expansion.scm" #t)
 
 
 ;;;; some boolean options
@@ -82,6 +87,11 @@
 (define-boolean-option print-library-debug-messages?)
 (define-boolean-option print-loaded-libraries?)
 
+;;Set  to true  when  the fasl  writer  is writing  output for  a  boot image;  false
+;;otherwise
+;;
+(define-boolean-option writing-boot-image?)
+
 
 ;;;; some parameter boolean options
 
@@ -97,7 +107,6 @@
     ))
 
 (define-parameter-boolean-option strict-r6rs #f)
-
 
 ;;When  set to  true: expand  every ASSERT  macro into  its expression,  dropping the
 ;;assertions.  Specifically:
@@ -143,8 +152,6 @@
 
 
 ;;;; done
-
-(include "cond-boot-expansion.scm" #t)
 
 ;; #!vicare
 ;; (define dummy
