@@ -38,9 +38,6 @@
 		  traverse
 		  TRAVERSAL-HELPERS)
 	    writer::)
-    (prefix (only (ikarus records procedural)
-		  record-ref)
-	    records::)
     (only (ikarus.pretty-formats)
 	  get-fmt))
 
@@ -696,7 +693,7 @@
       (if (pair? field-name*)
 	  ;;First we do the next field...
 	  (let ((box (let* ((box1 (%boxify-object (car field-name*)))
-			    (box2 (%boxify-object (records::record-ref reco field-idx)))
+			    (box2 (%boxify-object (record-ref reco field-idx)))
 			    (len  (+ (box-length box1) (box-length box2)))
 			    (box  (make-fbox len (list box1 box2) #f)))
 		       (make-cbox (+ 2 len) (list "(" box ")"))))

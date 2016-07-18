@@ -135,15 +135,15 @@
 		  code-size
 		  code-ref
 		  code->thunk
-		  #;code-set!
-		  #;set-code-reloc-vector!
-		  #;set-code-annotation!)
-	    code-objects::)
-    (prefix (only (ikarus.code-objects)
 		  code-set!
 		  set-code-reloc-vector!
 		  set-code-annotation!)
 	    code-objects::)
+    ;; (prefix (only (ikarus.code-objects)
+    ;; 		  code-set!
+    ;; 		  set-code-reloc-vector!
+    ;; 		  set-code-annotation!)
+    ;; 	    code-objects::)
     (prefix (only (vicare system $codes)
 		  assembler-property-key
 		  $closure-code
