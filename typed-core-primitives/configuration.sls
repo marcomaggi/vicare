@@ -38,6 +38,26 @@
 		  (declare-core-primitive ?who
 		      (safe)
 		    (signatures
+		     (()		=> (<boolean>))
+		     ((<top>)		=> (<void>)))))
+		 )))
+   (declare debug-mode-enabled?)
+   (declare print-verbose-messages?)
+   (declare print-debug-messages?)
+   (declare print-library-debug-messages?)
+   (declare print-loaded-libraries?)
+   (declare writing-boot-image?)
+   #| end of LET-SYNTAX |# )
+
+ (declare-parameter drop-assertions?	<boolean>)
+ (declare-parameter strict-r6rs		<boolean>)
+
+ (let-syntax
+     ((declare (syntax-rules ()
+		 ((_ ?who)
+		  (declare-core-primitive ?who
+		      (safe)
+		    (signatures
 		     (()			=> (<boolean>)))
 		    (attributes
 		     (()			effect-free))))
@@ -50,7 +70,6 @@
    (declare vicare-built-with-srfi-enabled)
    (declare vicare-built-with-arguments-validation-enabled)
    #| end of LET-SYNTAX |# )
-
 
  /section)
 

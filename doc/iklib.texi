@@ -56,7 +56,6 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib environment::           Environments.
 * iklib eval::                  Extended code evaluation.
 * iklib cafe::                  Cafe.
-* iklib procedures::            Procedures.
 * iklib structs::               @value{PRJNAME}'s structs.
 * iklib records::               Extensions to @rnrs{6} records.
 * iklib promises::              Delay, force and promises.
@@ -8883,22 +8882,6 @@ The string used as prompt for cafe.
 @cindex Parameter @func{cafe-input-port}
 A textual input port used by the cafe.
 @end deffn
-
-@c page
-@node iklib procedures
-@section Procedures
-
-
-@defun procedure-annotation @var{proc}
-Return the annotation of the procedure @var{proc}; return @false{} if
-@var{proc} has no annotation.
-
-@example
-(define (a) 1)
-(procedure-annotation a)
-@result{} (#@{a |w$qfI9a4N>aIi$P5|@} . #f)
-@end example
-@end defun
 
 @c page
 @node iklib structs

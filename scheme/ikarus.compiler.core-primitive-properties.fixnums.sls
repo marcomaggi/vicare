@@ -37,6 +37,7 @@
 (library (ikarus.compiler.core-primitive-properties.fixnums)
   (export initialise-core-primitive-properties/fixnums)
   (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.core-primitive-properties.base)
     (ikarus.compiler.scheme-objects-ontology))

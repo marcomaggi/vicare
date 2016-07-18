@@ -74,10 +74,39 @@
     identifier-suffix			syntax->list
     all-identifiers?
     set-symbol-value!			symbol-value
-    code?
+    fasl-write
 
     cnd::define-core-condition-type
     cnd::&condition			cnd::&assertion
+
+    symbols::$getprop
+    symbols::$symbol-value
+    symbols::$unbound-object?
+
+    code-objects::make-code
+    code-objects::code?
+    code-objects::procedure-annotation
+    code-objects::code-reloc-vector
+    code-objects::code-freevars
+    code-objects::code-size
+    code-objects::code-ref
+    code-objects::code->thunk
+    code-objects::code-set!
+    code-objects::set-code-reloc-vector!
+    code-objects::set-code-annotation!
+    code-objects::assembler-property-key
+    code-objects::$closure-code
+    code-objects::$code->closure
+    code-objects::$code-reloc-vector
+    code-objects::$code-freevars
+    code-objects::$code-size
+    code-objects::$code-annotation
+    code-objects::$code-ref
+    code-objects::$code-set!
+    code-objects::$set-code-annotation!
+    code-objects::$make-annotated-procedure
+    code-objects::$annotated-procedure-annotation
+    code-objects::$cpref
 
     ;; syntax helpers
     cond-boot-expansion
@@ -91,7 +120,49 @@
 	  identifier-suffix
 	  syntax->list)
     (only (ikarus.printing-messages)
-	  print-stderr-message))
+	  print-stderr-message)
+    (prefix (only (vicare system $symbols)
+		  $getprop
+		  $symbol-value
+		  $unbound-object?)
+	    symbols::)
+    (prefix (only (vicare system code-objects)
+		  #;make-code
+		  code?
+		  procedure-annotation
+		  code-reloc-vector
+		  code-freevars
+		  code-size
+		  code-ref
+		  #;code->thunk
+		  ;; code-set!
+		  ;; set-code-reloc-vector!
+		  ;; set-code-annotation!
+		  )
+	    code-objects::)
+    (prefix (only (vicare system $codes)
+		  assembler-property-key
+		  $closure-code
+		  $code->closure
+		  $code-reloc-vector
+		  $code-freevars
+		  $code-size
+		  $code-annotation
+		  $code-ref
+		  $code-set!
+		  $set-code-annotation!
+		  $make-annotated-procedure
+		  $annotated-procedure-annotation
+		  $cpref)
+	    code-objects::)
+    (prefix (only (ikarus.code-objects)
+		  make-code
+		  code->thunk
+		  code-set!
+		  set-code-reloc-vector!
+		  set-code-annotation!
+		  )
+	    code-objects::))
 
   (include "cond-boot-expansion.scm" #t)
 

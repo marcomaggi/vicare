@@ -42,30 +42,12 @@
     (only (vicare system $structs)
 	  base-rtd
 	  $struct-rtd)
-    ;;FIXME To be  included at the next  boot image rotation.  (Marco  Maggi; Sun Jul
-    ;;17, 2016)
-    ;;
-    ;; (prefix (vicare system code-objects)
-    ;; 	    code-objects::)
-    ;;
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Jul 17,
-    ;;2016)
-    (prefix (ikarus.code-objects)
+    (prefix (vicare system code-objects)
     	    code-objects::)
-    ;;FIXME To be  included at the next  boot image rotation.  (Marco  Maggi; Sun Jul
-    ;;17, 2016)
-    ;;
-    ;; (prefix (only (vicare system options)
-    ;; 		  debug-mode-enabled?
-    ;; 		  writing-boot-image?)
-    ;; 	    options::)
-    ;;
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Jul 17,
-    ;;2016)
-    (prefix (only (ikarus.options)
-		  debug-mode-enabled?
-		  writing-boot-image?)
-	    options::))
+    (prefix (only (vicare system options)
+    		  debug-mode-enabled?
+    		  writing-boot-image?)
+    	    options::))
 
   (module (wordsize case-word-size)
     (include "ikarus.wordsize.scm" #t))
@@ -259,7 +241,7 @@
 		    (make-graph (gensym->unique-string x) h)))
 		 ((string? x)
 		  (void))
-		 ((code? x)
+		 ((code-objects::code? x)
 		  (make-graph ($code-annotation x) h)
 		  (make-graph (code-objects::code-reloc-vector x) h))
 		 ((hashtable? x)
@@ -519,7 +501,7 @@
 
 ;;; --------------------------------------------------------------------
 
-	((code? x)	;code object
+	((code-objects::code? x)	;code object
 	 ;;Write the character "x" as header.
 	 (put-tag #\x port)
 	 ;;Write a raw  exact integer representing the number of  bytes actually used

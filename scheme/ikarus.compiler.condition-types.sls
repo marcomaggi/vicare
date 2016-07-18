@@ -54,6 +54,7 @@
     compile-time-operand-core-type-error
     compile-time-retval-core-type-error
     compiler-internal-error)
+  ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
   (import (rnrs)
     (ikarus.compiler.compat))
 

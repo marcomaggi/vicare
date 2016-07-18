@@ -24,6 +24,7 @@
     V V-known V-simple-operand
     K KN)
   (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
     (ikarus.compiler.helpers)

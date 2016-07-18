@@ -73,9 +73,19 @@
     tcbucket?
 
     ;; unsafe operations
-    $string-hash		$string-ci-hash
-    $symbol-hash		$bytevector-hash
-    $exact-integer-hash)
+    $boolean-hash
+    $bytevector-hash
+    $char-ci-hash
+    $char-hash
+    $exact-integer-hash
+    $fixnum-hash
+    $flonum-hash
+    $record-hash
+    $string-ci-hash
+    $string-hash
+    $struct-hash
+    $symbol-hash
+    $transcoder-hash)
   (import (except (vicare)
 		  make-eq-hashtable		make-eqv-hashtable
 		  make-hashtable

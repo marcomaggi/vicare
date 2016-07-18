@@ -56,6 +56,7 @@
     application-attributes-identity?
     CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES)
   (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.scheme-objects-ontology)
     (ikarus.compiler.core-primitive-properties.base)

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -32,7 +32,7 @@
     print-verbose-message
     print-debug-message)
   (import (vicare)
-    (prefix (ikarus.options)
+    (prefix (vicare system options)
 	    options::))
 
 
@@ -45,7 +45,8 @@
 	    (display prefix P))
 	  (apply fprintf P template arg*)
 	  (newline P)
-	  (flush-output-port P)))))
+	  (flush-output-port P))))
+  (void))
 
 (define (print-error-message template . args)
   (print-stderr-message "error: " template args))

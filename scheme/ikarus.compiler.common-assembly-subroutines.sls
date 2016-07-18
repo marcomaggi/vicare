@@ -29,6 +29,7 @@
     sl-values-label
     sl-cwv-label)
   (import (rnrs)
+    ;;NOTE Here we must load only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
     (ikarus.compiler.helpers)
@@ -36,7 +37,7 @@
     (ikarus.compiler.condition-types)
     (ikarus.compiler.unparse-recordised-code)
     (ikarus.compiler.intel-assembly)
-    (ikarus.intel-assembler))
+    (ikarus.compiler.intel-assembler))
 
   (import INTEL-ASSEMBLY-CODE-GENERATION)
   (include "ikarus.compiler.scheme-objects-layout.scm" #t)

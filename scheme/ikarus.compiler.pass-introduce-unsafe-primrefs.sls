@@ -18,6 +18,7 @@
 (library (ikarus.compiler.pass-introduce-unsafe-primrefs)
   (export pass-introduce-unsafe-primrefs)
   (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
     (ikarus.compiler.helpers)

@@ -296,7 +296,7 @@ endif
 
 VICARE_BOOT_SRCS = \
 	scheme/ikarus.wordsize.scm							\
-	scheme/ikarus.intel-assembler.sls						\
+	scheme/ikarus.compiler.intel-assembler.sls					\
 	scheme/ikarus.compiler.scheme-objects-layout.scm				\
 	scheme/ikarus.compiler.condition-types.sls					\
 	\
@@ -573,6 +573,7 @@ VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS = \
 	typed-core-primitives/strings.sls			\
 	typed-core-primitives/structs.sls			\
 	typed-core-primitives/symbols.sls			\
+	typed-core-primitives/tcbuckets.sls			\
 	typed-core-primitives/times-and-dates.sls		\
 	typed-core-primitives/transcoders.sls			\
 	typed-core-primitives/vectors.sls

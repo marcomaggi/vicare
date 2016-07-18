@@ -17,6 +17,7 @@
 #!vicare
 (library (ikarus.compiler.core-primitive-operation-names)
   (export CORE-PRIMITIVE-OPERATION-NAMES)
+  ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)

@@ -18,6 +18,7 @@
 (library (ikarus.compiler.pass-optimize-for-direct-jumps)
   (export pass-optimize-for-direct-jumps)
   (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
     (ikarus.compiler.helpers)

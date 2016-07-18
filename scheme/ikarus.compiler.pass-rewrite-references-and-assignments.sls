@@ -18,6 +18,7 @@
 (library (ikarus.compiler.pass-rewrite-references-and-assignments)
   (export pass-rewrite-references-and-assignments)
   (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
     (ikarus.compiler.helpers)

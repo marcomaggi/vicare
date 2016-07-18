@@ -103,12 +103,14 @@
 (declare-core-primitive transcoder-max
     (safe)
   (signatures
-   ((<transcoder> . (list-of <transcoder>))	=> (<transcoder>))))
+   ((<transcoder> . (list-of <transcoder>))	=> (<transcoder>)))
+  (replacements $transcoder-max))
 
 (declare-core-primitive transcoder-min
     (safe)
   (signatures
-   ((<transcoder> . (list-of <transcoder>))	=> (<transcoder>))))
+   ((<transcoder> . (list-of <transcoder>))	=> (<transcoder>)))
+  (replacements $transcoder-min))
 
 /section)
 

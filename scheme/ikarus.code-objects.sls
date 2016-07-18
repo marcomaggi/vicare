@@ -34,10 +34,11 @@
 		  set-code-annotation!		code-annotation
 		  procedure-annotation
 		  code-reloc-vector->sexp)
-    ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
-    ;;everything here using the system  libraries and not loading external libraries.
-    ;;(Marco Maggi; Fri May 23, 2014)
     (vicare system $fx)
+    (only (psyntax system $all)
+	  code?)
+    ;; (only (vicare system code-objects)
+    ;; 	  code?)
     (except (vicare system $codes)
 	    code-reloc-vector->sexp)
     (prefix (vicare platform words)

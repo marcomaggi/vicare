@@ -18,6 +18,7 @@
 (library (ikarus.compiler.pass-optimize-combinator-calls-lift-clambdas)
   (export pass-optimize-combinator-calls/lift-clambdas)
   (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
     (ikarus.compiler.helpers)

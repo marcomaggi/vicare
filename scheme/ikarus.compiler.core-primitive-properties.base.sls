@@ -152,6 +152,8 @@
     declare-parameter
     declare-object-retriever)
   (import (rnrs)
+    ;;NOTE Here  we should  import only "(ikarus.compiler.*)"  libraries.  But  we do
+    ;;not.
     (ikarus.compiler.compat)
     (only (vicare system $fx)
 	  $fxzero?

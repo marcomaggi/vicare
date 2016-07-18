@@ -20,14 +20,9 @@
 #!vicare
 (library (ikarus.compiler.scheme-objects-ontology)
   (export SCHEME-OBJECTS-ONTOLOGY)
-  ;;Here we should import:
-  ;;
-  ;; (import (rnrs)
-  ;;   (ikarus.compiler.compat))
-  ;;
-  ;;but this library directly source by  a test file for testing purposes.  Importing
-  ;;"(vicare)" makes it easier to handle dependencies.
-  (import (vicare))
+  (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
+    (ikarus.compiler.compat))
 
 
 (module SCHEME-OBJECTS-ONTOLOGY
@@ -1357,7 +1352,7 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

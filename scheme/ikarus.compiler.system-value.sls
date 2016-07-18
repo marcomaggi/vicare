@@ -20,12 +20,9 @@
   (export
     system-value
     system-value-gensym)
-  (import (except (vicare)
-		  system-value
-		  system-value-gensym)
-    (except (vicare system $symbols)
-	    system-value
-	    system-value-gensym)
+  (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
+    (ikarus.compiler.compat)
     (ikarus.compiler.helpers))
 
 
@@ -52,23 +49,23 @@
      ;;For example, this is more or less what happens to CONS:
      ;;
      ;;   (define G-cons (gensym "cons"))
-     ;;   ($set-symbol-value 'G-cons #<procedure cons>)
+     ;;   (set-symbol-value! 'G-cons #<procedure cons>)
      ;;   (putprop 'cons SYSTEM-VALUE-GENSYM 'G-cons)
      ;;
      ;;so later we can do:
      ;;
-     ;;   ($symbol-value (getprop 'G-cons SYSTEM-VALUE-GENSYM))
+     ;;   (symbol-value (getprop 'G-cons SYSTEM-VALUE-GENSYM))
      ;;   => #<procedure cons>
      ;;
      ;;or use the equivalent public API:
      ;;
      ;;   (system-value 'cons)    => #<procedure cons>
      ;;
-     (cond (($getprop x SYSTEM-VALUE-GENSYM)
+     (cond ((symbols::$getprop x SYSTEM-VALUE-GENSYM)
 	    => (lambda (g)
 		 (receive-and-return (v)
-		     ($symbol-value g)
-		   (when ($unbound-object? v)
+		     (symbols::$symbol-value g)
+		   (when (symbols::$unbound-object? v)
 		     (procedure-argument-violation __who__ "not a system symbol" x)))))
 	   (else
 	    (procedure-argument-violation __who__ "not a system symbol" x))))
@@ -99,23 +96,23 @@
      ;;For example, this is more or less what happens to CONS:
      ;;
      ;;   (define G-cons (gensym "cons"))
-     ;;   ($set-symbol-value 'G-cons #<procedure cons>)
+     ;;   (set-symbol-value! 'G-cons #<procedure cons>)
      ;;   (putprop 'cons SYSTEM-VALUE-GENSYM 'G-cons)
      ;;
      ;;so later we can do:
      ;;
-     ;;   ($symbol-value (getprop 'G-cons SYSTEM-VALUE-GENSYM))
+     ;;   (symbol-value (getprop 'G-cons SYSTEM-VALUE-GENSYM))
      ;;   => #<procedure cons>
      ;;
      ;;or use the equivalent public API:
      ;;
      ;;   (system-value 'cons)    => #<procedure cons>
      ;;
-     (cond (($getprop x SYSTEM-VALUE-GENSYM)
+     (cond ((symbols::$getprop x SYSTEM-VALUE-GENSYM)
 	    => (lambda (g)
 		 (receive-and-return (v)
-		     ($symbol-value g)
-		   (when ($unbound-object? v)
+		     (symbols::$symbol-value g)
+		   (when (symbols::$unbound-object? v)
 		     (procedure-argument-violation __who__ "not a system symbol" x)))))
 	   (else
 	    (procedure-argument-violation __who__ "not a system symbol" x))))

@@ -473,6 +473,33 @@
    ((<gensym> <positive-fixnum> <procedure>)	=> <list>)))
 
 
+;;;; printing messages
+
+(section
+
+(declare-core-primitive print-stderr-message
+    (safe)
+  (signatures
+   ((<string> <string> <list>)	=> (<void>))))
+
+(declare-core-primitive print-error-message
+    (safe)
+  (signatures
+   ((<string> . <list>)		=> (<void>))))
+
+(declare-core-primitive print-verbose-message
+    (safe)
+  (signatures
+   ((<string> . <list>)		=> (<void>))))
+
+(declare-core-primitive print-debug-message
+    (safe)
+  (signatures
+   ((<string> . <list>)		=> (<void>))))
+
+/section)
+
+
 ;;;; core syntactic binding descriptors, typed safe OOP core primitives: generic objects
 
 (section

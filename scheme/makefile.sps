@@ -191,7 +191,7 @@
   (prefix (vicare libraries)
 	  libraries::)
   ;;The following libraries are read, expanded and compiled from the source tree.
-  (prefix (ikarus.options)
+  (prefix (vicare system options)
 	  options::)
   (prefix (only (ikarus.compiler)
 		current-primitive-locations
@@ -402,7 +402,7 @@
 ;;;
     "ikarus.compiler.compat.sls"
     "ikarus.compiler.condition-types.sls"
-    "ikarus.intel-assembler.sls"
+    "ikarus.compiler.intel-assembler.sls"
     "ikarus.fasl.write.sls"
     "ikarus.fasl.read.sls"
     "ikarus.compiler.scheme-objects-ontology.sls"
@@ -1937,12 +1937,15 @@
     ($pointer-min				$pointers)
     ($pointer-max				$pointers)
 ;;;
-    (code?					v $language $code-objects)
-    (procedure-annotation			v $language $code-objects)
+    (make-code					$code-objects)
+    (code?					$code-objects)
     (code-reloc-vector				$code-objects)
     (code-freevars				$code-objects)
     (code-size					$code-objects)
     (code-ref					$code-objects)
+    (code->thunk				$code-objects)
+    (code-reloc-vector->sexp			$code-objects)
+    (procedure-annotation			$code-objects)
     ;;
     (assembler-property-key			$codes)
     ($closure-code				$codes)
@@ -1954,13 +1957,13 @@
     ($code-ref					$codes)
     ($code-set!					$codes)
     ($set-code-annotation!			$codes)
-    (code-reloc-vector->sexp			$codes)
     ($make-annotated-procedure			$codes)
     ($annotated-procedure-annotation		$codes)
     ($cpref					$codes)
 ;;;
     (tcbucket?					$tcbuckets)
     ($make-tcbucket				$tcbuckets)
+    ($tcbucket-tconc				$tcbuckets)
     ($tcbucket-key				$tcbuckets)
     ($tcbucket-val				$tcbuckets)
     ($tcbucket-next				$tcbuckets)
@@ -6115,10 +6118,19 @@
 ;;; --------------------------------------------------------------------
 ;;; (vicare system $hashtables)
 
-    ($string-hash				$hashtables)
-    ($string-ci-hash				$hashtables)
-    ($symbol-hash				$hashtables)
+    ($boolean-hash				$hashtables)
     ($bytevector-hash				$hashtables)
+    ($char-ci-hash				$hashtables)
+    ($char-hash					$hashtables)
+    ($exact-integer-hash			$hashtables)
+    ($fixnum-hash				$hashtables)
+    ($flonum-hash				$hashtables)
+    ($record-hash				$hashtables)
+    ($string-ci-hash				$hashtables)
+    ($string-hash				$hashtables)
+    ($struct-hash				$hashtables)
+    ($symbol-hash				$hashtables)
+    ($transcoder-hash				$hashtables)
 
 ;;;; built-in object types utilities
 

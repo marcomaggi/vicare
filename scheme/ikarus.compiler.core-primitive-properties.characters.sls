@@ -37,6 +37,7 @@
 (library (ikarus.compiler.core-primitive-properties.characters)
   (export initialise-core-primitive-properties/characters)
   (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.core-primitive-properties.base)
     (ikarus.compiler.scheme-objects-ontology))

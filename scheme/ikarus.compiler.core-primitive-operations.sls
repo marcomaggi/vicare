@@ -18,6 +18,7 @@
 (library (ikarus.compiler.core-primitive-operations)
   (export initialise-core-primitive-operations)
   (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
     (ikarus.compiler.helpers)

@@ -69,6 +69,8 @@
 	  $set-std-printer!)
     (only (vicare system $tcbuckets)
      	  tcbucket?)
+    (only (psyntax system $all)
+     	  code?)
     (only (vicare expander)
 	  syntax-clauses-unwrap
 	  syntax-clauses-collapse

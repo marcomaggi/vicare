@@ -355,6 +355,7 @@
   (declare-hash-function void-hash		<top>)
   (declare-hash-function eof-object-hash	<eof>)
   (declare-hash-function would-block-hash	<would-block>)
+  (declare-hash-function transcoder-hash	<transcoder>)
   (declare-hash-function object-hash		<top>)
   #| end of LET-SYNTAX |# )
 
@@ -372,54 +373,6 @@
 
 (section
 
-;;; tail-conc buckets
-
-(declare-core-primitive $make-tcbucket
-    (unsafe)
-  (signatures
-   ((<pair> <top> <top> (or <tcbucket> <non-negative-fixnum>))
-    => (<tcbucket>))))
-
-;;;
-
-(declare-core-primitive $tcbucket-key
-    (unsafe)
-  (signatures
-   ((<tcbucket>)		=> (<top>))))
-
-(declare-core-primitive $tcbucket-val
-    (unsafe)
-  (signatures
-   ((<tcbucket>)		=> (<top>))))
-
-(declare-core-primitive $tcbucket-next
-    (unsafe)
-  (signatures
-   ((<tcbucket>)		=> ((or <tcbucket> <non-negative-fixnum>)))))
-
-;;;
-
-(declare-core-primitive $set-tcbucket-tconc!
-    (unsafe)
-  (signatures
-   ((<tcbucket> <pair>)			=> (<void>))))
-
-(declare-core-primitive $set-tcbucket-key!
-    (unsafe)
-  (signatures
-   ((<tcbucket> <top>)		=> (<void>))))
-
-(declare-core-primitive $set-tcbucket-val!
-    (unsafe)
-  (signatures
-   ((<tcbucket> <top>)		=> (<void>))))
-
-(declare-core-primitive $set-tcbucket-next!
-    (unsafe)
-  (signatures
-   ((<tcbucket> (or <tcbucket> <non-negative-fixnum>))	=> (<void>))))
-
-;;; --------------------------------------------------------------------
 ;;; hash functions
 
 (let-syntax
@@ -450,7 +403,16 @@
 				 (attributes
 				  ((_)			foldable effect-free result-true))))
 			      )))
+  (declare-hash-function $boolean-hash		<boolean>)
+  (declare-hash-function $char-ci-hash		<char>)
+  (declare-hash-function $char-hash		<char>)
+  (declare-hash-function $exact-integer-hash	<exact-integer>)
+  (declare-hash-function $fixnum-hash		<fixnum>)
+  (declare-hash-function $flonum-hash		<flonum>)
+  (declare-hash-function $record-hash		<record>)
+  (declare-hash-function $struct-hash		<struct>)
   (declare-hash-function $symbol-hash		<symbol>)
+  (declare-hash-function $transcoder-hash	<transcoder>)
   #| end of LET-SYNTAX |# )
 
 /section)

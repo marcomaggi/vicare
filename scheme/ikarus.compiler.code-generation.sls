@@ -27,6 +27,7 @@
     pass-color-by-chaitin
     pass-flatten-codes)
   (import (rnrs)
+    ;;NOTE Here we must load only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.config)
     (only (ikarus.compiler.helpers)
 	  sl-apply-label-func)

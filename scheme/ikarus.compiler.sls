@@ -86,15 +86,13 @@
     unparse-recordized-code
     unparse-recordized-code/sexp
     unparse-recordized-code/pretty)
-  ;;NOTE  This library  is  needed  to build  a  new boot  image.   Let's  try to  do
-  ;;everything  here  *not*  loading  external  libraries.  Also,  let's  try  to  do
-  ;;everything without  importing libraries in  the hierarchy (vicare system  --); we
-  ;;should rely on the expander's type tagging and the compiler's core type inference
-  ;;to introduce unsafe calls when appropriate.  (Marco Maggi; Fri Sep 19, 2014)
+  ;;NOTE This library is needed to build a  new boot image.  Here we must import only
+  ;;"(ikarus.compiler.*)" libraries.
   (import (except (rnrs)
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
     (ikarus.compiler.helpers)
@@ -122,12 +120,7 @@
     (ikarus.compiler.pass-insert-engine-checks)
     (ikarus.compiler.pass-insert-stack-overflow-check)
     (ikarus.compiler.code-generation)
-    ;;When building a new  boot image: the FASL write library  is loaded from source.
-    ;;This needs  to be  loaded here  so that  it evaluates  with the  freshly loaded
-    ;;"ikarus.config.scm", including the correct value for WORDSIZE.
-    (only (ikarus.fasl.write)
-	  fasl-write)
-    (only (ikarus.intel-assembler)
+    (only (ikarus.compiler.intel-assembler)
 	  assemble-sources))
 
   (include "ikarus.wordsize.scm" #t)

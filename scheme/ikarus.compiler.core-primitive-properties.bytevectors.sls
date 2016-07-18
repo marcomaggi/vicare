@@ -37,6 +37,7 @@
 (library (ikarus.compiler.core-primitive-properties.bytevectors)
   (export initialise-core-primitive-properties/bytevectors)
   (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.core-primitive-properties.base)
     (ikarus.compiler.scheme-objects-ontology))

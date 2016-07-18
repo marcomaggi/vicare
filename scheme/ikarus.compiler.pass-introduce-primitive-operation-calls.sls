@@ -18,6 +18,7 @@
 (library (ikarus.compiler.pass-introduce-primitive-operation-calls)
   (export pass-introduce-primitive-operation-calls)
   (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
     (ikarus.compiler.helpers)

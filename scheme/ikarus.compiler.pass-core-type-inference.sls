@@ -18,6 +18,7 @@
 (library (ikarus.compiler.pass-core-type-inference)
   (export pass-core-type-inference)
   (import (rnrs)
+    ;;NOTE Here we must import only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
     (ikarus.compiler.helpers)

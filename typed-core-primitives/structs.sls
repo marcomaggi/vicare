@@ -97,18 +97,23 @@
 (declare-core-primitive struct-field-accessor
     (safe)
   (signatures
-   #;((<struct-type-descriptor> (or <non-negative-fixnum> <symbol>))	=> (<procedure>))
-   ((<struct-type-descriptor> <non-negative-fixnum>)	=> (<procedure>))
-   ((<struct-type-descriptor> <symbol>)			=> (<procedure>)))
+   ((<struct-type-descriptor> (or <non-negative-fixnum> <symbol>))	=> ((lambda (<struct>) => (<top>)))))
   (attributes
    ((_ _)		effect-free result-true)))
 
 (declare-core-primitive struct-field-mutator
     (safe)
   (signatures
-   #;((<struct-type-descriptor> (or <non-negative-fixnum> <symbol>))	=> (<procedure>))
-   ((<struct-type-descriptor> <non-negative-fixnum>)	=> (<procedure>))
-   ((<struct-type-descriptor> <symbol>)			=> (<procedure>)))
+   ((<struct-type-descriptor> (or <non-negative-fixnum> <symbol>))	=> ((lambda (<struct> <top>) => (<void>)))))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive struct-field-method
+    (safe)
+  (signatures
+   ((<struct-type-descriptor> (or <non-negative-fixnum> <symbol>))	=> ((case-lambda
+									      ((<struct>)       => (<top>))
+									      ((<struct> <top>) => (<void>))))))
   (attributes
    ((_ _)		effect-free result-true)))
 
