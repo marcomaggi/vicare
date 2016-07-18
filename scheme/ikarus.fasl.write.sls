@@ -27,9 +27,6 @@
 		  fasl-write
 		  fasl-write-header
 		  fasl-write-object)
-    ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
-    ;;everything here using the system  libraries and not loading external libraries.
-    ;;(Marco Maggi; Fri May 23, 2014)
     (vicare system $fx)
     (vicare system $pairs)
     (vicare system $chars)

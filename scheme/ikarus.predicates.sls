@@ -59,7 +59,7 @@
 	  $pointer=)
     (vicare system $foreign)
     ;;These are the ones implemented as primitive operations.
-    (rename (only (psyntax system $all) #;(vicare system code-objects)
+    (rename (only (vicare system code-objects)
 		  code?)
 	    (code?		sys::code?))
     (rename (only (vicare)

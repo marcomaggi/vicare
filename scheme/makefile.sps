@@ -177,22 +177,10 @@
 ;;defined by the old  boot image.  Source libraries expanded later to  be part of the
 ;;boot image are interned in a separate library collection, BOOTSTRAP-COLLECTION.
 (import (vicare)
-  (prefix (only (vicare expander)
-		generate-descriptive-gensyms?
-		syntax-clauses-unwrap
-		syntax-clauses-collapse
-		syntax-clauses-validate-specs
-		syntax-clauses-fold-specs
-		syntax-clauses-validate-specs
-		syntax-clause-spec-keyword
-		syntax-clause-spec?
-		make-syntax-clause-spec)
-	  expander::)
-  (prefix (vicare libraries)
-	  libraries::)
+  (prefix (vicare system options)	options::)
+  (prefix (vicare expander)		expander::)
+  (prefix (vicare libraries)		libraries::)
   ;;The following libraries are read, expanded and compiled from the source tree.
-  (prefix (vicare system options)
-	  options::)
   (prefix (only (ikarus.compiler)
 		current-primitive-locations
 		compile-core-expr-to-port

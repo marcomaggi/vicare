@@ -40,7 +40,7 @@
 		  printf		fprintf
 		  print-unicode		print-graph
 		  printer-integer-radix	printer-printing-style)
-    (only (psyntax system $all) #;(vicare system code-objects)
+    (only (vicare system code-objects)
 	  code?
 	  procedure-annotation)
     (only (vicare system $symbols)

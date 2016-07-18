@@ -35,10 +35,8 @@
 		  procedure-annotation
 		  code-reloc-vector->sexp)
     (vicare system $fx)
-    (only (psyntax system $all)
-	  code?)
-    ;; (only (vicare system code-objects)
-    ;; 	  code?)
+    (only (vicare system code-objects)
+     	  code?)
     (except (vicare system $codes)
 	    code-reloc-vector->sexp)
     (prefix (vicare platform words)
