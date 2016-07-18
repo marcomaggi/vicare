@@ -41,15 +41,7 @@
     overloaded-function-late-binding
     #| end of EXPORT |# )
   (import (except (vicare)
-		  method-call-late-binding
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Sun Jul 17, 2016)
-		  #;make-overloaded-function-late-binding-error
-		  #| end of EXCEPT |# )
-    #;(only (ikarus conditions)
-	  ;;FIXME To be  removed at the next boot image  rotation.  (Marco Maggi; Sun
-	  ;;Jul 17, 2016)
-	  make-overloaded-function-late-binding-error)
+		  method-call-late-binding)
     (ikarus records syntactic)
     (only (ikarus.core-type-descr)
 	  core-type-descriptor?

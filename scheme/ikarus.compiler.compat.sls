@@ -127,18 +127,22 @@
 		  $unbound-object?)
 	    symbols::)
     (prefix (only (vicare system code-objects)
-		  #;make-code
+		  make-code
 		  code?
 		  procedure-annotation
 		  code-reloc-vector
 		  code-freevars
 		  code-size
 		  code-ref
-		  #;code->thunk
-		  ;; code-set!
-		  ;; set-code-reloc-vector!
-		  ;; set-code-annotation!
-		  )
+		  code->thunk
+		  #;code-set!
+		  #;set-code-reloc-vector!
+		  #;set-code-annotation!)
+	    code-objects::)
+    (prefix (only (ikarus.code-objects)
+		  code-set!
+		  set-code-reloc-vector!
+		  set-code-annotation!)
 	    code-objects::)
     (prefix (only (vicare system $codes)
 		  assembler-property-key
@@ -154,14 +158,6 @@
 		  $make-annotated-procedure
 		  $annotated-procedure-annotation
 		  $cpref)
-	    code-objects::)
-    (prefix (only (ikarus.code-objects)
-		  make-code
-		  code->thunk
-		  code-set!
-		  set-code-reloc-vector!
-		  set-code-annotation!
-		  )
 	    code-objects::))
 
   (include "cond-boot-expansion.scm" #t)

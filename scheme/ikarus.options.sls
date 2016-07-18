@@ -51,16 +51,7 @@
     inclusion-in-rotation-boot-image
     bootstrapping-for-normal-boot-image
     bootstrapping-for-rotation-boot-image)
-  (import (except (vicare)
-		  ;;FIXME These excepts  are to be removed after the  next boot image
-		  ;;rotation.  (Marco Maggi; Sun Jul 17, 2016)
-		  vicare-built-with-arguments-validation-enabled
-		  vicare-built-with-srfi-enabled
-		  vicare-built-with-ffi-enabled
-		  vicare-built-with-iconv-enabled
-		  vicare-built-with-posix-enabled
-		  vicare-built-with-glibc-enabled
-		  vicare-built-with-linux-enabled))
+  (import (vicare))
 
   (include "cond-boot-expansion.scm" #t)
 

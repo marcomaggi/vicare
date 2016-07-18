@@ -33,7 +33,7 @@
     options::print-debug-messages?)
   (import (rnrs)
     (ikarus.compiler.compat)
-    (prefix (only (vicare system options) #;(ikarus.options)
+    (prefix (only (vicare system options)
 		  print-verbose-messages?
 		  print-debug-messages?)
 	    options::))
