@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: tests for reader annotation objects, typed language
@@ -53,14 +54,11 @@
 
   ;;Method call late binding.
   ;;
-  ;;FIXME To be uncommented  at the next boot image rotation.   (Marco Maggi; Sat Dec
-  ;;26, 2015)
-  ;;
-  ;; (check
-  ;;     (let* ((port		(open-string-input-port "123"))
-  ;; 	     ({datum <top>}	(get-annotated-datum port)))
-  ;; 	(method-call-late-binding 'stripped datum))
-  ;;   => 123)
+  (check
+      (let* ((port		(open-string-input-port "123"))
+  	     ({datum <top>}	(get-annotated-datum port)))
+  	(method-call-late-binding 'stripped datum))
+    => 123)
 
   #t)
 
@@ -75,5 +73,4 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; coding: utf-8
 ;; End:

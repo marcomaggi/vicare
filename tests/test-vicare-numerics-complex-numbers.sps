@@ -220,19 +220,13 @@
 
 ;;; --------------------------------------------------------------------
 
-  ;;FIXME To be uncommented  at the next boot image rotation.   (Marco Maggi; Fri May
-  ;;8, 2015)
-  ;;
-  ;; (check-for-procedure-signature-argument-violation
-  ;;     (make-rectangular 1+2i 3)
-  ;;   => '(make-rectangular 1 real? 1+2i))
+  (check-for-procedure-signature-argument-violation
+      (make-rectangular 1+2i 3)
+    => '(make-rectangular 1 real? 1+2i))
 
-  ;;FIXME To be uncommented  at the next boot image rotation.   (Marco Maggi; Fri May
-  ;;8, 2015)
-  ;;
-  ;; (check-for-procedure-signature-argument-violation
-  ;;     (make-rectangular 3 1+2i)
-  ;;   => '(make-rectangular 2 real? 1+2i))
+  (check-for-procedure-signature-argument-violation
+      (make-rectangular 3 1+2i)
+    => '(make-rectangular 2 real? 1+2i))
 
   #t)
 
@@ -403,19 +397,13 @@
 
 ;;; --------------------------------------------------------------------
 
-  ;;FIXME To be uncommented  at the next boot image rotation.   (Marco Maggi; Fri May
-  ;;8, 2015)
-  ;;
-  ;; (check-for-procedure-signature-argument-violation
-  ;;     (make-polar 1+2i 3)
-  ;;   => '(make-polar 1 real? 1+2i))
+  (check-for-procedure-signature-argument-violation
+      (make-polar 1+2i 3)
+    => '(make-polar 1 real? 1+2i))
 
-  ;;FIXME To be uncommented  at the next boot image rotation.   (Marco Maggi; Fri May
-  ;;8, 2015)
-  ;;
-  ;; (check-for-procedure-signature-argument-violation
-  ;;     (make-polar 3 1+2i)
-  ;;   => '(make-polar 2 real? 1+2i))
+  (check-for-procedure-signature-argument-violation
+      (make-polar 3 1+2i)
+    => '(make-polar 2 real? 1+2i))
 
   #t)
 
