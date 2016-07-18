@@ -567,7 +567,7 @@
 (declare-core-primitive make-overloaded-function-late-binding-error
     (safe)
   (signatures
-   ((<symbol> <symbol> <top> <type-descriptor>)	=> (&overloaded-function-late-binding-error))))
+   ((<overloaded-function-descriptor>)		=> (&overloaded-function-late-binding-error))))
 
 /section)
 

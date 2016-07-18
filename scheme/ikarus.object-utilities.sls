@@ -44,8 +44,12 @@
 		  method-call-late-binding
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Sun Jul 17, 2016)
-		  make-overloaded-function-late-binding-error
+		  #;make-overloaded-function-late-binding-error
 		  #| end of EXCEPT |# )
+    #;(only (ikarus conditions)
+	  ;;FIXME To be  removed at the next boot image  rotation.  (Marco Maggi; Sun
+	  ;;Jul 17, 2016)
+	  make-overloaded-function-late-binding-error)
     (ikarus records syntactic)
     (only (ikarus.core-type-descr)
 	  core-type-descriptor?
@@ -71,10 +75,6 @@
     (only (vicare system $records)
 	  $record-type-method-retriever
 	  $record-type-hash-function)
-    (only (ikarus conditions)
-	  ;;FIXME To be  removed at the next boot image  rotation.  (Marco Maggi; Sun
-	  ;;Jul 17, 2016)
-	  make-overloaded-function-late-binding-error)
     (prefix (only (ikarus records procedural)
 		  record-type-implemented-interfaces)
 	    td::)
