@@ -370,7 +370,7 @@
 ;;maker of "<object-type-spec>" is not exported by the module.
 ;;
 (define-core-record-type <object-type-spec>
-  (nongenerative *8*vicare:expander:<object-type-spec>)
+  (nongenerative vicare:expander:<object-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (fields
@@ -2854,7 +2854,7 @@
 ;;object-type specifications for: <fixnum>, <flonum>, <string>, <list>, ...
 ;;
 (define-core-record-type <core-type-spec>
-  (nongenerative *8*vicare:expander:<core-type-spec>)
+  (nongenerative vicare:expander:<core-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -2916,7 +2916,7 @@
 ;;"Struct-Type Spec") or STRUCT-OTS.
 ;;
 (define-core-record-type <struct-type-spec>
-  (nongenerative *8*vicare:expander:<struct-type-spec>)
+  (nongenerative vicare:expander:<struct-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -2963,7 +2963,7 @@
 ;;called RTS (as in "Record-Type Spec") or RECORD-OTS.
 ;;
 (define-core-record-type <record-type-spec>
-  (nongenerative *8*vicare:expander:<record-type-spec>)
+  (nongenerative vicare:expander:<record-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -3097,7 +3097,7 @@
 ;;"<compound-condition>" representing compound condition objects of a known type.
 ;;
 (define-core-record-type <compound-condition-type-spec>
-  (nongenerative *8*vicare:expander:<compound-condition-type-spec>)
+  (nongenerative vicare:expander:<compound-condition-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -3193,7 +3193,7 @@
 ;;types.
 ;;
 (define-core-record-type <union-type-spec>
-  (nongenerative *8*vicare:expander:<union-type-spec>)
+  (nongenerative vicare:expander:<union-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -3466,7 +3466,7 @@
 ;;types.
 ;;
 (define-core-record-type <intersection-type-spec>
-  (nongenerative *8*vicare:expander:<intersection-type-spec>)
+  (nongenerative vicare:expander:<intersection-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -3637,7 +3637,7 @@
 ;;types.
 ;;
 (define-core-record-type <complement-type-spec>
-  (nongenerative *8*vicare:expander:<complement-type-spec>)
+  (nongenerative vicare:expander:<complement-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -3711,7 +3711,7 @@
 ;;types.
 ;;
 (define-core-record-type <ancestor-of-type-spec>
-  (nongenerative *8*vicare:expander:<ancestor-of-type-spec>)
+  (nongenerative vicare:expander:<ancestor-of-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -3803,7 +3803,7 @@
 ;;the signature of a closure object.
 ;;
 (define-core-record-type <closure-type-spec>
-  (nongenerative *8*vicare:expander:<closure-type-spec>)
+  (nongenerative vicare:expander:<closure-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -3911,7 +3911,7 @@
 ;;"<pair>" representing pair of objects holding items of a known type.
 ;;
 (define-core-record-type <pair-type-spec>
-  (nongenerative *8*vicare:expander:<pair-type-spec>)
+  (nongenerative vicare:expander:<pair-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -4025,7 +4025,7 @@
 ;;"<pair>" representing pair of objects holding items of the same type.
 ;;
 (define-core-record-type <pair-of-type-spec>
-  (nongenerative *8*vicare:expander:<pair-of-type-spec>)
+  (nongenerative vicare:expander:<pair-of-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -4119,7 +4119,7 @@
 ;;heterogeneous type.
 ;;
 (define-core-record-type <list-type-spec>
-  (nongenerative *8*vicare:expander:<list-type-spec>)
+  (nongenerative vicare:expander:<list-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -4250,7 +4250,7 @@
 ;;type.
 ;;
 (define-core-record-type <list-of-type-spec>
-  (nongenerative *8*vicare:expander:<list-of-type-spec>)
+  (nongenerative vicare:expander:<list-of-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -4336,7 +4336,7 @@
 ;;"<list>" representing alist objects holding keys and values of a known type.
 ;;
 (define-core-record-type <alist-type-spec>
-  (nongenerative *8*vicare:expander:<alist-type-spec>)
+  (nongenerative vicare:expander:<alist-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <list-of-type-spec>)
@@ -4413,7 +4413,7 @@
 ;;heterogeneous type.
 ;;
 (define-core-record-type <vector-type-spec>
-  (nongenerative *8*vicare:expander:<vector-type-spec>)
+  (nongenerative vicare:expander:<vector-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -4529,7 +4529,7 @@
 ;;"<vector>" representing vector objects holding items of a known type.
 ;;
 (define-core-record-type <vector-of-type-spec>
-  (nongenerative *8*vicare:expander:<vector-of-type-spec>)
+  (nongenerative vicare:expander:<vector-of-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -4611,7 +4611,7 @@
 ;;type.
 ;;
 (define-core-record-type <hashtable-type-spec>
-  (nongenerative *8*vicare:expander:<hashtable-type-spec>)
+  (nongenerative vicare:expander:<hashtable-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -4688,7 +4688,7 @@
 ;;annotation.
 ;;
 (define-core-record-type <enumeration-type-spec>
-  (nongenerative *8*vicare:expander:<enumeration-type-spec>)
+  (nongenerative vicare:expander:<enumeration-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -4772,7 +4772,7 @@
 ;;defined with DEFINE-LABEL.
 ;;
 (define-core-record-type <label-type-spec>
-  (nongenerative *8*vicare:expander:<label-type-spec>)
+  (nongenerative vicare:expander:<label-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
@@ -4817,7 +4817,7 @@
 ;;
 
 (define-core-record-type <interface-type-spec>
-  (nongenerative *8*vicare:expander:<interface-type-spec>)
+  (nongenerative vicare:expander:<interface-type-spec>)
   (define-type-descriptors)
   (strip-angular-parentheses)
   (parent <object-type-spec>)
