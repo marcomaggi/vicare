@@ -100,7 +100,7 @@
 		;   (({?method-procname . ?rv-types} . ?formals) . ?body)
 		;
 		;that  can  be  turned   into  a  method's  implementation  procedure
-		;definition just be prepending DEFINE/TYPED or DEFINE/OVERLOAD.
+		;definition just by prepending DEFINE/TYPED or DEFINE/OVERLOAD.
     #| end of FIELDS |# )
 
   (protocol
