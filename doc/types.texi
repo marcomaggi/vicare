@@ -7096,14 +7096,14 @@ In the following example:
 
 @noindent
 we can think of the @clause{constructor} clauses as generating the
-following function definition:
+following functions definition:
 
 @lisp
-(case-define <vec>-constructor
-  ((@{_ <vec>@} a b)
-   (vector a b))
-  ((@{_ <vec>@} a b c)
-   (vector a b c)))
+(define/overload (@{<vec>-constructor <vec>@} a b)
+  (vector a b))
+
+(define/overload (@{<vec>-constructor <vec>@} a b c)
+  (vector a b c))
 @end lisp
 
 @noindent

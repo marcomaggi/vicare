@@ -48,6 +48,24 @@
        => (quote ?expected)))
     ))
 
+(define (%eval sexp)
+  (with-exception-handler
+      (lambda (E)
+	(unless (warning? E)
+	  (raise-continuable E)))
+    (lambda ()
+      (eval sexp THE-ENVIRONMENT
+	    (expander-options typed-language)
+	    (compiler-options)))))
+
+(define THE-ENVIRONMENT
+  (environment '(vicare)
+	       '(vicare language-extensions labels)))
+
+(define (%print-message bool str)
+  (when bool
+    (fprintf (current-error-port) "~a\n" str)))
+
 
 (parametrise ((check-test-name	'type-inspection))
 
