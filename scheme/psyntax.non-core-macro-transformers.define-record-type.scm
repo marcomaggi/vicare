@@ -272,19 +272,17 @@
   (define method-spec*
     (%parse-method-clauses clause*.stx foo foo-for-id-generation field-name*.sym synner))
 
-  ;;METHOD-NAME*.SYM is  a list  of symbols  representing the  names of  the methods,
-  ;;including the field names.
-  ;;
-  ;;METHOD-PROCNAME*.ID is a list of syntactic  identifiers that will be bound to the
-  ;;method implementation procedures.
+  ;;EARLY-BINDING-METHODS-ALIST an  alist having:  as keys, symbols  representing the
+  ;;method names,  including the field  names; as values, syntactic  identifiers that
+  ;;will be bound to the method implementation procedures, including field methods.
   ;;
   ;;METHOD-FORM*.SEXP  is  a,   possibly  empty,  list  of   forms  representing  the
   ;;definitions of method implementation procedures.
   ;;
   ;;METHOD-RETRIEVER-CODE.SEXP  is false  or  a symbolic  expression  (to be  BLESSed
   ;;later)  representing  a  Scheme  expression   returning  a  closure  object:  the
-  ;;method-retriever function.
-  (define-values (method-name*.sym method-procname*.id method-form*.sexp method-retriever-code.sexp)
+  ;;late-binding method-retriever function.
+  (define-values (early-binding-methods-alist method-form*.sexp method-retriever-code.sexp)
     (%process-method-specs foo parent-rtd.id method-spec* field-name*.sym field-method*))
 
   ;;Null  or a  proper  list of  "<interface-type-spec>"  instances representing  the
@@ -311,8 +309,7 @@
     (%make-type-name-syntactic-binding-form foo foo-uid make-foo foo? foo-super-rcd.id foo-destructor.id
 					    foo-parent.id foo-rtd foo-rcd
 					    foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
-					    method-name*.sym method-procname*.id
-					    implemented-interface*.ots))
+					    early-binding-methods-alist implemented-interface*.ots))
 
   (bless
    `(module (,foo
@@ -1424,11 +1421,10 @@
     ;;
     ;;Return the following values:
     ;;
-    ;;* METHOD-NAME*.SYM,  a list of symbols  representing the names of  the methods,
-    ;;including the field names.
-    ;;
-    ;;* METHOD-PROCNAME*.ID,  a list of syntactic  identifiers that will be  bound to
-    ;;the method implementation procedures.
+    ;;* EARLY-BINDING-METHODS-ALIST  an alist  having: as keys,  symbols representing
+    ;;the method names,  including the field names; as  values, syntactic identifiers
+    ;;that will  be bound  to the method  implementation procedures,  including field
+    ;;methods.
     ;;
     ;;* METHOD-FORM*.SEXP,  a list  of forms representing  the definitions  of method
     ;;implementation procedures.
@@ -1454,50 +1450,43 @@
 		      (recur (car rest) (cdr rest))
 		    '()))))))
     (let loop ((group*				group*)
-	       (method-name*.sym		'())
-	       (method-procname*.id		'())
+	       (early-binding-methods-alist	(map cons field-name*.sym field-method*.id))
 	       (method-form*.sexp		'())
-	       (methods-late-binding-alist	(map cons field-name*.sym field-method*.id)))
+	       (late-binding-methods-alist	(map cons field-name*.sym field-method*.id)))
       (if (pair? group*)
 	  (let ((group (car group*)))
-	    (cond ((null? group)
-		   (loop (cdr group*)
-			 method-name*.sym
-			 method-procname*.id
-			 method-form*.sexp
-			 methods-late-binding-alist))
-
-		  ((list-of-single-item? group)
+	    (cond ((list-of-single-item? group)
 		   (let ((single (car group)))
 		     (loop (cdr group*)
-			   (cons (<method-spec>-name-sym single) method-name*.sym)
-			   (cons (<method-spec>-procname single) method-procname*.id)
+			   (cons (cons (<method-spec>-name-sym single)
+				       (<method-spec>-procname single))
+				 early-binding-methods-alist)
 			   (cons (cons (core-prim-id 'define/typed) (<method-spec>-implementation-meat single))
 				 method-form*.sexp)
 			   (cons (cons (<method-spec>-name-id single) (<method-spec>-procname single))
-				 methods-late-binding-alist))))
+				 late-binding-methods-alist))))
 
 		   (else
 		    (let ((first (car group)))
 		      (loop (cdr group*)
-			    (cons (<method-spec>-name-sym first) method-name*.sym)
-			    (cons (<method-spec>-procname first) method-procname*.id)
+			    (cons (cons (<method-spec>-name-sym first)
+					(<method-spec>-procname first))
+				  early-binding-methods-alist)
 			    (append (map (lambda (spec)
 					   (cons (core-prim-id 'define/overload) (<method-spec>-implementation-meat spec)))
 				      group)
 				    method-form*.sexp)
 			    (cons (cons (<method-spec>-name-id first) (<method-spec>-procname first))
-				  methods-late-binding-alist))))))
+				  late-binding-methods-alist))))))
 	;;No more groups.
-	(values (append method-name*.sym    field-name*.sym)
-		(append method-procname*.id field-method*.id)
+	(values early-binding-methods-alist
 		method-form*.sexp
-		(%make-method-retriever foo parent-rtd.id methods-late-binding-alist)))))
+		(%make-method-retriever foo parent-rtd.id late-binding-methods-alist)))))
 
-  (define (%make-method-retriever foo parent-rtd.id methods-late-binding-alist)
+  (define (%make-method-retriever foo parent-rtd.id late-binding-methods-alist)
     (define method-name.id	(make-syntactic-identifier-for-temporary-variable "method-name"))
     (define parent-retriever.id	(make-syntactic-identifier-for-temporary-variable "parent-retriever"))
-    (cond ((pair? methods-late-binding-alist)
+    (cond ((pair? late-binding-methods-alist)
 	   (let ((retriever-maker.sexp `(lambda/typed (,parent-retriever.id)
 					  (lambda/typed ({_ (or <false> <procedure>)} {,method-name.id <symbol>})
 					    (case ,method-name.id
@@ -1505,7 +1494,7 @@
 						       (let ((name (car P))
 							     (proc (cdr P)))
 							 `((,name) ,proc)))
-						  methods-late-binding-alist)
+						  late-binding-methods-alist)
 					      (else
 					       (,parent-retriever.id ,method-name.id)))))))
 	     `(,retriever-maker.sexp ,(if parent-rtd.id
@@ -1530,7 +1519,7 @@
 						 foo-equality-predicate.id
 						 foo-comparison-procedure.id
 						 foo-hash-function.id
-						 method-name*.sym method-procname*.id
+						 early-binding-methods-alist
 						 implemented-interface*.ots)
   ;;Build and return symbolic expression (to  be BLESSed later) representing a Scheme
   ;;expression which, expanded and evaluated  at expand-time, returns the record-type
@@ -1560,48 +1549,22 @@
   ;;FOO-RTD.SYM must be a  gensym: it will become the name  of the identifier bound
   ;;to the record-constructor descriptor.
   ;;
-  ;;METHOD-NAME*.SYM must be null or a list of symbols representing the method names.
-  ;;
-  ;;METHOD-PROCNAME*.ID  must be  null or  list  of identifiers  bound to  procedures
-  ;;implementing the methods.
+  ;;EARLY-BINDING-METHODS-ALIST an  alist having:  as keys, symbols  representing the
+  ;;method names,  including the field  names; as values, syntactic  identifiers that
+  ;;will be bound to the method implementation procedures, including field methods.
   ;;
   ;;IMPLEMENTED-INTERFACE*.OTS  null  or  a proper  list  of  "<interface-type-spec>"
   ;;instances representing the interfaces that this record-type implements.
   ;;
-  (define (%make-alist-from-ids field-name*.id operator*.id)
-    ;;We want to return a  symbolic expression representing the following expand-time
-    ;;expression:
-    ;;
-    ;;   (list (cons (quote ?field-sym0) (syntax ?operator0))
-    ;;         (cons (quote ?field-sym)  (syntax ?operator))
-    ;;         ...)
-    ;;
-    ;;which evaluates  to an alist  whose keys are field  names and whose  values are
-    ;;syntactic identifiers bound  to accessors or mutators.  When  an OPERATOR.ID is
-    ;;false, an entry with the following format is generated:
-    ;;
-    ;;  (cons (quote ?field-sym) #t)
-    ;;
-    ;;so  an attempt  to call  the mutator  of an  immutable field  can be  correctly
-    ;;detected and reported (with a meaningful error message).
-    ;;
-    (cons 'list (fold-right
-		    (lambda (key.id operator.id knil)
-		      (cons (list 'cons
-				  `(quote ,(syntax->datum key.id))
-				  (if operator.id
-				      `(syntax ,operator.id)
-				    #t))
-			    knil))
-		  '() field-name*.id operator*.id)))
 
   (define hash-func.id
     (or foo-hash-function.id
 	(core-prim-id 'record-hash)))
 
   (define foo-methods.table
-    (%make-alist-from-ids (cons 'hash method-name*.sym)
-			  (cons hash-func.id method-procname*.id)))
+    `(list . ,(map (lambda (entry)
+		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+		early-binding-methods-alist)))
 
   (define implemented-interfaces
     (if (null? implemented-interface*.ots)
@@ -1623,8 +1586,7 @@
 			  (syntax ,foo?.id)
 			  (syntax ,foo-equality-predicate.id)
 			  (syntax ,foo-comparison-procedure.id)
-			  ,(and foo-hash-function.id
-				`(syntax ,foo-hash-function.id))
+			  (syntax ,foo-hash-function.id)
 			  ,foo-methods.table
 			  ,implemented-interfaces))
 
