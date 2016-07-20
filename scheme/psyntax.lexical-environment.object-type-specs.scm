@@ -480,7 +480,8 @@
 		;
 		;   (?method ?instance ?arg ...)
 		;
-		;and called explicitly with the METHOD-CALL syntax.
+		;and  called  explicitly with  the  METHOD-CALL  syntax.  This  alist
+		;includes, as tail, the parent's alist (if any).
 
     (immutable	implemented-iterfaces	object-type-spec.implemented-interfaces)
 		;A (possibly empty) proper  list of "<interface-type-spec>" instances
@@ -498,7 +499,10 @@
 	(make-record name uids-list parent.ots type-annotation-maker
 		     constructor-stx destructor-stx type-predicate-stx
 		     equality-predicate.id comparison-procedure.id hash-function.id
-		     methods-table implemented-interfaces))
+		     (if parent.ots
+			 (append methods-table (object-type-spec.methods-table parent.ots))
+			 methods-table)
+		     implemented-interfaces))
       make-object-type-spec))
 
   (custom-printer
@@ -568,15 +572,14 @@
   ;;and  evaluated at  run-time, returns  the method's  applicable; otherwise  return
   ;;false.
   ;;
-  ;; (debug-print __who__
-  ;; 	       method-name.sym (object-type-spec.methods-table ots))
+  ;;NOTE  We need  to remember  that the  METHODS-TABLE field  holds entries  for the
+  ;;parent  of  OTS,  so  there  is  no  need  to  traverse  the  hierarchy  of  type
+  ;;specifications.
+  ;;
   (cond ((assq method-name.sym (object-type-spec.methods-table ots))
-	 ;;The name  is known; extract the  symbolic expression from the  alist entry
-	 ;;and return it.
+	 ;;The name is known; extract the method implementation object from the alist
+	 ;;entry and return it.
 	 => cdr)
-	((object-type-spec.parent-ots ots)
-	 => (lambda (parent.ots)
-	      (object-type-spec.applicable-method-stx parent.ots method-name.sym)))
 	(else #f)))
 
 
