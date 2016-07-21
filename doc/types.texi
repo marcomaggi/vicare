@@ -14,6 +14,7 @@ leave the type of variables unspecified.
 * types syntaxes::              Type-exploiting syntaxes.
 * types built-in::              Built-in object types.
 * types void::                  Handling of void values.
+* types methods::               Methods and virtual methods.
 * types mixins::                Sharing object-type definition clauses.
 * types interfaces::            Interface types.
 * types labels::                Sub-typing with labels.
@@ -2014,7 +2015,6 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes types::        Defining type annotations.
 * types syntaxes new-and-del::  Constructors and destructors.
 * types syntaxes predicates::   Predicate syntaxes.
-* types syntaxes methods::      Calling object-type methods.
 * types syntaxes annotations::  Operating on type annotations.
 * types syntaxes signatures::   Operating on type signatures.
 * types syntaxes assert::       Validating signatures.
@@ -2287,191 +2287,6 @@ predicate function.
 @result{} #t
 @end example
 @end deffn
-
-@c page
-@node types syntaxes methods
-@subsection Calling object--type methods
-
-
-The following keyword syntactic bindings are involved in the definition
-and use of methods: @clause{method}, @syntax{method-call}.  In addition
-the function @func{method-call-late-binding} performs a method call with
-``late binding'' (run--time dispatching).
-
-The keyword @clause{method} is used in @syntax{define-record-type} to
-define methods for a record type (@pxref{iklib records defs methods,
-Record--type methods}).  For example:
-
-@lisp
-(define-record-type duo
-  (fields one two)
-  (method (sum-them)
-    (+ (duo-one this)
-       (duo-two this)))
-  (method (mul-them)
-    (* (duo-one this)
-       (duo-two this))))
-@end lisp
-
-@noindent
-the syntax @syntax{method-call} is then used to call a record's methods:
-
-@lisp
-(define @{O duo@}
-  (new duo 3 5))
-
-(method-call sum-them O)        @result{} 8
-(method-call mul-them O)        @result{} 15
-@end lisp
-
-When defining a record or struct: @value{PRJNAME} automatically adds a
-method to the methods table, for each field, with the same name of the
-field.  When the field is mutable: if the method is called with one
-argument, it behaves as a field accessor; if the method is called with
-two arguments, it behaves as a field mutator.  When the field is
-immutable: the method can be called with one argument only.  Example:
-
-@lisp
-(define-record-type duo
-  (fields (immutable one)
-          (mutable   two)))
-
-(define @{O duo@}
-  (new duo 1 2))
-
-(method-call one O)     @result{} 1
-(method-call one O 123) @error{} &syntax
-(method-call two O)     @result{} 2
-(method-call two O 9)
-(method-call two O)     @result{} 9
-@end lisp
-
-The following syntactic bindings are exported by the library
-@library{vicare}.
-
-
-@deffn Syntax method-call @meta{name} @meta{subject-expr} @meta{arg} @dots{}
-Apply an object--type's method to the return value of
-@meta{subject-expr} and the optional arguments @meta{arg}.
-
-@meta{name} must be a symbol representing a method or field name.
-@meta{subject-expr} must be a Scheme expression which, expanded and
-evaluated at run--time, returns a single value.  Each @meta{arg} must be
-a Scheme expression which, expanded and evaluated at run--time, returns
-a single value.
-
-When possible, @syntax{method-call} determines at expand--time the type
-of the expression @meta{subject-expr} and searches for a method with
-equal name, according to @func{eq?}.  If the method is found, the
-syntactic identifier to which the implementation procedure is bound is
-inserted in the macro expansion:
-
-@lisp
-(@meta{procedure} @meta{subject-expr} @meta{arg} ...)
-@end lisp
-
-@noindent
-If the object--type of @meta{subject-expr} has no matching method: its
-super--type is inspected, then the super--type of the super--type and so
-on.  If no method is found in the types hierarchy: an exception is
-raised.
-
-@syntax{method-call} is able to retrieve the type of its second argument
-at expand--time only when the typed language is enabled.  If
-@syntax{method-call} cannot determine the type of @meta{subject-expr} at
-expand--time, the macro use is expanded to:
-
-@lisp
-(method-call-late-binding (quote @meta{name})
-                          @meta{subject-expr} @meta{arg} ...)
-@end lisp
-
-@noindent
-and the function @func{method-call-late-binding} attempts to determine a
-suitable method at run--time.
-@end deffn
-
-
-@defun method-call-late-binding @var{name} @var{subject} @var{arg} @dots{}
-Apply an object--type's method to @var{subject} and the optional
-arguments @meta{arg}.  Return the application results.
-
-@var{name} must be a symbol representing a method or field name.
-@var{subject} must be a Scheme object implementing a set of methods.
-The optional @meta{arg} arguments can be any value.
-
-This function attempts to determine the type of @var{subject} at
-run--time and searches the object--type's table of methods, if any, for
-a method whose name equals @var{name} according to @func{eq?}.  If a
-method is found, its implementation procedure is retrieved and applied
-to @var{subject} and the @var{arg} values.
-
-If the object--type of @var{subject} has no matching method: its
-super--type is inspected, then the super--type of the super--type and so
-on.  If no method is found in the type's hierarchy: an exception is
-raised.
-
-Usually we do not need to call this function explicitly; however, it is
-useful for debugging purposes.
-@end defun
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Dot notation
-
-When the Scheme reader's textual input port is configured in
-@samp{#!vicare} mode: if a list starts with a symbol; the name of the
-symbol is a string of length at least @math{2}; the first character of
-the string is a dot; the second character of the string is @strong{not}
-a dot, then a @syntax{method-call} symbol is inserted and the symbol
-stripped of the dot.
-
-We can try it at the @repl{}:
-
-@example
-vicare> '(.ciao)
-$1 = (method-call ciao)
-@end example
-
-Notice that @rnrs{6} forbids symbols starting with a dot, with the
-exception of the ellipsis; so this transformation does not influence the
-other reader operations.
-
-We can use this notation to call an object--type's methods as in the
-following program:
-
-@lisp
-#!vicare
-(program (demo)
-  (options typed-language)
-  (import (vicare))
-
-  (define-record-type duo
-    (fields one two)
-
-    (method (sum-them)
-      (+ (.one this) (.two this)))
-
-    (method (mul-them)
-      (* (.one this) (.two this)))
-
-    (method (display port)
-      (display this port)))
-
-  (define @{O duo@}
-    (new duo 3 4))
-
-  (pretty-print (.sum-them O)
-                (current-error-port))
-
-  (pretty-print (.mul-them O)
-                (current-error-port))
-
-  (.display O (current-error-port))
-  (newline (current-error-port))
-
-  #| end of program |# )
-@end lisp
 
 @c page
 @node types syntaxes annotations
@@ -5936,6 +5751,330 @@ The only function that is allowed to have a void operand is the core
 primitive @func{void-object?}.
 
 @c page
+@node types methods
+@section Methods and virtual methods
+
+
+@cindex @clause{method}, record--type definition clause
+@cindex @clause{method}, label--type definition clause
+@cindex @clause{method}, interface--type definition clause
+@cindex @clause{method}, mixin definition clause
+@cindex @clause{virtual-method}, record--type definition clause
+@cindex @clause{virtual-method}, mixin definition clause
+
+
+The syntactic bindings @clause{method} and @clause{virtual-method} are
+used as clause keywords in @syntax{define-record-type} to define methods
+and virtual methods for a record--type; they can be used any number of
+times in the same @syntax{define-record-type} macro use.
+
+The clause @clause{method} is also accepted by
+@syntax{define-label-type}, @syntax{define-interface-type} and
+@syntax{define-mixin-type}.
+
+The clause @clause{virtual-method} is also accepted by
+@syntax{define-mixin-type}.
+
+@menu
+* types methods concrete::      Concrete methods.
+* types methods virtual::       Virtual methods.
+* types methods calling::       Calling object-type methods.
+@end menu
+
+@c page
+@node types methods concrete
+@subsection Concrete methods
+
+
+We can think of @clause{method} as acting like @syntax{define/typed}
+with regard to the syntax of arguments to function; the first argument
+to a method is the record itself, but it is implicit: we can access it
+using the fluid syntax @syntax{this}.  For example:
+
+@lisp
+(define-record-type duo
+  (fields one two)
+  (method (sum-them)
+    (+ (duo-one this)
+       (duo-two this)))
+  (method (mul-them)
+    (* (duo-one this)
+       (duo-two this))))
+
+(define O
+  (make-duo 1 2))
+
+(method-call sum-them O)        @result{} 3
+@end lisp
+
+The clause @clause{method} allows the definition of overloaded
+functions, with multiple function specialisations linked to the same
+method name:
+
+@lisp
+(define-record-type alpha
+  (fields a b)
+
+  (method (doit @{A <fixnum>@})
+    (list (alpha-a this) (alpha-b this) 'fixnum A))
+
+  (method (doit @{A <symbol>@})
+    (list (alpha-a this) (alpha-b this) 'symbol A))
+
+  (method (doit @{A <number>@} @{B <number>@})
+    (list (alpha-a this) (alpha-b this) 'numbers A B)))
+
+(define O
+  (make-alpha 1 2))
+
+(method-call doit O 123)        @result{} (1 2 fixnum 123)
+(method-call doit O 'ciao)      @result{} (1 2 symbol ciao)
+(method-call doit O 3 4)        @result{} (1 2 numbers 3 4)
+@end lisp
+
+The syntax @syntax{method-call} searches for a record--type's methods by
+comparing the symbols with @func{eq?} (@strong{not} the syntactic
+identifiers with @func{free-identifier=?}).  @ref{types methods calling,
+Calling object--type methods}.
+
+When used with records: if a method with the given name is not found,
+@syntax{method-call} searches for a field with the given name; field
+accessors and mutators are methods automatically.  The syntax of
+@syntax{method-call} is:
+
+@example
+(method-call @meta{name} @meta{subject-expr} @meta{arg} ...)
+@end example
+
+@noindent
+when there are no @meta{arg} arguments the syntax is compatible with a
+field accessor call; when there is a single @meta{arg} argument the
+syntax is compatible with a field mutator call.
+
+So we can access and mutate fields as follows:
+
+@lisp
+(define-record-type alpha
+  (fields (mutable a)))
+
+(define O
+  (make-alpha 1))
+
+(method-call a O)            @result{} 1
+(method-call a O 2)
+(method-call a O)            @result{} 2
+@end lisp
+
+@noindent
+and with dot notation (@pxref{types methods calling, Dot notation}):
+
+@lisp
+(define-record-type alpha
+  (fields (mutable a)))
+
+(define O
+  (make-alpha 1))
+
+(.a O)          @result{} 1
+(.a O 2)
+(.a O)          @result{} 2
+@end lisp
+
+@c page
+@node types methods virtual
+@subsection Virtual methods
+
+
+@c page
+@node types methods calling
+@subsection Calling object-type methods
+
+
+The following keyword syntactic bindings are involved in the definition
+and use of methods: @clause{method}, @clause{virtual-method},
+@syntax{method-call}.  In addition the function
+@func{method-call-late-binding} performs a method call with ``late
+binding'' (run--time dispatching).
+
+The keyword @clause{method} is used in @syntax{define-record-type} to
+define methods for a record type (@pxref{iklib records defs methods,
+Record--type methods}).  For example:
+
+@lisp
+(define-record-type duo
+  (fields one two)
+  (method (sum-them)
+    (+ (duo-one this)
+       (duo-two this)))
+  (method (mul-them)
+    (* (duo-one this)
+       (duo-two this))))
+@end lisp
+
+@noindent
+the syntax @syntax{method-call} is then used to call a record's methods:
+
+@lisp
+(define @{O duo@}
+  (new duo 3 5))
+
+(method-call sum-them O)        @result{} 8
+(method-call mul-them O)        @result{} 15
+@end lisp
+
+When defining a record or struct: @value{PRJNAME} automatically adds a
+method to the methods table, for each field, with the same name of the
+field.  When the field is mutable: if the method is called with one
+argument, it behaves as a field accessor; if the method is called with
+two arguments, it behaves as a field mutator.  When the field is
+immutable: the method can be called with one argument only.  Example:
+
+@lisp
+(define-record-type duo
+  (fields (immutable one)
+          (mutable   two)))
+
+(define @{O duo@}
+  (new duo 1 2))
+
+(method-call one O)     @result{} 1
+(method-call one O 123) @error{} &syntax
+(method-call two O)     @result{} 2
+(method-call two O 9)
+(method-call two O)     @result{} 9
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
+
+@deffn Syntax method-call @meta{name} @meta{subject-expr} @meta{arg} @dots{}
+Apply an object--type's method to the return value of
+@meta{subject-expr} and the optional arguments @meta{arg}.
+
+@meta{name} must be a symbol representing a method or field name.
+@meta{subject-expr} must be a Scheme expression which, expanded and
+evaluated at run--time, returns a single value.  Each @meta{arg} must be
+a Scheme expression which, expanded and evaluated at run--time, returns
+a single value.
+
+When possible, @syntax{method-call} determines at expand--time the type
+of the expression @meta{subject-expr} and searches for a method with
+equal name, according to @func{eq?}.  If the method is found, the
+syntactic identifier to which the implementation procedure is bound is
+inserted in the macro expansion:
+
+@lisp
+(@meta{procedure} @meta{subject-expr} @meta{arg} ...)
+@end lisp
+
+@noindent
+If the object--type of @meta{subject-expr} has no matching method: its
+super--type is inspected, then the super--type of the super--type and so
+on.  If no method is found in the types hierarchy: an exception is
+raised.
+
+@syntax{method-call} is able to retrieve the type of its second argument
+at expand--time only when the typed language is enabled.  If
+@syntax{method-call} cannot determine the type of @meta{subject-expr} at
+expand--time, the macro use is expanded to:
+
+@lisp
+(method-call-late-binding (quote @meta{name}) #f
+                          @meta{subject-expr} @meta{arg} ...)
+@end lisp
+
+@noindent
+and the function @func{method-call-late-binding} attempts to determine a
+suitable method at run--time.
+@end deffn
+
+
+@defun method-call-late-binding @var{name} @var{td} @var{subject} @var{arg} @dots{}
+Apply an object--type's method to @var{subject} and the optional
+arguments @meta{arg}.  Return the application results.
+
+The argument @var{name} must be a symbol representing a method or field
+name.  The argument @var{subject} must be a Scheme object implementing a
+set of methods.  The optional @meta{arg} arguments can be any value.
+
+The argument @var{td} must be @false{} or a predetermined type
+descriptor for @var{subject}; this argument is usually @false{}.
+
+This function attempts to determine the type of @var{subject} at
+run--time and searches the object--type's table of methods, if any, for
+a method whose name equals @var{name} according to @func{eq?}.  If a
+method is found, its implementation procedure is retrieved and applied
+to @var{subject} and the @var{arg} values.
+
+If the object--type of @var{subject} has no matching method: its
+super--type is inspected, then the super--type of the super--type and so
+on.  If no method is found in the type's hierarchy: an exception is
+raised.
+
+Usually we do not need to call this function explicitly; however, it is
+useful for debugging purposes.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Dot notation
+
+When the Scheme reader's textual input port is configured in
+@samp{#!vicare} mode: if a list starts with a symbol; the name of the
+symbol is a string of length at least @math{2}; the first character of
+the string is a dot; the second character of the string is @strong{not}
+a dot, then a @syntax{method-call} symbol is inserted and the symbol
+stripped of the dot.
+
+We can try it at the @repl{}:
+
+@example
+vicare> '(.ciao)
+$1 = (method-call ciao)
+@end example
+
+Notice that @rnrs{6} forbids symbols starting with a dot, with the
+exception of the ellipsis; so this transformation does not influence the
+other reader operations.
+
+We can use this notation to call an object--type's methods as in the
+following program:
+
+@lisp
+#!vicare
+(program (demo)
+  (options typed-language)
+  (import (vicare))
+
+  (define-record-type duo
+    (fields one two)
+
+    (method (sum-them)
+      (+ (.one this) (.two this)))
+
+    (method (mul-them)
+      (* (.one this) (.two this)))
+
+    (method (display port)
+      (display this port)))
+
+  (define @{O duo@}
+    (new duo 3 4))
+
+  (pretty-print (.sum-them O)
+                (current-error-port))
+
+  (pretty-print (.mul-them O)
+                (current-error-port))
+
+  (.display O (current-error-port))
+  (newline (current-error-port))
+
+  #| end of program |# )
+@end lisp
+
+@c page
 @node types mixins
 @section Sharing object--type definition clauses
 
@@ -6046,9 +6185,11 @@ The following clauses are accepted in the body of a
 @lisp
 define-type-descriptors strip-angular-parentheses
 nongenerative implements
-sealed opaque protocol super-protocol fields method
+sealed opaque protocol super-protocol fields
+method virtual-method
 custom-printer type-predicate equality-predicate
 comparison-procedure hash-function
+implements
 @end lisp
 @end deffn
 

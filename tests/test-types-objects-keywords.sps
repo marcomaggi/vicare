@@ -86,14 +86,14 @@
 
   (check
       (let (({O <keyword>} #:ciao))
-	(method-call-late-binding 'string O))
+	(method-call-late-binding 'string #f O))
     => "#:ciao")
 
 ;;; --------------------------------------------------------------------
 
   (check
       (let (({O <keyword>} #:ciao))
-	(fixnum? (method-call-late-binding 'hash O)))
+	(fixnum? (method-call-late-binding 'hash #f O)))
     => #t)
 
   (void))

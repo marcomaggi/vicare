@@ -156,7 +156,7 @@
 	 <record-type-spec>-rtd				<record-type-spec>-rcd
 	 make-record-type-spec				record-type-spec?
 	 record-type-spec.rtd-id			record-type-spec.rcd-id
-	 record-type-spec.super-protocol-id
+	 record-type-spec.super-protocol-id		record-type-spec.virtual-method-signatures
 	 simple-condition-object-type-spec?
 
 	 <compound-condition-type-spec>
@@ -2972,14 +2972,18 @@
   (parent <object-type-spec>)
   (sealed #t)
   (fields
-    (immutable rtd-id			record-type-spec.rtd-id)
+    (immutable rtd-id				record-type-spec.rtd-id)
 		;The syntactic identifier bound to the record-type descriptor.
-    (immutable rcd-id			record-type-spec.rcd-id)
+    (immutable rcd-id				record-type-spec.rcd-id)
 		;The syntactic identifier bound to the record-constructor descriptor.
-    (immutable super-protocol-id	record-type-spec.super-protocol-id)
+    (immutable super-protocol-id		record-type-spec.super-protocol-id)
 		;False  if  this  record-type has  no  super-type  record-constructor
 		;descriptor;  otherwise   the  syntactic  identifier  to   which  the
 		;super-RCD is bound.
+    (immutable virtual-method-signatures	record-type-spec.virtual-method-signatures)
+		;An alist having: as keys, symbols representing virtual method names;
+		;as values, instances of  "<closure-type-spec>" representing the type
+		;signature of the method.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
@@ -2987,7 +2991,8 @@
 				      rtd-id rcd-id super-protocol-id parent-name.id
 				      constructor.stx destructor.stx predicate.stx
 				      equality-predicate.id comparison-procedure.id hash-function.id
-				      methods-table {implemented-interfaces list-of-interface-type-specs?})
+				      methods-table virtual-method-signatures
+				      {implemented-interfaces list-of-interface-type-specs?})
 	(let* ((parent.ots	(cond ((<record>-type-id? parent-name.id)
 				       (<record>-ots))
 				      ((<condition>-type-id? parent-name.id)
@@ -3018,7 +3023,7 @@
 				  constructor.stx destructor.stx pred
 				  equality-predicate.id comparison-procedure.id hash-func.id
 				  methods-table implemented-interfaces)
-	   rtd-id rcd-id super-protocol-id)))
+	   rtd-id rcd-id super-protocol-id virtual-method-signatures)))
       make-record-type-spec))
 
   (custom-printer

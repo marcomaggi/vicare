@@ -762,10 +762,31 @@
      (or <false> <syntactic-identifier>)     ;comparison-procedure.id
      (or <false> <syntactic-identifier>)     ;hash-function.id
      (alist <symbol> <syntactic-identifier>) ;methods-table
+     (alist <symbol> <closure-type-spec>)    ;virtual-method-signatures
      (list-of <syntactic-identifier>))	     ;implemented-interfaces
     => (<record-type-spec>))))
 
 (declare-type-predicate record-type-spec?		<record-type-spec>)
+
+(declare-core-primitive record-type-spec.rtd-id
+    (safe)
+  (signatures
+   ((<record-type-spec>)		=> (<syntactic-identifier>))))
+
+(declare-core-primitive record-type-spec.rcd-id
+    (safe)
+  (signatures
+   ((<record-type-spec>)		=> (<syntactic-identifier>))))
+
+(declare-core-primitive record-type-spec.super-protocol-id
+    (safe)
+  (signatures
+   ((<record-type-spec>)		=> ((or <false> <syntactic-identifier>)))))
+
+(declare-core-primitive record-type-spec.virtual-method-signatures
+    (safe)
+  (signatures
+   ((<record-type-spec>)		=> ((alist <symbol> <closure-type-spec>)))))
 
 ;;; --------------------------------------------------------------------
 

@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: tests for the <list> type
@@ -271,12 +272,12 @@
 (parametrise ((check-test-name	'late-binding))
 
   (begin
-    (check (method-call-late-binding 'car (new <list> 1 2))	=> 1)
-    (check (method-call-late-binding 'cdr (new <list> 1 2))	=> '(2)))
+    (check (method-call-late-binding 'car #f (new <list> 1 2))	=> 1)
+    (check (method-call-late-binding 'cdr #f (new <list> 1 2))	=> '(2)))
 
   (begin
-    (check (method-call-late-binding 'car (new <nelist> 1 2))	=> 1)
-    (check (method-call-late-binding 'cdr (new <nelist> 1 2))	=> '(2)))
+    (check (method-call-late-binding 'car #f (new <nelist> 1 2))	=> 1)
+    (check (method-call-late-binding 'cdr #f (new <nelist> 1 2))	=> '(2)))
 
   #t)
 
@@ -385,11 +386,11 @@
 ;;; late binding
 
   (check
-      (method-call-late-binding 'car (new <list-of-chars> #\a #\b))
+      (method-call-late-binding 'car #f (new <list-of-chars> #\a #\b))
     => #\a)
 
   (check
-      (method-call-late-binding 'cdr (new <list-of-chars> #\a #\b))
+      (method-call-late-binding 'cdr #f (new <list-of-chars> #\a #\b))
     => '(#\b))
 
   #t)
@@ -500,11 +501,11 @@
 ;;; late binding
 
   (check
-      (method-call-late-binding 'car (new <list-of-strings> "a" "b"))
+      (method-call-late-binding 'car #f (new <list-of-strings> "a" "b"))
     => "a")
 
   (check
-      (method-call-late-binding 'cdr (new <list-of-strings> "a" "b"))
+      (method-call-late-binding 'cdr #f (new <list-of-strings> "a" "b"))
     => '("b"))
 
   #t)
@@ -519,5 +520,4 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; coding: utf-8
 ;; End:

@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: tests for the <pair> type
@@ -189,11 +190,11 @@
 (parametrise ((check-test-name	'late-binding))
 
   (check
-      (method-call-late-binding 'car (new <pair> 1 2))
+      (method-call-late-binding 'car #f (new <pair> 1 2))
     => 1)
 
   (check
-      (method-call-late-binding 'cdr (new <pair> 1 2))
+      (method-call-late-binding 'cdr #f (new <pair> 1 2))
     => 2)
 
   #t)
@@ -208,5 +209,4 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; coding: utf-8
 ;; End:

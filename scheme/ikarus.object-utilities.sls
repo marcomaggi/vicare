@@ -83,7 +83,7 @@
 
 ;;;; helpers for object-type method calls
 
-(define* (method-call-late-binding method-name.sym subject . args)
+(define* (method-call-late-binding method-name.sym td subject . args)
   ;;This function is called by the expansion of METHOD-CALL:
   ;;
   ;;   (method-call ?method-name ?subject-expr ?arg ...)
@@ -92,18 +92,22 @@
   ;;subject expression.   SUBJECT is the  result of  the subject expression;  ARGS is
   ;;null or a list of method arguments.
   ;;
+  ;;The argument TD must be false or a predetermined type descriptor for SUBJECT.
+  ;;
   (define (%error message)
     (raise
      (condition (make-method-late-binding-error)
 		(make-who-condition 'method-call-late-binding)
 		(make-message-condition message)
-		(make-irritants-condition (list method-name.sym subject args)))))
+		(make-irritants-condition (list method-name.sym td subject args)))))
+  (define (%error-invalid-type-descriptor-argument)
+    (%error "invalid object type descriptor argument"))
   (define (%error-object-type-has-no-methods-table)
-    (%error "object type has no methods table"))
+    (%error "object-type has no methods table"))
   (define (%error-record-type-has-no-matching-method)
-    (%error "record type has no matching method"))
+    (%error "record-type has no matching method"))
   (define (%error-scheme-type-has-no-matching-method)
-    (%error "scheme type has no matching method"))
+    (%error "scheme-type has no matching method"))
 
   (define (%built-in-scheme-object-call btd)
     (cond (((core-type-descriptor.method-retriever btd) method-name.sym)
@@ -122,7 +126,15 @@
 	  (else
 	   (%error-record-type-has-no-matching-method))))
 
-  (cond ((record-object? subject)
+  (cond (td
+	 ;;The type descriptor is known.
+	 (cond ((record-type-descriptor? td)	(%record-object-call          td))
+	       ((core-type-descriptor?   td)	(%built-in-scheme-object-call td))
+	       ((struct-type-descriptor? td)	(%struct-object-call          td))
+	       (else
+		(%error-invalid-type-descriptor-argument))))
+
+	((record-object? subject)
 	 ;;We use  $STRUCT-RTD because it does  not care about the  opaqueness of the
 	 ;;record object.
 	 (%record-object-call ($struct-rtd subject)))

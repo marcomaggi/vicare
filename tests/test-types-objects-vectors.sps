@@ -188,14 +188,14 @@
 
   (check
       (let (({O <vector>} '#(1 2 3 4)))
-	(method-call-late-binding 'empty? O))
+	(method-call-late-binding 'empty? #f O))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
       (let (({O <vector>} '#(1 2 3 4)))
-	(fixnum? (method-call-late-binding 'hash O)))
+	(fixnum? (method-call-late-binding 'hash #f O)))
     => #t)
 
   (void))

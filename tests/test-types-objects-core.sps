@@ -63,7 +63,7 @@
     => #t)
 
   (check
-      (fixnum? (method-call-late-binding 'hash (unsafe-cast-signature (<top>) 123)))
+      (fixnum? (method-call-late-binding 'hash #f (unsafe-cast-signature (<top>) 123)))
     => #t)
 
   #t)

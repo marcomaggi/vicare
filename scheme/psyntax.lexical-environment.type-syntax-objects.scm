@@ -36,6 +36,8 @@
    syntax-object.standard-clambda-clause-formals?
    syntax-object.typed-clambda-clause-formals?
 
+   typed-formals-syntax->args-list
+
    #| end of exports |# )
 
 
@@ -615,6 +617,105 @@
     (receive (standard-formals signature-tags)
 	(syntax-object.parse-typed-clambda-clause-formals input-formals.stx)
       #t)))
+
+
+;;;; type syntax objects: tagged binding parsing
+
+(define* (typed-formals-syntax->args-list input-formals.stx)
+  ;;Examples:
+  ;;
+  ;;   (typed-formals-syntax->args-list #'args)
+  ;;   => #'(args) #t
+  ;;
+  ;;   (typed-formals-syntax->args-list #'(brace args <fixnum>))
+  ;;   => #'(args) #t
+  ;;
+  ;;   (typed-formals-syntax->args-list #'(a b))
+  ;;   => #'(a b) #f
+  ;;
+  ;;   (typed-formals-syntax->args-list #'((brace a <fixnum>) (brace b <string>)))
+  ;;   => #'(a b) #f
+  ;;
+  ;;   (typed-formals-syntax->args-list #'(a b . rest))
+  ;;   => #'(a b rest) #t
+  ;;
+  ;;   (typed-formals-syntax->args-list #'((brace a <fixnum>) (brace b <string>) . rest))
+  ;;   => #'(a b rest) #t
+  ;;
+  (define who __who__)
+  (define-synner %synner who input-formals.stx)
+
+  (syntax-match input-formals.stx (brace)
+    ;;Non-standard formals: typed args, as in: (lambda (brace args <list>) ---)
+    ((brace ?args-id ?args-type)
+     (identifier? ?args-id)
+     (values (list ?args-id) #t))
+
+    ;;Standard formals, UNtyped args as in: (lambda args ---)
+    (?args-id
+     (identifier? ?args-id)
+     (values (list ?args-id) #t))
+
+    ;;Non-standard formals: possibly typed arguments with typed rest argument.
+    ((?arg0 ?arg* ... . (brace ?rest-id ?rest-type))
+     (values (append (map (lambda (arg.stx)
+			    (syntax-match arg.stx (brace)
+			      (?id
+			       (identifier? ?id)
+			       ?id)
+			      ((brace ?id ?type)
+			       ?id)
+			      (_
+			       (%synner "invalid argument syntax" arg.stx))))
+		       (cons ?arg0 ?arg*))
+		     (list ?rest-id))
+	     #t))
+
+    ;;Standard formals: UNtyped identifiers without rest argument.
+    ((?arg* ...)
+     (for-all identifier? ?arg*)
+     (values ?arg* #f))
+
+    ;;Standard formals: UNtyped identifiers with UNtyped rest argument.
+    ((?arg0 ?arg* ... . ?rest-id)
+     (and (for-all identifier? (cons ?arg0 ?arg*))
+	  (identifier? ?rest-id))
+     (values (append (cons ?arg0 ?arg*)
+		     (list ?rest-id))
+	     #t))
+
+    ;;Non-standard formals: possibly typed identifiers with UNtyped rest argument.
+    ((?arg0 ?arg* ... . ?rest-id)
+     (identifier? ?rest-id)
+     (values (append (map (lambda (arg.stx)
+			    (syntax-match arg.stx (brace)
+			      (?id
+			       (identifier? ?id)
+			       ?id)
+			      ((brace ?id ?type)
+			       ?id)
+			      (_
+			       (%synner "invalid argument syntax" arg.stx))))
+		       (cons ?arg0 ?arg*))
+		     (list ?rest-id))
+	     #t))
+
+    ;;Non-standard formals: possibly typed identifiers without rest argument.
+    ((?arg* ...)
+     (values (map (lambda (arg.stx)
+		    (syntax-match arg.stx (brace)
+		      (?id
+		       (identifier? ?id)
+		       ?id)
+		      ((brace ?id ?type)
+		       ?id)
+		      (_
+		       (%synner "invalid argument syntax" arg.stx))))
+	       ?arg*)
+	     #f))
+
+    (_
+     (%synner "invalid formals syntax"))))
 
 
 ;;;; done

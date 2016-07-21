@@ -34,6 +34,27 @@
 (check-display "*** testing Vicare libraries: records with typed language\n")
 
 
+;;;; helpers
+
+(define (%eval sexp)
+  (with-exception-handler
+      (lambda (E)
+	(unless (warning? E)
+	  (raise-continuable E)))
+    (lambda ()
+      (eval sexp THE-ENVIRONMENT
+	    (expander-options typed-language)
+	    (compiler-options)))))
+
+(define THE-ENVIRONMENT
+  (environment '(vicare)
+	       '(vicare language-extensions interfaces)))
+
+(define (%print-message bool str)
+  (when bool
+    (fprintf (current-error-port) "~a\n" str)))
+
+
 (parametrise ((check-test-name	'descriptor-syntax))
 
   (internal-body	;application syntax
@@ -713,8 +734,8 @@
 
 	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
 
-	(values (method-call-late-binding 'get-a (the-record))
-		(method-call-late-binding 'get-b (the-record))))
+	(values (method-call-late-binding 'get-a #f (the-record))
+		(method-call-late-binding 'get-b #f (the-record))))
     => 1 2)
 
   ;;Calling methods and parent's methods.
@@ -738,8 +759,8 @@
 	(define ({the-record <top>})
 	  O)
 
-	(values (method-call-late-binding 'add-them (the-record))
-		(method-call-late-binding 'mul-them (the-record))))
+	(values (method-call-late-binding 'add-them #f (the-record))
+		(method-call-late-binding 'mul-them #f (the-record))))
     => 8 15)
 
   ;;Calling methods, parent's methods, grandparent's methods.
@@ -768,9 +789,9 @@
 	(define ({the-record <top>})
 	  O)
 
-	(values (method-call-late-binding 'add-them (the-record))
-		(method-call-late-binding 'mul-them (the-record))
-		(method-call-late-binding 'list-them (the-record))))
+	(values (method-call-late-binding 'add-them #f (the-record))
+		(method-call-late-binding 'mul-them #f (the-record))
+		(method-call-late-binding 'list-them #f (the-record))))
     => 8 15 '(3 5))
 
 ;;; --------------------------------------------------------------------
@@ -788,8 +809,8 @@
 	  (make-alpha 1 2))
 
 	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
-	(values (method-call-late-binding 'a O)
-		(method-call-late-binding 'b O)))
+	(values (method-call-late-binding 'a #f O)
+		(method-call-late-binding 'b #f O)))
     => 1 2)
 
   ;;Accessing parent's fields.
@@ -808,10 +829,10 @@
 	  (make-beta 1 2 3 4))
 
 	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
-	(values (method-call-late-binding 'a O)
-		(method-call-late-binding 'b O)
-		(method-call-late-binding 'c O)
-		(method-call-late-binding 'd O)))
+	(values (method-call-late-binding 'a #f O)
+		(method-call-late-binding 'b #f O)
+		(method-call-late-binding 'c #f O)
+		(method-call-late-binding 'd #f O)))
     => 1 2 3 4)
 
   ;;Accessing grandparent's fields.
@@ -834,12 +855,12 @@
 	  (make-gamma 1 2 3 4 5 6))
 
 	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
-	(values (method-call-late-binding 'a O)
-		(method-call-late-binding 'b O)
-		(method-call-late-binding 'c O)
-		(method-call-late-binding 'd O)
-		(method-call-late-binding 'e O)
-		(method-call-late-binding 'f O)))
+	(values (method-call-late-binding 'a #f O)
+		(method-call-late-binding 'b #f O)
+		(method-call-late-binding 'c #f O)
+		(method-call-late-binding 'd #f O)
+		(method-call-late-binding 'e #f O)
+		(method-call-late-binding 'f #f O)))
     => 1 2 3 4 5 6)
 
 ;;; --------------------------------------------------------------------
@@ -856,12 +877,12 @@
 	(define O
 	  (make-alpha 1 2))
 
-	(method-call-late-binding 'a O 11)
-	(method-call-late-binding 'b O 22)
+	(method-call-late-binding 'a #f O 11)
+	(method-call-late-binding 'b #f O 22)
 
 	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
-	(values (method-call-late-binding 'a O)
-		(method-call-late-binding 'b O)))
+	(values (method-call-late-binding 'a #f O)
+		(method-call-late-binding 'b #f O)))
     => 11 22)
 
   ;;Accessing parent's fields.
@@ -879,16 +900,16 @@
 	(define O
 	  (make-beta 1 2 3 4))
 
-	(method-call-late-binding 'a O 11)
-	(method-call-late-binding 'b O 22)
-	(method-call-late-binding 'c O 33)
-	(method-call-late-binding 'd O 44)
+	(method-call-late-binding 'a #f O 11)
+	(method-call-late-binding 'b #f O 22)
+	(method-call-late-binding 'c #f O 33)
+	(method-call-late-binding 'd #f O 44)
 
 	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
-	(values (method-call-late-binding 'a O)
-		(method-call-late-binding 'b O)
-		(method-call-late-binding 'c O)
-		(method-call-late-binding 'd O)))
+	(values (method-call-late-binding 'a #f O)
+		(method-call-late-binding 'b #f O)
+		(method-call-late-binding 'c #f O)
+		(method-call-late-binding 'd #f O)))
     => 11 22 33 44)
 
   ;;Accessing grandparent's fields.
@@ -910,20 +931,20 @@
 	(define O
 	  (make-gamma 1 2 3 4 5 6))
 
-	(method-call-late-binding 'a O 11)
-	(method-call-late-binding 'b O 22)
-	(method-call-late-binding 'c O 33)
-	(method-call-late-binding 'd O 44)
-	(method-call-late-binding 'e O 55)
-	(method-call-late-binding 'f O 66)
+	(method-call-late-binding 'a #f O 11)
+	(method-call-late-binding 'b #f O 22)
+	(method-call-late-binding 'c #f O 33)
+	(method-call-late-binding 'd #f O 44)
+	(method-call-late-binding 'e #f O 55)
+	(method-call-late-binding 'f #f O 66)
 
 	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
-	(values (method-call-late-binding 'a O)
-		(method-call-late-binding 'b O)
-		(method-call-late-binding 'c O)
-		(method-call-late-binding 'd O)
-		(method-call-late-binding 'e O)
-		(method-call-late-binding 'f O)))
+	(values (method-call-late-binding 'a #f O)
+		(method-call-late-binding 'b #f O)
+		(method-call-late-binding 'c #f O)
+		(method-call-late-binding 'd #f O)
+		(method-call-late-binding 'e #f O)
+		(method-call-late-binding 'f #f O)))
     => 11 22 33 44 55 66)
 
   (void))
@@ -989,6 +1010,189 @@
 
 	(fun O))
     => 1)
+
+  (void))
+
+
+(parametrise ((check-test-name	'virtual-methods))
+
+  ;;Hierarchy of two record-types.  No virtual methods.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <super>
+	  (method (doit)
+	    1))
+
+	(define-record-type <sub>
+	  (parent <super>)
+	  (method (doit)
+	    2))
+
+	(define up	(new <super>))
+	(define down	(new <sub>))
+
+	(define (fun {O <super>})
+	  (.doit O))
+
+	(values (.doit up)
+		(.doit down)
+		(fun up)
+		(fun down)))
+    => 1 2 1 1)
+
+
+;;; --------------------------------------------------------------------
+
+  ;;Hierarchy of two record-types.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <super>
+	  (fields value)
+	  (virtual-method (doit)
+	    (.value this)))
+
+	(define-record-type <sub>
+	  (parent <super>)
+	  (method (doit)
+	    (.value this)))
+
+	(define up	(new <super> 1))
+	(define down	(new <sub>   2))
+
+	(define (fun {O <super>})
+	  (.doit O))
+
+	(values (.doit up)
+		(.doit down)
+		(fun up)
+		(fun down)))
+    => 1 2 1 2)
+
+  ;;Hierarchy of three record-types.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <super>
+	  (virtual-method (doit)
+	    1))
+
+	(define-record-type <middle>
+	  (parent <super>)
+	  (virtual-method (doit)
+	    2))
+
+	(define-record-type <sub>
+	  (parent <middle>)
+	  (method (doit)
+	    3))
+
+	(define up	(new <super>))
+	(define middle	(new <middle>))
+	(define down	(new <sub>))
+
+	(define (fun {O <super>})
+	  (.doit O))
+
+	(values (.doit up)
+		(.doit middle)
+		(.doit down)
+		(fun up)
+		(fun middle)
+		(fun down)))
+    => 1 2 3 1 2 3)
+
+  ;;Hierarchy of four record-types.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <one>
+	  (virtual-method (doit)
+	    1))
+
+	(define-record-type <two>
+	  (parent <one>)
+	  (virtual-method (doit)
+	    2))
+
+	(define-record-type <three>
+	  (parent <two>)
+	  (virtual-method (doit)
+	    3))
+
+	(define-record-type <four>
+	  (parent <three>)
+	  (virtual-method (doit)
+	    4))
+
+	(define one	(new <one>))
+	(define two	(new <two>))
+	(define three	(new <three>))
+	(define four	(new <four>))
+
+	(define (fun {O <one>})
+	  (.doit O))
+
+	(values (.doit one) (.doit two) (.doit three) (.doit four)
+		(fun one) (fun two) (fun three) (fun four)))
+    => 1 2 3 4
+    1 2 3 4)
+
+  ;;Hierarchy of four record-types.  A concrete method is a final method.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <one>
+	  (virtual-method (doit)
+	    1))
+
+	(define-record-type <two>
+	  (parent <one>)
+	  (virtual-method (doit)
+	    2))
+
+	(define-record-type <three>
+	  (parent <two>)
+	  (method (doit)
+	    3))
+
+	(define-record-type <four>
+	  (parent <three>)
+	  (virtual-method (doit)
+	    4))
+
+	(define one	(new <one>))
+	(define two	(new <two>))
+	(define three	(new <three>))
+	(define four	(new <four>))
+
+	(define (fun {O <one>})
+	  (.doit O))
+
+	(values (.doit one) (.doit two) (.doit three) (.doit four)
+		(fun one) (fun two) (fun three) (fun four)))
+    => 1 2 3 4
+    1 2 3 3)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  ;;Method and virtual method with the same name.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <it>
+		      (method         (doit)	1)
+		      (virtual-method (doit)	2))
+		    #t))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'doit)
 
   (void))
 

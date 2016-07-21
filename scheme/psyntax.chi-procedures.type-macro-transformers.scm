@@ -657,6 +657,7 @@
 	(build-application input-form.stx
 	    (build-primref no-source 'method-call-late-binding)
 	  (cons* (build-data no-source method-name.sym)
+		 (build-data no-source #f) ;no predetermined type-descriptor
 		 expr.core
 		 arg*.core))
 	(make-type-signature/fully-unspecified))))

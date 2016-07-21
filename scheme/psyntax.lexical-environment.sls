@@ -152,7 +152,7 @@
     <record-type-spec>-rtd				<record-type-spec>-rcd
     make-record-type-spec				record-type-spec?
     record-type-spec.rtd-id				record-type-spec.rcd-id
-    record-type-spec.super-protocol-id
+    record-type-spec.super-protocol-id			record-type-spec.virtual-method-signatures
     simple-condition-object-type-spec?
 
     <compound-condition-type-spec>

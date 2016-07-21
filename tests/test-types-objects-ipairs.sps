@@ -83,11 +83,11 @@
 (parametrise ((check-test-name	'late-binding))
 
   (check
-      (method-call-late-binding 'car (new <ipair> 1 2))
+      (method-call-late-binding 'car #f (new <ipair> 1 2))
     => 1)
 
   (check
-      (method-call-late-binding 'cdr (new <ipair> 1 2))
+      (method-call-late-binding 'cdr #f (new <ipair> 1 2))
     => 2)
 
   #t)

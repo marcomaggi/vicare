@@ -406,7 +406,7 @@
 	       (method-call ?slot O)
 	     => (quasiquote ?value))
 	   (check
-	       (method-call-late-binding (quote ?slot) O)
+	       (method-call-late-binding (quote ?slot) #f O)
 	     => (quasiquote ?value)))
 	 ...
 	 ))

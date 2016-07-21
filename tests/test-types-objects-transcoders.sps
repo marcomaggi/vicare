@@ -97,17 +97,17 @@
 
   (check
       (let (({O <transcoder>} (new <transcoder> (utf-8-codec) (eol-style lf) (error-handling-mode ignore))))
-	(method-call-late-binding 'codec O))
+	(method-call-late-binding 'codec #f O))
     => (utf-8-codec))
 
   (check
       (let (({O <transcoder>} (new <transcoder> (utf-8-codec) (eol-style lf) (error-handling-mode ignore))))
-	(method-call-late-binding 'eol-style O))
+	(method-call-late-binding 'eol-style #f O))
     => (eol-style lf))
 
   (check
       (let (({O <transcoder>} (new <transcoder> (utf-8-codec) (eol-style lf) (error-handling-mode ignore))))
-	(method-call-late-binding 'handling-mode O))
+	(method-call-late-binding 'handling-mode #f O))
     => (error-handling-mode ignore))
 
   (void))

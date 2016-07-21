@@ -117,7 +117,7 @@
 (declare-core-primitive method-call-late-binding
     (safe)
   (signatures
-   ((<symbol> <top> . <list>)		=> <list>)))
+   ((<symbol> (or <false> <type-descriptor>) <top> . <list>)	=> <list>)))
 
 (declare-core-primitive interface-method-call-late-binding
     (safe)

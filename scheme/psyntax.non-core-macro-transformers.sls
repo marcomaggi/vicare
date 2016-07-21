@@ -189,6 +189,7 @@
   (declare destructor-protocol)
   (declare custom-printer)
   (declare method)
+  (declare virtual-method)
   (declare define-type-descriptors)
   (declare strip-angular-parentheses)
   (declare type-predicate)
@@ -827,6 +828,7 @@
 					  #f #;comparison-procedure
 					  #f #;hash-function
 					  ,METHOD-TABLE
+					  '() #;virtual-method-signatures
 					  '() #;implemented-interfaces
 					  ))
 		 (define/std ,RTD

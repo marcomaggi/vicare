@@ -98,26 +98,26 @@
 
   (check
       (let (({O <char>} #\A))
-	(method-call-late-binding 'string O))
+	(method-call-late-binding 'string #f O))
     => "A")
 
 ;;; --------------------------------------------------------------------
 
   (check
       (let (({O <char>} #\A))
-	(fixnum? (method-call-late-binding 'hash O)))
+	(fixnum? (method-call-late-binding 'hash #f O)))
     => #t)
 
 ;;; --------------------------------------------------------------------
 
   (check
       (let (({O <char>} #\A))
-	(method-call-late-binding 'integer O))
+	(method-call-late-binding 'integer #f O))
     => 65)
 
   (check
       (let (({O <char>} #\A))
-	(method-call-late-binding 'fixnum O))
+	(method-call-late-binding 'fixnum #f O))
     => 65)
 
   (void))

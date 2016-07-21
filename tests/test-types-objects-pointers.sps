@@ -155,75 +155,75 @@
 
   (check-for-false
    (let (({O <pointer>} (%make-instance)))
-     (method-call-late-binding 'null? O)))
+     (method-call-late-binding 'null? #f O)))
 
   (check-for-true
    (let (({O <pointer>} (%make-instance 0)))
-     (method-call-late-binding 'null? O)))
+     (method-call-late-binding 'null? #f O)))
 
 ;;; --------------------------------------------------------------------
 
 
   (check
       (let (({O <pointer>} (%make-instance)))
-	(method-call-late-binding 'integer O))
+	(method-call-late-binding 'integer #f O))
     => 123)
 
   (check
       (let (({O <pointer>} (%make-instance)))
-	(method-call-late-binding '= O (%make-instance)))
+	(method-call-late-binding '= #f O (%make-instance)))
     => #t)
 
   (check
       (let (({O <pointer>} (%make-instance)))
-	(method-call-late-binding '!= O (%make-instance)))
+	(method-call-late-binding '!= #f O (%make-instance)))
     => #f)
 
   (check
       (let (({O <pointer>} (%make-instance)))
-	(method-call-late-binding '< O (%make-instance 222)))
+	(method-call-late-binding '< #f O (%make-instance 222)))
     => #t)
 
   (check
       (let (({O <pointer>} (%make-instance)))
-	(method-call-late-binding '> O (%make-instance 222)))
+	(method-call-late-binding '> #f O (%make-instance 222)))
     => #f)
 
   (check
       (let (({O <pointer>} (%make-instance)))
-	(method-call-late-binding '<= O (%make-instance 222)))
+	(method-call-late-binding '<= #f O (%make-instance 222)))
     => #t)
 
   (check
       (let (({O <pointer>} (%make-instance)))
-	(method-call-late-binding '>= O (%make-instance 222)))
+	(method-call-late-binding '>= #f O (%make-instance 222)))
     => #f)
 
   (check
       (let (({O <pointer>} (%make-instance)))
-	(method-call-late-binding 'integer (method-call-late-binding 'add O (- 999 123))))
+	(method-call-late-binding 'integer #f (method-call-late-binding 'add #f O (- 999 123))))
     => 999)
 
   (check
       (let (({O <pointer>} (%make-instance))
 	    ({P <pointer>} (%make-instance)))
-	(method-call-late-binding 'diff O P))
+	(method-call-late-binding 'diff #f O P))
     => 0)
 
   (check
       (let (({O <pointer>} (%make-instance)))
-	(method-call-late-binding 'integer (method-call-late-binding 'clone O)))
+	(method-call-late-binding 'integer #f (method-call-late-binding 'clone #f O)))
     => 123)
 
   (check
       (let (({O <pointer>} (%make-instance)))
-	(method-call-late-binding 'set-null! O)
-	(method-call-late-binding 'integer O))
+	(method-call-late-binding 'set-null! #f O)
+	(method-call-late-binding 'integer #f O))
     => 0)
 
   (check
       (let (({O <pointer>} (%make-instance)))
-	(fixnum? (method-call-late-binding 'hash O)))
+	(fixnum? (method-call-late-binding 'hash #f O)))
     => #t)
 
 

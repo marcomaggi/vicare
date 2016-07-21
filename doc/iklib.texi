@@ -9664,6 +9664,7 @@ Reset to void all the fields of a structure.
 @deffn Syntax define-record-type @meta{name-spec} @meta{record-clause} @dots{}
 @deffnx {Auxiliary Syntax} fields @meta{field-spec} @dots{}
 @deffnx {Auxiliary Syntax} method
+@deffnx {Auxiliary Syntax} virtual-method
 @deffnx {Auxiliary Syntax} super-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} destructor-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} constructor-signature @meta{signature}
@@ -10177,7 +10178,7 @@ parent:
         (fx+ (fixnum-hash (.one O))
              (fixnum-hash (.two O)))))))
 
-(.hash (new duo 1 2))   @result{} 3
+(hash (new duo 1 2))    @result{} 3
 @end lisp
 
 @noindent
@@ -10198,12 +10199,11 @@ the following record--type has a parent defining a hash function:
       (lambda (@{O beta@})
         (fx+ (alpha-hash O) (.b O))))))
 
-(.hash (new beta 1 2))) @result{} 3
+(hash (new beta 1 2))) @result{} 3
 @end lisp
 
-The @code{.hash} method is always implemented and the syntax
-@syntax{hash-function} always returns a function because, when the
-record--type has no custom has function, the core primitive
+The @syntax{hash} syntax can always compute a hash value for records;
+when the record--type has no custom has function, the core primitive
 @func{record-hash} is used @ref{iklib hashtables hashfun, record-hash}.
 
 @c page
@@ -10212,107 +10212,15 @@ record--type has no custom has function, the core primitive
 
 
 @cindex @clause{method}, record--type definition clause
+@cindex @clause{virtual-method}, record--type definition clause
 
 
-The syntactic binding @clause{method} is used as clause keyword in
-@syntax{define-record-type} to define methods for a record type; it can
-be used any number of times in the same @syntax{define-record-type}
-macro use.  These clauses are accepted by @syntax{define-record-type}
-only when the language is non--strict @rnrs{6}.
-
-We can think of @clause{method} as acting like @syntax{define} with
-regard to the syntax of arguments to function; the first argument to a
-method is the record itself, but it is implicit: we can access it using
-the fluid syntax @syntax{this}.  For example:
-
-@lisp
-(define-record-type duo
-  (fields one two)
-  (method (sum-them)
-    (+ (duo-one this)
-       (duo-two this)))
-  (method (mul-them)
-    (* (duo-one this)
-       (duo-two this))))
-
-(define O
-  (make-duo 1 2))
-
-(method-call sum-them O)        @result{} 3
-@end lisp
-
-The clause @clause{method} allows the definition of overloaded
-functions, with multiple function specialisations linked to the same
-method name:
-
-@lisp
-(define-record-type alpha
-  (fields a b)
-
-  (method (doit @{A <fixnum>@})
-    (list (alpha-a this) (alpha-b this) 'fixnum A))
-
-  (method (doit @{A <symbol>@})
-    (list (alpha-a this) (alpha-b this) 'symbol A))
-
-  (method (doit @{A <number>@} @{B <number>@})
-    (list (alpha-a this) (alpha-b this) 'numbers A B)))
-
-(define O
-  (make-alpha 1 2))
-
-(method-call doit O 123)        @result{} (1 2 fixnum 123)
-(method-call doit O 'ciao)      @result{} (1 2 symbol ciao)
-(method-call doit O 3 4)        @result{} (1 2 numbers 3 4)
-@end lisp
-
-The syntax @syntax{method-call} searches for a record--type's methods by
-comparing the symbols with @func{eq?} (@strong{not} the syntactic
-identifiers with @func{free-identifier=?}).  @ref{types syntaxes
-methods, Calling object--type methods}.
-
-When used with records: if a method with the given name is not found,
-@syntax{method-call} searches for a field with the given name; field
-accessors and mutators are methods automatically.  The syntax of
-@syntax{method-call} is:
-
-@example
-(method-call @meta{name} @meta{subject-expr} @meta{arg} ...)
-@end example
-
-@noindent
-when there are no @meta{arg} arguments the syntax is compatible with a
-field accessor call; when there is a single @meta{arg} argument the
-syntax is compatible with a field mutator call.
-
-So we can access and mutate fields as follows:
-
-@lisp
-(define-record-type alpha
-  (fields (mutable a)))
-
-(define O
-  (make-alpha 1))
-
-(method-call a O)            @result{} 1
-(method-call a O 2)
-(method-call a O)            @result{} 2
-@end lisp
-
-@noindent
-and with dot notation (@pxref{types syntaxes methods, Dot notation}):
-
-@lisp
-(define-record-type alpha
-  (fields (mutable a)))
-
-(define O
-  (make-alpha 1))
-
-(.a O)          @result{} 1
-(.a O 2)
-(.a O)          @result{} 2
-@end lisp
+The syntactic bindings @clause{method} and @clause{virtual-method} are
+used as clause keywords in @syntax{define-record-type} to define methods
+and virtual methods for a record--type; they can be used any number of
+times in the same @syntax{define-record-type} macro use.  These clauses
+are accepted by @syntax{define-record-type} only when the typed language
+is used, @ref{types methods, Methods and virtual methods}.
 
 @c page
 @node iklib records defs descriptors
@@ -10439,7 +10347,9 @@ clause:
 
 @noindent
 causes the listed mixins to be included in the record--type definition,
-@ref{types mixins, Sharing object--type definition clauses}.
+@ref{types mixins, Sharing object--type definition clauses}.  The clause
+@clause{implements} is accepted by @syntax{define-record-type} when the
+non--strict or typed languages are selected.
 
 @c page
 @node iklib records defs implements
@@ -10459,8 +10369,8 @@ clause:
 @noindent
 causes the listed interface names to be included in the list of
 interfaces implemented by this record--type's, @ref{types interfaces,
-Interface types}.  The clause @clause{implements} is meant to be used
-with the typed language.
+Interface types}.  The clause @clause{implements} is accepted by
+@syntax{define-record-type} when the typed language is selected.
 
 A record--type implements an interface when it implements a method for
 each method prototype included in the interface--type definition; the

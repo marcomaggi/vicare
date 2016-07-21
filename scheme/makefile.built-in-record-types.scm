@@ -190,7 +190,8 @@
   (methods
    (rtd-id				record-type-spec.rtd-id)
    (rcd-id				record-type-spec.rcd-id)
-   (super-protocol-id		record-type-spec.super-protocol-id)))
+   (super-protocol-id			record-type-spec.super-protocol-id)
+   (virtual-method-signatures		record-type-spec.virtual-method-signatures)))
 
 (define-built-in-record-type <compound-condition-type-spec>
     <objct-type-spec>

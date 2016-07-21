@@ -163,24 +163,24 @@
 
   (check
       (let (({O <string>} "ciao"))
-	(method-call-late-binding 'empty? O))
+	(method-call-late-binding 'empty? #f O))
     => #f)
 
   (check
       (let (({O <string>} "ciao"))
-	(fixnum? (method-call-late-binding 'hash O)))
+	(fixnum? (method-call-late-binding 'hash #f O)))
     => #t)
 
 ;;; --------------------------------------------------------------------
 
   (check
       (let (({O <nestring>} "ciao"))
-	(method-call-late-binding 'empty? O))
+	(method-call-late-binding 'empty? #f O))
     => #f)
 
   (check
       (let (({O <nestring>} "ciao"))
-	(fixnum? (method-call-late-binding 'hash O)))
+	(fixnum? (method-call-late-binding 'hash #f O)))
     => #t)
 
   (void))

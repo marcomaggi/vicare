@@ -57,7 +57,7 @@
   (check
       (let* ((port		(open-string-input-port "123"))
   	     ({datum <top>}	(get-annotated-datum port)))
-  	(method-call-late-binding 'stripped datum))
+  	(method-call-late-binding 'stripped #f datum))
     => 123)
 
   #t)

@@ -139,66 +139,66 @@
 
   (check
       (let (({O <symbol>} 'ciao))
-	(method-call-late-binding 'string O))
+	(method-call-late-binding 'string #f O))
     => "ciao")
 
 ;;; --------------------------------------------------------------------
 
   (check
       (let (({O <symbol>} 'ciao))
-	(fixnum? (method-call-late-binding 'hash O)))
+	(fixnum? (method-call-late-binding 'hash #f O)))
     => #t)
 
 ;;; --------------------------------------------------------------------
 
   (check
       (let (({O <symbol>} 'ciao))
-	(method-call-late-binding 'bound? O))
+	(method-call-late-binding 'bound? #f O))
     => #f)
 
   (check
       (let (({O <symbol>} (gensym)))
-	(method-call-late-binding 'value O 123)
-	(method-call-late-binding 'bound? O))
+	(method-call-late-binding 'value #f O 123)
+	(method-call-late-binding 'bound? #f O))
     => #t)
 
   (check
       (let (({O <symbol>} (gensym)))
-	(method-call-late-binding 'value O 123)
-	(method-call-late-binding 'value O))
+	(method-call-late-binding 'value #f O 123)
+	(method-call-late-binding 'value #f O))
     => 123)
 
 ;;; --------------------------------------------------------------------
 
-  (method-call-late-binding 'putprop 'ciao 'british 'hello)
-  (method-call-late-binding 'putprop 'ciao 'spanish 'hola)
+  (method-call-late-binding 'putprop #f 'ciao 'british 'hello)
+  (method-call-late-binding 'putprop #f 'ciao 'spanish 'hola)
 
   (check
       (let (({O <symbol>} 'ciao))
-	(method-call-late-binding 'getprop O 'british))
+	(method-call-late-binding 'getprop #f O 'british))
     => 'hello)
 
   (check
       (let (({O <symbol>} 'ciao))
-	(method-call-late-binding 'getprop O 'spanish))
+	(method-call-late-binding 'getprop #f O 'spanish))
     => 'hola)
 
   (check
       (let (({O <symbol>} 'ciao))
-	(method-call-late-binding 'property-list O))
+	(method-call-late-binding 'property-list #f O))
     => '((spanish . hola)
 	 (british . hello)))
 
-  (method-call-late-binding 'remprop 'ciao 'british)
+  (method-call-late-binding 'remprop #f 'ciao 'british)
 
   (check
       (let (({O <symbol>} 'ciao))
-	(method-call-late-binding 'getprop O 'british))
+	(method-call-late-binding 'getprop #f O 'british))
     => #f)
 
   (check
       (let (({O <symbol>} 'ciao))
-	(method-call-late-binding 'property-list O))
+	(method-call-late-binding 'property-list #f O))
     => '((spanish . hola)))
 
   (void))

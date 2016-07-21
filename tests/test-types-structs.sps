@@ -220,8 +220,8 @@
 	(define O
 	  (make-alpha 1 2))
 
-	(values (method-call-late-binding 'a O)
-		(method-call-late-binding 'b O)))
+	(values (method-call-late-binding 'a #f O)
+		(method-call-late-binding 'b #f O)))
     => 1 2)
 
 ;;; --------------------------------------------------------------------
@@ -238,10 +238,10 @@
 	(define O
 	  (new alpha 1 2))
 
-	(method-call-late-binding 'a O 11)
-	(method-call-late-binding 'b O 22)
-	(values (method-call-late-binding 'a O)
-		(method-call-late-binding 'b O)))
+	(method-call-late-binding 'a #f O 11)
+	(method-call-late-binding 'b #f O 22)
+	(values (method-call-late-binding 'a #f O)
+		(method-call-late-binding 'b #f O)))
     => 11 22)
 
   (void))
