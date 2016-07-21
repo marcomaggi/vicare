@@ -13337,6 +13337,26 @@ Reset to void the selected range of slots beginning with index
 Return unspecified values.
 @end defun
 
+
+@defun sorted-vector-binary-search @var{item<} @var{vec} @var{sought}
+Return @false{} or a non--negative fixnum representing the index at
+which @var{sought} is present in the sorted vector @var{vec}.  The
+procedure @var{item<} is used to compare the items from @var{vec} and
+the object @var{sought}.
+
+@lisp
+(sorted-vector-binary-search < '#(0 1 2 3 4 5 6 7 8 9) 3)
+@result{} 3
+
+(sorted-vector-binary-search < '#(0 1 2 3 4 5 6 7 8 9) 999)
+@result{} #f
+
+(sorted-vector-binary-search symbol<?
+   '#(a b c d e f g h i l m) 'd)
+@result{} 3
+@end lisp
+@end defun
+
 @c page
 @node iklib symbols
 @section Additional symbol functions

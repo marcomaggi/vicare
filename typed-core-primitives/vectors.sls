@@ -145,6 +145,11 @@
   (replacements
    $vector-length))
 
+(declare-core-primitive sorted-vector-binary-search
+    (safe)
+  (signatures
+   ((<procedure> <vector> <top>)	=> ((or <false> <non-negative-fixnum>)))))
+
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators
 

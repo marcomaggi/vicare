@@ -144,6 +144,7 @@
     vector-fill!	vector-append
     vector-copy		vector-copy!
     vector-resize	vector-reset!
+    sorted-vector-binary-search
 
     ;; unsafe operations
     $make-clean-vector
@@ -175,7 +176,8 @@
 		  vector-fold-left	vector-fold-right
 		  vector-fill!		vector-append
 		  vector-copy		vector-copy!
-		  vector-resize		vector-reset!)
+		  vector-resize		vector-reset!
+		  sorted-vector-binary-search)
     (vicare system $fx)
     (vicare system $pairs)
     (except (vicare system $vectors)
@@ -1116,6 +1118,32 @@
   ;;
   (and (vector? obj)
        (not ($vector-empty? obj))))
+
+
+;;;; sorted vectors
+
+(define* (sorted-vector-binary-search {item< procedure?} {vec vector?} sought)
+  ;;Return false or  a non-negative fixnum representing the index  at which SOUGHT is
+  ;;present in VEC.
+  ;;
+  ;;Adapted from (retrieved on Thu Jul 21, 2016):
+  ;;
+  ;;  <https://www.cs.bgu.ac.il/~elhadad/scheme/binary-search.html>
+  ;;
+  (define vec.len (vector-length vec))
+  (if (fxzero? vec.len)
+      #f
+    (let loop ((start 0)
+	       (stop  (fxsub1 vec.len)))
+      (if (< stop start)
+	  #f
+	(let* ((mid-point (fxarithmetic-shift-right (+ start stop) 1))
+	       (mid-value (vector-ref vec mid-point)))
+	  (cond ((item< sought mid-value)
+		 (loop start (fxsub1 mid-point)))
+		((item< mid-value sought)
+		 (loop (fxadd1 mid-point) stop))
+		(else mid-point)))))))
 
 
 ;;;; simplified unsafe operations

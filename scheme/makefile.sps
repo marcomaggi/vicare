@@ -2379,6 +2379,7 @@
     (vector-copy!				v $language)
     (vector-resize				v $language)
     (vector-reset!				v $language)
+    (sorted-vector-binary-search		v $language)
     (vector?					v r ba se)
     (list-of-vectors?				v $language)
     (zero?					v r ba se)
