@@ -85,60 +85,6 @@
     foo))
 
 
-(define-core-record-type <method-spec>
-  (fields
-    (immutable	name-id)
-		;A syntactic identifier representing the method name.
-    (immutable	name-sym)
-		;A symbol representing the method name.
-    (immutable	early-binding-procname)
-		;The syntactic  identifier that  will be bound  to the  early binding
-		;method implementation procedure.
-    (immutable	early-binding-implementation)
-		;A symbolic expression (to be BLESSed later) with one of the formats:
-		;
-		;   ((?method-procname               . ?formals) . ?body)
-		;   (({?method-procname . ?rv-types} . ?formals) . ?body)
-		;
-		;that  can  be  turned   into  a  method's  implementation  procedure
-		;definition just by prepending DEFINE/TYPED or DEFINE/OVERLOAD.
-		;
-		;Concrete methods use this implementation for late binding, too.
-    (immutable	late-binding-procname)
-		;The  syntactic identifier  that will  be bound  to the  late binding
-		;method implementation procedure.
-		;
-		;Concrete methods  have this  field equal  to EARLY-BINDING-PROCNAME;
-		;virtual methods have this field set to a different identifier.
-    (immutable	late-binding-implementation)
-		;False or a symbolic expression (to be BLESSed later) with one of the
-		;formats:
-		;
-		;   ((?method-procname               . ?formals) . ?body)
-		;   (({?method-procname . ?rv-types} . ?formals) . ?body)
-		;
-		;that  can  be  turned   into  a  method's  implementation  procedure
-		;definition just by prepending DEFINE/TYPED or DEFINE/OVERLOAD.
-		;
-		;Only virtual methods have this field set to non-false.
-    (immutable	closure-ots)
-		;An instance of "<closure-type-spec>" representing the type signature
-		;of this method.
-    #| end of FIELDS |# )
-
-  (protocol
-    (lambda (make-record)
-      (lambda (name-id name-sym early-binding-procname early-binding-meat late-binding-procname late-binding-meat
-		  closure.ots)
-	(make-record name-id name-sym
-		     early-binding-procname early-binding-meat
-		     late-binding-procname late-binding-meat
-		     closure.ots)))))
-
-(define-core-record-type <virtual-method-spec>
-  (parent <method-spec>))
-
-
 (define (%do-define-record input-form.stx namespec input-clause*.stx synner)
   (define clause*.stx
     (let ((foo (syntax-match namespec ()
@@ -159,37 +105,6 @@
     (%get-define-type-descriptors clause*.stx synner))
   (define foo-rtd (identifier-append foo foo-for-id-generation "-rtd"))
   (define foo-rcd (identifier-append foo foo-for-id-generation "-rcd"))
-  (define-values
-    (field-name*.sym
-		;A list of symbols representing all the field names.
-     field-relative-idx*
-		;A  list  of fixnums  representing  all  the field  relative  indexes
-		;(zero-based).
-     field-type*.ann
-		;The  list of  syntax objects  representing the  type annotations  of
-		;fields.
-     safe-field-accessor*
-		;A  list of  syntactic identifiers  that will  be bound  to the  safe
-		;accessors.
-     unsafe-field-accessor*
-		;A list  of syntactic identifiers  that will  be bound to  the unsafe
-		;accessors.
-     safe-field-mutator*
-		;A  list of  syntactic identifiers  that will  be bound  to the  safe
-		;mutators.  This list  holds #f in the position  of immutable fields.
-		;This list has one item for each item in SAFE-FIELD-ACCESSOR*.
-     unsafe-field-mutator*
-		;A list  of syntactic identifiers  that will  be bound to  the unsafe
-		;mutators.  This list  holds #f in the position  of immutable fields.
-		;This list has one item for each item in UNSAFE-FIELD-ACCESSOR*.
-     field-method*
-		;A list of syntactic identifiers that will be bound to the safe field
-		;accessor/mutator methods.
-     fields-vector-spec
-		;A  vector to  be  used as  FIELDS argument  for  the core  primitive
-		;function MAKE-RECORD-TYPE-DESCRIPTOR.
-     )
-    (%parse-field-specs foo foo-for-id-generation clause*.stx synner))
 
   ;;Code  for  parent  record-type  descriptor  and  parent  record-type  constructor
   ;;descriptor retrieval.
@@ -210,8 +125,52 @@
   ;;
   ;;PARENT-RCD-DEFINITION: null or  a list holding a DEFINE form  defining the parent
   ;;RCD syntactic binding, the list is spliced in the output.
-  (define-values (foo-parent.id parent-rtd.id parent-rcd.id parent-rtd-definition parent-rcd-definition)
+  ;;
+  ;;PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST:  an   alist  representing   the  parent's
+  ;;virtual methods and sealed methods.
+  (define-values (foo-parent.id
+		  parent-rtd.id parent-rcd.id parent-rtd-definition parent-rcd-definition
+		  parent-virtual-method-signatures-alist)
     (%make-parent-rtd+rcd-code clause*.stx foo input-form.stx synner))
+
+  ;;Parsing fields clauses.
+  ;;
+  (define-values
+    (field-name*.sym
+		;A list  of symbols  representing all  the field  names, in  the same
+		;order  in  which  the  FIELDS  clauses  appear  in  the  record-type
+		;definition.
+     field-relative-idx*
+		;A  list  of fixnums  representing  all  the field  relative  indexes
+		;(zero-based).
+     field-type*.ann
+		;A  list  of syntax  objects  representing  the type  annotations  of
+		;fields.  The type "<top>" is used when no type annotation is given.
+     safe-field-accessor*
+		;A  list of  syntactic identifiers  that will  be bound  to the  safe
+		;accessors.
+     unsafe-field-accessor*
+		;A list  of syntactic identifiers  that will  be bound to  the unsafe
+		;accessors.
+     safe-field-mutator*
+		;A  list of  syntactic identifiers  that will  be bound  to the  safe
+		;mutators.  This list  holds #f in the position  of immutable fields.
+		;This list has one item for each item in SAFE-FIELD-ACCESSOR*.
+     unsafe-field-mutator*
+		;A list  of syntactic identifiers  that will  be bound to  the unsafe
+		;mutators.  This list  holds #f in the position  of immutable fields.
+		;This list has one item for each item in UNSAFE-FIELD-ACCESSOR*.
+     field-methods-alist
+		;An alist having:  as keys, symbols representing the  field names; as
+		;values, syntactic identifiers  that will be bound to  the safe field
+		;accessor/mutator methods.
+     fields-vector-spec
+		;A  vector to  be  used as  FIELDS argument  for  the core  primitive
+		;function MAKE-RECORD-TYPE-DESCRIPTOR.
+     )
+    (%parse-fields-clauses clause*.stx foo foo-for-id-generation
+			   parent-virtual-method-signatures-alist
+			   synner))
 
   ;;FOO-UID  is a  syntactic identifier  representing the  record-type UID;  it is  a
   ;;symbol even  when the  record-type is  generative.  GENERATIVE?   can be  true or
@@ -297,11 +256,8 @@
 	  (else
 	   (values #f '()))))
 
-  ;;METHOD-SPEC*  is a  list  of "<method-spec>"  instances  representing the  method
-  ;;specifications.
-  (define method-spec*
-    (%parse-method-clauses clause*.stx foo foo-for-id-generation field-name*.sym synner))
-
+  ;;Parse METHOD and similar clauses.  Build the following values:
+  ;;
   ;;EARLY-BINDING-METHODS-ALIST an  alist having:  as keys, symbols  representing the
   ;;method names,  including the field  names; as values, syntactic  identifiers that
   ;;will be bound to the method implementation procedures, including field methods.
@@ -317,9 +273,13 @@
   ;;the  virtual   method  names;  as  values,   instances  of  "<closure-type-spec>"
   ;;representing  the  signature   of  the  method.   This   alist  already  contains
   ;;appropriate entries for the parent record-type, if any.
+  ;;
   (define-values (early-binding-methods-alist method-form*.sexp method-retriever-code.sexp
 					      virtual-method-signatures-alist)
-    (%process-method-specs foo parent-rtd.id method-spec* field-name*.sym field-method* synner))
+    (%parse-method-clauses clause*.stx
+			   foo foo-for-id-generation
+			   parent-rtd.id parent-virtual-method-signatures-alist
+			   field-methods-alist synner))
 
   ;;Null  or a  proper  list of  "<interface-type-spec>"  instances representing  the
   ;;interfaces implemented by this record-type.
@@ -385,7 +345,7 @@
 					  safe-field-accessor* unsafe-field-accessor*
 					  safe-field-mutator*  unsafe-field-mutator*)
       ,@(%make-safe-method-code foo field-type*.ann
-				field-method* unsafe-field-accessor* unsafe-field-mutator*)
+				field-methods-alist unsafe-field-accessor* unsafe-field-mutator*)
       #| end of module |# )))
 
 
@@ -434,7 +394,7 @@
 					     equality-predicate comparison-procedure hash-function))
 			strict-r6rs-keys))
 	  (set! typed-language-keys
-		(append (map core-prim-id '(method virtual-method implements))
+		(append (map core-prim-id '(method virtual-method seal-method implements))
 			extended-keys)))
 	(cond ((options::typed-language-enabled?)
 	       typed-language-keys)
@@ -448,7 +408,7 @@
       (lambda (id)
 	(free-id-member? id (or cached
 				(receive-and-return (rv)
-				    (map core-prim-id '(method virtual-method fields mixins implements))
+				    (map core-prim-id '(method virtual-method seal-method fields mixins implements))
 				  (set! cached rv)))))))
 
   #| end of module: %VALIDATE-DEFINITION-CLAUSES |# )
@@ -612,37 +572,46 @@
        (loop ?clauses iface*)))))
 
 
-(define (%parse-field-specs type-id foo-for-id-generation clause* synner)
+(define (%parse-fields-clauses clause*.stx foo foo-for-id-generation parent-virtual-method-signatures-alist synner)
   ;;Given the definition  clauses CLAUSE* extract the FIELDS clauses  and parse them.
   ;;Return the following values:
   ;;
-  ;;1..The list of symbols representing all the field names.
+  ;;1. FIELD-NAME*.SYM:  a list of symbols  representing all the field  names, in the
+  ;;same order in which the FIELDS clauses appear in the record-type definition.
   ;;
-  ;;2..The list of fixnums representings all the field relative indexes (zero-based).
+  ;;2. FIELD-RELATIVE-IDX*:  a list  of fixnums representing  all the  field relative
+  ;;indexes (zero-based).
   ;;
-  ;;3..The list of "<object-type-spec>" instances representing the field types.
+  ;;3. FIELD-TYPE*.ANN: a list of syntax objects representing the type annotations of
+  ;;fields; the type "<top>" is used when no type annotation is given.
   ;;
-  ;;4..A list of syntactic identifiers that will be bound to the safe accessors.
+  ;;4. SAFE-FIELD-ACCESSOR*:  a list of syntactic  identifiers that will be  bound to
+  ;;the safe accessors.
   ;;
-  ;;5..A list of syntactic identifiers that will be bound to the unsafe accessors.
+  ;;5. UNSAFE-FIELD-ACCESSOR*: a list of syntactic  identifiers that will be bound to
+  ;;the unsafe accessors.
   ;;
-  ;;6..A list of syntactic identifiers that will be bound to the safe mutators.  This
-  ;;list holds #f in the position of immutable fields.
+  ;;6. SAFE-FIELD-MUTATOR*: a list of syntactic identifiers that will be bound to the
+  ;;safe mutators.   This list holds  #f in the  position of immutable  fields.  This
+  ;;list has one item for each item in SAFE-FIELD-ACCESSOR*.
   ;;
-  ;;7..A list  of syntactic identifiers  that will be  bound to the  unsafe mutators.
-  ;;This list holds #f in the position of immutable fields.
+  ;;7. UNSAFE-FIELD-MUTATOR*: a  list of syntactic identifiers that will  be bound to
+  ;;the unsafe  mutators.  This list  holds #f in  the position of  immutable fields.
+  ;;This list has one item for each item in UNSAFE-FIELD-ACCESSOR*.
   ;;
-  ;;8..A  list  of  syntactic identifiers  that  will  be  bound  to the  safe  field
+  ;;8. FIELD-METHODS-ALIST: an alist having:  as keys, symbols representing the field
+  ;;names; as  values, syntactic  identifiers that  will be bound  to the  safe field
   ;;accessor/mutator methods.
   ;;
-  ;;9..A vector to be used as FIELDS argument to MAKE-RECORD-TYPE-DESCRIPTOR.
+  ;;9.   FIELDS-VECTOR-SPEC: a  vector to  be used  as FIELDS  argument for  the core
+  ;;primitive function MAKE-RECORD-TYPE-DESCRIPTOR.
   ;;
   ;;Here we assume that FIELD-CLAUSE* is null or a proper list.
   ;;
   (define fields-clause*
-    (let loop ((clause*       clause*)
-	       (field-spec**  '()))
-      (syntax-match clause* (fields)
+    (let loop ((clause*.stx	clause*.stx)
+	       (field-spec**	'()))
+      (syntax-match clause*.stx (fields)
 	(()
 	 (if (options::strict-r6rs-enabled?)
 	     (if (pair? field-spec**)
@@ -665,30 +634,30 @@
 	((_ . ?clauses)
 	 (loop ?clauses field-spec**)))))
   (define (%gen-safe-accessor-name field-name.id)
-    (identifier-append type-id foo-for-id-generation "-" field-name.id))
+    (identifier-append foo foo-for-id-generation "-" field-name.id))
   (define (%gen-unsafe-accessor-name field-name.id)
-    (identifier-append type-id "$" foo-for-id-generation "-" field-name.id))
+    (identifier-append foo "$" foo-for-id-generation "-" field-name.id))
   (define (%gen-safe-mutator-name field-name.id)
-    (identifier-append type-id foo-for-id-generation "-" field-name.id "-set!"))
+    (identifier-append foo foo-for-id-generation "-" field-name.id "-set!"))
   (define (%gen-unsafe-mutator-name field-name.id)
-    (identifier-append type-id "$" foo-for-id-generation "-" field-name.id "-set!"))
+    (identifier-append foo "$" foo-for-id-generation "-" field-name.id "-set!"))
   (define (%gen-safe-method-name field-name.id)
-    (identifier-append type-id foo-for-id-generation "-" field-name.id "-method"))
+    (identifier-append foo foo-for-id-generation "-" field-name.id "-method"))
 
-  (define (%parse-typed-field stx)
-    (syntax-match stx (brace)
-      ((brace ?id ?type)
-       ;;FIXME Here we  should do full type annotation validation.   At present it is
-       ;;not possible  becase here the syntactic  binding for the record  type is not
-       ;;established yet,  so we cannot use  it in field specifications  (but we want
-       ;;to).  (Marco Maggi; Fri Apr 29, 2016)
-       (begin
-	 ;; (unless (syntax-object.type-annotation? ?type)
-	 ;;   (synner "invalid field type annotation" ?type))
-	 (values ?id ?type)))
-      (?id
-       (identifier? ?id)
-       (values ?id (<top>-type-id)))))
+  (define (%parse-typed-field field-name.stx field-name*.sym)
+    (receive-and-return (field-name.id field-name.sym field-type.ann)
+	(syntax-match field-name.stx (brace)
+	  ((brace ?id ?type)
+	   (values ?id (identifier->symbol ?id) ?type))
+	  (?id
+	   (identifier? ?id)
+	   (values ?id (identifier->symbol ?id) (<top>-type-id))))
+      (when (memq field-name.sym field-name*.sym)
+	(synner "multiple field definitions with the same name" field-name.id))
+      (when (exists (lambda (entry)
+		      (eq? (car entry) field-name.sym))
+	      parent-virtual-method-signatures-alist)
+	(synner "forbidden field with name equal to a virtual or sealed method parent method" field-name.id))))
 
   (let loop ((fields-clause*			fields-clause*)
 	     (i					0)
@@ -699,13 +668,8 @@
 	     (unsafe-field-accessor*		'())
 	     (safe-field-mutator*		'())
 	     (unsafe-field-mutator*		'())
-	     (field-method*		'())
+	     (field-methods-alist		'())
 	     (fields-vector-spec*		'()))
-    (define (%register-field-name field-name.id)
-      (let ((field.sym (identifier->symbol field-name.id)))
-	(if (memq field.sym field-name*.sym)
-	    (synner "multiple field definitions with the same name" field-name.id)
-	  (cons field.sym field-name*.sym))))
     (syntax-match fields-clause* (mutable immutable)
       (()
        (values (reverse field-name*.sym)
@@ -715,227 +679,84 @@
 	       (reverse unsafe-field-accessor*)
 	       (reverse safe-field-mutator*)
 	       (reverse unsafe-field-mutator*)
-	       (reverse field-method*)
+	       (reverse field-methods-alist)
 	       (list->vector (reverse fields-vector-spec*))))
 
       (((mutable   ?name ?accessor ?mutator) . ?rest)
        (and (identifier? ?accessor)
 	    (identifier? ?mutator))
-       (receive (field-name.id field-type.ann)
-	   (%parse-typed-field ?name)
+       (receive (field-name.id field-name.sym field-type.ann)
+	   (%parse-typed-field ?name field-name*.sym)
 	 (loop ?rest (fxadd1 i)
-	       (%register-field-name field-name.id)
+	       (cons field-name.sym field-name*.sym)
 	       (cons i field-relative-idx*)
 	       (cons field-type.ann field-type*.ann)
 	       (cons ?accessor safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons ?mutator safe-field-mutator*)
 	       (cons (%gen-unsafe-mutator-name  field-name.id) unsafe-field-mutator*)
-	       (cons (%gen-safe-method-name     field-name.id) field-method*)
+	       (cons (cons field-name.sym (%gen-safe-method-name field-name.id)) field-methods-alist)
 	       (cons `(mutable ,field-name.id) fields-vector-spec*))))
 
       (((immutable ?name ?accessor) . ?rest)
        (identifier? ?accessor)
-       (receive (field-name.id field-type.ann)
-	   (%parse-typed-field ?name)
+       (receive (field-name.id field-name.sym field-type.ann)
+	   (%parse-typed-field ?name field-name*.sym)
 	 (loop ?rest (fxadd1 i)
-	       (%register-field-name field-name.id)
+	       (cons field-name.sym field-name*.sym)
 	       (cons i field-relative-idx*)
 	       (cons field-type.ann field-type*.ann)
 	       (cons ?accessor safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons #f safe-field-mutator*)
 	       (cons #f unsafe-field-mutator*)
-	       (cons (%gen-safe-method-name     field-name.id) field-method*)
+	       (cons (cons field-name.sym (%gen-safe-method-name field-name.id)) field-methods-alist)
 	       (cons `(immutable ,field-name.id) fields-vector-spec*))))
 
       (((mutable   ?name) . ?rest)
-       (receive (field-name.id field-type.ann)
-	   (%parse-typed-field ?name)
+       (receive (field-name.id field-name.sym field-type.ann)
+	   (%parse-typed-field ?name field-name*.sym)
 	 (loop ?rest (fxadd1 i)
-	       (%register-field-name field-name.id)
+	       (cons field-name.sym field-name*.sym)
 	       (cons i field-relative-idx*)
 	       (cons field-type.ann field-type*.ann)
 	       (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons (%gen-safe-mutator-name    field-name.id) safe-field-mutator*)
 	       (cons (%gen-unsafe-mutator-name  field-name.id) unsafe-field-mutator*)
-	       (cons (%gen-safe-method-name     field-name.id) field-method*)
+	       (cons (cons field-name.sym (%gen-safe-method-name field-name.id)) field-methods-alist)
 	       (cons `(mutable ,field-name.id) fields-vector-spec*))))
 
       (((immutable ?name) . ?rest)
-       (receive (field-name.id field-type.ann)
-	   (%parse-typed-field ?name)
+       (receive (field-name.id field-name.sym field-type.ann)
+	   (%parse-typed-field ?name field-name*.sym)
 	 (loop ?rest (fxadd1 i)
-	       (%register-field-name field-name.id)
+	       (cons field-name.sym field-name*.sym)
 	       (cons i field-relative-idx*)
 	       (cons field-type.ann field-type*.ann)
 	       (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons #f safe-field-mutator*)
 	       (cons #f unsafe-field-mutator*)
-	       (cons (%gen-safe-method-name     field-name.id) field-method*)
+	       (cons (cons field-name.sym (%gen-safe-method-name field-name.id)) field-methods-alist)
 	       (cons `(immutable ,field-name.id) fields-vector-spec*))))
 
       ((?name . ?rest)
-       (receive (field-name.id field-type.ann)
-	   (%parse-typed-field ?name)
+       (receive (field-name.id field-name.sym field-type.ann)
+	   (%parse-typed-field ?name field-name*.sym)
 	 (loop ?rest (fxadd1 i)
-	       (%register-field-name field-name.id)
+	       (cons field-name.sym field-name*.sym)
 	       (cons i field-relative-idx*)
 	       (cons field-type.ann field-type*.ann)
 	       (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons #f safe-field-mutator*)
 	       (cons #f unsafe-field-mutator*)
-	       (cons (%gen-safe-method-name     field-name.id) field-method*)
+	       (cons (cons field-name.sym (%gen-safe-method-name field-name.id)) field-methods-alist)
 	       (cons `(immutable ,field-name.id) fields-vector-spec*))))
 
       ((?spec . ?rest)
        (synner "invalid field specification in DEFINE-RECORD-TYPE syntax" ?spec)))))
-
-
-(module (%parse-method-clauses)
-
-  (define (%parse-method-clauses clause* foo foo-for-id-generation field-name*.sym synner)
-    ;;Parse  the  METHOD  clauses  in  CLAUSE*.  Return  a  list  of  "<method-spec>"
-    ;;instances.
-    ;;
-    (define-syntax-rule (recurse ?clause*)
-      (%parse-method-clauses ?clause* foo foo-for-id-generation field-name*.sym synner))
-    (syntax-match clause* (method virtual-method)
-      (()
-       '())
-
-      (((method . ?stuff) . ?clause*)
-       (cons (%parse-single-method-clause ?stuff foo foo-for-id-generation field-name*.sym synner)
-	     (recurse ?clause*)))
-
-      (((virtual-method . ?stuff) . ?clause*)
-       (cons (%parse-single-virtual-method-clause ?stuff foo foo-for-id-generation field-name*.sym synner)
-	     (recurse ?clause*)))
-
-      ((_ . ?clause*)
-       (recurse ?clause*))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%parse-single-method-clause stuff.stx foo foo-for-id-generation field-name*.sym synner)
-    (define subject.id (make-syntactic-identifier-for-temporary-variable "subject"))
-    (syntax-match stuff.stx (brace)
-      (((?who . ?formals) ?body0 ?body* ...)
-       (identifier? ?who)
-       (let* ((method-name.sym		(identifier->symbol ?who))
-	      (method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym))
-	      (method-form.sexp		`((,method-procname.id {,subject.id ,foo} . ,?formals)
-					  (fluid-let-syntax ((this (identifier-syntax ,subject.id)))
-					    ,?body0 . ,?body*)))
-	      (closure.ots		(make-closure-type-spec/from-typed-formals
-					 (bless
-					  `({_ . <list>} {subject <bottom>} . ,?formals)))))
-	 (%validate-method-name ?who method-name.sym field-name*.sym synner)
-	 (make-<method-spec> ?who method-name.sym
-			     method-procname.id method-form.sexp
-			     method-procname.id #f
-			     closure.ots)))
-
-      ((((brace ?who ?rv-tag0 . ?rv-tag*) . ?formals) ?body0 . ?body*)
-       (identifier? ?who)
-       (let* ((method-name.sym		(identifier->symbol ?who))
-	      (method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym))
-	      (method-form.sexp		`(((brace ,method-procname.id ,?rv-tag0 . ,?rv-tag*) {,subject.id ,foo} . ,?formals)
-					  (fluid-let-syntax ((this (identifier-syntax ,subject.id)))
-					    ,?body0 . ,?body*)))
-	      (closure.ots		(make-closure-type-spec/from-typed-formals
-					 (bless
-					  `({_ ,?rv-tag0 . ,?rv-tag*} {subject <bottom>} . ,?formals)))))
-	 (%validate-method-name ?who method-name.sym field-name*.sym synner)
-	 (make-<method-spec> ?who method-name.sym
-			     method-procname.id method-form.sexp
-			     method-procname.id #f
-			     closure.ots)))
-
-      (_
-       (synner "invalid syntax in METHOD clause" (cons (method-id) stuff.stx)))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%parse-single-virtual-method-clause stuff.stx foo foo-for-id-generation field-name*.sym synner)
-    (define subject.id (make-syntactic-identifier-for-temporary-variable "subject"))
-    (syntax-match stuff.stx (brace)
-      (((?who . ?formals) ?body0 ?body* ...)
-       (identifier? ?who)
-       (receive (args.stx improper?)
-	   (typed-formals-syntax->args-list ?formals)
-	 (let* ((method-name.sym		(identifier->symbol ?who))
-		(early-method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym "-early"))
-		(early-body.sexp		(let ((B `(method-call-late-binding (quote ,method-name.sym) #f
-										    ,subject.id ,@args.stx)))
-						  (if improper?
-						      (cons 'apply B)
-						    B)))
-		(early-method-form.sexp		`((,early-method-procname.id {,subject.id ,foo} . ,?formals)
-						  ,early-body.sexp))
-		(late-method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym "-late"))
-		(late-method-form.sexp		`((,late-method-procname.id {,subject.id ,foo} . ,?formals)
-						  (fluid-let-syntax ((this (identifier-syntax ,subject.id)))
-						    ,?body0 . ,?body*)))
-		(closure.ots			(make-closure-type-spec/from-typed-formals
-						 (bless
-						  `({_ . <list>} {subject <bottom>} . ,?formals)))))
-	   (%validate-method-name ?who method-name.sym field-name*.sym synner)
-	   (make-<virtual-method-spec> ?who method-name.sym
-				       early-method-procname.id early-method-form.sexp
-				       late-method-procname.id late-method-form.sexp
-				       closure.ots))))
-
-      ((((brace ?who ?rv-tag0 . ?rv-tag*) . ?formals) ?body0 . ?body*)
-       (identifier? ?who)
-       (receive (args.stx improper?)
-	   (typed-formals-syntax->args-list ?formals)
-	 (let* ((method-name.sym		(identifier->symbol ?who))
-		(early-method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym "-early"))
-		(early-body.sexp		(let ((B `(method-call-late-binding (quote ,method-name.sym) #f
-										    ,subject.id ,@args.stx)))
-						  (if improper?
-						      (cons 'apply B)
-						    B)))
-		(early-method-form.sexp		`(((brace ,early-method-procname.id ,?rv-tag0 . ,?rv-tag*) {,subject.id ,foo} . ,?formals)
-						  ,early-body.sexp))
-		(late-method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym "-late"))
-		(late-method-form.sexp		`(((brace ,late-method-procname.id ,?rv-tag0 . ,?rv-tag*) {,subject.id ,foo} . ,?formals)
-						  (fluid-let-syntax ((this (identifier-syntax ,subject.id)))
-						    ,?body0 . ,?body*)))
-		(closure.ots			(make-closure-type-spec/from-typed-formals
-						 (bless
-						  `({_ ,?rv-tag0 . ,?rv-tag*} {subject <bottom>} . ,?formals)))))
-	   (%validate-method-name ?who method-name.sym field-name*.sym synner)
-	   (make-<virtual-method-spec> ?who method-name.sym
-				       early-method-procname.id early-method-form.sexp
-				       late-method-procname.id late-method-form.sexp
-				       closure.ots))))
-
-      (_
-       (synner "invalid syntax in METHOD clause" (cons (method-id) stuff.stx)))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%validate-method-name method-name.id method-name.sym field-name*.sym synner)
-    (when (memq method-name.sym field-name*.sym)
-      (synner "forbidden method with name equal to field name" method-name.id)))
-
-  (case-define %mk-method-procname-id
-    ((foo-for-id-generation method-name.sym)
-     (%mk-method-procname-id foo-for-id-generation method-name.sym ""))
-    ((foo-for-id-generation method-name.sym tail.str)
-     (datum->syntax foo-for-id-generation
-		    (string->symbol
-		     (string-append (symbol->string (syntax->datum foo-for-id-generation))
-				    "-"
-				    (symbol->string method-name.sym)
-				    tail.str)))))
-
-  #| end of module: %PARSE-METHOD-CLAUSES |# )
 
 
 (define (%make-unsafe-accessor+mutator-code foo foo-rtd
@@ -1085,7 +906,7 @@
     (append safe-field-accessor-form* safe-field-mutator-form*)))
 
 
-(define (%make-safe-method-code foo field-type*.ann field-method* unsafe-field-accessor* unsafe-field-mutator*)
+(define (%make-safe-method-code foo field-type*.ann field-methods-alist unsafe-field-accessor* unsafe-field-mutator*)
   ;;Return a list  holding a symbolic expressions (to be  BLESSed later) representing
   ;;Scheme  expressions  which,  expanded  and  evaluated  at  run-time,  define  the
   ;;syntactic  bindings of  the field  methods.   The returned  list is  meant to  be
@@ -1097,25 +918,27 @@
   ;;FIELD-TYPE*.ANN must be the list of  syntax objects representing the fields' type
   ;;annotations.
   ;;
-  ;;FIELD-METHOD* must be  a list of symbols representing the  names of the syntactic
-  ;;identifiers that will be bound to the safe field methods.
+  ;;FIELD-METHODS-ALIST must  be an alist  having: as keys, symbols  representing the
+  ;;field names;  as values,  syntactic identifiers  that will be  bound to  the safe
+  ;;field accessor/mutator methods.
   ;;
   ;;UNSAFE-FIELD-ACCESSOR*  and  UNSAFE-FIELD-MUTATOR*  must   be  lists  of  symbols
   ;;representing the  names of the  syntactic identifiers  bound to the  unsafe field
   ;;accessors and mutators.
   ;;
-  (map (lambda (safe-field-method unsafe-field-accessor unsafe-field-mutator field-type.ann)
-	 (let ((record.id	(make-syntactic-identifier-for-temporary-variable "record"))
-	       (new-value.id	(make-syntactic-identifier-for-temporary-variable "new-value")))
+  (map (lambda (field-method-entry unsafe-field-accessor unsafe-field-mutator field-type.ann)
+	 (let ((safe-method-procname.id	(cdr field-method-entry))
+	       (record.id		(make-syntactic-identifier-for-temporary-variable "record"))
+	       (new-value.id		(make-syntactic-identifier-for-temporary-variable "new-value")))
 	   (if unsafe-field-mutator
 	       `(begin
-		  (define/overload ((brace ,safe-field-method ,field-type.ann) (brace ,record.id ,foo))
+		  (define/overload ((brace ,safe-method-procname.id ,field-type.ann) (brace ,record.id ,foo))
 		    (unsafe-cast-signature (,field-type.ann) (,unsafe-field-accessor ,record.id)))
-		  (define/overload ((brace ,safe-field-method <void>) (brace ,record.id ,foo) (brace ,new-value.id ,field-type.ann))
+		  (define/overload ((brace ,safe-method-procname.id <void>) (brace ,record.id ,foo) (brace ,new-value.id ,field-type.ann))
 		    (,unsafe-field-mutator ,record.id ,new-value.id)))
-	     `(define/checked ((brace ,safe-field-method ,field-type.ann) (brace ,record.id ,foo))
+	     `(define/checked ((brace ,safe-method-procname.id ,field-type.ann) (brace ,record.id ,foo))
 		(unsafe-cast-signature (,field-type.ann) (,unsafe-field-accessor ,record.id))))))
-    field-method* unsafe-field-accessor* unsafe-field-mutator* field-type*.ann))
+    field-methods-alist unsafe-field-accessor* unsafe-field-mutator* field-type*.ann))
 
 
 (define (%make-parent-rtd+rcd-code clause* foo input-form.stx synner)
@@ -1139,6 +962,9 @@
   ;;5.  PARENT-RCD-DEFINITION: null  or a  list holding  a DEFINE  form defining  the
   ;;parent RCD syntactic binding, the list is spliced in the output.
   ;;
+  ;;6.   PARENT-VIRTUAL-METHODS-ALIST: an  alist  representing  the parent's  virtual
+  ;;methods and sealed methods.
+  ;;
   (let ((parent-clause (%get-clause 'parent clause*)))
     (syntax-match parent-clause ()
       ;;If there  is a  PARENT clause  insert code  that retrieves  the RTD  from the
@@ -1147,8 +973,8 @@
        (identifier? ?parent-name)
        ;;Validate  ?PARENT-NAME  as  syntactic  identifier  bound  to  a  record-type
        ;;syntactic binding.
-       (let* ((parent-rts	(id->record-type-spec ?parent-name))
-	      (parent-proto	(record-type-spec.super-protocol-id parent-rts))
+       (let* ((parent.ots	(id->record-type-spec ?parent-name))
+	      (parent-proto	(record-type-spec.super-protocol-id parent.ots))
 	      (parent-rtd.id	(%named-gensym/suffix foo "-parent-rtd"))
 	      (parent-rcd.id	(%named-gensym/suffix foo "-parent-rcd")))
 	 (values ?parent-name parent-rtd.id parent-rcd.id
@@ -1157,7 +983,8 @@
 		 ;;If the  parent has  a super-type  constructor descriptor:  use it;
 		 ;;otherwise use the default constructor descriptor.
 		 `((define/typed {,parent-rcd.id <record-constructor-descriptor>}
-		     ,(or parent-proto `(record-constructor-descriptor ,?parent-name)))))))
+		     ,(or parent-proto `(record-constructor-descriptor ,?parent-name))))
+		 (record-type-spec.virtual-method-signatures parent.ots))))
 
       ;;If there is no PARENT clause try to retrieve the expression evaluating to the
       ;;RTD.
@@ -1171,12 +998,13 @@
 		      `((define/typed {,parent-rtd.id <record-type-descriptor>}
 			  ,?parent-rtd))
 		      `((define/typed {,parent-rcd.id <record-constructor-descriptor>}
-			  ,?parent-rcd)))))
+			  ,?parent-rcd))
+		      '())))
 
 	   ;;If  neither the  PARENT nor  the  PARENT-RTD clauses  are present:  just
 	   ;;return false.
 	   (#f
-	    (values #f #f #f '() '()))
+	    (values #f #f #f '() '() '()))
 
 	   (_
 	    (synner "invalid syntax in PARENT-RTD clause" parent-rtd-clause)))))
@@ -1539,81 +1367,64 @@
        (synner "invalid syntax in HASH-FUNCTION clause" clause)))))
 
 
-(module (%process-method-specs)
-
-  (define (%process-method-specs foo parent-rtd.id method-spec* field-name*.sym field-method*.id synner)
-    ;;Process the method specifications, including the field specifications for field
-    ;;methods.
+(module (%parse-method-clauses)
+  ;;Parse METHOD and similar clauses in  CLAUSE*.STX; build a list of "<method-spec>"
+  ;;instances  representing  the  specifications;  perform some  validations  on  the
+  ;;specifications; finally build and return the following values:
+  ;;
+  ;;* EARLY-BINDING-METHODS-ALIST an alist having:  as keys, symbols representing the
+  ;;method names,  including the field  names; as values, syntactic  identifiers that
+  ;;will be bound to the method implementation procedures, including field methods.
+  ;;
+  ;;*  METHOD-FORM*.SEXP, a  list of  forms  representing the  definitions of  method
+  ;;implementation procedures and related stuff.
+  ;;
+  ;;*  METHOD-RETRIEVER-CODE.SEXP, false  or  a symbolic  expression  (to be  BLESSed
+  ;;later)  representing  a  Scheme  expression   returning  a  closure  object:  the
+  ;;method-retriever function.  The method retriever function is used when performing
+  ;;late binding of methods.
+  ;;
+  ;;* VIRTUAL-METHOD-SIGNATURES-ALIST an alist  having: as keys, symbols representing
+  ;;the virtual and sealed method names; as values:
+  ;;
+  ;;** When the method is an  open virtual method: instances of "<closure-type-spec>"
+  ;;representing the type signature of the method.
+  ;;
+  ;;** When the method has been sealed: the boolean false.
+  ;;
+  ;;the alist has, as tail, the argument PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST.
+  ;;
+  (define (%parse-method-clauses clause*.stx
+				 foo foo-for-id-generation
+				 parent-rtd.id parent-virtual-method-signatures-alist
+				 field-methods-alist synner)
+    ;;The arguments are:
     ;;
-    ;;Return the following values:
+    ;;FOO, the syntactic identifier representing the record-type name.
     ;;
-    ;;* EARLY-BINDING-METHODS-ALIST  an alist  having: as keys,  symbols representing
-    ;;the method names,  including the field names; as  values, syntactic identifiers
-    ;;that will  be bound  to the method  implementation procedures,  including field
-    ;;methods.
+    ;;FOO-FOR-ID-GENERATION,  the syntactic  identifier representing  the record-type
+    ;;name preprocessed to be used as prefix in procnames generation.
     ;;
-    ;;* METHOD-FORM*.SEXP,  a list  of forms representing  the definitions  of method
-    ;;implementation procedures.
+    ;;PARENT-RTD.ID,  false  or   the  syntactic  identifier  bound   to  the  parent
+    ;;record-type descriptor.   It is  used to  access the  parent's method-retriever
+    ;;procedure.
     ;;
-    ;;* METHOD-RETRIEVER-CODE.SEXP,  false or  a symbolic  expression (to  be BLESSed
-    ;;later)  representing  a  Scheme  expression returning  a  closure  object:  the
-    ;;method-retriever  function.   The  method   retriever  function  is  used  when
-    ;;performing late binding of methods.
+    ;;PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST  an  alist   having:  as  keys,  symbols
+    ;;representing the parnet's virtual and sealed method names; as values:
     ;;
-    ;;*   VIRTUAL-METHOD-SIGNATURES-ALIST  an   alist   having:   as  keys,   symbols
-    ;;representing   the   virtual   method    names;   as   values,   instances   of
-    ;;"<closure-type-spec>"  representing the  signature of  the method.   This alist
-    ;;already contains appropriate entries for the parent record-type, if any.
+    ;;* When the method is an open virtual method: instances of "<closure-type-spec>"
+    ;;representing the type signature of the method.
     ;;
-
-    ;;Every item  in GROUP* is a  non-empty proper list of  "<method-spec>" instances
-    ;;having the same method name.
-    (define group*
-      (%partition-method-specs method-spec*))
-
-    ;;Check that no method has the same name of a field.
-    (for-each (lambda (group)
-		(cond ((memq (<method-spec>-name-sym (car group)) field-name*.sym)
-		       => (lambda (P)
-			    (synner "found method with the same name of a field" (car P))))))
-      group*)
-
-    ;;Check that no virtual method has the same name of a concrete method.
-    (for-each (lambda (group)
-		(let* ((head (car group))
-		       (tail (cdr group)))
-		  (unless (for-all (if (<virtual-method-spec>? head)
-				       <virtual-method-spec>?
-				     (lambda (spec) (not (<virtual-method-spec>? spec))))
-			    tail)
-		    (synner "found method and virtual method with the same name" (<method-spec>-name-sym head)))))
-      group*)
-
-    ;;Build the methods alist and the definitions forms.
-    (receive (early-binding-methods-alist method-form*.sexp method-retriever-code.sexp)
-	(let ((fields-alist (map cons field-name*.sym field-method*.id)))
-	  (let loop ((group*				group*)
-		     (early-binding-methods-alist	fields-alist)
-		     (late-binding-methods-alist	fields-alist)
-		     (method-form*.sexp			'()))
-	    (if (pair? group*)
-		(let ((group (car group*)))
-		  (receive (early-binding-methods-entry late-binding-methods-entry form*.sexp)
-		      (if (list-of-single-item? group)
-			  (%process-method-group-with-single-item (car group))
-			(%process-method-group-with-multiple-items group))
-		    (loop (cdr group*)
-			  (cons early-binding-methods-entry	early-binding-methods-alist)
-			  (cons late-binding-methods-entry	late-binding-methods-alist)
-			  (append form*.sexp			method-form*.sexp))))
-	      ;;No more groups.
-	      (values early-binding-methods-alist method-form*.sexp
-		      (%make-method-retriever foo parent-rtd.id late-binding-methods-alist)))))
-
-      (let ((virtual-method-signatures-alist '()))
-	(values early-binding-methods-alist method-form*.sexp method-retriever-code.sexp virtual-method-signatures-alist))))
-
-;;; --------------------------------------------------------------------
+    ;;* When the method has been sealed: the boolean false.
+    ;;
+    (let* ((method-spec*	(%parse-clauses clause*.stx foo foo-for-id-generation synner))
+	   (group*		(%partition-method-specs method-spec*)))
+      (%check-that-no-method-has-the-same-name-of-a-field group* field-methods-alist synner)
+      (%check-that-methods-with-the-same-name-have-homogeneous-type group* synner)
+      (%check-that-parent-sealed-methods-are-not-overridden group* parent-virtual-method-signatures-alist synner)
+      (%process-method-specs group* foo field-methods-alist
+			     parent-rtd.id parent-virtual-method-signatures-alist
+			     synner)))
 
   (define (%partition-method-specs method-spec*)
     ;;Given a  list of  "<method-spec>" instances:  return a  list of  sublists, each
@@ -1633,80 +1444,375 @@
 		    '()))))
       '()))
 
+  (define (%check-that-no-method-has-the-same-name-of-a-field group* field-methods-alist synner)
+    (for-each (lambda (group)
+		(let ((method-name.sym (<method-spec>-name-sym (car group))))
+		  (when (exists (lambda (field-method-entry)
+				  (let ((field-name.sym (car field-method-entry)))
+				    (eq? field-name.sym method-name.sym)))
+			  field-methods-alist)
+		    (synner "forbidden method with name equal to a field name" method-name.sym))))
+      group*))
+
+  (define (%check-that-methods-with-the-same-name-have-homogeneous-type group* synner)
+    (for-each (lambda (group)
+		(let* ((head (car group))
+		       (tail (cdr group)))
+		  (unless (for-all (cond ((<virtual-method-spec>? head)	<virtual-method-spec>?)
+					 ((<seal-method-spec>?    head)	<seal-method-spec>?)
+					 (else				<concrete-method-spec>?))
+			    tail)
+		    (synner "forbidden methods with the same name but different type" (<method-spec>-name-sym head)))))
+      group*))
+
+  (define (%check-that-parent-sealed-methods-are-not-overridden group* parent-virtual-method-signatures-alist synner)
+    ;;Here we already know that every  group in GROUP* holds method specifications of
+    ;;homogeneous type; so: if the head is  concrete all are concrete, if the head is
+    ;;virtual all are virtual, if the head is sealed all are sealed.
+    ;;
+    (for-each
+	(lambda (group)
+	  (let ((method-name.sym (<method-spec>-name-sym (car group))))
+	    (cond ((assq method-name.sym parent-virtual-method-signatures-alist)
+		   => (lambda (P)
+			(if (cdr P)
+			    ;;The parent has a virtual method with this name.
+			    (void)
+			  ;;The parent has a sealed method with this name.
+			  (synner "attempt to override a method declared sealed by the parent record-type"
+				  method-name.sym))))
+		  (else
+		   ;;Fine, the  parent has  neither virtual  nor sealed  methods with
+		   ;;this name.
+		   (void)))))
+      group*))
+
 ;;; --------------------------------------------------------------------
 
-  (define (%process-method-group-with-single-item single)
-    (values
-     ;;early-binding-methods-entry
-     (cons (<method-spec>-name-sym single) (<method-spec>-early-binding-procname single))
-     ;;late-binding-methods-entry
-     (cons (<method-spec>-name-id  single) (<method-spec>-late-binding-procname  single))
-     ;;form*.sexp
-     (let ((early-form (cons (core-prim-id 'define/typed) (<method-spec>-early-binding-implementation single))))
-       (cond ((<method-spec>-late-binding-implementation single)
-	      => (lambda (impl)
-		   ;;A virtual method  has both the early  binding implementation and
-		   ;;the late binding implementation.
-		   (list early-form (cons (core-prim-id 'define/typed) impl))))
-	     (else
-	      ;;A concrete  method only  has the  early binding  implementation, also
-	      ;;used for late binding.
-	      (list early-form))))))
+  (define-core-record-type <method-spec>
+    (fields
+      (immutable	name-id)
+		;A syntactic identifier representing the method name.
+      (immutable	name-sym)
+		;A symbol representing the method name.
+      (immutable	early-binding-procname)
+		;The syntactic  identifier that  will be bound  to the  early binding
+		;method implementation procedure.
+      (immutable	early-binding-implementation)
+		;A symbolic expression (to be BLESSed later) with the format:
+		;
+		;   (({?early-binding-procname . ?rv-types} . ?formals) . ?body)
+		;
+		;that  can  be  turned   into  a  method's  implementation  procedure
+		;definition just by preconsing DEFINE/TYPED or DEFINE/OVERLOAD.
+      (immutable	late-binding-procname)
+		;The  syntactic identifier  that will  be bound  to the  late binding
+		;method implementation procedure.
+      (immutable	late-binding-implementation)
+		;A symbolic expression (to be BLESSed later) with the format:
+		;
+		;   (({?late-binding-procname . ?rv-types} . ?formals) . ?body)
+		;
+		;that  can  be  turned   into  a  method's  implementation  procedure
+		;definition just by preconsing DEFINE/TYPED or DEFINE/OVERLOAD.
+      (immutable	closure-ots)
+		;An instance of "<closure-type-spec>" representing the type signature
+		;of this method.
+      #| end of FIELDS |# )
 
-  (define (%process-method-group-with-multiple-items group)
-    (define first (car group))
-    (values
-     ;;early-binding-methods-entry
-     (cons (<method-spec>-name-sym first) (<method-spec>-early-binding-procname first))
-     ;;late-binding-methods-entry
-     (cons (<method-spec>-name-id  first) (<method-spec>-late-binding-procname  first))
-     ;;form*.sexp
-     (fold-left
-	 (lambda (knil spec)
-	   (let ((entry (cons (core-prim-id 'define/overload)
-			      (<method-spec>-early-binding-implementation spec))))
-	     (cond ((<method-spec>-late-binding-implementation spec)
-		    => (lambda (impl)
-			 ;;A virtual method has both the early binding implementation
-			 ;;and the late binding implementation.
-			 (cons* (cons (core-prim-id 'define/overload) impl)
-				entry knil)))
-		   (else
-		    ;;A concrete  method only  has the early  binding implementation,
-		    ;;also used for late binding.
-		    (cons entry knil)))))
-       '() group)))
+    (protocol
+      (lambda (make-record)
+	(lambda (name-id name-sym early-binding-procname early-binding-meat late-binding-procname late-binding-meat
+		    closure.ots)
+	  (make-record name-id name-sym
+		       early-binding-procname early-binding-meat
+		       late-binding-procname late-binding-meat
+		       closure.ots)))))
+
+  (define-core-record-type <concrete-method-spec>
+    (parent <method-spec>))
+
+  (define-core-record-type <virtual-method-spec>
+    (parent <method-spec>))
+
+  (define-core-record-type <seal-method-spec>
+    (parent <method-spec>))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-method-retriever foo parent-rtd.id late-binding-methods-alist)
-    (define method-name.id	(make-syntactic-identifier-for-temporary-variable "method-name"))
-    (define parent-retriever.id	(make-syntactic-identifier-for-temporary-variable "parent-retriever"))
-    (cond ((pair? late-binding-methods-alist)
-	   (let ((retriever-maker.sexp `(lambda/typed (,parent-retriever.id)
-					  (lambda/typed ({_ (or <false> <procedure>)} {,method-name.id <symbol>})
-					    (case ,method-name.id
-					      ,@(map (lambda (P)
-						       (let ((name (car P))
-							     (proc (cdr P)))
-							 `((,name) ,proc)))
-						  late-binding-methods-alist)
-					      (else
-					       (,parent-retriever.id ,method-name.id)))))))
-	     `(,retriever-maker.sexp ,(if parent-rtd.id
-					  `($record-type-method-retriever ,parent-rtd.id)
-					'(core-type-descriptor.method-retriever <record>-ctd)))))
+  (module (%parse-clauses)
 
-	  (parent-rtd.id
-	   ;;This record-type has no methods, but it has a parent.
-	   `($record-type-method-retriever ,parent-rtd.id))
+    (define (%parse-clauses clause*.stx foo foo-for-id-generation synner)
+      ;;Parse  the  METHOD clauses  in  CLAUSE*,  return  a list  of  "<method-spec>"
+      ;;instances.
+      ;;
+      (define-syntax-rule (recurse)
+	(%parse-clauses (cdr clause*.stx) foo foo-for-id-generation synner))
+      (if (pair? clause*.stx)
+	  (let ((clause.stx (car clause*.stx)))
+	    (if (syntax-match clause.stx (method virtual-method seal-method)
+		  ((method         . ?stuff)	#t)
+		  ((virtual-method . ?stuff)	#t)
+		  ((seal-method    . ?stuff)	#t)
+		  (_				#f))
+		(cons (%parse-single-clause clause.stx foo foo-for-id-generation synner)
+		      (recurse))
+	      (recurse)))
+	'()))
 
+    (define (%parse-single-clause clause.stx foo foo-for-id-generation synner)
+      (syntax-match clause.stx (brace)
+	((?keyword (?who . ?formals) ?body0 ?body* ...)
+	 (identifier? ?who)
+	 (%process-clause-contents foo foo-for-id-generation ?keyword
+				   (identifier->symbol ?who) ?who
+				   #f ?formals `(,?body0 . ,?body*)
+				   synner))
+
+	((?keyword ((brace ?who ?rv-tag0 . ?rv-tag*) . ?formals) ?body0 . ?body*)
+	 (identifier? ?who)
+	 (%process-clause-contents foo foo-for-id-generation ?keyword
+				   (identifier->symbol ?who) ?who
+				   `(,?rv-tag0 . ,?rv-tag*) ?formals `(,?body0 . ,?body*)
+				   synner))
+
+	(_
+	 (synner "invalid syntax in method clause" clause.stx))))
+
+    (define (%process-clause-contents foo foo-for-id-generation keyword.id
+				      method-name.sym method-name.id retvals.stx formals.stx body*.stx
+				      synner)
+      (let* ((early-method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym "-early"))
+	     (late-method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym "-late"))
+	     (subject.id		(make-syntactic-identifier-for-temporary-variable "subject")))
+
+	(define early-binding-implementation-form.sexp
+	  (let ((lhs.stx (if retvals.stx
+			     `(brace ,early-method-procname.id . ,retvals.stx)
+			   early-method-procname.id)))
+	    `((,lhs.stx {,subject.id ,foo} . ,formals.stx)
+	      (fluid-let-syntax ((this (identifier-syntax ,subject.id)))
+		. ,body*.stx))))
+
+	(define late-binding-implementation-form.sexp
+	  (receive (args.stx improper?)
+	      (typed-formals-syntax->args-list formals.stx)
+	    (let ((lhs.stx		(if retvals.stx
+					    `(brace ,late-method-procname.id . ,retvals.stx)
+					  late-method-procname.id))
+		  (late-body.sexp	(let ((B `(method-call-late-binding (quote ,method-name.sym) #f ,subject.id ,@args.stx)))
+					  (if improper? (cons 'apply B) B))))
+	      `((,lhs.stx {,subject.id ,foo} . ,formals.stx)
+		,late-body.sexp))))
+
+	(define closure.ots
+	  (make-closure-type-spec/from-typed-formals
+	   (bless (let ((lhs.stx (if retvals.stx
+				     `(brace _ . ,retvals.stx)
+				   `(brace _ . <list>))))
+		    `(,lhs.stx {,subject.id <bottom>} . ,formals.stx)))))
+
+	(case (identifier->symbol keyword.id)
+	  ((method)
+	   (make-<concrete-method-spec> method-name.id method-name.sym
+					early-method-procname.id early-binding-implementation-form.sexp
+					late-method-procname.id   late-binding-implementation-form.sexp
+					closure.ots))
+	  ((virtual-method)
+	   (make-<virtual-method-spec> method-name.id method-name.sym
+				       early-method-procname.id early-binding-implementation-form.sexp
+				       late-method-procname.id   late-binding-implementation-form.sexp
+				       closure.ots))
+	  ((seal-method)
+	   (make-<seal-method-spec> method-name.id method-name.sym
+				    early-method-procname.id early-binding-implementation-form.sexp
+				    late-method-procname.id   late-binding-implementation-form.sexp
+				    closure.ots))
 	  (else
-	   ;;This record-type has  no methods, and no parent.  The  default parent is
-	   ;;"<record>".
-	   '(core-type-descriptor.method-retriever <record>-ctd))))
+	   (synner "internal error, invalid method type" keyword.id)))))
 
-  #| end of module: %PROCESS-METHOD-SPECS |# )
+    (case-define %mk-method-procname-id
+      ((foo-for-id-generation method-name.sym)
+       (%mk-method-procname-id foo-for-id-generation method-name.sym ""))
+      ((foo-for-id-generation method-name.sym tail.str)
+       (datum->syntax foo-for-id-generation
+		      (string->symbol
+		       (string-append (symbol->string (syntax->datum foo-for-id-generation))
+				      "-"
+				      (symbol->string method-name.sym)
+				      tail.str)))))
+
+    #| end of module: %PARSE-CLAUSES |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (%process-method-specs)
+
+    (define (%process-method-specs init-group* foo field-methods-alist
+				   parent-rtd.id parent-virtual-method-signatures-alist
+				   synner)
+      ;;Process the method specifications, build the return values.
+      ;;
+
+      ;;Build the methods alist and the definitions forms.
+      (let loop ((group*			init-group*)
+		 (early-binding-methods-alist	field-methods-alist)
+		 (late-binding-methods-alist	field-methods-alist)
+		 (method-form*.sexp		'()))
+	(if (pair? group*)
+	    (let* ((group	(car group*))
+		   (virtual?	(or (<virtual-method-spec>? (car group))
+				    (let ((method-name.sym (<method-spec>-name-sym (car group))))
+				      (exists (lambda (entry)
+						(and (eq? method-name.sym (car entry))
+						     (cdr entry)
+						     #t))
+					parent-virtual-method-signatures-alist)))))
+	      (receive (early-binding-methods-entry late-binding-methods-entry form*.sexp)
+		  (if (list-of-single-item? group)
+		      (%process-method-group-with-single-item (car group) virtual?)
+		    (%process-method-group-with-multiple-items group virtual?))
+		(loop (cdr group*)
+		      (cons early-binding-methods-entry	early-binding-methods-alist)
+		      (cons late-binding-methods-entry	late-binding-methods-alist)
+		      (append form*.sexp		method-form*.sexp))))
+	  ;;No more groups.
+	  (values early-binding-methods-alist method-form*.sexp
+		  (%make-method-retriever-code foo parent-rtd.id late-binding-methods-alist)
+		  (%make-virtual-method-signatures-alist init-group* parent-virtual-method-signatures-alist)))))
+
+    ;;; --------------------------------------------------------------------
+
+    (define (%process-method-group-with-single-item single virtual?)
+      ;;VIRTUAL? is true if the parent record-type has a virtual method with the same
+      ;;name.  When VIRTUAL?  is true: this method  is virtual too, even  when it was
+      ;;defined using METHOD rather than VIRTUAL-METHOD.
+      ;;
+      (if virtual?
+	  ;;This is a virtual method
+	  (values
+	   ;;EARLY-BINDING-METHODS-ENTRY, this  will go  in the methods-table  of the
+	   ;;record-type specification.
+	   (cons (<method-spec>-name-sym single) (<method-spec>-late-binding-procname  single))
+	   ;;LATE-BINDING-METHODS-ENTRY,    this   will    go    in   the    run-time
+	   ;;method-retriever procedure of the record-type descriptor.
+	   (cons (<method-spec>-name-id  single) (<method-spec>-early-binding-procname single))
+	   ;;FORM*.SEXP
+	   (list (cons (core-prim-id 'define/typed) (<method-spec>-early-binding-implementation single))
+		 (cons (core-prim-id 'define/typed) (<method-spec>-late-binding-implementation  single))))
+	;;This is a concrete method.
+	(values
+	 ;;EARLY-BINDING-METHODS-ENTRY,  this will  go  in the  methods-table of  the
+	 ;;record-type specification.
+	 (cons (<method-spec>-name-sym single) (<method-spec>-early-binding-procname single))
+	 ;;LATE-BINDING-METHODS-ENTRY, this will go  in the run-time method-retriever
+	 ;;procedure of the record-type descriptor.
+	 (cons (<method-spec>-name-id  single) (<method-spec>-early-binding-procname single))
+	 ;;FORM*.SEXP
+	 (list (cons (core-prim-id 'define/typed) (<method-spec>-early-binding-implementation single))))))
+
+    (define (%process-method-group-with-multiple-items group virtual?)
+      ;;VIRTUAL? is true if the parent record-type has a virtual method with the same
+      ;;name.
+      ;;
+      (define first (car group))
+      (if virtual?
+	  ;;This is a virtual method
+	  (values
+	   ;;EARLY-BINDING-METHODS-ENTRY, this  will go  in the methods-table  of the
+	   ;;record-type specification.
+	   (cons (<method-spec>-name-sym first) (<method-spec>-late-binding-procname  first))
+	   ;;LATE-BINDING-METHODS-ENTRY,    this   will    go    in   the    run-time
+	   ;;method-retriever procedure of the record-type descriptor.
+	   (cons (<method-spec>-name-id  first) (<method-spec>-early-binding-procname first))
+	   ;;FORM*.SEXP
+	   (fold-left (lambda (knil spec)
+			(cons* (cons (core-prim-id 'define/overload) (<method-spec>-early-binding-implementation spec))
+			       (cons (core-prim-id 'define/overload) (<method-spec>-late-binding-implementation  spec))
+			       knil))
+	     '() group))
+	;;This is a concrete method.
+	(values
+	 ;;EARLY-BINDING-METHODS-ENTRY,  this will  go  in the  methods-table of  the
+	 ;;record-type specification.
+	 (cons (<method-spec>-name-sym first) (<method-spec>-early-binding-procname first))
+	 ;;LATE-BINDING-METHODS-ENTRY, this will go  in the run-time method-retriever
+	 ;;procedure of the record-type descriptor.
+	 (cons (<method-spec>-name-id  first) (<method-spec>-early-binding-procname first))
+	 ;;FORM*.SEXP
+	 (map (lambda (spec)
+		(cons (core-prim-id 'define/overload) (<method-spec>-early-binding-implementation spec)))
+	   group))))
+
+    ;;; --------------------------------------------------------------------
+
+    (define (%make-method-retriever-code foo parent-rtd.id late-binding-methods-alist)
+      (define method-name.id	(make-syntactic-identifier-for-temporary-variable "method-name"))
+      (define parent-retriever.id	(make-syntactic-identifier-for-temporary-variable "parent-retriever"))
+      (cond ((pair? late-binding-methods-alist)
+	     (let ((retriever-maker.sexp `(lambda/typed (,parent-retriever.id)
+					    (lambda/typed ({_ (or <false> <procedure>)} {,method-name.id <symbol>})
+					      (case ,method-name.id
+						,@(map (lambda (P)
+							 (let ((name (car P))
+							       (proc (cdr P)))
+							   `((,name) ,proc)))
+						    late-binding-methods-alist)
+						(else
+						 (,parent-retriever.id ,method-name.id)))))))
+	       `(,retriever-maker.sexp ,(if parent-rtd.id
+					    `($record-type-method-retriever ,parent-rtd.id)
+					  '(core-type-descriptor.method-retriever <record>-ctd)))))
+
+	    (parent-rtd.id
+	     ;;This record-type has no methods, but it has a parent.
+	     `($record-type-method-retriever ,parent-rtd.id))
+
+	    (else
+	     ;;This record-type has no methods, and no parent.  The default parent is
+	     ;;"<record>".
+	     '(core-type-descriptor.method-retriever <record>-ctd))))
+
+    ;;; --------------------------------------------------------------------
+
+    (define (%make-virtual-method-signatures-alist group* parent-virtual-method-signatures-alist)
+      ;;Build and  return VIRTUAL-METHOD-SIGNATURES-ALIST, an alist  having: as keys,
+      ;;symbols representing the virtual and sealed method names; as values:
+      ;;
+      ;;*   When   the   method   is   an   open   virtual   method:   instances   of
+      ;;"<closure-type-spec>" representing the type signature of the method.
+      ;;
+      ;;* When the method has been sealed: the boolean false.
+      ;;
+      ;;the alist has, as tail, the argument PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST.
+      ;;
+      (fold-left (lambda (knil group)
+		   (if (list-of-single-item? group)
+		       (let ((single (car group)))
+			 (cond ((<virtual-method-spec>? single)
+				(cons (cons (<method-spec>-name-sym single) (<method-spec>-closure-ots single))
+				      knil))
+			       ((<seal-method-spec>? single)
+				(cons (cons (<method-spec>-name-sym single) #f)
+				      knil))
+			       (else knil)))
+		     (let ((head (car group))
+			   (tail (cdr group)))
+		       (cond ((<virtual-method-spec>? head)
+			      (cons (cons (<method-spec>-name-sym head)
+					  (fold-left (lambda (closure.ots spec)
+						       (closure-type-spec.join closure.ots (<method-spec>-closure-ots spec)))
+					    (<method-spec>-closure-ots head) tail))
+				    knil))
+			     ((<seal-method-spec>? head)
+			      (cons (cons (<method-spec>-name-sym head) #f)
+				    knil))
+			     (else knil)))))
+	parent-virtual-method-signatures-alist group*))
+
+    #| end of module: %PROCESS-METHOD-SPECS |# )
+
+  #| end of module: %PARSE-METHOD-CLAUSES |# )
 
 
 (define* (%make-type-name-syntactic-binding-form foo.id foo-uid make-foo.id foo?.id

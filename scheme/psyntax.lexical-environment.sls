@@ -344,6 +344,8 @@
     brace-id				brace-id?
     method-id				method-id?
     case-method-id			case-method-id?
+    virtual-method-id			virtual-method-id?
+    seal-method-id			seal-method-id?
     procedure-pred-id
     list-of-id				vector-of-id
     hashtable-id			alist-id
@@ -2721,6 +2723,8 @@
   (define-core-prim-id-retriever procedure-pred-id	procedure?)
   (define-core-prim-id-retriever method-id		method)
   (define-core-prim-id-retriever case-method-id		case-method)
+  (define-core-prim-id-retriever virtual-method-id	virtual-method)
+  (define-core-prim-id-retriever seal-method-id	seal-method)
   (define-core-prim-id-retriever brace-id		brace)
   (define-core-prim-id-retriever list-of-id		list-of)
   (define-core-prim-id-retriever vector-of-id		vector-of)
@@ -2753,6 +2757,14 @@
 (define (method-id? id)
   (and (identifier? id)
        (~free-identifier=? id (method-id))))
+
+(define (virtual-method-id? id)
+  (and (identifier? id)
+       (~free-identifier=? id (virtual-method-id))))
+
+(define (seal-method-id? id)
+  (and (identifier? id)
+       (~free-identifier=? id (seal-method-id))))
 
 (define (case-method-id? id)
   (and (identifier? id)

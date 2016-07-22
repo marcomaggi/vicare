@@ -624,6 +624,26 @@
 	(method-call a O))
     => 2)
 
+;;; --------------------------------------------------------------------
+;;; errors
+
+  ;;Field and concrete method with the same name.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <it>
+		      (fields it)
+		      (method (it)
+			2))
+		    #t))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'it)
+
   #t)
 
 
@@ -1016,7 +1036,8 @@
 
 (parametrise ((check-test-name	'virtual-methods))
 
-  ;;Hierarchy of two record-types.  No virtual methods.
+  ;;Hierarchy of two record-types.  No virtual  methods, keep it as reference to show
+  ;;how virtual methods work.
   ;;
   (check
       (internal-body
@@ -1040,7 +1061,6 @@
 		(fun up)
 		(fun down)))
     => 1 2 1 1)
-
 
 ;;; --------------------------------------------------------------------
 
@@ -1092,16 +1112,23 @@
 	(define middle	(new <middle>))
 	(define down	(new <sub>))
 
-	(define (fun {O <super>})
+	(define (fun-super {O <super>})
+	  (.doit O))
+
+	(define (fun-middle {O <middle>})
 	  (.doit O))
 
 	(values (.doit up)
 		(.doit middle)
 		(.doit down)
-		(fun up)
-		(fun middle)
-		(fun down)))
-    => 1 2 3 1 2 3)
+		(fun-super up)
+		(fun-super middle)
+		(fun-super down)
+		(fun-middle middle)
+		(fun-middle down)))
+    => 1 2 3
+    1 2 3
+    2 3)
 
   ;;Hierarchy of four record-types.
   ;;
@@ -1139,46 +1166,27 @@
     => 1 2 3 4
     1 2 3 4)
 
-  ;;Hierarchy of four record-types.  A concrete method is a final method.
-  ;;
-  (check
-      (internal-body
-	(define-record-type <one>
-	  (virtual-method (doit)
-	    1))
-
-	(define-record-type <two>
-	  (parent <one>)
-	  (virtual-method (doit)
-	    2))
-
-	(define-record-type <three>
-	  (parent <two>)
-	  (method (doit)
-	    3))
-
-	(define-record-type <four>
-	  (parent <three>)
-	  (virtual-method (doit)
-	    4))
-
-	(define one	(new <one>))
-	(define two	(new <two>))
-	(define three	(new <three>))
-	(define four	(new <four>))
-
-	(define (fun {O <one>})
-	  (.doit O))
-
-	(values (.doit one) (.doit two) (.doit three) (.doit four)
-		(fun one) (fun two) (fun three) (fun four)))
-    => 1 2 3 4
-    1 2 3 3)
-
 ;;; --------------------------------------------------------------------
 ;;; errors
 
-  ;;Method and virtual method with the same name.
+  ;;Virtual method and field with the same name.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <it>
+		      (fields it)
+		      (virtual-method (it)
+			2))
+		    #t))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'it)
+
+  ;;Virtual method and concrete method with the same name.
   ;;
   (check
       (try
@@ -1193,6 +1201,189 @@
 	   (syntax->datum (syntax-violation-subform E)))
 	  (else E)))
     => 'doit)
+
+
+  ;;Field and parent's virtual method with the same name.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <super>
+		      (virtual-method (it)
+			1))
+		    (define-record-type <sub>
+		      (parent <super>)
+		      (fields it))
+		    #t))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'it)
+
+  (void))
+
+
+(parametrise ((check-test-name	'seal-methods))
+
+  ;;Overloaded seal method.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <it>
+	  (method (doit)
+	    1)
+	  (method (doit a)
+	    2))
+
+	(define O (new <it>))
+
+	(values (.doit O)
+		(.doit O 99)))
+    => 1 2)
+
+  ;;Hierarchy of record-types.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <super>
+	  (method (doit)
+	    1))
+
+	(define-record-type <sub>
+	  (parent <super>)
+	  (seal-method (doit)
+	    2))
+
+	(define up	(new <super>))
+	(define down	(new <sub>))
+
+	(define (fun {O <super>})
+	  (.doit O))
+
+	(values (.doit up)
+		(.doit down)
+		(fun up)
+		(fun down)))
+    => 1 2 1 1)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  ;;Method and seal method with the same name.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <it>
+		      (method      (doit)	1)
+		      (seal-method (doit)	2))
+		    #t))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'doit)
+
+  ;;Field and seal method with the same name.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <it>
+		      (fields it)
+		      (seal-method (it)
+			2))
+		    #t))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'it)
+
+;;; seal method in the parent
+
+  ;;Field and parent's seal method with the same name.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <super>
+		      (seal-method (it)
+			1))
+		    (define-record-type <sub>
+		      (parent <super>)
+		      (fields it))
+		    #t))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'it)
+
+  ;;Concrete method and parent's seal method with the same name.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <super>
+		      (seal-method (it)
+			1))
+		    (define-record-type <sub>
+		      (parent <super>)
+		      (method (it)
+			2))
+		    #t))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'it)
+
+  ;;Virtual method and parent's seal method with the same name.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <super>
+		      (seal-method (it)
+			1))
+		    (define-record-type <sub>
+		      (parent <super>)
+		      (virtual-method (it)
+			2))
+		    #t))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'it)
+
+  ;;Seal method and parent's seal method with the same name.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <super>
+		      (seal-method (it)
+			1))
+		    (define-record-type <sub>
+		      (parent <super>)
+		      (seal-method (it)
+			2))
+		    #t))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'it)
 
   (void))
 

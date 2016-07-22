@@ -2982,8 +2982,14 @@
 		;super-RCD is bound.
     (immutable virtual-method-signatures	record-type-spec.virtual-method-signatures)
 		;An alist having: as keys, symbols representing virtual method names;
-		;as values, instances of  "<closure-type-spec>" representing the type
-		;signature of the method.
+		;as values:
+		;
+		;*  When  the  method  is   an  open  virtual  method:  instances  of
+		;"<closure-type-spec>" representing the type signature of the method.
+		;
+		;* When the method has been sealed: the boolean false.
+		;
+		;The alist holds entries from the parent's record-type specification.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)

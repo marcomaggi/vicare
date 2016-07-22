@@ -749,21 +749,21 @@
 (declare-core-primitive make-record-type-spec
     (safe)
   (signatures
-   ((<syntactic-identifier>		     ;type-name
-     <symbol>				     ;uid
-     <syntactic-identifier>		     ;rcd-id
-     <syntactic-identifier>		     ;rtd-id
-     (or <false> <syntactic-identifier>)     ;super-protocol-id
-     (or <false> <syntactic-identifier>)     ;parent-name.id
-     (or <false> <syntactic-identifier>)     ;constructor.stx
-     (or <false> <syntactic-identifier>)     ;destructor.stx
-     <syntactic-identifier>		     ;predicate.stx
-     (or <false> <syntactic-identifier>)     ;equality-predicate.id
-     (or <false> <syntactic-identifier>)     ;comparison-procedure.id
-     (or <false> <syntactic-identifier>)     ;hash-function.id
-     (alist <symbol> <syntactic-identifier>) ;methods-table
-     (alist <symbol> <closure-type-spec>)    ;virtual-method-signatures
-     (list-of <syntactic-identifier>))	     ;implemented-interfaces
+   ((<syntactic-identifier>			       ;type-name
+     <symbol>					       ;uid
+     <syntactic-identifier>			       ;rcd-id
+     <syntactic-identifier>			       ;rtd-id
+     (or <false> <syntactic-identifier>)	       ;super-protocol-id
+     (or <false> <syntactic-identifier>)	       ;parent-name.id
+     (or <false> <syntactic-identifier>)	       ;constructor.stx
+     (or <false> <syntactic-identifier>)	       ;destructor.stx
+     <syntactic-identifier>			       ;predicate.stx
+     (or <false> <syntactic-identifier>)	       ;equality-predicate.id
+     (or <false> <syntactic-identifier>)	       ;comparison-procedure.id
+     (or <false> <syntactic-identifier>)	       ;hash-function.id
+     (alist <symbol> <syntactic-identifier>)	       ;methods-table
+     (alist <symbol> (or <false> <closure-type-spec>)) ;virtual-method-signatures
+     (list-of <syntactic-identifier>))		       ;implemented-interfaces
     => (<record-type-spec>))))
 
 (declare-type-predicate record-type-spec?		<record-type-spec>)
@@ -786,7 +786,7 @@
 (declare-core-primitive record-type-spec.virtual-method-signatures
     (safe)
   (signatures
-   ((<record-type-spec>)		=> ((alist <symbol> <closure-type-spec>)))))
+   ((<record-type-spec>)		=> ((alist <symbol> (or <false> <closure-type-spec>))))))
 
 ;;; --------------------------------------------------------------------
 

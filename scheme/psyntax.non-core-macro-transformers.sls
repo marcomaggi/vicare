@@ -190,6 +190,7 @@
   (declare custom-printer)
   (declare method)
   (declare virtual-method)
+  (declare seal-method)
   (declare define-type-descriptors)
   (declare strip-angular-parentheses)
   (declare type-predicate)
