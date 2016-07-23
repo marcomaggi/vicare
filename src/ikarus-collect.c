@@ -505,6 +505,10 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
       collection_id_to_gen(pcb->collection_id) : IK_UNFIX(s_requested_generation);
     assert((0 <= requested_generation) && (requested_generation <= 4));
   }
+  if (0) {
+    fprintf(stderr, "%s: generation %d, customisable heap nursery size %lu\n",
+	    __func__, requested_generation, ik_customisable_heap_nursery_size);
+  }
   IK_RUNTIME_MESSAGE("%s: enter collection for generation %d, requested size %lu bytes, crossed redline=%s",
 		       __func__, requested_generation, (ik_ulong)mem_req,
 		       ((pcb->allocation_redline <= pcb->allocation_pointer)? "yes" : "no"));

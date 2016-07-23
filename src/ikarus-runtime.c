@@ -929,6 +929,10 @@ ikptr_t
 ikrt_scheme_heap_nursery_size_set (ikptr_t s_num_of_bytes, ikpcb_t * pcb)
 {
   ik_customisable_heap_nursery_size = IK_ALIGN_TO_NEXT_PAGE(ik_integer_to_ulong(s_num_of_bytes));
+  if (0) {
+    fprintf(stderr, "%s: set customisable heap nursery size to %lu\n",
+	    __func__, ik_customisable_heap_nursery_size);
+  }
   return IK_VOID;
 }
 

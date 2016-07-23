@@ -598,6 +598,8 @@ VICARE_BOOT_ENV		= \
 	VICARE_LIBRARY_PATH=$(BOOT_SEARCH_PATH);	export VICARE_LIBRARY_PATH;	\
 	VICARE_SOURCE_PATH=$(BOOT_SEARCH_PATH);		export VICARE_SOURCE_PATH;
 VICARE_BOOT_FLAGS	= $(AX_BOOT_VFLAGS) $(BOOT_VFLAGS)				\
+			  --scheme-heap-nursery-size 100000000				\
+			  --scheme-stack-size        100000000				\
 			  --no-rcfile --library-locator source
 
 CLEANFILES		+= $(VICARE_NEW_BOOT) \

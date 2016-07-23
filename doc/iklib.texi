@@ -318,6 +318,10 @@ function @cfunc{dlopen}.  @ref{foreign} for details.
 
 @cindex @library{vicare system $runtime}, library
 @cindex Library @library{vicare system $runtime}
+@cindex Heap nursery size configuration
+@cindex Stack size configuration
+@cindex Scheme heap nursery size configuration
+@cindex Scheme stack size configuration
 
 
 The following syntactic bindings are exported by the library
@@ -347,6 +351,10 @@ After boot image loading, if the Scheme heap nursery's hot block memory
 segment is reallocated: the new hot block has the size configured with
 this function.  Notice that, after boot image loading: hot block
 reallocation may never happen (most likely it will never happen).
+
+The default size for the heap nursery is: on 32-bit platforms
+@math{4096*1024=4194304}, that is @math{4} MiB; on 64-bit platforms
+@samp{4096*1024*2=8388608}, that is @math{8} MiB.
 @end defun
 
 
@@ -370,6 +378,10 @@ argument (@pxref{using invoking, scheme-stack-size}).
 
 After boot image loading, when the Scheme stack segment is reallocated:
 the new segment has the size configured with this function.
+
+The default size for the stack is: on 32-bit platforms
+@math{4096*1024=4194304}, that is @math{4} MiB; on 64-bit platforms
+@samp{4096*1024*2=8388608}, that is @math{8} MiB.
 @end defun
 
 @c page
