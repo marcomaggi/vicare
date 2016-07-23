@@ -1651,7 +1651,17 @@
     (define (%process-method-specs init-group* foo field-methods-alist
 				   parent-rtd.id parent-virtual-method-signatures-alist
 				   synner)
-      ;;Process the method specifications, build the return values.
+      ;;Process the method specifications, return the following values:
+      ;;
+      ;;* EARLY-BINDING-METHODS-ALIST, the return value of the whole module.
+      ;;
+      ;;* METHOD-FORM*.SEXP, the return value of the whole module.
+      ;;
+      ;;* METHOD-RETRIEVER-CODE.SEXP, the return value of the whole module.
+      ;;
+      ;;* VIRTUAL-METHOD-SIGNATURES-ALIST  an alist having  the format of  the return
+      ;;value of the  whole module, but not  yet including the entries  of the parent
+      ;;record-type.
       ;;
 
       ;;Build the methods alist and the definitions forms.
@@ -1679,7 +1689,7 @@
 	  ;;No more groups.
 	  (values early-binding-methods-alist method-form*.sexp
 		  (%make-method-retriever-code foo parent-rtd.id late-binding-methods-alist)
-		  (%make-virtual-method-signatures-alist init-group* parent-virtual-method-signatures-alist)))))
+		  (%make-virtual-method-signatures-alist init-group* parent-virtual-method-signatures-alist synner)))))
 
     ;;; --------------------------------------------------------------------
 
@@ -1775,7 +1785,7 @@
 
     ;;; --------------------------------------------------------------------
 
-    (define (%make-virtual-method-signatures-alist group* parent-virtual-method-signatures-alist)
+    (define (%make-virtual-method-signatures-alist group* parent-virtual-method-signatures-alist synner)
       ;;Build and  return VIRTUAL-METHOD-SIGNATURES-ALIST, an alist  having: as keys,
       ;;symbols representing the virtual and sealed method names; as values:
       ;;
@@ -1784,11 +1794,12 @@
       ;;
       ;;* When the method has been sealed: the boolean false.
       ;;
-      ;;the alist has, as tail, the argument PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST.
-      ;;
       (fold-left (lambda (knil group)
 		   (if (list-of-single-item? group)
 		       (let ((single (car group)))
+			 (%check-that-overriding-method-has-signature-compatible-with-overridden-method
+			  (<method-spec>-name-sym single) (<method-spec>-closure-ots single)
+			  parent-virtual-method-signatures-alist synner)
 			 (cond ((<virtual-method-spec>? single)
 				(cons (cons (<method-spec>-name-sym single) (<method-spec>-closure-ots single))
 				      knil))
@@ -1796,19 +1807,37 @@
 				(cons (cons (<method-spec>-name-sym single) #f)
 				      knil))
 			       (else knil)))
-		     (let ((head (car group))
-			   (tail (cdr group)))
+		     (let* ((head		(car group))
+			    (tail		(cdr group))
+			    (signature.ots	(fold-left (lambda (closure.ots spec)
+							     (closure-type-spec.join closure.ots (<method-spec>-closure-ots spec)))
+						  (<method-spec>-closure-ots head) tail)))
+		       (%check-that-overriding-method-has-signature-compatible-with-overridden-method
+			(<method-spec>-name-sym head) signature.ots
+			parent-virtual-method-signatures-alist synner)
 		       (cond ((<virtual-method-spec>? head)
-			      (cons (cons (<method-spec>-name-sym head)
-					  (fold-left (lambda (closure.ots spec)
-						       (closure-type-spec.join closure.ots (<method-spec>-closure-ots spec)))
-					    (<method-spec>-closure-ots head) tail))
+			      (cons (cons (<method-spec>-name-sym head) signature.ots)
 				    knil))
 			     ((<seal-method-spec>? head)
 			      (cons (cons (<method-spec>-name-sym head) #f)
 				    knil))
 			     (else knil)))))
 	parent-virtual-method-signatures-alist group*))
+
+    (define (%check-that-overriding-method-has-signature-compatible-with-overridden-method
+	     method-name.sym method-signature.ots parent-virtual-method-signatures-alist
+	     synner)
+      (cond ((assq method-name.sym parent-virtual-method-signatures-alist)
+	     => (lambda (entry)
+		  ;;There exists a  parent's method (virtual or sealed)  that has the
+		  ;;same name.
+		  (cond ((cdr entry)
+			 => (lambda (parent-signature.ots)
+			      ;;There exists  a parent's virtual method  that has the
+			      ;;same name.
+			      (unless (object-type-spec.matching-super-and-sub? parent-signature.ots method-signature.ots)
+				(synner "method overriding parent's virtual method has wrong signature"
+					method-name.sym)))))))))
 
     #| end of module: %PROCESS-METHOD-SPECS |# )
 

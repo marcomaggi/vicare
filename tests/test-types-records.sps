@@ -1063,8 +1063,9 @@
     => 1 2 1 1)
 
 ;;; --------------------------------------------------------------------
+;;; hierarchy of two record-types
 
-  ;;Hierarchy of two record-types.
+  ;;VIRTUAL-METHOD and METHOD clauses.
   ;;
   (check
       (internal-body
@@ -1089,6 +1090,60 @@
 		(fun up)
 		(fun down)))
     => 1 2 1 2)
+
+  ;;VIRTUAL-METHOD and VIRTUAL-METHOD clauses.  Complex signatures.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <super>
+	  (fields value)
+	  (virtual-method ({doit <number>} {S <nestring>})
+	    (.value this)))
+
+	(define-record-type <sub>
+	  (parent <super>)
+	  (virtual-method ({doit <fixnum>} {S <string>})
+	    (.value this)))
+
+	(define up	(new <super> 1))
+	(define down	(new <sub>   2))
+
+	(define (fun {O <super>})
+	  (.doit O "ciao"))
+
+	(values (.doit up "ciao")
+		(.doit down "ciao")
+		(fun up)
+		(fun down)))
+    => 1 2 1 2)
+
+  ;;VIRTUAL-METHOD and SEAL-METHOD clauses.  Complex signatures.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <super>
+	  (fields value)
+	  (virtual-method ({doit <number>} {S <nestring>})
+	    (.value this)))
+
+	(define-record-type <sub>
+	  (parent <super>)
+	  (seal-method ({doit <fixnum>} {S <string>})
+	    (.value this)))
+
+	(define up	(new <super> 1))
+	(define down	(new <sub>   2))
+
+	(define (fun {O <super>})
+	  (.doit O "ciao"))
+
+	(values (.doit up "ciao")
+		(.doit down "ciao")
+		(fun up)
+		(fun down)))
+    => 1 2 1 2)
+
+;;; --------------------------------------------------------------------
 
   ;;Hierarchy of three record-types.
   ;;
@@ -1221,6 +1276,32 @@
 	   (syntax->datum (syntax-violation-subform E)))
 	  (else E)))
     => 'it)
+
+;;;
+
+  ;;The sub-type concrete method has signature incompatible with the parent's virtual
+  ;;method.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <super>
+		      (fields value)
+		      (virtual-method ({doit <fixnum>} {S <string>})
+			(.value this)))
+
+		    (define-record-type <sub>
+		      (parent <super>)
+		      (method ({doit <number>} {S <flonum>})
+			(.value this)))
+
+		    (void)))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'doit)
 
   (void))
 
