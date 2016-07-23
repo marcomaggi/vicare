@@ -24,7 +24,9 @@
     (ikarus.compiler.helpers)
     (ikarus.compiler.typedefs)
     (ikarus.compiler.condition-types)
-    (ikarus.compiler.unparse-recordised-code))
+    (ikarus.compiler.unparse-recordised-code)
+    (only (ikarus.compiler.pass-source-optimizer)
+	  optimize-level))
 
 
 ;;;; introduction
@@ -48,7 +50,9 @@
   (identifier-syntax 'pass-introduce-unsafe-primrefs))
 
 (define (pass-introduce-unsafe-primrefs x)
-  (E x))
+  (case optimize-level
+    ((0)	x)
+    (else	(E x))))
 
 
 (define* (E x)

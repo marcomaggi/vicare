@@ -598,7 +598,7 @@ VICARE_BOOT_ENV		= \
 	VICARE_LIBRARY_PATH=$(BOOT_SEARCH_PATH);	export VICARE_LIBRARY_PATH;	\
 	VICARE_SOURCE_PATH=$(BOOT_SEARCH_PATH);		export VICARE_SOURCE_PATH;
 VICARE_BOOT_FLAGS	= $(AX_BOOT_VFLAGS) $(BOOT_VFLAGS)				\
-			  --no-rcfile --library-locator source --r6rs-script
+			  --no-rcfile --library-locator source
 
 CLEANFILES		+= $(VICARE_NEW_BOOT) \
 	$(builddir)/scheme/ikarus.config.scm		\
@@ -671,7 +671,12 @@ typed-core-primitives-specs.scm: $(VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS) vicar
 #
 $(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) $(VICARE_BOOT_PREREQUISITES)
 	$(VICARE_BOOT_ENV) $(GDB) $(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
-		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
+		$(VICARE_BOOT_FLAGS) --r6rs-script $(srcdir)/scheme/makefile.sps
+
+# This is like the above, but with -O0.
+boot: $(VICARE_BOOT_SRCS) $(VICARE_BOOT_PREREQUISITES)
+	$(VICARE_BOOT_ENV) $(GDB) $(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
+		$(VICARE_BOOT_FLAGS) -O0 --r6rs-script $(srcdir)/scheme/makefile.sps
 
 ## --------------------------------------------------------------------
 
@@ -680,13 +685,13 @@ $(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) $(VICARE_BOOT_PREREQUISITES)
 boot-image-32-bit: vicare
 	$(VICARE_BOOT_ENV); VICARE_WORDSIZE=4; export VICARE_WORDSIZE; \
 	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
-		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
+		$(VICARE_BOOT_FLAGS) --r6rs-script $(srcdir)/scheme/makefile.sps
 	mv $(builddir)/vicare.boot $(builddir)/vicare.boot.4.prebuilt
 
 boot-image-64-bit: vicare
 	$(VICARE_BOOT_ENV); VICARE_WORDSIZE=8; export VICARE_WORDSIZE; \
 	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
-		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
+		$(VICARE_BOOT_FLAGS) --r6rs-script $(srcdir)/scheme/makefile.sps
 	mv $(builddir)/vicare.boot $(builddir)/vicare.boot.8.prebuilt
 
 ## --------------------------------------------------------------------
@@ -714,7 +719,7 @@ boot-image-64-bit: vicare
 try-vicare-boot: $(VICARE_BOOT_SRCS) vicare
 	BUILDING_ROTATION_BOOT_IMAGE=yes; export BUILDING_ROTATION_BOOT_IMAGE;		\
 	$(VICARE_BOOT_ENV) $(VICARE_NEW_EXECUTABLE) -b $(builddir)/vicare.boot.try	\
-		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
+		$(VICARE_BOOT_FLAGS) --r6rs-script $(srcdir)/scheme/makefile.sps
 
 #page
 #### compiling bundled libraries: build rules

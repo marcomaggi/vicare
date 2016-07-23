@@ -2602,6 +2602,13 @@ primitive assumes its operands are correct and just attempts to perform
 the algorithm.
 @end quotation
 
+@quotation
+@strong{NOTE} At present (Jul 23, 2016), this compiler pass is performed
+only if the configured compiler's optimisation level is @samp{1} or
+above.  When @value{PRJNAME} is run with the option @option{-O0}: this
+compiler pass is skipped.
+@end quotation
+
 It makes sense to perform this compiler pass only if
 @func{core-type-inference} has been performed first: it is the ``type
 inference'' pass that introduces the type descriptions consumed by the
