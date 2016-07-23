@@ -25,7 +25,9 @@
     (ikarus.compiler.typedefs)
     (ikarus.compiler.condition-types)
     (ikarus.compiler.unparse-recordised-code)
-    (ikarus.compiler.scheme-objects-ontology))
+    (ikarus.compiler.scheme-objects-ontology)
+    (only (ikarus.compiler.pass-source-optimizer)
+	  optimize-level))
 
 
 ;;;; introduction
@@ -99,9 +101,12 @@
   (identifier-syntax 'pass-core-type-inference))
 
 (define (pass-core-type-inference x)
-  (receive (y env y.tag)
-      (%infer-core-types x EMPTY-ENV)
-    y))
+  (case optimize-level
+    ((0)	x)
+    (else
+     (receive (y env y.tag)
+	 (%infer-core-types x EMPTY-ENV)
+       y))))
 
 
 ;;;; env functions

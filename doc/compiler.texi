@@ -2526,6 +2526,13 @@ the implementation of @func{vector-length} integrated at the call site
 does @strong{not} include a validation of @meta{RAND} as vector object.
 @end itemize
 
+@quotation
+@strong{NOTE} At present (Jul 23, 2016), this compiler pass is performed
+only if the configured compiler's optimisation level is @samp{1} or
+above.  When @value{PRJNAME} is run with the option @option{-O0}: this
+compiler pass is skipped.
+@end quotation
+
 The following bindings are exported by the library @library{vicare
 compiler}.
 
