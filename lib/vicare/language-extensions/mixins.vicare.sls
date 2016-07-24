@@ -42,7 +42,7 @@
   (export
     define-mixin-type
     nongenerative fields sealed opaque protocol super-protocol
-    method virtual-method
+    method virtual-method seal-method
     define-type-descriptors
     strip-angular-parentheses
     custom-printer
@@ -77,6 +77,7 @@
 	;;
 	(new <syntax-clause-spec> #'method			0 +inf.0 2 +inf.0 '() '())
 	(new <syntax-clause-spec> #'virtual-method		0 +inf.0 2 +inf.0 '() '())
+	(new <syntax-clause-spec> #'seal-method			0 +inf.0 2 +inf.0 '() '())
 	;;
 	(new <syntax-clause-spec> #'custom-printer		0 1      1 1      '() '())
 	(new <syntax-clause-spec> #'type-predicate		0 1      1 1      '() '())
@@ -173,6 +174,7 @@
 	 ;;
 	 ((method)			%process-clause/method)
 	 ((virtual-method)		%process-clause/virtual-method)
+	 ((seal-method)			%process-clause/seal-method)
 	 ;;
 	 ((custom-printer)		%process-clause/custom-printer)
 	 ((type-predicate)		%process-clause/type-predicate)
@@ -445,6 +447,45 @@
 	   #'(virtual-method (?who . ?formals) ?body0 ?body ...)))
 	(#(?stuff ...)
 	 (synner "invalid virtual method specification" #'(virtual-method ?stuff ...)))))
+
+;;; --------------------------------------------------------------------
+
+    (define (%process-clause/seal-method type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
+      ;;This clause can  be present multiple times.  Each input  clause must have the
+      ;;format:
+      ;;
+      ;;   (seal-method (?who . ?args) . ?body)
+      ;;
+      ;;and we expect ARGS to have the format:
+      ;;
+      ;;   #(#((?who . ?args) . ?body) ...)
+      ;;
+      (vector-fold-left (lambda (rev-parsed-clause*.stx arg)
+			  (cons (%process-seal-method-spec arg synner)
+				rev-parsed-clause*.stx))
+	rev-parsed-clause*.stx
+	args))
+
+    (define (%process-seal-method-spec arg synner)
+      ;;We expect ARG to have the format:
+      ;;
+      ;;   #((?who . ?formals) . ?body)
+      ;;
+      (syntax-case arg ()
+	(#((?who . ?formals) ?body0 ?body ...)
+	 (begin
+	   (syntax-case #'?who (brace)
+	     (?method-name
+	      (identifier? #'?method-name)
+	      (void))
+	     ((brace ?method-name . ?rv-types)
+	      (identifier? #'?method-name)
+	      (void))
+	     (_
+	      (synner "invalid method name and/or return values specification" #'?who)))
+	   #'(seal-method (?who . ?formals) ?body0 ?body ...)))
+	(#(?stuff ...)
+	 (synner "invalid seal method specification" #'(seal-method ?stuff ...)))))
 
 ;;; --------------------------------------------------------------------
 
