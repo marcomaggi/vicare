@@ -657,7 +657,7 @@
       (when (exists (lambda (entry)
 		      (eq? (car entry) field-name.sym))
 	      parent-virtual-method-signatures-alist)
-	(synner "forbidden field with name equal to a virtual or sealed method parent method" field-name.id))))
+	(synner "forbidden field with name equal to a virtual or sealed parent's method" field-name.id))))
 
   (let loop ((fields-clause*			fields-clause*)
 	     (i					0)
