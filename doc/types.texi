@@ -5755,29 +5755,41 @@ primitive @func{void-object?}.
 @section Methods and virtual methods
 
 
+@cindex Methods
+@cindex Concrete methods
+@cindex Virtual methods
+@cindex Sealing methods
 @cindex @clause{method}, record--type definition clause
 @cindex @clause{method}, label--type definition clause
 @cindex @clause{method}, interface--type definition clause
 @cindex @clause{method}, mixin definition clause
 @cindex @clause{virtual-method}, record--type definition clause
 @cindex @clause{virtual-method}, mixin definition clause
+@cindex @clause{seal-method}, record--type definition clause
+@cindex @clause{seal-method}, mixin definition clause
 
 
-The syntactic bindings @clause{method} and @clause{virtual-method} are
-used as clause keywords in @syntax{define-record-type} to define methods
-and virtual methods for a record--type; they can be used any number of
-times in the same @syntax{define-record-type} macro use.
+Methods are possibly overloaded typed functions whose syntactic binding
+resides in a namespace reserved to an object--type and that are
+accessible only through an instance of such object--type.
+
+The syntactic bindings @clause{method}, @clause{virtual-method} and
+@clause{seal-method} are used as clause keywords in uses of
+@syntax{define-record-type} to define methods and virtual methods for a
+record--type; they can be used any number of times in the same
+@syntax{define-record-type} macro use.
 
 The clause @clause{method} is also accepted by
 @syntax{define-label-type}, @syntax{define-interface-type} and
 @syntax{define-mixin-type}.
 
-The clause @clause{virtual-method} is also accepted by
-@syntax{define-mixin-type}.
+The clauses @clause{virtual-method} and @clause{seal-method} are also
+accepted by @syntax{define-mixin-type}.
 
 @menu
 * types methods concrete::      Concrete methods.
 * types methods virtual::       Virtual methods.
+* types methods sealing::       Sealing methods.
 * types methods calling::       Calling object-type methods.
 @end menu
 
@@ -5789,10 +5801,12 @@ The clause @clause{virtual-method} is also accepted by
 We can think of @clause{method} as acting like @syntax{define/typed}
 with regard to the syntax of arguments to function; the first argument
 to a method is the record itself, but it is implicit: we can access it
-using the fluid syntax @syntax{this}.  For example:
+using the fluid syntax @syntax{this}.  For example, using the procedural
+coding style:
 
 @lisp
-(define-record-type duo
+(define-record-type <duo>
+  (strip-angular-parentheses)
   (fields one two)
   (method (sum-them)
     (+ (duo-one this)
@@ -5807,73 +5821,118 @@ using the fluid syntax @syntax{this}.  For example:
 (method-call sum-them O)        @result{} 3
 @end lisp
 
-The clause @clause{method} allows the definition of overloaded
-functions, with multiple function specialisations linked to the same
-method name:
+@noindent
+and using the object--oriented syntax style:
 
 @lisp
-(define-record-type alpha
-  (fields a b)
-
-  (method (doit @{A <fixnum>@})
-    (list (alpha-a this) (alpha-b this) 'fixnum A))
-
-  (method (doit @{A <symbol>@})
-    (list (alpha-a this) (alpha-b this) 'symbol A))
-
-  (method (doit @{A <number>@} @{B <number>@})
-    (list (alpha-a this) (alpha-b this) 'numbers A B)))
+(define-record-type <duo>
+  (fields one two)
+  (method (sum-them)
+    (+ (.one this)
+       (.two this)))
+  (method (mul-them)
+    (* (.one this)
+       (.two this))))
 
 (define O
-  (make-alpha 1 2))
+  (new <duo> 1 2))
 
-(method-call doit O 123)        @result{} (1 2 fixnum 123)
-(method-call doit O 'ciao)      @result{} (1 2 symbol ciao)
-(method-call doit O 3 4)        @result{} (1 2 numbers 3 4)
+(.sum-them O)   @result{} 3
 @end lisp
 
 The syntax @syntax{method-call} searches for a record--type's methods by
-comparing the symbols with @func{eq?} (@strong{not} the syntactic
-identifiers with @func{free-identifier=?}).  @ref{types methods calling,
-Calling object--type methods}.
+using @func{eq?} to search for the method's name, as symbol, in the
+record--type's internal table of methods (it does @strong{not} use the
+syntactic identifiers with @func{free-identifier=?}).  @ref{types
+methods calling, Calling object--type methods}.
 
-When used with records: if a method with the given name is not found,
-@syntax{method-call} searches for a field with the given name; field
-accessors and mutators are methods automatically.  The syntax of
-@syntax{method-call} is:
+@menu
+* types methods concrete overloaded::  Overloaded methods.
+* types methods concrete fields::      Field methods.
+* types methods concrete override::    Overriding methods.
+@end menu
+
+@c page
+@node types methods concrete overloaded
+@subsubsection Overloaded methods
+
+
+The clause @clause{method} allows the definition of overloaded
+functions, with multiple function specialisations associated to the same
+method name.  Example:
+
+@lisp
+(define-record-type <alpha>
+  (fields a b)
+
+  (method (@{doit <list>@} @{A <fixnum>@})
+    (list (.a this) (.b this) 'fixnum A))
+
+  (method (@{doit <list>@} @{A <symbol>@})
+    (list (.a this) (.b this) 'symbol A))
+
+  (method (@{doit <list>@} @{A <number>@} @{B <number>@})
+    (list (.a this) (.b this) 'numbers A B)))
+
+(define O
+  (new <alpha> 1 2))
+
+(.doit O 123)           @result{} (1 2 fixnum 123)
+(.doit O 'ciao)         @result{} (1 2 symbol ciao)
+(.doit O 3 4)           @result{} (1 2 numbers 3 4)
+@end lisp
+
+@noindent
+we can think of the methods defined above as expanding to the following
+definitions:
+
+@lisp
+(define/overload (@{doit <list>@} @{subject <alpha>@}
+                      @{A <fixnum>@})
+  (fluid-let-syntax ((this (identifier-syntax subject)))
+    (list (.a this) (.b this) 'fixnum A)))
+
+(define/overload (@{doit <list>@} @{subject <alpha>@}
+                      @{A <symbol>@})
+  (fluid-let-syntax ((this (identifier-syntax subject)))
+    (list (.a this) (.b this) 'symbol A)))
+
+(define/overload (@{doit <list>@} @{subject <alpha>@}
+                      @{A <number>@} @{B <number>@})
+  (fluid-let-syntax ((this (identifier-syntax subject)))
+    (list (.a this) (.b this) 'numbers A B)))
+@end lisp
+
+@noindent
+where @var{subject} is a non--accessible identifier.
+
+@c page
+@node types methods concrete fields
+@subsubsection Field methods
+
+
+When methods are defined for record-types: method names cannot be equal
+to field names; field accessors and mutators are accessible as methods
+automatically, with a method name equal to the field name.  The syntax
+of @syntax{method-call} is:
 
 @example
 (method-call @meta{name} @meta{subject-expr} @meta{arg} ...)
 @end example
 
 @noindent
-when there are no @meta{arg} arguments the syntax is compatible with a
-field accessor call; when there is a single @meta{arg} argument the
+when there are no @meta{arg} operand the syntax is compatible with a
+field accessor call; when there is a single @meta{arg} operand the
 syntax is compatible with a field mutator call.
 
 So we can access and mutate fields as follows:
 
 @lisp
-(define-record-type alpha
+(define-record-type <alpha>
   (fields (mutable a)))
 
 (define O
-  (make-alpha 1))
-
-(method-call a O)            @result{} 1
-(method-call a O 2)
-(method-call a O)            @result{} 2
-@end lisp
-
-@noindent
-and with dot notation (@pxref{types methods calling, Dot notation}):
-
-@lisp
-(define-record-type alpha
-  (fields (mutable a)))
-
-(define O
-  (make-alpha 1))
+  (new <alpha> 1))
 
 (.a O)          @result{} 1
 (.a O 2)
@@ -5881,9 +5940,254 @@ and with dot notation (@pxref{types methods calling, Dot notation}):
 @end lisp
 
 @c page
+@node types methods concrete override
+@subsubsection Overriding methods
+
+
+When a hierarchy of record--types is defined: the sub--types can
+override the super--type's concrete methods by defining methods with the
+same name.  Example:
+
+@lisp
+(define-record-type <super>
+  (method (doit)
+    1))
+
+(define-record-type <sub>
+  (parent <super>)
+  (method (doit)
+    2))
+
+(define (super-fun @{O <super>@})
+  (.doit O))
+
+(define (sub-fun   @{O <sub>@})
+  (.doit O))
+
+(define O
+  (new <sub>))
+
+(super-fun O)   @result{} 1
+(sub-fun   O)   @result{} 2
+@end lisp
+
+The method of the super--type is still accessible if we ``see'' the
+object instance through the super--type's type specification.
+
+The sub--type's method is in no way limited by the super--type's method:
+the two methods are allowed to have completely different type signature.
+
+@c page
 @node types methods virtual
 @subsection Virtual methods
 
+
+The clause @clause{virtual-method} allows the definition of virtual
+methods associated to a record--type.  Virtual methods work almost like
+concrete methods, but the rules of overriding are different: with
+virtual methods we request run--time dynamic dispatching, to have the
+methods of the sub--types take precedence over the methods of the
+super--types.
+
+@quotation
+@strong{NOTE} Virtual methods must have an implementation, there are no
+abstract methods.
+@end quotation
+
+Example:
+
+@lisp
+(define-record-type <super>
+  (virtual-method (doit)
+    1))
+
+(define-record-type <sub>
+  (parent <super>)
+  (method (doit)
+    2))
+
+(define (super-fun @{O <super>@})
+  (.doit O))
+
+(define (sub-fun   @{O <sub>@})
+  (.doit O))
+
+(define O
+  (new <sub>))
+
+(super-fun O)   @result{} 2
+(sub-fun   O)   @result{} 2
+@end lisp
+
+@noindent
+we see that even though the function @func{super-fun} accesses the
+instance of @class{sub} with the type specification @class{super}, the
+actually called method is the one defined by @class{sub}.
+
+The overriding method must have type signature being a sub--type of the
+overridden type signature.  For example, the following definitions are
+fine:
+
+@lisp
+(define-record-type <super>
+  (fields value)
+  (virtual-method (@{doit <number>@} @{S <nestring>@})
+    (.value this)))
+
+(define-record-type <sub>
+  (parent <super>)
+  (virtual-method (@{doit <fixnum>@} @{S <string>@})
+    (.value this)))
+@end lisp
+
+@noindent
+because:
+
+@lisp
+(type-annotation-super-and-sub?
+   (lambda (<nestring>) => (<number>))
+   (lambda (<string>)   => (<fixnum>)))
+@result{} #t
+@end lisp
+
+@noindent
+while the following definitions will cause a syntax violation exception
+at expand--time:
+
+@lisp
+(define-record-type <super>
+  (fields value)
+  (virtual-method (@{doit <number>@} @{S <nestring>@})
+    (.value this)))
+
+(define-record-type <sub>
+  (parent <super>)
+  (virtual-method (@{doit <fixnum>@} @{S <vector>@})
+    (.value this)))
+@end lisp
+
+@noindent
+because:
+
+@lisp
+(type-annotation-super-and-sub?
+   (lambda (<nestring>) => (<number>))
+   (lambda (<string>)   => (<vector>)))
+@result{} #f
+@end lisp
+
+Once a method has been defined as virtual in a super--type, it does not
+matter if the sub--type makes use of @clause{method},
+@clause{virtual-method} or @clause{seal-method}: all these clauses will
+override the super--type's method if they use the same name.  Example:
+
+@lisp
+(define-record-type <super>
+  (virtual-method (darkness)
+    1)
+  (virtual-method (light)
+    2))
+
+(define-record-type <sub>
+  (parent <super>)
+  (method (darkness)
+    11)
+  (virtual-method (light)
+    22))
+
+(define O
+  (new <sub>))
+
+(define @{P <super>@}
+  O)
+
+(.darkness P)   @result{} 11
+(.light    P)   @result{} 22
+@end lisp
+
+Notice that it is not possible to define a sub--type having a field with
+the same name of a super--type's virtual method; the following
+definitions will cause an expand--time exception:
+
+@lisp
+(define-record-type <super>
+  (method (doit)
+    1))
+
+(define-record-type <sub>
+  (parent <super>)
+  (fields doit))
+@error{} &syntax
+@end lisp
+
+The clause @clause{seal-method} seals a method name so that the
+sub--types can no more use it; it does not matter if the super--types
+actually use it or not.
+
+@c page
+@node types methods sealing
+@subsection Sealing methods
+
+
+It happens that we want to define virtual methods in a super--type,
+override them in a sub--type and then forbid further overriding in the
+sub--types of the sub-type.  This is possible with sealing methods.
+
+The clause @clause{seal-method} allows the definition of methods
+associated to a record--type that might override the super--type's
+methods, but that forbid the sub--types from overriding them.  For
+everything else: sealing methods work like concrete methods.
+
+In the following example everything works as usual, with @class{sub}
+overriding the implementation of @func{doit} in @class{super}:
+
+@lisp
+(define-record-type <super>
+  (virtual-method (doit)
+    1))
+
+(define-record-type <sub>
+  (parent <super>)
+  (seal-method (doit)
+    2))
+
+(define (super-fun @{O <super>@})
+  (.doit O))
+
+(define (sub-fun   @{O <sub>@})
+  (.doit O))
+
+(define O
+  (new <sub>))
+
+(super-fun O)   @result{} 2
+(sub-fun   O)   @result{} 2
+@end lisp
+
+@noindent
+but adding the following definition will cause an expand--time
+exception, because sub--types of @class{sub} are forbidden from having a
+method named @func{doit}:
+
+@lisp
+(define-record-type <sub-sub>
+  (parent <sub>)
+  (method (doit)
+    3))
+@error{} &syntax
+@end lisp
+
+@noindent
+the following definition will also cause an expand--time exception,
+because sub--types of @class{sub} are forbidden from having a field
+named @func{doit}:
+
+@lisp
+(define-record-type <sub-sub>
+  (parent <sub>)
+  (fields doit))
+@error{} &syntax
+@end lisp
 
 @c page
 @node types methods calling
@@ -5892,7 +6196,7 @@ and with dot notation (@pxref{types methods calling, Dot notation}):
 
 The following keyword syntactic bindings are involved in the definition
 and use of methods: @clause{method}, @clause{virtual-method},
-@syntax{method-call}.  In addition the function
+@clause{seal-method}, @syntax{method-call}.  In addition the function
 @func{method-call-late-binding} performs a method call with ``late
 binding'' (run--time dispatching).
 
@@ -6186,7 +6490,7 @@ The following clauses are accepted in the body of a
 define-type-descriptors strip-angular-parentheses
 nongenerative implements
 sealed opaque protocol super-protocol fields
-method virtual-method
+method virtual-method seal-method
 custom-printer type-predicate equality-predicate
 comparison-procedure hash-function
 implements
