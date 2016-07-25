@@ -178,7 +178,7 @@
 
   (check
       (let (({O <vector>} '#(1 2 3 4)))
-	(fixnum? (.hash O)))
+	(fixnum? (hash O)))
     => #t)
 
   (void))

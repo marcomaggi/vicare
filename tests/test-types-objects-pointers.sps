@@ -145,7 +145,7 @@
 
   (check
       (let (({O <pointer>} (%make-instance)))
-	(fixnum? (.hash O)))
+	(fixnum? (hash O)))
     => #t)
 
   (void))

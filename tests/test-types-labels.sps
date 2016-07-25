@@ -264,7 +264,7 @@
 	    999))
 	(define {O <my-fixnum>}
 	  123)
-	(values (.hash O) (.doit O)))
+	(values (hash O) (.doit O)))
     => 123 999)
 
   (internal-body
@@ -512,7 +512,7 @@
       "ciao")
 
     (check (.length O)	=> 4)
-    (check (.hash O)	=> (string-hash "ciao"))
+    (check (hash O)	=> (string-hash "ciao"))
 
     #| end of INTERNAL-BODY |# )
 
@@ -532,7 +532,7 @@
     (define {O <String>}
       "ciao")
 
-    (check (.hash O)	=> (char-hash #\c))
+    (check (hash O)	=> (char-hash #\c))
 
     #| end of INTERNAL-BODY |# )
 
