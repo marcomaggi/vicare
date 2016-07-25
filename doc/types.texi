@@ -5762,7 +5762,7 @@ accepted by @syntax{define-mixin-type}.
 @subsection Concrete methods
 
 
-We can think of @clause{method} as acting like @syntax{define/typed}
+We can think of @clause{method} as acting like @syntax{define/checked}
 with regard to the syntax of arguments to function; the first argument
 to a method is the record itself, but it is implicit: we can access it
 using the fluid syntax @syntax{this}.  For example, using the procedural

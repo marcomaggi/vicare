@@ -88,7 +88,7 @@
 		;   (({?method-procname . ?rv-types} . ?formals) . ?body)
 		;
 		;that  can  be  turned   into  a  method's  implementation  procedure
-		;definition just be prepending DEFINE/TYPED or DEFINE/OVERLOAD.
+		;definition just be prepending DEFINE/CHECKED or DEFINE/OVERLOAD.
     #| end of FIELDS |# )
 
   (constructor-signature
@@ -280,7 +280,7 @@
 		(cond ((list-of-single-item? group)
 		       (let (({single <method-spec>} (car group)))
 			 (.methods-table-push! this (.name-id single) (.procname single))
-			 (.push-definition!    this (cons #'define/typed (.implementation-meat single)))))
+			 (.push-definition!    this (cons #'define/checked (.implementation-meat single)))))
 		      (else
 		       ;;For the whole  group: we push only one entry  on the methods
 		       ;;table.
