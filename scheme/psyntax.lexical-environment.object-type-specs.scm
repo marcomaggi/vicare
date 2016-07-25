@@ -122,7 +122,7 @@
 	 object-type-spec.equality-predicate		object-type-spec.comparison-procedure
 	 object-type-spec.hash-function			object-type-spec.applicable-hash-function
 	 object-type-spec.ancestor-ots*
-	 object-type-spec.applicable-method-stx
+	 object-type-spec.applicable-method-stx		object-type-spec.applicable-private-method-stx
 	 object-type-spec.implemented-interfaces
 	 object-type-spec.type-descriptor-core-expr
 	 object-type-spec.single-value-validator-lambda-stx
@@ -604,7 +604,7 @@
   ;;OTS must an  object-type specification record.  METHOD-NAME.SYM must  be a symbol
   ;;representing a method name in the object-type specification.
   ;;
-  ;;If  METHOD-NAME.SYM  is EQ?   to  an  object's  method  name: return  a  symbolic
+  ;;If METHOD-NAME.SYM is  EQ?  to an object's public method  name: return a symbolic
   ;;expression (to be BLESSed later) representing a Scheme expression which, expanded
   ;;and  evaluated at  run-time, returns  the method's  applicable; otherwise  return
   ;;false.
@@ -614,6 +614,25 @@
   ;;specifications.
   ;;
   (cond ((assq method-name.sym (object-type-spec.methods-table-public ots))
+	 ;;The name is known; extract the method implementation object from the alist
+	 ;;entry and return it.
+	 => cdr)
+	(else #f)))
+
+(define* (object-type-spec.applicable-private-method-stx {ots object-type-spec?} method-name.sym)
+  ;;OTS must an  object-type specification record.  METHOD-NAME.SYM must  be a symbol
+  ;;representing a method name in the object-type specification.
+  ;;
+  ;;If METHOD-NAME.SYM is EQ?  to an  object's private method name: return a symbolic
+  ;;expression (to be BLESSed later) representing a Scheme expression which, expanded
+  ;;and  evaluated at  run-time, returns  the method's  applicable; otherwise  return
+  ;;false.
+  ;;
+  ;;NOTE  We need  to remember  that the  METHODS-TABLE field  holds entries  for the
+  ;;parent  of  OTS,  so  there  is  no  need  to  traverse  the  hierarchy  of  type
+  ;;specifications.
+  ;;
+  (cond ((assq method-name.sym (object-type-spec.methods-table-private ots))
 	 ;;The name is known; extract the method implementation object from the alist
 	 ;;entry and return it.
 	 => cdr)

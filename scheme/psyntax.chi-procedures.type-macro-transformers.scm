@@ -575,74 +575,95 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%identifier-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
-						method-name.id subject-expr.id rand*.stx)
-    (define (%default-dispatching)
-      (%general-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
-					 method-name.id subject-expr.id rand*.stx))
-    (cond ((id->label subject-expr.id)
-	   => (lambda (label)
-		(let ((descr (label->syntactic-binding-descriptor label lexenv.run)))
-		  (case (syntactic-binding-descriptor.type descr)
-		    ((lexical-typed)
-		     ;;Reference to typed lexical variable; this means EXPR.STX is an
-		     ;;identifier.  The syntactic binding's descriptor has format:
-		     ;;
-		     ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
-		     ;;
-		     (let* ((subject-expr.lts	(syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr))
-			    (subject-expr.ots	(typed-variable-spec.ots subject-expr.lts)))
-		       (%typed-variable-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
-								 method-name.id subject-expr.id subject-expr.ots rand*.stx)))
+  (module (%identifier-subject-expr-dispatching)
 
-		    ((global-typed)
-		     ;;Reference  to  global  imported typed  lexical  variable.   We
-		     ;;expect the syntactic binding's descriptor to be:
-		     ;;
-		     ;;   (global-typed . (#<library> . ?loc))
-		     ;;
-		     ;;The library  is visited by default,  so we know that  the ?LOC
-		     ;;actually        references        the       instance        of
-		     ;;"<global-typed-variable-spec>".
-		     (let* ((descr.value	(syntactic-binding-descriptor.value descr))
-			    (globvar.lib	(car descr.value))
-			    (globvar.type-loc	(cdr descr.value)))
-		       ((inv-collector) globvar.lib)
-		       (if (symbol-bound? globvar.type-loc)
-			   (let ((subject-expr.gts (symbol-value globvar.type-loc)))
-			     (if (global-typed-variable-spec? subject-expr.gts)
-				 (let ((subject-expr.ots (typed-variable-spec.ots subject-expr.gts)))
-				   (%typed-variable-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
-									     method-name.id subject-expr.id subject-expr.ots rand*.stx))
-			       (assertion-violation __module_who__
-				 "invalid object in loc gensym's \"value\" slot of \"global-typed\" syntactic binding's descriptor"
-				 subject-expr.id descr)))
-			 (assertion-violation __module_who__
-			   "unbound loc gensym of \"global-typed\" syntactic binding's descriptor"
-			   subject-expr.id descr))))
+    (define (%identifier-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+						  method-name.id subject-expr.id rand*.stx)
+      (define (%default-dispatching)
+	(%general-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+					   method-name.id subject-expr.id rand*.stx))
+      (cond ((id->label subject-expr.id)
+	     => (lambda (label)
+		  (let ((descr (label->syntactic-binding-descriptor label lexenv.run)))
+		    (case (syntactic-binding-descriptor.type descr)
+		      ((lexical-typed)
+		       ;;Reference to typed lexical variable; this means EXPR.STX is an
+		       ;;identifier.  The syntactic binding's descriptor has format:
+		       ;;
+		       ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
+		       ;;
+		       (%lexical-typed-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+								method-name.id subject-expr.id rand*.stx
+								(syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr)))
 
-		    (else
-		     (%default-dispatching))))))
-	  (else
-	   (%default-dispatching))))
+		      ((global-typed)
+		       ;;Reference  to  global  imported typed  lexical  variable.   We
+		       ;;expect the syntactic binding's descriptor to be:
+		       ;;
+		       ;;   (global-typed . (#<library> . ?loc))
+		       ;;
+		       ;;The library  is visited by default,  so we know that  the ?LOC
+		       ;;actually        references        the       instance        of
+		       ;;"<global-typed-variable-spec>".
+		       (%global-typed-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+							       method-name.id subject-expr.id rand*.stx
+							       (syntactic-binding-descriptor.value descr)))
 
-  (define (%typed-variable-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
-						    method-name.id subject-expr.id subject-expr.ots rand*.stx)
-    (let* ((method-name.sym	(identifier->symbol method-name.id))
-	   (subject-expr.psi	(chi-expr subject-expr.id lexenv.run lexenv.expand))
-	   (subject-expr.sig	(psi.retvals-signature subject-expr.psi)))
-      (define-syntax-rule (%late-binding)
-	(%expand-to-late-binding-method-call input-form.stx lexenv.run lexenv.expand
-					     method-name.sym subject-expr.psi rand*.stx))
-      (cond ((or (<top>-ots?     subject-expr.ots)
-		 (<bottom>-ots?  subject-expr.ots)
-		 (<untyped>-ots? subject-expr.ots))
-	     (%late-binding))
+		      (else
+		       (%default-dispatching))))))
 	    (else
-	     (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
-						   method-name.id method-name.sym
-						   subject-expr.id subject-expr.psi subject-expr.ots
-						   rand*.stx)))))
+	     (%default-dispatching))))
+
+    (define (%lexical-typed-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+						     method-name.id subject-expr.id rand*.stx
+						     subject-expr.lts)
+      (let* ((subject-expr.ots	(typed-variable-spec.ots subject-expr.lts))
+	     (private-access?	#f))
+	(%typed-variable-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+						  method-name.id subject-expr.id subject-expr.ots rand*.stx
+						  private-access?)))
+
+    (define (%global-typed-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+						    method-name.id subject-expr.id rand*.stx
+						    descr.value)
+      (let* ((globvar.lib	(car descr.value))
+	     (globvar.type-loc	(cdr descr.value)))
+	((inv-collector) globvar.lib)
+	(if (symbol-bound? globvar.type-loc)
+	    (let ((subject-expr.gts (symbol-value globvar.type-loc)))
+	      (if (global-typed-variable-spec? subject-expr.gts)
+		  (let ((subject-expr.ots	(typed-variable-spec.ots subject-expr.gts))
+			(private-access?	#f))
+		    (%typed-variable-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+							      method-name.id subject-expr.id subject-expr.ots rand*.stx
+							      private-access?))
+		(assertion-violation __module_who__
+		  "invalid object in loc gensym's \"value\" slot of \"global-typed\" syntactic binding's descriptor"
+		  subject-expr.id descr.value subject-expr.gts)))
+	  (assertion-violation __module_who__
+	    "unbound loc gensym of \"global-typed\" syntactic binding's descriptor"
+	    subject-expr.id descr.value))))
+
+    (define (%typed-variable-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+						      method-name.id subject-expr.id subject-expr.ots rand*.stx
+						      private-access?)
+      (let* ((method-name.sym	(identifier->symbol method-name.id))
+	     (subject-expr.psi	(chi-expr subject-expr.id lexenv.run lexenv.expand))
+	     (subject-expr.sig	(psi.retvals-signature subject-expr.psi)))
+	(define-syntax-rule (%late-binding)
+	  (%expand-to-late-binding-method-call input-form.stx lexenv.run lexenv.expand
+					       method-name.sym subject-expr.psi rand*.stx))
+	(cond ((or (<top>-ots?     subject-expr.ots)
+		   (<bottom>-ots?  subject-expr.ots)
+		   (<untyped>-ots? subject-expr.ots))
+	       (%late-binding))
+	      (else
+	       (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
+						     method-name.id method-name.sym
+						     subject-expr.id subject-expr.psi subject-expr.ots
+						     rand*.stx private-access?)))))
+
+    #| end of module: %IDENTIFIER-SUBJECT-EXPR-DISPATCHING |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -671,7 +692,7 @@
 	      (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
 						    method-name.id method-name.sym
 						    subject-expr.stx subject-expr.psi subject-expr.ots
-						    rand*.stx)))
+						    rand*.stx #f)))
 
 	(<bottom>
 	 (let ((common (condition
@@ -700,8 +721,25 @@
   (define* (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
 						 method-name.id method-name.sym
 						 subject-expr.stx subject-expr.psi subject-expr.ots
-						 arg*.stx)
-    (cond ((object-type-spec.applicable-method-stx subject-expr.ots method-name.sym)
+						 arg*.stx private-access?)
+    (define (%error-unknown-method-name)
+      (raise
+       (condition (make-who-condition __module_who__)
+		  (make-message-condition "unknown method name for type of subject expression")
+		  (make-syntax-violation input-form.stx subject-expr.stx)
+		  (make-application-operand-signature-condition (psi.retvals-signature subject-expr.psi))
+		  (make-type-method-name-condition method-name.sym))))
+    (cond (private-access?
+	   (cond ((object-type-spec.applicable-private-method-stx subject-expr.ots method-name.sym)
+		  ;;A matching method name exists.
+		  => (lambda (method.stx)
+		       ;;A matching method name exists.
+		       (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+							  method.stx subject-expr.psi arg*.stx)))
+		 (else
+		  (%error-unknown-method-name))))
+
+	  ((object-type-spec.applicable-method-stx subject-expr.ots method-name.sym)
 	   ;;A matching method name exists.
 	   => (lambda (method.stx)
 		;;A matching method name exists.
@@ -709,12 +747,7 @@
 						   method.stx subject-expr.psi arg*.stx)))
 
 	  (else
-	   (raise
-	    (condition (make-who-condition __module_who__)
-		       (make-message-condition "unknown method name for type of subject expression")
-		       (make-syntax-violation input-form.stx subject-expr.stx)
-		       (make-application-operand-signature-condition (psi.retvals-signature subject-expr.psi))
-		       (make-type-method-name-condition method-name.sym))))))
+	   (%error-unknown-method-name))))
 
 ;;; --------------------------------------------------------------------
 
