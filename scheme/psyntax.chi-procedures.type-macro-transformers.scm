@@ -613,20 +613,7 @@
 						 method-name.id method-name.sym
 						 subject-expr.stx subject-expr.psi subject-expr.ots
 						 arg*.stx)
-    (cond ((eq? 'hash method-name.sym)
-	   (cond ((object-type-spec.applicable-hash-function subject-expr.ots)
-		  => (lambda (hash-function.id)
-		       (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-							  hash-function.id subject-expr.psi arg*.stx)))
-		 (else
-		  (raise
-		   (condition (make-who-condition __module_who__)
-			      (make-message-condition "undefined hash function for type of subject expression")
-			      (make-syntax-violation input-form.stx subject-expr.stx)
-			      (make-application-operand-signature-condition (psi.retvals-signature subject-expr.psi))
-			      (make-type-method-name-condition method-name.sym))))))
-
-	  ((object-type-spec.applicable-method-stx subject-expr.ots method-name.sym)
+    (cond ((object-type-spec.applicable-method-stx subject-expr.ots method-name.sym)
 	   ;;A matching method name exists.
 	   => (lambda (method.stx)
 		;;A matching method name exists.

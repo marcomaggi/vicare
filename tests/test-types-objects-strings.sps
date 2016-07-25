@@ -153,7 +153,7 @@
 
   (check
       (let (({O <string>} "ciao"))
-	(fixnum? (.hash O)))
+	(fixnum? (hash O)))
     => #t)
 
   (void))

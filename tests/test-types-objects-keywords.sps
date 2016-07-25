@@ -76,7 +76,7 @@
 
   (check
       (let (({O <keyword>} #:ciao))
-	(fixnum? (.hash O)))
+	(fixnum? (hash O)))
     => #t)
 
   (void))

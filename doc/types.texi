@@ -3681,13 +3681,6 @@ Return @var{obj} itself.
 Always return @true{}.
 @end defop
 
-
-@deftypemethod @class{top} @aclass{non-negative-fixnum} hash @var{self}
-Compute and return a hash value for @var{self}.  When the object--type
-does not define a specialised hash function: @func{object-hash} is
-applied to @var{self}.
-@end deftypemethod
-
 @c page
 @node types built-in bottom
 @subsection The universal sub--type
@@ -3791,11 +3784,6 @@ Apply @func{string} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{char} @aclass{fixnum} hash @var{self}
-Apply @func{char-hash} to the instance.
-@end deftypemethod
-
-
 @deftypemethod @class{char} @aclass{fixnum} integer @var{self}
 Apply @func{char->integer} to the instance.
 @end deftypemethod
@@ -3829,11 +3817,6 @@ symbol object; otherwise return @false{}.
 
 @deftypemethod @class{symbol} @aclass{string} string @var{self}
 Apply @func{symbol->string} to the instance.
-@end deftypemethod
-
-
-@deftypemethod @class{symbol} @aclass{fixnum} hash @var{self}
-Apply @func{symbol-hash} to the instance.
 @end deftypemethod
 
 
@@ -3924,11 +3907,6 @@ Apply @func{keyword->symbol} to the instance.
 Apply @func{keyword->string} to the instance.
 @end deftypemethod
 
-
-@deftypemethod @class{keyword} @aclass{fixnum} hash @var{self}
-Apply @func{keyword-hash} to the instance.
-@end deftypemethod
-
 @c page
 @node types built-in pointers
 @subsection Type of pointer values
@@ -4008,11 +3986,6 @@ Apply @func{pointer-clone} to the instance.
 
 @deftypemethod @class{pointer} @aclass{void} set-null! @var{self}
 Apply @func{set-pointer-null!)} to the instance.
-@end deftypemethod
-
-
-@deftypemethod @class{pointer} @aclass{fixnum} hash @var{self}
-Apply @func{pointer-hash} to the instance.
 @end deftypemethod
 
 @c page
@@ -5022,15 +4995,6 @@ Apply @func{string->keyword} to the instance.
 
 @deftypemethod @aclass{string} list @var{self}
 Apply @func{string->list} to the instance.
-@end deftypemethod
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Miscellaneous
-
-
-@deftypemethod @aclass{string} hash @var{self}
-Apply @func{string-hash} to the instance.
 @end deftypemethod
 
 @c page
@@ -7436,7 +7400,7 @@ synonym for @class{string}:
   "ciao")
 
 (.length O)     @result{} 4
-(.hash   O)     @expansion{} (string-hash O)
+(hash    O)     @expansion{} (string-hash O)
 @end lisp
 
 The following example defines a label to represent fixnums returned by
@@ -7480,7 +7444,7 @@ function that gets passed as @var{parent-hash} argument):
 (define @{O <String>@}
   "ciao")
 
-(.hash O)    @equiv{} (char-hash #\c)
+(hash O)     @equiv{} (char-hash #\c)
 @end lisp
 
 @c ------------------------------------------------------------------------
