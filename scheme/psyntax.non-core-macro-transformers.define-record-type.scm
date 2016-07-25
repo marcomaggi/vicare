@@ -1898,10 +1898,16 @@
     (or foo-hash-function.id
 	(core-prim-id 'record-hash)))
 
-  (define foo-methods.table
+  (define foo-methods-table-public
     `(list . ,(map (lambda (entry)
 		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
 		early-binding-methods-alist)))
+
+  (define foo-methods-table-protected
+     foo-methods-table-public)
+
+  (define foo-methods-table-private
+     foo-methods-table-public)
 
   (define foo-virtual-method-signatures.table
     `(quote ,virtual-method-signatures-alist))
@@ -1927,7 +1933,9 @@
 			  (syntax ,foo-equality-predicate.id)
 			  (syntax ,foo-comparison-procedure.id)
 			  (syntax ,foo-hash-function.id)
-			  ,foo-methods.table
+			  ,foo-methods-table-public
+			  ,foo-methods-table-protected
+			  ,foo-methods-table-private
 			  ,foo-virtual-method-signatures.table
 			  ,implemented-interfaces))
 

@@ -1039,7 +1039,8 @@
 	 (ots				(make-record-type-spec type-name.id uid.sym rtd.id rcd.id super-protocol.id parent.id
 							       constructor-sexp destructor-sexp type-predicate-sexp
 							       equality-predicate.id comparison-procedure.id hash-function.id
-							       methods-table virtual-method-signatures
+							       methods-table methods-table methods-table
+							       virtual-method-signatures
 							       implemented-interfaces)))
     (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
@@ -1101,7 +1102,8 @@
 							       rtd.id rcd.id super-protocol.id parent.id
 							       constructor.id destructor.id type-predicate.id
 							       equality-predicate.id comparison-procedure.id hash-function.id
-							       methods-table virtual-method-signatures
+							       methods-table methods-table methods-table
+							       virtual-method-signatures
 							       implemented-interfaces)))
     (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))

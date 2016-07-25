@@ -121,7 +121,8 @@
 	 object-type-spec.constructor-stx		object-type-spec.destructor-stx
 	 object-type-spec.equality-predicate		object-type-spec.comparison-procedure
 	 object-type-spec.hash-function			object-type-spec.applicable-hash-function
-	 object-type-spec.applicable-method-stx		object-type-spec.ancestor-ots*
+	 object-type-spec.ancestor-ots*
+	 object-type-spec.applicable-method-stx
 	 object-type-spec.implemented-interfaces
 	 object-type-spec.type-descriptor-core-expr
 	 object-type-spec.single-value-validator-lambda-stx
@@ -472,16 +473,44 @@
 		;False or a syntax object  which, expanded and evaluated, returns the
 		;hash function for this type.
 
-    (immutable methods-table		object-type-spec.methods-table)
-		;Null or  an alist mapping  symbols representing the method  names to
-		;syntax objects  representing Scheme  expressions that,  expanded and
-		;evaluated at  run-time, return the  associated method.  A  method is
-		;meant to be used as:
+    (immutable methods-table-public	object-type-spec.methods-table-public)
+		;Public methods table.  Null or an alist mapping symbols representing
+		;the method  names to syntax objects  representing Scheme expressions
+		;that,  expanded and  evaluated  at run-time,  return the  associated
+		;method.  A method is meant to be used as:
 		;
 		;   (?method ?instance ?arg ...)
 		;
-		;and  called  explicitly with  the  METHOD-CALL  syntax.  This  alist
-		;includes, as tail, the parent's alist (if any).
+		;and called explicitly with the METHOD-CALL syntax.
+		;
+		;This alist includes, as tail,  the parent's public methods alist (if
+		;any).
+
+    (immutable methods-table-protected	object-type-spec.methods-table-protected)
+		;Protected  methods   table.   Null  or  an   alist  mapping  symbols
+		;representing the method names  to syntax objects representing Scheme
+		;expressions  that, expanded  and evaluated  at run-time,  return the
+		;associated method.  A method is meant to be used as:
+		;
+		;   (?method ?instance ?arg ...)
+		;
+		;and called explicitly with the METHOD-CALL syntax.
+		;
+		;This alist includes,  as tail, the parent's  protected methods alist
+		;(if any).
+
+    (immutable methods-table-private	object-type-spec.methods-table-private)
+		;Private   methods  table.    Null  or   an  alist   mapping  symbols
+		;representing the method names  to syntax objects representing Scheme
+		;expressions  that, expanded  and evaluated  at run-time,  return the
+		;associated method.  A method is meant to be used as:
+		;
+		;   (?method ?instance ?arg ...)
+		;
+		;and called explicitly with the METHOD-CALL syntax.
+		;
+		;This alist includes,  as tail, the parent's  protected methods alist
+		;(if any).
 
     (immutable	implemented-iterfaces	object-type-spec.implemented-interfaces)
 		;A (possibly empty) proper  list of "<interface-type-spec>" instances
@@ -495,14 +524,22 @@
 				      type-annotation-maker
 				      constructor-stx destructor-stx type-predicate-stx
 				      equality-predicate.id comparison-procedure.id hash-function.id
-				      methods-table implemented-interfaces)
-	(make-record name uids-list parent.ots type-annotation-maker
-		     constructor-stx destructor-stx type-predicate-stx
-		     equality-predicate.id comparison-procedure.id hash-function.id
-		     (if parent.ots
-			 (append methods-table (object-type-spec.methods-table parent.ots))
-			 methods-table)
-		     implemented-interfaces))
+				      methods-table-public methods-table-protected methods-table-private
+				      implemented-interfaces)
+	(let ((methods-table-public	(if parent.ots
+					    (append methods-table-public (object-type-spec.methods-table-public parent.ots))
+					  methods-table-public))
+	      (methods-table-protected	(if parent.ots
+					    (append methods-table-protected (object-type-spec.methods-table-protected parent.ots))
+					  methods-table-protected))
+	      (methods-table-private	(if parent.ots
+					    (append methods-table-private (object-type-spec.methods-table-private parent.ots))
+					  methods-table-private)))
+	  (make-record name uids-list parent.ots type-annotation-maker
+		       constructor-stx destructor-stx type-predicate-stx
+		       equality-predicate.id comparison-procedure.id hash-function.id
+		       methods-table-public methods-table-protected methods-table-private
+		       implemented-interfaces)))
       make-object-type-spec))
 
   (custom-printer
@@ -576,7 +613,7 @@
   ;;parent  of  OTS,  so  there  is  no  need  to  traverse  the  hierarchy  of  type
   ;;specifications.
   ;;
-  (cond ((assq method-name.sym (object-type-spec.methods-table ots))
+  (cond ((assq method-name.sym (object-type-spec.methods-table-public ots))
 	 ;;The name is known; extract the method implementation object from the alist
 	 ;;entry and return it.
 	 => cdr)
@@ -2879,7 +2916,7 @@
 	  ((make-object-type-spec name uids-list parent.ots core-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx type-predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   type-descriptor.id)))
       make-core-type-spec))
   (custom-printer
@@ -2941,7 +2978,7 @@
 	  ((make-object-type-spec name uids-list parent.ots struct-type-spec.type-annotation-maker
 				  constructor.id destructor.stx predicate.id
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   std)))
       make-struct-type-spec))
 
@@ -2997,7 +3034,8 @@
 				      rtd-id rcd-id super-protocol-id parent-name.id
 				      constructor.stx destructor.stx predicate.stx
 				      equality-predicate.id comparison-procedure.id hash-function.id
-				      methods-table virtual-method-signatures
+				      methods-table-public methods-table-protected methods-table-private
+				      virtual-method-signatures
 				      {implemented-interfaces list-of-interface-type-specs?})
 	(let* ((parent.ots	(cond ((<record>-type-id? parent-name.id)
 				       (<record>-ots))
@@ -3028,7 +3066,8 @@
 	  ((make-object-type-spec type-name uids-list parent.ots record-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx pred
 				  equality-predicate.id comparison-procedure.id hash-func.id
-				  methods-table implemented-interfaces)
+				  methods-table-public methods-table-protected methods-table-private
+				  implemented-interfaces)
 	   rtd-id rcd-id super-protocol-id virtual-method-signatures)))
       make-record-type-spec))
 
@@ -3140,7 +3179,7 @@
 				  parent.ots compound-condition-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   component-type*.ots #f)))
 
       (define (%splice-component-specs component-type*.ots)
@@ -3237,7 +3276,7 @@
 				  parent.ots union-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   component-type*.ots (void))))
 
       make-union-type-spec))
@@ -3511,7 +3550,7 @@
 				  parent.ots intersection-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   component-type*.ots (void))))
 
       make-intersection-type-spec))
@@ -3677,7 +3716,7 @@
 				  parent.ots complement-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   item-type.ots)))
 
       make-complement-type-spec))
@@ -3755,7 +3794,7 @@
 				  parent.ots ancestor-of-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   type.ots ancestor*.ots)))
 
       make-ancestor-of-type-spec))
@@ -3850,7 +3889,7 @@
 				  parent.ots closure-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   signature)))
 
       make-closure-type-spec))
@@ -3964,7 +4003,7 @@
 				   parent.ots pair-type-spec.type-annotation-maker
 				   constructor.stx destructor.stx predicate.stx
 				   equality-predicate.id comparison-procedure.id hash-function.id
-				   methods-table implemented-interfaces)
+				   methods-table methods-table methods-table implemented-interfaces)
 	    car.ots cdr.ots (void))))
 
       (define (pair-name? name.stx)
@@ -4072,7 +4111,7 @@
 				   parent.ots pair-of-type-spec.type-annotation-maker
 				   constructor.stx destructor.stx predicate.stx
 				   equality-predicate.id comparison-procedure.id hash-function.id
-				   methods-table implemented-interfaces)
+				   methods-table methods-table methods-table implemented-interfaces)
 	    item.ots)))
 
       (define (pair-of-name? name.stx)
@@ -4171,7 +4210,7 @@
 				  parent.ots list-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   item-type*.ots (void) (void))))
 
       (define (list-name? name.stx)
@@ -4296,7 +4335,7 @@
 				  parent.ots list-of-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   item-type.ots)))
 
       (define (list-of-name? name.stx)
@@ -4465,7 +4504,7 @@
 				  parent.ots vector-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   item-type*.ots (void) (void))))
 
       (define (vector-name? name.stx)
@@ -4575,7 +4614,7 @@
 				  parent.ots vector-of-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   item-type.ots)))
 
       (define (vector-of-name? name.stx)
@@ -4658,7 +4697,7 @@
 				  parent.ots hashtable-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   key-type.ots value-type.ots)))
 
       (define (hashtable-name? name.stx)
@@ -4735,7 +4774,7 @@
 				  parent.ots enumeration-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   symbol* #f)))
 
       make-enumeration-type-spec))
@@ -4814,7 +4853,7 @@
 				  parent.ots label-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx type-predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table implemented-interfaces)
+				  methods-table methods-table methods-table implemented-interfaces)
 	   with-type-predicate?)))
 
       make-label-type-spec))
@@ -4888,7 +4927,9 @@
 				  #f			  ;equality-predicate.id
 				  #f			  ;comparison-procedure.id
 				  #f			  ;hash-function.id
-				  methods-table		  ;methods-table
+				  methods-table		  ;methods-table-public
+				  methods-table		  ;methods-table-protected
+				  methods-table		  ;methods-table-private
 				  implemented-interfaces) ;implemented-interfaces
 	   type-descriptor.id method-prototypes-table)))
 
@@ -5155,7 +5196,7 @@
 	(object-type-spec.compatible-method-stx iface.ots object.ots ?parent.ots
 						super-method-name.sym super-method-prototype.ots
 						super-method-has-default?))
-      (cond ((assq super-method-name.sym (object-type-spec.methods-table current.ots))
+      (cond ((assq super-method-name.sym (object-type-spec.methods-table-public current.ots))
 	     => (lambda (entry)
 		  (let* ((sub-method-procname.id	(cdr entry))
 			 (sub-method-procedure.ots	((expression-expander-for-type-annotations)

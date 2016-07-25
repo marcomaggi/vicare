@@ -761,7 +761,9 @@
      (or <false> <syntactic-identifier>)	       ;equality-predicate.id
      (or <false> <syntactic-identifier>)	       ;comparison-procedure.id
      (or <false> <syntactic-identifier>)	       ;hash-function.id
-     (alist <symbol> <syntactic-identifier>)	       ;methods-table
+     (alist <symbol> <syntactic-identifier>)	       ;methods-table-public
+     (alist <symbol> <syntactic-identifier>)	       ;methods-table-protected
+     (alist <symbol> <syntactic-identifier>)	       ;methods-table-private
      (alist <symbol> (or <false> <closure-type-spec>)) ;virtual-method-signatures
      (list-of <syntactic-identifier>))		       ;implemented-interfaces
     => (<record-type-spec>))))

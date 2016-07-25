@@ -196,6 +196,9 @@
   (declare type-predicate)
   (declare mixins)
   (declare implements)
+  (declare private)
+  (declare protected)
+  (declare public)
   (declare catch)
   (declare finally)
   (declare pair)
@@ -820,17 +823,19 @@
 					  (quote ,UID)
 					  (syntax ,RTD)
 					  (syntax ,RCD)
-					  #f #;super-rcd
+					  #f ;super-rcd
 					  (syntax ,?parent-name)
 					  (syntax ,?constructor)
-					  #f #;destructor
+					  #f ;destructor
 					  (syntax ,?predicate)
-					  #f #;equality-predicate
-					  #f #;comparison-procedure
-					  #f #;hash-function
-					  ,METHOD-TABLE
-					  '() #;virtual-method-signatures
-					  '() #;implemented-interfaces
+					  #f		;equality-predicate
+					  #f		;comparison-procedure
+					  #f		;hash-function
+					  ,METHOD-TABLE ;method-table-public
+					  ,METHOD-TABLE ;method-table-protected
+					  ,METHOD-TABLE ;method-table-private
+					  '()		;virtual-method-signatures
+					  '()		;implemented-interfaces
 					  ))
 		 (define/std ,RTD
 		   ($make-record-type-descriptor-ex (quote ,?name) (record-type-descriptor ,?parent-name)
