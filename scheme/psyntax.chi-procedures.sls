@@ -733,8 +733,8 @@
        ;;
        ;;   (global-typed . (#<library> . ?loc))
        ;;
-       ;;We visit  the library so that  the ?LOC actually references  the instance of
-       ;;"<global-typed-variable-spec>".
+       ;;The  library is  visited  by default,  so  we know  that  the ?LOC  actually
+       ;;references the instance of "<global-typed-variable-spec>".
        (let* ((descr.value	(syntactic-binding-descriptor.value descr))
 	      (lib		(car descr.value))
 	      (globvar.type-loc	(cdr descr.value)))

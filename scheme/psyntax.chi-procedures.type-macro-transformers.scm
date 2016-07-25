@@ -556,56 +556,144 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?method-name ?subject-expr ?arg* ...)
+       (and (identifier? ?method-name)
+	    (identifier? ?subject-expr))
+       ;;The case  of ?SUBJECT-EXPR  being an  identifier is may  be special:  if the
+       ;;identifier is bound to a type  variable, we know the single-value type right
+       ;;away  an  we can  distinguish  between  public  and  private access  to  the
+       ;;object-type's members.
+       (%identifier-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+					     ?method-name ?subject-expr ?arg*))
+
+      ((_ ?method-name ?subject-expr ?arg* ...)
        (identifier? ?method-name)
-       (let* ((method-name.sym	(identifier->symbol ?method-name))
-	      (subject-expr.psi	(chi-expr ?subject-expr lexenv.run lexenv.expand))
-	      (subject-expr.sig	(psi.retvals-signature subject-expr.psi)))
-	 (define-syntax-rule (%late-binding)
-	   (%expand-to-late-binding-method-call input-form.stx lexenv.run lexenv.expand
-						method-name.sym subject-expr.psi ?arg*))
-	 (define (%error message)
-	   (raise
-	    (condition (make-who-condition __module_who__)
-		       (make-message-condition message)
-		       (make-syntax-violation input-form.stx ?subject-expr)
-		       (make-irritants-condition (list subject-expr.sig)))))
-	 (case-type-signature-full-structure subject-expr.sig
-	   ((<top>)
-	    (%late-binding))
-	   ((<untyped>)
-	    (%late-binding))
-
-	   ((single-value)
-	    => (lambda (subject-expr.ots)
-		 (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
-						       ?method-name method-name.sym
-						       ?subject-expr subject-expr.psi subject-expr.ots
-						       ?arg*)))
-
-	   (<bottom>
-	    (let ((common (condition
-			   (make-who-condition __module_who__)
-			   (make-message-condition "subject expression of method call defined to never return")
-			   (make-syntax-violation input-form.stx ?subject-expr)
-			   (make-irritants-condition (list subject-expr.sig)))))
-	      (if (options::typed-language-enabled?)
-		  (raise (condition (make-expand-time-type-signature-violation) common))
-		(begin
-		  (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-		  (%late-binding)))))
-
-	   (<list>
-	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
-	    ;;signature; we need to insert a run-time dispatch.
-	    (%late-binding))
-
-	   (else
-	    ;;We have determined at expand-time  that the expression returns multiple
-	    ;;values.
-	    (%error "subject expression of method call returns multiple values")))))
+       (%general-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+					  ?method-name ?subject-expr ?arg*))
 
       (_
        (__synner__ "invalid syntax in macro use"))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%identifier-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+						method-name.id subject-expr.id rand*.stx)
+    (define (%default-dispatching)
+      (%general-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+					 method-name.id subject-expr.id rand*.stx))
+    (cond ((id->label subject-expr.id)
+	   => (lambda (label)
+		(let ((descr (label->syntactic-binding-descriptor label lexenv.run)))
+		  (case (syntactic-binding-descriptor.type descr)
+		    ((lexical-typed)
+		     ;;Reference to typed lexical variable; this means EXPR.STX is an
+		     ;;identifier.  The syntactic binding's descriptor has format:
+		     ;;
+		     ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
+		     ;;
+		     (let* ((subject-expr.lts	(syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr))
+			    (subject-expr.ots	(typed-variable-spec.ots subject-expr.lts)))
+		       (%typed-variable-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+								 method-name.id subject-expr.id subject-expr.ots rand*.stx)))
+
+		    ((global-typed)
+		     ;;Reference  to  global  imported typed  lexical  variable.   We
+		     ;;expect the syntactic binding's descriptor to be:
+		     ;;
+		     ;;   (global-typed . (#<library> . ?loc))
+		     ;;
+		     ;;The library  is visited by default,  so we know that  the ?LOC
+		     ;;actually        references        the       instance        of
+		     ;;"<global-typed-variable-spec>".
+		     (let* ((descr.value	(syntactic-binding-descriptor.value descr))
+			    (globvar.lib	(car descr.value))
+			    (globvar.type-loc	(cdr descr.value)))
+		       ((inv-collector) globvar.lib)
+		       (if (symbol-bound? globvar.type-loc)
+			   (let ((subject-expr.gts (symbol-value globvar.type-loc)))
+			     (if (global-typed-variable-spec? subject-expr.gts)
+				 (let ((subject-expr.ots (typed-variable-spec.ots subject-expr.gts)))
+				   (%typed-variable-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+									     method-name.id subject-expr.id subject-expr.ots rand*.stx))
+			       (assertion-violation __module_who__
+				 "invalid object in loc gensym's \"value\" slot of \"global-typed\" syntactic binding's descriptor"
+				 subject-expr.id descr)))
+			 (assertion-violation __module_who__
+			   "unbound loc gensym of \"global-typed\" syntactic binding's descriptor"
+			   subject-expr.id descr))))
+
+		    (else
+		     (%default-dispatching))))))
+	  (else
+	   (%default-dispatching))))
+
+  (define (%typed-variable-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+						    method-name.id subject-expr.id subject-expr.ots rand*.stx)
+    (let* ((method-name.sym	(identifier->symbol method-name.id))
+	   (subject-expr.psi	(chi-expr subject-expr.id lexenv.run lexenv.expand))
+	   (subject-expr.sig	(psi.retvals-signature subject-expr.psi)))
+      (define-syntax-rule (%late-binding)
+	(%expand-to-late-binding-method-call input-form.stx lexenv.run lexenv.expand
+					     method-name.sym subject-expr.psi rand*.stx))
+      (cond ((or (<top>-ots?     subject-expr.ots)
+		 (<bottom>-ots?  subject-expr.ots)
+		 (<untyped>-ots? subject-expr.ots))
+	     (%late-binding))
+	    (else
+	     (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
+						   method-name.id method-name.sym
+						   subject-expr.id subject-expr.psi subject-expr.ots
+						   rand*.stx)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%general-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
+					     method-name.id subject-expr.stx rand*.stx)
+    (let* ((method-name.sym	(identifier->symbol method-name.id))
+	   (subject-expr.psi	(chi-expr subject-expr.stx lexenv.run lexenv.expand))
+	   (subject-expr.sig	(psi.retvals-signature subject-expr.psi)))
+      (define-syntax-rule (%late-binding)
+	(%expand-to-late-binding-method-call input-form.stx lexenv.run lexenv.expand
+					     method-name.sym subject-expr.psi rand*.stx))
+      (define (%error message)
+	(raise
+	 (condition (make-who-condition __module_who__)
+		    (make-message-condition message)
+		    (make-syntax-violation input-form.stx subject-expr.stx)
+		    (make-irritants-condition (list subject-expr.sig)))))
+      (case-type-signature-full-structure subject-expr.sig
+	((<top>)
+	 (%late-binding))
+	((<untyped>)
+	 (%late-binding))
+
+	((single-value)
+	 => (lambda (subject-expr.ots)
+	      (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
+						    method-name.id method-name.sym
+						    subject-expr.stx subject-expr.psi subject-expr.ots
+						    rand*.stx)))
+
+	(<bottom>
+	 (let ((common (condition
+			 (make-who-condition __module_who__)
+			 (make-message-condition "subject expression of method call defined to never return")
+			 (make-syntax-violation input-form.stx subject-expr.stx)
+			 (make-irritants-condition (list subject-expr.sig)))))
+	   (if (options::typed-language-enabled?)
+	       (raise (condition (make-expand-time-type-signature-violation) common))
+	     (begin
+	       (raise-continuable (condition (make-expand-time-type-signature-warning) common))
+	       (%late-binding)))))
+
+	(<list>
+	 ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
+	 ;;signature; we need to insert a run-time dispatch.
+	 (%late-binding))
+
+	(else
+	 ;;We have determined at expand-time  that the expression returns multiple
+	 ;;values.
+	 (%error "subject expression of method call returns multiple values")))))
 
 ;;; --------------------------------------------------------------------
 
