@@ -1504,7 +1504,7 @@
 		;   (({?early-binding-procname . ?rv-types} . ?formals) . ?body)
 		;
 		;that  can  be  turned   into  a  method's  implementation  procedure
-		;definition just by preconsing DEFINE/TYPED or DEFINE/OVERLOAD.
+		;definition just by preconsing DEFINE/CHECKED or DEFINE/OVERLOAD.
       (immutable	late-binding-procname)
 		;The  syntactic identifier  that will  be bound  to the  late binding
 		;method implementation procedure.
@@ -1514,7 +1514,7 @@
 		;   (({?late-binding-procname . ?rv-types} . ?formals) . ?body)
 		;
 		;that  can  be  turned   into  a  method's  implementation  procedure
-		;definition just by preconsing DEFINE/TYPED or DEFINE/OVERLOAD.
+		;definition just by preconsing DEFINE/CHECKED or DEFINE/OVERLOAD.
       (immutable	closure-ots)
 		;An instance of "<closure-type-spec>" representing the type signature
 		;of this method.
@@ -1708,8 +1708,8 @@
 	   ;;method-retriever procedure of the record-type descriptor.
 	   (cons (<method-spec>-name-id  single) (<method-spec>-early-binding-procname single))
 	   ;;FORM*.SEXP
-	   (list (cons (core-prim-id 'define/typed) (<method-spec>-early-binding-implementation single))
-		 (cons (core-prim-id 'define/typed) (<method-spec>-late-binding-implementation  single))))
+	   (list (cons (core-prim-id 'define/checked) (<method-spec>-early-binding-implementation single))
+		 (cons (core-prim-id 'define/checked) (<method-spec>-late-binding-implementation  single))))
 	;;This is a concrete method.
 	(values
 	 ;;EARLY-BINDING-METHODS-ENTRY,  this will  go  in the  methods-table of  the
@@ -1719,7 +1719,7 @@
 	 ;;procedure of the record-type descriptor.
 	 (cons (<method-spec>-name-id  single) (<method-spec>-early-binding-procname single))
 	 ;;FORM*.SEXP
-	 (list (cons (core-prim-id 'define/typed) (<method-spec>-early-binding-implementation single))))))
+	 (list (cons (core-prim-id 'define/checked) (<method-spec>-early-binding-implementation single))))))
 
     (define (%process-method-group-with-multiple-items group virtual?)
       ;;VIRTUAL? is true if the parent record-type has a virtual method with the same
