@@ -243,6 +243,7 @@
     <typed-variable-spec>
     typed-variable-spec?
     typed-variable-spec.ots				typed-variable-spec.ots-set!
+    typed-variable-spec.private-access?			typed-variable-spec.private-access?-set!
 
     ;; typed lexical variable specification
     <lexical-typed-variable-spec>

@@ -617,8 +617,8 @@
     (define (%lexical-typed-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
 						     method-name.id subject-expr.id rand*.stx
 						     subject-expr.lts)
-      (let* ((subject-expr.ots	(typed-variable-spec.ots subject-expr.lts))
-	     (private-access?	#f))
+      (let* ((subject-expr.ots	(typed-variable-spec.ots             subject-expr.lts))
+	     (private-access?	(typed-variable-spec.private-access? subject-expr.lts)))
 	(%typed-variable-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
 						  method-name.id subject-expr.id subject-expr.ots rand*.stx
 						  private-access?)))
@@ -632,8 +632,8 @@
 	(if (symbol-bound? globvar.type-loc)
 	    (let ((subject-expr.gts (symbol-value globvar.type-loc)))
 	      (if (global-typed-variable-spec? subject-expr.gts)
-		  (let ((subject-expr.ots	(typed-variable-spec.ots subject-expr.gts))
-			(private-access?	#f))
+		  (let ((subject-expr.ots	(typed-variable-spec.ots             subject-expr.gts))
+			(private-access?	(typed-variable-spec.private-access? subject-expr.gts)))
 		    (%typed-variable-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
 							      method-name.id subject-expr.id subject-expr.ots rand*.stx
 							      private-access?))

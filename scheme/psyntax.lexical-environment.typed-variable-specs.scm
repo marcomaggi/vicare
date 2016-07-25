@@ -25,6 +25,7 @@
 	 <typed-variable-spec>-rtd			<typed-variable-spec>-rcd
 	 typed-variable-spec?
 	 typed-variable-spec.ots			typed-variable-spec.ots-set!
+	 typed-variable-spec.private-access?		typed-variable-spec.private-access?-set!
 
 	 <lexical-typed-variable-spec>
 	 <lexical-typed-variable-spec>-rtd		<lexical-typed-variable-spec>-rcd
@@ -64,14 +65,17 @@
   (define-type-descriptors)
   (strip-angular-parentheses)
   (fields
-    (mutable ots		typed-variable-spec.ots typed-variable-spec.ots-set!)
+    (mutable	ots		typed-variable-spec.ots typed-variable-spec.ots-set!)
 		;An instance  of "<object-type-spec>"  representing the type  of this
 		;variable.
+    (mutable	private-access?	typed-variable-spec.private-access? typed-variable-spec.private-access?-set!)
+		;Boolean, true if  this variable has access to the  private member of
+		;its OTS.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
       (define* (make-typed-variable-spec {ots object-type-spec?})
-	(make-record ots))
+	(make-record ots #f))
       make-typed-variable-spec))
   #| end of DEFINE-CORE-RECORD-TYPE |# )
 
