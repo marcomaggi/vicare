@@ -484,7 +484,8 @@
 		;and called explicitly with the METHOD-CALL syntax.
 		;
 		;This alist includes, as tail,  the parent's public methods alist (if
-		;any).
+		;any).  This list  is used at expand-time to search  for methods with
+		;normal non-private access.
 
     (immutable methods-table-protected	object-type-spec.methods-table-protected)
 		;Protected  methods   table.   Null  or  an   alist  mapping  symbols
@@ -497,7 +498,8 @@
 		;and called explicitly with the METHOD-CALL syntax.
 		;
 		;This alist includes,  as tail, the parent's  protected methods alist
-		;(if any).
+		;(if any).  This  alist exists only to be appended  to the sub-type's
+		;private methods alist.
 
     (immutable methods-table-private	object-type-spec.methods-table-private)
 		;Private   methods  table.    Null  or   an  alist   mapping  symbols
@@ -510,7 +512,9 @@
 		;and called explicitly with the METHOD-CALL syntax.
 		;
 		;This alist includes,  as tail, the parent's  protected methods alist
-		;(if any).
+		;(if any).   This list is used  at expand-time to search  for methods
+		;for  the THIS  special syntactic  binding representing  the implicit
+		;first argument of methods.
 
     (immutable	implemented-iterfaces	object-type-spec.implemented-interfaces)
 		;A (possibly empty) proper  list of "<interface-type-spec>" instances
