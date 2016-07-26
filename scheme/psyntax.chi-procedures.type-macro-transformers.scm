@@ -23,6 +23,7 @@
 	 delete-transformer
 	 is-a?-transformer
 	 method-call-transformer
+	 typed-variable-with-private-access!-transformer
 	 unsafe-cast-signature-transformer
 	 case-type-transformer
 	 assert-signature-transformer
@@ -582,6 +583,8 @@
       (define (%default-dispatching)
 	(%general-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
 					   method-name.id subject-expr.id rand*.stx))
+;;;FIXME  SUBJECT-EXPR.ID is  THIS when  methods are  called, so  it is  not a  typed
+;;;variable we can inspect here.
       (cond ((id->label subject-expr.id)
 	     => (lambda (label)
 		  (let ((descr (label->syntactic-binding-descriptor label lexenv.run)))
@@ -771,6 +774,66 @@
 	(make-type-signature/fully-unspecified))))
 
   #| end of module |# )
+
+
+;;;; module core-macro-transformer: TYPED-VARIABLE-WITH-PRIVATE-ACCESS!
+
+(define-core-transformer (typed-variable-with-private-access! input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used  to expand Vicare's TYPED-VARIABLE-WITH-PRIVATE-ACCESS!
+  ;;syntaxes  from the  top-level built  in  environment.  Expand  the syntax  object
+  ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?varname)
+     (identifier? ?varname)
+     (cond ((id->label ?varname)
+	    => (lambda (label)
+		 (let ((descr (label->syntactic-binding-descriptor label lexenv.run)))
+		   (case (syntactic-binding-descriptor.type descr)
+		     ((lexical-typed)
+		      ;;Reference to  typed lexical variable; this  means EXPR.STX is
+		      ;;an  identifier.   The   syntactic  binding's  descriptor  has
+		      ;;format:
+		      ;;
+		      ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
+		      ;;
+		      (let ((varname.lts (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr)))
+			(typed-variable-spec.private-access?-set! varname.lts #t)))
+
+		     ((global-typed)
+		      ;;Reference  to global  imported  typed  lexical variable.   We
+		      ;;expect the syntactic binding's descriptor to be:
+		      ;;
+		      ;;   (global-typed . (#<library> . ?loc))
+		      ;;
+		      ;;The library is  visited by default, so we know  that the ?LOC
+		      ;;actually        references       the        instance       of
+		      ;;"<global-typed-variable-spec>".
+		      (let* ((descr.value		(syntactic-binding-descriptor.value descr))
+			     (globvar.lib		(car descr.value))
+			     (globvar.type-loc	(cdr descr.value)))
+			((inv-collector) globvar.lib)
+			(if (symbol-bound? globvar.type-loc)
+			    (let ((varname.gts (symbol-value globvar.type-loc)))
+			      (if (global-typed-variable-spec? varname.gts)
+				  (typed-variable-spec.private-access?-set! varname.gts #t)
+				(assertion-violation __who__
+				  "invalid object in loc gensym's \"value\" slot of \"global-typed\" syntactic binding's descriptor"
+				  ?varname descr.value varname.gts)))
+			  (assertion-violation __who__
+			    "unbound loc gensym of \"global-typed\" syntactic binding's descriptor"
+			    ?varname descr.value))))
+
+		     (else
+		      (__synner__ "expected typed variable identifier as argument" ?varname))))
+		 (make-psi input-form.stx
+		   (build-void)
+		   (make-type-signature/single-void))))
+	   (else
+	    (__synner__ "expected bound syntactic identifier as argument" ?varname))))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; module core-macro-transformer: HASH

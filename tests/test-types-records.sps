@@ -1469,6 +1469,114 @@
   (void))
 
 
+(parametrise ((check-test-name	'methods-protection))
+
+  ;;Calling public method from public method.
+  ;;
+  (begin
+    (check
+	(internal-body
+	  (define-record-type <it>
+	    (method public (inner)
+		    1)
+	    (method (outer)
+	      (.inner this)))
+
+	  (.outer (new <it>)))
+      => 1)
+    (check
+	(internal-body
+	  (define-record-type <it>
+	    (public
+	      (method (inner)
+		1))
+	    (method (outer)
+	      (.inner this)))
+
+	  (.outer (new <it>)))
+      => 1)
+    #| end of BEGIN |# )
+
+  ;;Calling protected method from public method.
+  ;;
+  #;(check
+  (internal-body
+  (define-record-type <it>
+  (method protected (inner)
+  1)
+  (method (outer)
+  (.inner this)))
+
+  (.outer (new <it>)))
+  => 1)
+
+  ;;Calling private method from public method.
+  ;;
+  #;(check
+  (internal-body
+  (define-record-type <it>
+  (method private (inner)
+  1)
+  (method (outer)
+  (.inner this)))
+
+  (.outer (new <it>)))
+  => 1)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  ;;Methods with equal name but different protection level: public, private.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <it>
+		      (method public (doit) 1)
+		      (method private (doit {O <string>}) 2))
+		    (void)))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'doit)
+
+  ;;Methods with equal name but different protection level: public, protected.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <it>
+		      (method public (doit) 1)
+		      (method protected (doit {O <string>}) 2))
+		    (void)))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'doit)
+
+  ;;Methods with equal name but different protection level: protected, private.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <it>
+		      (method protected (doit) 1)
+		      (method private (doit {O <string>}) 2))
+		    (void)))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'doit)
+
+  (void))
+
+
 (parametrise ((check-test-name	'typed-fields))
 
   (check

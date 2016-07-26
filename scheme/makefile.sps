@@ -681,6 +681,7 @@
 	 (type-unique-identifiers		(core-macro . type-unique-identifiers))
 	 (is-a?					(core-macro . is-a?))
 	 (method-call				(core-macro . method-call))
+	 (typed-variable-with-private-access!	(core-macro . typed-variable-with-private-access!))
 	 (case-type				(core-macro . case-type))
 	 (assert-signature			(core-macro . assert-signature))
 	 (assert-signature-and-return		(core-macro . assert-signature-and-return))
@@ -6151,6 +6152,7 @@
     (set!/initialise)
     (make-overloaded-function-spec)
     (overloaded-function-spec.register-specialisation!)
+    (typed-variable-with-private-access!)
     ))
 
 

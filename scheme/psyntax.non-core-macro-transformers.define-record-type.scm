@@ -58,6 +58,8 @@
   (make-syntactic-identifier-for-temporary-variable (string-append prefix (symbol->string (syntax->datum foo)))))
 
 (define (%filter-out-falses ls)
+  ;;Remove all the #f items from the list LS and return the resulting list.
+  ;;
   (if (pair? ls)
       (let ((A (car ls))
 	    (D (cdr ls)))
@@ -87,16 +89,7 @@
 
 (define (%do-define-record input-form.stx namespec input-clause*.stx synner)
   (define clause*.stx
-    (let ((foo (syntax-match namespec ()
-		 ((?foo ?make-foo ?foo?)
-		  (identifier? ?foo)
-		  ?foo)
-		 (?foo
-		  (identifier? ?foo)
-		  ?foo)
-		 (_
-		  (synner "invalid record-type name specification" namespec)))))
-      (%introduce-mixin-clauses foo input-clause*.stx synner)))
+    (%preprocess-input-clauses namespec input-clause*.stx synner))
   (define strip-angular-parentheses?
     (%get-strip-angular-parentheses clause*.stx synner))
   (define-values (foo make-foo foo? foo-for-id-generation)
@@ -160,10 +153,13 @@
 		;A list  of syntactic identifiers  that will  be bound to  the unsafe
 		;mutators.  This list  holds #f in the position  of immutable fields.
 		;This list has one item for each item in UNSAFE-FIELD-ACCESSOR*.
-     field-methods-alist
-		;An alist having:  as keys, symbols representing the  field names; as
-		;values, syntactic identifiers  that will be bound to  the safe field
-		;accessor/mutator methods.
+     field-methods-alist-public
+     field-methods-alist-protected
+     field-methods-alist-private
+		;Alist  for public,  protected and  private fields  having: as  keys,
+		;symbols  representing   the  field   names;  as   values,  syntactic
+		;identifiers that  will be bound  to the safe  field accessor/mutator
+		;methods.
      fields-vector-spec
 		;A  vector to  be  used as  FIELDS argument  for  the core  primitive
 		;function MAKE-RECORD-TYPE-DESCRIPTOR.
@@ -258,9 +254,20 @@
 
   ;;Parse METHOD and similar clauses.  Build the following values:
   ;;
-  ;;EARLY-BINDING-METHODS-ALIST an  alist having:  as keys, symbols  representing the
-  ;;method names,  including the field  names; as values, syntactic  identifiers that
-  ;;will be bound to the method implementation procedures, including field methods.
+  ;;EARLY-BINDING-METHODS-ALIST-PUBLIC an  alist for public methods  having: as keys,
+  ;;symbols  representing the  method names,  including the  field names;  as values,
+  ;;syntactic identifiers that will be bound to the method implementation procedures,
+  ;;including public field methods.
+  ;;
+  ;;EARLY-BINDING-METHODS-ALIST-PROTECTED an  alist for protected methods  having: as
+  ;;keys, symbols representing the method names, including the protected field names;
+  ;;as values, syntactic identifiers that will  be bound to the method implementation
+  ;;procedures, including protected field methods.
+  ;;
+  ;;EARLY-BINDING-METHODS-ALIST-PRIVATE an alist for private methods having: as keys,
+  ;;symbols  representing the  method names,  including the  private field  names; as
+  ;;values, syntactic  identifiers that  will be bound  to the  method implementation
+  ;;procedures, including private field methods.
   ;;
   ;;METHOD-FORM*.SEXP  is  a,   possibly  empty,  list  of   forms  representing  the
   ;;definitions of method implementation procedures.
@@ -274,12 +281,18 @@
   ;;representing  the  signature   of  the  method.   This   alist  already  contains
   ;;appropriate entries for the parent record-type, if any.
   ;;
-  (define-values (early-binding-methods-alist method-form*.sexp method-retriever-code.sexp
-					      virtual-method-signatures-alist)
+  (define-values (early-binding-methods-alist-public
+		  early-binding-methods-alist-protected
+		  early-binding-methods-alist-private
+		  method-form*.sexp method-retriever-code.sexp
+		  virtual-method-signatures-alist)
     (%parse-method-clauses clause*.stx
 			   foo foo-for-id-generation
 			   parent-rtd.id parent-virtual-method-signatures-alist
-			   field-methods-alist synner))
+			   field-methods-alist-public
+			   field-methods-alist-protected
+			   field-methods-alist-private
+			   synner))
 
   ;;Null  or a  proper  list of  "<interface-type-spec>"  instances representing  the
   ;;interfaces implemented by this record-type.
@@ -305,7 +318,10 @@
     (%make-type-name-syntactic-binding-form foo foo-uid make-foo foo? foo-super-rcd.id foo-destructor.id
 					    foo-parent.id foo-rtd foo-rcd
 					    foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
-					    early-binding-methods-alist virtual-method-signatures-alist
+					    early-binding-methods-alist-public
+					    early-binding-methods-alist-protected
+					    early-binding-methods-alist-private
+					    virtual-method-signatures-alist
 					    implemented-interface*.ots))
 
   (bless
@@ -345,7 +361,7 @@
 					  safe-field-accessor* unsafe-field-accessor*
 					  safe-field-mutator*  unsafe-field-mutator*)
       ,@(%make-safe-method-code foo field-type*.ann
-				field-methods-alist unsafe-field-accessor* unsafe-field-mutator*)
+				field-methods-alist-private unsafe-field-accessor* unsafe-field-mutator*)
       #| end of module |# )))
 
 
@@ -394,7 +410,8 @@
 					     equality-predicate comparison-procedure hash-function))
 			strict-r6rs-keys))
 	  (set! typed-language-keys
-		(append (map core-prim-id '(method virtual-method seal-method implements))
+		(append (map core-prim-id '(method virtual-method seal-method implements
+						   public protected private))
 			extended-keys)))
 	(cond ((options::typed-language-enabled?)
 	       typed-language-keys)
@@ -408,35 +425,144 @@
       (lambda (id)
 	(free-id-member? id (or cached
 				(receive-and-return (rv)
-				    (map core-prim-id '(method virtual-method seal-method fields mixins implements))
+				    (map core-prim-id '(method virtual-method seal-method fields mixins implements
+							       public protected private))
 				  (set! cached rv)))))))
 
   #| end of module: %VALIDATE-DEFINITION-CLAUSES |# )
 
 
-(define (%introduce-mixin-clauses foo input-clause*.stx synner)
-  (let clause-recur ((input-clause*.stx	input-clause*.stx))
-    (if (pair? input-clause*.stx)
-	(syntax-match (car input-clause*.stx) (mixins)
-	  ((mixins ?mixin-name* ...)
-	   (let mixin-recur ((mixin-name*.id ?mixin-name*))
-	     (if (pair? mixin-name*.id)
-		 (let ((mixin-name.id (car mixin-name*.id)))
-		   (unless (identifier? mixin-name.id)
-		     (synner "expected identifier as mixin name in MIXINS clause" mixin-name.id))
-		   (let ((obj (retrieve-expand-time-value mixin-name.id)))
-		     (syntax-match obj ()
-		       ((?kwd ?mixin-name ?clause* ...)
-			(eq? 'define-mixin-type (syntax->datum ?kwd))
-			(append (syntax-replace-id ?clause* mixin-name.id foo)
-				(mixin-recur (cdr mixin-name*.id))))
-		       (_
-			(synner "expected mixin name in MIXINS clause" mixin-name.id)))))
-	       (clause-recur (cdr input-clause*.stx)))))
-	  (_
-	   (cons (car input-clause*.stx)
+;;;; preprocessing of input clauses
+
+(module (%preprocess-input-clauses)
+
+  (define (%preprocess-input-clauses namespec input-clause*.stx synner)
+    (let* ((foo		(syntax-match namespec ()
+			  ((?foo ?make-foo ?foo?)
+			   (identifier? ?foo)
+			   ?foo)
+			  (?foo
+			   (identifier? ?foo)
+			   ?foo)
+			  (_
+			   (synner "invalid record-type name specification" namespec))))
+	   ;;We do  these twice to  allow mixin  clauses to contain  protection level
+	   ;;specifications.
+	   (clause*.stx	(if (options::strict-r6rs-enabled?)
+			    input-clause*.stx
+			  (%introduce-mixin-clauses foo input-clause*.stx synner)))
+	   (clause*.stx	(if (options::typed-language-enabled?)
+			    (%splice-protection-levels clause*.stx synner)
+			  clause*.stx))
+	   (clause*.stx	(if (options::strict-r6rs-enabled?)
+			    clause*.stx
+			  (%introduce-mixin-clauses foo clause*.stx synner)))
+	   (clause*.stx	(if (options::typed-language-enabled?)
+			    (%splice-protection-levels clause*.stx synner)
+			  clause*.stx)))
+      (%check-that-there-are-no-invalid-protection-levels clause*.stx synner)
+      clause*.stx))
+
+  (define (%introduce-mixin-clauses foo input-clause*.stx synner)
+    (let clause-recur ((input-clause*.stx input-clause*.stx))
+      (if (pair? input-clause*.stx)
+	  (syntax-match (car input-clause*.stx) (mixins)
+	    ((mixins ?mixin-name* ...)
+	     (let mixin-recur ((mixin-name*.id ?mixin-name*))
+	       (if (pair? mixin-name*.id)
+		   (let ((mixin-name.id (car mixin-name*.id)))
+		     (unless (identifier? mixin-name.id)
+		       (synner "expected identifier as mixin name in MIXINS clause" mixin-name.id))
+		     (let ((obj (retrieve-expand-time-value mixin-name.id)))
+		       (syntax-match obj ()
+			 ((?kwd ?mixin-name ?clause* ...)
+			  (eq? 'define-mixin-type (syntax->datum ?kwd))
+			  (append (syntax-replace-id ?clause* mixin-name.id foo)
+				  (mixin-recur (cdr mixin-name*.id))))
+			 (_
+			  (synner "expected mixin name in MIXINS clause" mixin-name.id)))))
 		 (clause-recur (cdr input-clause*.stx)))))
-      '())))
+	    (_
+	     (cons (car input-clause*.stx)
+		   (clause-recur (cdr input-clause*.stx)))))
+	'())))
+
+;;; --------------------------------------------------------------------
+
+  (module (%splice-protection-levels)
+
+    (define (%splice-protection-levels clause*.stx synner)
+      (syntax-match clause*.stx ()
+	((?head . ?tail)
+	 (append (syntax-match ?head (public protected private)
+		   ((public    ?clause . ?clause*)	(%splice-clause (public-id)    (cons ?clause ?clause*)))
+		   ((protected ?clause . ?clause*)	(%splice-clause (protected-id) (cons ?clause ?clause*)))
+		   ((private   ?clause . ?clause*)	(%splice-clause (private-id)   (cons ?clause ?clause*)))
+		   (?clause				(list ?clause))
+		   (_
+		    (synner "internal error, invalid clause" ?head)))
+		 (%splice-protection-levels ?tail synner)))
+	(()
+	 '())))
+
+    (define (%splice-clause protection.id clause*.stx)
+      (syntax-match clause*.stx ()
+	((?head . ?tail)
+	 (cons (syntax-match ?head (fields method virtual-method seal-method)
+		 ((fields         . ?field-spec*)	(cons* (fields-id)         protection.id ?field-spec*))
+		 ((method         . ?stuff)		(cons* (method-id)         protection.id ?stuff))
+		 ((virtual-method . ?stuff)		(cons* (virtual-method-id) protection.id ?stuff))
+		 ((seal-method    . ?stuff)		(cons* (seal-method-id)    protection.id ?stuff))
+		 (?clause				?clause))
+	       (%splice-clause protection.id ?tail)))
+	(()
+	 '())))
+
+    #| end of modoule: %SPLICE-PROTECTION-LEVELS |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (%check-that-there-are-no-invalid-protection-levels)
+
+    (define (%check-that-there-are-no-invalid-protection-levels clause*.stx synner)
+    (syntax-match clause*.stx ()
+      (()
+       (void))
+      ((?head . ?tail)
+       (syntax-match ?head (fields method virtual-method seal-method)
+	 ((fields . ?stuff)
+	  (%check-stuff-for-double ?head ?stuff synner))
+
+	 ((method . ?stuff)
+	  (%check-stuff-for-double ?head ?stuff synner))
+
+	 ((virtual-method . ?stuff)
+	  (%check-stuff-for-double ?head ?stuff synner))
+
+	 ((seal-method . ?stuff)
+	  (%check-stuff-for-double ?head ?stuff synner))
+
+	 ((_ ?thing . ?rest)
+	  (protection-level-id? ?thing)
+	  (synner "found protection level specification in clause not supporting it" ?head))
+
+	 (_
+	  (%check-that-there-are-no-invalid-protection-levels ?tail synner))))))
+
+    (define (%check-stuff-for-double head.stx stuff.stx synner)
+      (syntax-match stuff.stx ()
+	((?thing1 ?thing2 . ?rest)
+	 (and (identifier? ?thing1)
+	      (identifier? ?thing2))
+	 (when (and (protection-level-id? ?thing1)
+		    (protection-level-id? ?thing2))
+	   (synner "while processing DEFINE-RECORD-TYPE, found double protection level specification" head.stx)))
+	(_
+	 (void))))
+
+    #| end of module: %CHECK-THAT-THERE-ARE-NO-INVALID-PROTECTION-LEVELS |# )
+
+  #| end of module: %PREPROCESS-INPUT-CLAUSES |# )
 
 
 ;;;; basic parsing functions
@@ -572,9 +698,9 @@
        (loop ?clauses iface*)))))
 
 
-(define (%parse-fields-clauses clause*.stx foo foo-for-id-generation parent-virtual-method-signatures-alist synner)
-  ;;Given the definition  clauses CLAUSE* extract the FIELDS clauses  and parse them.
-  ;;Return the following values:
+(module (%parse-fields-clauses)
+  ;;Given the  definition clauses  CLAUSE*.STX extract the  FIELDS clauses  and parse
+  ;;them.  Return the following values:
   ;;
   ;;1. FIELD-NAME*.SYM:  a list of symbols  representing all the field  names, in the
   ;;same order in which the FIELDS clauses appear in the record-type definition.
@@ -599,52 +725,287 @@
   ;;the unsafe  mutators.  This list  holds #f in  the position of  immutable fields.
   ;;This list has one item for each item in UNSAFE-FIELD-ACCESSOR*.
   ;;
-  ;;8. FIELD-METHODS-ALIST: an alist having:  as keys, symbols representing the field
-  ;;names; as  values, syntactic  identifiers that  will be bound  to the  safe field
-  ;;accessor/mutator methods.
+  ;;8. FIELD-METHODS-ALIST-PUBLIC: alist  for public fields having:  as keys, symbols
+  ;;representing the field names; as values, syntactic identifiers that will be bound
+  ;;to the safe field accessor/mutator methods.
   ;;
-  ;;9.   FIELDS-VECTOR-SPEC: a  vector to  be used  as FIELDS  argument for  the core
+  ;;9.  FIELD-METHODS-ALIST-PROTECTED:  alist for  protected fields having:  as keys,
+  ;;symbols representing the field names;  as values, syntactic identifiers that will
+  ;;be bound to the safe field accessor/mutator methods.
+  ;;
+  ;;10.   FIELD-METHODS-ALIST-PRIVATE:  alist for  private  fields  having: as  keys,
+  ;;symbols representing the field names;  as values, syntactic identifiers that will
+  ;;be bound to the safe field accessor/mutator methods.
+  ;;
+  ;;11.  FIELDS-VECTOR-SPEC:  a vector  to be  used as FIELDS  argument for  the core
   ;;primitive function MAKE-RECORD-TYPE-DESCRIPTOR.
   ;;
   ;;Here we assume that FIELD-CLAUSE* is null or a proper list.
   ;;
-  (define fields-clause*
+  (define (%parse-fields-clauses clause*.stx foo foo-for-id-generation parent-virtual-method-signatures-alist synner)
+    (define fields-clause*
+      (%parse-clauses clause*.stx synner))
+
+    (define (%gen-safe-accessor-name field-name.id)
+      (identifier-append foo foo-for-id-generation "-" field-name.id))
+    (define (%gen-unsafe-accessor-name field-name.id)
+      (identifier-append foo "$" foo-for-id-generation "-" field-name.id))
+    (define (%gen-safe-mutator-name field-name.id)
+      (identifier-append foo foo-for-id-generation "-" field-name.id "-set!"))
+    (define (%gen-unsafe-mutator-name field-name.id)
+      (identifier-append foo "$" foo-for-id-generation "-" field-name.id "-set!"))
+    (define (%gen-safe-method-name field-name.id)
+      (identifier-append foo foo-for-id-generation "-" field-name.id "-method"))
+
+    (let loop ((fields-clause*			fields-clause*)
+	       (i				0)
+	       (field-name*.sym			'())
+	       (field-relative-idx*		'())
+	       (field-type*.ann			'())
+	       (safe-field-accessor*		'())
+	       (unsafe-field-accessor*		'())
+	       (safe-field-mutator*		'())
+	       (unsafe-field-mutator*		'())
+	       (field-methods-alist-public	'())
+	       (field-methods-alist-protected	'())
+	       (field-methods-alist-private	'())
+	       (fields-vector-spec*		'()))
+      (define-syntax-rule (%%parse-typed-field ?name)
+	(%parse-typed-field ?name field-name*.sym parent-virtual-method-signatures-alist synner))
+      (syntax-match fields-clause* (mutable immutable)
+	(()
+	 (values (reverse field-name*.sym)
+		 (reverse field-relative-idx*)
+		 (reverse field-type*.ann)
+		 (reverse safe-field-accessor*)
+		 (reverse unsafe-field-accessor*)
+		 (reverse safe-field-mutator*)
+		 (reverse unsafe-field-mutator*)
+		 (reverse field-methods-alist-public)
+		 (reverse field-methods-alist-protected)
+		 (reverse field-methods-alist-private)
+		 (list->vector (reverse fields-vector-spec*))))
+
+	(((?protection mutable ?name ?accessor ?mutator) . ?rest)
+	 (and (identifier? ?accessor)
+	      (identifier? ?mutator))
+	 (receive (field-name.id field-name.sym field-type.ann)
+	     (%%parse-typed-field ?name)
+	   (let ((field-method-entry (cons field-name.sym (%gen-safe-method-name field-name.id))))
+	     (loop ?rest (fxadd1 i)
+		   (cons field-name.sym field-name*.sym)
+		   (cons i field-relative-idx*)
+		   (cons field-type.ann field-type*.ann)
+		   (cons ?accessor safe-field-accessor*)
+		   (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
+		   (cons ?mutator safe-field-mutator*)
+		   (cons (%gen-unsafe-mutator-name  field-name.id) unsafe-field-mutator*)
+		   ;;FIELD-METHODS-ALIST-PUBLIC
+		   (if (eq? ?protection 0)
+		       (cons field-method-entry field-methods-alist-public)
+		     field-methods-alist-public)
+		   ;;FIELD-METHODS-ALIST-PROTECTED
+		   (if (or (eq? ?protection 0)
+			   (eq? ?protection 1))
+		       (cons field-method-entry field-methods-alist-protected)
+		     field-methods-alist-protected)
+		   ;;FIELD-METHODS-ALIST-PRIVATE
+		   (cons field-method-entry field-methods-alist-private)
+		   (cons `(mutable ,field-name.id) fields-vector-spec*)))))
+
+	(((?protection immutable ?name ?accessor) . ?rest)
+	 (identifier? ?accessor)
+	 (receive (field-name.id field-name.sym field-type.ann)
+	     (%%parse-typed-field ?name)
+	   (let ((field-method-entry (cons field-name.sym (%gen-safe-method-name field-name.id))))
+	     (loop ?rest (fxadd1 i)
+		   (cons field-name.sym field-name*.sym)
+		   (cons i field-relative-idx*)
+		   (cons field-type.ann field-type*.ann)
+		   (cons ?accessor safe-field-accessor*)
+		   (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
+		   (cons #f safe-field-mutator*)
+		   (cons #f unsafe-field-mutator*)
+		   ;;FIELD-METHODS-ALIST-PUBLIC
+		   (if (eq? ?protection 0)
+		       (cons field-method-entry field-methods-alist-public)
+		     field-methods-alist-public)
+		   ;;FIELD-METHODS-ALIST-PROTECTED
+		   (if (or (eq? ?protection 0)
+			   (eq? ?protection 1))
+		       (cons field-method-entry field-methods-alist-protected)
+		     field-methods-alist-protected)
+		   ;;FIELD-METHODS-ALIST-PRIVATE
+		   (cons field-method-entry field-methods-alist-private)
+		   (cons `(immutable ,field-name.id) fields-vector-spec*)))))
+
+	(((?protection mutable   ?name) . ?rest)
+	 (receive (field-name.id field-name.sym field-type.ann)
+	     (%%parse-typed-field ?name)
+	   (let ((field-method-entry (cons field-name.sym (%gen-safe-method-name field-name.id))))
+	     (loop ?rest (fxadd1 i)
+		   (cons field-name.sym field-name*.sym)
+		   (cons i field-relative-idx*)
+		   (cons field-type.ann field-type*.ann)
+		   (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
+		   (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
+		   (cons (%gen-safe-mutator-name    field-name.id) safe-field-mutator*)
+		   (cons (%gen-unsafe-mutator-name  field-name.id) unsafe-field-mutator*)
+		   ;;FIELD-METHODS-ALIST-PUBLIC
+		   (if (eq? ?protection 0)
+		       (cons field-method-entry field-methods-alist-public)
+		     field-methods-alist-public)
+		   ;;FIELD-METHODS-ALIST-PROTECTED
+		   (if (or (eq? ?protection 0)
+			   (eq? ?protection 1))
+		       (cons field-method-entry field-methods-alist-protected)
+		     field-methods-alist-protected)
+		   ;;FIELD-METHODS-ALIST-PRIVATE
+		   (cons field-method-entry field-methods-alist-private)
+		   (cons `(mutable ,field-name.id) fields-vector-spec*)))))
+
+	(((?protection immutable ?name) . ?rest)
+	 (receive (field-name.id field-name.sym field-type.ann)
+	     (%%parse-typed-field ?name)
+	   (let ((field-method-entry (cons field-name.sym (%gen-safe-method-name field-name.id))))
+	     (loop ?rest (fxadd1 i)
+		   (cons field-name.sym field-name*.sym)
+		   (cons i field-relative-idx*)
+		   (cons field-type.ann field-type*.ann)
+		   (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
+		   (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
+		   (cons #f safe-field-mutator*)
+		   (cons #f unsafe-field-mutator*)
+		   ;;FIELD-METHODS-ALIST-PUBLIC
+		   (if (eq? ?protection 0)
+		       (cons field-method-entry field-methods-alist-public)
+		     field-methods-alist-public)
+		   ;;FIELD-METHODS-ALIST-PROTECTED
+		   (if (or (eq? ?protection 0)
+			   (eq? ?protection 1))
+		       (cons field-method-entry field-methods-alist-protected)
+		     field-methods-alist-protected)
+		   ;;FIELD-METHODS-ALIST-PRIVATE
+		   (cons field-method-entry field-methods-alist-private)
+		   (cons `(immutable ,field-name.id) fields-vector-spec*)))))
+
+	(((?protection . ?name) . ?rest)
+	 (receive (field-name.id field-name.sym field-type.ann)
+	     (%%parse-typed-field ?name)
+	   (let ((field-method-entry (cons field-name.sym (%gen-safe-method-name field-name.id))))
+	     (loop ?rest (fxadd1 i)
+		   (cons field-name.sym field-name*.sym)
+		   (cons i field-relative-idx*)
+		   (cons field-type.ann field-type*.ann)
+		   (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
+		   (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
+		   (cons #f safe-field-mutator*)
+		   (cons #f unsafe-field-mutator*)
+		   ;;FIELD-METHODS-ALIST-PUBLIC
+		   (if (eq? ?protection 0)
+		       (cons field-method-entry field-methods-alist-public)
+		     field-methods-alist-public)
+		   ;;FIELD-METHODS-ALIST-PROTECTED
+		   (if (or (eq? ?protection 0)
+			   (eq? ?protection 1))
+		       (cons field-method-entry field-methods-alist-protected)
+		     field-methods-alist-protected)
+		   ;;FIELD-METHODS-ALIST-PRIVATE
+		   (cons field-method-entry field-methods-alist-private)
+		   (cons `(immutable ,field-name.id) fields-vector-spec*)))))
+
+	(((?protection . ?spec) . ?rest)
+	 (synner "invalid field specification in DEFINE-RECORD-TYPE syntax" ?spec)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%parse-clauses clause*.stx synner)
+    ;;Given the  full input  clauses in  CLAUSE*.STX, select  the FIELDS  clauses and
+    ;;splice them into a list of syntax objects, each having one of the formats:
+    ;;
+    ;;   (?protection ?field-name)
+    ;;   (?protection (immutable ?field-name ?accessor)
+    ;;   (?protection (mutable ?field-name ?accessor ?mutator)
+    ;;   (?protection (brace ?field-name ?type-ann))
+    ;;   (?protection (immutable (brace ?field-name ?type-ann) ?accessor)
+    ;;   (?protection (mutable (brace ?field-name ?type-ann) ?accessor ?mutator)
+    ;;
+    ;;where ?PROTECTION is a fixnum: 0 for public, 1 for protected, 2 for private.
+    ;;
+    ;;Return the spliced list.
+    ;;
     (let loop ((clause*.stx	clause*.stx)
 	       (field-spec**	'()))
-      (syntax-match clause*.stx (fields)
+      (syntax-match clause*.stx (fields public protected private)
 	(()
 	 (if (options::strict-r6rs-enabled?)
 	     (if (pair? field-spec**)
 		 ;;If there is only one list of field specs, fine; otherwise raise an
 		 ;;error.
-		 (if (null? (cdr field-spec**))
-		     (car field-spec**)
+		 (if (list-of-single-item? field-spec**)
+		     (let* ((field-spec*	(car field-spec**))
+			    (protection		(car field-spec*))
+			    (spec*		(cdr field-spec*)))
+		       (map (lambda (spec)
+			      (cons protection spec))
+			 spec*))
 		   (synner "invalid multiple FIELDS clauses in strict-R6RS language"
-			   (let ((fields.id (core-prim-id 'fields)))
-			     (map (lambda (field-spec*)
-				    (cons fields.id field-spec*))
-			       field-spec**))))
+			   (map (lambda (field-spec*)
+				  (cons (fields-id) field-spec*))
+			     field-spec**)))
 	       '())
 	   ;;Non-strict language: we accept any number of FIELDS clauses.
 	   (if (pair? field-spec**)
-	       (apply append (reverse field-spec**))
+	       (fold-left (lambda (knil field-spec*)
+			    (let ((protection	(car field-spec*))
+				  (spec*	(cdr field-spec*)))
+			      (append (map (lambda (spec)
+					     (cons protection spec))
+					spec*)
+				      knil)))
+		 '() field-spec**)
 	     '())))
+
+	(((fields public ?field-spec* ...) . ?clauses)
+	 ;;If the language is not typed: we accept fields with name PUBLIC, otherwise
+	 ;;it is a protection level specifier.
+	 (options::typed-language-enabled?)
+	 (loop ?clauses (cons (cons 0 ?field-spec*) field-spec**)))
+
+	(((fields protected ?field-spec* ...) . ?clauses)
+	 ;;If  the language  is  not typed:  we accept  fields  with name  PROTECTED,
+	 ;;otherwise it is a protection level specifier.
+	 (options::typed-language-enabled?)
+	 (loop ?clauses (cons (cons 1 ?field-spec*) field-spec**)))
+
+	(((fields private ?field-spec* ...) . ?clauses)
+	 ;;If  the  language is  not  typed:  we  accept  fields with  name  PRIVATE,
+	 ;;otherwise it is a protection level specifier.
+	 (options::typed-language-enabled?)
+	 (loop ?clauses (cons (cons 2 ?field-spec*) field-spec**)))
+
 	(((fields ?field-spec* ...) . ?clauses)
-	 (loop ?clauses (cons ?field-spec* field-spec**)))
+	 (loop ?clauses (cons (cons 0 ?field-spec*) field-spec**)))
+
 	((_ . ?clauses)
 	 (loop ?clauses field-spec**)))))
-  (define (%gen-safe-accessor-name field-name.id)
-    (identifier-append foo foo-for-id-generation "-" field-name.id))
-  (define (%gen-unsafe-accessor-name field-name.id)
-    (identifier-append foo "$" foo-for-id-generation "-" field-name.id))
-  (define (%gen-safe-mutator-name field-name.id)
-    (identifier-append foo foo-for-id-generation "-" field-name.id "-set!"))
-  (define (%gen-unsafe-mutator-name field-name.id)
-    (identifier-append foo "$" foo-for-id-generation "-" field-name.id "-set!"))
-  (define (%gen-safe-method-name field-name.id)
-    (identifier-append foo foo-for-id-generation "-" field-name.id "-method"))
 
-  (define (%parse-typed-field field-name.stx field-name*.sym)
+;;; --------------------------------------------------------------------
+
+  (define (%parse-typed-field field-name.stx field-name*.sym parent-virtual-method-signatures-alist synner)
+    ;;Given a typed field name  specification in FIELD-NAME.STX, return the following
+    ;;values:
+    ;;
+    ;;1. A syntactic identifier representing the field name.
+    ;;
+    ;;2. A symbol representing the field name.
+    ;;
+    ;;3. A syntax object representing the  type annotation.  This defaults to "<top>"
+    ;;when no annotation is present in the input form.
+    ;;
+    ;;Check that there are no duplicate field  names.  Check that there are no fields
+    ;;with the same name of a parent's virtual or sealed method.
+    ;;
     (receive-and-return (field-name.id field-name.sym field-type.ann)
 	(syntax-match field-name.stx (brace)
 	  ((brace ?id ?type)
@@ -659,104 +1020,8 @@
 	      parent-virtual-method-signatures-alist)
 	(synner "forbidden field with name equal to a virtual or sealed parent's method" field-name.id))))
 
-  (let loop ((fields-clause*			fields-clause*)
-	     (i					0)
-	     (field-name*.sym			'())
-	     (field-relative-idx*		'())
-	     (field-type*.ann			'())
-	     (safe-field-accessor*		'())
-	     (unsafe-field-accessor*		'())
-	     (safe-field-mutator*		'())
-	     (unsafe-field-mutator*		'())
-	     (field-methods-alist		'())
-	     (fields-vector-spec*		'()))
-    (syntax-match fields-clause* (mutable immutable)
-      (()
-       (values (reverse field-name*.sym)
-	       (reverse field-relative-idx*)
-	       (reverse field-type*.ann)
-	       (reverse safe-field-accessor*)
-	       (reverse unsafe-field-accessor*)
-	       (reverse safe-field-mutator*)
-	       (reverse unsafe-field-mutator*)
-	       (reverse field-methods-alist)
-	       (list->vector (reverse fields-vector-spec*))))
 
-      (((mutable   ?name ?accessor ?mutator) . ?rest)
-       (and (identifier? ?accessor)
-	    (identifier? ?mutator))
-       (receive (field-name.id field-name.sym field-type.ann)
-	   (%parse-typed-field ?name field-name*.sym)
-	 (loop ?rest (fxadd1 i)
-	       (cons field-name.sym field-name*.sym)
-	       (cons i field-relative-idx*)
-	       (cons field-type.ann field-type*.ann)
-	       (cons ?accessor safe-field-accessor*)
-	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
-	       (cons ?mutator safe-field-mutator*)
-	       (cons (%gen-unsafe-mutator-name  field-name.id) unsafe-field-mutator*)
-	       (cons (cons field-name.sym (%gen-safe-method-name field-name.id)) field-methods-alist)
-	       (cons `(mutable ,field-name.id) fields-vector-spec*))))
-
-      (((immutable ?name ?accessor) . ?rest)
-       (identifier? ?accessor)
-       (receive (field-name.id field-name.sym field-type.ann)
-	   (%parse-typed-field ?name field-name*.sym)
-	 (loop ?rest (fxadd1 i)
-	       (cons field-name.sym field-name*.sym)
-	       (cons i field-relative-idx*)
-	       (cons field-type.ann field-type*.ann)
-	       (cons ?accessor safe-field-accessor*)
-	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
-	       (cons #f safe-field-mutator*)
-	       (cons #f unsafe-field-mutator*)
-	       (cons (cons field-name.sym (%gen-safe-method-name field-name.id)) field-methods-alist)
-	       (cons `(immutable ,field-name.id) fields-vector-spec*))))
-
-      (((mutable   ?name) . ?rest)
-       (receive (field-name.id field-name.sym field-type.ann)
-	   (%parse-typed-field ?name field-name*.sym)
-	 (loop ?rest (fxadd1 i)
-	       (cons field-name.sym field-name*.sym)
-	       (cons i field-relative-idx*)
-	       (cons field-type.ann field-type*.ann)
-	       (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
-	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
-	       (cons (%gen-safe-mutator-name    field-name.id) safe-field-mutator*)
-	       (cons (%gen-unsafe-mutator-name  field-name.id) unsafe-field-mutator*)
-	       (cons (cons field-name.sym (%gen-safe-method-name field-name.id)) field-methods-alist)
-	       (cons `(mutable ,field-name.id) fields-vector-spec*))))
-
-      (((immutable ?name) . ?rest)
-       (receive (field-name.id field-name.sym field-type.ann)
-	   (%parse-typed-field ?name field-name*.sym)
-	 (loop ?rest (fxadd1 i)
-	       (cons field-name.sym field-name*.sym)
-	       (cons i field-relative-idx*)
-	       (cons field-type.ann field-type*.ann)
-	       (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
-	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
-	       (cons #f safe-field-mutator*)
-	       (cons #f unsafe-field-mutator*)
-	       (cons (cons field-name.sym (%gen-safe-method-name field-name.id)) field-methods-alist)
-	       (cons `(immutable ,field-name.id) fields-vector-spec*))))
-
-      ((?name . ?rest)
-       (receive (field-name.id field-name.sym field-type.ann)
-	   (%parse-typed-field ?name field-name*.sym)
-	 (loop ?rest (fxadd1 i)
-	       (cons field-name.sym field-name*.sym)
-	       (cons i field-relative-idx*)
-	       (cons field-type.ann field-type*.ann)
-	       (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
-	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
-	       (cons #f safe-field-mutator*)
-	       (cons #f unsafe-field-mutator*)
-	       (cons (cons field-name.sym (%gen-safe-method-name field-name.id)) field-methods-alist)
-	       (cons `(immutable ,field-name.id) fields-vector-spec*))))
-
-      ((?spec . ?rest)
-       (synner "invalid field specification in DEFINE-RECORD-TYPE syntax" ?spec)))))
+  #| end of module: %PARSE-FIELDS-CLAUSES |# )
 
 
 (define (%make-unsafe-accessor+mutator-code foo foo-rtd
@@ -1372,9 +1637,20 @@
   ;;instances  representing  the  specifications;  perform some  validations  on  the
   ;;specifications; finally build and return the following values:
   ;;
-  ;;* EARLY-BINDING-METHODS-ALIST an alist having:  as keys, symbols representing the
-  ;;method names,  including the field  names; as values, syntactic  identifiers that
-  ;;will be bound to the method implementation procedures, including field methods.
+  ;;* EARLY-BINDING-METHODS-ALIST-PUBLIC an alist for public methods having: as keys,
+  ;;symbols  representing the  method names,  including the  field names;  as values,
+  ;;syntactic identifiers that will be bound to the method implementation procedures,
+  ;;including public field methods.
+  ;;
+  ;;* EARLY-BINDING-METHODS-ALIST-PROTECTED an alist for protected methods having: as
+  ;;keys, symbols representing the method names, including the protected field names;
+  ;;as values, syntactic identifiers that will  be bound to the method implementation
+  ;;procedures, including protected field methods.
+  ;;
+  ;;*  EARLY-BINDING-METHODS-ALIST-PRIVATE an  alist for  private methods  having: as
+  ;;keys, symbols representing  the method names, including the  private field names;
+  ;;as values, syntactic identifiers that will  be bound to the method implementation
+  ;;procedures, including private field methods.
   ;;
   ;;*  METHOD-FORM*.SEXP, a  list of  forms  representing the  definitions of  method
   ;;implementation procedures and related stuff.
@@ -1397,7 +1673,10 @@
   (define (%parse-method-clauses clause*.stx
 				 foo foo-for-id-generation
 				 parent-rtd.id parent-virtual-method-signatures-alist
-				 field-methods-alist synner)
+				 field-methods-alist-public
+				 field-methods-alist-protected
+				 field-methods-alist-private
+				 synner)
     ;;The arguments are:
     ;;
     ;;FOO, the syntactic identifier representing the record-type name.
@@ -1419,10 +1698,11 @@
     ;;
     (let* ((method-spec*	(%parse-clauses clause*.stx foo foo-for-id-generation synner))
 	   (group*		(%partition-method-specs method-spec*)))
-      (%check-that-no-method-has-the-same-name-of-a-field group* field-methods-alist synner)
-      (%check-that-methods-with-the-same-name-have-homogeneous-type group* synner)
+      (%check-that-no-method-has-the-same-name-of-a-field group* field-methods-alist-private synner)
+      (%check-that-methods-with-the-same-name-have-homogeneous-type-and-protection group* synner)
       (%check-that-parent-sealed-methods-are-not-overridden group* parent-virtual-method-signatures-alist synner)
-      (%process-method-specs group* foo field-methods-alist
+      (%process-method-specs group* foo
+			     field-methods-alist-public field-methods-alist-protected field-methods-alist-private
 			     parent-rtd.id parent-virtual-method-signatures-alist
 			     synner)))
 
@@ -1454,15 +1734,20 @@
 		    (synner "forbidden method with name equal to a field name" method-name.sym))))
       group*))
 
-  (define (%check-that-methods-with-the-same-name-have-homogeneous-type group* synner)
+  (define (%check-that-methods-with-the-same-name-have-homogeneous-type-and-protection group* synner)
     (for-each (lambda (group)
-		(let* ((head (car group))
-		       (tail (cdr group)))
-		  (unless (for-all (cond ((<virtual-method-spec>? head)	<virtual-method-spec>?)
-					 ((<seal-method-spec>?    head)	<seal-method-spec>?)
-					 (else				<concrete-method-spec>?))
-			    tail)
-		    (synner "forbidden methods with the same name but different type" (<method-spec>-name-sym head)))))
+		(let* ((head		(car group))
+		       (tail		(cdr group))
+		       (spec-pred	(cond ((<virtual-method-spec>? head)	<virtual-method-spec>?)
+					      ((<seal-method-spec>?    head)	<seal-method-spec>?)
+					      (else				<concrete-method-spec>?)))
+		       (head-protection	(<method-spec>-protection head)))
+		  (for-all (lambda (spec)
+			     (unless (spec-pred spec)
+			       (synner "forbidden methods with the same name but different type" (<method-spec>-name-sym head)))
+			     (unless (eq? head-protection (<method-spec>-protection spec))
+			       (synner "forbidden methods with the same name but different protection level" (<method-spec>-name-sym head))))
+		    tail)))
       group*))
 
   (define (%check-that-parent-sealed-methods-are-not-overridden group* parent-virtual-method-signatures-alist synner)
@@ -1495,6 +1780,8 @@
 		;A syntactic identifier representing the method name.
       (immutable	name-sym)
 		;A symbol representing the method name.
+      (immutable	protection)
+		;One of the symbols: public, protected private.
       (immutable	early-binding-procname)
 		;The syntactic  identifier that  will be bound  to the  early binding
 		;method implementation procedure.
@@ -1522,9 +1809,9 @@
 
     (protocol
       (lambda (make-record)
-	(lambda (name-id name-sym early-binding-procname early-binding-meat late-binding-procname late-binding-meat
+	(lambda (name-id name-sym protection early-binding-procname early-binding-meat late-binding-procname late-binding-meat
 		    closure.ots)
-	  (make-record name-id name-sym
+	  (make-record name-id name-sym protection
 		       early-binding-procname early-binding-meat
 		       late-binding-procname late-binding-meat
 		       closure.ots)))))
@@ -1561,25 +1848,35 @@
 	'()))
 
     (define (%parse-single-clause clause.stx foo foo-for-id-generation synner)
-      (syntax-match clause.stx (brace)
-	((?keyword (?who . ?formals) ?body0 ?body* ...)
-	 (identifier? ?who)
-	 (%process-clause-contents foo foo-for-id-generation ?keyword
-				   (identifier->symbol ?who) ?who
-				   #f ?formals `(,?body0 . ,?body*)
-				   synner))
+      (receive (clause.stx protection)
+	  (syntax-match clause.stx (private public protected)
+	    ((?keyword public . ?stuff)
+	     (values (cons ?keyword ?stuff) 'public))
+	    ((?keyword protected . ?stuff)
+	     (values (cons ?keyword ?stuff) 'protected))
+	    ((?keyword private . ?stuff)
+	     (values (cons ?keyword ?stuff) 'private))
+	    (_
+	     (values clause.stx 'public)))
+	(syntax-match clause.stx (brace)
+	  ((?keyword (?who . ?formals) ?body0 ?body* ...)
+	   (identifier? ?who)
+	   (%process-clause-contents foo foo-for-id-generation ?keyword protection
+				     (identifier->symbol ?who) ?who
+				     #f ?formals `(,?body0 . ,?body*)
+				     synner))
 
-	((?keyword ((brace ?who ?rv-tag0 . ?rv-tag*) . ?formals) ?body0 . ?body*)
-	 (identifier? ?who)
-	 (%process-clause-contents foo foo-for-id-generation ?keyword
-				   (identifier->symbol ?who) ?who
-				   `(,?rv-tag0 . ,?rv-tag*) ?formals `(,?body0 . ,?body*)
-				   synner))
+	  ((?keyword ((brace ?who ?rv-tag0 . ?rv-tag*) . ?formals) ?body0 . ?body*)
+	   (identifier? ?who)
+	   (%process-clause-contents foo foo-for-id-generation ?keyword protection
+				     (identifier->symbol ?who) ?who
+				     `(,?rv-tag0 . ,?rv-tag*) ?formals `(,?body0 . ,?body*)
+				     synner))
 
-	(_
-	 (synner "invalid syntax in method clause" clause.stx))))
+	  (_
+	   (synner "invalid syntax in method clause" clause.stx)))))
 
-    (define (%process-clause-contents foo foo-for-id-generation keyword.id
+    (define (%process-clause-contents foo foo-for-id-generation keyword.id protection
 				      method-name.sym method-name.id retvals.stx formals.stx body*.stx
 				      synner)
       (let* ((early-method-procname.id	(%mk-method-procname-id foo-for-id-generation method-name.sym "-early"))
@@ -1591,6 +1888,7 @@
 			     `(brace ,early-method-procname.id . ,retvals.stx)
 			   early-method-procname.id)))
 	    `((,lhs.stx {,subject.id ,foo} . ,formals.stx)
+	      (typed-variable-with-private-access! ,subject.id)
 	      (fluid-let-syntax ((this (identifier-syntax ,subject.id)))
 		. ,body*.stx))))
 
@@ -1614,17 +1912,17 @@
 
 	(case (identifier->symbol keyword.id)
 	  ((method)
-	   (make-<concrete-method-spec> method-name.id method-name.sym
+	   (make-<concrete-method-spec> method-name.id method-name.sym protection
 					early-method-procname.id early-binding-implementation-form.sexp
 					late-method-procname.id   late-binding-implementation-form.sexp
 					closure.ots))
 	  ((virtual-method)
-	   (make-<virtual-method-spec> method-name.id method-name.sym
+	   (make-<virtual-method-spec> method-name.id method-name.sym protection
 				       early-method-procname.id early-binding-implementation-form.sexp
 				       late-method-procname.id   late-binding-implementation-form.sexp
 				       closure.ots))
 	  ((seal-method)
-	   (make-<seal-method-spec> method-name.id method-name.sym
+	   (make-<seal-method-spec> method-name.id method-name.sym protection
 				    early-method-procname.id early-binding-implementation-form.sexp
 				    late-method-procname.id   late-binding-implementation-form.sexp
 				    closure.ots))
@@ -1648,12 +1946,18 @@
 
   (module (%process-method-specs)
 
-    (define (%process-method-specs init-group* foo field-methods-alist
+    (define (%process-method-specs init-group* foo
+				   field-methods-alist-public field-methods-alist-protected field-methods-alist-private
 				   parent-rtd.id parent-virtual-method-signatures-alist
 				   synner)
       ;;Process the method specifications, return the following values:
       ;;
-      ;;* EARLY-BINDING-METHODS-ALIST, the return value of the whole module.
+      ;;* EARLY-BINDING-METHODS-ALIST-PUBLIC, the return value of the whole module.
+      ;;
+      ;;*  EARLY-BINDING-METHODS-ALIST-PROTECTED,  the  return  value  of  the  whole
+      ;;module.
+      ;;
+      ;;* EARLY-BINDING-METHODS-ALIST-PRIVATE, the return value of the whole module.
       ;;
       ;;* METHOD-FORM*.SEXP, the return value of the whole module.
       ;;
@@ -1665,10 +1969,17 @@
       ;;
 
       ;;Build the methods alist and the definitions forms.
-      (let loop ((group*			init-group*)
-		 (early-binding-methods-alist	field-methods-alist)
-		 (late-binding-methods-alist	field-methods-alist)
-		 (method-form*.sexp		'()))
+      (let loop ((group*				init-group*)
+		 ;;Only the public methods go in the public methods alist.
+		 (early-binding-methods-alist-public	field-methods-alist-public)
+		 ;;Both the public and protected  methods go in the protected methods
+		 ;;alist.
+		 (early-binding-methods-alist-protected	field-methods-alist-protected)
+		 ;;All the methods go in the private alist.
+		 (early-binding-methods-alist-private	field-methods-alist-private)
+		 ;;Only the public methods go in the late-binding alist.
+		 (late-binding-methods-alist		field-methods-alist-public)
+		 (method-form*.sexp			'()))
 	(if (pair? group*)
 	    (let* ((group	(car group*))
 		   (virtual?	(or (<virtual-method-spec>? (car group))
@@ -1677,82 +1988,135 @@
 						(and (eq? method-name.sym (car entry))
 						     (cdr entry)
 						     #t))
-					parent-virtual-method-signatures-alist)))))
-	      (receive (early-binding-methods-entry late-binding-methods-entry form*.sexp)
-		  (if (list-of-single-item? group)
-		      (%process-method-group-with-single-item (car group) virtual?)
-		    (%process-method-group-with-multiple-items group virtual?))
-		(loop (cdr group*)
-		      (cons early-binding-methods-entry	early-binding-methods-alist)
-		      (cons late-binding-methods-entry	late-binding-methods-alist)
-		      (append form*.sexp		method-form*.sexp))))
+					parent-virtual-method-signatures-alist))))
+		   (protection	(<method-spec>-protection (car group))))
+	      (if (list-of-single-item? group)
+		  (%process-method-group-with-single-item (car group) virtual? protection
+							  early-binding-methods-alist-public
+							  early-binding-methods-alist-protected
+							  early-binding-methods-alist-private
+							  late-binding-methods-alist
+							  method-form*.sexp
+							  (lambda (a b c d e)
+							    (loop (cdr group*) a b c d e)))
+		(%process-method-group-with-multiple-items group virtual? protection
+							   early-binding-methods-alist-public
+							   early-binding-methods-alist-protected
+							   early-binding-methods-alist-private
+							   late-binding-methods-alist
+							   method-form*.sexp
+							   (lambda (a b c d e)
+							     (loop (cdr group*) a b c d e)))))
 	  ;;No more groups.
-	  (values early-binding-methods-alist method-form*.sexp
+	  (values early-binding-methods-alist-public
+		  early-binding-methods-alist-protected
+		  early-binding-methods-alist-private
+		  method-form*.sexp
 		  (%make-method-retriever-code foo parent-rtd.id late-binding-methods-alist)
 		  (%make-virtual-method-signatures-alist init-group* parent-virtual-method-signatures-alist synner)))))
 
     ;;; --------------------------------------------------------------------
 
-    (define (%process-method-group-with-single-item single virtual?)
+    (define (%process-method-group-with-single-item single virtual? protection
+						    early-binding-methods-alist-public
+						    early-binding-methods-alist-protected
+						    early-binding-methods-alist-private
+						    late-binding-methods-alist
+						    method-form*.sexp kont)
       ;;VIRTUAL? is true if the parent record-type has a virtual method with the same
       ;;name.  When VIRTUAL?  is true: this method  is virtual too, even  when it was
       ;;defined using METHOD rather than VIRTUAL-METHOD.
       ;;
-      (if virtual?
-	  ;;This is a virtual method
-	  (values
-	   ;;EARLY-BINDING-METHODS-ENTRY, this  will go  in the methods-table  of the
-	   ;;record-type specification.
-	   (cons (<method-spec>-name-sym single) (<method-spec>-late-binding-procname  single))
-	   ;;LATE-BINDING-METHODS-ENTRY,    this   will    go    in   the    run-time
-	   ;;method-retriever procedure of the record-type descriptor.
-	   (cons (<method-spec>-name-id  single) (<method-spec>-early-binding-procname single))
-	   ;;FORM*.SEXP
-	   (list (cons (core-prim-id 'define/checked) (<method-spec>-early-binding-implementation single))
-		 (cons (core-prim-id 'define/checked) (<method-spec>-late-binding-implementation  single))))
-	;;This is a concrete method.
-	(values
-	 ;;EARLY-BINDING-METHODS-ENTRY,  this will  go  in the  methods-table of  the
-	 ;;record-type specification.
-	 (cons (<method-spec>-name-sym single) (<method-spec>-early-binding-procname single))
-	 ;;LATE-BINDING-METHODS-ENTRY, this will go  in the run-time method-retriever
-	 ;;procedure of the record-type descriptor.
-	 (cons (<method-spec>-name-id  single) (<method-spec>-early-binding-procname single))
-	 ;;FORM*.SEXP
-	 (list (cons (core-prim-id 'define/checked) (<method-spec>-early-binding-implementation single))))))
+      (receive (early-binding-method-entry late-binding-method-entry form*.sexp)
+	  (if virtual?
+	      ;;This is a virtual method.
+	      (values
+	       ;;early-binding-method-entry
+	       (cons (<method-spec>-name-sym single) (<method-spec>-late-binding-procname  single))
+	       ;;late-binding-method-entry
+	       (cons (<method-spec>-name-id  single) (<method-spec>-early-binding-procname single))
+	       ;;form*.sexp
+	       (list (cons (core-prim-id 'define/checked) (<method-spec>-early-binding-implementation single))
+		     (cons (core-prim-id 'define/checked) (<method-spec>-late-binding-implementation  single))))
+	    ;;This is a concrete method.
+	    (values
+	     ;;early-binding-method-entry
+	     (cons (<method-spec>-name-sym single) (<method-spec>-early-binding-procname single))
+	     ;;late-binding-method-entry
+	     (cons (<method-spec>-name-id  single) (<method-spec>-early-binding-procname single))
+	     ;;form*.sexp
+	     (list (cons (core-prim-id 'define/checked) (<method-spec>-early-binding-implementation single)))))
+	(kont
+	 ;;early-binding-methods-alist-public
+	 (if (eq? protection 'public)
+	     (cons early-binding-method-entry early-binding-methods-alist-public)
+	   early-binding-methods-alist-public)
+	 ;;early-binding-methods-alist-protected
+	 (if (or (eq? protection 'public)
+		 (eq? protection 'private))
+	     (cons early-binding-method-entry early-binding-methods-alist-protected)
+	   early-binding-methods-alist-protected)
+	 ;;early-binding-methods-alist-private
+	 (cons early-binding-method-entry early-binding-methods-alist-private)
+	 ;;late-binding-methods-alist
+	 (if (eq? protection 'public)
+	     (cons late-binding-method-entry late-binding-methods-alist)
+	   late-binding-methods-alist)
+	 ;;method-form*.sexp
+	 (append form*.sexp method-form*.sexp))))
 
-    (define (%process-method-group-with-multiple-items group virtual?)
+    (define (%process-method-group-with-multiple-items group virtual? protection
+						       early-binding-methods-alist-public
+						       early-binding-methods-alist-protected
+						       early-binding-methods-alist-private
+						       late-binding-methods-alist
+						       method-form*.sexp kont)
       ;;VIRTUAL? is true if the parent record-type has a virtual method with the same
       ;;name.
       ;;
       (define first (car group))
-      (if virtual?
-	  ;;This is a virtual method
-	  (values
-	   ;;EARLY-BINDING-METHODS-ENTRY, this  will go  in the methods-table  of the
-	   ;;record-type specification.
-	   (cons (<method-spec>-name-sym first) (<method-spec>-late-binding-procname  first))
-	   ;;LATE-BINDING-METHODS-ENTRY,    this   will    go    in   the    run-time
-	   ;;method-retriever procedure of the record-type descriptor.
-	   (cons (<method-spec>-name-id  first) (<method-spec>-early-binding-procname first))
-	   ;;FORM*.SEXP
-	   (fold-left (lambda (knil spec)
-			(cons* (cons (core-prim-id 'define/overload) (<method-spec>-early-binding-implementation spec))
-			       (cons (core-prim-id 'define/overload) (<method-spec>-late-binding-implementation  spec))
-			       knil))
-	     '() group))
-	;;This is a concrete method.
-	(values
-	 ;;EARLY-BINDING-METHODS-ENTRY,  this will  go  in the  methods-table of  the
-	 ;;record-type specification.
-	 (cons (<method-spec>-name-sym first) (<method-spec>-early-binding-procname first))
-	 ;;LATE-BINDING-METHODS-ENTRY, this will go  in the run-time method-retriever
-	 ;;procedure of the record-type descriptor.
-	 (cons (<method-spec>-name-id  first) (<method-spec>-early-binding-procname first))
-	 ;;FORM*.SEXP
-	 (map (lambda (spec)
-		(cons (core-prim-id 'define/overload) (<method-spec>-early-binding-implementation spec)))
-	   group))))
+      (receive (early-binding-method-entry late-binding-method-entry form*.sexp)
+	  (if virtual?
+	      ;;This is a virtual method.
+	      (values
+	       ;;early-binding-method-entry
+	       (cons (<method-spec>-name-sym first) (<method-spec>-late-binding-procname  first))
+	       ;;late-binding-method-entry
+	       (cons (<method-spec>-name-id  first) (<method-spec>-early-binding-procname first))
+	       ;;form*.sexp
+	       (fold-left (lambda (knil spec)
+			    (cons* (cons (core-prim-id 'define/overload) (<method-spec>-early-binding-implementation spec))
+				   (cons (core-prim-id 'define/overload) (<method-spec>-late-binding-implementation  spec))
+				   knil))
+		 '() group))
+	    ;;This is a concrete method.
+	    (values
+	     ;;early-binding-method-entry
+	     (cons (<method-spec>-name-sym first) (<method-spec>-early-binding-procname first))
+	     ;;late-binding-method-entry
+	     (cons (<method-spec>-name-id  first) (<method-spec>-early-binding-procname first))
+	     ;;form*.sexp
+	     (map (lambda (spec)
+		    (cons (core-prim-id 'define/overload) (<method-spec>-early-binding-implementation spec)))
+	       group)))
+	(kont
+	 ;;early-binding-methods-alist-public
+	 (if (eq? protection 'public)
+	     (cons early-binding-method-entry early-binding-methods-alist-public)
+	   early-binding-methods-alist-public)
+	 ;;early-binding-methods-alist-protected
+	 (if (or (eq? protection 'public)
+		 (eq? protection 'private))
+	     (cons early-binding-method-entry early-binding-methods-alist-protected)
+	   early-binding-methods-alist-protected)
+	 ;;early-binding-methods-alist-private
+	 (cons early-binding-method-entry early-binding-methods-alist-private)
+	 ;;late-binding-methods-alist
+	 (if (eq? protection 'public)
+	     (cons late-binding-method-entry late-binding-methods-alist)
+	   late-binding-methods-alist)
+	 ;;method-form*.sexp
+	 (append form*.sexp method-form*.sexp))))
 
     ;;; --------------------------------------------------------------------
 
@@ -1850,7 +2214,9 @@
 						 foo-equality-predicate.id
 						 foo-comparison-procedure.id
 						 foo-hash-function.id
-						 early-binding-methods-alist
+						 early-binding-methods-alist-public
+						 early-binding-methods-alist-protected
+						 early-binding-methods-alist-private
 						 virtual-method-signatures-alist
 						 implemented-interface*.ots)
   ;;Build and return symbolic expression (to  be BLESSed later) representing a Scheme
@@ -1881,7 +2247,7 @@
   ;;FOO-RTD.SYM must be a  gensym: it will become the name  of the identifier bound
   ;;to the record-constructor descriptor.
   ;;
-  ;;EARLY-BINDING-METHODS-ALIST an  alist having:  as keys, symbols  representing the
+  ;;EARLY-BINDING-METHODS-ALIST-* an alist having:  as keys, symbols representing the
   ;;method names,  including the field  names; as values, syntactic  identifiers that
   ;;will be bound to the method implementation procedures, including field methods.
   ;;
@@ -1901,13 +2267,17 @@
   (define foo-methods-table-public
     `(list . ,(map (lambda (entry)
 		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
-		early-binding-methods-alist)))
+		early-binding-methods-alist-public)))
 
   (define foo-methods-table-protected
-     foo-methods-table-public)
+    `(list . ,(map (lambda (entry)
+		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+		early-binding-methods-alist-protected)))
 
   (define foo-methods-table-private
-     foo-methods-table-public)
+    `(list . ,(map (lambda (entry)
+		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+		early-binding-methods-alist-private)))
 
   (define foo-virtual-method-signatures.table
     `(quote ,virtual-method-signatures-alist))
