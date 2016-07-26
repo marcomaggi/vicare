@@ -545,6 +545,33 @@
 
 
 ;;;; module core-macro-transformer: METHOD-CALL
+;;
+;;About protection levels for record-type members
+;;-----------------------------------------------
+;;
+;;There is only one  place where protection levels defined for  fields and methods in
+;;uses of DEFINE-RECORD-TYPE make a difference:  right here in the METHOD-CALL syntax
+;;implementation.  Of all the uses of  METHOD-CALL, the only ones in which protection
+;;levels matter are  those in which METHOD-CALL  is applied to the  fluid syntax THIS
+;;injected in the body of methods as alias for the first method operand.
+;;
+;;We can think of a method clause like:
+;;
+;;   (define-record-type <duo>
+;;     (fields one two)
+;;     (method (doit)
+;;       (+ (.one this) (.two this))))
+;;
+;;as expanding to:
+;;
+;;   (define/checked (<duo>-doit {subject <tow>})
+;;     (typed-variable-with-private-access! subject)
+;;     (fluid-let-syntax ((this (make-synonym-transformer #'subject)))
+;;       (+ (method-call one this) (method-call two this))))
+;;
+;;such use of METHOD-CALL causes the macro to look for methods in the private methods
+;;table, rather than the public methods table as in the general case.
+;;
 
 (module (method-call-transformer)
 
@@ -583,8 +610,6 @@
       (define (%default-dispatching)
 	(%general-subject-expr-dispatching input-form.stx lexenv.run lexenv.expand
 					   method-name.id subject-expr.id rand*.stx))
-;;;FIXME  SUBJECT-EXPR.ID is  THIS when  methods are  called, so  it is  not a  typed
-;;;variable we can inspect here.
       (cond ((id->label subject-expr.id)
 	     => (lambda (label)
 		  (let ((descr (label->syntactic-binding-descriptor label lexenv.run)))

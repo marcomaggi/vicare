@@ -345,10 +345,10 @@
     place-holder-id			place-holder-id?
     brace-id				brace-id?
     method-id				method-id?
-    case-method-id			case-method-id?
     virtual-method-id			virtual-method-id?
     seal-method-id			seal-method-id?
     fields-id				fields-id?
+    this-id				this-id?
     public-id
     protected-id
     private-id
@@ -2733,9 +2733,9 @@
   (define-core-prim-id-retriever protected-id		protected)
   (define-core-prim-id-retriever private-id		private)
   (define-core-prim-id-retriever method-id		method)
-  (define-core-prim-id-retriever case-method-id		case-method)
   (define-core-prim-id-retriever virtual-method-id	virtual-method)
   (define-core-prim-id-retriever seal-method-id		seal-method)
+  (define-core-prim-id-retriever this-id		this)
   (define-core-prim-id-retriever brace-id		brace)
   (define-core-prim-id-retriever list-of-id		list-of)
   (define-core-prim-id-retriever vector-of-id		vector-of)
@@ -2781,9 +2781,9 @@
   (and (identifier? id)
        (~free-identifier=? id (seal-method-id))))
 
-(define (case-method-id? id)
+(define (this-id? id)
   (and (identifier? id)
-       (~free-identifier=? id (case-method-id))))
+       (~free-identifier=? id (this-id))))
 
 (define (brace-id? id)
   (and (identifier? id)

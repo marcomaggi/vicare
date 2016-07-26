@@ -1499,29 +1499,29 @@
 
   ;;Calling protected method from public method.
   ;;
-  #;(check
-  (internal-body
-  (define-record-type <it>
-  (method protected (inner)
-  1)
-  (method (outer)
-  (.inner this)))
+  (check
+      (internal-body
+	(define-record-type <it>
+	  (method protected (inner)
+		  1)
+	  (method (outer)
+	    (.inner this)))
 
-  (.outer (new <it>)))
-  => 1)
+	(.outer (new <it>)))
+    => 1)
 
   ;;Calling private method from public method.
   ;;
-  #;(check
-  (internal-body
-  (define-record-type <it>
-  (method private (inner)
-  1)
-  (method (outer)
-  (.inner this)))
+  (check
+      (internal-body
+	(define-record-type <it>
+	  (method private (inner)
+		  1)
+	  (method (outer)
+	    (.inner this)))
 
-  (.outer (new <it>)))
-  => 1)
+	(.outer (new <it>)))
+    => 1)
 
 ;;; --------------------------------------------------------------------
 ;;; errors

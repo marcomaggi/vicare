@@ -633,7 +633,11 @@
 	 (receive (method-name.id default-procname.id default-method-who.stx underscore-who.stx)
 	     (%parse-method-who results #'?who synner)
 	   (.push-definition! results #`(define/overload (#,default-method-who.stx {subject #,(.type-name results)} . ?formals)
-					  (fluid-let-syntax ((this (identifier-syntax subject)))
+					  ;;We really  have to  use the  fluid syntax
+					  ;;THIS, otherwise  we will  not be  able to
+					  ;;process  correctly  the clauses  imported
+					  ;;from mixins.
+					  (fluid-let-syntax ((this (make-synonym-transformer #'subject)))
 					    ?body0 ?body ...)))
 	   (.push-required-prototype! results (new <method-prototype> method-name.id
 						   (make-closure-type-spec/from-typed-formals

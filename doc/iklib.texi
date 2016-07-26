@@ -3034,7 +3034,7 @@ the method's implementation procedure is defined as:
 @example
 (define (<duo>-add @{subject <duo>@})
   (fluid-let-syntax
-      ((this (identifier-syntax subject)))
+      ((this (make-synonym-transformer #'subject)))
     (+ (.one this) (.two this))))
 @end example
 @end deffn

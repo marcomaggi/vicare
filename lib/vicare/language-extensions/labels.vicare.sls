@@ -557,7 +557,7 @@
 	   (new <method-spec>
 		method-name.id method-procname.id
 		#`((#,method-who.stx {subject #,(.type-name results)} . ?formals)
-		   (fluid-let-syntax ((this (identifier-syntax subject)))
+		   (fluid-let-syntax ((this (make-synonym-transformer (syntax subject))))
 		     ?body0 ?body ...))))
 	 results))
       (#(?stuff ...)

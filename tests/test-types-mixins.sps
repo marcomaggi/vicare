@@ -890,6 +890,27 @@
 		(.e O) (.f O)))
     => 1 2 3 4 5 6)
 
+  ;;Actually using imported methods.
+  ;;
+  (check
+      (internal-body
+	(define-mixin-type <stuff>
+	  (fields one two)
+	  (method (add)
+	    (+ (.one this) (.two this))))
+
+	(define-record-type <duo>
+	  (mixins <stuff>))
+
+	(define O
+	  (new <duo> 1 2))
+
+	(values (.one O)
+		(.two O)
+		(.add O)))
+    => 1 2 3)
+
+
   #| end of PARAMETRISE |# )
 
 

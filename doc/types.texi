@@ -5853,17 +5853,17 @@ definitions:
 @lisp
 (define/overload (@{doit <list>@} @{subject <alpha>@}
                       @{A <fixnum>@})
-  (fluid-let-syntax ((this (identifier-syntax subject)))
+  (fluid-let-syntax ((this (make-synonym-transformer #'subject)))
     (list (.a this) (.b this) 'fixnum A)))
 
 (define/overload (@{doit <list>@} @{subject <alpha>@}
                       @{A <symbol>@})
-  (fluid-let-syntax ((this (identifier-syntax subject)))
+  (fluid-let-syntax ((this (make-synonym-transformer #'subject)))
     (list (.a this) (.b this) 'symbol A)))
 
 (define/overload (@{doit <list>@} @{subject <alpha>@}
                       @{A <number>@} @{B <number>@})
-  (fluid-let-syntax ((this (identifier-syntax subject)))
+  (fluid-let-syntax ((this (make-synonym-transformer #'subject)))
     (list (.a this) (.b this) 'numbers A B)))
 @end lisp
 

@@ -1888,8 +1888,12 @@
 			     `(brace ,early-method-procname.id . ,retvals.stx)
 			   early-method-procname.id)))
 	    `((,lhs.stx {,subject.id ,foo} . ,formals.stx)
+	      ;;This  is the  only use  of TYPED-VARIABLE-WITH-PRIVATE-ACCESS!,  this
+	      ;;syntax has been designed to be used here and nowhere else.
 	      (typed-variable-with-private-access! ,subject.id)
-	      (fluid-let-syntax ((this (identifier-syntax ,subject.id)))
+	      ;;We really have to use the fluid syntax THIS, otherwise we will not be
+	      ;;able to process correctly the clauses imported from mixins.
+	      (fluid-let-syntax ((this (make-synonym-transformer (syntax ,subject.id))))
 		. ,body*.stx))))
 
 	(define late-binding-implementation-form.sexp
