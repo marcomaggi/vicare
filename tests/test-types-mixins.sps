@@ -70,7 +70,18 @@
 	(unless (warning? E)
 	  (raise-continuable E)))
     (lambda ()
-      (eval `(internal-body ,sexp (void))
+      (eval `(internal-body ,sexp (sentinel))
+	    EVAL-ENV
+	    (expander-options typed-language)
+	    (compiler-options)))))
+
+(define (%eval sexp)
+  (with-exception-handler
+      (lambda (E)
+	(unless (warning? E)
+	  (raise-continuable E)))
+    (lambda ()
+      (eval sexp
 	    EVAL-ENV
 	    (expander-options typed-language)
 	    (compiler-options)))))
@@ -965,10 +976,8 @@
   (begin
     (check
 	(try
-	    (%eval-def '(internal-body
-			  (define-mixin-type <stuff>
-			    (public (nongenerative)))
-			  (void)))
+	    (%eval-def '(define-mixin-type <stuff>
+			  (public (nongenerative))))
 	  (catch E
 	    ((&syntax)
 	     (%print-message #t (condition-message E))
@@ -977,10 +986,8 @@
       => '(nongenerative))
     (check
 	(try
-	    (%eval-def '(internal-body
-			  (define-mixin-type <stuff>
-			    (protected (nongenerative)))
-			  (void)))
+	    (%eval-def '(define-mixin-type <stuff>
+			  (protected (nongenerative))))
 	  (catch E
 	    ((&syntax)
 	     (%print-message #t (condition-message E))
@@ -989,10 +996,8 @@
       => '(nongenerative))
     (check
 	(try
-	    (%eval-def '(internal-body
-			  (define-mixin-type <stuff>
-			    (private (nongenerative)))
-			  (void)))
+	    (%eval-def '(define-mixin-type <stuff>
+			  (private (nongenerative))))
 	  (catch E
 	    ((&syntax)
 	     (%print-message #t (condition-message E))
@@ -1000,6 +1005,20 @@
 	    (else E)))
       => '(nongenerative))
     #| end of BEGIN |# )
+
+  ;;Double protection level specification.
+  ;;
+  (check
+      (try
+	  (%eval-def '(define-mixin-type <stuff>
+			(public
+			  (fields public a))))
+	(catch E
+	  ((&syntax)
+	   (%print-message #t (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => '(fields public public a))
 
   (void))
 

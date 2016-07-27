@@ -148,21 +148,23 @@
 (module (%splice-protection-levels)
 
   (define (%splice-protection-levels input-clause*.stx synner)
-    (fold-right
-	(lambda (input-clause.stx parsed-clause*.stx)
-	  (syntax-case input-clause.stx (public protected private)
-	    ((public . ?clauses)
-	     (%splice-protection #'public    #'?clauses parsed-clause*.stx synner))
+    (receive-and-return (spliced-clause*.stx)
+	(fold-right
+	    (lambda (input-clause.stx parsed-clause*.stx)
+	      (syntax-case input-clause.stx (public protected private)
+		((public . ?clauses)
+		 (%splice-protection #'public    #'?clauses parsed-clause*.stx synner))
 
-	    ((protected . ?clauses)
-	     (%splice-protection #'protected #'?clauses parsed-clause*.stx synner))
+		((protected . ?clauses)
+		 (%splice-protection #'protected #'?clauses parsed-clause*.stx synner))
 
-	    ((private . ?clauses)
-	     (%splice-protection #'private   #'?clauses parsed-clause*.stx synner))
+		((private . ?clauses)
+		 (%splice-protection #'private   #'?clauses parsed-clause*.stx synner))
 
-	    (?clause
-	     (cons #'?clause parsed-clause*.stx))))
-      '() input-clause*.stx))
+		(?clause
+		 (cons #'?clause parsed-clause*.stx))))
+	  '() input-clause*.stx)
+      (%validate-protection-levels spliced-clause*.stx synner)))
 
   (define (%splice-protection protection.id nested-clause*.stx parsed-clause*.stx synner)
     (fold-right
@@ -188,6 +190,41 @@
 	     (synner "wrapping protection level syntax around clause not accepting protection level specification"
 		     nested-clause.stx))))
       parsed-clause*.stx nested-clause*.stx))
+
+  (define (%validate-protection-levels spliced-clause*.stx synner)
+    (for-each (lambda (spliced-clause.stx)
+		(syntax-case spliced-clause.stx (fields method virtual-method seal-method)
+		  ((fields . ?stuff)
+		   (%validate-stuff spliced-clause.stx #'?stuff synner))
+
+		  ((method . ?stuff)
+		   (%validate-stuff spliced-clause.stx #'?stuff synner))
+
+		  ((virtual-method . ?stuff)
+		   (%validate-stuff spliced-clause.stx #'?stuff synner))
+
+		  ((seal-method . ?stuff)
+		   (%validate-stuff spliced-clause.stx #'?stuff synner))
+
+		  (_
+		   (void))))
+      spliced-clause*.stx))
+
+  (define (%validate-stuff clause.stx stuff.stx synner)
+    (syntax-case stuff.stx ()
+      ((?thing1 ?thing2 . ?rest)
+       (when (and (protection-level-id #'?thing1)
+		  (protection-level-id #'?thing2))
+	 (synner "found double protection level specification in clause"
+		 clause.stx)))
+      (_
+       (void))))
+
+  (define (protection-level-id stx)
+    (and (identifier? stx)
+	 (or (free-identifier=? stx #'public)
+	     (free-identifier=? stx #'protected)
+	     (free-identifier=? stx #'private))))
 
   #| end of module: %SPLICE-PROTECTION-LEVELS |# )
 
