@@ -15,6 +15,7 @@ leave the type of variables unspecified.
 * types built-in::              Built-in object types.
 * types void::                  Handling of void values.
 * types methods::               Methods and virtual methods.
+* types protlev::               Protection levels.
 * types mixins::                Sharing object-type definition clauses.
 * types interfaces::            Interface types.
 * types labels::                Sub-typing with labels.
@@ -6343,6 +6344,171 @@ following program:
 @end lisp
 
 @c page
+@node types protlev
+@section Protection levels
+
+
+@cindex Protection levels for record--type's members
+@cindex Record--types, protection levels for members
+
+
+When the typed language is enabled, record--type definitions support
+protection levels for fields and methods.  Protection levels limit the
+way fields and methods can be used both from other types in the
+record--type hierarchy and from outside a record--type's definition.
+
+Three protection levels are supported: @clause{public},
+@clause{protected} and @clause{private}; they are modeled after the ones
+defined in the C++ language.
+
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
+
+@deffn {Auxiliary Syntax} public
+Select the @clause{public} protection level for the associated fields
+and methods.  When a member of record--type @class{T} is given the
+@clause{public} protection level: sub--types of @class{T} can access it;
+instances of @class{T} can access it from outside methods.
+
+When no protection level is specified for a member in a record--type
+definition: the protection level defaults to @clause{public}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} protected
+Select the @clause{protected} protection level for the associated fields
+and methods.  When a member of record--type @class{T} is given the
+@clause{protected} protection level: sub--types of @class{T} can access
+it; instances of @class{T} cannot access it from outside methods.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} private
+Select the @clause{private} protection level for the associated fields
+and methods.  When a member of record--type @class{T} is given the
+@clause{private} protection level: sub--types of @class{T} cannot access
+it; instances of @class{T} cannot access it from outside methods.
+@end deffn
+
+
+The protection level keywords can be used both as ``wrapping syntaxes''
+as in:
+
+@lisp
+(define-record-type <duo>
+  (public
+    (fields one two)
+    (method (add)
+      (+ (.one this) (.two this)))))
+@end lisp
+
+@noindent
+or as ``attribute syntaxes'' as in:
+
+@lisp
+(define-record-type <duo>
+  (fields public one two)
+  (method public (add)
+    (+ (.one this) (.two this))))
+@end lisp
+
+The only clauses that can be put in a wrapping syntax and that accept an
+attribute syntax are: @clause{fields}, @clause{method},
+@clause{virtual-method}, @clause{seal-method}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Usage and limitations by examples
+
+The protection levels limit the access to members from outside a
+method's body:
+
+@lisp
+(define-record-type <blue>
+  (method public    (pub)  1)
+  (method protected (pro)  2)
+  (method private   (pri)  3))
+
+(define O
+  (new <blue>))
+
+(.pub O)        @result{} 1
+(.pro O)        @error{} not a public method
+(.pri O)        @error{} not a public method
+@end lisp
+
+When super--type's members are @clause{public}, everything works as
+usual:
+
+@lisp
+(define-record-type <blue>
+  (fields public light))
+
+(define-record-type <dark-blue>
+  (parent <blue>)
+  (method public (doit)
+    (.light this)))
+
+(define O
+  (new <dark-blue> 1))
+
+(define @{X <blue>@}
+  O)
+
+(.doit  O)      @result{} 1
+(.light X)      @result{} 1
+@end lisp
+
+When super--type's members are @clause{protected}, we can access them
+from the super--type's methods and from the sub--type's methods:
+
+@lisp
+(define-record-type <blue>
+  (fields protected light)
+  (method public (doit)
+    (.light this)))
+
+(define-record-type <dark-blue>
+  (parent <blue>)
+  (method public (doit)
+    (.light this)))
+
+(define O
+  (new <dark-blue> 1))
+
+(.doit O)       @result{} 1
+
+(define @{X <blue>@}
+  O)
+
+(.light X)      @error{} not a public method
+(.doit  X)      @result{} 1
+@end lisp
+
+When super--type's members are @clause{private}, we can access them from
+the super--type's methods only:
+
+@lisp
+(define-record-type <blue>
+  (fields private light)
+  (method public (doit)
+    (.light this)))
+
+(define X
+  (new <blue> 1))
+
+(.light X)      @error{} not a public method
+(.doit  X)      @result{} 1
+
+(define-record-type <dark-blue>
+  (parent <blue>)
+  (method public (doit)
+    (.light this)))     @error{} not a public or protected method
+@end lisp
+
+
+@c page
 @node types mixins
 @section Sharing object--type definition clauses
 
@@ -6457,6 +6623,7 @@ sealed opaque protocol super-protocol fields
 method virtual-method seal-method
 custom-printer type-predicate equality-predicate
 comparison-procedure hash-function
+public protected private
 implements
 @end lisp
 @end deffn
