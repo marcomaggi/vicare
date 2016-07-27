@@ -287,6 +287,10 @@
   ;;later)  representing  a  Scheme  expression   returning  a  closure  object:  the
   ;;late-binding method-retriever function.
   ;;
+  ;;METHOD-RETRIEVER-CODE-PRIVATE.SEXP  is  false or  a  symbolic  expression (to  be
+  ;;BLESSed later) representing  a Scheme expression returning a  closure object: the
+  ;;late-binding private method-retriever function.
+  ;;
   ;;VIRTUAL-METHOD-SIGNATURES-ALIST an  alist having:  as keys,  symbols representing
   ;;the  virtual   method  names;  as  values,   instances  of  "<closure-type-spec>"
   ;;representing  the  signature   of  the  method.   This   alist  already  contains
@@ -295,7 +299,8 @@
   (define-values (early-binding-methods-alist-public
 		  early-binding-methods-alist-protected
 		  early-binding-methods-alist-private
-		  method-form*.sexp method-retriever-code.sexp
+		  method-form*.sexp
+		  method-retriever-code.sexp method-retriever-code-private.sexp
 		  virtual-method-signatures-alist)
     (%parse-method-clauses clause*.stx
 			   foo foo-for-id-generation
@@ -320,7 +325,8 @@
     (%make-rtd-definitions foo foo-rtd foo-uid generative? clause*.stx parent-rtd.id fields-vector-spec
 			   foo-destructor.id (%make-custom-printer-code clause*.stx foo synner)
 			   foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
-			   method-retriever-code.sexp implemented-interfaces-table.sexp synner))
+			   method-retriever-code.sexp method-retriever-code-private.sexp
+			   implemented-interfaces-table.sexp synner))
 
   ;;A  symbolic expression  representing  a  form which,  expanded  and evaluated  at
   ;;expand-time, returns the right-hand side of the record-type name's DEFINE-SYNTAX.
@@ -1297,7 +1303,8 @@
 			       clause* parent-rtd fields-vector-spec
 			       destructor printer
 			       equality-predicate comparison-procedure hash-function
-			       method-retriever implemented-interfaces-table synner)
+			       method-retriever method-retriever-private
+			       implemented-interfaces-table synner)
   ;;Return a list of symbolic expressions (to be BLESSed later) representing a Scheme
   ;;definitions which,  expanded and  evaluated at  run-time, define  the record-type
   ;;descriptor.
@@ -1322,6 +1329,7 @@
 				    (_
 				     (synner "invalid argument in OPAQUE clause" clause)))))
 	(fields-vec		`(quote ,fields-vector-spec))
+
 	(normalised-fields-vec	`(quote ,(vector-map (lambda (item)
 						       (cons (eq? 'mutable (car item)) (cadr item)))
 					   fields-vector-spec))))
@@ -1331,7 +1339,8 @@
 					 ,fields-vec ,normalised-fields-vec
 					 ,destructor ,printer
 					 ,equality-predicate ,comparison-procedure ,hash-function
-					 ,method-retriever ,implemented-interfaces-table)))))
+					 ,method-retriever ,method-retriever-private
+					 ,implemented-interfaces-table)))))
 
 
 (define (%make-rcd-definitions clause* foo foo-rtd foo-rcd parent-rcd.id synner)
@@ -1675,6 +1684,11 @@
   ;;method-retriever function.  The method retriever function is used when performing
   ;;late binding of methods.
   ;;
+  ;;*  METHOD-RETRIEVER-CODE-PRIVATE.SEXP,  false or  a  symbolic  expression (to  be
+  ;;BLESSed later) representing  a Scheme expression returning a  closure object: the
+  ;;private method-retriever  function.  The method  retriever function is  used when
+  ;;performing late binding of methods.
+  ;;
   ;;* VIRTUAL-METHOD-SIGNATURES-ALIST an alist  having: as keys, symbols representing
   ;;the virtual and sealed method names; as values:
   ;;
@@ -1974,7 +1988,11 @@
 	    (let ((lhs.stx		(if retvals.stx
 					    `(brace ,late-method-procname.id . ,retvals.stx)
 					  late-method-procname.id))
-		  (late-body.sexp	(let ((B `(method-call-late-binding (quote ,method-name.sym) #f ,subject.id ,@args.stx)))
+		  (late-body.sexp	(let ((B (if (eq? protection 'public)
+						     `(method-call-late-binding
+						       (quote ,method-name.sym) #f ,subject.id ,@args.stx)
+						   `(record-type-method-call-late-binding-private
+						     (quote ,method-name.sym) ,subject.id ,@args.stx))))
 					  (if improper? (cons 'apply B) B))))
 	      `((,lhs.stx {,subject.id ,foo} . ,formals.stx)
 		,late-body.sexp))))
@@ -2039,6 +2057,8 @@
       ;;
       ;;* METHOD-RETRIEVER-CODE.SEXP, the return value of the whole module.
       ;;
+      ;;* METHOD-RETRIEVER-CODE-PRIVATE.SEXP, the return value of the whole module.
+      ;;
       ;;* VIRTUAL-METHOD-SIGNATURES-ALIST  an alist having  the format of  the return
       ;;value of the  whole module, but not  yet including the entries  of the parent
       ;;record-type.
@@ -2053,8 +2073,10 @@
 		 (early-binding-methods-alist-protected	field-methods-alist-protected)
 		 ;;All the methods go in the private alist.
 		 (early-binding-methods-alist-private	field-methods-alist-private)
-		 ;;Only the public methods go in the late-binding alist.
-		 (late-binding-methods-alist		field-methods-alist-public)
+		 ;;Only the public methods go in this late-binding alist.
+		 (late-binding-methods-alist-public	field-methods-alist-public)
+		 ;;All the methods go in this late-binding alist.
+		 (late-binding-methods-alist-private	field-methods-alist-private)
 		 (method-form*.sexp			'()))
 	(if (pair? group*)
 	    (let* ((group	(car group*))
@@ -2070,24 +2092,27 @@
 							  early-binding-methods-alist-public
 							  early-binding-methods-alist-protected
 							  early-binding-methods-alist-private
-							  late-binding-methods-alist
+							  late-binding-methods-alist-public
+							  late-binding-methods-alist-private
 							  method-form*.sexp
-							  (lambda (a b c d e)
-							    (loop (cdr group*) a b c d e)))
+							  (lambda (a b c d e f)
+							    (loop (cdr group*) a b c d e f)))
 		(%process-method-group-with-multiple-items group virtual?
 							   early-binding-methods-alist-public
 							   early-binding-methods-alist-protected
 							   early-binding-methods-alist-private
-							   late-binding-methods-alist
+							   late-binding-methods-alist-public
+							   late-binding-methods-alist-private
 							   method-form*.sexp
-							   (lambda (a b c d e)
-							     (loop (cdr group*) a b c d e)))))
+							   (lambda (a b c d e f)
+							     (loop (cdr group*) a b c d e f)))))
 	  ;;No more groups.
 	  (values early-binding-methods-alist-public
 		  early-binding-methods-alist-protected
 		  early-binding-methods-alist-private
 		  method-form*.sexp
-		  (%make-method-retriever-code foo parent-rtd.id late-binding-methods-alist)
+		  (%make-method-retriever-code foo parent-rtd.id late-binding-methods-alist-public  #f)
+		  (%make-method-retriever-code foo parent-rtd.id late-binding-methods-alist-private #t)
 		  (%make-virtual-method-signatures-alist init-group* parent-virtual-method-signatures-alist synner)))))
 
     ;;; --------------------------------------------------------------------
@@ -2096,7 +2121,8 @@
 						    early-binding-methods-alist-public
 						    early-binding-methods-alist-protected
 						    early-binding-methods-alist-private
-						    late-binding-methods-alist
+						    late-binding-methods-alist-public
+						    late-binding-methods-alist-private
 						    method-form*.sexp kont)
       ;;VIRTUAL? is true if the parent record-type has a virtual method with the same
       ;;name.  When VIRTUAL?  is true: this method  is virtual too, even  when it was
@@ -2133,10 +2159,12 @@
 	   early-binding-methods-alist-protected)
 	 ;;early-binding-methods-alist-private
 	 (cons early-binding-method-entry early-binding-methods-alist-private)
-	 ;;late-binding-methods-alist
+	 ;;late-binding-methods-alist-public
 	 (if (<method-spec>-protection-public? single)
-	     (cons late-binding-method-entry late-binding-methods-alist)
-	   late-binding-methods-alist)
+	     (cons late-binding-method-entry late-binding-methods-alist-public)
+	   late-binding-methods-alist-public)
+	 ;;late-binding-methods-alist-private
+	 (cons late-binding-method-entry late-binding-methods-alist-private)
 	 ;;method-form*.sexp
 	 (append form*.sexp method-form*.sexp))))
 
@@ -2144,7 +2172,8 @@
 						       early-binding-methods-alist-public
 						       early-binding-methods-alist-protected
 						       early-binding-methods-alist-private
-						       late-binding-methods-alist
+						       late-binding-methods-alist-public
+						       late-binding-methods-alist-private
 						       method-form*.sexp kont)
       ;;VIRTUAL? is true if the parent record-type has a virtual method with the same
       ;;name.
@@ -2186,16 +2215,18 @@
 	   early-binding-methods-alist-protected)
 	 ;;early-binding-methods-alist-private
 	 (cons early-binding-method-entry early-binding-methods-alist-private)
-	 ;;late-binding-methods-alist
+	 ;;late-binding-methods-alist-public
 	 (if (<method-spec>-protection-public? first)
-	     (cons late-binding-method-entry late-binding-methods-alist)
-	   late-binding-methods-alist)
+	     (cons late-binding-method-entry late-binding-methods-alist-public)
+	   late-binding-methods-alist-public)
+	 ;;late-binding-methods-alist-private
+	 (cons late-binding-method-entry late-binding-methods-alist-private)
 	 ;;method-form*.sexp
 	 (append form*.sexp method-form*.sexp))))
 
     ;;; --------------------------------------------------------------------
 
-    (define (%make-method-retriever-code foo parent-rtd.id late-binding-methods-alist)
+    (define (%make-method-retriever-code foo parent-rtd.id late-binding-methods-alist private?)
       (define method-name.id	(make-syntactic-identifier-for-temporary-variable "method-name"))
       (define parent-retriever.id	(make-syntactic-identifier-for-temporary-variable "parent-retriever"))
       (cond ((pair? late-binding-methods-alist)
@@ -2210,7 +2241,9 @@
 						(else
 						 (,parent-retriever.id ,method-name.id)))))))
 	       `(,retriever-maker.sexp ,(if parent-rtd.id
-					    `($record-type-method-retriever ,parent-rtd.id)
+					    (if private?
+						`($record-type-method-retriever-private ,parent-rtd.id)
+					      `($record-type-method-retriever ,parent-rtd.id))
 					  '(core-type-descriptor.method-retriever <record>-ctd)))))
 
 	    (parent-rtd.id

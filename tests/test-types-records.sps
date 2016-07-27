@@ -1722,7 +1722,7 @@
 
   ;;Overriding a virtual method with the same protection level.
   ;;
-  #;(begin
+  (begin
     (check
 	(internal-body
 	  (define-record-type <blue>
@@ -1775,7 +1775,7 @@
 
   ;;Overriding and sealing a virtual method with the same protection level.
   ;;
-  #;(begin
+  (begin
     (check
 	(internal-body
 	  (define-record-type <blue>
@@ -1825,6 +1825,24 @@
 		  (fun O)))
       => 'over-dark-blue 'over-dark-blue)
     #| end of BEGIN |# )
+
+  ;;Public methods are available for late binding.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <it>
+	  (method public	(pub)	1)
+	  (method protected	(pro)	2)
+	  (method private	(pri)	3))
+
+	(define O
+	  (new <it>))
+
+	(define (fun {X <top>})
+	  (.pub X))
+
+	(fun O))
+    => 1)
 
 ;;; --------------------------------------------------------------------
 ;;; definition errors
@@ -2006,6 +2024,54 @@
 	   (syntax->datum (syntax-violation-subform E)))
 	  (else E)))
     => 'light)
+
+  ;;Protected methods are not available for late binding.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <it>
+		      (method public	(pub)	1)
+		      (method protected	(pro)	2)
+		      (method private	(pri)	3))
+
+		    (define O
+		      (new <it>))
+
+		    (define (fun {X <top>})
+		      (.pro X))
+
+		    (fun O)))
+	(catch E
+	  ((&method-late-binding-error)
+	   (%print-message #f (condition-message E))
+	   (car (condition-irritants E)))
+	  (else E)))
+    => 'pro)
+
+  ;;Private methods are not available for late binding.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <it>
+		      (method public	(pub)	1)
+		      (method protected	(pro)	2)
+		      (method private	(pri)	3))
+
+		    (define O
+		      (new <it>))
+
+		    (define (fun {X <top>})
+		      (.pri X))
+
+		    (fun O)))
+	(catch E
+	  ((&method-late-binding-error)
+	   (%print-message #f (condition-message E))
+	   (car (condition-irritants E)))
+	  (else E)))
+    => 'pri)
 
   (void))
 

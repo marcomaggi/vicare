@@ -797,6 +797,7 @@
 		  ;;This  is  a   closure  accepting  as  single   argument  a  symbol
 		  ;;representing a field  name; the single return value is  false or a
 		  ;;field accessor closure object.
+		  (method-retriever.id		(make-syntactic-identifier-for-temporary-variable "method-retriever"))
 		  (METHOD-RETRIEVER `(lambda/typed ({_ (or <false> <procedure>)} {,ARG <symbol>})
 				       (case ,ARG
 					 ,@(map (lambda (field-name.id accessor.id)
@@ -838,17 +839,19 @@
 					  '()		;implemented-interfaces
 					  ))
 		 (define/std ,RTD
-		   ($make-record-type-descriptor-ex (quote ,?name) (record-type-descriptor ,?parent-name)
-						    (quote ,UID) #f ,SEALED? ,OPAQUE?
-						    (quote ,FIELDS-VECTOR) (quote ,NORMAL-FIELDS-VECTOR)
-						    #f ;destructor
-						    #f ;printer
-						    #f ;equality-predicate
-						    #f ;comparison-procedure
-						    #f ;hash-function
-						    ,METHOD-RETRIEVER
-						    #f ;implemented-interfaces
-						    ))
+		   (let ((,method-retriever.id ,METHOD-RETRIEVER))
+		     ($make-record-type-descriptor-ex (quote ,?name) (record-type-descriptor ,?parent-name)
+						      (quote ,UID) #f ,SEALED? ,OPAQUE?
+						      (quote ,FIELDS-VECTOR) (quote ,NORMAL-FIELDS-VECTOR)
+						      #f ;destructor
+						      #f ;printer
+						      #f ;equality-predicate
+						      #f ;comparison-procedure
+						      #f ;hash-function
+						      ,method-retriever.id
+						      ,method-retriever.id ;method-retriever-private
+						      #f ;implemented-interfaces
+						      )))
 		 (define/std ,RCD
 		   ($make-record-constructor-descriptor ,RTD (record-constructor-descriptor ,?parent-name) #f))
 		 ;;At present  we cannot know the  exact number of arguments  for the

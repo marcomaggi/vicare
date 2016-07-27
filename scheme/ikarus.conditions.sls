@@ -848,6 +848,7 @@
 						#f ;comparison-procedure
 						#f ;hash-function
 						METHOD-RETRIEVER
+						METHOD-RETRIEVER ;method-retriever-private
 						#f ;implemented-interfaces
 						))
 	     (define RCD

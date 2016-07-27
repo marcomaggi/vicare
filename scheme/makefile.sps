@@ -1914,6 +1914,7 @@
     ($record-type-hash-function-set!		$records)
     ($record-type-method-retriever		$records)
     ($record-type-method-retriever-set!		$records)
+    ($record-type-method-retriever-private)
     ($record-guardian				$records)
 
     ;;These are for internal use in the expansion of DEFINE-CONDITION-TYPE.
@@ -6156,6 +6157,7 @@
     (make-overloaded-function-spec)
     (overloaded-function-spec.register-specialisation!)
     (typed-variable-with-private-access!)
+    (record-type-method-call-late-binding-private)
     ))
 
 

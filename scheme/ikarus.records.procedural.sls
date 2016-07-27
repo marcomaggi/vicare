@@ -80,7 +80,9 @@
     $record-constructor				$rtd-subtype?
     $record-accessor/index			$record=
     internal-applicable-record-type-destructor
-    internal-applicable-record-destructor)
+    internal-applicable-record-destructor
+    record-type-method-call-late-binding-private
+    $record-type-method-retriever-private)
   (import (except (vicare)
 		  ;; bindings for (rnrs records procedural (6))
 		  make-record-type-descriptor		make-record-constructor-descriptor
@@ -295,8 +297,12 @@
 		;19.   False  or  a  function,  accepting a  method  name  as  single
 		;argument,  returning a  method's implementation  function as  single
 		;return value.
+   method-retriever-private
+		;20.   False  or  a  function,  accepting a  method  name  as  single
+		;argument, returning  a private  method's implementation  function as
+		;single return value.
    implemented-interfaces
-		;20.  False  or a  vector of  pairs representing  the interface-types
+		;21.  False  or a  vector of  pairs representing  the interface-types
 		;implemented by this  record-type.  Each pair has: as car  the UID of
 		;an interface-type; as cdr a method retriever procedure to be used by
 		;the  interface method  callers.   The vector  includes the  parent's
@@ -972,6 +978,7 @@
 				       #f ;comparison-procedure
 				       #f ;hash-function
 				       #f ;method-retriever
+				       #f ;method-retriever-private
 				       #f ;implemented-interfaces
 				       )))
 
@@ -987,6 +994,7 @@
 					   {comparison-procedure (or not procedure?)}
 					   {hash-function (or not procedure?)}
 					   {method-retriever (or not procedure?)}
+					   {method-retriever-private (or not procedure?)}
 					   implemented-interfaces)
     (let ((normalised-fields	(%normalise-fields-vector fields))
 	  (generative?		(if uid #f #t))
@@ -994,12 +1002,14 @@
       ($make-record-type-descriptor-ex name parent uid generative? sealed? opaque? fields normalised-fields
 				       destructor printer
 				       equality-predicate comparison-procedure hash-function
-				       method-retriever implemented-interfaces)))
+				       method-retriever method-retriever-private
+				       implemented-interfaces)))
 
   (define ($make-record-type-descriptor-ex name parent uid generative? sealed? opaque? fields normalised-fields
 					   destructor printer
 					   equality-predicate comparison-procedure hash-function
-					   method-retriever implemented-interfaces)
+					   method-retriever method-retriever-private
+					   implemented-interfaces)
     ;;Return a  record-type descriptor representing  a record type distinct  from all
     ;;the built-in types and other record types.
     ;;
@@ -1017,17 +1027,20 @@
 	    (%generate-rtd name parent uid generative? sealed? opaque? normalised-fields
 			   destructor printer
 			   equality-predicate comparison-procedure hash-function
-			   method-retriever implemented-interfaces)
+			   method-retriever method-retriever-private
+			   implemented-interfaces)
 	  (%make-nongenerative-rtd name parent uid sealed? opaque? fields normalised-fields
 				   destructor printer
 				   equality-predicate comparison-procedure hash-function
-				   method-retriever implemented-interfaces))
+				   method-retriever method-retriever-private
+				   implemented-interfaces))
       ($set-<rtd>-initialiser! rtd (%make-record-initialiser rtd))))
 
   (define (%generate-rtd name parent-rtd uid generative? sealed? opaque? normalised-fields
 			 destructor printer
 			 equality-predicate comparison-procedure hash-function
-			 method-retriever implemented-interfaces)
+			 method-retriever method-retriever-private
+			 implemented-interfaces)
     ;;Build and return a new instance of RTD struct.
     ;;
     (let* ((fields-number		($vector-length normalised-fields))
@@ -1062,13 +1075,15 @@
 		     #f	;default-rcd
 		     destructor printer
 		     equality-predicate comparison-procedure hash-function
-		     method-retriever implemented-interfaces))
+		     method-retriever method-retriever-private
+		     implemented-interfaces))
 	(%intern-nongenerative-rtd! uid rtd))))
 
   (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? fields normalised-fields
 				   destructor printer
 				   equality-predicate comparison-procedure hash-function
-				   method-retriever implemented-interfaces)
+				   method-retriever method-retriever-private
+				   implemented-interfaces)
     ;;Build and  return a  new instance of  RTD or return  an already  generated (and
     ;;interned) RTD.  If the  specified UID holds an RTD in  its "value" field: check
     ;;that the arguments are compatible and return the interned RTD.
@@ -1101,7 +1116,8 @@
 	   (%generate-rtd name parent-rtd uid #f sealed? opaque? normalised-fields
 			  destructor printer
 			  equality-predicate comparison-procedure hash-function
-			  method-retriever implemented-interfaces))))
+			  method-retriever method-retriever-private
+			  implemented-interfaces))))
 
   (define-syntax-rule (%intern-nongenerative-rtd! ?uid ?rtd)
     ($set-symbol-value! ?uid ?rtd))
@@ -1785,6 +1801,11 @@
   ;;
   ($<rtd>-method-retriever rtd))
 
+(define ($record-type-method-retriever-private rtd)
+  ;;Return false or the private method retriever procedure from RTD.
+  ;;
+  ($<rtd>-method-retriever-private rtd))
+
 ;;; --------------------------------------------------------------------
 
 (define* (record-method-retriever {reco record-object?})
@@ -1798,6 +1819,25 @@
   ;;RECO.
   ;;
   ($<rtd>-method-retriever ($struct-rtd reco)))
+
+;;; --------------------------------------------------------------------
+
+(define* (record-type-method-call-late-binding-private method-name.sym subject . args)
+  ;;This function is used for late binding  of virtual methods when access to private
+  ;;and protected methods is needed.
+  ;;
+  ;;This function is for internal use only.
+  ;;
+  (cond ((($record-type-method-retriever-private ($struct-rtd subject)) method-name.sym)
+	 => (lambda (proc)
+	      (apply proc subject args)))
+	(else
+	 (raise
+	  (condition (make-method-late-binding-error)
+		     (make-who-condition __who__)
+		     (make-message-condition "record-type has no matching method")
+		     (make-irritants-condition (list method-name.sym subject args)))))))
+
 
 
 ;;;; done

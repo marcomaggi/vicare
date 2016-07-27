@@ -274,6 +274,11 @@
 ;;; --------------------------------------------------------------------
 ;;; misc
 
+(declare-core-primitive record-type-method-call-late-binding-private
+    (safe)
+  (signatures
+   ((<symbol> <record> . <list>)	=> <list>)))
+
 (declare-core-primitive internal-applicable-record-type-destructor
     (safe)
   (signatures
@@ -400,6 +405,7 @@
      (or <false> <comparison-procedure>)   ;comparison-procedure
      (or <false> <hash-function>)	   ;hash-function
      (or <false> <type-method-retriever>)  ;method-retriever
+     (or <false> <type-method-retriever>)  ;method-retriever-private
      (or <false> (vector-of (pair <symbol> <type-method-retriever>)))) ;implemented-interfaces
     => (<record-type-descriptor>))))
 
@@ -438,10 +444,11 @@
 		     (safe)
 		   (signatures
 		    ((<record-type-descriptor>)		=> ((or <false> ?rv-type)))))))))
-  (declare $record-type-equality-predicate	(equality-predicate <top>))
-  (declare $record-type-comparison-procedure	(comparison-procedure <top>))
-  (declare $record-type-hash-function		(hash-function <top>))
-  (declare $record-type-method-retriever	<type-method-retriever>)
+  (declare $record-type-equality-predicate		(equality-predicate <top>))
+  (declare $record-type-comparison-procedure		(comparison-procedure <top>))
+  (declare $record-type-hash-function			(hash-function <top>))
+  (declare $record-type-method-retriever		<type-method-retriever>)
+  (declare $record-type-method-retriever-private	<type-method-retriever>)
   #| end of LET-SYNTAX |# )
 
 (let-syntax
