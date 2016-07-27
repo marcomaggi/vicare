@@ -1771,6 +1771,56 @@
 	  (else E)))
     => 'doit)
 
+  ;;Virtual method and its overriding method with different protection levels.
+  ;;
+  (begin
+    (check
+	(try
+	    (%eval '(internal-body
+		      (define-record-type <blue>
+			(virtual-method protected (doit) 1))
+		      (define-record-type <dark-blue>
+			(parent <blue>)
+			(method public (doit) 2))
+		      #f))
+	  (catch E
+	    ((&syntax)
+	     (%print-message #f (condition-message E))
+	     (syntax->datum (syntax-violation-subform E)))
+	    (else E)))
+      => 'doit)
+    (check
+	(try
+	    (%eval '(internal-body
+		      (define-record-type <blue>
+			(virtual-method public (doit) 1))
+		      (define-record-type <dark-blue>
+			(parent <blue>)
+			(seal-method protected (doit) 2))
+		      #f))
+	  (catch E
+	    ((&syntax)
+	     (%print-message #f (condition-message E))
+	     (syntax->datum (syntax-violation-subform E)))
+	    (else E)))
+      => 'doit)
+    (check
+	(try
+	    (%eval '(internal-body
+		      (define-record-type <blue>
+			(virtual-method public (doit) 1))
+		      (define-record-type <dark-blue>
+			(parent <blue>)
+			(virtual-method private (doit) 2))
+		      #f))
+	  (catch E
+	    ((&syntax)
+	     (%print-message #f (condition-message E))
+	     (syntax->datum (syntax-violation-subform E)))
+	    (else E)))
+      => 'doit)
+    #| end of BEGIN |# )
+
 ;;; --------------------------------------------------------------------
 ;;; calling errors
 

@@ -3057,15 +3057,18 @@
 		;descriptor;  otherwise   the  syntactic  identifier  to   which  the
 		;super-RCD is bound.
     (immutable virtual-method-signatures	record-type-spec.virtual-method-signatures)
-		;An alist having: as keys, symbols representing virtual method names;
-		;as values:
+		;An alist having entries with format:
+		;
+		;   (?method-name . (?protection . ?method-signature))
+		;
+		;in which: ?METHOD-NAME  is a symbol representing  a parent's virtual
+		;or sealed method  name; ?PROTECTION is a the fixnum  0 for public, 1
+		;for protected, 2 for private; ?METHOD-SIGNATURE is:
 		;
 		;*  When  the  method  is   an  open  virtual  method:  instances  of
 		;"<closure-type-spec>" representing the type signature of the method.
 		;
 		;* When the method has been sealed: the boolean false.
-		;
-		;The alist holds entries from the parent's record-type specification.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)

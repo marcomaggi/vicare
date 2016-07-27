@@ -119,8 +119,19 @@
   ;;PARENT-RCD-DEFINITION: null or  a list holding a DEFINE form  defining the parent
   ;;RCD syntactic binding, the list is spliced in the output.
   ;;
-  ;;PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST:  an   alist  representing   the  parent's
-  ;;virtual methods and sealed methods.
+  ;;PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST an alist having  entries with format:
+  ;;
+  ;;   (?method-name . (?protection . ?method-signature))
+  ;;
+  ;;in which:  ?METHOD-NAME is  a symbol  representing a  parent's virtual  or sealed
+  ;;method name;  ?PROTECTION is a the  fixnum 0 for  public, 1 for protected,  2 for
+  ;;private; ?METHOD-SIGNATURE is:
+  ;;
+  ;;* When the  method is an open virtual method:  instances of "<closure-type-spec>"
+  ;;representing the type signature of the method.
+  ;;
+  ;;* When the method has been sealed: the boolean false.
+  ;;
   (define-values (foo-parent.id
 		  parent-rtd.id parent-rcd.id parent-rtd-definition parent-rcd-definition
 		  parent-virtual-method-signatures-alist)
@@ -1016,6 +1027,10 @@
       (when (memq field-name.sym field-name*.sym)
 	(synner "multiple field definitions with the same name" field-name.id))
       (when (exists (lambda (entry)
+		      ;;The ENTRY has the format:
+		      ;;
+		      ;;   (?method-name . (?protection . ?method-signature))
+		      ;;
 		      (eq? (car entry) field-name.sym))
 	      parent-virtual-method-signatures-alist)
 	(synner "forbidden field with name equal to a virtual or sealed parent's method" field-name.id))))
@@ -1688,8 +1703,13 @@
     ;;record-type descriptor.   It is  used to  access the  parent's method-retriever
     ;;procedure.
     ;;
-    ;;PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST  an  alist   having:  as  keys,  symbols
-    ;;representing the parnet's virtual and sealed method names; as values:
+    ;;PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST an alist having  entries with format:
+    ;;
+    ;;   (?method-name . (?protection . ?method-signature))
+    ;;
+    ;;in which:  ?METHOD-NAME is a symbol  representing a parent's virtual  or sealed
+    ;;method name; ?PROTECTION is  a the fixnum 0 for public, 1  for protected, 2 for
+    ;;private; ?METHOD-SIGNATURE is:
     ;;
     ;;* When the method is an open virtual method: instances of "<closure-type-spec>"
     ;;representing the type signature of the method.
@@ -1701,6 +1721,8 @@
       (%check-that-no-method-has-the-same-name-of-a-field group* field-methods-alist-private synner)
       (%check-that-methods-with-the-same-name-have-homogeneous-type-and-protection group* synner)
       (%check-that-parent-sealed-methods-are-not-overridden group* parent-virtual-method-signatures-alist synner)
+      (%check-that-overriding-methods-have-the-same-protection-of-the-parent-virtual-method
+       group* parent-virtual-method-signatures-alist synner)
       (%process-method-specs group* foo
 			     field-methods-alist-public field-methods-alist-protected field-methods-alist-private
 			     parent-rtd.id parent-virtual-method-signatures-alist
@@ -1759,12 +1781,40 @@
 	(lambda (group)
 	  (let ((method-name.sym (<method-spec>-name-sym (car group))))
 	    (cond ((assq method-name.sym parent-virtual-method-signatures-alist)
-		   => (lambda (P)
-			(if (cdr P)
+		   => (lambda (entry)
+			(if (vmsa.signature entry)
 			    ;;The parent has a virtual method with this name.
 			    (void)
 			  ;;The parent has a sealed method with this name.
 			  (synner "attempt to override a method declared sealed by the parent record-type"
+				  method-name.sym))))
+		  (else
+		   ;;Fine, the  parent has  neither virtual  nor sealed  methods with
+		   ;;this name.
+		   (void)))))
+      group*))
+
+  (define (%check-that-overriding-methods-have-the-same-protection-of-the-parent-virtual-method
+	   group* parent-virtual-method-signatures-alist synner)
+    ;;Here we already know that every  group in GROUP* holds method specifications of
+    ;;homogeneous  type and  protection level;  so: if  the head  is private  all are
+    ;;private, if the head is protected all  are protected, if the head is public all
+    ;;are public.
+    ;;
+    (for-each
+	(lambda (group)
+	  (let* ((head			(car group))
+		 (method-name.sym	(<method-spec>-name-sym head))
+		 (protection		(<method-spec>-protection head)))
+	    (cond ((assq method-name.sym parent-virtual-method-signatures-alist)
+		   => (lambda (entry)
+			(if (eq? protection (vmsa.protection-level entry))
+			    ;;The parent  has a  virtual or  sealed method  with this
+			    ;;name and the same protection level of the group.
+			    (void)
+			  ;;The parent has a virtual  or sealed method with this name
+			  ;;but different protection level.
+			  (synner "attempt to override a parent's method with different protection level"
 				  method-name.sym))))
 		  (else
 		   ;;Fine, the  parent has  neither virtual  nor sealed  methods with
@@ -1781,7 +1831,8 @@
       (immutable	name-sym)
 		;A symbol representing the method name.
       (immutable	protection)
-		;One of the symbols: public, protected private.
+		;A  fixnum representing  the protection  level: 0  for public,  1 for
+		;protected, 2 for private.
       (immutable	early-binding-procname)
 		;The syntactic  identifier that  will be bound  to the  early binding
 		;method implementation procedure.
@@ -1811,7 +1862,14 @@
       (lambda (make-record)
 	(lambda (name-id name-sym protection early-binding-procname early-binding-meat late-binding-procname late-binding-meat
 		    closure.ots)
-	  (make-record name-id name-sym protection
+	  (make-record name-id name-sym
+		       (case protection
+			 ((public)	0)
+			 ((protected)	1)
+			 ((private)	2)
+			 (else
+			  (assertion-violation 'make-<method-spec>
+			    "internal error, invalid protection level" name-sym protection)))
 		       early-binding-procname early-binding-meat
 		       late-binding-procname late-binding-meat
 		       closure.ots)))))
@@ -1824,6 +1882,15 @@
 
   (define-core-record-type <seal-method-spec>
     (parent <method-spec>))
+
+  (define (<method-spec>-protection-public? spec)
+    (eq? 0 (<method-spec>-protection spec)))
+
+  (define (<method-spec>-protection-protected? spec)
+    (eq? 1 (<method-spec>-protection spec)))
+
+  (define (<method-spec>-protection-private? spec)
+    (eq? 2 (<method-spec>-protection spec)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1989,13 +2056,12 @@
 		   (virtual?	(or (<virtual-method-spec>? (car group))
 				    (let ((method-name.sym (<method-spec>-name-sym (car group))))
 				      (exists (lambda (entry)
-						(and (eq? method-name.sym (car entry))
-						     (cdr entry)
+						(and (eq? method-name.sym (vmsa.method-name entry))
+						     (vmsa.signature entry)
 						     #t))
-					parent-virtual-method-signatures-alist))))
-		   (protection	(<method-spec>-protection (car group))))
+					parent-virtual-method-signatures-alist)))))
 	      (if (list-of-single-item? group)
-		  (%process-method-group-with-single-item (car group) virtual? protection
+		  (%process-method-group-with-single-item (car group) virtual?
 							  early-binding-methods-alist-public
 							  early-binding-methods-alist-protected
 							  early-binding-methods-alist-private
@@ -2003,7 +2069,7 @@
 							  method-form*.sexp
 							  (lambda (a b c d e)
 							    (loop (cdr group*) a b c d e)))
-		(%process-method-group-with-multiple-items group virtual? protection
+		(%process-method-group-with-multiple-items group virtual?
 							   early-binding-methods-alist-public
 							   early-binding-methods-alist-protected
 							   early-binding-methods-alist-private
@@ -2021,7 +2087,7 @@
 
     ;;; --------------------------------------------------------------------
 
-    (define (%process-method-group-with-single-item single virtual? protection
+    (define (%process-method-group-with-single-item single virtual?
 						    early-binding-methods-alist-public
 						    early-binding-methods-alist-protected
 						    early-binding-methods-alist-private
@@ -2052,24 +2118,24 @@
 	     (list (cons (core-prim-id 'define/checked) (<method-spec>-early-binding-implementation single)))))
 	(kont
 	 ;;early-binding-methods-alist-public
-	 (if (eq? protection 'public)
+	 (if (<method-spec>-protection-public? single)
 	     (cons early-binding-method-entry early-binding-methods-alist-public)
 	   early-binding-methods-alist-public)
 	 ;;early-binding-methods-alist-protected
-	 (if (or (eq? protection 'public)
-		 (eq? protection 'protected))
+	 (if (or (<method-spec>-protection-public?    single)
+		 (<method-spec>-protection-protected? single))
 	     (cons early-binding-method-entry early-binding-methods-alist-protected)
 	   early-binding-methods-alist-protected)
 	 ;;early-binding-methods-alist-private
 	 (cons early-binding-method-entry early-binding-methods-alist-private)
 	 ;;late-binding-methods-alist
-	 (if (eq? protection 'public)
+	 (if (<method-spec>-protection-public? single)
 	     (cons late-binding-method-entry late-binding-methods-alist)
 	   late-binding-methods-alist)
 	 ;;method-form*.sexp
 	 (append form*.sexp method-form*.sexp))))
 
-    (define (%process-method-group-with-multiple-items group virtual? protection
+    (define (%process-method-group-with-multiple-items group virtual?
 						       early-binding-methods-alist-public
 						       early-binding-methods-alist-protected
 						       early-binding-methods-alist-private
@@ -2105,18 +2171,18 @@
 	       group)))
 	(kont
 	 ;;early-binding-methods-alist-public
-	 (if (eq? protection 'public)
+	 (if (<method-spec>-protection-public? first)
 	     (cons early-binding-method-entry early-binding-methods-alist-public)
 	   early-binding-methods-alist-public)
 	 ;;early-binding-methods-alist-protected
-	 (if (or (eq? protection 'public)
-		 (eq? protection 'private))
+	 (if (or (<method-spec>-protection-public?    first)
+		 (<method-spec>-protection-protected? first))
 	     (cons early-binding-method-entry early-binding-methods-alist-protected)
 	   early-binding-methods-alist-protected)
 	 ;;early-binding-methods-alist-private
 	 (cons early-binding-method-entry early-binding-methods-alist-private)
 	 ;;late-binding-methods-alist
-	 (if (eq? protection 'public)
+	 (if (<method-spec>-protection-public? first)
 	     (cons late-binding-method-entry late-binding-methods-alist)
 	   late-binding-methods-alist)
 	 ;;method-form*.sexp
@@ -2154,8 +2220,14 @@
     ;;; --------------------------------------------------------------------
 
     (define (%make-virtual-method-signatures-alist group* parent-virtual-method-signatures-alist synner)
-      ;;Build and  return VIRTUAL-METHOD-SIGNATURES-ALIST, an alist  having: as keys,
-      ;;symbols representing the virtual and sealed method names; as values:
+      ;;Build  and return  VIRTUAL-METHOD-SIGNATURES-ALIST, an  alist having  entries
+      ;;with format:
+      ;;
+      ;;   (?method-name . (?protection . ?method-signature))
+      ;;
+      ;;in which:  ?METHOD-NAME is a symbol  representing a virtual or  sealed method
+      ;;name;  ?PROTECTION is  a the  fixnum 0  for public,  1 for  protected, 2  for
+      ;;private; ?METHOD-SIGNATURE is:
       ;;
       ;;*   When   the   method   is   an   open   virtual   method:   instances   of
       ;;"<closure-type-spec>" representing the type signature of the method.
@@ -2169,10 +2241,14 @@
 			  (<method-spec>-name-sym single) (<method-spec>-closure-ots single)
 			  parent-virtual-method-signatures-alist synner)
 			 (cond ((<virtual-method-spec>? single)
-				(cons (cons (<method-spec>-name-sym single) (<method-spec>-closure-ots single))
+				(cons (cons* (<method-spec>-name-sym    single)
+					     (<method-spec>-protection  single)
+					     (<method-spec>-closure-ots single))
 				      knil))
 			       ((<seal-method-spec>? single)
-				(cons (cons (<method-spec>-name-sym single) #f)
+				(cons (cons* (<method-spec>-name-sym    single)
+					     (<method-spec>-protection  single)
+					     #f)
 				      knil))
 			       (else knil)))
 		     (let* ((head		(car group))
@@ -2184,10 +2260,14 @@
 			(<method-spec>-name-sym head) signature.ots
 			parent-virtual-method-signatures-alist synner)
 		       (cond ((<virtual-method-spec>? head)
-			      (cons (cons (<method-spec>-name-sym head) signature.ots)
+			      (cons (cons* (<method-spec>-name-sym   head)
+					   (<method-spec>-protection head)
+					   signature.ots)
 				    knil))
 			     ((<seal-method-spec>? head)
-			      (cons (cons (<method-spec>-name-sym head) #f)
+			      (cons (cons* (<method-spec>-name-sym   head)
+					   (<method-spec>-protection head)
+					   #f)
 				    knil))
 			     (else knil)))))
 	parent-virtual-method-signatures-alist group*))
@@ -2199,7 +2279,7 @@
 	     => (lambda (entry)
 		  ;;There exists a  parent's method (virtual or sealed)  that has the
 		  ;;same name.
-		  (cond ((cdr entry)
+		  (cond ((vmsa.signature entry)
 			 => (lambda (parent-signature.ots)
 			      ;;There exists  a parent's virtual method  that has the
 			      ;;same name.
@@ -2208,6 +2288,23 @@
 					method-name.sym)))))))))
 
     #| end of module: %PROCESS-METHOD-SPECS |# )
+
+;;; --------------------------------------------------------------------
+;;; accessors for the entries of PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST
+
+  ;;The ?ENTRY has the format:
+  ;;
+  ;;   (?method-name . (?protection . ?method-signature))
+  ;;
+
+  (define-syntax-rule (vmsa.method-name ?entry)
+    (car ?entry))
+
+  (define-syntax-rule (vmsa.protection-level ?entry)
+    (cadr ?entry))
+
+  (define-syntax-rule (vmsa.signature ?entry)
+    (cddr ?entry))
 
   #| end of module: %PARSE-METHOD-CLAUSES |# )
 
