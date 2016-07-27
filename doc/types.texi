@@ -6507,6 +6507,43 @@ the super--type's methods only:
     (.light this)))     @error{} not a public or protected method
 @end lisp
 
+It is not an error to define a private virtual method, but such method
+cannot be overridden by the sub--types:
+
+@lisp
+(define-record-type <blue>
+  (virtual-method private (doit) 1))
+
+(define-record-type <dark-blue>
+  (parent <blue>)
+  (method (doit) 2))    @error{} cannot override private method
+@end lisp
+
+Virtual methods overriding and sealing is possible only among methods of
+the same protection level:
+
+@lisp
+(define-record-type <blue>
+  (protected
+    (virtual-method (over)
+      'over-blue))
+  (method (doit)
+    (.over this)))
+
+(define-record-type <dark-blue>
+  (parent <blue>)
+  (protected
+    (method (over)
+      'over-dark-blue)))
+
+(define O
+  (new <dark-blue>))
+
+(define (fun @{X <blue>@})
+  (.doit X))
+
+(fun O)         @result{} over-dark-blue
+@end lisp
 
 @c page
 @node types mixins

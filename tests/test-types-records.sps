@@ -1720,6 +1720,112 @@
 	(.doit (new <dark-blue>)))
     => 1)
 
+  ;;Overriding a virtual method with the same protection level.
+  ;;
+  #;(begin
+    (check
+	(internal-body
+	  (define-record-type <blue>
+	    (protected
+	      (virtual-method (over)
+		'over-blue))
+	    (method (doit)
+	      (.over this)))
+
+	  (define-record-type <dark-blue>
+	    (parent <blue>)
+	    (protected
+	      (method (over)
+		'over-dark-blue)))
+
+	  (define O
+	    (new <dark-blue>))
+
+	  (define (fun {X <blue>})
+	    (.doit X))
+
+	  (values (.doit O)
+		  (fun O)))
+      => 'over-dark-blue 'over-dark-blue)
+    (check
+	(internal-body
+	  (define-record-type <blue>
+	    (public
+	      (virtual-method (over)
+		'over-blue))
+	    (method (doit)
+	      (.over this)))
+
+	  (define-record-type <dark-blue>
+	    (parent <blue>)
+	    (public
+	      (method (over)
+		'over-dark-blue)))
+
+	  (define O
+	    (new <dark-blue>))
+
+	  (define (fun {X <blue>})
+	    (.doit X))
+
+	  (values (.doit O)
+		  (fun O)))
+      => 'over-dark-blue 'over-dark-blue)
+    #| end of BEGIN |# )
+
+  ;;Overriding and sealing a virtual method with the same protection level.
+  ;;
+  #;(begin
+    (check
+	(internal-body
+	  (define-record-type <blue>
+	    (protected
+	      (virtual-method (over)
+		'over-blue))
+	    (method (doit)
+	      (.over this)))
+
+	  (define-record-type <dark-blue>
+	    (parent <blue>)
+	    (protected
+	      (seal-method (over)
+		'over-dark-blue)))
+
+	  (define O
+	    (new <dark-blue>))
+
+	  (define (fun {X <blue>})
+	    (.doit X))
+
+	  (values (.doit O)
+		  (fun O)))
+      => 'over-dark-blue 'over-dark-blue)
+    (check
+	(internal-body
+	  (define-record-type <blue>
+	    (public
+	      (virtual-method (over)
+		'over-blue))
+	    (method (doit)
+	      (.over this)))
+
+	  (define-record-type <dark-blue>
+	    (parent <blue>)
+	    (public
+	      (seal-method (over)
+		'over-dark-blue)))
+
+	  (define O
+	    (new <dark-blue>))
+
+	  (define (fun {X <blue>})
+	    (.doit X))
+
+	  (values (.doit O)
+		  (fun O)))
+      => 'over-dark-blue 'over-dark-blue)
+    #| end of BEGIN |# )
+
 ;;; --------------------------------------------------------------------
 ;;; definition errors
 
@@ -1820,6 +1926,24 @@
 	    (else E)))
       => 'doit)
     #| end of BEGIN |# )
+
+  ;;Attempt to override a parent's private method.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <blue>
+		      (virtual-method private (doit) 1))
+		    (define-record-type <dark-blue>
+		      (parent <blue>)
+		      (method (doit) 2))
+		    #f))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'doit)
 
 ;;; --------------------------------------------------------------------
 ;;; calling errors

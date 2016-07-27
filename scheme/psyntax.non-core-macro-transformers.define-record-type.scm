@@ -1808,14 +1808,19 @@
 		 (protection		(<method-spec>-protection head)))
 	    (cond ((assq method-name.sym parent-virtual-method-signatures-alist)
 		   => (lambda (entry)
-			(if (eq? protection (vmsa.protection-level entry))
-			    ;;The parent  has a  virtual or  sealed method  with this
-			    ;;name and the same protection level of the group.
-			    (void)
-			  ;;The parent has a virtual  or sealed method with this name
-			  ;;but different protection level.
-			  (synner "attempt to override a parent's method with different protection level"
-				  method-name.sym))))
+			(cond ((vmsa.private-method? entry)
+			       (synner "attempt to override a parent's method declared as private"
+				       method-name.sym))
+			      ((eq? protection (vmsa.protection-level entry))
+			       ;;The parent has a virtual  or sealed method with this
+			       ;;name  and the  same protection  level of  the group.
+			       ;;Good.
+			       (void))
+			      (else
+			       ;;The parent has a virtual  or sealed method with this
+			       ;;name but different protection level.
+			       (synner "attempt to override a parent's method with different protection level"
+				       method-name.sym)))))
 		  (else
 		   ;;Fine, the  parent has  neither virtual  nor sealed  methods with
 		   ;;this name.
@@ -2305,6 +2310,15 @@
 
   (define-syntax-rule (vmsa.signature ?entry)
     (cddr ?entry))
+
+  (define-syntax-rule (vmsa.public-method? ?entry)
+    (eq? 0 (vmsa.protection-level ?entry)))
+
+  (define-syntax-rule (vmsa.protected-method? ?entry)
+    (eq? 1 (vmsa.protection-level ?entry)))
+
+  (define-syntax-rule (vmsa.private-method? ?entry)
+    (eq? 2 (vmsa.protection-level ?entry)))
 
   #| end of module: %PARSE-METHOD-CLAUSES |# )
 
