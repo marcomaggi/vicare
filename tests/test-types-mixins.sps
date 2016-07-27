@@ -75,6 +75,10 @@
 	    (expander-options typed-language)
 	    (compiler-options)))))
 
+(define (%print-message bool str)
+  (when bool
+    (fprintf (current-error-port) "~a\n" str)))
+
 
 (parametrise ((check-test-name	'definition-basics))
 
@@ -912,6 +916,92 @@
 
 
   #| end of PARAMETRISE |# )
+
+
+(parametrise ((check-test-name	'protection-levels))
+
+  ;;Public wrapping syntax.
+  ;;
+  (check
+      (internal-body
+	(define-mixin-type <stuff>
+	  (public
+	    (fields a)
+	    (method (doit)
+	      (.a this))))
+
+	(define-record-type <blue>
+	  (mixins <stuff>))
+
+	(.doit (new <blue> 1)))
+    => 1)
+
+  ;;Nested syntaxes.
+  ;;
+  (check
+      (internal-body
+	(define-mixin-type <stuff>
+	  (fields private a)
+	  (method protected (one)
+		  (.a this))
+	  (method public (two)
+		  (values (.one this) 2)))
+
+	(define-record-type <blue>
+	  (mixins <stuff>))
+
+	(define O
+	  (new <blue> 1))
+
+	(.two O))
+    => 1 2)
+
+;;; --------------------------------------------------------------------
+;;; definition errors
+
+  ;;Protection   level  syntax   around   clause  not   accepting  protection   level
+  ;;specification.
+  ;;
+  (begin
+    (check
+	(try
+	    (%eval-def '(internal-body
+			  (define-mixin-type <stuff>
+			    (public (nongenerative)))
+			  (void)))
+	  (catch E
+	    ((&syntax)
+	     (%print-message #t (condition-message E))
+	     (syntax->datum (syntax-violation-subform E)))
+	    (else E)))
+      => '(nongenerative))
+    (check
+	(try
+	    (%eval-def '(internal-body
+			  (define-mixin-type <stuff>
+			    (protected (nongenerative)))
+			  (void)))
+	  (catch E
+	    ((&syntax)
+	     (%print-message #t (condition-message E))
+	     (syntax->datum (syntax-violation-subform E)))
+	    (else E)))
+      => '(nongenerative))
+    (check
+	(try
+	    (%eval-def '(internal-body
+			  (define-mixin-type <stuff>
+			    (private (nongenerative)))
+			  (void)))
+	  (catch E
+	    ((&syntax)
+	     (%print-message #t (condition-message E))
+	     (syntax->datum (syntax-violation-subform E)))
+	    (else E)))
+      => '(nongenerative))
+    #| end of BEGIN |# )
+
+  (void))
 
 
 ;;;; done
