@@ -705,6 +705,21 @@
   (signatures
    ((<object-type-spec>)		=> ((list-of <symbol>)))))
 
+(declare-core-primitive object-type-spec.methods-table-public
+    (safe)
+  (signatures
+   ((<object-type-spec>)		=> ((alist <symbol> <syntactic-identifier>)))))
+
+(declare-core-primitive object-type-spec.methods-table-protected
+    (safe)
+  (signatures
+   ((<object-type-spec>)		=> ((alist <symbol> <syntactic-identifier>)))))
+
+(declare-core-primitive object-type-spec.methods-table-private
+    (safe)
+  (signatures
+   ((<object-type-spec>)		=> ((alist <symbol> <syntactic-identifier>)))))
+
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive make-type-annotation

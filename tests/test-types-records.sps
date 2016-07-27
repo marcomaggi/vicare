@@ -1469,6 +1469,169 @@
   (void))
 
 
+(parametrise ((check-test-name	'fields-protection))
+
+  ;;Accessing public field from public method.
+  ;;
+  (begin
+    (check
+	(internal-body
+	  (define-record-type <it>
+	    (fields public inner)
+	    (method (outer)
+	      (.inner this)))
+
+	  (.outer (new <it> 1)))
+      => 1)
+    (check
+	(internal-body
+	  (define-record-type <it>
+	    (public
+	      (fields inner))
+	    (method (outer)
+	      (.inner this)))
+
+	  (.outer (new <it> 1)))
+      => 1)
+    #| end of BEGIN |# )
+
+  ;;Accessing protected field from public method.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <it>
+	  (fields protected inner)
+	  (method (outer)
+	    (.inner this)))
+
+	(.outer (new <it> 1)))
+    => 1)
+
+  ;;Accessing private field from public method.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <it>
+	  (fields private inner)
+	  (method (outer)
+	    (.inner this)))
+
+	(.outer (new <it> 1)))
+    => 1)
+
+  ;;Accessing super-type's public field.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <blue>
+	  (public
+	    (fields light)))
+
+	(define-record-type <dark-blue>
+	  (parent <blue>)
+	  (method (doit)
+	    (.light this)))
+
+	(.doit (new <dark-blue> 1)))
+    => 1)
+
+  ;;Accessing super-type's protected field.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <blue>
+	  (protected
+	    (fields light)))
+
+	(define-record-type <dark-blue>
+	  (parent <blue>)
+	  (method (doit)
+	    (.light this)))
+
+	(.doit (new <dark-blue> 1)))
+    => 1)
+
+;;; --------------------------------------------------------------------
+;;; definition errors
+
+  ;;Field and method with equal name.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <it>
+		      (fields private doit)
+		      (method private (doit) 1))
+		    (void)))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'doit)
+
+;;; --------------------------------------------------------------------
+;;; access errors
+
+  ;;Attempt to access private field.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <blue>
+		      (private
+			(fields light)))
+
+		    (.light (new <blue> 1))))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'light)
+
+  ;;Attempt to access protected field.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <blue>
+		      (protected
+			(fields light)))
+
+		    (.light (new <blue> 1))))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'light)
+
+  ;;Attempt to access super-type's private field.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <blue>
+		      (private
+			(fields light)))
+
+		    (define-record-type <dark-blue>
+		      (parent <blue>)
+		      (method (doit)
+			(.light this)))
+
+		    (.doit (new <dark-blue> 1))))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'light)
+
+  (void))
+
+
 (parametrise ((check-test-name	'methods-protection))
 
   ;;Calling public method from public method.
@@ -1523,8 +1686,42 @@
 	(.outer (new <it>)))
     => 1)
 
+  ;;Calling super-type's public method.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <blue>
+	  (public
+	    (method (light)
+	      1)))
+
+	(define-record-type <dark-blue>
+	  (parent <blue>)
+	  (method (doit)
+	    (.light this)))
+
+	(.doit (new <dark-blue>)))
+    => 1)
+
+  ;;Calling super-type's protected method.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <blue>
+	  (protected
+	    (method (light)
+	      1)))
+
+	(define-record-type <dark-blue>
+	  (parent <blue>)
+	  (method (doit)
+	    (.light this)))
+
+	(.doit (new <dark-blue>)))
+    => 1)
+
 ;;; --------------------------------------------------------------------
-;;; errors
+;;; definition errors
 
   ;;Methods with equal name but different protection level: public, private.
   ;;
@@ -1573,6 +1770,68 @@
 	   (syntax->datum (syntax-violation-subform E)))
 	  (else E)))
     => 'doit)
+
+;;; --------------------------------------------------------------------
+;;; calling errors
+
+  ;;Attempt to call private method.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <blue>
+		      (private
+			(method (light)
+			  1)))
+
+		    (.light (new <blue>))))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'light)
+
+  ;;Attempt to call protected method.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <blue>
+		      (protected
+			(method (light)
+			  1)))
+
+		    (.light (new <blue>))))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'light)
+
+  ;;Attempt to call super-type's private method.
+  ;;
+  (check
+      (try
+	  (%eval '(internal-body
+		    (define-record-type <blue>
+		      (private
+			(method (light)
+			  1)))
+
+		    (define-record-type <dark-blue>
+		      (parent <blue>)
+		      (method (doit)
+			(.light this)))
+
+		    (.doit (new <dark-blue>))))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f (condition-message E))
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => 'light)
 
   (void))
 

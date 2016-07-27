@@ -754,7 +754,7 @@
       (raise
        (condition (make-who-condition __module_who__)
 		  (make-message-condition "unknown method name for type of subject expression")
-		  (make-syntax-violation input-form.stx subject-expr.stx)
+		  (make-syntax-violation input-form.stx method-name.id)
 		  (make-application-operand-signature-condition (psi.retvals-signature subject-expr.psi))
 		  (make-type-method-name-condition method-name.sym))))
     (cond (private-access?

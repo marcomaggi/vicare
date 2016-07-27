@@ -2057,7 +2057,7 @@
 	   early-binding-methods-alist-public)
 	 ;;early-binding-methods-alist-protected
 	 (if (or (eq? protection 'public)
-		 (eq? protection 'private))
+		 (eq? protection 'protected))
 	     (cons early-binding-method-entry early-binding-methods-alist-protected)
 	   early-binding-methods-alist-protected)
 	 ;;early-binding-methods-alist-private

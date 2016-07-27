@@ -121,6 +121,8 @@
 	 object-type-spec.constructor-stx		object-type-spec.destructor-stx
 	 object-type-spec.equality-predicate		object-type-spec.comparison-procedure
 	 object-type-spec.hash-function			object-type-spec.applicable-hash-function
+	 object-type-spec.methods-table-public		object-type-spec.methods-table-protected
+	 object-type-spec.methods-table-private
 	 object-type-spec.ancestor-ots*
 	 object-type-spec.applicable-method-stx		object-type-spec.applicable-private-method-stx
 	 object-type-spec.implemented-interfaces
@@ -381,7 +383,7 @@
 		;type  identifier, for  example:  "<fixnum>,  "<string>".  For  other
 		;types it is a syntax object like "(list-of <fixnum>)".
 
-    (immutable uids-list	object-type-spec.uids-list)
+    (immutable uids-list		object-type-spec.uids-list)
 		;A list of symbols uniquely identifying this type specification.
 
     (immutable parent-ots		object-type-spec.parent-ots)
@@ -537,8 +539,12 @@
 					    (append methods-table-protected (object-type-spec.methods-table-protected parent.ots))
 					  methods-table-protected))
 	      (methods-table-private	(if parent.ots
-					    (append methods-table-private (object-type-spec.methods-table-private parent.ots))
+					    (append methods-table-private (object-type-spec.methods-table-protected parent.ots))
 					  methods-table-private)))
+	  ;; (debug-print 'expand name
+	  ;; 	       'methods-table-public methods-table-public
+	  ;; 	       'methods-table-protected methods-table-protected
+	  ;; 	       'methods-table-private  methods-table-private)
 	  (make-record name uids-list parent.ots type-annotation-maker
 		       constructor-stx destructor-stx type-predicate-stx
 		       equality-predicate.id comparison-procedure.id hash-function.id
@@ -608,13 +614,18 @@
   ;;OTS must an  object-type specification record.  METHOD-NAME.SYM must  be a symbol
   ;;representing a method name in the object-type specification.
   ;;
-  ;;If METHOD-NAME.SYM is  EQ?  to an object's public method  name: return a symbolic
-  ;;expression (to be BLESSed later) representing a Scheme expression which, expanded
-  ;;and  evaluated at  run-time, returns  the method's  applicable; otherwise  return
-  ;;false.
+  ;;If METHOD-NAME.SYM is EQ? to:
   ;;
-  ;;NOTE  We need  to remember  that the  METHODS-TABLE field  holds entries  for the
-  ;;parent  of  OTS,  so  there  is  no  need  to  traverse  the  hierarchy  of  type
+  ;;* The name of a public method for OTS.
+  ;;
+  ;;* The name of a public method for OTS's parent.
+  ;;
+  ;;return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
+  ;;expression  which,  expanded and  evaluated  at  run-time, returns  the  method's
+  ;;applicable; otherwise return false.
+  ;;
+  ;;NOTE We  need to remember that  the METHODS-TABLE-PUBLIC field holds  entries for
+  ;;the  parent of  OTS,  so there  is  no need  to traverse  the  hierarchy of  type
   ;;specifications.
   ;;
   (cond ((assq method-name.sym (object-type-spec.methods-table-public ots))
@@ -627,13 +638,18 @@
   ;;OTS must an  object-type specification record.  METHOD-NAME.SYM must  be a symbol
   ;;representing a method name in the object-type specification.
   ;;
-  ;;If METHOD-NAME.SYM is EQ?  to an  object's private method name: return a symbolic
-  ;;expression (to be BLESSed later) representing a Scheme expression which, expanded
-  ;;and  evaluated at  run-time, returns  the method's  applicable; otherwise  return
-  ;;false.
+  ;;If METHOD-NAME.SYM is EQ? to:
   ;;
-  ;;NOTE  We need  to remember  that the  METHODS-TABLE field  holds entries  for the
-  ;;parent  of  OTS,  so  there  is  no  need  to  traverse  the  hierarchy  of  type
+  ;;* The name of a public, protected or private method for OTS.
+  ;;
+  ;;* The name of a public or protected method for OTS's parent.
+  ;;
+  ;;return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
+  ;;expression  which,  expanded and  evaluated  at  run-time, returns  the  method's
+  ;;applicable; otherwise return false.
+  ;;
+  ;;NOTE We need  to remember that the METHODS-TABLE-PRIVATE field  holds entries for
+  ;;the  parent of  OTS,  so there  is  no need  to traverse  the  hierarchy of  type
   ;;specifications.
   ;;
   (cond ((assq method-name.sym (object-type-spec.methods-table-private ots))
