@@ -532,24 +532,11 @@
 				      equality-predicate.id comparison-procedure.id hash-function.id
 				      methods-table-public methods-table-protected methods-table-private
 				      implemented-interfaces)
-	(let ((methods-table-public	(if parent.ots
-					    (append methods-table-public (object-type-spec.methods-table-public parent.ots))
-					  methods-table-public))
-	      (methods-table-protected	(if parent.ots
-					    (append methods-table-protected (object-type-spec.methods-table-protected parent.ots))
-					  methods-table-protected))
-	      (methods-table-private	(if parent.ots
-					    (append methods-table-private (object-type-spec.methods-table-protected parent.ots))
-					  methods-table-private)))
-	  ;; (debug-print 'expand name
-	  ;; 	       'methods-table-public methods-table-public
-	  ;; 	       'methods-table-protected methods-table-protected
-	  ;; 	       'methods-table-private  methods-table-private)
-	  (make-record name uids-list parent.ots type-annotation-maker
-		       constructor-stx destructor-stx type-predicate-stx
-		       equality-predicate.id comparison-procedure.id hash-function.id
-		       methods-table-public methods-table-protected methods-table-private
-		       implemented-interfaces)))
+	(make-record name uids-list parent.ots type-annotation-maker
+		     constructor-stx destructor-stx type-predicate-stx
+		     equality-predicate.id comparison-procedure.id hash-function.id
+		     methods-table-public methods-table-protected methods-table-private
+		     implemented-interfaces))
       make-object-type-spec))
 
   (custom-printer
@@ -2946,16 +2933,24 @@
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-core-type-spec {name identifier?} uids-list
-				      {parent.ots (or not core-type-spec?)}
-				      constructor.stx type-predicate.stx
-				      equality-predicate.id comparison-procedure.id hash-function.id
-				      type-descriptor.id methods-table)
-	(let ((destructor.stx		#f)
-	      (implemented-interfaces	'()))
+				    {parent.ots (or not core-type-spec?)}
+				    constructor.stx type-predicate.stx
+				    equality-predicate.id comparison-procedure.id hash-function.id
+				    type-descriptor.id methods-table)
+	(let* ((destructor.stx		#f)
+	       (implemented-interfaces	'())
+	       (methods-table-public	(if parent.ots
+					    (append methods-table (object-type-spec.methods-table-public    parent.ots))
+					  methods-table))
+	       (methods-table-protected	(if parent.ots
+					    (append methods-table (object-type-spec.methods-table-protected parent.ots))
+					  methods-table))
+	       (methods-table-private	methods-table-protected))
 	  ((make-object-type-spec name uids-list parent.ots core-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx type-predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table methods-table methods-table implemented-interfaces)
+				  methods-table-public methods-table-protected methods-table-private
+				  implemented-interfaces)
 	   type-descriptor.id)))
       make-core-type-spec))
   (custom-printer
@@ -3014,11 +3009,15 @@
 	       (comparison-procedure.id	#f)
 	       (hash-function.id	(core-prim-id 'struct-hash))
 	       (implemented-interfaces	'()))
-	  ((make-object-type-spec name uids-list parent.ots struct-type-spec.type-annotation-maker
-				  constructor.id destructor.stx predicate.id
-				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table methods-table methods-table implemented-interfaces)
-	   std)))
+	  (let* ((methods-table-public		(append methods-table (object-type-spec.methods-table-public    parent.ots)))
+		 (methods-table-protected	(append methods-table (object-type-spec.methods-table-protected parent.ots)))
+		 (methods-table-private		methods-table-protected))
+	    ((make-object-type-spec name uids-list parent.ots struct-type-spec.type-annotation-maker
+				    constructor.id destructor.stx predicate.id
+				    equality-predicate.id comparison-procedure.id hash-function.id
+				    methods-table-public methods-table-protected methods-table-private
+				    implemented-interfaces)
+	     std))))
       make-struct-type-spec))
 
   (custom-printer
@@ -3215,14 +3214,17 @@
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id	#f)
 	       (hash-function.id	#f)
-	       (methods-table		'())
 	       (implemented-interfaces	'()))
-	  ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
-				  parent.ots compound-condition-type-spec.type-annotation-maker
-				  constructor.stx destructor.stx predicate.stx
-				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table methods-table methods-table implemented-interfaces)
-	   component-type*.ots #f)))
+	  (let* ((methods-table-public		(object-type-spec.methods-table-public    parent.ots))
+		 (methods-table-protected	(object-type-spec.methods-table-protected parent.ots))
+		 (methods-table-private		methods-table-protected))
+	    ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
+				    parent.ots compound-condition-type-spec.type-annotation-maker
+				    constructor.stx destructor.stx predicate.stx
+				    equality-predicate.id comparison-procedure.id hash-function.id
+				    methods-table-public methods-table-protected methods-table-private
+				    implemented-interfaces)
+	     component-type*.ots #f))))
 
       (define (%splice-component-specs component-type*.ots)
 	(fold-right (lambda (component.ots knil)
@@ -3925,14 +3927,17 @@
 	      (equality-predicate.id	#f)
 	      (comparison-procedure.id	#f)
 	      (hash-function.id		#f)
-	      (methods-table		'())
 	      (implemented-interfaces	'()))
-	  ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
-				  parent.ots closure-type-spec.type-annotation-maker
-				  constructor.stx destructor.stx predicate.stx
-				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table methods-table methods-table implemented-interfaces)
-	   signature)))
+	  (let* ((methods-table-public		(object-type-spec.methods-table-public    parent.ots))
+		 (methods-table-protected	(object-type-spec.methods-table-protected parent.ots))
+		 (methods-table-private		methods-table-protected))
+	    ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
+				    parent.ots closure-type-spec.type-annotation-maker
+				    constructor.stx destructor.stx predicate.stx
+				    equality-predicate.id comparison-procedure.id hash-function.id
+				    methods-table-public methods-table-protected methods-table-private
+				    implemented-interfaces)
+	     signature))))
 
       make-closure-type-spec))
 
@@ -4032,21 +4037,24 @@
 	 ($make-pair-type-spec car.ots cdr.ots name.stx)))
 
       (define ($make-pair-type-spec car.ots cdr.ots name)
-	 (let* ((parent.ots		(<pair>-ots))
-		(constructor.stx	#f)
-		(destructor.stx		#f)
-		(predicate.stx		make-pair-predicate)
-		(equality-predicate.id	#f)
-		(comparison-procedure.id #f)
-		(hash-function.id	#f)
-		(methods-table		'())
-		(implemented-interfaces	'()))
-	   ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
-				   parent.ots pair-type-spec.type-annotation-maker
-				   constructor.stx destructor.stx predicate.stx
-				   equality-predicate.id comparison-procedure.id hash-function.id
-				   methods-table methods-table methods-table implemented-interfaces)
-	    car.ots cdr.ots (void))))
+	(let* ((parent.ots		(<pair>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		make-pair-predicate)
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id #f)
+	       (hash-function.id	#f)
+	       (implemented-interfaces	'())
+	       (methods-table-public	(object-type-spec.methods-table-public    parent.ots))
+	       (methods-table-protected	(object-type-spec.methods-table-protected parent.ots))
+	       (methods-table-private	methods-table-protected))
+	  ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
+				  parent.ots pair-type-spec.type-annotation-maker
+				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
+				  methods-table-public methods-table-protected methods-table-private
+				  implemented-interfaces)
+	   car.ots cdr.ots (void))))
 
       (define (pair-name? name.stx)
 	(syntax-match name.stx (pair nelist-of)
@@ -4140,20 +4148,23 @@
 	 ($make-pair-of-type-spec item.ots name.stx)))
 
       (define ($make-pair-of-type-spec item.ots name)
-	 (let* ((parent.ots		(<pair>-ots))
-		(constructor.stx	#f)
-		(destructor.stx		#f)
-		(predicate.stx		make-pair-of-predicate)
-		(equality-predicate.id	#f)
-		(comparison-procedure.id #f)
-		(hash-function.id	#f)
-		(methods-table		'())
-		(implemented-interfaces	'()))
+	 (let* ((parent.ots			(<pair>-ots))
+		(constructor.stx		#f)
+		(destructor.stx			#f)
+		(predicate.stx			make-pair-of-predicate)
+		(equality-predicate.id		#f)
+		(comparison-procedure.id	#f)
+		(hash-function.id		#f)
+		(implemented-interfaces		'())
+		(methods-table-public		(object-type-spec.methods-table-public    parent.ots))
+		(methods-table-protected	(object-type-spec.methods-table-protected parent.ots))
+		(methods-table-private		methods-table-protected))
 	   ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
 				   parent.ots pair-of-type-spec.type-annotation-maker
 				   constructor.stx destructor.stx predicate.stx
 				   equality-predicate.id comparison-procedure.id hash-function.id
-				   methods-table methods-table methods-table implemented-interfaces)
+				   methods-table-public methods-table-protected methods-table-private
+				   implemented-interfaces)
 	    item.ots)))
 
       (define (pair-of-name? name.stx)
@@ -4246,13 +4257,16 @@
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id #f)
 	       (hash-function.id	#f)
-	       (methods-table		'())
+	       (methods-table-public	(object-type-spec.methods-table-public    parent.ots))
+	       (methods-table-protected	(object-type-spec.methods-table-protected parent.ots))
+	       (methods-table-private	methods-table-protected)
 	       (implemented-interfaces	'()))
 	  ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
 				  parent.ots list-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table methods-table methods-table implemented-interfaces)
+				  methods-table-public methods-table-protected methods-table-private
+				  implemented-interfaces)
 	   item-type*.ots (void) (void))))
 
       (define (list-name? name.stx)
@@ -4371,13 +4385,16 @@
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id #f)
 	       (hash-function.id	#f)
-	       (methods-table		'())
+	       (methods-table-public	(object-type-spec.methods-table-public    parent.ots))
+	       (methods-table-protected	(object-type-spec.methods-table-protected parent.ots))
+	       (methods-table-private	methods-table-protected)
 	       (implemented-interfaces	'()))
 	  ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
 				  parent.ots list-of-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table methods-table methods-table implemented-interfaces)
+				  methods-table-public methods-table-protected methods-table-private
+				  implemented-interfaces)
 	   item-type.ots)))
 
       (define (list-of-name? name.stx)
@@ -4540,13 +4557,16 @@
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id #f)
 	       (hash-function.id	#f)
-	       (methods-table		'())
+	       (methods-table-public	(object-type-spec.methods-table-public    parent.ots))
+	       (methods-table-protected	(object-type-spec.methods-table-protected parent.ots))
+	       (methods-table-private	methods-table-protected)
 	       (implemented-interfaces	'()))
 	  ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
 				  parent.ots vector-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table methods-table methods-table implemented-interfaces)
+				  methods-table-public methods-table-protected methods-table-private
+				  implemented-interfaces)
 	   item-type*.ots (void) (void))))
 
       (define (vector-name? name.stx)
@@ -4650,13 +4670,16 @@
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id #f)
 	       (hash-function.id	#f)
-	       (methods-table		'())
+	       (methods-table-public	(object-type-spec.methods-table-public    parent.ots))
+	       (methods-table-protected	(object-type-spec.methods-table-protected parent.ots))
+	       (methods-table-private	methods-table-protected)
 	       (implemented-interfaces	'()))
 	  ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
 				  parent.ots vector-of-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table methods-table methods-table implemented-interfaces)
+				  methods-table-public methods-table-protected methods-table-private
+				  implemented-interfaces)
 	   item-type.ots)))
 
       (define (vector-of-name? name.stx)
@@ -4733,13 +4756,16 @@
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id #f)
 	       (hash-function.id	#f)
-	       (methods-table		'())
+	       (methods-table-public	(object-type-spec.methods-table-public    parent.ots))
+	       (methods-table-protected	(object-type-spec.methods-table-protected parent.ots))
+	       (methods-table-private	methods-table-protected)
 	       (implemented-interfaces	'()))
 	  ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
 				  parent.ots hashtable-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table methods-table methods-table implemented-interfaces)
+				  methods-table-public methods-table-protected methods-table-private
+				  implemented-interfaces)
 	   key-type.ots value-type.ots)))
 
       (define (hashtable-name? name.stx)
@@ -4810,13 +4836,16 @@
 	       (equality-predicate.id	(core-prim-id 'eq?))
 	       (comparison-procedure.id #f)
 	       (hash-function.id	(core-prim-id 'symbol-hash))
-	       (methods-table		'())
+	       (methods-table-public	(object-type-spec.methods-table-public    parent.ots))
+	       (methods-table-protected	(object-type-spec.methods-table-protected parent.ots))
+	       (methods-table-private	methods-table-protected)
 	       (implemented-interfaces	'()))
 	  ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
 				  parent.ots enumeration-type-spec.type-annotation-maker
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table methods-table methods-table implemented-interfaces)
+				  methods-table-public methods-table-protected methods-table-private
+				  implemented-interfaces)
 	   symbol* #f)))
 
       make-enumeration-type-spec))
@@ -4891,12 +4920,16 @@
 	       (with-type-predicate?	(and type-predicate.stx #t))
 	       (type-predicate.stx	(or type-predicate.stx (object-type-spec.type-predicate-stx parent.ots)))
 	       (implemented-interfaces	'()))
-	  ((make-object-type-spec type-name.id (cons uid (object-type-spec.uids-list parent.ots))
-				  parent.ots label-type-spec.type-annotation-maker
-				  constructor.stx destructor.stx type-predicate.stx
-				  equality-predicate.id comparison-procedure.id hash-function.id
-				  methods-table methods-table methods-table implemented-interfaces)
-	   with-type-predicate?)))
+	  (let* ((methods-table-public		(append methods-table (object-type-spec.methods-table-public    parent.ots)))
+		 (methods-table-protected	(append methods-table (object-type-spec.methods-table-protected parent.ots)))
+		 (methods-table-private		methods-table-protected))
+	    ((make-object-type-spec type-name.id (cons uid (object-type-spec.uids-list parent.ots))
+				    parent.ots label-type-spec.type-annotation-maker
+				    constructor.stx destructor.stx type-predicate.stx
+				    equality-predicate.id comparison-procedure.id hash-function.id
+				    methods-table-public methods-table-protected methods-table-private
+				    implemented-interfaces)
+	     with-type-predicate?))))
 
       make-label-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )

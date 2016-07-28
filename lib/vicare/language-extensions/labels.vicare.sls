@@ -41,15 +41,14 @@
     this)
   (import (vicare)
     (vicare language-extensions mixins (0 4))
-    (for (vicare expander)
-      expand))
+    (only (psyntax system $all)
+	  typed-variable-with-private-access!))
 
 
 (define-syntax (define-label-type input-form.stx)
   (import (only (psyntax system $all)
 		make-label-type-spec)
-    (prefix (only (vicare expander)
-		  <syntactic-identifier>)
+    (prefix (vicare expander)
 	    xp::))
 
   (define-constant __module_who__
@@ -57,18 +56,18 @@
 
 
 (define-constant CLAUSE-SPEC*
-  (syntax-clauses-validate-specs
+  (xp::syntax-clauses-validate-specs
    (list
     ;;KEYWORD MIN-OCCUR MAX-OCCUR MIN-ARGS MAX-ARGS MUTUALLY-INCLUSIVE MUTUALLY-EXCLUSIVE
-    (new <syntax-clause-spec> #'parent			1 1      1 +inf.0 '() '())
-    (new <syntax-clause-spec> #'constructor		0 +inf.0 2 +inf.0 '() '())
-    (new <syntax-clause-spec> #'destructor		0 1      2 +inf.0 '() '())
-    (new <syntax-clause-spec> #'type-predicate		0 1      1 1      '() '())
-    (new <syntax-clause-spec> #'equality-predicate	0 1      1 1      '() '())
-    (new <syntax-clause-spec> #'comparison-procedure	0 1      1 1      '() '())
-    (new <syntax-clause-spec> #'hash-function		0 1      1 1      '() '())
-    (new <syntax-clause-spec> #'method			0 +inf.0 2 +inf.0 '() '())
-    (new <syntax-clause-spec> #'nongenerative		0 1      1 1      '() '())
+    (new xp::<syntax-clause-spec> #'parent			1 1      1 +inf.0 '() '())
+    (new xp::<syntax-clause-spec> #'constructor			0 +inf.0 2 +inf.0 '() '())
+    (new xp::<syntax-clause-spec> #'destructor			0 1      2 +inf.0 '() '())
+    (new xp::<syntax-clause-spec> #'type-predicate		0 1      1 1      '() '())
+    (new xp::<syntax-clause-spec> #'equality-predicate		0 1      1 1      '() '())
+    (new xp::<syntax-clause-spec> #'comparison-procedure	0 1      1 1      '() '())
+    (new xp::<syntax-clause-spec> #'hash-function		0 1      1 1      '() '())
+    (new xp::<syntax-clause-spec> #'method			0 +inf.0 2 +inf.0 '() '())
+    (new xp::<syntax-clause-spec> #'nongenerative		0 1      1 1      '() '())
     #| end of LIST |# )))
 
 
@@ -229,7 +228,7 @@
   (let ((clause*.stx (.constructor-clauses this)))
     (if (null? clause*.stx)
 	(.constructor-id this #f)
-      (with-syntax ((FUNC (identifier-method-procname (.type-name this) #'constructor)))
+      (with-syntax ((FUNC (xp::identifier-method-procname (.type-name this) #'constructor)))
 	(.constructor-id this #'(syntax FUNC))
 	(for-each (lambda (clause.stx)
 		    (let ((formals.stx	(cons #`(brace FUNC #,(.type-name this)) (car clause.stx)))
@@ -244,7 +243,7 @@
 	      ;;
 	      ;;   (?formals . ?body)
 	      ;;
-	      (with-syntax ((FUNC (identifier-method-procname (.type-name this) #'destructor)))
+	      (with-syntax ((FUNC (xp::identifier-method-procname (.type-name this) #'destructor)))
 		(.destructor-id    this #'(syntax FUNC))
 		(.push-definition! this #`(define/checked (FUNC . #,(car clause.stx)) . #,(cdr clause.stx))))))
 	(else
@@ -309,9 +308,9 @@
      (synner "invalid DEFINE-LABEL-TYPE syntax use"))))
 
 (define ({%parse-clauses <parsing-results>} {results <parsing-results>} clauses.stx)
-  (let* ((clause*.stx	(syntax-clauses-unwrap clauses.stx synner))
+  (let* ((clause*.stx	(xp::syntax-clauses-unwrap clauses.stx synner))
 	 (clause*.stx	(%merge-mixins-clauses results clause*.stx)))
-    (syntax-clauses-fold-specs combine results CLAUSE-SPEC* clause*.stx synner)))
+    (xp::syntax-clauses-fold-specs combine results CLAUSE-SPEC* clause*.stx synner)))
 
 (define (%build-output {results <parsing-results>})
   (.finalise results)
@@ -374,7 +373,7 @@
     (let ((obj (retrieve-expand-time-value mixin-name.id)))
       (syntax-case obj (define-mixin-type)
 	((define-mixin-type ?mixin-name . ?clauses)
-	 (syntax-replace-id #'?clauses mixin-name.id (.type-name results)))
+	 (xp::syntax-replace-id #'?clauses mixin-name.id (.type-name results)))
 	(_
 	 (synner "identifier in MIXINS clause is not a mixin name" mixin-name.id)))))
 
@@ -384,7 +383,7 @@
 (define-type <parsed-args>
   (vector-of (vector-of <top>)))
 
-(define ({combine <parsing-results>} {results <parsing-results>} {clause-spec <syntax-clause-spec>} {args <parsed-args>})
+(define ({combine <parsing-results>} {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
   ((case-identifiers (.keyword clause-spec)
      ((method)			%process-clause/method)
      ((parent)			%process-clause/parent)
@@ -459,7 +458,7 @@
   ;;
   (let ((protocol-stx (vector-ref (vector-ref args 0) 0)))
     (with-syntax
-	((FUNC (identifier-method-procname (.type-name results) #'type-predicate)))
+	((FUNC (xp::identifier-method-procname (.type-name results) #'type-predicate)))
       (.type-predicate-id results #'(syntax FUNC))
       (.push-definition!  results #`(define/typed {FUNC <type-predicate>}
 				      (#,protocol-stx (is-a? _ #,(.parent results))))))))
@@ -476,7 +475,7 @@
   ;;
   (let ((equality-predicate-protocol (vector-ref (vector-ref args 0) 0)))
     (with-syntax
-	((FUNC (identifier-method-procname (.type-name results) #'equality-predicate)))
+	((FUNC (xp::identifier-method-procname (.type-name results) #'equality-predicate)))
       (.equality-predicate-id results #'(syntax FUNC))
       (.push-definition!      results #`(define/typed {FUNC (equality-predicate #,(.type-name results))}
 					  (#,equality-predicate-protocol (equality-predicate #,(.parent results))))))))
@@ -493,7 +492,7 @@
   ;;
   (let ((comparison-procedure-protocol (vector-ref (vector-ref args 0) 0)))
     (with-syntax
-	((FUNC (identifier-method-procname (.type-name results) #'comparison-procedure)))
+	((FUNC (xp::identifier-method-procname (.type-name results) #'comparison-procedure)))
       (.comparison-procedure-id results #'(syntax FUNC))
       (.push-definition!        results #`(define/typed {FUNC (comparison-procedure #,(.type-name results))}
 					    (#,comparison-procedure-protocol (comparison-procedure #,(.parent results))))))))
@@ -510,7 +509,7 @@
   ;;
   (let ((hash-function-protocol (vector-ref (vector-ref args 0) 0)))
     (with-syntax
-	((FUNC (identifier-method-procname (.type-name results) #'hash-function)))
+	((FUNC (xp::identifier-method-procname (.type-name results) #'hash-function)))
       (.hash-function-id results #'(syntax FUNC))
       (.push-definition! results #`(define/typed {FUNC (hash-function #,(.type-name results))}
 				     (#,hash-function-protocol (hash-function #,(.parent results))))))))
@@ -557,6 +556,7 @@
 	   (new <method-spec>
 		method-name.id method-procname.id
 		#`((#,method-who.stx {subject #,(.type-name results)} . ?formals)
+		   (typed-variable-with-private-access! subject)
 		   (fluid-let-syntax ((this (make-synonym-transformer (syntax subject))))
 		     ?body0 ?body ...))))
 	 results))
@@ -567,11 +567,11 @@
     (syntax-case who.stx (brace)
       (?method-name
        (identifier? #'?method-name)
-       (let ((method-procname.id (identifier-method-procname (.type-name results) #'?method-name)))
+       (let ((method-procname.id (xp::identifier-method-procname (.type-name results) #'?method-name)))
 	 (values #'?method-name method-procname.id method-procname.id)))
       ((brace ?method-name . ?rv-types)
        (identifier? #'?method-name)
-       (let ((method-procname.id (identifier-method-procname (.type-name results) #'?method-name)))
+       (let ((method-procname.id (xp::identifier-method-procname (.type-name results) #'?method-name)))
 	 (values #'?method-name method-procname.id #`(brace #,method-procname.id . ?rv-types))))
       (_
        (synner "invalid method name specification" who.stx))))
