@@ -14927,6 +14927,10 @@ the hash value for @code{(void)}, @code{(eof-object)} and
 @defun object-hash @var{obj}
 Hash function for any Scheme object.  For some object types: this is a
 very low quality hash function.
+
+When @var{obj} is a record whose record--type defines a custom hash
+function: @func{object-hash} makes use of such custom function;
+otherwise @func{record-hash} is used.
 @end defun
 
 

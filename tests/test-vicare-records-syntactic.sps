@@ -1497,6 +1497,21 @@
     => (fx+ (fixnum-hash 1)
 	    (fixnum-hash 2)))
 
+  ;;OBJECT-HASH calls the custom hash function for records, if any.
+  ;;
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields one two)
+	  (hash-function
+	    (lambda ()
+	      (lambda (O)
+		(fx+ (fixnum-hash (duo-one O))
+		     (fixnum-hash (duo-two O)))))))
+	(object-hash (make-duo 1 2)))
+    => (fx+ (fixnum-hash 1)
+	    (fixnum-hash 2)))
+
   (void))
 
 
