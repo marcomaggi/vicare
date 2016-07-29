@@ -1554,60 +1554,61 @@
 ;;; --------------------------------------------------------------------
 ;;; definition errors
 
-  ;;Field and method with equal name.
+  ;;Field and method with equal name: private, private.
   ;;
-  (check
-      (try
-	  (%eval '(internal-body
-		    (define-record-type <it>
-		      (fields private doit)
-		      (method private (doit) 1))
-		    (void)))
-	(catch E
-	  ((&syntax)
-	   (%print-message #f (condition-message E))
-	   (syntax->datum (syntax-violation-subform E)))
-	  (else E)))
-    => 'doit)
+  (let-syntax
+      ((declare (syntax-rules ()
+		  ((_ ?lev1 ?lev2)
+		   (check
+		       (try
+			   (%eval '(internal-body
+				     (define-record-type <it>
+				       (fields ?lev1 doit)
+				       (method ?lev2 (doit) 1))
+				     (void)))
+			 (catch E
+			   ((&syntax)
+			    (%print-message #f (condition-message E))
+			    (syntax->datum (syntax-violation-subform E)))
+			   (else E)))
+		     => 'doit)))))
+    (declare private private)
+    (declare private protected)
+    (declare private public)
+    (declare protected private)
+    (declare protected protected)
+    (declare protected public)
+    (declare public private)
+    (declare public protected)
+    (declare public public)
+    #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
 ;;; access errors
 
-  ;;Attempt to access private field.
+  ;;Attempt to access private and protected field from outside a class's methods.
   ;;
-  (check
-      (try
-	  (%eval '(internal-body
-		    (define-record-type <blue>
-		      (private
-			(fields light)))
+  (let-syntax
+      ((declare (syntax-rules ()
+		  ((_ ?lev)
+		   (check
+		       (try
+			   (%eval '(internal-body
+				     (define-record-type <blue>
+				       (?lev (fields light)))
 
-		    (.light (new <blue> 1))))
-	(catch E
-	  ((&syntax)
-	   (%print-message #f (condition-message E))
-	   (syntax->datum (syntax-violation-subform E)))
-	  (else E)))
-    => 'light)
+				     (.light (new <blue> 1))))
+			 (catch E
+			   ((&syntax)
+			    (%print-message #f (condition-message E))
+			    (syntax->datum (syntax-violation-subform E)))
+			   (else E)))
+		     => 'light)))))
+    (declare private)
+    (declare protected)
+    #| end of LET-SYNTAX |# )
 
-  ;;Attempt to access protected field.
-  ;;
-  (check
-      (try
-	  (%eval '(internal-body
-		    (define-record-type <blue>
-		      (protected
-			(fields light)))
-
-		    (.light (new <blue> 1))))
-	(catch E
-	  ((&syntax)
-	   (%print-message #f (condition-message E))
-	   (syntax->datum (syntax-violation-subform E)))
-	  (else E)))
-    => 'light)
-
-  ;;Attempt to access super-type's private field.
+  ;;Attempt to access super-type's private field from a sub-type's method.
   ;;
   (check
       (try
@@ -1634,10 +1635,12 @@
 
 (parametrise ((check-test-name	'methods-protection))
 
+;;; calling methods from outside method definitions
+
   ;;Calling public method from public method.
   ;;
   (begin
-    (check
+    (check	;attrubute syntax
 	(internal-body
 	  (define-record-type <it>
 	    (method public (inner)
@@ -1647,7 +1650,7 @@
 
 	  (.outer (new <it>)))
       => 1)
-    (check
+    (check	;wrapping syntax
 	(internal-body
 	  (define-record-type <it>
 	    (public
@@ -1662,29 +1665,58 @@
 
   ;;Calling protected method from public method.
   ;;
-  (check
-      (internal-body
-	(define-record-type <it>
-	  (method protected (inner)
-		  1)
-	  (method (outer)
-	    (.inner this)))
+  (begin
+    (check	;attribute syntax
+	(internal-body
+	  (define-record-type <it>
+	    (method protected (inner)
+		    1)
+	    (method (outer)
+	      (.inner this)))
 
-	(.outer (new <it>)))
-    => 1)
+	  (.outer (new <it>)))
+      => 1)
+    (check	;wrapping syntax
+	(internal-body
+	  (define-record-type <it>
+	    (protected
+	      (method (inner)
+		1))
+	    (method (outer)
+	      (.inner this)))
+
+	  (.outer (new <it>)))
+      => 1)
+    #| end of BEGIN |# )
 
   ;;Calling private method from public method.
   ;;
-  (check
-      (internal-body
-	(define-record-type <it>
-	  (method private (inner)
-		  1)
-	  (method (outer)
-	    (.inner this)))
+  (begin
+    (check	;attribute syntax
+	(internal-body
+	  (define-record-type <it>
+	    (method private (inner)
+		    1)
+	    (method (outer)
+	      (.inner this)))
 
-	(.outer (new <it>)))
-    => 1)
+	  (.outer (new <it>)))
+      => 1)
+    (check	;wrapping syntax
+	(internal-body
+	  (define-record-type <it>
+	    (private
+	      (method (inner)
+		1))
+	    (method (outer)
+	      (.inner this)))
+
+	  (.outer (new <it>)))
+      => 1)
+    #| end of BEGIN |# )
+
+;;; --------------------------------------------------------------------
+;;; calling methods from sub-type's methods
 
   ;;Calling super-type's public method.
   ;;
@@ -1720,10 +1752,13 @@
 	(.doit (new <dark-blue>)))
     => 1)
 
+;;; --------------------------------------------------------------------
+;;; virtual methods
+
   ;;Overriding a virtual method with the same protection level.
   ;;
   (begin
-    (check
+    (check	;protected methods
 	(internal-body
 	  (define-record-type <blue>
 	    (protected
@@ -1747,7 +1782,7 @@
 	  (values (.doit O)
 		  (fun O)))
       => 'over-dark-blue 'over-dark-blue)
-    (check
+    (check	;public methods
 	(internal-body
 	  (define-record-type <blue>
 	    (public
@@ -1776,7 +1811,7 @@
   ;;Overriding and sealing a virtual method with the same protection level.
   ;;
   (begin
-    (check
+    (check	;protected methods
 	(internal-body
 	  (define-record-type <blue>
 	    (protected
@@ -1800,7 +1835,7 @@
 	  (values (.doit O)
 		  (fun O)))
       => 'over-dark-blue 'over-dark-blue)
-    (check
+    (check	;public methods
 	(internal-body
 	  (define-record-type <blue>
 	    (public
@@ -1825,6 +1860,9 @@
 		  (fun O)))
       => 'over-dark-blue 'over-dark-blue)
     #| end of BEGIN |# )
+
+;;; --------------------------------------------------------------------
+;;; late binding
 
   ;;Public methods are available for late binding.
   ;;
@@ -1897,53 +1935,27 @@
 
   ;;Virtual method and its overriding method with different protection levels.
   ;;
-  (begin
-    (check
-	(try
-	    (%eval '(internal-body
-		      (define-record-type <blue>
-			(virtual-method protected (doit) 1))
-		      (define-record-type <dark-blue>
-			(parent <blue>)
-			(method public (doit) 2))
-		      #f))
-	  (catch E
-	    ((&syntax)
-	     (%print-message #f (condition-message E))
-	     (syntax->datum (syntax-violation-subform E)))
-	    (else E)))
-      => 'doit)
-    (check
-	(try
-	    (%eval '(internal-body
-		      (define-record-type <blue>
-			(virtual-method public (doit) 1))
-		      (define-record-type <dark-blue>
-			(parent <blue>)
-			(seal-method protected (doit) 2))
-		      #f))
-	  (catch E
-	    ((&syntax)
-	     (%print-message #f (condition-message E))
-	     (syntax->datum (syntax-violation-subform E)))
-	    (else E)))
-      => 'doit)
-    (check
-	(try
-	    (%eval '(internal-body
-		      (define-record-type <blue>
-			(virtual-method public (doit) 1))
-		      (define-record-type <dark-blue>
-			(parent <blue>)
-			(virtual-method private (doit) 2))
-		      #f))
-	  (catch E
-	    ((&syntax)
-	     (%print-message #f (condition-message E))
-	     (syntax->datum (syntax-violation-subform E)))
-	    (else E)))
-      => 'doit)
-    #| end of BEGIN |# )
+  (let-syntax
+      ((declare (syntax-rules ()
+		  ((_ ?lev1 ?lev2)
+		   (check
+		       (try
+			   (%eval '(internal-body
+				     (define-record-type <blue>
+				       (virtual-method ?lev1 (doit) 1))
+				     (define-record-type <dark-blue>
+				       (parent <blue>)
+				       (method ?lev2 (doit) 2))
+				     #f))
+			 (catch E
+			   ((&syntax)
+			    (%print-message #f (condition-message E))
+			    (syntax->datum (syntax-violation-subform E)))
+			   (else E)))
+		     => 'doit)))))
+    (declare protected public)
+    (declare public protected)
+    #| end of LET-SYNTAX |# )
 
   ;;Attempt to override a parent's private method.
   ;;
@@ -1966,7 +1978,7 @@
 ;;; --------------------------------------------------------------------
 ;;; calling errors
 
-  ;;Attempt to call private method.
+  ;;Attempt to call a private method from outside a class's definition.
   ;;
   (check
       (try
@@ -1984,7 +1996,7 @@
 	  (else E)))
     => 'light)
 
-  ;;Attempt to call protected method.
+  ;;Attempt to call a protected method from outside a class's definition.
   ;;
   (check
       (try
@@ -2002,7 +2014,7 @@
 	  (else E)))
     => 'light)
 
-  ;;Attempt to call super-type's private method.
+  ;;Attempt to call super-type's private method from a sub-type's method.
   ;;
   (check
       (try

@@ -161,8 +161,8 @@
 		((private . ?clauses)
 		 (%splice-protection #'private   #'?clauses parsed-clause*.stx synner))
 
-		(?clause
-		 (cons #'?clause parsed-clause*.stx))))
+		(_
+		 (cons input-clause.stx parsed-clause*.stx))))
 	  '() input-clause*.stx)
       (%validate-protection-levels spliced-clause*.stx synner)))
 

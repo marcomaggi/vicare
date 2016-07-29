@@ -6358,8 +6358,8 @@ way fields and methods can be used both from other types in the
 record--type hierarchy and from outside a record--type's definition.
 
 Three protection levels are supported: @clause{public},
-@clause{protected} and @clause{private}; they are modeled after the ones
-defined in the C++ language.
+@clause{protected} and @clause{private}; they are loosely modeled after
+the ones defined in the C++ language.
 
 The following syntactic bindings are exported by the library
 @library{vicare}.
