@@ -28,6 +28,7 @@
   (options typed-language)
   (import (vicare)
     (prefix (vicare expander) expander::)
+    (vicare language-extensions friend-functions)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -2233,6 +2234,26 @@
 		(let (({A alpha} O))
 		  (fx+ (hash A) (.b O)))))))
 	(hash (new beta 1 2)))
+    => 3)
+
+  (void))
+
+
+(parametrise ((check-test-name	'friend-functions))
+
+  (check
+      (internal-body
+	(define-record-type <duo>
+	  (private
+	    (fields one two)))
+
+	(define/friend (add {O <duo>})
+	  (+ (.one O) (.two O)))
+
+	(define O
+	  (new <duo> 1 2))
+
+	(add O))
     => 3)
 
   (void))

@@ -19,6 +19,7 @@ leave the type of variables unspecified.
 * types mixins::                Sharing object-type definition clauses.
 * types interfaces::            Interface types.
 * types labels::                Sub-typing with labels.
+* types friends::               Friend functions.
 @end menu
 
 @c page
@@ -6391,6 +6392,24 @@ and methods.  When a member of record--type @class{T} is given the
 it; instances of @class{T} cannot access it from outside methods.
 @end deffn
 
+@float Table
+@multitable {Members of the same type} {public} {protected} {private}
+@headitem Access @tab public @tab protected @tab private
+@item Members of the same type
+@tab yes
+@tab yes
+@tab yes
+@item Members of sub--type
+@tab yes
+@tab yes
+@tab no
+@item Not members
+@tab yes
+@tab no
+@tab no
+@end multitable
+@caption{Summary of protection levels.}
+@end float
 
 The protection level keywords can be used both as ``wrapping syntaxes''
 as in:
@@ -7772,6 +7791,51 @@ Here we show how to include mixin clauses in a label definition:
 
 (.name  O)      @result{} cat
 (.pussy O)      @result{} (pussy cat)
+@end lisp
+
+@c page
+@node types friends
+@section Friend functions
+
+
+@cindex Friend functions
+@cindex Record--types, friend functions
+@cindex @library{vicare language-extensions friend-functions}, library
+@cindex Library @library{vicare language-extensions friend-functions}
+
+
+Friend functions are used to access private, public and protected
+members of a record--type from outside of the the record--type's
+methods.
+
+The following syntactic bindings are exported by the library
+@library{vicare language-extensions friend-functions}.
+
+
+@deffn Syntax define/friend (@meta{who} (brace @meta{subject} @meta{type}) . @meta{formals}) . @meta{body}
+Define a function like @syntax{define/checked} would do, but give
+private access to the members of the record type @meta{type} for the
+argument @meta{subject}.
+
+The new function is not a member of the record--type, so it does not
+influences the compliance of the record--type with interface types.
+@end deffn
+
+
+Example:
+
+@lisp
+(define-record-type <duo>
+  (private
+    (fields one two)))
+
+(define/friend (add @{O <duo>@})
+  (+ (.one O) (.two O)))
+
+(define O
+  (new <duo> 1 2))
+
+(add O)  @result{} 3
 @end lisp
 
 @c end of file

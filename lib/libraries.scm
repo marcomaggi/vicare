@@ -94,6 +94,7 @@
      (vicare language-extensions multimethods methods-table)
      (vicare language-extensions multimethods)
      (vicare language-extensions instantiable-bodies)
+     (vicare language-extensions friend-functions)
 
      (vicare build-tools automake)
 
