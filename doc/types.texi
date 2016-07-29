@@ -27,9 +27,9 @@ leave the type of variables unspecified.
 @section Introduction to the typed language
 
 
-@value{PRJNAME}'s typed language adds some expand--time syntactic
-binding type--checking and extended @oop{} syntax to the language
-specified by @rnrs{6}.
+@value{PRJNAME}'s typed language adds some expand--time
+syntactic--binding type--checking and extended object--oriented
+programming (@oop{}) syntax to the language specified by @rnrs{6}.
 
 @menu
 * types intro philosophy::      Typed language philosophy.
@@ -76,12 +76,11 @@ information that the values are fixnums.
 The tuple of type annotations associated to the @meta{formals} is called
 @dfn{type signature}; a type signature represents informations about
 both the number of values and their type.  We need a type signature to
-represent the types of values returned by an expression; more generally,
-we need a type signature to represent the types of values returned by a
-function application.  We need a type signature to represent the types
-of the arguments accepted in a function application.
+represent the types of values returned by an expression.  We need a type
+signature to represent the types of the arguments accepted in a function
+application.
 
-Given the @syntax{call-with-values} model of thinking to expressions
+Given the @func{call-with-values} model of thinking to expressions
 evaluations: the whole purpose of a typed language is to verify, at
 expand--time, that the type signature of an expression matches the type
 signature of the arguments of a function.
@@ -244,7 +243,8 @@ we usually want to import the library @library{vicare} to use the
 extended syntaxes that recognise type definitions and declarations.
 
 We can use the function @func{typed-language-enabled?} to enable the
-typed language at the @repl{}.
+typed language at the @repl{} (@pxref{iklib expander language,
+typed-language-enabled?}).
 
 @c page
 @node types intro type ids
@@ -269,7 +269,8 @@ object types (like @condition{i/o}) are special cases of these.
 The library @library{vicare} exports a set type identifiers (whose
 implementation is integrated in @value{PRJNAME}'s expander) representing
 the types of built--in objects.  Some of them are: @class{fixnum},
-@class{string}, @class{vector}, @class{textual-input-port}.
+@class{string}, @class{vector}, @class{textual-input-port}.  @ref{types
+built-in, Built-in object types}.
 @end itemize
 
 Type identifiers are organised in a tree hierarchy, with subtypes
@@ -310,16 +311,16 @@ annotation @class{fixnum}.
 At the time the typed variable's syntactic binding is established: the
 type annotation must hold only already bound type identifiers.  So the
 following program (where @samp{---} represents an unspecified form) is
-correct because @objtype{duo} is bound before @var{O}:
+correct because @class{duo} is bound before @var{O}:
 
 @lisp
 #!vicare
 (program (demo)
   (options typed-language)
   (import (vicare))
-  (define-record-type duo
+  (define-record-type <duo>
     (fields one two))
-  (define @{O duo@}
+  (define @{O <duo>@}
     ---))
 @end lisp
 
@@ -331,9 +332,9 @@ the follow program is @strong{not} correct:
 (program (demo)
   (options typed-language)
   (import (vicare))
-  (define @{O duo@}
+  (define @{O <duo>@}
     ---)
-  (define-record-type duo
+  (define-record-type <duo>
     (fields one two)))
 @end lisp
 
@@ -344,8 +345,9 @@ and will cause an expand--time syntax violation.
 @node types ann
 @section Type annotations
 
-Type annotations are special syntaxes that make use of the @func{brace}
-syntax to associate a type specification to a lexical syntax
+
+Type annotations are special forms that make use of the @func{brace}
+syntax to associate a type specification to a lexical variable
 (@pxref{iklib syntaxes misc, brace}).  It works as follows:
 
 @lisp
@@ -358,8 +360,8 @@ in which the variable @samp{O} is defined as having type @class{fixnum}.
 
 @quotation
 @strong{NOTE} To use the extensions in a friendly manner we need to put
-the reader in @samp{#!vicare} mode, this way @func{brace} can be
-inserted using actual brace characters:
+the source code reader in @samp{#!vicare} mode, this way @func{brace}
+can be inserted using actual brace characters:
 
 @lisp
 #!vicare
@@ -422,9 +424,8 @@ When using the syntaxes @syntax{lambda}, @syntax{case-lambda},
 @syntax{define}, @syntax{case-define}, @syntax{receive},
 @syntax{let-values} and @syntax{let*-values} we can specify a ``rest''
 argument that is bound to a list of the rest of the operands; this
-syntactic binding can be annotated only with the type identifier
-@class{list} or the type annotation @samp{(list-of @meta{type})}.  For
-example:
+syntactic binding can be annotated only with a type that is a sub--type
+of @class{list}, and so represents a list.  For example:
 
 @lisp
 ((lambda (@{a @aclass{fixnum}@} @{b @aclass{string}@} . @{rest (list-of @aclass{symbol})@})
