@@ -504,7 +504,7 @@ The following syntactic bindings are exported by @library{vicare}.
 @deftp {Type Annotation} pair @meta{car-type} @meta{car-type}
 @deftpx {Parent Type} @aclass{pair}
 Describe a pair having car of type @meta{car-type} and cdr of type
-@meta{car-type}.  Both @meta{car-type} and @meta{car-type} are nested
+@meta{car-type}.  Both @meta{car-type} and @meta{cdr-type} are nested
 type annotations.
 
 @lisp
@@ -817,8 +817,8 @@ annotation with one of the ancestors of @meta{type}:
 @result{} exact-match
 @end lisp
 
-When used along with @syntax{not}, it can is used to avoid matching
-exactly a type annotation with one of the ancestors of @meta{type}:
+When used along with @syntax{not}, it is used to avoid matching exactly
+a type annotation with one of the ancestors of @meta{type}:
 
 @lisp
 (type-annotation-matching (not (ancestor-of &condition))
@@ -833,7 +833,7 @@ exactly a type annotation with one of the ancestors of @meta{type}:
 A short--cut to specify:
 
 @lisp
-(lambda (@meta{type}) => (<true>))
+(lambda (@meta{type}) => (<boolean>))
 @end lisp
 @end deftp
 
@@ -899,7 +899,7 @@ The expression is not allowed not to return:
 @error{} &assertion
 @end lisp
 
-The expression is not allowed not return zero, two or more values:
+The expression is not allowed to return zero, two or more values:
 
 @lisp
 (type-annotation-syntax (type-of (values)))
