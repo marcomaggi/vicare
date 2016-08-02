@@ -1881,7 +1881,7 @@ Accessor for the field of @class{case-lambda-descriptors} instances.
 
 
 The following syntactic bindings are exported by the library
-@library{vicare}.
+@library{vicare system type-descriptors}.
 
 
 @deffn Syntax type-descriptor-parent @meta{type-annotation}
@@ -1996,6 +1996,58 @@ descriptors; the operand must be further validated at run--time.
 @item no-match
 If there is no match between the argument's and operand's descriptors.
 @end table
+@end deffn
+
+
+@deffn Syntax descriptors-signature-matching @metai{signature-annotation} @metaii{signature-annotation}
+The arguments @var{signature-annotation} must be proper or improper
+lists of type annotations.  Expand to an expression which, compiled and
+evaluated, matches the arguments as if:
+
+@itemize
+@item
+The @class{descriptors-signature} instance associated to
+@metai{signature-annotation} represents the types of formal arguments
+requested by a closure object.
+
+The @class{descriptors-signature} instance associated to
+@metaii{signature-annotation} represents the types of the operands given
+to a closure object application.
+@end itemize
+
+Expand to a quoted symbol:
+
+@table @code
+@item exact-match
+If there is an exact match between the argument's and operand's
+descriptors.
+
+@item possible-match
+If there is a possible match between the argument's and operand's
+descriptors; the operand must be further validated at run--time.
+
+@item no-match
+If there is no match between the argument's and operand's descriptors.
+@end table
+
+Usage examples:
+
+@lisp
+(descriptors-signature-matching
+  (<number> <string>)
+  (<fixnum> <nestring>))
+@result{} exact-match
+
+(descriptors-signature-matching
+  (<number> <string>)
+  (<fixnum> <top>))
+@result{} possible-match
+
+(descriptors-signature-matching
+  (<number> <string>)
+  (<fixnum> <vector>))
+@result{} no-match
+@end lisp
 @end deffn
 
 @c page

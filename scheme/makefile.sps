@@ -1217,12 +1217,6 @@
     (type-signature-common-ancestor		v $language)
     (type-signature-matching			v $language)
     (type-signature-union			v $language)
-    (type-descriptor=?				v $language)
-    (type-descriptor-parent			v $language)
-    (type-descriptor-ancestors			v $language)
-    (type-descriptor-super-and-sub?		v $language)
-    (type-descriptor-matching			v $language)
-    (descriptors-signature-matching		v $language)
     (expansion-of				v $language)
     (expansion-of*				v $language)
     (visit-code-of				v $language)
@@ -4278,6 +4272,16 @@
     (overloaded-function-descriptor.register!	$type-descriptors)
     (overloaded-function-descriptor.select-matching-entry $type-descriptors)
     (overloaded-function-late-binding		$type-descriptors)
+
+;;; --------------------------------------------------------------------
+;;; type descriptors syntaxes
+
+    (type-descriptor=?				$type-descriptors)
+    (type-descriptor-parent			$type-descriptors)
+    (type-descriptor-ancestors			$type-descriptors)
+    (type-descriptor-super-and-sub?		$type-descriptors)
+    (type-descriptor-matching			$type-descriptors)
+    (descriptors-signature-matching		$type-descriptors)
 
 ;;; --------------------------------------------------------------------
 ;;; keywords

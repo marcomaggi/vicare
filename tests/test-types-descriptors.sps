@@ -3650,6 +3650,27 @@
   ;;So none of the components of <zero> is equal to an ancestor of <fixnum>.
   (doit ((not (ancestor-of <fixnum>)))		(<zero>)		=> exact-match)
 
+;;; --------------------------------------------------------------------
+;;; examples
+
+  (check
+      (descriptors-signature-matching
+       (<number> <string>)
+       (<fixnum> <nestring>))
+    => 'exact-match)
+
+  (check
+      (descriptors-signature-matching
+       (<number> <string>)
+       (<fixnum> <top>))
+    => 'possible-match)
+
+  (check
+      (descriptors-signature-matching
+       (<number> <string>)
+       (<fixnum> <vector>))
+    => 'no-match)
+
   (void))
 
 
