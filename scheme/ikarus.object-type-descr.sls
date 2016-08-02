@@ -846,13 +846,13 @@
 		;A  list  of   symbols  representing  the  UIDs   of  the  interfaces
 		;implemented by this interface-type.
 		;
-		;NOTE this  field is  used only  to validate  nongenerative instances
+		;NOTE This  field is  used only  to validate  nongenerative instances
 		;stored in the UIDs.
     (immutable	method-prototype-names		interface-type-descr.method-prototype-names)
-		;A list of symbols representing the names of the methods that must be
-		;provided by object-types implementing this interface.
+		;A list of symbols representing the names of public methods that must
+		;be provided by object-types implementing this interface.
 		;
-		;NOTE this  field is  used only  to validate  nongenerative instances
+		;NOTE This  field is  used only  to validate  nongenerative instances
 		;stored in the UIDs.
     (immutable	method-retriever		interface-type-descr.method-retriever)
 		;A function that retrieves  method implementation functions given the
