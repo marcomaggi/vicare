@@ -1890,7 +1890,7 @@ descriptor of the parent of the specified type annotation.
 
 @lisp
 (type-descriptor-parent @aclass{fixnum})
-@result{} @actdname{fixnum}
+@result{} @actdname{exact-integer}
 
 (type-descriptor-parent (pair @aclass{fixnum} @aclass{flonum}))
 @result{} @actdname{pair}
@@ -1966,9 +1966,8 @@ matching super--type of the type descriptor associated to
 
 (type-descriptor-super-and-sub?
    @aclass{number} @aclass{top})
-@result{} #t
+@result{} #f
 
-;;this pair is a matching super-type of this list
 (type-descriptor-super-and-sub?
    (pair @aclass{fixnum} @aclass{null}) (list @aclass{fixnum}))
 @result{} #t
@@ -1988,14 +1987,14 @@ Expand to a quoted symbol:
 @table @code
 @item exact-match
 If there is an exact match between the argument's and operand's
-annotations.
+descriptors.
 
 @item possible-match
 If there is a possible match between the argument's and operand's
-annotations; the operand must be further validated at run--time.
+descriptors; the operand must be further validated at run--time.
 
 @item no-match
-If there is no match between the argument's and operand's annotations.
+If there is no match between the argument's and operand's descriptors.
 @end table
 @end deffn
 
