@@ -950,7 +950,7 @@ characteristics of object--types.  For example @rnrs{6} record--type
 descriptors, @rnrs{6} record--constructor descriptors, @value{PRJNAME}'s
 struct descriptors are all special cases of type descriptors.
 
-Every expand-time type annotation has a corresponding run--time type
+Every expand--time type annotation has a corresponding run--time type
 descriptor.  Usually we do not have to deal with type descriptors; so
 most of the syntactic bindings are exported by the library
 @library{vicare system type-descriptors}, while the public @api{} is
@@ -1016,11 +1016,11 @@ there is an already defined type descriptor, bound to a syntactic
 binding exported by the library @library{vicare system
 type-descriptors}.
 
-Such syntactic binding have name derived from the type name by appending
-@samp{-ctd} (where @samp{ctd} stands for Core Type Descriptor).  So the
-type name @class{fixnum} has the associated type descriptor
-@ctdname{fixnum}, the type name @class{string} has the associated type
-descriptor @ctdname{string}, et cetera.
+Such syntactic bindings have name derived from the type name by
+appending @samp{-ctd} (where @samp{ctd} stands for Core Type
+Descriptor).  So the type name @class{fixnum} has the associated type
+descriptor @ctdname{fixnum}, the type name @class{string} has the
+associated type descriptor @ctdname{string}, et cetera.
 
 Some usage examples:
 
@@ -1046,7 +1046,7 @@ The following syntactic bindings are exported by the library
 
 
 @deftp {Record Type} @aclass{core-type-descriptor}
-Type name for objects describing core object--types.  It has the
+The type name of objects describing core object--types.  It has the
 following immutable fields:
 
 @table @code
@@ -1712,17 +1712,17 @@ A symbol representing the name of this interface type.
 @item uid
 A symbol acting as unique identifier associated to this type descriptor.
 
-@item method-prototype-names
-A list of symbols representing the names of the methods that must be
-provided by object--types implementing this interface.
-
-@item implemented-method-names
-A list of symbols representing the names of te methods implemented by
-this interface type (excluding the prototype names).
+@item parent-type-descriptor
+An instance of @class{interface-type-descr} representing the parent of
+this interface--type; @false{} if this interface--type has no parent.
 
 @item implemented-interface-uids
 A list of symbols representing the @uid{}s of the interfaces implemented
 by this interface--type.
+
+@item method-prototype-names
+A list of symbols representing the names of public methods that must be
+provided by object--types implementing this interface.
 
 @item method-retriever
 A function that retrieves method implementation functions given the name
@@ -1731,7 +1731,7 @@ of a method as symbol.
 @end deftp
 
 
-@defun make-interface-type-descr @var{type-name} @var{method-retriever}
+@defun make-interface-type-descr @var{type-name} @var{uid} @var{parent-type-descriptor} @var{implemented-interface-uids} @var{method-prototype-names} @var{method-retriever}
 Build and return a new instance of @class{interface-type-descr}.
 @end defun
 
@@ -1744,9 +1744,9 @@ Return @true{} if @var{obj} is an instance of
 
 @defun interface-type-descr.type-name @var{des}
 @defunx interface-type-descr.uid @var{des}
-@defunx interface-type-descr.method-prototype-names @var{des}
-@defunx interface-type-descr.implemented-method-names @var{des}
+@defunx interface-type-descr.parent-type-descriptor @var{des}
 @defunx interface-type-descr.implemented-interface-uids @var{des}
+@defunx interface-type-descr.method-prototype-names @var{des}
 @defunx interface-type-descr.method-retriever @var{des}
 Accessors for the fields of @class{interface-type-descr} instances.
 @end defun
@@ -1772,8 +1772,8 @@ The following syntactic bindings are exported by the library
 
 
 @deftp {Record Type} @aclass{descriptors-signature}
-Name of descriptors representing tuples of values signatures.  It has
-the following fields:
+Type name of descriptors representing tuples of values signatures.  It
+has the following fields:
 
 @table @code
 @item object-type-descrs
@@ -1808,8 +1808,8 @@ The following syntactic bindings are exported by the library
 
 
 @deftp {Record Type} @aclass{lambda-descriptors}
-Name of descriptors the type signature of single lambda clauses.  It has
-the following fields:
+Type name of descriptors representing the type signature of single
+lambda clauses.  It has the following fields:
 
 @table @code
 @item retvals
@@ -1823,7 +1823,7 @@ arguments expected by this lambda clause.
 @end deftp
 
 
-@defun make-lambda-descriptors @var{descriptors}
+@defun make-lambda-descriptors @var{retvals} @var{argvals}
 Build and return a new instance of @class{lambda-descriptors}.
 @end defun
 
@@ -1849,8 +1849,8 @@ The following syntactic bindings are exported by the library
 
 
 @deftp {Record Type} @aclass{case-lambda-descriptors}
-Name of descriptors representing the type signature of a tuple of lambda
-clauses.  It has the following fields:
+Type name of descriptors representing the type signature of a tuple of
+lambda clauses.  It has the following fields:
 
 @table @code
 @item clause-signature*
@@ -1860,7 +1860,7 @@ the clauses.
 @end deftp
 
 
-@defun make-case-lambda-descriptors @var{descriptors}
+@defun make-case-lambda-descriptors @var{clause-signature*}
 Build and return a new instance of @class{case-lambda-descriptors}.
 @end defun
 
