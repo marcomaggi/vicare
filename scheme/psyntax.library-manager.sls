@@ -82,7 +82,7 @@
   (define-type-descriptors)
   (strip-angular-parentheses)
   (fields
-    (immutable uid library-uid)
+    (immutable uid		library-uid)
 		;A  gensym  uniquely  identifying  this  interned  library;  it  also
 		;identifies the corresponding serialised library.
 		;
@@ -95,7 +95,7 @@
 		;binary file is compared to this field: if they are EQ?  the compiled
 		;versions  are  in sync,  otherwise  the  importing library  must  be
 		;recompiled.
-    (immutable name	library-name)
+    (immutable name		library-name)
 		;A library name as defined by R6RS; it is the symbolic expression:
 		;
 		;   (?identifier0 ?identifier ...)
@@ -103,12 +103,12 @@
 		;
 		;where  the  ?IDENTIFIERs are  symbols  and  ?VERSION  is a  list  of
 		;non-negative fixnums representing the version numbers.
-    (immutable imp-lib*	library-imp-lib*)
+    (immutable imp-lib*		library-imp-lib*)
 		;The list of LIBRARY objects selected by the IMPORT syntax.
-    (immutable vis-lib*	library-vis-lib*)
+    (immutable vis-lib*		library-vis-lib*)
 		;The list of LIBRARY objects  selecting libraries needed by the visit
 		;code.
-    (immutable inv-lib*	library-inv-lib*)
+    (immutable inv-lib*		library-inv-lib*)
 		;The list of LIBRARY objects selecting libraries needed by the invoke
 		;code.
     (immutable export-subst	library-export-subst)
@@ -124,7 +124,7 @@
 		;When set  to a  procedure: it is  the thunk to  call to  compile and
 		;evaluate the visit  code.  When set to something  else: this library
 		;has been already visited.
-    (mutable invoke-state library-invoke-state library.invoke-state-set!)
+    (mutable invoke-state	library-invoke-state library.invoke-state-set!)
 		;When set  to a  procedure: it is  the thunk to  call to  compile and
 		;evaluate the invoke code.  When  set to something else: this library
 		;has been already invoked.
@@ -146,7 +146,7 @@
     (immutable guard-lib*	library-guard-lib*)
 		;The  list  of LIBRARY  objects  selecting  libraries needed  by  the
 		;STALE-WHEN composite test expression.
-    (immutable visible?	library-visible?)
+    (immutable visible?		library-visible?)
 		;A boolean determining if the  library is visible.  This attribute is
 		;used  by  INTERNED-LIBRARIES  to   select  libraries  to  report  as
 		;interned.
@@ -157,7 +157,7 @@
     (immutable source-file-name	library-source-file-name)
 		;False or a  string representing the pathname of the  file from which
 		;the source code of the library was read.
-    (immutable option*	library-option*)
+    (immutable option*		library-option*)
 		;A sexp holding library options.
     (immutable foreign-library*	library-foreign-library*)
 		;A list of strings representing  identifiers of shared libraries that
@@ -181,17 +181,18 @@
 		     guard-lib* (and visible? #t)
 		     source-file-name option* foreign-library*))
       make-library))
-  #| end of DEFINE-RECORD-TYPE |# )
 
-  ;; (lambda (S port sub-printer)
-  ;;   (define-syntax-rule (%display thing)
-  ;;     (display thing port))
-  ;;   (define-syntax-rule (%write thing)
-  ;;     (write thing port))
-  ;;   (%display "#<library ")
-  ;;   (%display (library-name S))
-  ;;   (%display " filename=")	(%write (library-source-file-name S))
-  ;;   (%display ">"))
+  (custom-printer
+    (lambda (S port sub-printer)
+      (define-syntax-rule (%display thing)
+	(display thing port))
+      (define-syntax-rule (%write thing)
+	(write thing port))
+      (%display "#<library ")
+      (%display (library-name S))
+      (%display ">")))
+
+  #| end of DEFINE-RECORD-TYPE |# )
 
 (define-list-of-type-predicate list-of-libraries? library?)
 
