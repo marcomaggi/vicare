@@ -29,6 +29,17 @@
   (import (vicare)
     (vicare language-extensions interfaces)
     (vicare language-extensions instantiable-bodies)
+    (only (vicare expander)
+	  type-annotation=?
+	  type-annotation-super-and-sub?
+	  type-annotation-common-ancestor
+	  type-annotation-ancestors
+	  type-annotation-syntax
+	  type-annotation-matching
+	  type-signature-super-and-sub?
+	  type-signature-common-ancestor
+	  type-signature-matching
+	  type-signature-union)
     (prefix (vicare expander) xp::)
     (vicare checks))
 
@@ -61,7 +72,18 @@
 
 (define THE-ENVIRONMENT
   (environment '(vicare)
-	       '(vicare language-extensions interfaces)))
+	       '(vicare language-extensions interfaces)
+	       '(only (vicare expander)
+		      type-annotation=?
+		      type-annotation-super-and-sub?
+		      type-annotation-common-ancestor
+		      type-annotation-ancestors
+		      type-annotation-syntax
+		      type-annotation-matching
+		      type-signature-super-and-sub?
+		      type-signature-common-ancestor
+		      type-signature-matching
+		      type-signature-union)))
 
 (define (%print-message bool str)
   (when bool

@@ -30,6 +30,17 @@
     (prefix (vicare expander) expander::)
     (only (vicare expander)
 	  &expand-time-type-signature-violation)
+    (only (vicare expander)
+	  type-annotation=?
+	  type-annotation-super-and-sub?
+	  type-annotation-common-ancestor
+	  type-annotation-ancestors
+	  type-annotation-syntax
+	  type-annotation-matching
+	  type-signature-super-and-sub?
+	  type-signature-common-ancestor
+	  type-signature-matching
+	  type-signature-union)
     (vicare checks))
 
 (check-set-mode! 'report-failed)

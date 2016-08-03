@@ -28,8 +28,19 @@
   (options typed-language)
   (import (vicare)
     (prefix (vicare expander) expander::)
+    (only (vicare expander)
+	  type-annotation=?
+	  type-annotation-super-and-sub?
+	  type-annotation-common-ancestor
+	  type-annotation-ancestors
+	  type-annotation-syntax
+	  type-annotation-matching
+	  type-signature-super-and-sub?
+	  type-signature-common-ancestor
+	  type-signature-matching
+	  type-signature-union)
     (prefix (vicare system type-descriptors)
-	    sys::)
+	    td::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -100,28 +111,28 @@
 (parametrise ((check-test-name	'type-descriptor))
 
   (check
-      (sys::core-type-descriptor? (type-descriptor <string>))
+      (td::core-type-descriptor? (type-descriptor <string>))
     => #t)
 
   (check
-      (sys::core-type-descriptor.name (type-descriptor <string>))
+      (td::core-type-descriptor.name (type-descriptor <string>))
     => '<string>)
 
   (let ((btd (type-descriptor <string>)))
 
     (check
-	(sys::core-type-descriptor.name (sys::core-type-descriptor.parent btd))
+	(td::core-type-descriptor.name (td::core-type-descriptor.parent btd))
       => '<top>)
 
     (check
-	(sys::core-type-descriptor.uids-list btd)
+	(td::core-type-descriptor.uids-list btd)
       => '(vicare:core-type:<string> vicare:core-type:<top>))
 
-    (check-for-true	(procedure? (sys::core-type-descriptor.method-retriever btd)))
-    (check-for-true	((sys::core-type-descriptor.method-retriever btd) 'length))
+    (check-for-true	(procedure? (td::core-type-descriptor.method-retriever btd)))
+    (check-for-true	((td::core-type-descriptor.method-retriever btd) 'length))
 
     (check
-	(let* ((retriever (sys::core-type-descriptor.method-retriever btd))
+	(let* ((retriever (td::core-type-descriptor.method-retriever btd))
 	       ({strlen <procedure>} (retriever 'length)))
 	  (strlen "ciao"))
       => 4)
@@ -131,7 +142,7 @@
 ;;; --------------------------------------------------------------------
 
   (internal-body
-    (define {string-btd sys::<core-type-descriptor>}
+    (define {string-btd td::<core-type-descriptor>}
       (type-descriptor <string>))
 
     (check
@@ -139,7 +150,7 @@
       => '<string>)
 
     (check
-	(sys::core-type-descriptor.name (.parent string-btd))
+	(td::core-type-descriptor.name (.parent string-btd))
       => '<top>)
 
     (check
@@ -150,7 +161,7 @@
     (check-for-true	((.method-retriever string-btd) 'length))
 
     (check
-	(let* ((retriever (sys::core-type-descriptor.method-retriever string-btd))
+	(let* ((retriever (td::core-type-descriptor.method-retriever string-btd))
 	       ({strlen <procedure>} (retriever 'length)))
 	  (strlen "ciao"))
       => 4)
