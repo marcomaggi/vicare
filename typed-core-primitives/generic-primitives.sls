@@ -123,6 +123,13 @@
    ((<void>)			=> (<true>))
    ((<top>)			=> (<boolean>))))
 
+(declare-core-primitive unspecified-values
+    (safe)
+  (signatures
+   (()				=> (list-of <void>)))
+  (attributes
+   (()				foldable effect-free result-true)))
+
 (declare-core-primitive load
     (safe)
   (signatures
