@@ -3553,9 +3553,9 @@ name is bound to the fluid syntax @syntax{__who__}.
 @cindex Functions, overloaded
 
 
-An overloaded function represents an aggregation of functions linked to
-the same name and having different number and/or type of arguments.  For
-example, in the code:
+An @dfn{overloaded function} represents an aggregation of functions
+linked to the same name and having different number and/or type of
+arguments.  For example, in the code:
 
 @lisp
 (define/overload (fun @{O <fixnum>@})
@@ -3635,13 +3635,14 @@ binding is attempted.  At expand--time:
 @enumerate
 @item
 The expander determines the type of the operands, if it fails a syntax
-violation is raised.
+violation is raised (for example if an operand expression returns
+multiple values).
 
 @item
-The set of specialised functions is visited and the identifier of the
-better matching one is inserted in the code to be applied to the
-operands.  The return values of the specialised function will become the
-return values of the overloaded function application.
+The set of specialised functions is visited and the syntactic identifier
+bound to the better matching one is inserted in the code to be applied
+to the operands.  The return values of the specialised function will
+become the return values of the overloaded function application.
 
 @item
 If no matching function is found: code performing late binding is
@@ -3774,6 +3775,10 @@ If @var{A} is equal to @var{B}.
 @item +1
 If @var{A} is greater than @var{B}.
 @end table
+
+@item Hash functions
+When applied to an instance of the type: compute and return  a
+non--negative fixnum suitable to be used by hashtables.
 @end table
 
 The following syntactic bindings are exported by the library
