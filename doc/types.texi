@@ -5909,8 +5909,8 @@ applications and forbidden in logic predicates.  For example:
 @end lisp
 
 @noindent
-raises a warning because @func{vector-set!} returns the void value.  The
-type @class{void} has no parent (it is @strong{not} a sub--type of
+raises an exception because @func{vector-set!} returns the void value.
+The type @class{void} has no parent (it is @strong{not} a sub--type of
 @class{top}) and it should be like not--a--number for numeric
 computations.  Here are some consequences:
 
@@ -6180,7 +6180,8 @@ The method of the super--type is still accessible if we ``see'' the
 object instance through the super--type's type specification.
 
 The sub--type's method is in no way limited by the super--type's method:
-the two methods are allowed to have completely different type signature.
+the two methods are allowed to have completely different type
+signatures.
 
 @c page
 @node types methods virtual
@@ -6229,9 +6230,9 @@ we see that even though the function @func{super-fun} accesses the
 instance of @class{sub} with the type specification @class{super}, the
 actually called method is the one defined by @class{sub}.
 
-The overriding method must have type signature being a sub--type of the
-overridden type signature.  For example, the following definitions are
-fine:
+The overriding method's type signature must be a sub--type of the
+overridden method's type signature.  For example, the following
+definitions are fine:
 
 @lisp
 (define-record-type <super>
@@ -6300,11 +6301,8 @@ override the super--type's method if they use the same name.  Example:
   (virtual-method (light)
     22))
 
-(define O
-  (new <sub>))
-
 (define @{P <super>@}
-  O)
+  (new <sub>))
 
 (.darkness P)   @result{} 11
 (.light    P)   @result{} 22
@@ -6650,8 +6648,8 @@ it; instances of @class{T} cannot access it from outside methods.
 @caption{Summary of protection levels.}
 @end float
 
-The protection level keywords can be used both as ``wrapping syntaxes''
-as in:
+The protection level keywords can be used either as ``enclosing
+syntaxes'' as in:
 
 @lisp
 (define-record-type <duo>
@@ -6671,8 +6669,8 @@ or as ``attribute syntaxes'' as in:
     (+ (.one this) (.two this))))
 @end lisp
 
-The only clauses that can be put in a wrapping syntax and that accept an
-attribute syntax are: @clause{fields}, @clause{method},
+The only clauses that can be put in an enclosing syntax and that accept
+an attribute syntax are: @clause{fields}, @clause{method},
 @clause{virtual-method}, @clause{seal-method}.
 
 @c ------------------------------------------------------------------------
