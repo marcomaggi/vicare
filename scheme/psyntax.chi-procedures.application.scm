@@ -796,19 +796,22 @@
      (map (lambda (rand.psi)
 	    (define rand.sig
 	      (psi.retvals-signature rand.psi))
+	    (define (%error message)
+	      (raise
+	       (condition
+		 (make-expand-time-type-signature-violation)
+		 (make-who-condition __module_who__)
+		 (make-message-condition message)
+		 (make-syntax-violation input-form.stx (psi.input-form rand.psi))
+		 (make-application-operand-signature-condition rand.sig))))
 	    (case-type-signature-full-structure rand.sig
+	      ((<void>)
+	       (%error "expression used as operand in procedure application is typed as returning void"))
 	      ((single-value)
 	       ;;Single return value.  Good.
 	       => (lambda (rand.ots) rand.ots))
 	      (else
-	       (raise
-		(condition
-		  (make-expand-time-type-signature-violation)
-		  (make-who-condition __module_who__)
-		  (make-message-condition
-		   "expression used as operand in overloaded function application is not typed to return a single value")
-		  (make-syntax-violation input-form.stx (psi.input-form rand.psi))
-		  (make-application-operand-signature-condition rand.sig))))))
+	       (%error "expression used as operand in overloaded function application is not typed to return a single value"))))
        rand*.psi)))
 
   (define (%search-applicable-function operator.ofs rands.sig)
