@@ -2655,7 +2655,7 @@ The syntax @syntax{cast-signature} returns the return values of
 @meta{expr} with the type signature @meta{signature}.
 
 @lisp
-(type-of 1)
+(type-of 123)
 @result{} #[signature (<positive-fixnum>)]
 
 (type-of (assert-signature-and-return (<top>) 123))
@@ -3174,7 +3174,7 @@ for the input form components:
 
 @lisp
 @meta{standard-clause} ==
-  | (@meta{formals} . @meta{body})
+  | (@meta{standard-formals} . @meta{body})
 
 @meta{typed-clause} ==
   | (@meta{typed-clause-formals} . @meta{body})
@@ -3196,7 +3196,7 @@ for the input form components:
   | (brace @meta{who-id} @metao{rv-type} @meta{rv-type} ...)
   | (brace @meta{who-id} @meta{rv-type} ... . @meta{rest-rv-type})
 
-@meta{formals} ==
+@meta{standard-formals} ==
   | @meta{args-id}
   | (@meta{arg-id} ...)
   | (@meta{arg-id} @metao{arg-id} ... . @meta{args-id})
@@ -3217,6 +3217,15 @@ for the input form components:
 @meta{typed-rest} ==
   | @meta{rest-id}
   | (brace @meta{rest-id} @meta{rest-type})
+
+@meta{standard-binding} ==
+  | @meta{standard-var}
+
+@meta{standard-var} ==
+  | @meta{name-id}
+
+@meta{typed-binding} ==
+  | @meta{standard-var}
 @end lisp
 
 @noindent
@@ -3244,7 +3253,6 @@ lists:
 The following syntactic bindings are exported by the library
 @library{vicare}.
 
-
 @c ------------------------------------------------------------------------
 
 @subsubheading Standard syntaxes
@@ -3252,7 +3260,7 @@ The following syntactic bindings are exported by the library
 
 @deffn Syntax define/std @meta{who-id}
 @deffnx Syntax define/std @meta{who-id} @meta{expr}
-@deffnx Syntax define/std (@meta{who-id} . @meta{formals}) . @meta{body}
+@deffnx Syntax define/std (@meta{who-id} . @meta{standard-formals}) . @meta{body}
 This is the @syntax{define} syntax as defined by @rnrs{6}; whenever the
 @syntax{define} syntactic binding is used in code with the typed
 language @strong{disabled}: it expands into a use of
@@ -3268,13 +3276,58 @@ code with the typed language @strong{disabled}: it expands into a use of
 @end deffn
 
 
-@deffn Syntax lambda/std @meta{formals} . @meta{body}
+@deffn Syntax lambda/std @meta{standard-formals} . @meta{body}
 This is the @syntax{lambda} syntax as defined by @rnrs{6}; whenever the
 @syntax{lambda} syntactic binding is used in code with the typed
 language @strong{disabled}: it expands into a use of
 @syntax{lambda/std}.
 @end deffn
 
+
+@deffn Syntax named-lambda/std @meta{name} @meta{standard-formals} . @meta{body}
+This is like @syntax{lambda/std}, but accepts an argument @meta{name}
+which must be a syntactic identifier representing the name of the
+generated closure object.  In the body of the clauses the quoted name is
+bound to the fluid syntax @syntax{__who__}.
+@end deffn
+
+
+@deffn Syntax case-lambda/std @metao{standard-clause} @meta{standard-clause} @dots{}
+This is a @syntax{case-lambda} syntax defined by @rnrs{6}; whenever the
+@syntax{case-lambda} syntactic binding is used in code with the typed
+language @strong{disabled}: it expands into a use of
+@syntax{case-lambda/std}.
+@end deffn
+
+
+@deffn Syntax named-case-lambda/std @meta{name} @metao{standard-clause} @meta{standard-clause} @dots{}
+This is like @syntax{case-lambda/std}, but accepts an argument
+@meta{name} which must be a syntactic identifier representing the name
+of the generated closure object.  In the body of the clauses the quoted
+name is bound to the fluid syntax @syntax{__who__}.
+@end deffn
+
+
+@deffn Syntax let/std (@meta{standard-binding} @dots{}) . @meta{body}
+@deffnx Syntax let*/std (@meta{standard-binding} @dots{}) . @meta{body}
+@deffnx Syntax letrec/std (@meta{standard-binding} @dots{}) . @meta{body}
+@deffnx Syntax letrec*/std (@meta{standard-binding} @dots{}) . @meta{body}
+These are the binding syntaxes defined by @rnrs{6}: whenever the
+syntaxes @syntax{let}, @syntax{let*}, @syntax{letrec}, @syntax{letrec*}
+are used in code with the typed language @strong{disabled}: they expand
+into a uses of @syntax{let/std}, @syntax{let*/std}, @syntax{letrec/std},
+@syntax{letrec*/std}.
+@end deffn
+
+
+@deffn Syntax receive/std @meta{standard-formals} @meta{producer-expr} . @meta{body}
+@deffnx Syntax receive-and-return/std @meta{standard-formals} @meta{producer-expr} . @meta{body}
+These are @syntax{receive} and @syntax{receive-and-return} syntaxes
+which define standard syntactic bindings: whenever the syntaxes
+@syntax{receive}, @syntax{receive-and-return} are used in code with the
+typed language @strong{disabled}: they expand into a uses of
+@syntax{receive/std} and @syntax{receive-and-return/std}.
+@end deffn
 
 @c ------------------------------------------------------------------------
 
@@ -3297,8 +3350,21 @@ variable's type.
 When defining a function: the operands and return values are validated
 either at expand--time or at run--time, to make sure that they match the
 type of the function's type signature.  The operands' types must be
-sub--types of the arguments' types; the return values' type must be
+sub--types of the arguments' types; the return values' types must be
 sub--types of the declared signature types.
+
+Usage examples:
+
+@lisp
+(define/checked var1
+  123)
+
+(define/checked @{var2 <string>@}
+  "hello")
+
+(define/checked (@{fun <string>@} @{N <fixnum>@})
+  (fixnum->string N))
+@end lisp
 @end deffn
 
 
@@ -3306,6 +3372,25 @@ sub--types of the declared signature types.
 This is a @syntax{case-define} variant that supports the typed language.
 Operands and return values are validated either at expand--time or at
 run--time, to make sure that they match the type signature.
+
+Usage examples:
+
+@lisp
+(case-define/checked fun-1
+  ((a b c)
+   (list a b c))
+  ((a b c . rest)
+   (cons* a b c rest)))
+
+(case-define/checked fun-2
+  ((@{_ (list <fixnum> <fixnum> <fixnum>)@}
+      @{a <fixnum>@} @{b <fixnum>@} @{c <fixnum>@})
+   (list a b c))
+  ((@{_ (list-of <fixnum>)@}
+      @{a <fixnum>@} @{b <fixnum>@} @{c <fixnum>@}
+      . @{rest (list-of <fixnum>)@})
+   (cons* a b c rest)))
+@end lisp
 @end deffn
 
 
@@ -3318,8 +3403,83 @@ typed language @strong{enabled}: it expands into a use of
 The operands and return values are validated either at expand--time and
 at run--time, to make sure that they match the type of the function's
 type signature.  The operands' types must be sub--types of the
-arguments' types; the return values' type must be sub--types of the
+arguments' types; the return values' types must be sub--types of the
 declared signature types.
+
+Usage examples:
+
+@lisp
+(lambda/checked (a b)
+  (list a b))
+
+(lambda/checked (@{_ (list <fixnum> <fixnum>)@}
+                  @{a <fixnum>@} @{b <fixnum>@})
+  (list a b))
+@end lisp
+@end deffn
+
+
+@deffn Syntax named-lambda/checked @meta{name} @meta{typed-clause-formals} . @meta{body}
+This is like @syntax{lambda/checked}, but accepts an argument
+@meta{name} which must be a syntactic identifier representing the name
+of the generated closure object.  In the body of the clauses the quoted
+name is bound to the fluid syntax @syntax{__who__}.
+
+Usage examples:
+
+@lisp
+(named-lambda/checked fun (@{_ <string>@} @{N <fixnum>@})
+  (fixnum->string N))
+@end lisp
+@end deffn
+
+
+@deffn Syntax case-lambda/checked @metao{typed-clause} @meta{typed-clause} @dots{}
+This is a @syntax{case-lambda} syntax that supports the typed language;
+whenever the @syntax{case-lambda} syntactic binding is used in code with
+the typed language @strong{enabled}: it expands into a use of
+@syntax{case-lambda/checked}.
+
+Usage examples:
+
+@lisp
+(case-lambda/checked
+  ((@{_ <string>@} @{N <fixnum>@})
+   (fixnum->string N))
+  ((@{_ <string>@} @{N <fixnum>@} @{base <fixnum>@})
+   (fixnum->string N base)))
+@end lisp
+@end deffn
+
+
+@deffn Syntax named-case-lambda/checked @meta{name} @metao{typed-clause} @meta{typed-clause} @dots{}
+This is like @syntax{case-lambda/checked}, but accepts an argument
+@meta{name} which must be a syntactic identifier representing the name
+of the generated closure object.  In the body of the clauses the quoted
+name is bound to the fluid syntax @syntax{__who__}.
+@end deffn
+
+
+@deffn Syntax let/checked (@meta{typed-binding} @dots{}) . @meta{body}
+@deffnx Syntax let*/checked (@meta{typed-binding} @dots{}) . @meta{body}
+@deffnx Syntax letrec/checked (@meta{typed-binding} @dots{}) . @meta{body}
+@deffnx Syntax letrec*/checked (@meta{typed-binding} @dots{}) . @meta{body}
+These are the binding syntaxes that support the typed language: whenever
+the syntaxes @syntax{let}, @syntax{let*}, @syntax{letrec},
+@syntax{letrec*} are used in code with the typed language
+@strong{enabled}: they expand into a uses of @syntax{let/checked},
+@syntax{let*/checked}, @syntax{letrec/checked},
+@syntax{letrec*/checked}.
+@end deffn
+
+
+@deffn Syntax receive/checked @meta{typed-formals} @meta{producer-expr} . @meta{body}
+@deffnx Syntax receive-and-return/checked @meta{typed-formals} @meta{producer-expr} . @meta{body}
+These are @syntax{receive} and @syntax{receive-and-return} syntaxes
+which define typed syntactic bindings: whenever the syntaxes
+@syntax{receive}, @syntax{receive-and-return} are used in code with the
+typed language @strong{enabled}: they expand into a uses of
+@syntax{receive/checked} and @syntax{receive-and-return/checked}.
 @end deffn
 
 @c ------------------------------------------------------------------------
@@ -3331,7 +3491,7 @@ declared signature types.
 @deffnx Syntax define/typed @meta{typed-var} @meta{expr}
 @deffnx Syntax define/typed (@meta{typed-who} . @meta{typed-formals}) . @meta{body}
 This is a @syntax{define} syntax variant that supports the typed
-language.
+language: with expand--time validation, without run--time validation.
 
 When defining a variable: the result of the expression is validated only
 at expand--time, to make sure that it matches the type of the variable.
@@ -3340,7 +3500,7 @@ The expression's type must be a sub--type of the variable's type.
 When defining a function: the operands and return values are validated
 only at expand--time, to make sure that they match the type of the
 function's type signature.  The operands' types must be sub--types of
-the arguments' types; the return values' type must be sub--types of the
+the arguments' types; the return values' types must be sub--types of the
 declared signature types.
 @end deffn
 
@@ -3353,12 +3513,35 @@ that they match the type signature.
 
 
 @deffn Syntax lambda/typed @meta{typed-clause-formals} . @meta{body}
-This is a @syntax{lambda} syntax variant supports the typed language.
+This is a @syntax{lambda} syntax variant supports the typed language:
+with expand--time validation, without run--time validation.
 
 The operands and return values are validated only at expand--time, to
 make sure that they match the type of the function's type signature.
 The operands' types must be sub--types of the arguments' types; the
-return values' type must be sub--types of the declared signature types.
+return values' types must be sub--types of the declared signature types.
+@end deffn
+
+
+@deffn Syntax named-lambda/typed @meta{name} @meta{typed-clause-formals} . @meta{body}
+This is like @syntax{lambda/typed}, but accepts an argument @meta{name}
+which must be a syntactic identifier representing the name of the
+generated closure object.  In the body of the clauses the quoted name is
+bound to the fluid syntax @syntax{__who__}.
+@end deffn
+
+
+@deffn Syntax case-lambda/typed @metao{typed-clause} @meta{typed-clause} @dots{}
+This is a @syntax{case-lambda} syntax that supports the typed language:
+with expand--time validation, without run--time validation.
+@end deffn
+
+
+@deffn Syntax named-case-lambda/typed @meta{name} @metao{typed-clause} @meta{typed-clause} @dots{}
+This is like @syntax{case-lambda/typed}, but accepts an argument
+@meta{name} which must be a syntactic identifier representing the name
+of the generated closure object.  In the body of the clauses the quoted
+name is bound to the fluid syntax @syntax{__who__}.
 @end deffn
 
 @c page
