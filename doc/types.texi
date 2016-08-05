@@ -6811,7 +6811,10 @@ the same protection level:
 
 
 @dfn{Mixins} are a way to add definition clauses to record--types and
-labels.  Let's consider this situation:
+labels.  Interfaces are implemented half in the boot image and half in
+the library @library{vicare language-extensions mixins}.
+
+Let's consider this situation:
 
 @lisp
 (define-record-type <alpha>
@@ -6883,7 +6886,8 @@ The resulting clauses are added to the enclosing definition.
 
 @deffn {Auxiliary Syntax} mixins @meta{mixin-name} @dots{}
 Compose the enclosing record--type, label or mixin definition with the
-given list of mixins.  This clause can be used multiple times.
+given list of mixins.  This clause can be used multiple times.  This
+syntactic binding is exported by the library @library{vicare}.
 
 The syntactic identifiers @meta{mixin-name} are used to reference the
 mixins to be imported.  The clauses are included in the same order in
@@ -6900,7 +6904,8 @@ expanded.
 @deffn Syntax define-mixin-type @meta{mixin-name} @metao{clause} @meta{clause} ...
 Associate a set of mixin clauses to the identifier @meta{mixin-name},
 which can be later referenced by a @clause{mixins} clause in the body of
-a class or label definition.
+a class or label definition.  This syntactic binding is exported by the
+library @library{vicare language-extensions mixins}.
 
 The @clause{mixins} clause can be used in the body of a mixin
 definition; the result is that the clauses of the imported mixins are
@@ -7045,7 +7050,7 @@ The following syntactic bindings are exported by the library
 @deffnx {Auxiliary Syntax} implements
 @deffnx {Auxiliary Syntax} method-prototype
 @deffnx {Auxiliary Syntax} method
-Define a new interface type bound to the syntactic identifier
+Define a new interface--type bound to the syntactic identifier
 @meta{name}.  The syntactic bindings @clause{nongenerative},
 @clause{parent}, @clause{implements}, @clause{method} are the same ones
 exported by @library{vicare} and are reexported by the library
@@ -7108,10 +7113,10 @@ methods with signatures that are sub--types of the method prototypes.
 A use of the clause @clause{method} must have format:
 
 @lisp
-(method (@meta{who} . @meta{formals})
+(method (@meta{who} . @meta{typed-formals})
   . @meta{body})
 
-(method ((brace @meta{who} . @meta{rv-types}) . @meta{formals})
+(method ((brace @meta{who} . @meta{rv-types}) . @meta{typed-formals})
   . @meta{body})
 @end lisp
 
@@ -7759,24 +7764,26 @@ Here we use an ``instantiable body'' to define a ``generic'' interface--type:
 @cindex @library{vicare language-extensions labels}, library
 
 
-@dfn{Labels} are types built on top of other types: we put type labels
+@dfn{Labels} are types built on top of other types: we put label--types
 on values of a parent type to handle them locally in a special way.
 There are two kinds of labels:
 
 @itemize
 @item
 Labels without custom type predicate.  They are synonyms of their parent
-type and add methods to it.  A value matches the label type if it
+type and add methods to it.  A value matches the label--type if it
 matches the parent type.
 
 @item
-Labels with custom type predicate.  A value matches the label type if it
-satisfies the label's type predicate; it is possible to establish when a
-value matches the label type only at run--time.
+Labels with custom type predicate.  A value matches the label--type if
+it satisfies the label's type predicate; it is possible to establish
+when a value matches the label--type only at run--time.
 @end itemize
 
 The following syntactic bindings are exported by the library
-@library{vicare language-extensions labels}.
+@library{vicare language-extensions labels}.  All the auxiliary syntaxes
+are exported by the library @library{vicare} and reexported by the
+library @library{vicare language-extensions labels}.
 
 
 @deffn Syntax define-label-type @meta{type-name} @meta{clause} @dots{}
@@ -7811,17 +7818,16 @@ notice that labels @strong{cannot} implement interfaces.
 The clause @clause{constructor} may appear zero, one or more times;
 these clauses define a constructor function to be used with the syntax
 @syntax{new}.  The @clause{constructor} clause has a syntax similar to
-@syntax{lambda}; it must have the format:
+@syntax{lambda/checked}; it must have the format:
 
 @lisp
-(constructor @meta{formals} @metao{body} @meta{body} ...)
+(constructor @meta{typed-formals} @metao{body} @meta{body} ...)
 @end lisp
 
 @noindent
-where @meta{formals} must specify one or more arguments, the first of
-which of type @meta{type-name}.  @meta{formals} must @strong{not}
-specify a return value: the constructor returns a single value of type
-@var{type-name}, and its specification is automatically generated.
+@meta{typed-formals} must @strong{not} specify a return value: the
+constructor returns a single value of type @var{type-name}, and its
+specification is automatically generated.
 
 The clause @clause{destructor} may appear zero or one time; this clause
 defines a destructor function to be used with the syntax
@@ -7924,7 +7930,7 @@ Let's define a label with a method to increment a fixnum.
 (.incr O)       @result{} 11
 @end lisp
 
-Now let's define a method for appending prefixes and suffixes:
+Now let's define a method for adding prefixes and suffixes:
 
 @lisp
 (define-label-type <String>
@@ -8041,31 +8047,30 @@ Here we show how to include mixin clauses in a label definition:
 
 
 Friend functions are used to access private, public and protected
-members of a record--type from outside of the the record--type's
-methods.
+members of a record--type from outside of the record--type's methods.
 
 The following syntactic bindings are exported by the library
 @library{vicare language-extensions friend-functions}.
 
 
-@deffn Syntax define/friend (@meta{who} (brace @meta{subject} @meta{type}) . @meta{formals}) . @meta{body}
+@deffn Syntax define/friend (@meta{typed-who} (brace @meta{subject} @meta{type}) . @meta{formals}) . @meta{body}
 Define a function like @syntax{define/checked} would do, but give
 private access to the members of the record--type @meta{type} for the
 argument @meta{subject}.
 
 The new function is not a member of the record--type, so it does not
-influences the compliance of the record--type with interface types.
+influence the compliance of the record--type with interface types.
 @end deffn
 
 
-Example:
+Usage example:
 
 @lisp
 (define-record-type <duo>
   (private
     (fields one two)))
 
-(define/friend (add @{O <duo>@})
+(define/friend (@{add <number>@} @{O <duo>@})
   (+ (.one O) (.two O)))
 
 (define O
