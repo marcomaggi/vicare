@@ -3748,7 +3748,7 @@ validate the type of the operands used in an application.
 
 
 @value{PRJNAME} allows us to specify special procedures for built--in
-Scheme types, record types and label types; they are:
+Scheme types, record--types and label--types; they are:
 
 @table @strong
 @item Type predicates
@@ -6404,7 +6404,7 @@ and use of methods: @clause{method}, @clause{virtual-method},
 binding'' (run--time dispatching).
 
 The keyword @clause{method} is used in @syntax{define-record-type} to
-define methods for a record type (@pxref{iklib records defs methods,
+define methods for a record--type (@pxref{iklib records defs methods,
 Record--type methods}).  For example:
 
 @lisp
@@ -6903,16 +6903,15 @@ which can be later referenced by a @clause{mixins} clause in the body of
 a class or label definition.
 
 The @clause{mixins} clause can be used in the body of a mixin
-definition; the result is that the clauses of the selected mixins are
-added to the definition of the current mixin.
+definition; the result is that the clauses of the imported mixins are
+added to the enclosing mixin definition.
 
 The following clauses are accepted in the body of a
 @syntax{define-mixin-type}:
 
 @lisp
 define-type-descriptors strip-angular-parentheses
-nongenerative implements
-sealed opaque protocol super-protocol fields
+nongenerative sealed opaque protocol super-protocol fields
 method virtual-method seal-method
 custom-printer type-predicate equality-predicate
 comparison-procedure hash-function
@@ -8051,7 +8050,7 @@ The following syntactic bindings are exported by the library
 
 @deffn Syntax define/friend (@meta{who} (brace @meta{subject} @meta{type}) . @meta{formals}) . @meta{body}
 Define a function like @syntax{define/checked} would do, but give
-private access to the members of the record type @meta{type} for the
+private access to the members of the record--type @meta{type} for the
 argument @meta{subject}.
 
 The new function is not a member of the record--type, so it does not
