@@ -5133,8 +5133,6 @@
     (type-signature.common-ancestor			$expander)
     (type-signature.union				$expander)
 ;;;
-    (type-annotation->object-type-spec			$expander)
-;;;
     (&syntactic-identifier				$expander)
     (&syntactic-identifier-rtd)
     (&syntactic-identifier-rcd)
