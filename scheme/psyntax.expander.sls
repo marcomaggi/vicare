@@ -479,7 +479,6 @@
 	(receive (import-spec* invoke-lib* visit-lib* invoke-code visit-env export-subst global-env typed-locs)
 	    (let ((option* (%parse-program-options option*))
 		  (mixed-definitions-and-expressions? #t))
-	      (import CORE-BODY-EXPANDER)
 	      (core-body-expander 'all import-spec* option* body* mixed-definitions-and-expressions?
 				  %verbose-messages-thunk))
 	  (values invoke-lib* invoke-code visit-env export-subst global-env typed-locs option* foreign-library*)))))
@@ -654,9 +653,7 @@
 	     guard-code guard-lib*
 	     option* foreign-library*)
        (parametrise ((libman::source-code-location (or filename (libman::source-code-location))))
-	 (internal-body
-	   (import CORE-LIBRARY-EXPANDER)
-	   (core-library-expander library-sexp verify-libname)))
+	 (core-library-expander library-sexp verify-libname))
      (let ((uid		(gensym)) ;library unique-symbol identifier
 	   ;;Thunk to eval to visit the library.
 	   (visit-proc	(lambda ()
@@ -700,8 +697,7 @@
       (foreign-library*	. ,(libman::library-foreign-library*  lib)))))
 
 
-(module CORE-LIBRARY-EXPANDER
-  (core-library-expander)
+(module (core-library-expander)
   (define-constant __module_who__ 'core-library-expander)
 
   (define (core-library-expander library-sexp verify-libname)
@@ -730,7 +726,6 @@
 	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-env export-subst global-env typed-locs)
 	    (parametrise ((stale-when-collector    stale-clt))
 	      (let ((mixed-definitions-and-expressions? #f))
-		(import CORE-BODY-EXPANDER)
 		(core-body-expander export-spec* import-spec* option* body*
 				    mixed-definitions-and-expressions?
 				    (%make-verbose-messages-thunk libname.sexp))))
@@ -749,6 +744,8 @@
 	(print-expander-warning-message "enabling typed language support for library: ~a" libname.sexp))
       (when (options::strict-r6rs-enabled?)
 	(print-expander-warning-message "enabling expander's strict R6RS support for library: ~a" libname.sexp))))
+
+;;; --------------------------------------------------------------------
 
   (define (%parse-library library-sexp)
     ;;Given an  ANNOTATION struct  representing a  LIBRARY form  symbolic expression,
@@ -802,6 +799,8 @@
 	    (syntax-violation __module_who__ "malformed library" library-sexp)))))
       ))
 
+;;; --------------------------------------------------------------------
+
   (define (%validate-library-name libname verify-libname)
     ;;Given a SYNTAX-MATCH expression argument LIBNAME  which is meant to represent a
     ;;R6RS  library name:  validate  it.  If  successful  return unspecified  values;
@@ -829,6 +828,8 @@
 	(syntax-violation __module_who__ "empty library name" libname)))
     (verify-libname (syntax->datum libname))
     (void))
+
+;;; --------------------------------------------------------------------
 
   (module (%parse-library-options)
 
@@ -887,6 +888,8 @@
 
     #| end of module: %PARSE-LIBRARY-OPTIONS |# )
 
+;;; --------------------------------------------------------------------
+
   (define (%parse-foreign-library* foreign-library*)
     (receive-and-return (id*)
 	(map syntax->datum foreign-library*)
@@ -896,6 +899,8 @@
 		id*)
 	(syntax-violation __module_who__
 	  "invalid foreign library identifiers" foreign-library*))))
+
+;;; --------------------------------------------------------------------
 
   (module (%make-stale-collector)
     ;;When a library has code like:
@@ -946,8 +951,7 @@
   #| end of module: CORE-LIBRARY-EXPANDER |# )
 
 
-(module CORE-BODY-EXPANDER
-  (core-body-expander)
+(module (core-body-expander)
   ;;Both the R6RS  programs expander and the  R6RS library expander make  use of this
   ;;module to expand the body forms.
   ;;
