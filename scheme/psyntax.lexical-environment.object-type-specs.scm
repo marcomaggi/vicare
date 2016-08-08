@@ -1279,9 +1279,14 @@
 
   (define (super-and-sub? super.ots sub.ots)
     (or (object-type-spec.matching-super-and-sub?   super.ots sub.ots)
-	(object-type-spec.compatible-super-and-sub? super.ots sub.ots)))
+	(%compatible-super-and-sub?                 super.ots sub.ots)))
 
   (define (object-type-spec.compatible-super-and-sub? super.ots sub.ots)
+    (if (options::strict-type-checking?)
+	#f
+      (%compatible-super-and-sub? super.ots sub.ots)))
+
+  (define (%compatible-super-and-sub? super.ots sub.ots)
     ;;This  function is  used to  check  for non-matching  compatibility between  two
     ;;object-type    specifications.    It    is    meant   to    be   called    when
     ;;OBJECT-TYPE-SPEC.MATCHING-SUPER-AND-SUB? has  already returned #f  when applied
@@ -1699,7 +1704,7 @@
        ;;(matching (pair-of <list>) (list <list>))	=> possible-match
        (let ((super-item.ots (pair-of-type-spec.item-ots super.ots)))
 	 (list-type-spec.for-all sub.ots (lambda (sub-item.ots)
-					    (super-and-sub? super-item.ots sub-item.ots)))))
+					   (super-and-sub? super-item.ots sub-item.ots)))))
 
       (list-of-type-spec?
        ;;(matching (pair-of <list>) (list-of <list>))	=> possible-match
@@ -1885,7 +1890,7 @@
 
   (define (%compatible-super/intersection-type-spec super.ots sub.ots)
     (intersection-type-spec.for-all super.ots (lambda (super-item.ots)
-						 (super-and-sub? super-item.ots sub.ots))))
+						(super-and-sub? super-item.ots sub.ots))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1923,7 +1928,7 @@
        ;;
        (let ((super-item.ots (complement-type-spec.item-ots super.ots)))
 	 (and (not (object-type-spec.matching-super-and-sub? super-item.ots sub.ots))
-	      (or (object-type-spec.compatible-super-and-sub? super-item.ots sub.ots)
+	      (or (%compatible-super-and-sub? super-item.ots sub.ots)
 		  (object-type-spec.matching-super-and-sub? sub.ots super-item.ots)))))))
 
 ;;; --------------------------------------------------------------------
@@ -1956,8 +1961,8 @@
     ;;
     (cond-with-predicates sub.ots
       (label-type-spec?
-       (object-type-spec.compatible-super-and-sub? (object-type-spec.parent-ots super.ots)
-						   (object-type-spec.parent-ots   sub.ots)))
+       (%compatible-super-and-sub? (object-type-spec.parent-ots super.ots)
+				   (object-type-spec.parent-ots   sub.ots)))
       (else
        (let ((super-parent.ots (object-type-spec.parent-ots super.ots)))
 	 (super-and-sub? super-parent.ots sub.ots)))))
@@ -1970,12 +1975,12 @@
     ;;(matching <positive-fixnum>	<my-fixnum>)		=> possible-match
     (cond-with-predicates super.ots
       (label-type-spec?
-       (object-type-spec.compatible-super-and-sub? (object-type-spec.parent-ots super.ots)
-						   (object-type-spec.parent-ots   sub.ots)))
+       (%compatible-super-and-sub? (object-type-spec.parent-ots super.ots)
+				   (object-type-spec.parent-ots   sub.ots)))
       (else
        (let ((sub-parent.ots (object-type-spec.parent-ots sub.ots)))
 	 (or ($object-type-spec=? super.ots sub-parent.ots)
-	     (object-type-spec.compatible-super-and-sub? super.ots sub-parent.ots))))))
+	     (%compatible-super-and-sub? super.ots sub-parent.ots))))))
 
 ;;; --------------------------------------------------------------------
 

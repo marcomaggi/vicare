@@ -4319,6 +4319,7 @@
     (writing-boot-image?				$options)
     (compilation-wordsize				$options)
     (strict-r6rs					$options)
+    (strict-type-checking?				$options)
     (vicare-built-with-arguments-validation-enabled	$options)
     (vicare-built-with-descriptive-labels-generation	$options)
     (vicare-built-with-srfi-enabled			$options)

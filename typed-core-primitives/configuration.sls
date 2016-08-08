@@ -49,8 +49,9 @@
    (declare writing-boot-image?)
    #| end of LET-SYNTAX |# )
 
- (declare-parameter drop-assertions?	<boolean>)
- (declare-parameter strict-r6rs		<boolean>)
+ (declare-parameter drop-assertions?		<boolean>)
+ (declare-parameter strict-r6rs			<boolean>)
+ (declare-parameter strict-type-checking?	<boolean>)
 
  (let-syntax
      ((declare (syntax-rules ()

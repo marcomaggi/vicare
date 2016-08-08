@@ -103,7 +103,8 @@
     (prefix (only (psyntax.config)
 		  expander-language
 		  typed-language-enabled?
-		  strict-r6rs-enabled?)
+		  strict-r6rs-enabled?
+		  strict-type-checking?)
 	    options::)
     (psyntax.setup)
     (psyntax.builders)
@@ -535,6 +536,8 @@
       (_
        (assertion-violation __module_who__ "invalid syntax of top-level program"))))
 
+;;; --------------------------------------------------------------------
+
   (module (%parse-program-options)
 
     (define (%parse-program-options options.stx)
@@ -544,25 +547,30 @@
 	option*.sym))
 
     (define (%parse-syntax options.stx)
+      (define (synner message subform)
+	(syntax-violation __module_who__ message options.stx subform))
       (let recur ((opts.stx options.stx))
 	(syntax-match opts.stx ()
-	  (() '())
 	  ((?opt . ?other*)
-	   (symbol? (syntax->datum ?opt))
 	   (let ((sym (syntax->datum ?opt)))
+	     (unless (symbol? sym)
+	       (synner "expected identifier as program option" ?opt))
 	     (case sym
 	       ((typed-language)
 		(cons sym (recur ?other*)))
-	       ;;"tagged-language"  is  kept  for  backwards  compatibility,  but  it  is
+	       ;;"tagged-language"  is kept  for backwards  compatibility, but  it is
 	       ;;deprecated.  We should use "typed-language".
 	       ((tagged-language)
 		(cons 'typed-language (recur ?other*)))
 	       ((strict-r6rs)
 		(cons sym (recur ?other*)))
+	       ((strict-type-checking)
+		(cons sym (recur ?other*)))
 	       (else
-		(syntax-violation __module_who__ "invalid program option" ?opt)))))
-	  (?thing
-	   (syntax-violation __module_who__ "invalid syntax in program options" options.stx ?thing)))))
+		(synner "invalid program option" ?opt)))))
+	  (() '())
+	  (_
+	   (synner "invalid syntax in program options" opts.stx)))))
 
     (define (%clean-language-selection option*.sym)
       (let* ((option*.sym (cond ((memq 'strict-r6rs option*.sym)
@@ -592,6 +600,8 @@
 
     #| end of module: %PARSE-PROGRAM-OPTIONS |# )
 
+;;; --------------------------------------------------------------------
+
   (define (%parse-foreign-library* foreign-library*)
     (receive-and-return (id*)
 	(map syntax->datum foreign-library*)
@@ -603,6 +613,8 @@
 	  "invalid foreign library identifiers" foreign-library*))))
 
   #| end of module: EXPAND-TOP-LEVEL-PROGRAM |# )
+
+;;; --------------------------------------------------------------------
 
 (define (expand-top-level-program->sexp sexp)
   (receive (invoke-lib* invoke-code visit-env export-subst global-env typed-locs option* foreign-library*)
@@ -840,12 +852,14 @@
 	option*.sym))
 
     (define (%parse-syntax options.stx)
+      (define (synner message subform)
+	(syntax-violation __module_who__ message options.stx subform))
       (let recur ((opts.stx options.stx))
 	(syntax-match opts.stx ()
-	  (() '())
 	  ((?opt . ?other*)
-	   (symbol? (syntax->datum ?opt))
 	   (let ((sym (syntax->datum ?opt)))
+	     (unless (symbol? sym)
+	       (synner "expected identifier as library option" ?opt))
 	     (case sym
 	       ((typed-language)
 		(cons sym (recur ?other*)))
@@ -855,10 +869,13 @@
 		(cons 'typed-language (recur ?other*)))
 	       ((strict-r6rs)
 		(cons sym (recur ?other*)))
+	       ((strict-type-checking)
+		(cons sym (recur ?other*)))
 	       (else
-		(syntax-violation __module_who__ "invalid library option" ?opt)))))
-	  (?thing
-	   (syntax-violation __module_who__ "invalid syntax in library options" options.stx ?thing)))))
+		(synner "unknown identifier among library options" ?opt)))))
+	  (() '())
+	  (_
+	   (synner "invalid syntax in library options" opts.stx)))))
 
     (define (%clean-language-selection option*.sym)
       (let* ((option*.sym (cond ((memq 'strict-r6rs option*.sym)
@@ -1045,14 +1062,16 @@
       (define (wrap-source-expression-with-top-rib expr)
 	(wrap-source-expression expr rib))
       (parametrise
-	  ((options::expander-language (cond ((memq 'typed-language option*)
-					      'typed)
-					     ((memq 'strict-r6rs option*)
-					      'strict-r6rs)
-					     (else
-					      ;;No options  from the source  code, so
-					      ;;select the default language.
-					      'default))))
+	  ((options::expander-language		(cond ((memq 'typed-language option*)
+						       'typed)
+						      ((memq 'strict-r6rs option*)
+						       'strict-r6rs)
+						      (else
+						       ;;No  options from  the source
+						       ;;code, so  select the default
+						       ;;language.
+						       'default)))
+	   (options::strict-type-checking?	(memq 'strict-type-checking option*)))
 	(verbose-messages-thunk)
 	(let ((body-stx*	(map wrap-source-expression-with-top-rib body-sexp*))
 	      (rtc		(make-collector))

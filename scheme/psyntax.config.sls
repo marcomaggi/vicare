@@ -32,6 +32,7 @@
     expander-language
     typed-language-enabled?
     strict-r6rs-enabled?
+    (rename (options::strict-type-checking?	strict-type-checking?))
     enable-all-warnings
     disable-all-warnings
     enable-extra-warnings

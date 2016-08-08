@@ -131,7 +131,7 @@ single @clause{options} clause, before the @clause{export} one.
 
 
 @defvr {Library Option} typed-language
-Turn on the tagged language extensions (@pxref{types, The typed
+Turn on the typed language extensions (@pxref{types, The typed
 language}).
 @end defvr
 
@@ -140,6 +140,11 @@ language}).
 Turn on strict support for @rnrs{6} language.
 @end defvr
 
+
+@defvr {Library Option} strict-type-checking
+Turn on strict type checking when the typed language is enabled
+(@pxref{types, The typed language}).
+@end defvr
 
 @c page
 @node iklib libraries foreign
@@ -272,13 +277,19 @@ The following options are supported.
 
 
 @defvr {Program Option} typed-language
-Turn on the tagged language extensions (@pxref{types, The typed
+Turn on the typed language extensions (@pxref{types, The typed
 language}).
 @end defvr
 
 
 @defvr {Program Option} strict-r6rs
 Turn on strict support for @rnrs{6} language.
+@end defvr
+
+
+@defvr {Library Option} strict-type-checking
+Turn on strict type checking when the typed language is enabled
+(@pxref{types, The typed language}).
 @end defvr
 
 @c page
