@@ -20,96 +20,8 @@
 ;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
-;;;;; introduction to object-type specifications
-;;
-;;The hierarchy of the record types defined in this module is:
-;;
-;;   <object-type-spec>
-;;           |
-;;           |------------> <core-type-spec>
-;;           |
-;;           |------------> <struct-type-spec>
-;;           |
-;;           |------------> <record-type-spec>
-;;           |
-;;           |------------> <closure-type-spec>
-;;           |
-;;           |------------> <compound-condition-type-spec>
-;;           |
-;;           |------------> <union-type-spec>
-;;           |
-;;           |------------> <intersection-type-spec>
-;;           |
-;;           |------------> <complement-type-spec>
-;;           |
-;;           |------------> <ancestor-of-type-spec>
-;;           |
-;;	     |------------> <pair-type-spec>
-;;           |
-;;	     |------------> <pair-of-type-spec>
-;;           |
-;;	     |------------> <list-type-spec>
-;;           |
-;;	     |------------> <list-of-type-spec> --> <alist-type-spec>
-;;           |
-;;	     |------------> <vector-type-spec>
-;;           |
-;;	     |------------> <vector-of-type-spec>
-;;	     |
-;;	     |------------> <hashtable-type-spec>
-;;	     |
-;;	     |------------> <enumeration-type-spec>
-;;	     |
-;;	      ------------> <label-type-spec>
-;;	     |
-;;	      ------------> <interface-type-spec>
-;;
-;;The type "<object-type-spec>" has a field  PARENT-OTS that is used to represent the
-;;hierarchy of Scheme-level object-types.
-;;
-;;All   the  built-in   Scheme  object   types  are   represented  by   instances  of
-;;"<core-type-spec>".  So  "<top>", "<fixnum>", "<string>", "<list>"  et cetera are
-;;represented by instances of "<core-type-spec>".
-;;
-;;The hierarchy of list types is as follows:
-;;
-;;   <list>
-;;      |
-;;      |---> <null>
-;;      |
-;;      |---> (list-of ?type) ---> <null>
-;;      |
-;;       ---> <nelist> ------------> (list ?type0 ?type ...)
-;;
-;;notice how "<null>" is considered a sub-type of both "<list>" and "(list-of ?type)"
-;;annotations,  but *not*  of  "(list ?type0  ?type ..)";  this  special handling  is
-;;implemented  in the  function OBJECT-TYPE-SPEC.MATCHING-SUPER-AND-SUB?.   "(list-of
-;;?type)" annotations are represented  by instances of "<list-of-type-spec>".  "(list
-;;?type0 ?type ...)"  annotations are represented by instances of "<list-type-spec>",
-;;and represent non-empty lists.
-;;
-;;The hierarchy of vector types is as follows:
-;;
-;;   <vector>
-;;      |
-;;      |---> <empty-vector>
-;;      |
-;;      |---> (vector-of ?type) ---> <empty-vector>
-;;      |
-;;       ---> <nevector> ----------> (vector ?type0 ?type ...)
-;;
-;;notice  how  "<empty-vector>" is  considered  a  sub-type  of both  "<vector>"  and
-;;"(vector-of  ?type)"  annotations,  but  *not*   of  "(vector  ?type0  ?type  ...)"
-;;annotations;   this    special   handling   is   implemented    in   the   function
-;;OBJECT-TYPE-SPEC.MATCHING-SUPER-AND-SUB?.   "(vector-of   ?type)"  annotations  are
-;;represented by  instances of "<vector-of-type-spec>".  "(vector  ?type0 ?type ...)"
-;;annotations  are represented  by instances  of "<vector-type-spec>",  and represent
-;;non-empty vectors.
-;;
-;;The only  record type defined in  this module that  can be sub-typed at  the Scheme
-;;level is "<record-type-spec>".
-;;
+;;;NOTE For the documentation about  object-type specifications see Vicare's expander
+;;;documentation, node "expander specs".  (Marco Maggi; Sun Aug 7, 2016)
 
 
 (module (<object-type-spec>
@@ -380,7 +292,7 @@
     (mutable name-or-maker		object-type-spec.name-or-maker object-type-spec.name-or-maker-set!)
 		;A  procedure that,  applied to  this  OTS, returns  a syntax  object
 		;representing the name of this type.  For some types it is the actual
-		;type  identifier, for  example:  "<fixnum>,  "<string>".  For  other
+		;type  identifier, for  example: "<fixnum>",  "<string>".  For  other
 		;types it is a syntax object like "(list-of <fixnum>)".
 
     (immutable uids-list		object-type-spec.uids-list)
@@ -445,7 +357,7 @@
 		;and called explicitly with the DELETE syntax.
 
     (mutable type-predicate		object-type-spec.type-predicate object-type-spec.type-predicate-set!)
-		;Either false  or:
+		;Either false or:
 		;
 		;* A  syntax object representing  a Scheme expression  that, expanded
 		;and evaluated at run-time, returns a type predicate.
@@ -550,15 +462,23 @@
 ;;; --------------------------------------------------------------------
 
 (define* (object-type-spec.name {ots object-type-spec?})
+  ;;Return  a syntax  object representing  the  type annotation  of the  object--type
+  ;;specification OTS.
+  ;;
   (let ((thing (object-type-spec.name-or-maker ots)))
     (if (procedure? thing)
 	(thing ots)
       thing)))
 
 (define* (object-type-spec.type-annotation {ots object-type-spec?})
+  ;;Return a syntax object representing the type annotation of this type.
+  ;;
   ((object-type-spec.type-annotation-maker ots) ots))
 
 (define* (object-type-spec.type-predicate-stx {ots object-type-spec?})
+  ;;Return false or  a syntax object representing a Scheme  expression that, expanded
+  ;;and evaluated at run-time, returns a type predicate for the object-type OTS.
+  ;;
   (let ((thing (object-type-spec.type-predicate ots)))
     (if (procedure? thing)
 	(receive-and-return (pred.stx)
@@ -567,17 +487,10 @@
       ;;Here THING is either false or a syntax object.
       thing)))
 
-(define (list-of-object-type-spec? obj)
-  (if (pair? obj)
-      (and (object-type-spec? (car obj))
-	   (list-of-object-type-spec? (cdr obj)))
-    (null? obj)))
-
-(define (not-empty-list-of-object-type-spec? obj)
-  (and (pair? obj)
-       (list-of-object-type-spec? obj)))
-
 (define* (object-type-spec.applicable-hash-function {ots object-type-spec?})
+  ;;Return false or a syntax object  representing a Scheme expression which, expanded
+  ;;and evaluated, returns the hash function for this type.
+  ;;
   (cond ((object-type-spec.hash-function ots))
 	((object-type-spec.parent-ots ots)
 	 => object-type-spec.applicable-hash-function)
@@ -644,6 +557,19 @@
 	 ;;entry and return it.
 	 => cdr)
 	(else #f)))
+
+;;; --------------------------------------------------------------------
+;;; helpers
+
+(define (list-of-object-type-spec? obj)
+  (if (pair? obj)
+      (and (object-type-spec? (car obj))
+	   (list-of-object-type-spec? (cdr obj)))
+    (null? obj)))
+
+(define (not-empty-list-of-object-type-spec? obj)
+  (and (pair? obj)
+       (list-of-object-type-spec? obj)))
 
 
 ;;;; basic object-type specification: matching super and sub types
