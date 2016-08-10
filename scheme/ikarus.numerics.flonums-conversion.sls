@@ -15,7 +15,8 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(library (ikarus flonum-conversion)
+#!vicare
+(library (ikarus numerics flonum-conversion)
   (export
     string->flonum
     flonum->string)

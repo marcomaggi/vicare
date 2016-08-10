@@ -420,7 +420,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.multiple-values.sls				\
 	scheme/ikarus.numerics.flonums.sls				\
 	scheme/ikarus.numerics.generic-arithmetic.sls			\
-	scheme/ikarus.numerics.flonum-conversion.sls			\
+	scheme/ikarus.numerics.flonums-conversion.sls			\
 	scheme/ikarus.numerics.rationalize.sls				\
 	scheme/ikarus.numerics.div-and-mod.sls				\
 	scheme/ikarus.numerics.flonums.div-and-mod.sls			\

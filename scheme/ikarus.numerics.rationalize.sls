@@ -15,7 +15,8 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(library (ikarus rationalize)
+#!vicare
+(library (ikarus numerics rationalize)
   (export rationalize)
   (import (except (vicare)
 		  rationalize)

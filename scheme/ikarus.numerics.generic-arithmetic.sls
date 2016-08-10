@@ -56,6 +56,7 @@
 ;;;
 
 
+#!vicare
 (library (ikarus numerics generic-arithmetic)
   (export
     + - * /

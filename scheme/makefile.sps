@@ -365,7 +365,7 @@
     "ikarus.string-bytevector-conversion.sls"
     "ikarus.numerics.flonums.sls"
     "ikarus.numerics.generic-arithmetic.sls"
-    "ikarus.numerics.flonum-conversion.sls"
+    "ikarus.numerics.flonums-conversion.sls"
     "ikarus.numerics.rationalize.sls"
     "ikarus.numerics.div-and-mod.sls"
     "ikarus.numerics.flonums.div-and-mod.sls"
