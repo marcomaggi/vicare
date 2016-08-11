@@ -2556,7 +2556,7 @@
 	 (vector (unsyntax-splicing
 		  (build-table-for-interface-types-and-implementer-object-type
 		   (quote ,implemented-interface*.ots)
-		   (make-type-annotation (syntax ,foo))))))))))
+		   (make-type-specification (syntax ,foo))))))))))
 
 
 ;;;; done

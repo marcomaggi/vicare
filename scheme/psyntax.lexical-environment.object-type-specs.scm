@@ -35,19 +35,19 @@
 	 object-type-spec.hash-function			object-type-spec.applicable-hash-function
 	 object-type-spec.methods-table-public		object-type-spec.methods-table-protected
 	 object-type-spec.methods-table-private
-	 object-type-spec.ancestor-ots*
 	 object-type-spec.applicable-method-stx		object-type-spec.applicable-private-method-stx
 	 object-type-spec.implemented-interfaces
 	 object-type-spec.type-descriptor-core-expr
 	 object-type-spec.single-value-validator-lambda-stx
 	 object-type-spec.list-validator-lambda-stx
 	 expression-expander-for-core-expressions
+	 object-type-specs-delete-duplicates
 
 	 object-type-spec.matching-super-and-sub?	object-type-spec.compatible-super-and-sub?
 	 object-type-spec=?
-	 object-type-spec.common-ancestor		object-type-spec.procedure?
+	 object-type-spec.ancestor-ots*			object-type-spec.common-ancestor
+	 object-type-spec.procedure?
 	 object-type-spec.list-sub-type?		object-type-spec.vector-sub-type?
-	 object-type-specs-delete-duplicates
 
 	 <core-type-spec>
 	 <core-type-spec>-rtd				<core-type-spec>-rcd
@@ -174,7 +174,7 @@
 
 	 ;;;
 
-	 make-type-annotation
+	 make-type-specification
 	 syntax-object.type-annotation?
 	 type-annotation->object-type-spec
 	 expression-expander-for-type-annotations
@@ -307,7 +307,7 @@
 		;* When defining  a built-in Scheme type, the  following types cannot
 		;be subtyped: <bottom>, <void>, <null>, <empty-vector>.
 		;
-		;* Besides  the built-in  Scheme types, the  pari subtypes,  the list
+		;* Besides  the built-in  Scheme types, the  pair subtypes,  the list
 		;subtypes, the  vector subtypes, the only  object-type specifications
 		;for which we might specify a parent are records.
 		;
@@ -327,17 +327,17 @@
 		;trying to use the syntax NEW will cause an expand-time exception.
 		;
 		;When  this field  is #t:  this object-type  has no  constructor, but
-		;requires the object  to be supplied in its  already-built form.  For
-		;example:
+		;requires the object to be supplied  in its already-built form to the
+		;syntax NEW.  For example:
 		;
 		;   (new <fixnum> 123)
 		;
-		;must expand to:
+		;must expand to an equivalent of:
 		;
 		;   (assert-signature-and-return (<fixnum>) 123)
 		;
-		;When this field  is a symbolic expression: the  constructor is meant
-		;to be used as:
+		;When this field  is a syntax object: the constructor  is meant to be
+		;used as:
 		;
 		;   (?constructor ?arg ...)
 		;
@@ -345,7 +345,7 @@
 		;
 		;The   constructor  can   be  a   syntax  or   core  operation   like
 		;"$make-clean-vector" or a closure object  like "vector" or the maker
-		;of R6RS records.
+		;of record-types.
 
     (immutable destructor-stx		object-type-spec.destructor-stx)
 		;False  or a  syntax object  representing a  Scheme expression  that,
@@ -520,9 +520,8 @@
   ;;
   ;;* The name of a public method for OTS's parent.
   ;;
-  ;;return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
-  ;;expression  which,  expanded and  evaluated  at  run-time, returns  the  method's
-  ;;applicable; otherwise return false.
+  ;;return  a  syntax objectrepresenting  a  Scheme  expression which,  expanded  and
+  ;;evaluated at run-time, returns the method's applicable; otherwise return false.
   ;;
   ;;NOTE We  need to remember that  the METHODS-TABLE-PUBLIC field holds  entries for
   ;;the  parent of  OTS,  so there  is  no need  to traverse  the  hierarchy of  type
@@ -5446,7 +5445,7 @@
 		    (assertion-violation 'expression-expander-for-type-annotations
 		      "parameter not initialised"))))
 
-(define (make-type-annotation annotation.stx)
+(define (make-type-specification annotation.stx)
   (type-annotation->object-type-spec annotation.stx (current-inferior-lexenv) annotation.stx))
 
 (case-define* type-annotation->object-type-spec

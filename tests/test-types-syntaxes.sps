@@ -311,20 +311,20 @@
   #| end of PARAMETRISE |# )
 
 
-(parametrise ((check-test-name	'make-type-annotation))
+(parametrise ((check-test-name	'make-type-specification))
 
-  (let-syntax ((<my-string> (expander::make-type-annotation #'<string>)))
+  (let-syntax ((<my-string> (expander::make-type-specification #'<string>)))
     (check-for-true	(is-a? "string" <my-string>))
     (check-for-false	(is-a? 123      <my-string>)))
 
-  (let*-syntax ((<string1> (expander::make-type-annotation #'<string>))
-		(<string2> (expander::make-type-annotation #'<string1>)))
+  (let*-syntax ((<string1> (expander::make-type-specification #'<string>))
+		(<string2> (expander::make-type-specification #'<string1>)))
     (check-for-true	(is-a? "string" <string2>))
     (check-for-false	(is-a? 123      <string2>)))
 
   (internal-body
-    (define-syntax <string1> (expander::make-type-annotation #'<string>))
-    (define-syntax <string2> (expander::make-type-annotation #'<string1>))
+    (define-syntax <string1> (expander::make-type-specification #'<string>))
+    (define-syntax <string2> (expander::make-type-specification #'<string1>))
     (check-for-true	(is-a? "string" <string2>))
     (check-for-false	(is-a? 123      <string2>)))
 

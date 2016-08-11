@@ -198,13 +198,13 @@
 	       #`((begin-for-syntax
 		    (xp::assert-implemented-interface-type-and-implementer-interface-type
 		     (quote IMPLEMENTED-IFACE-OTS)
-		     (xp::make-type-annotation (syntax IMPLEMENTER-IFACE-ID)))))))
+		     (xp::make-type-specification (syntax IMPLEMENTER-IFACE-ID)))))))
 	    (else
 	     (with-syntax
 		 ((IMPLEMENTED-INTERFACES-OTS	(.implemented-interfaces-ots this))
 		  (IMPLEMENTER-IFACE-ID		(.type-name this)))
 	       #`((begin-for-syntax
-		    (let ((implementer-iface.ots (xp::make-type-annotation (syntax IMPLEMENTER-IFACE-ID))))
+		    (let ((implementer-iface.ots (xp::make-type-specification (syntax IMPLEMENTER-IFACE-ID))))
 		      (for-each (lambda (implemented-iface.ots)
 				  (xp::assert-implemented-interface-type-and-implementer-interface-type
 				   implemented-iface.ots implementer-iface.ots))
@@ -493,7 +493,7 @@
 								     msg)))
 							 (synner msg parent.id)))
 						   (lambda ()
-						     (xp::make-type-annotation parent.id)))))
+						     (xp::make-type-specification parent.id)))))
 	(unless (interface-type-spec? parent.ots)
 	  (synner "expected interface-type name as argument in PARENT clause" parent.id))
 	(.parent-ots results parent.ots)))
@@ -533,7 +533,7 @@
 								 msg)))
 						     (synner msg iface.id)))
 					       (lambda ()
-						 (xp::make-type-annotation iface.id)))))
+						 (xp::make-type-specification iface.id)))))
 					(if (interface-type-spec? iface.ots)
 					    iface.ots
 					  (synner "expected interface-type name as argument in IMPLEMENTS clause" iface.id))))
@@ -573,7 +573,7 @@
 	(#(?method-name ?signature)
 	 (identifier? #'?method-name)
 	 (let* ((signature.stx		(%add-bottom-arguments #'?signature synner))
-		(signature.ots		(xp::make-type-annotation signature.stx)))
+		(signature.ots		(xp::make-type-specification signature.stx)))
 	   (.push-required-prototype! results (new <method-prototype> #'?method-name signature.ots #f))
 	   results))
 

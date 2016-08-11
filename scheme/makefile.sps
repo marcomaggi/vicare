@@ -4916,7 +4916,7 @@
     (make-global-typed-variable-spec)
     (make-global-closure-variable-spec)
 
-    (make-type-annotation				$expander)
+    (make-type-specification				$expander)
 
     ;;These are only for internal use by the dynamic libraries loader.
     (global-typed-variable-spec?)
@@ -4937,9 +4937,6 @@
     (object-type-spec.equality-predicate		$expander)
     (object-type-spec.comparison-procedure		$expander)
     (object-type-spec.hash-function			$expander)
-    (object-type-spec.methods-table-public		$expander)
-    (object-type-spec.methods-table-protected		$expander)
-    (object-type-spec.methods-table-private		$expander)
     (object-type-spec.applicable-hash-function		$expander)
     (object-type-spec.safe-accessor-stx			$expander)
     (object-type-spec.safe-mutator-stx			$expander)
