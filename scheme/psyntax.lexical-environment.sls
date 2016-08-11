@@ -137,7 +137,7 @@
     <core-type-spec>
     <core-type-spec>-rtd				<core-type-spec>-rcd
     make-core-type-spec					core-type-spec?
-    core-type-spec.type-descriptor-id
+    core-type-spec.type-descriptor-id			core-type-spec.parent-and-child?
 
     <closure-type-spec>
     <closure-type-spec>-rtd				<closure-type-spec>-rcd

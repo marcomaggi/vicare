@@ -743,6 +743,16 @@
 
 (declare-type-predicate core-type-spec?		<core-type-spec>)
 
+(declare-core-primitive core-type-spec.type-descriptor-id
+    (safe)
+  (signatures
+   ((<core-type-spec>)				=> (<syntactic-identifier>))))
+
+(declare-core-primitive core-type-spec.parent-and-child?
+    (safe)
+  (signatures
+   ((<core-type-spec> <core-type-spec>)		=> (<boolean>))))
+
 ;;; --------------------------------------------------------------------
 
 (declare-core-rtd <struct-type-spec>-rtd)

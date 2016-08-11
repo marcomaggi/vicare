@@ -52,7 +52,7 @@
 	 <core-type-spec>
 	 <core-type-spec>-rtd				<core-type-spec>-rcd
 	 make-core-type-spec				core-type-spec?
-	 core-type-spec.type-descriptor-id
+	 core-type-spec.type-descriptor-id		core-type-spec.parent-and-child?
 
 	 <closure-type-spec>
 	 <closure-type-spec>-rtd			<closure-type-spec>-rcd
@@ -2882,6 +2882,10 @@
 				  methods-table-public methods-table-protected methods-table-private
 				  implemented-interfaces)
 	   type-descriptor.id)))
+
+      (define (core-type-spec.type-annotation-maker ots)
+	(object-type-spec.name ots))
+
       make-core-type-spec))
   (custom-printer
     (lambda (S port sub-printer)
@@ -2892,12 +2896,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (core-type-spec.type-annotation-maker ots)
-  (object-type-spec.name ots))
-
-;;; --------------------------------------------------------------------
-
 (define (core-type-spec.parent-and-child? super.ots sub.ots)
+  ;;Return  true if  SUPER.OTS and  SUB.OTS represent  parent and  child object-types
+  ;;(respectively); otherwise return  false.  Return false if  the operands represent
+  ;;the same object-type.
+  ;;
   (if (or (eq? super.ots sub.ots)
 	  (free-identifier=? (object-type-spec.name super.ots)
 			     (object-type-spec.name   sub.ots)))
@@ -2929,6 +2932,7 @@
     (immutable std			struct-type-spec.std)
 		;The struct-type descriptor object.
     #| end of FIELDS |# )
+
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-struct-type-spec name std constructor.id predicate.id methods-table)
@@ -2948,6 +2952,10 @@
 				    methods-table-public methods-table-protected methods-table-private
 				    implemented-interfaces)
 	     std))))
+
+      (define (struct-type-spec.type-annotation-maker ots)
+	(object-type-spec.name ots))
+
       make-struct-type-spec))
 
   (custom-printer
@@ -2957,9 +2965,6 @@
       (display "]" port)))
 
   #| end of DEFINE-STRUCT-TYPE |# )
-
-(define (struct-type-spec.type-annotation-maker ots)
-  (object-type-spec.name ots))
 
 
 ;;;; R6RS's record-type specification
@@ -2999,6 +3004,7 @@
 		;
 		;* When the method has been sealed: the boolean false.
     #| end of FIELDS |# )
+
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-record-type-spec {type-name identifier?} uid
@@ -3040,6 +3046,10 @@
 				  methods-table-public methods-table-protected methods-table-private
 				  implemented-interfaces)
 	   rtd-id rcd-id super-protocol-id virtual-method-signatures)))
+
+      (define (record-type-spec.type-annotation-maker ots)
+	(object-type-spec.name ots))
+
       make-record-type-spec))
 
   (custom-printer
@@ -3054,10 +3064,10 @@
 
 (define (make-record-type-predicate ots)
   (let ((rtd-id  (record-type-spec.rtd-id ots))
-	(arg.sym (make-syntactic-identifier-for-temporary-variable)))
+	(arg.id (make-syntactic-identifier-for-temporary-variable)))
     (bless
-     `(lambda/typed ({_ <boolean>} ,arg.sym)
-	(record-and-rtd? ,arg.sym ,rtd-id)))))
+     `(lambda/typed ({_ <boolean>} ,arg.id)
+	(record-and-rtd? ,arg.id ,rtd-id)))))
 
 (define (simple-condition-object-type-spec? ots)
   ;;Return true  if OTS is  represents a simple condition-object  type specification;
@@ -3095,9 +3105,6 @@
   ;;
   (and (record-type-spec? ots)
        (%compare-super-with-sub-and-its-parents (&condition-ots) ots)))
-
-(define (record-type-spec.type-annotation-maker ots)
-  (object-type-spec.name ots))
 
 ;;; --------------------------------------------------------------------
 

@@ -4955,9 +4955,10 @@
     (<core-type-spec>-rtd)
     (<core-type-spec>-rcd)
     (<core-type-spec>					$expander)
-    (make-core-type-spec				$expander)
+    (make-core-type-spec)
     (core-type-spec?					$expander)
-    (core-type-spec.equality-predicate-id		$expander)
+    (core-type-spec.type-descriptor-id			$expander)
+    (core-type-spec.parent-and-child?			$expander)
 
     (<struct-type-spec>-rtd)
     (<struct-type-spec>-rcd)

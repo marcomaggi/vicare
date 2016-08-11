@@ -168,9 +168,10 @@
 
 (define-built-in-record-type <core-type-spec>
     <object-type-spec>
-  make-core-type-spec core-type-spec?
+  #f core-type-spec?
   (methods
-   (type-descriptor-id		core-type-spec.type-descriptor-id)))
+   (type-descriptor-id		core-type-spec.type-descriptor-id)
+   (parent-and-child?		core-type-spec.parent-and-child?)))
 
 (define-built-in-record-type <closure-type-spec>
     <object-type-spec>
