@@ -742,9 +742,7 @@
   (define-type-descriptors)
   (strip-angular-parentheses)
   (fields
-    (mutable specs
-	     type-signature.object-type-specs
-	     type-signature.object-type-specs-set!)
+    (mutable specs				type-signature.object-type-specs	      type-signature.object-type-specs-set!)
 		;A  proper   or  improper  list  of   "<object-type-spec>"  instances
 		;representing the types of values matching this signature.
     (mutable memoised-tags			type-signature.memoised-tags		      type-signature.memoised-tags-set!)
@@ -756,11 +754,18 @@
     (mutable memoised-max-count			type-signature.memoised-max-count	      type-signature.memoised-max-count-set!)
 		;Memoised maximum number of values matching this signature.
     #| end of FIELDS |# )
+
   (protocol
     (lambda (make-record)
       (define* (make-type-signature {specs type-signature-specs?})
 	(make-record specs (void) (void) (void) (void) #f #f))
       make-type-signature))
+
+  (equality-predicate
+    (lambda ()
+      (lambda (A B)
+	($type-signature=? A B))))
+
   ;; (custom-printer
   ;;   (lambda (S port sub-printer)
   ;;     (sub-printer `(<type-signature> ,(type-signature.syntax-object S)))))
@@ -772,7 +777,9 @@
 	(write ?thing port))
       (%display "#[signature ")
       (%display (syntax->datum (type-signature.syntax-object S)))
-      (%display "]"))))
+      (%display "]")))
+
+  #| end of DEFINE-RECORD-TYPE |# )
 
 (define-list-of-type-predicate list-of-type-signatures? type-signature?)
 

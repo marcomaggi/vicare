@@ -451,6 +451,11 @@
 		     implemented-interfaces))
       make-object-type-spec))
 
+  (equality-predicate
+    (lambda ()
+      (lambda (A B)
+	($object-type-spec=? A B))))
+
   (custom-printer
     (lambda (S port sub-printer)
       (display "#[object-type-spec " port)
@@ -3698,6 +3703,26 @@
 				  methods-table methods-table methods-table implemented-interfaces)
 	   item-type.ots)))
 
+      (define (make-complement-type-name ots)
+	(list (core-prim-id 'not)
+	      (object-type-spec.name (complement-type-spec.item-ots ots))))
+
+      (define (complement-type-spec.type-annotation-maker ots)
+	(list (core-prim-id 'not)
+	      (object-type-spec.type-annotation (complement-type-spec.item-ots ots))))
+
+      (define (make-complement-predicate ots)
+	(let* ((item-type.ots (complement-type-spec.item-ots ots))
+	       (item-pred.stx (object-type-spec.type-predicate-stx item-type.ots)))
+	  (unless item-pred.stx
+	    (assertion-violation '<complement-type-spec>
+	      "impossible to generate complement type predicate, component type has no predicate"
+	      item-type.ots))
+	  (let ((obj.sym (make-syntactic-identifier-for-temporary-variable "obj")))
+	    (bless
+	     `(lambda/typed ({_ <boolean>} ,obj.sym)
+		(not (,item-pred.stx ,obj.sym)))))))
+
       make-complement-type-spec))
 
   (custom-printer
@@ -3710,31 +3735,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (make-complement-type-name ots)
-  (list (core-prim-id 'not)
-	(object-type-spec.name (complement-type-spec.item-ots ots))))
-
-(define (complement-type-spec.type-annotation-maker ots)
-  (list (core-prim-id 'not)
-	(object-type-spec.type-annotation (complement-type-spec.item-ots ots))))
-
-(define (make-complement-predicate ots)
-  (let* ((item-type.ots (complement-type-spec.item-ots ots))
-	 (item-pred.stx (object-type-spec.type-predicate-stx item-type.ots)))
-    (unless item-pred.stx
-      (assertion-violation '<complement-type-spec>
-	"impossible to generate complement type predicate, component type has no predicate"
-	item-type.ots))
-    (let ((obj.sym (make-syntactic-identifier-for-temporary-variable "obj")))
-      (bless
-       `(lambda/typed ({_ <boolean>} ,obj.sym)
-	  (not (,item-pred.stx ,obj.sym)))))))
-
-;;; --------------------------------------------------------------------
-
 (define* (complement-type-spec.not {complement.ots complement-type-spec?} {proc procedure?})
   (not (proc (complement-type-spec.item-ots complement.ots))))
-
 
 
 ;;;; ancestor-of object spec
@@ -3776,6 +3778,32 @@
 				  methods-table methods-table methods-table implemented-interfaces)
 	   type.ots ancestor*.ots)))
 
+      (define (make-ancestor-of-type-name ots)
+	(list (core-prim-id 'ancestor-of)
+	      (object-type-spec.name (ancestor-of-type-spec.item-ots ots))))
+
+      (define (ancestor-of-type-spec.type-annotation-maker ots)
+	(list (core-prim-id 'ancestor-of)
+	      (object-type-spec.type-annotation (ancestor-of-type-spec.item-ots ots))))
+
+      (define (make-ancestor-of-predicate ots)
+	(let* ((ancestor*.ots		(ancestor-of-type-spec.ancestor-ots* ots))
+	       (pred*.stx		(map object-type-spec.type-predicate-stx ancestor*.ots)))
+	  (for-each (lambda (ancestor.ots pred.stx)
+		      (unless pred.stx
+			(assertion-violation '<ancestor-of-type-spec>
+			  "impossible to generate ancestor-of type predicate, component type has no predicate"
+			  ancestor.ots)))
+	    ancestor*.ots pred*.stx)
+	  (let ((obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
+		(pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
+	    (bless
+	     `(lambda/typed ({_ <boolean>} ,obj.sym)
+		(and (exists (lambda (,pred.sym)
+			       (,pred.sym ,obj.sym))
+		       (list ,@pred*.stx))
+		     #t))))))
+
       make-ancestor-of-type-spec))
 
   (custom-printer
@@ -3785,34 +3813,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define (make-ancestor-of-type-name ots)
-  (list (core-prim-id 'ancestor-of)
-	(object-type-spec.name (ancestor-of-type-spec.item-ots ots))))
-
-(define (ancestor-of-type-spec.type-annotation-maker ots)
-  (list (core-prim-id 'ancestor-of)
-	(object-type-spec.type-annotation (ancestor-of-type-spec.item-ots ots))))
-
-(define (make-ancestor-of-predicate ots)
-  (let* ((ancestor*.ots		(ancestor-of-type-spec.ancestor-ots* ots))
-	 (pred*.stx		(map object-type-spec.type-predicate-stx ancestor*.ots)))
-    (for-each (lambda (ancestor.ots pred.stx)
-		(unless pred.stx
-		  (assertion-violation '<ancestor-of-type-spec>
-		    "impossible to generate ancestor-of type predicate, component type has no predicate"
-		    ancestor.ots)))
-      ancestor*.ots pred*.stx)
-    (let ((obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
-	  (pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
-      (bless
-       `(lambda/typed ({_ <boolean>} ,obj.sym)
-	  (and (exists (lambda (,pred.sym)
-			 (,pred.sym ,obj.sym))
-		 (list ,@pred*.stx))
-	       #t))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4850,11 +4850,11 @@
 				    implemented-interfaces)
 	     with-type-predicate?))))
 
+      (define (label-type-spec.type-annotation-maker ots)
+	(object-type-spec.name ots))
+
       make-label-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define (label-type-spec.type-annotation-maker ots)
-  (object-type-spec.name ots))
 
 
 ;;;; interface spec
@@ -4927,11 +4927,11 @@
 				  implemented-interfaces) ;implemented-interfaces
 	   type-descriptor.id method-prototypes-table)))
 
+      (define (interface-type-spec.type-annotation-maker ots)
+	(object-type-spec.name ots))
+
       make-interface-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define (interface-type-spec.type-annotation-maker ots)
-  (object-type-spec.name ots))
 
 (define (list-of-interface-type-specs? obj)
   (if (pair? obj)

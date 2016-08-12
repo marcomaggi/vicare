@@ -34,6 +34,9 @@
   (import (vicare)
     (prefix (vicare expander)			xp::)
     (prefix (vicare system type-descriptors)	td::)
+    (prefix (only (psyntax system $all)
+		  make-interface-type-spec)
+	    sys::)
     (for (vicare expander) expand))
 
   (define-auxiliary-syntaxes method-prototype)
@@ -427,8 +430,8 @@
 	    (td::make-interface-type-descr (quote TYPE-NAME) (quote UID) PARENT-TYPE-DESCRIPTOR-ID
 					   IMPLEMENTED-INTERFACE-UIDS METHOD-PROTOTYPE-NAMES METHOD-RETRIEVER))
 	  (define-syntax TYPE-NAME
-	    (xp::make-interface-type-spec (syntax TYPE-NAME) (quote UID) (syntax TYPE-DESCRIPTOR-ID) (quote PARENT-OTS)
-					  METHOD-PROTOTYPES-TABLE METHODS-TABLE IMPLEMENTED-INTERFACES))
+	    (sys::make-interface-type-spec (syntax TYPE-NAME) (quote UID) (syntax TYPE-DESCRIPTOR-ID) (quote PARENT-OTS)
+					   METHOD-PROTOTYPES-TABLE METHODS-TABLE IMPLEMENTED-INTERFACES))
 	  DEFINITION ...
 	  ;;We want this validation code after the definitions.
 	  INTERFACE-VALIDATION-FORM ...)))

@@ -30,6 +30,7 @@ syntactic binding names, it is suggested to import it with prefix
 * expander system-identifiers:: Retrieving syntactic binding identifiers.
 * expander examples::           Expansion and expander inspection
                                 examples.
+* expander specs::              Object-type specifications.
 @end menu
 
 @c page
@@ -4664,6 +4665,1239 @@ for phase 2.
 @noindent
 for this reason: from the internal @syntax{begin-for-syntax} we are able
 to retrieve the descriptor of @samp{B}.
+
+@c page
+@node expander specs
+@section Object-type specifications
+
+
+Type specifications are expand--time objects that describe the
+characteristics of object--types.  Type specifications are part of the
+lexical environment and are contained in syntactic binding's
+descriptors.
+
+Every type annotation has an internal representation as type
+specification, @ref{types ann, Type annotations}.  The type
+specifications @api{} is exposed mostly for debugging purposes: in
+normal operations we are not meant to use it directly.
+
+@menu
+* expander specs intro::        Introduction to type specifications.
+* expander specs retrieving::   Retrieving type specifications.
+* expander specs object::       Base object-type specifications.
+* expander specs core::         Core object-type specifications.
+* expander specs struct::       Struct object-type specifications.
+* expander specs record::       Record object-type specifications.
+* expander specs pair::         Pair type specifications.
+* expander specs pair-of::      Pair-of type specifications.
+* expander specs list::         List type specifications.
+* expander specs list-of::      List-of type specifications.
+* expander specs vector::       Vector type specifications.
+* expander specs vector-of::    Vector-of type specifications.
+* expander specs condobj::      Condition-object type specifications.
+* expander specs enum::         Enumeration type specifications.
+* expander specs hashtable::    Hashtable type specifications.
+* expander specs alist::        Association list type specifications.
+* expander specs closure::      Closure object type specifications.
+* expander specs union::        Union type specifications.
+* expander specs intersection:: Intersection type specifications.
+* expander specs complement::   Complement type specifications.
+* expander specs ancestor::     Ancestor-of type specifications.
+* expander specs label::        Label type specifications.
+* expander specs interface::    Interface type specifications.
+* expander specs signatures::   Type specification signatures.
+@end menu
+
+@c page
+@node expander specs intro
+@subsection Introduction to type specifications
+
+
+The internal representation of object--types is as hierarchy of
+record--types having the type @class{object-type-spec} as base.  The
+hierarchy of record--types is:
+
+@example
+<object-type-spec>
+   |
+   +--> <core-type-spec>
+   |
+   +--> <struct-type-spec>
+   |
+   +--> <record-type-spec>
+   |
+   +--> <closure-type-spec>
+   |
+   +--> <compound-condition-type-spec>
+   |
+   +--> <union-type-spec>
+   |
+   +--> <intersection-type-spec>
+   |
+   +--> <complement-type-spec>
+   |
+   +--> <ancestor-of-type-spec>
+   |
+   +--> <pair-type-spec>
+   |
+   +--> <pair-of-type-spec>
+   |
+   +--> <list-type-spec>
+   |
+   +--> <list-of-type-spec> --> <alist-type-spec>
+   |
+   +--> <vector-type-spec>
+   |
+   +--> <vector-of-type-spec>
+   |
+   +--> <hashtable-type-spec>
+   |
+   +--> <enumeration-type-spec>
+   |
+   +--> <label-type-spec>
+   |
+    --> <interface-type-spec>
+@end example
+
+At present, all the record--types exposed by the library @library{vicare
+expander} are sealed: they cannot be sub--typed by user code.
+
+The type @class{object-type-spec} has a field @code{parent-ots} that is
+used to represent the hierarchy of Scheme--level object--types.
+
+All the built-in Scheme object types are represented by instances of
+@class{core-type-spec}; so @class{top}, @class{fixnum}, @class{string},
+@class{list} et cetera are represented by instances of
+@class{core-type-spec}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Hierarchy of list types
+
+The hierarchy of list types is as follows:
+
+@example
+<list>
+   |
+   +--> <null>
+   |
+   +--> (list-of @ameta{type}) --> <null>
+   |
+    --> <nelist> --> (list @ametao{type} @ameta{type} ...)
+@end example
+
+@noindent
+notice how @class{null} is considered a sub--type of both @class{list}
+and @code{(list-of @ameta{type})} annotations, but @strong{not} of
+@code{(list @ametao{type} @ameta{type} ...)}; this special handling is
+implemented in the function
+@func{object-type-spec.matching-super-and-sub?}.
+
+The type annotations @code{(list-of @ameta{type})} are represented by
+instances of @class{list-of-type-spec}.  @code{(list @ametao{type}
+@ameta{type} ...)}  annotations are represented by instances of
+@class{list-type-spec}, and represent non--empty lists.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Hierarchy of vector types
+
+The hierarchy of vector types is as follows:
+
+@example
+<vector>
+   |
+   +---> <empty-vector>
+   |
+   +---> (vector-of @meta{type}) ---> <empty-vector>
+   |
+    ---> <nevector> ----------> (vector @ametao{type} @meta{type} ...)
+@end example
+
+@noindent
+notice how @class{empty-vector} is considered a sub--type of both
+@class{vector} and @code{(vector-of @ameta{type})} annotations, but
+@strong{not} of @code{(vector @ametao{type} @ameta{type} ...)}
+annotations; this special handling is implemented in the function
+@func{object-type-spec.matching-super-and-sub?}.
+
+The type annotation @code{(vector-of @ameta{type})} annotations are
+represented by instances of @class{vector-of-type-spec}.  @code{(vector
+@ametao{type} @ameta{type} ...)}  annotations are represented by
+instances of @class{vector-type-spec}, and represent non--empty vectors.
+
+@c page
+@node expander specs retrieving
+@subsection Retrieving type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@defun make-type-specification @var{annotation}
+Build and return a new type specification object.  @var{annotation} must
+be a syntax object representing the type annotation.  This function
+allows us to define type annotations as follows:
+
+@lisp
+(import (only (psyntax expander)
+              make-type-specification))
+
+(let*-syntax ((<string1> (make-type-specification #'<string>))
+              (<string2> (make-type-specification #'<string1>)))
+  (is-a? "string" <string2>)    @result{} #t
+  (is-a? 123      <string2>))   @result{} #f
+@end lisp
+@end defun
+
+@c page
+@node expander specs object
+@subsection Base object--type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{object-type-spec}
+Record--type name of the base type for all the object--type
+specifications.  In this documentation, instances of this type used as
+arguments to function are indicated as @var{ots}.
+@end deftp
+
+
+@defun object-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of @class{object-type-spec},
+otherwise return @false{}.
+@end defun
+
+
+@defun object-type-spec.name @var{ots}
+@defunx object-type-spec.type-annotation @var{ots}
+Return a syntax object representing the name or the type annotation of
+the object--type specification @var{ots}.
+
+For some types the type name and the type annotation are equal, for
+example the core type names @class{fixnum}, @class{string}, et cetera
+are both type names and type annotations.  For other types they are
+distinguished, for example if we define the type:
+
+@lisp
+(define-type <list-of-fixnums>
+  (list-of <fixnum>))
+@end lisp
+
+@noindent
+the type name is @class{list-of-fixnums} while the type annotation is
+@code{(list-of <fixnum>)}.
+@end defun
+
+
+@defun object-type-spec.uids-list @var{ots}
+Return a list of symbols uniquely identifying this type specification.
+The head of the list is a symbol associated to this object--type; the
+second item in the list is associated to the parent; and so on.
+@end defun
+
+
+@defun object-type-spec.parent-ots
+Return @false{} or an instance of @class{object-type-spec} representing
+the parent of this object--type.
+@end defun
+
+
+@defun object-type-spec.constructor-stx @var{ots}
+Return a boolean value or a syntax object representing a Scheme
+expression that, expanded and evaluated at run--time, returns the
+default constructor function.
+
+@itemize
+@item
+When the return value is @false{}: this object--type has no constructor,
+so trying to use the syntax @syntax{new} will cause an expand--time
+exception.
+
+@item
+When the return value is @true{}: this object--type has no constructor,
+but requires the object to be supplied in its already--built form to the
+syntax @syntax{new}.  For example:
+
+@lisp
+(new <fixnum> 123)
+@end lisp
+
+@noindent
+must expand to an equivalent of:
+
+@lisp
+(assert-signature-and-return (<fixnum>) 123)
+@end lisp
+
+@item
+When this field is a syntax object: the constructor is meant to be used
+as:
+
+@lisp
+(?constructor ?arg ...)
+@end lisp
+
+@noindent
+and called explicitly with the syntax @syntax{new}.
+
+The constructor can be a syntax or core operation like
+@func{$make-clean-vector} or a closure object like @func{vector} or the
+maker of record--types.
+@end itemize
+@end defun
+
+
+@defun object-type-spec.destructor-stx @var{ots}
+Return @false{} or a syntax object representing a Scheme expression
+that, expanded and evaluated at run--time, returns a destructor
+function.  The destructor is meant to be used as:
+
+@lisp
+(?destructor ?instance)
+@end lisp
+
+@noindent
+and called explicitly with the @syntax{delete} syntax.
+@end defun
+
+
+@defun object-type-spec.type-predicate-stx @var{ots}
+Return @false{} or a syntax object representing a Scheme expression
+that, expanded and evaluated at run--time, returns a type predicate for
+the object--type @var{ots}.
+
+The predicate is meant to be used as:
+
+@lisp
+(@ameta{predicate} @ameta{object})
+@end lisp
+
+@noindent
+and called explicitly with the @syntax{is-a?} syntax.
+
+The type predicate can be a syntax or core operation or a closure object
+like @func{vector?} or the predicate of record--types.
+@end defun
+
+
+@defun object-type-spec.equality-predicate @var{ots}
+Return @false{} or a syntax object which, expanded and evaluated at
+run--time, returns the equality predicate for this type.
+@end defun
+
+
+@defun object-type-spec.comparison-procedure @var{ots}
+Return @false{} or a syntax object which, expanded and evaluated at
+run--time, returns the comparison procedure for this type.
+@end defun
+
+
+@defun object-type-spec.applicable-hash-function @var{ots}
+Return @false{} or a syntax object representing a Scheme expression
+which, expanded and evaluated, returns the hash function for this type.
+@end defun
+
+
+@defun object-type-spec.implemented-interfaces @var{ots}
+A (possibly empty) proper list of @class{interface-type-spec} instances
+representing the implemented interfaces.
+@end defun
+
+
+@defun object-type-spec.applicable-method-stx @var{ots} @var{method-name}
+@var{ots} must an object-type specification record.  @var{method-name}
+must be a symbol representing a method name in the object--type
+specification.
+
+If @var{method-name} is @func{eq?} to:
+
+@itemize
+@item
+The name of a public method for @var{OTS}.
+
+@item
+The name of a public method for @var{OTS}'s parent.
+@end itemize
+
+@noindent
+return a syntax object representing a Scheme expression which, expanded
+and evaluated at run-time, returns the method's applicable; otherwise
+return @false{}.
+@end defun
+
+
+@defun object-type-spec=? @varo{ots} @var{ots} @dots{}
+Return @true{} if all the @class{object-type-spec} instances given as
+operands are equal to each other; otherwise return @false{}.
+@end defun
+
+
+@defun object-type-spec.ancestor-ots* @var{ots}
+Return the, possibly empty, list of @class{object-type-spec} instances
+representing the ancestors list of @var{ots}.  @var{ots} itself is
+@strong{not} included in the list.
+
+As example, when applied to the object--type specification of
+@condition{condition}, the return value is the list of specifications
+for:
+
+@lisp
+(<record> <struct> <top>)
+@end lisp
+@end defun
+
+
+@defun object-type-spec.common-ancestor @vari{ots} @varii{ots}
+Search the hierarchies of @vari{ots} and @varii{ots} looking for a
+common ancestor.  Return an instance of @class{object-type-spec}
+representing the ancestor's @class{ots}.  If no ancestor is found:
+return the specification of @class{top}.
+@end defun
+
+
+@defun object-type-spec.matching-super-and-sub? @vari{ots} @varii{ots}
+Return @true{} if the specifications given as operands are matching
+super--type and sub--type; otherwise return @false{}.
+
+The object--type specifications @vari{ots} @varii{ots} are matching
+super--type and sub--type when @vari{ots} can be interpreted as
+super--type of @varii{ots}.  For example:
+
+@itemize
+@item
+When @vari{ots} is a parent of @varii{ots}.
+
+@item
+When both @vari{ots} and @varii{ots} represent pair compounds whose car
+and cdr are matching super--type and sub--type.
+
+@item
+When both @vari{ots} and @varii{ots} represent list compounds whose car
+and cdr are matching super--type and sub--type.
+
+@item
+When both @vari{ots} and @varii{ots} represent vector compounds whose
+car and cdr are matching super--type and sub--type.
+@end itemize
+@end defun
+
+
+@defun object-type-spec.compatible-super-and-sub? @vari{ots} @varii{ots}
+Return @true{} if the specifications given as operands are compatible
+super--type and sub--type; otherwise return @false{}.  This function is
+meant to be used when we have already applied
+@func{object-type-spec.matching-super-and-sub?} to the same operands and
+the result was @false{}.
+
+The operands @vari{ots} and @varii{ots} are compatible as super--type
+and sub--type when @varii{ots} is a matching super--type of @vari{ots}.
+Whenever @vari{ots} is the type specification of an expected argument
+and @varii{ots} is the type specification of a given operand: it makes
+sense to consider them ``matching'' at expand--time, but to perform a
+further values validation at run--time.
+@end defun
+
+
+@defun object-type-spec.procedure? @var{ots}
+Return @true{} if @var{ots} represents the object--type specification of
+a closure object; otherwise return @false{}.  This means @var{ots} is
+either an instance of @class{closure-type-spec} or it is the
+specification of @class{procedure}.
+@end defun
+
+
+@defun object-type-spec.list-sub-type? @var{ots}
+Return @true{} if @var{ots} represents the object--type specification of
+a list object; otherwise return @false{}.
+@end defun
+
+
+@defun object-type-spec.vector-sub-type? @var{ots}
+Return @true{} if @var{ots} represents the object--type specification of
+a vector object; otherwise return @false{}.
+@end defun
+
+@c page
+@node expander specs core
+@subsection Core object--type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{core-type-spec}
+Name of type specifications for core Scheme objects.  Instances of this
+type are the object--type specifications for: @class{fixnum},
+@class{flonum}, @class{string}, @class{list}, et cetera.  There may be
+multiple instances of this type representing the same Scheme
+object--type.
+
+Instances of this type are internally generated and cannot be built by
+user code.
+@end deftp
+
+
+@defun core-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of @class{core-type-spec};
+otherwise return @false{}.
+@end defun
+
+
+@defun core-type-spec.type-descriptor-id @var{ots}
+Return a syntactic identifier bound to the instance of
+@class{core-type-descriptor} describing run--time features of the
+object--type.
+@end defun
+
+
+@defun core-type-spec.parent-and-child? @vari{ots} @varii{ots}
+Return @true{} if @vari{ots} and @varii{ots} represent parent and child
+object--types (respectively); otherwise return @false{}.  Return
+@false{} if the operands represent the same object--type.
+@end defun
+
+@c page
+@node expander specs struct
+@subsection Struct object--type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{struct-type-spec}
+Name of type specifications for @value{PRJNAME}'s struct objects.
+Instances of this type are generated by the syntax
+@syntax{define-struct}.
+@end deftp
+
+
+@defun struct-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of @class{struct-type-spec};
+otherwise return @false{}.
+@end defun
+
+
+@defun struct-type-spec.std @var{ots}
+Return the struct--type descriptor object.
+@end defun
+
+@c page
+@node expander specs record
+@subsection Record object--type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{record-type-spec}
+Name of type specifications for record--type.  Instances of this type
+are generated by the syntax @syntax{define-record-type}.
+@end deftp
+
+
+@defun record-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of @class{record-type-spec};
+otherwise return @false{}.
+@end defun
+
+
+@defun record-type-spec.rtd-id @var{ots}
+@defunx record-type-spec.rcd-id @var{ots}
+Return the syntactic identifier bound to the record--type descriptor or
+record--type constructor descriptor.
+@end defun
+
+
+@defun record-type-spec.parent-and-child? @vari{ots} @varii{ots}
+Return @true{} if @vari{ots} and @varii{ots} represent parent and child
+object--types (respectively); otherwise return @false{}.  Return
+@false{} if the operands represent the same object--type.
+@end defun
+
+@c page
+@node expander specs pair
+@subsection Pair type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{pair-type-spec}
+Name of type specifications for pairs of heterogeneous values.
+@end deftp
+
+
+@defun make-pair-type-spec @var{car-ots} @var{cdr-ots}
+Build and return a new instance of @class{pair-type-spec}.  The
+arguments @var{car-ots} and @var{cdr-ots} must be instances of
+@class{object-type-spec} representing the car and cdr specifications,
+respectively.
+@end defun
+
+
+@defun pair-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of @class{pair-type-spec};
+otherwise return @false{}.
+@end defun
+
+
+@defun pair-type-spec.car-ots @var{ots}
+@defunx pair-type-spec.cdr-ots @var{ots}
+Return instances of @class{object-type-spec} representing the car and
+cdr specifications, respectively.
+@end defun
+
+@c page
+@node expander specs pair-of
+@subsection Pair-of type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{pair-of-type-spec}
+Name of type specifications for pairs of homogeneous values.
+@end deftp
+
+
+@defun make-pair-of-type-spec @var{item-ots}
+Build and return a new instance of @class{pair-of-type-spec}.  The
+argument @var{item-ots} must be an instance of @class{object-type-spec}
+representing the type specification of both the car and cdr.
+@end defun
+
+
+@defun pair-of-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of @class{pair-of-type-spec};
+otherwise return @false{}.
+@end defun
+
+
+@defun pair-of-type-spec.item-ots @var{des}
+Return an instance of @class{object-type-spec} representing the type
+specification of both the car and cdr.
+@end defun
+
+@c page
+@node expander specs list
+@subsection List type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{list-type-spec}
+Name of type specifications for lists of heterogeneous values.
+@end deftp
+
+
+@defun make-list-type-spec @var{item-ots*}
+Build and return a new instance of @class{list-type-spec}.  The argument
+@var{item-ots*} must be a proper, non--empty list of
+@class{object-type-spec} instances representing the type specifications
+of the items in the list.
+@end defun
+
+
+@defun list-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{list-type-spec}; otherwise return @false{}.
+@end defun
+
+
+@defun list-type-spec.item-ots* @var{ots}
+Return a proper, non--empty list of @class{object-type-spec} instances
+representing the type specifications of the items in the list.
+@end defun
+
+
+@defun list-type-spec.length @var{ots}
+Return the length of the list, a non--negative exact integer.
+@end defun
+
+@c page
+@node expander specs list-of
+@subsection List-of type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{list-of-type-spec}
+Name of type specifications for lists of homogeneous values.
+@end deftp
+
+
+@defun make-list-of-type-spec @var{item-ots}
+Build and return a new instance of @class{list-of-type-spec}.  The
+argument @var{item-ots} must be an instance of @class{object-type-spec}
+representing the type specification of all the items.
+@end defun
+
+
+@defun list-of-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{list-of-type-spec}; otherwise return @false{}.
+@end defun
+
+
+@defun list-of-type-spec.item-ots @var{ots}
+Return an instance of @class{object-type-spec} representing the type
+specification of all the items.
+@end defun
+
+@c page
+@node expander specs vector
+@subsection Vector type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{vector-type-spec}
+Name of type specifications for vectors of heterogeneous values.
+@end deftp
+
+
+@defun make-vector-type-spec @var{item-ots*}
+Build and return a new instance of @class{vector-type-spec}.  The
+argument @var{item-ots*} must be a proper, non--empty list of
+@class{object-type-spec} instances representing the type specifications
+of the items in the vector.
+@end defun
+
+
+@defun vector-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{vector-type-spec}; otherwise return @false{}.
+@end defun
+
+
+@defun vector-type-spec.item-ots* @var{ots}
+Return a proper, non--empty list of @class{object-type-spec} instances
+representing the type specifications of the items in the vector.
+@end defun
+
+
+@defun vector-type-spec.length @var{ots}
+Return the length of the vector, a non--negative exact integer.
+@end defun
+
+@c page
+@node expander specs vector-of
+@subsection Vector-of type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{vector-of-type-spec}
+Name of type specifications for vectors of homogeneous values.
+@end deftp
+
+
+@defun make-vector-of-type-spec @var{item-ots}
+Build and return a new instance of @class{vector-of-type-spec}.  The
+argument @var{item-ots} must be an instance of @class{object-type-spec}
+representing the type specification of all the items.
+@end defun
+
+
+@defun vector-of-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{vector-of-type-spec}; otherwise return @false{}.
+@end defun
+
+
+@defun vector-of-type-spec.item-ots @var{ots}
+Return an instance of @class{object-type-spec} representing the type
+specification of all the items.
+@end defun
+
+@c page
+@node expander specs condobj
+@subsection Condition-object type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{compound-condition-type-spec}
+Name of type specifications for compound condition objects.
+@end deftp
+
+
+@defun make-compound-condition-type-spec @var{component-ots*}
+Build and return a new instance of @class{compound-condition-type-spec}.
+The argument @var{component-ots*} must be a non--empty proper list of
+@class{object-type-spec} instances representing the type specifications
+of the component condition--objects.
+@end defun
+
+
+@defun compound-condition-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{compound-condition-type-spec}; otherwise return @false{}.
+@end defun
+
+
+@defun compound-condition-type-spec.component-ots* @var{ots}
+Return a non--empty proper list of @class{object-type-spec} instances
+representing the type specifications of the component
+condition--objects.
+@end defun
+
+@c page
+@node expander specs enum
+@subsection Enumeration type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{enumeration-type-spec}
+Name of type specifications for symbols enumerations.
+@end deftp
+
+
+@defun make-enumeration-type-spec @var{symbols}
+Build and return a new instance of @class{enumeration-type-spec}.  The
+argument @var{symbols} must be a non--empty proper list of symbols
+representing the items in the enumeration.
+@end defun
+
+
+@defun enumeration-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{enumeration-type-spec}; otherwise return @false{}.
+@end defun
+
+
+@defun enumeration-type-spec.symbol* @var{ots}
+Return a non--empty proper list of symbols representing the items in the
+enumeration.
+@end defun
+
+
+@defun enumeration-type-spec.member? @var{ots} @var{sym}
+Return @true{} if the symbol @var{sym} is a member of the enumeration
+@var{ots}; otherwise return @false{}.
+@end defun
+
+@c page
+@node expander specs hashtable
+@subsection Hashtable type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{hashtable-type-spec}
+Name of type specifications for hashtables.
+@end deftp
+
+
+@defun make-hashtable-type-spec @var{key-ots} @var{val-ots}
+Build and return a new instance of @class{hashtable-type-spec}.  The
+arguments @var{key-ots} and @var{val-ots} must be instances of
+@class{object-type-spec} representing the type specifications of keys
+and values, respectively.
+@end defun
+
+
+@defun hashtable-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{hashtable-type-spec}; otherwise return @false{}.
+@end defun
+
+
+@defun hashtable-type-spec.key-ots @var{ots}
+@defunx hashtable-type-spec.val-ots @var{ots}
+Return instances of @class{object-type-spec} representing the type
+specifications of keys and values, respectively.
+@end defun
+
+@c page
+@node expander specs alist
+@subsection Association list type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{alist-type-spec}
+Name of type specifications for association lists.
+@end deftp
+
+
+@defun make-alist-type-spec @var{key-ots} @var{val-ots}
+Build and return a new instance of @class{alist-type-spec}.  The
+arguments @var{key-ots} and @var{val-ots} must be instances of
+@class{object-type-spec} representing the type specifications of keys
+and values, respectively.
+@end defun
+
+
+@defun alist-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{alist-type-spec}; otherwise return @false{}.
+@end defun
+
+
+@defun alist-type-spec.key-ots @var{ots}
+@defunx alist-type-spec.val-ots @var{ots}
+Return instances of @class{object-type-spec} representing the type
+specifications of keys and values, respectively.
+@end defun
+
+@c page
+@node expander specs closure
+@subsection Closure object type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{closure-type-spec}
+Name of type specifications for closure objects.
+@end deftp
+
+
+@defun make-closure-type-spec @var{signature}
+Build and return a new instance of @class{closure-type-spec}.  The
+argument @var{signature} must be an instance of
+@class{case-lambda-signature} representing the type signatures of the
+closure's clauses.
+@end defun
+
+
+@defun closure-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{closure-type-spec}; otherwise return @false{}.
+@end defun
+
+
+@defun closure-type-spec.signature @var{des}
+Return an instance of @class{case-lambda-signature} representing the
+type signatures of the closure's clauses.
+@end defun
+
+@c page
+@node expander specs union
+@subsection Union type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{union-type-spec}
+Name of type specifications for unions of type specifications.
+@end deftp
+
+
+@defun union-of-type-specs @varo{ots} @var{ots} @dots{}
+Build and return a new instance of @class{object-type-spec} representing
+the union between the given type specifications.  The returned value may
+or may not be an instance of @class{union-type-spec}.
+@end defun
+
+
+@defun union-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of @class{union-type-spec};
+otherwise return @false{}.
+@end defun
+
+
+@defun union-type-spec.item-ots* @var{ots}
+Return a non--empty proper list of @class{object-type-spec} instances
+representing the optional type specifications.
+@end defun
+
+@c page
+@node expander specs intersection
+@subsection Intersection type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{intersection-type-spec}
+Name of type specifications for intersections of type specifications.
+@end deftp
+
+
+@defun intersection-of-type-specs @var{component-ots*}
+Build and return a new instance of @class{object-type-spec} representing
+the intersection between the given type specifications.  The returned
+value may or may not be an instance of @class{intersection-type-spec}.
+
+The argument @var{component-ots*} must be a non--empty proper list of
+@class{object-type-spec} instances representing the type specifications.
+@end defun
+
+
+@defun intersection-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{intersection-type-spec}; otherwise return @false{}.
+@end defun
+
+
+@defun intersection-type-spec.item-ots* @var{ots}
+Return a non--empty proper list of @class{object-type-spec} instances
+representing the mandatory type specifications.
+@end defun
+
+@c page
+@node expander specs complement
+@subsection Complement type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{complement-type-spec}
+Name of type specifications for the complement of a type specification.
+@end deftp
+
+
+@defun make-complement-type-spec @var{item-ots}
+Build and return a new instance of @class{complement-type-spec}.  The
+argument @var{item-ots} must be an instance of @class{object-type-spec}
+representing the type specification to be complemented.
+@end defun
+
+
+@defun complement-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{complement-type-spec}; otherwise return @false{}.
+@end defun
+
+
+@defun complement-type-spec.item-ots @var{des}
+Return an instance of @class{object-type-spec} representing the type
+specification to be complemented.
+@end defun
+
+@c page
+@node expander specs ancestor
+@subsection Ancestor-of type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{ancestor-of-type-spec}
+Name of type specifications representing the ancestors of a type
+specification.
+@end deftp
+
+
+@defun make-ancestor-of-type-spec @var{ots}
+Build and return a new instance of @class{ancestor-of-type-spec}.  The
+argument @var{ots} must be an instance of @class{object-type-spec}
+representing the type specification of which we want to describe the
+ancestors.
+@end defun
+
+
+@defun ancestor-of-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{ancestor-of-type-spec}; otherwise return @false{}.
+@end defun
+
+
+@defun ancestor-of-type-spec.item-ots @var{ots}
+Return the type specification of which @var{ots} describes the
+ancestors.
+@end defun
+
+
+@defun ancestor-of-type-spec.ancestor-ots* @var{ots}
+Return a list of type specifications representing the ancestors.  The
+head of the list is the parent type specification.
+@end defun
+
+@c page
+@node expander specs label
+@subsection Label type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{label-type-spec}
+Name of type specifications representing a label--type specification
+@end deftp
+
+
+@defun label-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of @class{label-type-spec};
+otherwise return @false{}.
+@end defun
+
+@c page
+@node expander specs interface
+@subsection Interface type specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{interface-type-spec}
+Name of type specifications representing interface type specifications.
+@end deftp
+
+
+@defun interface-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{interface-type-spec}; otherwise return @false{}.
+@end defun
+
+@c page
+@node expander specs signatures
+@subsection Type specification signatures
+
+
+@menu
+* expander specs signatures type::         Type signatures.
+* expander specs signatures lambda::       Lambda signature specifications.
+* expander specs signatures case-lambda::  Case-lambda signature specifications.
+@end menu
+
+@c page
+@node expander specs signatures type
+@subsubsection Type signatures
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{type-signature}
+Type name of objects representing the type of lambda formals.
+@end deftp
+
+
+@defun make-type-signature @var{specs}
+Build and return a new instance of @class{type-signature}.  The argument
+@var{specs} must be a proper or improper list of
+@class{object-type-spec} instances representing the signatures of lambda
+formals.
+@end defun
+
+
+@defun type-signature? @var{obj}
+Return @true{} if @var{obj} is an instance of @class{type-signature};
+otherwise return @false{}.
+@end defun
+
+
+@defun type-signature.object-type-specs @var{des}
+Return a proper or improper list of @class{object-type-spec} instances
+representing the signatures of lambda formals.
+@end defun
+
+@c page
+@node expander specs signatures lambda
+@subsubsection Lambda signature specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{lambda-signature}
+Type name of objects representing the type signature of single lambda
+clauses.
+@end deftp
+
+
+@defun make-lambda-signature @var{retvals} @var{argvals}
+Build and return a new instance of @class{lambda-signature}.
+
+The argument @var{retvals} must be an instance of @class{type-signature}
+representing the types of values returned by this lambda clause.
+
+The argument @var{argvals} must be an instance of @class{type-signature}
+representing the types of arguments expected by this lambda clause.
+@end defun
+
+
+@defun lambda-signature? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{lambda-signature}; otherwise return @false{}.
+@end defun
+
+
+@defun lambda-signature.retvals @var{des}
+Return an instance of @class{type-signature} representing the types of
+values returned by this lambda clause.
+@end defun
+
+
+@defun lambda-signature.argvals @var{des}
+Return an instance of @class{type-signature} representing the types of
+arguments expected by this lambda clause.
+@end defun
+
+@c page
+@node expander specs signatures case-lambda
+@subsubsection Case-lambda signature specifications
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@deftp {Record Type} @aclass{case-lambda-signature}
+Type name of objects representing the type signature of a tuple of
+lambda clauses.
+@end deftp
+
+
+@defun make-case-lambda-signature @var{clause-signature*}
+Build and return a new instance of @class{case-lambda-signature}.  The
+argument @var{clause-signature*} must be a non--empty list of
+@class{lambda-signature} representing the type specifications of the
+single lambda clauses.
+@end defun
+
+
+@defun case-lambda-signature? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{case-lambda-signature}; otherwise return @false{}.
+@end defun
+
+
+@defun case-lambda-signature.clause-signature* @var{des}
+Return a non--empty list of @class{lambda-signature} representing the
+type specifications of the single lambda clauses.
+@end defun
 
 
 @c Local Variables:

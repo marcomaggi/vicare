@@ -290,11 +290,11 @@
 
 (define-built-in-record-type <label-type-spec>
     <object-type-spec>
-  make-label-type-spec label-type-spec?)
+  #f label-type-spec?)
 
 (define-built-in-record-type <interface-type-spec>
     <object-type-spec>
-  make-interface-type-spec interface-type-spec?
+  #f interface-type-spec?
   (methods
    (method-prototypes-table	interface-type-spec.method-prototypes-table)
    (type-descriptor-id		interface-type-spec.type-descriptor-id)))
@@ -307,7 +307,6 @@
   (methods
    (object-type-specs			type-signature.object-type-specs)
    (syntax-object			type-signature.syntax-object)
-   (=					type-signature=?)
    (fully-untyped?			type-signature.fully-untyped?)
    (partially-untyped?			type-signature.partially-untyped?)
    (untyped?				type-signature.untyped?)

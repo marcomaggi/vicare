@@ -10,6 +10,7 @@ leave the type of variables unspecified.
 @menu
 * types intro::                 Introduction to the typed language.
 * types ann::                   Type annotations.
+* types spec::                  Type specifications.
 * types descr::                 Type descriptors.
 * types syntaxes::              Type-exploiting syntaxes.
 * types built-in::              Built-in object types.
@@ -245,6 +246,49 @@ extended syntaxes that recognise type definitions and declarations.
 We can use the function @func{typed-language-enabled?} to enable the
 typed language at the @repl{} (@pxref{iklib expander language,
 typed-language-enabled?}).
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Strict type checking
+
+An additional option is available for both programs and libraries:
+@code{strict-type-checking}.  Under the typed language, the default
+behaviour is this:
+
+@lisp
+(import (prefix (vicare expander) xp::))
+
+(xp::type-annotation-matching <number> <fixnum>) @result{} exact-match
+(xp::type-annotation-matching <fixnum> <number>) @result{} possible-match
+@end lisp
+
+@noindent
+that is:
+
+@itemize
+@item
+An operand with type @class{fixnum} exactly matches an expected argument
+of type @class{number}.  The operand validation is successful at
+expand--time.
+
+@item
+An operand with type @class{number} is compatible with an expected
+argument of type @class{fixnum}.  The operand validation is successful
+at expand--time, but further validation at run--time is required.
+@end itemize
+
+When the option @code{strict-type-checking} is used, the behaviour is:
+
+@lisp
+(import (prefix (vicare expander) xp::))
+
+(xp::type-annotation-matching <number> <fixnum>) @result{} exact-match
+(xp::type-annotation-matching <fixnum> <number>) @result{} no-match
+@end lisp
+
+@noindent
+that is: compatibility validation is turned off, only expand--time exact
+matching is used to validate operands against expected arguments.
 
 @c page
 @node types intro type ids
@@ -1233,6 +1277,22 @@ representing a type signature.
 @result{} (<fixnum> <string> <vector>)
 @end lisp
 @end deffn
+
+@c page
+@node types spec
+@section Type specifications
+
+
+Type specifications are expand--time objects that describe the
+characteristics of object--types.  Type specifications are part of the
+lexical environment and are contained in syntactic binding's
+descriptors.
+
+Every type annotation has an internal representation as type
+specification.  Usually we do not have to deal with type specifications;
+so most of the syntactic bindings are exported by the library
+@library{vicare expander}.  For details @ref{expander specs, Object-type
+specifications}.
 
 @c page
 @node types descr
@@ -2506,30 +2566,10 @@ The following syntactic bindings are exported by the library
 @library{vicare}.
 
 
-@defun make-type-annotation @var{annotation}
-Build and return a new type annotation description object; expand to the
-quoted type annotation object.  @var{annotation} must be a syntax object
-representing the type annotation.
-
-This function is exported by @library{vicare expander} and it allows us
-to define type annotations as follows:
-
-@lisp
-(import (only (psyntax expander)
-              make-type-annotation))
-
-(let*-syntax ((<string1> (make-type-annotation #'<string>))
-              (<string2> (make-type-annotation #'<string1>)))
-  (is-a? "string" <string2>)    @result{} #t
-  (is-a? 123      <string2>))   @result{} #f
-@end lisp
-@end defun
-
-
 @deffn Syntax type-annotation @meta{annotation}
-Build a new type annotation description object; expand to the quoted
-type annotation object.  This syntax allows us to define type
-annotations as follows:
+Expand into an expression which, expanded and evaluated, builds and
+returns a new type specification object.  This syntax allows us to
+define type annotations as follows:
 
 @lisp
 (let*-syntax ((<string1> (type-annotation <string>))

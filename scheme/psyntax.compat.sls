@@ -38,9 +38,8 @@
     non-compound-sexp?			self-evaluating?
     delete-duplicates
 
-    define-core-record-type
-    define-type-descriptors
-    strip-angular-parentheses
+    define-core-record-type		define-type-descriptors
+    strip-angular-parentheses		equality-predicate
 
     cnd::define-core-condition-type
     cnd::&condition			cnd::&error
