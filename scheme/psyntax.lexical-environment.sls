@@ -170,7 +170,7 @@
 
     <intersection-type-spec>
     <intersection-type-spec>-rtd			<intersection-type-spec>-rcd
-    make-intersection-type-spec				intersection-of-type-specs
+    intersection-of-type-specs
     intersection-type-spec?				intersection-type-spec.item-ots*
 
     <complement-type-spec>
@@ -207,7 +207,7 @@
     <vector-type-spec>
     <vector-type-spec>-rtd				<vector-type-spec>-rcd
     make-vector-type-spec				vector-type-spec?
-    vector-type-spec.item-ots*
+    vector-type-spec.item-ots*				vector-type-spec.length
 
     <vector-of-type-spec>
     <vector-of-type-spec>-rtd				<vector-of-type-spec>-rcd

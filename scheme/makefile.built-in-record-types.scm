@@ -191,8 +191,7 @@
   (methods
    (rtd-id				record-type-spec.rtd-id)
    (rcd-id				record-type-spec.rcd-id)
-   (super-protocol-id			record-type-spec.super-protocol-id)
-   (virtual-method-signatures		record-type-spec.virtual-method-signatures)))
+   (parent-and-child?			record-type-spec.parent-and-child?)))
 
 (define-built-in-record-type <compound-condition-type-spec>
     <objct-type-spec>
@@ -204,13 +203,13 @@
 
 (define-built-in-record-type <union-type-spec>
     <object-type-spec>
-  make-union-type-spec union-type-spec?
+  #f union-type-spec?
   (methods
    (item-ots*			union-type-spec.item-ots*)))
 
 (define-built-in-record-type <intersection-type-spec>
     <object-type-spec>
-  make-intersection-type-spec intersection-type-spec?
+  #f intersection-type-spec?
   (methods
    (item-ots*			intersection-type-spec.item-ots*)))
 
@@ -246,7 +245,8 @@
     <object-type-spec>
   make-list-type-spec list-type-spec?
   (methods
-   (item-ots*		list-type-spec.item-ots*)))
+   (item-ots*		list-type-spec.item-ots*)
+   (length		list-type-spec.length)))
 
 (define-built-in-record-type <list-of-type-spec>
     <object-type-spec>
@@ -258,7 +258,8 @@
     <object-type-spec>
   make-vector-type-spec vector-type-spec?
   (methods
-   (item-ots*		vector-type-spec.item-ots*)))
+   (item-ots*		vector-type-spec.item-ots*)
+   (length		vector-type-spec.length)))
 
 (define-built-in-record-type <vector-of-type-spec>
     <object-type-spec>

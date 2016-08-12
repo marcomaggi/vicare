@@ -805,15 +805,20 @@
   (signatures
    ((<record-type-spec>)		=> (<syntactic-identifier>))))
 
-(declare-core-primitive record-type-spec.super-protocol-id
-    (safe)
-  (signatures
-   ((<record-type-spec>)		=> ((or <false> <syntactic-identifier>)))))
+;; (declare-core-primitive record-type-spec.super-protocol-id
+;;     (safe)
+;;   (signatures
+;;    ((<record-type-spec>)		=> ((or <false> <syntactic-identifier>)))))
 
-(declare-core-primitive record-type-spec.virtual-method-signatures
+;; (declare-core-primitive record-type-spec.virtual-method-signatures
+;;     (safe)
+;;   (signatures
+;;    ((<record-type-spec>)		=> ((alist <symbol> (pair <fixnum> (or <false> <closure-type-spec>)))))))
+
+(declare-core-primitive record-type-spec.parent-and-child?
     (safe)
   (signatures
-   ((<record-type-spec>)		=> ((alist <symbol> (pair <fixnum> (or <false> <closure-type-spec>)))))))
+   ((<record-type-spec> <record-type-spec>)	=> (<boolean>))))
 
 ;;; --------------------------------------------------------------------
 

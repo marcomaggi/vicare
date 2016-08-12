@@ -72,7 +72,7 @@
 	 make-record-type-spec				record-type-spec?
 	 record-type-spec.rtd-id			record-type-spec.rcd-id
 	 record-type-spec.super-protocol-id		record-type-spec.virtual-method-signatures
-	 simple-condition-object-type-spec?
+	 simple-condition-object-type-spec?		record-type-spec.parent-and-child?
 
 	 <compound-condition-type-spec>
 	 <compound-condition-type-spec>-rtd		<compound-condition-type-spec>-rcd
@@ -110,7 +110,7 @@
 	 <vector-type-spec>
 	 <vector-type-spec>-rtd				<vector-type-spec>-rcd
 	 make-vector-type-spec				vector-type-spec?
-	 vector-type-spec.item-ots*
+	 vector-type-spec.item-ots*			vector-type-spec.length
 
 	 <vector-of-type-spec>
 	 <vector-of-type-spec>-rtd			<vector-of-type-spec>-rcd
@@ -143,7 +143,7 @@
 
 	 <intersection-type-spec>
 	 <intersection-type-spec>-rtd			<intersection-type-spec>-rcd
-	 make-intersection-type-spec			intersection-of-type-specs
+	 intersection-of-type-specs
 	 intersection-type-spec?			intersection-type-spec.item-ots*
 
 	 <complement-type-spec>
@@ -827,7 +827,7 @@
       (record-type-spec?
        ;;This  branch  includes  the  case  of SUPER.OTS  and  SUB.OTS  being  simple
        ;;condition object types.
-       (record-type-spec.super-and-sub? super.ots sub.ots))
+       (record-type-spec.parent-and-child? super.ots sub.ots))
 
       (compound-condition-type-spec?
        ;;(super-and-sub? &who (condition &who &irritants)) => #t
@@ -1613,7 +1613,7 @@
 	;;This  branch  includes the  case  of  SUPER.OTS  and SUB.OTS  being  simple
 	;;condition object types.
 	(record-type-spec?
-	 (record-type-spec.super-and-sub? sub.ots super.ots))
+	 (record-type-spec.parent-and-child? sub.ots super.ots))
 	(complement-type-spec?
 	 (%compatible/super-record/sub-complement super.ots sub.ots))
 	(else
@@ -3050,6 +3050,13 @@
       (define (record-type-spec.type-annotation-maker ots)
 	(object-type-spec.name ots))
 
+      (define (make-record-type-predicate ots)
+	(let ((rtd-id  (record-type-spec.rtd-id ots))
+	      (arg.id (make-syntactic-identifier-for-temporary-variable)))
+	  (bless
+	   `(lambda/typed ({_ <boolean>} ,arg.id)
+	      (record-and-rtd? ,arg.id ,rtd-id)))))
+
       make-record-type-spec))
 
   (custom-printer
@@ -3061,13 +3068,6 @@
   #| end of DEFINE-RECORD-TYPE |# )
 
 ;;; --------------------------------------------------------------------
-
-(define (make-record-type-predicate ots)
-  (let ((rtd-id  (record-type-spec.rtd-id ots))
-	(arg.id (make-syntactic-identifier-for-temporary-variable)))
-    (bless
-     `(lambda/typed ({_ <boolean>} ,arg.id)
-	(record-and-rtd? ,arg.id ,rtd-id)))))
 
 (define (simple-condition-object-type-spec? ots)
   ;;Return true  if OTS is  represents a simple condition-object  type specification;
@@ -3108,7 +3108,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (record-type-spec.super-and-sub? {super.ots record-type-spec?} {sub.ots record-type-spec?})
+(define* (record-type-spec.parent-and-child? {super.ots record-type-spec?} {sub.ots record-type-spec?})
+  ;;Return  true if  SUPER.OTS and  SUB.OTS represent  parent and  child object-types
+  ;;(respectively); otherwise return  false.  Return false if  the operands represent
+  ;;the same object-type.
+  ;;
   (if (or (eq? super.ots sub.ots)
 	  (free-identifier=? (object-type-spec.name super.ots)
 			     (object-type-spec.name   sub.ots)))
@@ -3176,6 +3180,24 @@
 			       component.ots))))
 	  '() component-type*.ots))
 
+      (define (compound-condition-type-spec.type-annotation-maker ots)
+	(cons (core-prim-id 'condition)
+	      (map object-type-spec.name (compound-condition-type-spec.component-ots* ots))))
+
+      (define (make-compound-condition-type-predicate ots)
+	(let* ((component-type*.ots	(compound-condition-type-spec.component-ots* ots))
+	       (component-pred*.stx	(map object-type-spec.type-predicate-stx component-type*.ots))
+	       (obj.sym		(make-syntactic-identifier-for-temporary-variable "obj"))
+	       (pred.sym		(make-syntactic-identifier-for-temporary-variable "pred"))
+	       (item.sym		(make-syntactic-identifier-for-temporary-variable "item")))
+	  (bless
+	   `(lambda/typed ({_ <boolean>} ,obj.sym)
+	      (and (compound-condition? ,obj.sym)
+		   (for-all (lambda (,pred.sym)
+			      (,pred.sym ,obj.sym))
+		     (list ,@component-pred*.stx))
+		   #t)))))
+
       make-compound-condition-type-spec))
 
   (custom-printer
@@ -3185,26 +3207,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define (compound-condition-type-spec.type-annotation-maker ots)
-  (cons (core-prim-id 'condition)
-	(map object-type-spec.name (compound-condition-type-spec.component-ots* ots))))
-
-(define (make-compound-condition-type-predicate ots)
-  (let* ((component-type*.ots	(compound-condition-type-spec.component-ots* ots))
-	 (component-pred*.stx	(map object-type-spec.type-predicate-stx component-type*.ots))
-	 (obj.sym		(make-syntactic-identifier-for-temporary-variable "obj"))
-	 (pred.sym		(make-syntactic-identifier-for-temporary-variable "pred"))
-	 (item.sym		(make-syntactic-identifier-for-temporary-variable "item")))
-    (bless
-     `(lambda/typed ({_ <boolean>} ,obj.sym)
-	(and (compound-condition? ,obj.sym)
-	     (for-all (lambda (,pred.sym)
-			(,pred.sym ,obj.sym))
-	       (list ,@component-pred*.stx))
-	     #t)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3260,6 +3262,28 @@
 				  methods-table methods-table methods-table implemented-interfaces)
 	   component-type*.ots (void))))
 
+      (define (union-type-spec.type-annotation-maker ots)
+	(cons (core-prim-id 'or)
+	      (map object-type-spec.name (union-type-spec.item-ots* ots))))
+
+      (define (make-union-type-predicate ots)
+	(let* ((component-type*.ots (union-type-spec.item-ots* ots))
+	       (component-pred*.stx (map object-type-spec.type-predicate-stx component-type*.ots)))
+	  (for-each (lambda (type.ots pred.stx)
+		      (unless pred.stx
+			(assertion-violation '<union-type-spec>
+			  "impossible to generate union type predicate, component type has no predicate"
+			  type.ots)))
+	    component-type*.ots component-pred*.stx)
+	  (let ((obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
+		(pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
+	    (bless
+	     `(lambda/typed ({_ <boolean>} ,obj.sym)
+		(and (exists (lambda (,pred.sym)
+			       (,pred.sym ,obj.sym))
+		       (list ,@component-pred*.stx))
+		     #t))))))
+
       make-union-type-spec))
 
   (custom-printer
@@ -3269,30 +3293,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define (union-type-spec.type-annotation-maker ots)
-  (cons (core-prim-id 'or)
-	(map object-type-spec.name (union-type-spec.item-ots* ots))))
-
-(define (make-union-type-predicate ots)
-  (let* ((component-type*.ots (union-type-spec.item-ots* ots))
-	 (component-pred*.stx (map object-type-spec.type-predicate-stx component-type*.ots)))
-    (for-each (lambda (type.ots pred.stx)
-		(unless pred.stx
-		  (assertion-violation '<union-type-spec>
-		    "impossible to generate union type predicate, component type has no predicate"
-		    type.ots)))
-      component-type*.ots component-pred*.stx)
-    (let ((obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
-	  (pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
-      (bless
-       `(lambda/typed ({_ <boolean>} ,obj.sym)
-	  (and (exists (lambda (,pred.sym)
-			 (,pred.sym ,obj.sym))
-		 (list ,@component-pred*.stx))
-	       #t))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3534,6 +3534,28 @@
 				  methods-table methods-table methods-table implemented-interfaces)
 	   component-type*.ots (void))))
 
+      (define (intersection-type-spec.type-annotation-maker ots)
+	(cons (core-prim-id 'and)
+	      (map object-type-spec.name (intersection-type-spec.item-ots* ots))))
+
+      (define (make-intersection-type-predicate ots)
+	(let* ((component-type*.ots (intersection-type-spec.item-ots* ots))
+	       (component-pred*.stx (map object-type-spec.type-predicate-stx component-type*.ots)))
+	  (for-each (lambda (type.ots pred.stx)
+		      (unless pred.stx
+			(assertion-violation '<intersection-type-spec>
+			  "impossible to generate intersection type predicate, component type has no predicate"
+			  type.ots)))
+	    component-type*.ots component-pred*.stx)
+	  (let ((obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
+		(pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
+	    (bless
+	     `(lambda/typed ({_ <boolean>} ,obj.sym)
+		(and (for-all (lambda (,pred.sym)
+				(,pred.sym ,obj.sym))
+		       (list ,@component-pred*.stx))
+		     #t))))))
+
       make-intersection-type-spec))
 
   (custom-printer
@@ -3543,30 +3565,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define (intersection-type-spec.type-annotation-maker ots)
-  (cons (core-prim-id 'and)
-	(map object-type-spec.name (intersection-type-spec.item-ots* ots))))
-
-(define (make-intersection-type-predicate ots)
-  (let* ((component-type*.ots (intersection-type-spec.item-ots* ots))
-	 (component-pred*.stx (map object-type-spec.type-predicate-stx component-type*.ots)))
-    (for-each (lambda (type.ots pred.stx)
-		(unless pred.stx
-		  (assertion-violation '<intersection-type-spec>
-		    "impossible to generate intersection type predicate, component type has no predicate"
-		    type.ots)))
-      component-type*.ots component-pred*.stx)
-    (let ((obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
-	  (pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
-      (bless
-       `(lambda/typed ({_ <boolean>} ,obj.sym)
-	  (and (for-all (lambda (,pred.sym)
-			  (,pred.sym ,obj.sym))
-		 (list ,@component-pred*.stx))
-	       #t))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3876,6 +3874,17 @@
 				    implemented-interfaces)
 	     signature))))
 
+      (define (closure-type-spec.type-annotation-maker ots)
+	(let* ((signature	(closure-type-spec.signature ots))
+	       (clause*	(map (lambda (clause-signature)
+			       (list (type-signature.syntax-object (lambda-signature.argvals clause-signature))
+				     (core-prim-id '=>)
+				     (type-signature.syntax-object (lambda-signature.retvals clause-signature))))
+			  (case-lambda-signature.clause-signature* signature))))
+	  (if (list-of-single-item? clause*)
+	      (cons (core-prim-id 'lambda) (car clause*))
+	    (cons (core-prim-id 'case-lambda) clause*))))
+
       make-closure-type-spec))
 
   (custom-printer
@@ -3885,19 +3894,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define (closure-type-spec.type-annotation-maker ots)
-  (let* ((signature	(closure-type-spec.signature ots))
-	 (clause*	(map (lambda (clause-signature)
-			       (list (type-signature.syntax-object (lambda-signature.argvals clause-signature))
-				     (core-prim-id '=>)
-				     (type-signature.syntax-object (lambda-signature.retvals clause-signature))))
-			  (case-lambda-signature.clause-signature* signature))))
-    (if (list-of-single-item? clause*)
-	(cons (core-prim-id 'lambda) (car clause*))
-      (cons (core-prim-id 'case-lambda) clause*))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4006,6 +4002,27 @@
 	   #t)
 	  (else #f)))
 
+      (define (make-pair-type-name ots)
+	(list (core-prim-id 'pair)
+	      (object-type-spec.name (pair-type-spec.car-ots ots))
+	      (object-type-spec.name (pair-type-spec.cdr-ots ots))))
+
+      (define (pair-type-spec.type-annotation-maker ots)
+	(list (core-prim-id 'pair)
+	      (object-type-spec.type-annotation (pair-type-spec.car-ots ots))
+	      (object-type-spec.type-annotation (pair-type-spec.cdr-ots ots))))
+
+      (define (make-pair-predicate ots)
+	(let ((car-pred.stx	(object-type-spec.type-predicate-stx (pair-type-spec.car-ots ots)))
+	      (cdr-pred.stx	(object-type-spec.type-predicate-stx (pair-type-spec.cdr-ots ots)))
+	      (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
+	  (bless
+	   `(lambda/typed ({_ <boolean>} ,obj.sym)
+	      (and (pair? ,obj.sym)
+		   (,car-pred.stx (car ,obj.sym))
+		   (,cdr-pred.stx (cdr ,obj.sym))
+		   #t)))))
+
       make-pair-type-spec))
 
   (custom-printer
@@ -4015,29 +4032,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define (make-pair-type-name ots)
-  (list (core-prim-id 'pair)
-	(object-type-spec.name (pair-type-spec.car-ots ots))
-	(object-type-spec.name (pair-type-spec.cdr-ots ots))))
-
-(define (pair-type-spec.type-annotation-maker ots)
-  (list (core-prim-id 'pair)
-	(object-type-spec.type-annotation (pair-type-spec.car-ots ots))
-	(object-type-spec.type-annotation (pair-type-spec.cdr-ots ots))))
-
-(define (make-pair-predicate ots)
-  (let ((car-pred.stx	(object-type-spec.type-predicate-stx (pair-type-spec.car-ots ots)))
-	(cdr-pred.stx	(object-type-spec.type-predicate-stx (pair-type-spec.cdr-ots ots)))
-	(obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
-    (bless
-     `(lambda/typed ({_ <boolean>} ,obj.sym)
-	(and (pair? ,obj.sym)
-	     (,car-pred.stx (car ,obj.sym))
-	     (,cdr-pred.stx (cdr ,obj.sym))
-	     #t)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4114,6 +4108,24 @@
 	   #t)
 	  (else #f)))
 
+      (define (make-pair-of-type-name ots)
+	(list (core-prim-id 'pair-of)
+	      (object-type-spec.name (pair-of-type-spec.item-ots ots))))
+
+      (define (pair-of-type-spec.type-annotation-maker ots)
+	(list (core-prim-id 'pair-of)
+	      (object-type-spec.type-annotation (pair-of-type-spec.item-ots ots))))
+
+      (define (make-pair-of-predicate ots)
+	(let ((item-pred.stx	(object-type-spec.type-predicate-stx (pair-of-type-spec.item-ots ots)))
+	      (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
+	  (bless
+	   `(lambda/typed ({_ <boolean>} ,obj.sym)
+	      (and (pair? ,obj.sym)
+		   (,item-pred.stx (car ,obj.sym))
+		   (,item-pred.stx (cdr ,obj.sym))
+		   #t)))))
+
       make-pair-of-type-spec))
 
   (custom-printer
@@ -4123,26 +4135,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define (make-pair-of-type-name ots)
-  (list (core-prim-id 'pair-of)
-	(object-type-spec.name (pair-of-type-spec.item-ots ots))))
-
-(define (pair-of-type-spec.type-annotation-maker ots)
-  (list (core-prim-id 'pair-of)
-	(object-type-spec.type-annotation (pair-of-type-spec.item-ots ots))))
-
-(define (make-pair-of-predicate ots)
-  (let ((item-pred.stx	(object-type-spec.type-predicate-stx (pair-of-type-spec.item-ots ots)))
-	(obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
-    (bless
-     `(lambda/typed ({_ <boolean>} ,obj.sym)
-	(and (pair? ,obj.sym)
-	     (,item-pred.stx (car ,obj.sym))
-	     (,item-pred.stx (cdr ,obj.sym))
-	     #t)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4216,6 +4208,28 @@
 	   #t)
 	  (else #f)))
 
+      (define (make-list-type-name ots)
+	(cons (core-prim-id 'list)
+	      (map object-type-spec.name (list-type-spec.item-ots* ots))))
+
+      (define (list-type-spec.type-annotation-maker ots)
+	(cons (core-prim-id 'list)
+	      (map object-type-spec.type-annotation (list-type-spec.item-ots* ots))))
+
+      (define (make-list-type-predicate ots)
+	(let ((item-pred*.stx	(map object-type-spec.type-predicate-stx (list-type-spec.item-ots* ots)))
+	      (obj.id		(make-syntactic-identifier-for-temporary-variable "obj"))
+	      (pred.id		(make-syntactic-identifier-for-temporary-variable "pred"))
+	      (item.id		(make-syntactic-identifier-for-temporary-variable "item")))
+	  (bless
+	   `(lambda/typed ({_ <boolean>} ,obj.id)
+	      (and (list? ,obj.id)
+		   (for-all (lambda (,pred.id ,item.id)
+			      (,pred.id ,item.id))
+		     (list ,@item-pred*.stx)
+		     ,obj.id)
+		   #t)))))
+
       make-list-type-spec))
 
   (custom-printer
@@ -4225,30 +4239,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define (make-list-type-name ots)
-  (cons (core-prim-id 'list)
-	(map object-type-spec.name (list-type-spec.item-ots* ots))))
-
-(define (list-type-spec.type-annotation-maker ots)
-  (cons (core-prim-id 'list)
-	(map object-type-spec.type-annotation (list-type-spec.item-ots* ots))))
-
-(define (make-list-type-predicate ots)
-  (let ((item-pred*.stx (map object-type-spec.type-predicate-stx (list-type-spec.item-ots* ots)))
-	(obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
-	(pred.sym	(make-syntactic-identifier-for-temporary-variable "pred"))
-	(item.sym	(make-syntactic-identifier-for-temporary-variable "item")))
-    (bless
-     `(lambda/typed ({_ <boolean>} ,obj.sym)
-	(and (list? ,obj.sym)
-	     (for-all (lambda (,pred.sym ,item.sym)
-			(,pred.sym ,item.sym))
-	       (list ,@item-pred*.stx)
-	       ,obj.sym)
-	     #t)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4344,6 +4334,28 @@
 	   #t)
 	  (else #f)))
 
+      (define (make-list-of-type-name ots)
+	(list (list-of-id)
+	      (object-type-spec.name (list-of-type-spec.item-ots ots))))
+
+      (define (list-of-type-spec.type-annotation-maker ots)
+	(list (list-of-id)
+	      (object-type-spec.name (list-of-type-spec.item-ots ots))))
+
+      (define (make-list-of-type-predicate ots)
+	(let* ((item-type.ots	(list-of-type-spec.item-ots ots))
+	       (item-pred.stx	(object-type-spec.type-predicate-stx item-type.ots))
+	       (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
+	       (pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
+	  (bless
+	   `(letrec/checked ((,pred.sym (lambda ({_ <boolean>} ,obj.sym)
+					  (if (pair? ,obj.sym)
+					      (and (,item-pred.stx (car ,obj.sym))
+						   (,pred.sym      (cdr ,obj.sym))
+						   #t)
+					    (null? ,obj.sym)))))
+	      ,pred.sym))))
+
       make-list-of-type-spec))
 
   (custom-printer
@@ -4353,30 +4365,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define (make-list-of-type-name ots)
-  (list (list-of-id)
-	(object-type-spec.name (list-of-type-spec.item-ots ots))))
-
-(define (list-of-type-spec.type-annotation-maker ots)
-  (list (list-of-id)
-	(object-type-spec.name (list-of-type-spec.item-ots ots))))
-
-(define (make-list-of-type-predicate ots)
-  (let* ((item-type.ots	(list-of-type-spec.item-ots ots))
-	 (item-pred.stx	(object-type-spec.type-predicate-stx item-type.ots))
-	 (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
-	 (pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
-    (bless
-     `(letrec/checked ((,pred.sym (lambda ({_ <boolean>} ,obj.sym)
-				    (if (pair? ,obj.sym)
-					(and (,item-pred.stx (car ,obj.sym))
-					     (,pred.sym      (cdr ,obj.sym))
-					     #t)
-				      (null? ,obj.sym)))))
-	,pred.sym))))
 
 
 ;;;; alist object spec
@@ -4404,6 +4392,33 @@
 	(({key.ots object-type-spec?} {value.ots object-type-spec?} {name.stx alist-name?})
 	 ((make-list-of-type-spec (make-pair-type-spec key.ots value.ots) name.stx) key.ots value.ots)))
 
+      (define (make-alist-type-name ots)
+	(list (alist-id)
+	      (object-type-spec.name (alist-type-spec.key-ots   ots))
+	      (object-type-spec.name (alist-type-spec.val-ots ots))))
+
+      (define (alist-type-spec.type-annotation-maker ots)
+	(list (alist-id)
+	      (object-type-spec.type-annotation (alist-type-spec.key-ots   ots))
+	      (object-type-spec.type-annotation (alist-type-spec.val-ots ots))))
+
+      (define (make-alist-type-predicate ots)
+	;;FIXME The generated  predicate can be made more efficient  by iterating only once
+	;;through the spine of the list.  (Marco Maggi; Mon Apr 4, 2016)
+	(let ((key-pred.stx	(object-type-spec.type-predicate-stx (alist-type-spec.key-ots   ots)))
+	      (value-pred.stx	(object-type-spec.type-predicate-stx (alist-type-spec.val-ots ots)))
+	      (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
+	      (P.sym		(make-syntactic-identifier-for-temporary-variable "P")))
+	  (bless
+	   `(lambda/typed ({_ <boolean>} ,obj.sym)
+	      (and (list? ,obj.sym)
+		   (for-all (lambda (,P.sym)
+			      (and (pair? ,P.sym)
+				   (,key-pred.stx   (car ,P.sym))
+				   (,value-pred.stx (cdr ,P.sym))))
+		     ,obj.sym)
+		   #t)))))
+
       make-alist-type-spec))
 
   (custom-printer
@@ -4426,33 +4441,6 @@
      (identifier? ?type-id)
      #t)
     (else #f)))
-
-(define (make-alist-type-name ots)
-  (list (alist-id)
-	(object-type-spec.name (alist-type-spec.key-ots   ots))
-	(object-type-spec.name (alist-type-spec.val-ots ots))))
-
-(define (alist-type-spec.type-annotation-maker ots)
-  (list (alist-id)
-	(object-type-spec.type-annotation (alist-type-spec.key-ots   ots))
-	(object-type-spec.type-annotation (alist-type-spec.val-ots ots))))
-
-(define (make-alist-type-predicate ots)
-  ;;FIXME The generated  predicate can be made more efficient  by iterating only once
-  ;;through the spine of the list.  (Marco Maggi; Mon Apr 4, 2016)
-  (let ((key-pred.stx	(object-type-spec.type-predicate-stx (alist-type-spec.key-ots   ots)))
-	(value-pred.stx	(object-type-spec.type-predicate-stx (alist-type-spec.val-ots ots)))
-	(obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
-	(P.sym		(make-syntactic-identifier-for-temporary-variable "P")))
-    (bless
-     `(lambda/typed ({_ <boolean>} ,obj.sym)
-	(and (list? ,obj.sym)
-	     (for-all (lambda (,P.sym)
-			(and (pair? ,P.sym)
-			     (,key-pred.stx   (car ,P.sym))
-			     (,value-pred.stx (cdr ,P.sym))))
-	       ,obj.sym)
-	     #t)))))
 
 
 ;;;; heterogeneous vector object spec
@@ -4516,6 +4504,28 @@
 	   #t)
 	  (else #f)))
 
+      (define (make-vector-type-name ots)
+	(cons (core-prim-id 'vector)
+	      (map object-type-spec.name (vector-type-spec.item-ots* ots))))
+
+      (define (vector-type-spec.type-annotation-maker ots)
+	(cons (core-prim-id 'vector)
+	      (map object-type-spec.type-annotation (vector-type-spec.item-ots* ots))))
+
+      (define (make-vector-type-predicate ots)
+	(let* ((item-pred*.stx	(map object-type-spec.type-predicate-stx (vector-type-spec.item-ots* ots)))
+	       (obj.sym		(make-syntactic-identifier-for-temporary-variable "obj"))
+	       (pred.sym		(make-syntactic-identifier-for-temporary-variable "pred"))
+	       (item.sym		(make-syntactic-identifier-for-temporary-variable "item")))
+	  (bless
+	   `(lambda/typed ({_ <boolean>} ,obj.sym)
+	      (and (vector? ,obj.sym)
+		   (vector-for-all (lambda (,pred.sym ,item.sym)
+				     (,pred.sym ,item.sym))
+		     (vector ,@item-pred*.stx)
+		     ,obj.sym)
+		   #t)))))
+
       make-vector-type-spec))
 
   (custom-printer
@@ -4525,30 +4535,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define (make-vector-type-name ots)
-  (cons (core-prim-id 'vector)
-	(map object-type-spec.name (vector-type-spec.item-ots* ots))))
-
-(define (vector-type-spec.type-annotation-maker ots)
-  (cons (core-prim-id 'vector)
-	(map object-type-spec.type-annotation (vector-type-spec.item-ots* ots))))
-
-(define (make-vector-type-predicate ots)
-  (let* ((item-pred*.stx	(map object-type-spec.type-predicate-stx (vector-type-spec.item-ots* ots)))
-	 (obj.sym		(make-syntactic-identifier-for-temporary-variable "obj"))
-	 (pred.sym		(make-syntactic-identifier-for-temporary-variable "pred"))
-	 (item.sym		(make-syntactic-identifier-for-temporary-variable "item")))
-    (bless
-     `(lambda/typed ({_ <boolean>} ,obj.sym)
-	(and (vector? ,obj.sym)
-	     (vector-for-all (lambda (,pred.sym ,item.sym)
-			       (,pred.sym ,item.sym))
-	       (vector ,@item-pred*.stx)
-	       ,obj.sym)
-	     #t)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4629,6 +4615,23 @@
 	   #t)
 	  (else #f)))
 
+      (define (make-vector-of-type-name ots)
+	(list (vector-of-id)
+	      (object-type-spec.name (vector-of-type-spec.item-ots ots))))
+
+      (define (vector-of-type-spec.type-annotation-maker ots)
+	(list (vector-of-id)
+	      (object-type-spec.type-annotation (vector-of-type-spec.item-ots ots))))
+
+      (define (make-vector-of-type-predicate ots)
+	(let ((item-pred.stx	(object-type-spec.type-predicate-stx (vector-of-type-spec.item-ots ots)))
+	      (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
+	  (bless
+	   `(lambda/typed (,obj.sym)
+	      (and (vector? ,obj.sym)
+		   (vector-for-all ,item-pred.stx ,obj.sym)
+		   #t)))))
+
       make-vector-of-type-spec))
 
   (custom-printer
@@ -4638,25 +4641,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define (make-vector-of-type-name ots)
-  (list (vector-of-id)
-	(object-type-spec.name (vector-of-type-spec.item-ots ots))))
-
-(define (vector-of-type-spec.type-annotation-maker ots)
-  (list (vector-of-id)
-	(object-type-spec.type-annotation (vector-of-type-spec.item-ots ots))))
-
-(define (make-vector-of-type-predicate ots)
-  (let ((item-pred.stx	(object-type-spec.type-predicate-stx (vector-of-type-spec.item-ots ots)))
-	(obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
-    (bless
-     `(lambda/typed (,obj.sym)
-	(and (vector? ,obj.sym)
-	     (vector-for-all ,item-pred.stx ,obj.sym)
-	     #t)))))
 
 
 ;;;; hashtable object spec
@@ -4785,6 +4769,19 @@
 				  implemented-interfaces)
 	   symbol* #f)))
 
+      (define (enumeration-type-spec.type-annotation-maker ots)
+	(cons (enumeration-id)
+	      (map make-syntactic-identifier-for-quoted-symbol (enumeration-type-spec.symbol* ots))))
+
+      (define (make-enumeration-type-predicate ots)
+	(let ((symbol*	(enumeration-type-spec.symbol* ots))
+	      (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
+	  (bless
+	   `(lambda/typed ({_ <boolean>} ,obj.sym)
+	      (and (symbol? ,obj.sym)
+		   (memq ,obj.sym (quote ,symbol*))
+		   #t)))))
+
       make-enumeration-type-spec))
 
   (custom-printer
@@ -4794,21 +4791,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define (enumeration-type-spec.type-annotation-maker ots)
-  (cons (enumeration-id)
-	(map make-syntactic-identifier-for-quoted-symbol (enumeration-type-spec.symbol* ots))))
-
-(define (make-enumeration-type-predicate ots)
-  (let ((symbol*	(enumeration-type-spec.symbol* ots))
-	(obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
-    (bless
-     `(lambda/typed ({_ <boolean>} ,obj.sym)
-	(and (symbol? ,obj.sym)
-	     (memq ,obj.sym (quote ,symbol*))
-	     #t)))))
 
 ;;; --------------------------------------------------------------------
 
