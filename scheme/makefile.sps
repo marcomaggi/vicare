@@ -6160,6 +6160,8 @@
     (overloaded-function-spec.register-specialisation!)
     (typed-variable-with-private-access!)
     (record-type-method-call-late-binding-private)
+    ;;(interaction-environment-maker-for-reader-extensions)
+    ;;(eval-for-reader-extension)
     ))
 
 

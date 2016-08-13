@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011-2015  Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2016  Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -15,6 +15,7 @@
 ;;;
 
 
+#!vicare
 (library (ikarus.reader)
   (export
     ;; public functions
@@ -28,7 +29,9 @@
 
     ;; internal bindings only for Vicare
     read-libraries-from-file		read-script-from-file
-    read-library-from-file		read-library-from-port)
+    read-library-from-file		read-library-from-port
+    interaction-environment-maker-for-reader-extensions
+    eval-for-reader-extension)
   (import (except (vicare)
 		  <reader-annotation>
 
@@ -133,11 +136,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (%assert-argument-is-source-code-port who port)
+(define (%assert-argument-is-source-code-port who port)
   (unless (source-code-port? port)
     (assertion-violation who "expected textual input port as argument" port)))
 
-(define-inline (%assert-argument-is-procedure who x)
+(define (%assert-argument-is-procedure who x)
   (unless (procedure? x)
     (assertion-violation who "expected procedure as argument" x)))
 
@@ -192,6 +195,42 @@
   (begin
     (bytevector-ieee-double-native-set! bv i                (real-part x))
     (bytevector-ieee-double-native-set! bv ($fx+ 8 i) (imag-part x))))
+
+
+;;;; interaction lexical environment associated to textual ports
+
+(define* (port-textual-interaction-environment {port textual-input-port?})
+  ;;Defined  by  Vicare for  internal  use  only.  Return  false  or  an instance  of
+  ;;"<interaction-lexical-environment>".
+  ;;
+  (getprop (port-uid port) '*vicare-scheme-port-interaction-environment*))
+
+(define* (set-port-textual-interaction-environment! {port textual-input-port?} env)
+  ;;Defined by Vicare for  internal use only.  Register in the  property list of PORT
+  ;;an instance  of "<interaction-lexical-environment>" to  be used by  custom reader
+  ;;extensions.  Return unspecified values.
+  ;;
+  (putprop (port-uid port) '*vicare-scheme-port-interaction-environment* env))
+
+;;This parameter is exported for internal use  and it is initialised by the expander.
+;;The value  must be a function:  accepting as single argument  a symbolic expression
+;;representing  a list  of import  specifications; returning  an interaction  lexical
+;;environment.
+;;
+(define interaction-environment-maker-for-reader-extensions
+  (make-parameter #f))
+
+;;This parameter is exported for internal use  and it is initialised by the expander.
+;;The value  must be a function:
+;;
+;;* Accepting as two values: a  symbolic expression representing a Scheme expression;
+;;a lexical environment.
+;;
+;;* Returning  the single return  value of the  expression evaluated in  the reader's
+;;interaction lexical environment.
+;;
+(define eval-for-reader-extension
+  (make-parameter #f))
 
 
 ;;;; interface to low level functions
@@ -520,46 +559,42 @@
 ;;  get-datum
 ;;  get-annotated-datum
 ;;
-;;but:   READ    is   a    wrapper   for   GET-DATUM;    GET-DATUM   and
-;;GET-ANNOTATED-DATUM call READ-EXPR.
+;;but:  READ is  a  wrapper  for GET-DATUM;  GET-DATUM  and GET-ANNOTATED-DATUM  call
+;;READ-EXPR.
 ;;
 ;;READ-EXPR can call itself recursively.
 ;;
 
 (case-define read
-  ;;Defined by  R6RS.  Read an external representation  from the textual
-  ;;input PORT and return the datum it represents.
+  ;;Defined by R6RS.  Read an external representation from the textual input PORT and
+  ;;return the datum it represents.
   ;;
   ;;The READ procedure operates in the same way as GET-DATUM.
   ;;
-  ;;If  PORT  is   omitted,  it  defaults  to  the   value  returned  by
-  ;;CURRENT-INPUT-PORT.
+  ;;If PORT is omitted, it defaults to the value returned by CURRENT-INPUT-PORT.
   ;;
   (()
    (get-datum (current-input-port)))
   ((port)
-   (%assert-argument-is-source-code-port 'read port)
+   (%assert-argument-is-source-code-port __who__ port)
    (get-datum port)))
 
 (define* (get-datum port)
-  ;;Defined by  R6RS.  Read an external representation  from the textual
-  ;;input  PORT  and return  the  datum  it  represents.  The  GET-DATUM
-  ;;procedure returns the  next datum that can be  parsed from the given
-  ;;PORT, updating  PORT to point exactly  past the end  of the external
-  ;;representation of the object.
+  ;;Defined by R6RS.  Read an external representation from the textual input PORT and
+  ;;return the datum  it represents.  The GET-DATUM procedure returns  the next datum
+  ;;that can be parsed  from the given PORT, updating PORT to  point exactly past the
+  ;;end of the external representation of the object.
   ;;
-  ;;Any <interlexeme-space> in the input is first skipped.  If an end of
-  ;;file  occurs  after  the  <interlexeme-space>,  the  EOF  object  is
-  ;;returned.
+  ;;Any <interlexeme-space> in the input is first  skipped.  If an end of file occurs
+  ;;after the <interlexeme-space>, the EOF object is returned.
   ;;
-  ;;If  a  character inconsistent  with  an  external representation  is
-  ;;encountered  in  the  input,   an  exception  with  condition  types
-  ;;"&lexical" and "&i/o-read" is raised.
+  ;;If a character inconsistent with an external representation is encountered in the
+  ;;input, an exception with condition types "&lexical" and "&i/o-read" is raised.
   ;;
-  ;;Also, if  the end of file  is encountered after the  beginning of an
-  ;;external   representation,  but   the  external   representation  is
-  ;;incomplete  and  therefore  cannot  be  parsed,  an  exception  with
-  ;;condition types "&lexical" and "&i/o-read" is raised.
+  ;;Also,  if the  end of  file is  encountered after  the beginning  of an  external
+  ;;representation,  but  the external  representation  is  incomplete and  therefore
+  ;;cannot be parsed, an exception with condition types "&lexical" and "&i/o-read" is
+  ;;raised.
   ;;
   (%assert-argument-is-source-code-port __who__ port)
   (parametrise ((shared-library-loading-enabled? #f))
@@ -578,9 +613,9 @@
 	    expr))))))
 
 (define (get-annotated-datum port)
-  ;;Defined  by Ikarus.   Like GET-DATUM,  but rather  than  returning a
-  ;;datum  return a  hierarchy of  ANNOTATION structures  with  the same
-  ;;hierarchy of the datum and embedding the datum itself.
+  ;;Defined by  Ikarus.  Like GET-DATUM, but  rather than returning a  datum return a
+  ;;hierarchy  of ANNOTATION  structures with  the same  hierarchy of  the datum  and
+  ;;embedding the datum itself.
   ;;
   (parametrise ((shared-library-loading-enabled? #f))
     ($get-annotated-datum port)))
@@ -648,10 +683,12 @@
 		(begin
 		  (when sharp-bang?
 		    (read-and-discard-up-to-and-including-line-ending tport))
-		  (let read-next-datum ((obj (%next-datum)))
-		    (if (eof-object? obj)
-			'()
-		      (cons obj (read-next-datum (%next-datum))))))
+		  (%read-first-object-or-reader-import tport
+		    (lambda ()
+		      (let read-next-datum ((obj (%next-datum)))
+			(if (eof-object? obj)
+			    '()
+			  (cons obj (read-next-datum (%next-datum))))))))
 	      (close-input-port tport)))
 	(close-input-port port)))))
 
@@ -669,10 +706,12 @@
     ;;
     (let ((port (open-input-file filename)))
       (unwind-protect
-	  (let recur ((obj ($read-library-from-port port filename)))
-	    (if (eof-object? obj)
-		'()
-	      (cons obj (recur ($read-library-from-port port filename)))))
+	  (%read-first-object-or-reader-import port
+	    (lambda ()
+	      (let recur ((obj ($read-library-from-port port filename)))
+		(if (eof-object? obj)
+		    '()
+		  (cons obj (recur ($read-library-from-port port filename)))))))
 	(close-input-port port))))
 
   (define* (read-library-from-file {filename file-string-pathname?})
@@ -684,7 +723,9 @@
     ;;
     (let ((port (open-input-file filename)))
       (unwind-protect
-	  ($read-library-from-port port filename)
+	  (%read-first-object-or-reader-import port
+	    (lambda ()
+	      ($read-library-from-port port filename)))
 	(close-input-port port))))
 
   (case-define* read-library-from-port
@@ -709,6 +750,41 @@
       ($get-annotated-datum port)))
 
   #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module (%read-first-object-or-reader-import)
+  ;;Called to process the READER-IMPORT syntax  at the beginning of source code input
+  ;;files.  Expect PORT to be a textual input port and KONT a continuation thunk.
+  ;;
+  ;;If the first datum  read from PORT is a READER-IMPORT syntax:  process it and add
+  ;;the  resulting  interaction lexical  environment  to  the  state of  PORT.   Then
+  ;;tail-call the continuation thunk.
+  ;;
+  ;;If the  first datum  read from  PORT is  not a  READER-IMPORT syntax:  invoke the
+  ;;continuation thunk and prepend the first datum to its return value.
+  ;;
+  (define (%read-first-object-or-reader-import port kont)
+    (let ((first-obj ($get-annotated-datum port)))
+      (cond ((eof-object? first-obj)
+	     '())
+	    ((reader-annotation? first-obj)
+	     (%parse-first-obj-and-kont (reader-annotation-stripped first-obj) first-obj port kont))
+	    (else
+	     (%parse-first-obj-and-kont first-obj first-obj port kont)))))
+
+  (define (%parse-first-obj-and-kont stripped-first-obj first-obj port kont)
+    (if (%reader-import-sexp? stripped-first-obj)
+	(let ((env ((interaction-environment-maker-for-reader-extensions) (cdr stripped-first-obj))))
+	  (set-port-textual-interaction-environment! port env)
+	  (kont))
+      (cons first-obj (kont))))
+
+  (define (%reader-import-sexp? sexp)
+    (and (pair? sexp)
+	 (eq? (car sexp) 'reader-import)))
+
+  #| end of module: %READ-FIRST-OBJECT-OR-READER-IMPORT |# )
 
 
 ;;;; helpers for public functions
@@ -1078,6 +1154,7 @@
   ;;comment-paren		The token is a comment list.
   ;;case-sensitive		The token is a case sensitive directive.
   ;;case-insensitive		The token is a case insensitive directive.
+  ;;reader-extension		The token is a reader extension block.
   ;;
   ;;When the token is a bytevector: the return value is the return value
   ;;of ADVANCE-TOKENISATION-OF-BYTEVECTORS.
@@ -1290,6 +1367,9 @@
 	     'case-sensitive)
 	    (else
 	     (%error-1 "invalid syntax" (string #\# #\c ch1))))))
+
+   (($char= ch #\<)
+    'reader-extension)
 
 ;;;(($char= #\@ ch) DEAD: Unfixable due to port encoding
 ;;;                 that does not allow mixing binary and
@@ -2125,6 +2205,13 @@
 	       (parametrise ((case-insensitive? #t))
 		 (read-expr port locations kont))
 	     (values expr expr/ann locations kont)))
+
+	  ;;Read an extension block opened by "#<".
+	  ((eq? token 'reader-extension)
+	   (receive (sexp sexp/ann locations kont)
+	       (finish-tokenisation-of-reader-extension port locations kont)
+	     (values sexp (annotate sexp sexp/ann pos) locations kont)))
+
 
 	  ((pair? token)
 	   (%process-pair-token token))
@@ -3028,6 +3115,91 @@
   (main))
 
 
+(define (finish-tokenisation-of-reader-extension port locs kont)
+  ;;Finish tokenising  a reader extension block  reading from PORT after  the opening
+  ;;"#<" has been already consumed.
+  ;;
+  ;;Return 4 values: the symbolic expression datum, the annotated symbolic expression
+  ;;datum, the  graph notation locations alist,  a thunk to be  evaluated to finalise
+  ;;the graph notation locations.
+  ;;
+  ;;Example of  reader extension  block.  Assuming  the following  library is  in the
+  ;;search path:
+  ;;
+  ;;   (library (libdemo)
+  ;;     (export doit)
+  ;;     (import (rnrs))
+  ;;     (define (doit input-string)
+  ;;       (read (open-string-input-port input-string))))
+  ;;
+  ;;and assuming that at the beginning of a program file we have:
+  ;;
+  ;;   (reader-import (libdemo))
+  ;;
+  ;;the block:
+  ;;
+  ;;   #<doit 456>#
+  ;;
+  ;;is converted  to the form:
+  ;;
+  ;;   (doit " 456")
+  ;;
+  ;;and so the reader gets the symbolic expression: 456.
+  ;;
+  (define-syntax-rule (%error msg . irritants)
+    (die/p port 'vicare-reader msg . irritants))
+  (define-syntax-rule (%error-1 msg . irritants)
+    (die/p-1 port 'vicare-reader msg . irritants))
+
+  (define (%read-until-end-of-block input-port)
+    (receive (output-port extract)
+	(open-string-output-port)
+      (let read-next-char ((ch (get-char-and-track-textual-position input-port)))
+	(define (recurse)
+	  (read-next-char (get-char-and-track-textual-position input-port)))
+	(cond ((eof-object? ch)
+	       (%error "unexpected end of file while reading reader extension block"))
+	      ;;Discard whitespaces.
+	      ((char-whitespace? ch)
+	       (recurse))
+	      ((and (char=? #\> ch)
+		    (char=? #\# (lookahead-char input-port)))
+	       ;;Consume the # character.
+	       (get-char-and-track-textual-position input-port)
+	       ;;Extract and return the input string.
+	       (extract))
+	      (else
+	       (put-char output-port ch)
+	       (recurse))))))
+
+  (define (%eval-body body)
+    (let ((evaluator	(eval-for-reader-extension))
+	  (env		(port-textual-interaction-environment port)))
+      (unless (procedure? evaluator)
+	(%error "reader extension expression evaluator not initialised by the expander"))
+      (unless env
+	(%error "reader extension expression lexical environment not initialised (missing READER-IMPORT?)"))
+      (evaluator body env)))
+
+  ;;First we expect an identifier.
+  (receive (token pos)
+      ;;start tokenising the next item
+      (start-tokenising/pos port)
+    (cond ((eof-object? token)
+	   (%error "end of file encountered while reading reader extension block"))
+
+	  ((and (pair? token)
+		(eq? 'datum (car token))
+		(symbol? (cdr token)))
+	   (let* ((str	(%read-until-end-of-block port))
+		  (body	(list (cdr token) str))
+		  (sexp	(%eval-body body)))
+	     (values sexp sexp locs kont)))
+
+	  (else
+	   (%error-1 "expected identifier at the beginning of reader extension block" token)))))
+
+
 ;;;; bytevectors tokenisation
 
 (define-syntax define-finish-bytevector
@@ -3387,6 +3559,7 @@
 
 ;;; end of file
 ;;Local Variables:
-;;eval: (put 'read-char-no-eof		'scheme-indent-function 1)
-;;eval: (put '%read-char-no-eof		'scheme-indent-function 1)
+;;eval: (put 'read-char-no-eof				'scheme-indent-function 1)
+;;eval: (put '%read-char-no-eof				'scheme-indent-function 1)
+;;eval: (put '%read-first-object-or-reader-import	'scheme-indent-function 1)
 ;;End:

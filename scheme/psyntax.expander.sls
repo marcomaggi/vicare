@@ -345,6 +345,22 @@
      (({env interaction-lexical-environment?})
       (set! current-env env)))))
 
+;;; --------------------------------------------------------------------
+
+(define (%make-interaction-environment-for-reader-extensions import-spec*)
+  (config::initialise-expander)
+  (let ((itc (make-collector)))
+    (parametrise ((imp-collector itc))
+      (let ((rib	(receive (import-name.vec label.vec)
+			    (parse-import-spec* import-spec*)
+			  (make-rib/top-from-source-names-and-labels (vector->list import-name.vec)
+								     (vector->list label.vec))))
+	    (lexenv	(make-empty-lexenv)))
+	(make-interaction-lexical-environment rib lexenv)))))
+
+(define (%eval-expression-for-reader-extension body env)
+  (eval body env))
+
 
 (define* (expand-form-to-core-language expr env)
   ;;Interface to the internal expression expander (chi-expr).  Take an expression and
@@ -1680,6 +1696,26 @@
 
 ;;Register the expander with the library manager.
 (libman::current-library-expander expand-library)
+
+;;This parameter is  defined and used by  the Scheme source code  reader for internal
+;;use.   The value  must  be a  function:  accepting as  single  argument a  symbolic
+;;expression representing a  list of import specifications;  returning an interaction
+;;lexical environment.
+;;
+(interaction-environment-maker-for-reader-extensions
+ %make-interaction-environment-for-reader-extensions)
+
+;;This parameter is  defined and used by  the Scheme source code  reader for internal
+;;use.  The value must be a function:
+;;
+;;* Accepting as two values: a  symbolic expression representing a Scheme expression;
+;;a lexical environment.
+;;
+;;* Returning  the single return  value of the  expression evaluated in  the reader's
+;;interaction lexical environment.
+;;
+(eval-for-reader-extension %eval-expression-for-reader-extension)
+
 (void)
 
 ;; #!vicare

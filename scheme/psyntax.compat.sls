@@ -108,6 +108,9 @@
     reader-annotation-stripped		reader-annotation-source
     reader-annotation-textual-position
 
+    interaction-environment-maker-for-reader-extensions
+    eval-for-reader-extension
+
     ;; source position condition objects
     make-source-position-condition	source-position-condition?
     source-position-byte		source-position-character
@@ -186,6 +189,9 @@
 		  &warning)
 	    cnd::)
     (ikarus.printing-messages)
+    (only (ikarus.reader)
+	  interaction-environment-maker-for-reader-extensions
+	  eval-for-reader-extension)
     (prefix (only (vicare system posix)
 		  getenv
 		  file-string-pathname?
