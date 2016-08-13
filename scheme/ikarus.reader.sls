@@ -765,13 +765,15 @@
   ;;continuation thunk and prepend the first datum to its return value.
   ;;
   (define (%read-first-object-or-reader-import port kont)
-    (let ((first-obj ($get-annotated-datum port)))
-      (cond ((eof-object? first-obj)
-	     '())
-	    ((reader-annotation? first-obj)
-	     (%parse-first-obj-and-kont (reader-annotation-stripped first-obj) first-obj port kont))
-	    (else
-	     (%parse-first-obj-and-kont first-obj first-obj port kont)))))
+    (if (port-in-vicare-mode? port)
+	(let ((first-obj ($get-annotated-datum port)))
+	  (cond ((eof-object? first-obj)
+		 '())
+		((reader-annotation? first-obj)
+		 (%parse-first-obj-and-kont (reader-annotation-stripped first-obj) first-obj port kont))
+		(else
+		 (%parse-first-obj-and-kont first-obj first-obj port kont))))
+      (kont)))
 
   (define (%parse-first-obj-and-kont stripped-first-obj first-obj port kont)
     (if (%reader-import-sexp? stripped-first-obj)
@@ -1369,7 +1371,9 @@
 	     (%error-1 "invalid syntax" (string #\# #\c ch1))))))
 
    (($char= ch #\<)
-    'reader-extension)
+    (if (port-in-r6rs-mode? port)
+	(%error-1 "reader extension block is invalid in #!r6rs mode" (string #\# ch))
+      'reader-extension))
 
 ;;;(($char= #\@ ch) DEAD: Unfixable due to port encoding
 ;;;                 that does not allow mixing binary and
