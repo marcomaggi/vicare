@@ -503,7 +503,9 @@
     make-textual-socket-output-port
     make-textual-socket-output-port*
     make-textual-socket-input/output-port
-    make-textual-socket-input/output-port*)
+    make-textual-socket-input/output-port*
+
+    #| end of EXPORT |# )
   (import (except (vicare)
 		  ;; port parameters
 		  standard-input-port standard-output-port standard-error-port
