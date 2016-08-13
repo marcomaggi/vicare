@@ -2848,7 +2848,7 @@ vertical bar as @samp{||} as logical inclusive OR operator.
 In the @rnrs{6} Scheme language the vertical bar is used in the block
 comments delimiters @samp{#| @dots{} |#}.  @value{PRJNAME}'s source code
 reader uses the vertical bar to specify symbols whose name does not
-comply with @rnrs{6}, @ref{iklib reader stx, Miscellaneous additional
+comply with @rnrs{6}, @ref{iklib reader misc, Miscellaneous additional
 syntaxes}.  Some text editors for software programmers handle the
 vertical bar specially in Scheme mode, in particular for syntax
 highlighting.
@@ -7206,8 +7206,8 @@ Print a human readable serialisation of a condition object to the given
 * iklib reader mode::           Textual input port modes.
 * iklib reader bv::             Additional bytevector syntaxes.
 * iklib reader chars::          Custom named characters.
-* iklib reader stx::            Miscellaneous additional syntaxes.
 * iklib reader fun::            Additional reader functions.
+* iklib reader misc::           Miscellaneous additional syntaxes.
 @end menu
 
 @c page
@@ -7494,7 +7494,80 @@ Reader syntax for custom named characters embedded in strings.
 @end deffn
 
 @c page
-@node iklib reader stx
+@node iklib reader fun
+@subsection Additional reader functions
+
+
+The Scheme source code reader allows us to annotate source code read
+from a textual input with informations about the position of an
+expression in the input.  For example:
+
+@lisp
+(import (vicare))
+
+(define port  (open-string-input-port "(list var)"))
+(define datum (get-annotated-datum port))
+(pretty-print datum)
+@print{} #[reader-annotation
+        expression=#<omitted>
+        stripped=(list var)
+        textual-position=#[r6rs-record: &source-position
+                              port-id="*string-input-port*"
+                              byte=0
+                              character=0
+                              line=1
+                              column=1]]
+@end lisp
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@deftp {Object type} @class{reader-annotation}
+Disjoint object type representing source code read from a textual input
+port.  The source code expression is annotated with informations from
+its textual input.
+@end deftp
+
+
+@defun reader-annotation? @var{obj}
+Return @true{} if @var{obj} is an @class{reader-annotation} object, else return
+@false{}.
+@end defun
+
+
+@defop {Field accessor} @class{reader-annotation} reader-annotation-expression @var{ann}
+Return a list, vector, identifier, what--have--you that may contain
+further annotations.
+@end defop
+
+
+@defop {Field accessor} @class{reader-annotation} reader-annotation-stripped @var{ann}
+Return the same symbolic expression of the @code{expression} field with
+no annotations.
+@end defop
+
+
+@defop {Field accessor} @class{reader-annotation} reader-annotation-textual-position @var{ann}
+Return a condition object of type @condition{source-position}
+representing the position of the expression in the source code.
+@end defop
+
+
+@defop {Field accessor} @class{reader-annotation} reader-annotation-source @var{ann}
+Return a pair whose car is the port identifier and whose cdr is the
+offset of the first character of the source expression in the textual
+input.
+@end defop
+
+
+@defun get-annotated-datum @var{port}
+Like @func{get-datum}, but rather than returning a datum return a
+hierarchy of @class{reader-annotation} objects with the same hierarchy
+of the datum and embedding the datum itself.
+@end defun
+
+@c page
+@node iklib reader misc
 @subsection Miscellaneous additional syntaxes
 
 
@@ -7635,10 +7708,14 @@ like @true{} and @false{}, when it is found inside other expressions.
 #t
 > #!r6rs #!eof
 Unhandled exception
-Condition components:
-  1. &error
-  2. &who: tokenize
-  3. &message: "invalid syntax: #!e"
+ Condition components:
+   1. &lexical
+   2. &i/o-read
+   3. &message: "invalid syntax"
+   4. &irritants: ("#!eof")
+   5. &source-position:
+       port-id: "*stdin*"
+       ...
 > #!vicare #!eof
 $
 @end example
@@ -7666,79 +7743,6 @@ read: the next form read has case insensitive identifiers.  When
 #ci(A #cs B C)          @result{} (a B c)
 @end example
 @end deffn
-
-@c page
-@node iklib reader fun
-@subsection Additional reader functions
-
-
-The Scheme source code reader allows us to annotate source code read
-from a textual input with informations about the position of an
-expression in the input.  For example:
-
-@lisp
-(import (vicare))
-
-(define port  (open-string-input-port "(list var)"))
-(define datum (get-annotated-datum port))
-(pretty-print datum)
-@print{} #[reader-annotation
-        expression=#<omitted>
-        stripped=(list var)
-        textual-position=#[r6rs-record: &source-position
-                              port-id="*string-input-port*"
-                              byte=0
-                              character=0
-                              line=1
-                              column=1]]
-@end lisp
-
-The following bindings are exported by the library @library{vicare}.
-
-
-@deftp {Object type} @class{reader-annotation}
-Disjoint object type representing source code read from a textual input
-port.  The source code expression is annotated with informations from
-its textual input.
-@end deftp
-
-
-@defun reader-annotation? @var{obj}
-Return @true{} if @var{obj} is an @class{reader-annotation} object, else return
-@false{}.
-@end defun
-
-
-@defop {Field accessor} @class{reader-annotation} reader-annotation-expression @var{ann}
-Return a list, vector, identifier, what--have--you that may contain
-further annotations.
-@end defop
-
-
-@defop {Field accessor} @class{reader-annotation} reader-annotation-stripped @var{ann}
-Return the same symbolic expression of the @code{expression} field with
-no annotations.
-@end defop
-
-
-@defop {Field accessor} @class{reader-annotation} reader-annotation-textual-position @var{ann}
-Return a condition object of type @condition{source-position}
-representing the position of the expression in the source code.
-@end defop
-
-
-@defop {Field accessor} @class{reader-annotation} reader-annotation-source @var{ann}
-Return a pair whose car is the port identifier and whose cdr is the
-offset of the first character of the source expression in the textual
-input.
-@end defop
-
-
-@defun get-annotated-datum @var{port}
-Like @func{get-datum}, but rather than returning a datum return a
-hierarchy of @class{reader-annotation} objects with the same hierarchy
-of the datum and embedding the datum itself.
-@end defun
 
 @c page
 @node iklib expander
@@ -12051,7 +12055,7 @@ is faster than @func{eqv?} and @func{equal?} and slower than @func{eq?}
 for symbols.
 
 The reader supports a special syntax to read keyword objects, @ref{iklib
-reader stx, Miscellaneous additional syntaxes}.
+reader misc, Miscellaneous additional syntaxes}.
 
 The following bindings are exported by the library @library{vicare}.
 
@@ -15614,7 +15618,7 @@ returns the pretty string of the gensym and not its unique string.
 Gensyms are printed by default as @code{#@{pretty-string unique-string@}}.
 
 The reader supports special syntaxes to generate symbols, @ref{iklib
-reader stx}.
+reader misc}.
 
 
 @deffn Procedure gensym
