@@ -7206,6 +7206,7 @@ Print a human readable serialisation of a condition object to the given
 * iklib reader mode::           Textual input port modes.
 * iklib reader bv::             Additional bytevector syntaxes.
 * iklib reader chars::          Custom named characters.
+* iklib reader annotations::    Reader annotations.
 * iklib reader fun::            Additional reader functions.
 * iklib reader misc::           Miscellaneous additional syntaxes.
 @end menu
@@ -7494,8 +7495,8 @@ Reader syntax for custom named characters embedded in strings.
 @end deffn
 
 @c page
-@node iklib reader fun
-@subsection Additional reader functions
+@node iklib reader annotations
+@subsection Reader annotations
 
 
 The Scheme source code reader allows us to annotate source code read
@@ -7558,6 +7559,11 @@ Return a pair whose car is the port identifier and whose cdr is the
 offset of the first character of the source expression in the textual
 input.
 @end defop
+
+
+@c page
+@node iklib reader fun
+@subsection Additional reader functions
 
 
 @defun get-annotated-datum @var{port}
