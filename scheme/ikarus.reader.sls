@@ -2062,10 +2062,14 @@
 			 (cdr ls/ann))))
       (values x (annotate x x/ann pos) locations kont)))
 
-  (define-inline (main)
+  (define (%go-on-with-the-next-token)
+    (read-expr port locations kont))
+
+  (define (main)
     (cond ((eof-object? token)
 	   (values (eof-object)
-		   (annotate-simple (eof-object) pos) locations kont))
+		   (annotate-simple (eof-object) pos)
+		   locations kont))
 
 	  ;;Read list that was opened by a round parenthesis.
 	  ((eq? token 'lparen)
@@ -2193,10 +2197,7 @@
 	   (receive (ls ls/ann locations kont)
 	       (finish-tokenisation-of-list port pos locations kont 'rparen 'rbrack 'rbrace)
 	     (%process-comment-list port ls)
-	     ;;Go on with the next token.
-	     (receive (token pos)
-		 (start-tokenising/pos port)
-	       (finalise-tokenisation port locations kont token pos))))
+	     (%go-on-with-the-next-token)))
 
 	  ((eq? token 'case-sensitive)
 	   (receive (expr expr/ann locations kont)
@@ -2214,7 +2215,9 @@
 	  ((eq? token 'reader-extension)
 	   (receive (sexp sexp/ann locations kont)
 	       (finish-tokenisation-of-reader-extension port locations kont)
-	     (values sexp (annotate sexp sexp/ann pos) locations kont)))
+	     (if (sentinel? sexp)
+		 (%go-on-with-the-next-token)
+	       (values sexp (annotate sexp sexp/ann pos) locations kont))))
 
 
 	  ((pair? token)
@@ -3075,9 +3078,9 @@
     (die/p-1 port 'vicare-reader msg . irritants))
 
   (define-inline (main)
-    (let-values (((token pos)
-		  ;;start tokenising the next item
-		  (start-tokenising/pos port)))
+    (receive (token pos)
+	;;start tokenising the next item
+	(start-tokenising/pos port)
       (cond ((eof-object? token)
 	     (%error "end of file encountered while reading vector"))
 	    ((eq? token 'rparen)
@@ -3119,7 +3122,7 @@
   (main))
 
 
-(define (finish-tokenisation-of-reader-extension port locs kont)
+(define (finish-tokenisation-of-reader-extension port locations kont)
   ;;Finish tokenising  a reader extension block  reading from PORT after  the opening
   ;;"#<" has been already consumed.
   ;;
@@ -3127,8 +3130,14 @@
   ;;datum, the  graph notation locations alist,  a thunk to be  evaluated to finalise
   ;;the graph notation locations.
   ;;
-  ;;Example of  reader extension  block.  Assuming  the following  library is  in the
-  ;;search path:
+  ;;When the reader extension block does not return a datum for the reader: the first
+  ;;returned value is the  sentinel value.  In this case the  caller of this function
+  ;;must discard the received values and go on reading another token.
+  ;;
+  ;;Example of reader extension block
+  ;;---------------------------------
+  ;;
+  ;;Assuming the following library is in the search path:
   ;;
   ;;   (library (libdemo)
   ;;     (export doit)
@@ -3144,28 +3153,62 @@
   ;;
   ;;   #<doit 456>#
   ;;
-  ;;is converted  to the form:
+  ;;is converted to the form:
   ;;
-  ;;   (doit " 456")
+  ;;   (doit "456")
   ;;
-  ;;and so the reader gets the symbolic expression: 456.
+  ;;and so  the reader  gets the  symbolic expression:  456.  Notice  that whitespace
+  ;;characters after the symbol "doit" are discarded.
   ;;
   (define-syntax-rule (%error msg . irritants)
     (die/p port 'vicare-reader msg . irritants))
   (define-syntax-rule (%error-1 msg . irritants)
     (die/p-1 port 'vicare-reader msg . irritants))
 
-  (define (%read-until-end-of-block input-port)
+  (define (main)
+    ;;First we expect an identifier.
+    (receive (expr expr/ann locations kont)
+	(read-expr port locations kont)
+      (cond ((eof-object? expr)
+	     (%error "unexpected end of file encountered while reading reader extension block"))
+
+	    ((symbol? expr)
+	     (let ((str (%read-string-until-end-of-block port)))
+	       (case expr
+		 ((begin)
+		  ;;The block is a list of  Scheme expressions to be evaluated in the
+		  ;;interaction   lexical  environment   previously  established   by
+		  ;;READER-IMPORT.
+		  (let* ((form* (%read-forms-from-string str)))
+		    (%eval-body `(begin . ,form*))
+		    (values (sentinel) (sentinel) locations kont)))
+		 (else
+		  ;;The  block is  a  function call.   EXPR  must be  the  name of  a
+		  ;;function   exported  by   the   lexical  environment   previously
+		  ;;established by READER-IMPORT.
+		  (let ((sexp (%eval-body `(,expr ,str))))
+		    (values sexp sexp locations kont))))))
+
+	    (else
+	     (%error-1 "expected identifier at the beginning of reader extension block" expr/ann)))))
+
+  (define (%read-string-until-end-of-block input-port)
     (receive (output-port extract)
 	(open-string-output-port)
+      (let skip-whitespaces ((ch (lookahead-char input-port)))
+	(when (and (char? ch)
+		   (char-whitespace? ch))
+	  ;;Consume the whitespace character.
+	  (get-char-and-track-textual-position input-port)
+	  (skip-whitespaces (lookahead-char input-port))))
       (let read-next-char ((ch (get-char-and-track-textual-position input-port)))
 	(define (recurse)
 	  (read-next-char (get-char-and-track-textual-position input-port)))
 	(cond ((eof-object? ch)
 	       (%error "unexpected end of file while reading reader extension block"))
 	      ;;Discard whitespaces.
-	      ((char-whitespace? ch)
-	       (recurse))
+	      ;; ((char-whitespace? ch)
+	      ;;  (recurse))
 	      ((and (char=? #\> ch)
 		    (char=? #\# (lookahead-char input-port)))
 	       ;;Consume the # character.
@@ -3176,6 +3219,13 @@
 	       (put-char output-port ch)
 	       (recurse))))))
 
+  (define (%read-forms-from-string input-string)
+    (let ((port (open-string-input-port input-string)))
+      (let read-next-form ((form (read port)))
+	(if (eof-object? form)
+	    '()
+	  (cons form (read-next-form (read port)))))))
+
   (define (%eval-body body)
     (let ((evaluator	(eval-for-reader-extension))
 	  (env		(port-textual-interaction-environment port)))
@@ -3185,23 +3235,7 @@
 	(%error "reader extension expression lexical environment not initialised (missing READER-IMPORT?)"))
       (evaluator body env)))
 
-  ;;First we expect an identifier.
-  (receive (token pos)
-      ;;start tokenising the next item
-      (start-tokenising/pos port)
-    (cond ((eof-object? token)
-	   (%error "end of file encountered while reading reader extension block"))
-
-	  ((and (pair? token)
-		(eq? 'datum (car token))
-		(symbol? (cdr token)))
-	   (let* ((str	(%read-until-end-of-block port))
-		  (body	(list (cdr token) str))
-		  (sexp	(%eval-body body)))
-	     (values sexp sexp locs kont)))
-
-	  (else
-	   (%error-1 "expected identifier at the beginning of reader extension block" token)))))
+  (main))
 
 
 ;;;; bytevectors tokenisation
