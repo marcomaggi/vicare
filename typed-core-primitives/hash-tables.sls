@@ -415,6 +415,18 @@
   (declare-hash-function $transcoder-hash	<transcoder>)
   #| end of LET-SYNTAX |# )
 
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $hashtable-type-descriptor-set!
+    (unsafe)
+  (signatures
+   ((<hashtable> <hashtable-type-descr>)	=> (<void>))))
+
+(declare-core-primitive $hashtable-type-descriptor
+    (unsafe)
+  (signatures
+   ((<hashtable>)				=> (<hashtable-type-descr>))))
+
 /section)
 
 

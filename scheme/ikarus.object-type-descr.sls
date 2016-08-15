@@ -169,6 +169,8 @@
 	  <empty-bytevector>-ctd		<nebytevector>-ctd
 	  <condition>-ctd			<compound-condition>-ctd
 	  <hashtable>-ctd)
+    (only (ikarus hash-tables)
+	  $hashtable-type-descriptor)
     (only (ikarus records procedural)
 	  $rtd-subtype?)
     (only (vicare expander)
@@ -1074,7 +1076,8 @@
 	  ((struct? obj)		(cond ((record-type-descriptor? obj)
 					       (struct-std obj))
 					      ((hashtable? obj)
-					       <hashtable>-ctd)
+					       (or ($hashtable-type-descriptor obj)
+						   <hashtable>-ctd))
 					      ((struct-type-descriptor? obj)
 					       <struct>-ctd)
 					      (else

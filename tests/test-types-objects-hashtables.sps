@@ -28,6 +28,10 @@
   (options typed-language)
   (import (vicare)
     (prefix (vicare expander) expander::)
+    (prefix (vicare system $hashtables)
+	    sys::)
+    (prefix (vicare system type-descriptors)
+	    td::)
     (only (vicare expander)
 	  type-annotation=?
 	  type-annotation-super-and-sub?
@@ -43,6 +47,21 @@
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare typed language: <hashtable-type-spec> objects\n")
+
+
+;;;; helpers
+
+(define-constant EVAL-ENVIRONMENT
+  (environment '(vicare)))
+
+(define (%eval sexp)
+  (eval sexp EVAL-ENVIRONMENT
+	(expander-options typed-language)
+	(compiler-options)))
+
+(define (%print-message print? E)
+  (when print?
+    (fprintf (current-error-port) "~s\n" (condition-message E))))
 
 
 (parametrise ((check-test-name	'super-and-sub))
@@ -61,6 +80,66 @@
 
   (check-for-false	(type-annotation-super-and-sub? (hashtable <string>    <real>)
 							(hashtable <string> <boolean>)))
+
+  (void))
+
+
+(parametrise ((check-test-name	'typed-constructor))
+
+  (check
+      (let ((T (new (hashtable <string> <fixnum>))))
+	(hashtable-set! T "uno" 1)
+	(hashtable-ref  T "uno"))
+    => 1)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((T (new (hashtable <string> <fixnum>))))
+	(td::hashtable-type-descr? (sys::$hashtable-type-descriptor T)))
+    => #t)
+
+  (check
+      (let ((T (new (hashtable <string> <fixnum>))))
+	(is-a? (sys::$hashtable-type-descriptor T) td::<hashtable-type-descr>))
+    => #t)
+
+  (check
+      (let ((T (new (hashtable <string> <fixnum>))))
+	(.key-des (sys::$hashtable-type-descriptor T)))
+    => td::<string>-ctd)
+
+  (check
+      (let ((T (new (hashtable <string> <fixnum>))))
+	(.val-des (sys::$hashtable-type-descriptor T)))
+    => td::<fixnum>-ctd)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  ;;Key object-type without equality predicate.
+  ;;
+  (check
+      (try
+	  (%eval '(new (hashtable (pair <fixnum> <fixnum>) <fixnum>)))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f E)
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => '(pair <fixnum> <fixnum>))
+
+  ;;More operands.
+  ;;
+  (check
+      (try
+	  (%eval '(new (hashtable <string> <fixnum>) 1 2 3))
+	(catch E
+	  ((&syntax)
+	   (%print-message #f E)
+	   (syntax->datum (syntax-violation-subform E)))
+	  (else E)))
+    => '(1 2 3))
 
   (void))
 

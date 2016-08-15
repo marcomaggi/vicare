@@ -128,6 +128,10 @@
 		(%build-object-with-validator input-form.stx lexenv.run lexenv.expand
 					      requested.ots ?rand*))
 
+	       ((hashtable-type-spec? requested.ots)
+		(%build-hashtable-constructor input-form.stx lexenv.run lexenv.expand
+					      ?type-name ?rand* requested.ots __synner__))
+
 	       ((interface-type-spec? requested.ots)
 		(__synner__ "attempt to instantiate interface" ?type-name))
 
@@ -287,6 +291,29 @@
 		       (make-syntax-violation input-form.stx (psi.input-form constructor.psi))
 		       (make-expected-type-signature-condition (make-type-signature/single-value requested.ots))
 		       (make-returned-type-signature-condition (make-type-signature/single-value constructor.ots)))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%build-hashtable-constructor input-form.stx lexenv.run lexenv.expand
+					type-name.stx rand*.stx requested.ots synner)
+    (unless (null? rand*.stx)
+      (synner "expected no operands to hashtable constructor" rand*.stx))
+    (let ((key.ots (hashtable-type-spec.key-ots requested.ots))
+	  (val.ots (hashtable-type-spec.val-ots requested.ots)))
+      (let ((hash-func.stx	(object-type-spec.applicable-hash-function key.ots))
+	    (equal-pred.stx	(object-type-spec.equality-predicate       key.ots)))
+	(unless hash-func.stx
+	  (synner "key object-type does not implement a hash function" (object-type-spec.name key.ots)))
+	(unless equal-pred.stx
+	  (synner "key object-type does not implement an equality predicate" (object-type-spec.name key.ots)))
+	(let* ((output-form.sexp	(let ((table.id (make-syntactic-identifier-for-temporary-variable "table")))
+					  `(receive-and-return (,table.id)
+					       (make-hashtable ,hash-func.stx ,equal-pred.stx)
+					     ($hashtable-type-descriptor-set! ,table.id (type-descriptor ,type-name.stx)))))
+	       (output-form.psi		(chi-expr (bless output-form.sexp) lexenv.run lexenv.expand)))
+	  (make-psi input-form.stx
+	    (psi.core-expr output-form.psi)
+	    (make-type-signature/single-value requested.ots))))))
 
   #| end of module |# )
 

@@ -181,6 +181,7 @@
       <list-type-descr> <list-of-type-descr>
       <vector-type-descr> <vector-of-type-descr>
       <enumeration-type-descr> <closure-type-descr> <ancestor-of-type-descr>
+      <hashtable-type-descr> <alist-type-descr>
       <union-type-descr> <intersection-type-descr> <complement-type-descr>
       <interface-type-descr>))
 

@@ -2,23 +2,23 @@
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Mofified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
+;;;
 
 
 ;;See the paper:
 ;;
-;;  Ghuloum, Dybvig.  "Generation-Friendly Eq Hash Tables".  Proceedings
-;;  of the 2007 Workshop on Scheme and Functional Programming.
+;;  Ghuloum, Dybvig.  "Generation-Friendly Eq Hash  Tables".  Proceedings of the 2007
+;;  Workshop on Scheme and Functional Programming.
 ;;
 
 
@@ -85,7 +85,9 @@
     $string-hash
     $struct-hash
     $symbol-hash
-    $transcoder-hash)
+    $transcoder-hash
+
+    $hashtable-type-descriptor		$hashtable-type-descriptor-set!)
   (import (except (vicare)
 		  make-eq-hashtable		make-eqv-hashtable
 		  make-hashtable
@@ -216,6 +218,10 @@
 		;function given to the constructor of this struct.
    type
 		;A symbol among: eq?, eqv?, equiv.
+
+   des
+		;False or  an instance  of "<hashtable-type-descr>"  representing the
+		;type descriptor for this hashtable.
    ))
 
 
@@ -738,10 +744,11 @@
 		  0					      ;size
 		  tc					      ;tc
 		  mutable?				      ;mutable?
-		  hashf		       ;validated hash function
-		  (hasht-equivf H.src) ;equivalence function
-		  (hasht-hashf0 H.src) ;original hash function
-		  (hasht-type   H.src)
+		  hashf			;validated hash function
+		  (hasht-equivf  H.src) ;equivalence function
+		  (hasht-hashf0  H.src) ;original hash function
+		  (hasht-type    H.src)
+		  (hasht-des     H.src)
 		  )))
 
   #| end of module: HASHT-COPY |# )
@@ -773,6 +780,7 @@
 	       eq?			    ;equivf
 	       #f			    ;hashf0
 	       'eq?			    ;type
+	       #f			    ;des
 	       ))
   (({cap %initial-capacity?})
    (make-eq-hashtable)))
@@ -787,6 +795,7 @@
 	       eqv?			    ;equivf
 	       #f			    ;hashf0
 	       'eqv?			    ;type
+	       #f			    ;des
 	       ))
   (({cap %initial-capacity?})
    (make-eqv-hashtable)))
@@ -803,6 +812,7 @@
 		 equivf			       ;equivf
 		 hashf			       ;hashf0
 		 'equiv			       ;type
+		 #f			       ;des
 		 ))
     (({hashf procedure?} {equivf procedure?} {cap %initial-capacity?})
      (make-hashtable hashf equivf)))
@@ -1328,6 +1338,15 @@
 	    (procedure-argument-violation __who__
 	      "expected #f or procedure as COMPAR argument"
 	      compar))))))
+
+
+;;;; unsafe functions
+
+(define ($hashtable-type-descriptor H)
+  (hasht-des H))
+
+(define ($hashtable-type-descriptor-set! H des)
+  (set-hasht-des! H des))
 
 
 ;;;; done

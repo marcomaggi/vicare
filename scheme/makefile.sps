@@ -6145,7 +6145,11 @@
     ($symbol-hash				$hashtables)
     ($transcoder-hash				$hashtables)
 
-;;;; built-in object types utilities
+    ($hashtable-type-descriptor			$hashtables)
+    ($hashtable-type-descriptor-set!		$hashtables)
+
+;;; --------------------------------------------------------------------
+;;; built-in object types utilities
 
     ;;These are exported only by "(psyntax system $all)".
     (any->symbol)

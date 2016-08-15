@@ -7009,12 +7009,12 @@ Return the maximal or minimal pointer argument according to
 @section Low level hashtable objects operations
 
 
-@cindex @library{vicare system hashtables}, library
-@cindex Library @library{vicare system hashtables}
+@cindex @library{vicare system $hashtables}, library
+@cindex Library @library{vicare system $hashtables}
 
 
 The following bindings are exported by the library @library{vicare
-system hashtables}.
+system $hashtables}.
 
 
 @deffn {Unsafe Operation} $string-hash @var{string}
@@ -7095,6 +7095,13 @@ When @var{max-len} is @true{}: all the bytes in @var{bv} are used.
 @math{N} less than the bytevector length: applications @strong{must not}
 assume that two bytevectors having the first @math{N} bytes equal will
 have the same hash value.
+@end deffn
+
+
+@deffn {Unsafe Operation} $hashtable-type-desscriptor @var{table}
+@deffnx {Unsafe Operation} $hashtable-type-descriptor-set! @var{table} @var{des}
+Setter and getter for the hashtable run--time type descriptor.
+@var{des} must be an instance of @class{hashtable-type-descr}.
 @end deffn
 
 @c page

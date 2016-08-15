@@ -4700,6 +4700,16 @@
 	   #t)
 	  (else #f)))
 
+      (define (make-hashtable-type-name ots)
+	(list (hashtable-id)
+	      (object-type-spec.name (hashtable-type-spec.key-ots   ots))
+	      (object-type-spec.name (hashtable-type-spec.val-ots ots))))
+
+      (define (hashtable-type-spec.type-annotation-maker ots)
+	(list (hashtable-id)
+	      (object-type-spec.type-annotation (hashtable-type-spec.key-ots ots))
+	      (object-type-spec.type-annotation (hashtable-type-spec.val-ots ots))))
+
       make-hashtable-type-spec))
 
   (custom-printer
@@ -4709,18 +4719,6 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define (make-hashtable-type-name ots)
-  (list (hashtable-id)
-	(object-type-spec.name (hashtable-type-spec.key-ots   ots))
-	(object-type-spec.name (hashtable-type-spec.val-ots ots))))
-
-(define (hashtable-type-spec.type-annotation-maker ots)
-  (list (hashtable-id)
-	(object-type-spec.type-annotation (hashtable-type-spec.key-ots ots))
-	(object-type-spec.type-annotation (hashtable-type-spec.val-ots ots))))
 
 
 ;;;; enumeration object spec
