@@ -1,37 +1,37 @@
-@node containers bitvectors
-@section Bitvectors
+@node bitvectors
+@chapter Bitvectors
 
 
-@cindex Library @library{nausicaa containers bitvectors}
-@cindex @library{nausicaa containers bitvectors}, library
+@cindex Library @library{vicare containers bitvectors}
+@cindex @library{vicare containers bitvectors}, library
 
 
-The library @library{nausicaa containers bitvectors} implements vectors
-of bits on top of Scheme bytevectors and vectors of fixnums.
+The library @library{vicare containers bitvectors} implements vectors of
+bits.
 
 @menu
-* containers bitvectors class::  Record type of bitvectors.
-* containers bitvectors bits::   Bitwise operations on bitvectors.
-* containers bitvectors conv::   Conversion operations on bitvectors.
-* containers bitvectors comp::   Comparison operations on bitvectors.
-* containers bitvectors ops::    Other operations on bitvectors.
+* bitvectors type::             Record type of bitvectors.
+* bitvectors bits::             Bitwise operations on bitvectors.
+* bitvectors conv::             Conversion operations on bitvectors.
+* bitvectors comp::             Comparison operations on bitvectors.
+* bitvectors ops::              Other operations on bitvectors.
 @end menu
 
 @c page
-@node containers bitvectors class
-@subsection Record type of bitvectors
+@node bitvectors type
+@section Record type of bitvectors
 
 
-The following bindings are exported by the library @library{nausicaa containers
+The following bindings are exported by the library @library{vicare containers
 bitvectors}.
 
 
-@deftp Class @aclass{bitvector}
-Object type for bitvectors using vectors of fixnums as storage.
+@deftp {Record Type} @aclass{bitvector}
+Name of object--type representing bitvectors.
 @end deftp
 
 
-@defop {Default constructor} @aclass{bitvector} constructor @var{length}
+@defop Constructor @aclass{bitvector} constructor @{@var{length} <non-negative-exact-integer>@}
 Build and return a new @class{bitvector} object capable of holding
 @var{length} bits.  The bits are initialised to zero.
 @end defop
@@ -61,11 +61,11 @@ Return a boolean representing the bit at @meta{index} in the
 @end defop
 
 @c page
-@node containers bitvectors bits
-@subsection Bitwise operations on bitvectors
+@node bitvectors bits
+@section Bitwise operations on bitvectors
 
 
-The following bindings are exported by the library @library{nausicaa containers
+The following bindings are exported by the library @library{vicare containers
 bitvectors}.
 
 
@@ -122,11 +122,11 @@ if all the bits are set to false: return @math{-1}.
 @end defmethod
 
 @c page
-@node containers bitvectors conv
-@subsection Conversion operations on bitvectors
+@node bitvectors conv
+@section Conversion operations on bitvectors
 
 
-The following bindings are exported by the library @library{nausicaa containers
+The following bindings are exported by the library @library{vicare containers
 bitvectors}.
 
 
@@ -145,11 +145,11 @@ in the list @var{ell} or vector @var{vec}.
 @end defun
 
 @c page
-@node containers bitvectors comp
-@subsection Comparison operations on bitvectors
+@node bitvectors comp
+@section Comparison operations on bitvectors
 
 
-The following bindings are exported by the library @library{nausicaa containers
+The following bindings are exported by the library @library{vicare containers
 bitvectors}.
 
 
@@ -159,11 +159,11 @@ bit.
 @end defmethod
 
 @c page
-@node containers bitvectors ops
-@subsection Other operations on bitvectors
+@node bitvectors ops
+@section Other operations on bitvectors
 
 
-The following bindings are exported by the library @library{nausicaa containers
+The following bindings are exported by the library @library{vicare containers
 bitvectors}.
 
 
@@ -171,4 +171,9 @@ bitvectors}.
 Build and return a copy of this instance using newly allocated storage.
 @end deftypemethod
 
+
 @c end of file
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

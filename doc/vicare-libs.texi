@@ -177,6 +177,7 @@ Container libraries
 * dynamic arrays::              Dynamic arrays.
 * bst::                         Binary search trees.
 * sets bags::                   Sets and bags.
+* bitvectors::                  Bitvectors.
 * ilists::                      Immutable lists.
 * ralists::                     Random-access lists.
 * istacks::                     Common interface to stack-like
@@ -264,6 +265,7 @@ External documents
 @include libs-dynamic-arrays.texi
 @include libs-binary-search-trees.texi
 @include libs-sets-and-bags.texi
+@include libs-bitvectors.texi
 @include libs-ilists.texi
 @include libs-ralists.texi
 
