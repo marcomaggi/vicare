@@ -133,7 +133,7 @@
 (declare-core-primitive property-list
     (safe)
   (signatures
-   ((<symbol>)			=> (<list>))))
+   ((<symbol>)			=> ((alist <symbol> <top>)))))
 
 ;;; --------------------------------------------------------------------
 
