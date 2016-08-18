@@ -185,14 +185,15 @@
 	     (error-unbound-identifier __module_who__ body-form.stx))
 
 	    ((displaced-lexical)
-	     (syntax-violation __module_who__ "identifier out of context"
-	       body-form.stx (syntax-match body-form.stx ()
-			       ((?car . ?cdr)
-				?car)
-			       (?id
-				(identifier? ?id)
-				?id)
-			       (_ #f))))
+	     (syntax-violation __module_who__
+	       "identifier out of context" body-form.stx
+	       (syntax-match body-form.stx ()
+		 ((?car . ?cdr)
+		  ?car)
+		 (?id
+		  (identifier? ?id)
+		  ?id)
+		 (_ #f))))
 
 	    (else
 	     ;;Any other expression.
@@ -344,6 +345,14 @@
 		      (cons entry lexenv.expand)
 		      rev-qdef* mod** kwd* export-spec* rib
 		      mix? shadow/redefine-bindings?)))))
+
+    ((define-type)
+     ;;The body form is a built-in DEFINE-TYPE macro use.  This is what happens:
+     ;;
+     (chi-define-type body-form.stx lexenv.run lexenv.expand
+		      (cdr body-form*.stx)
+		      rev-qdef* mod** kwd* export-spec* rib
+		      mix? shadow/redefine-bindings?))
 
     ((define-fluid-syntax)
      ;;The  body form  is a  built-in DEFINE-FLUID-SYNTAX  macro use.   This is  what
@@ -1037,6 +1046,186 @@
     #| end of module: MODULE-INTERFACE-EXP-ID* |# )
 
   #| end of module |# )
+
+
+;;;; parsing DEFINE-TYPE forms
+
+(module (chi-define-type)
+  ;;Transformer  function  used  to  expand  Vicare's  DEFINE-TYPE  macros  from  the
+  ;;top-level built in environment.
+  ;;
+  ;;This is what happens:
+  ;;
+  ;;1. Parse the syntactic form.
+  ;;
+  ;;2. Expand  the right-hand side expression.   This expansion happens in  a lexical
+  ;;context in  which the syntactic  binding of the macro  itself has *not*  yet been
+  ;;established.
+  ;;
+  ;;3.  Add to the rib the  syntactic binding's association between the macro keyword
+  ;;and the label.
+  ;;
+  ;;4.  Evaluate  the right-hand side expression,  which is meant to  return: a macro
+  ;;transformer function, a compile-time value, a synonym transformer or whatever.
+  ;;
+  ;;5. Add  to the lexenv the  syntactic binding's association between  the label and
+  ;;the binding's descriptor.
+  ;;
+  ;;6. Finally recurse to expand the rest of the body.
+  ;;
+  (define-module-who chi-define-type)
+
+  (define (chi-define-type input-form.stx lexenv.run lexenv.expand
+			   rest-body-form*.stx rev-qdef* mod** kwd* export-spec* rib
+			   mix? shadow/redefine-bindings?)
+    (define (synner message subform)
+      (syntax-violation __module_who__ message input-form.stx subform))
+    (receive (type-name.id type-annotation.stx)
+	(%parse-define-type input-form.stx synner)
+      (cond ((id->label/local type-name.id)
+	     ;;A syntactic binding with identifier TYPE-NAME.ID already exists.
+	     => (lambda (type-name.lab)
+		  (let ((type-name.des (label->syntactic-binding-descriptor type-name.lab lexenv.run)))
+		    (case (syntactic-binding-descriptor.type type-name.des)
+		      ((local-object-type-name)
+		       ;;It is a local type definition: fine.
+		       (let ((type-name.ots (syntactic-binding-descriptor/local-object-type.object-type-spec type-name.des)))
+			 (if (reference-type-spec? type-name.ots)
+			     ;;It is a local, forward type definition: fine.
+			     (if type-annotation.stx
+				 ;;There  is  a  type  annotation,  so  this  is  the
+				 ;;redefinition   of   a  previously   defined   type
+				 ;;definition: fine.
+				 (let ((reference.entry	(assq type-name.lab lexenv.run))
+				       (new-type.des	(%make-new-object-type-syntactic-binding-descriptor
+							 type-name.id type-annotation.stx lexenv.run lexenv.expand synner)))
+				   (%update-syntactic-binding reference.entry new-type.des)
+				   (chi-body* rest-body-form*.stx lexenv.run lexenv.expand
+					      rev-qdef* mod** kwd* export-spec* rib
+					      mix? shadow/redefine-bindings?))
+			       ;;There is  no type  annotation, so  this is  a double
+			       ;;forward definition, as in:
+			       ;;
+			       ;;   (define-type <it>)
+			       ;;   (define-type <it>)
+			       ;;
+			       ;;let's do nothing.
+			       (chi-body* rest-body-form*.stx lexenv.run lexenv.expand
+					  rev-qdef* mod** kwd* export-spec* rib
+					  mix? shadow/redefine-bindings?))
+			   ;;It is a fully defined type definition: error.
+			   (synner "cannot redefine keyword" type-name.id))))
+
+		      (else
+		       ;;The syntactic binding is not a local type definition.
+		       (synner "cannot redefine keyword" type-name.id))))))
+
+	    (type-annotation.stx
+	     ;;No  syntactic binding  with  identifier TYPE-NAME.ID  exists.  A  type
+	     ;;annotation is provided.  This is a new, full type definition.
+	     (receive (reference.entry lexenv.run lexenv.expand)
+		 (%establish-forward-definition-syntactic-binding type-name.id lexenv.run lexenv.expand
+								  rib shadow/redefine-bindings?)
+	       (let ((new-type.des (%make-new-object-type-syntactic-binding-descriptor type-name.id type-annotation.stx
+										       lexenv.run lexenv.expand synner)))
+		 (%update-syntactic-binding reference.entry new-type.des)
+		 (chi-body* rest-body-form*.stx lexenv.run lexenv.expand
+			    rev-qdef* mod** kwd* export-spec* rib
+			    mix? shadow/redefine-bindings?))))
+
+	    (else
+	     ;;No  syntactic binding  with identifier  TYPE-NAME.ID exists.   No type
+	     ;;annotation is provided.  This is just a forward type definition.
+	     (receive (reference.entry lexenv.run lexenv.expand)
+		 (%establish-forward-definition-syntactic-binding type-name.id lexenv.run lexenv.expand
+								  rib shadow/redefine-bindings?)
+	       (chi-body* rest-body-form*.stx lexenv.run lexenv.expand
+			  rev-qdef* mod** kwd* export-spec* rib
+			  mix? shadow/redefine-bindings?))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%parse-define-type input-form.stx synner)
+    (define (%error-not-an-identifier type-name.stx)
+      (synner "expected identifier as type annotation name" type-name.stx))
+    (syntax-match input-form.stx ()
+      ((_ ?type-name ?type-annotation)
+       (begin
+	 (unless (identifier? ?type-name)
+	   (%error-not-an-identifier ?type-name))
+	 (values ?type-name ?type-annotation)))
+      ((_ ?type-name)
+       (begin
+	 (unless (identifier? ?type-name)
+	   (%error-not-an-identifier ?type-name))
+	 (values ?type-name #f)))
+      (_
+       (synner "invalid syntax in macro use" #f))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%establish-forward-definition-syntactic-binding type-name.id lexenv.run lexenv.expand
+							   rib shadow/redefine-bindings?)
+    (let ((lhs.lab	(generate-label-gensym type-name.id))
+	  (rhs.ots	(make-reference-type-spec type-name.id))
+	  (rhs.core	(build-application no-source
+			    (build-primref no-source 'make-reference-type-spec)
+			  (list (build-data no-source type-name.id)))))
+      ;;This call  will raise an exception  if it represents an  attempt to illegally
+      ;;redefine a binding.
+      (extend-rib! rib type-name.id lhs.lab shadow/redefine-bindings?)
+      (let* ((lhs.des	(make-syntactic-binding-descriptor/local-object-type-name rhs.ots rhs.core))
+	     ;;Notice that there is a single entry for both the lexenvs.
+	     (entry	(make-lexenv-entry lhs.lab lhs.des)))
+	(values entry
+		(cons entry lexenv.run)
+		(cons entry lexenv.expand)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%make-new-object-type-syntactic-binding-descriptor type-name.id type-annotation.stx lexenv.run lexenv.expand
+							      synner)
+    ;;Build  and  return  a  new  syntactic  binding's  descriptor  representing  the
+    ;;definition of a new object-type specification.
+    ;;
+    ;;This new descriptor is meant to be inserted in the lexical environment in place
+    ;;of a previously defined forward type definition.
+    ;;
+    (syntax-match type-annotation.stx (constructor)
+      ((constructor ?constructor-expr)
+       (let ((new.core	(expand-macro-transformer ?constructor-expr lexenv.expand)))
+	 (receive-and-return (new.des)
+	     (eval-macro-transformer new.core lexenv.run)
+	   (unless (%local-object-type-name-descriptor? new.des)
+	     (assertion-violation __module_who__
+	       "expected instance of <object-type-spec> as return value of type constructor expression"
+	       type-annotation.stx new.des)))))
+
+      (_
+       (let* ((new.ots	(type-annotation->object-type-spec type-annotation.stx lexenv.run type-name.id))
+	      (new.core	(build-data no-source new.ots)))
+	 (make-syntactic-binding-descriptor/local-object-type-name new.ots new.core)))))
+
+  (define (%local-object-type-name-descriptor? des)
+    (and (pair? des)
+	 (eq? (syntactic-binding-descriptor.type des) 'local-object-type-name)
+	 (let ((val (syntactic-binding-descriptor.value des)))
+	   (and (pair? val)
+		(object-type-spec? (car val))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%update-syntactic-binding reference.entry new-type.des)
+    ;;Register  the  syntactic binding  descriptor  NEW-TYPE.DES  as the  object-type
+    ;;specification referenced by the lexenv entry REFERENCE.ENTRY.
+    ;;
+    (let* ((reference.des	(lexenv-entry.binding-descriptor reference.entry))
+	   (reference.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec reference.des))
+	   (new-type.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec new-type.des)))
+      (reference-type-spec.object-type-spec-set! reference.ots new-type.ots)
+      (lexenv-entry.binding-descriptor-set! reference.entry new-type.des)))
+
+  #| end of module: CHI-DEFINE-TYPE |# )
 
 
 ;;;; parsing DEFINE forms

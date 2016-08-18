@@ -172,6 +172,12 @@
 	 assert-implemented-interface-type-and-implementer-interface-type
 	 build-table-for-interface-types-and-implementer-object-type
 
+	 <reference-type-spec>-rtd			<reference-type-spec>-rcd
+	 <reference-type-spec>
+	 make-reference-type-spec			reference-type-spec?
+	 reference-type-spec.object-type-spec		reference-type-spec.object-type-spec-set!
+	 reference-type-spec.dereference
+
 	 ;;;
 
 	 make-type-specification
@@ -484,7 +490,7 @@
   ;;Return false or  a syntax object representing a Scheme  expression that, expanded
   ;;and evaluated at run-time, returns a type predicate for the object-type OTS.
   ;;
-  (let ((thing (object-type-spec.type-predicate ots)))
+  (let ((thing	(object-type-spec.type-predicate ots)))
     (if (procedure? thing)
 	(receive-and-return (pred.stx)
 	    (thing ots)
@@ -496,10 +502,13 @@
   ;;Return false or a syntax object  representing a Scheme expression which, expanded
   ;;and evaluated, returns the hash function for this type.
   ;;
-  (cond ((object-type-spec.hash-function ots))
-	((object-type-spec.parent-ots ots)
-	 => object-type-spec.applicable-hash-function)
-	(else #f)))
+  (let ((ots	(if (reference-type-spec? ots)
+		    (reference-type-spec.dereference ots)
+		  ots)))
+    (cond ((object-type-spec.hash-function ots))
+	  ((object-type-spec.parent-ots ots)
+	   => object-type-spec.applicable-hash-function)
+	  (else #f))))
 
 (define* (object-type-spec.ancestor-ots* {ots object-type-spec?})
   ;;Return the,  possibly empty, list of  "<object-type-spec>" instances representing
@@ -510,10 +519,13 @@
   ;;
   ;;  (<record> <struct> <top>)
   ;;
-  (cond ((object-type-spec.parent-ots ots)
-	 => (lambda (parent.ots)
-	      (cons parent.ots (object-type-spec.ancestor-ots* parent.ots))))
-	(else '())))
+  (let ((ots (if (reference-type-spec? ots)
+		 (reference-type-spec.dereference ots)
+	       ots)))
+    (cond ((object-type-spec.parent-ots ots)
+	   => (lambda (parent.ots)
+		(cons parent.ots (object-type-spec.ancestor-ots* parent.ots))))
+	  (else '()))))
 
 (define* (object-type-spec.applicable-method-stx {ots object-type-spec?} method-name.sym)
   ;;OTS must an  object-type specification record.  METHOD-NAME.SYM must  be a symbol
@@ -532,11 +544,14 @@
   ;;the  parent of  OTS,  so there  is  no need  to traverse  the  hierarchy of  type
   ;;specifications.
   ;;
-  (cond ((assq method-name.sym (object-type-spec.methods-table-public ots))
-	 ;;The name is known; extract the method implementation object from the alist
-	 ;;entry and return it.
-	 => cdr)
-	(else #f)))
+  (let ((ots (if (reference-type-spec? ots)
+		 (reference-type-spec.dereference ots)
+	       ots)))
+    (cond ((assq method-name.sym (object-type-spec.methods-table-public ots))
+	   ;;The name  is known;  extract the method  implementation object  from the
+	   ;;alist entry and return it.
+	   => cdr)
+	  (else #f))))
 
 (define* (object-type-spec.applicable-private-method-stx {ots object-type-spec?} method-name.sym)
   ;;OTS must an  object-type specification record.  METHOD-NAME.SYM must  be a symbol
@@ -556,11 +571,14 @@
   ;;the  parent of  OTS,  so there  is  no need  to traverse  the  hierarchy of  type
   ;;specifications.
   ;;
-  (cond ((assq method-name.sym (object-type-spec.methods-table-private ots))
-	 ;;The name is known; extract the method implementation object from the alist
-	 ;;entry and return it.
-	 => cdr)
-	(else #f)))
+  (let ((ots (if (reference-type-spec? ots)
+		 (reference-type-spec.dereference ots)
+	       ots)))
+    (cond ((assq method-name.sym (object-type-spec.methods-table-private ots))
+	   ;;The name  is known;  extract the method  implementation object  from the
+	   ;;alist entry and return it.
+	   => cdr)
+	  (else #f))))
 
 ;;; --------------------------------------------------------------------
 ;;; helpers
@@ -598,9 +616,10 @@
   (define* (object-type-spec.matching-super-and-sub? super.ots sub.ots)
     (cond
      ((eq? super.ots sub.ots))
-     ((core-type-spec?  sub.ots)	(%matching-sub/core-type-spec  super.ots sub.ots))
-     ((interface-type-spec? sub.ots)	(%matching-sub/interface-type-spec super.ots sub.ots))
-     ((label-type-spec? sub.ots)	(%matching-sub/label-type-spec super.ots sub.ots))
+     ((core-type-spec?		sub.ots)	(%matching-sub/core-type-spec  super.ots sub.ots))
+     ((interface-type-spec?	sub.ots)	(%matching-sub/interface-type-spec super.ots sub.ots))
+     ((label-type-spec?		sub.ots)	(%matching-sub/label-type-spec super.ots sub.ots))
+     ((reference-type-spec?	sub.ots)	(object-type-spec.matching-super-and-sub? super.ots (reference-type-spec.dereference sub.ots)))
      (else
       (case-specification super.ots
 	(core-type-spec?		(%matching-super/core-type-spec		super.ots sub.ots))
@@ -624,6 +643,7 @@
 	 (cond-with-predicates super.ots
 	   (interface-type-spec?	(%matching-super/interface-type-spec super.ots sub.ots))
 	   (label-type-spec?		(%matching-super/label-type-spec super.ots sub.ots))
+	   (reference-type-spec?	(object-type-spec.matching-super-and-sub? (reference-type-spec.dereference super.ots) sub.ots))
 	   (else			#f)))))))
 
 ;;; --------------------------------------------------------------------
@@ -1301,8 +1321,9 @@
     ;;
     (cond
      ((core-type-spec?  sub.ots)		(%compatible-sub/core-type-spec   super.ots sub.ots))
-     ((interface-type-spec? sub.ots)		#f)
-     ((label-type-spec? sub.ots)		(%compatible-sub/label-type-spec  super.ots sub.ots))
+     ((interface-type-spec?	sub.ots)	#f)
+     ((label-type-spec?		sub.ots)	(%compatible-sub/label-type-spec  super.ots sub.ots))
+     ((reference-type-spec?	sub.ots)	(%compatible-super-and-sub? super.ots (reference-type-spec.dereference sub.ots)))
      (else
       (case-specification super.ots
 	(core-type-spec?			(%compatible-super/core-type-spec	  super.ots sub.ots))
@@ -1326,6 +1347,7 @@
 	 (cond-with-predicates super.ots
 	   (interface-type-spec?	#f)
 	   (label-type-spec?		(%compatible-super/label-type-spec super.ots sub.ots))
+	   (reference-type-spec?	(%compatible-super-and-sub? (reference-type-spec.dereference super.ots) sub.ots))
 	   (else
 	    (object-type-spec.matching-super-and-sub? sub.ots super.ots))))))))
 
@@ -2149,86 +2171,92 @@
 
 (define ($object-type-spec=? ots1 ots2)
   (or (eq? ots1 ots2)
-      (case-specification ots1
-	(core-type-spec?
-	 (and (core-type-spec? ots2)
-	      ($core-type-spec=? ots1 ots2)))
+      (let ((ots1 (if (reference-type-spec? ots1)
+		      (reference-type-spec.dereference ots1)
+		    ots1))
+	    (ots2 (if (reference-type-spec? ots2)
+		      (reference-type-spec.dereference ots2)
+		    ots2)))
+	(case-specification ots1
+	  (core-type-spec?
+	   (and (core-type-spec? ots2)
+		($core-type-spec=? ots1 ots2)))
 
-	(record-type-spec?
-	 (and (record-type-spec? ots2)
-	      ($record-type-spec=? ots1 ots2)))
+	  (record-type-spec?
+	   (and (record-type-spec? ots2)
+		($record-type-spec=? ots1 ots2)))
 
-	(struct-type-spec?
-	 (and (struct-type-spec? ots2)
-	      ($struct-type-spec=? ots1 ots2)))
+	  (struct-type-spec?
+	   (and (struct-type-spec? ots2)
+		($struct-type-spec=? ots1 ots2)))
 ;;;
-	(list-type-spec?
-	 (and (list-type-spec? ots2)
-	      ($list-type-spec=? ots1 ots2)))
+	  (list-type-spec?
+	   (and (list-type-spec? ots2)
+		($list-type-spec=? ots1 ots2)))
 
-	(list-of-type-spec?
-	 (and (list-of-type-spec? ots2)
-	      ($list-of-type-spec=? ots1 ots2)))
+	  (list-of-type-spec?
+	   (and (list-of-type-spec? ots2)
+		($list-of-type-spec=? ots1 ots2)))
 ;;;
-	(vector-type-spec?
-	 (and (vector-type-spec? ots2)
-	      ($vector-type-spec=? ots1 ots2)))
+	  (vector-type-spec?
+	   (and (vector-type-spec? ots2)
+		($vector-type-spec=? ots1 ots2)))
 
-	(vector-of-type-spec?
-	 (and (vector-of-type-spec? ots2)
-	      ($vector-of-type-spec=? ots1 ots2)))
+	  (vector-of-type-spec?
+	   (and (vector-of-type-spec? ots2)
+		($vector-of-type-spec=? ots1 ots2)))
 ;;;
-	(pair-type-spec?
-	 (and (pair-type-spec? ots2)
-	      ($pair-type-spec=? ots1 ots2)))
+	  (pair-type-spec?
+	   (and (pair-type-spec? ots2)
+		($pair-type-spec=? ots1 ots2)))
 
-	(pair-of-type-spec?
-	 (and (pair-of-type-spec? ots2)
-	      ($pair-of-type-spec=? ots1 ots2)))
+	  (pair-of-type-spec?
+	   (and (pair-of-type-spec? ots2)
+		($pair-of-type-spec=? ots1 ots2)))
 ;;;
-	(compound-condition-type-spec?
-	 (and (compound-condition-type-spec? ots2)
-	      ($compound-condition-type-spec=? ots1 ots2)))
+	  (compound-condition-type-spec?
+	   (and (compound-condition-type-spec? ots2)
+		($compound-condition-type-spec=? ots1 ots2)))
 
-	(enumeration-type-spec?
-	 (and (enumeration-type-spec? ots2)
-	      ($enumeration-type-spec=? ots1 ots2)))
+	  (enumeration-type-spec?
+	   (and (enumeration-type-spec? ots2)
+		($enumeration-type-spec=? ots1 ots2)))
 
-	(closure-type-spec?
-	 (and (closure-type-spec? ots2)
-	      ($closure-type-spec=? ots1 ots2)))
+	  (closure-type-spec?
+	   (and (closure-type-spec? ots2)
+		($closure-type-spec=? ots1 ots2)))
 
-	(hashtable-type-spec?
-	 (and (hashtable-type-spec? ots2)
-	      ($hashtable-type-spec=? ots1 ots2)))
+	  (hashtable-type-spec?
+	   (and (hashtable-type-spec? ots2)
+		($hashtable-type-spec=? ots1 ots2)))
 ;;;
-	(union-type-spec?
-	 (and (union-type-spec? ots2)
-	      ($union-type-spec=? ots1 ots2)))
+	  (union-type-spec?
+	   (and (union-type-spec? ots2)
+		($union-type-spec=? ots1 ots2)))
 
-	(intersection-type-spec?
-	 (and (intersection-type-spec? ots2)
-	      ($intersection-type-spec=? ots1 ots2)))
+	  (intersection-type-spec?
+	   (and (intersection-type-spec? ots2)
+		($intersection-type-spec=? ots1 ots2)))
 
-	(complement-type-spec?
-	 (and (complement-type-spec? ots2)
-	      ($complement-type-spec=? ots1 ots2)))
+	  (complement-type-spec?
+	   (and (complement-type-spec? ots2)
+		($complement-type-spec=? ots1 ots2)))
 
-	(ancestor-of-type-spec?
-	 (and (ancestor-of-type-spec? ots2)
-	      ($ancestor-of-type-spec=? ots1 ots2)))
+	  (ancestor-of-type-spec?
+	   (and (ancestor-of-type-spec? ots2)
+		($ancestor-of-type-spec=? ots1 ots2)))
 ;;;
-	(else
-	 (cond-with-predicates ots1
-	   (label-type-spec?
-	    (and (label-type-spec? ots2)
-		 ($label-type-spec=? ots1 ots2)))
+	  (else
+	   (cond-with-predicates ots1
+	     (label-type-spec?
+	      (and (label-type-spec? ots2)
+		   ($label-type-spec=? ots1 ots2)))
 
-	   (interface-type-spec?
-	    (and (interface-type-spec? ots2)
-		 ($interface-type-spec=? ots1 ots2)))
+	     (interface-type-spec?
+	      (and (interface-type-spec? ots2)
+		   ($interface-type-spec=? ots1 ots2)))
 
-	   (else #f))))))
+	     (else #f)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -5289,6 +5317,79 @@
     `(quote ,(car (object-type-spec.uids-list iface.ots))))
 
   #| end of module: BUILD-TABLE-FOR-INTERFACE-TYPES-AND-IMPLEMENTER-OBJECT-TYPE |# )
+
+
+;;;; reference spec
+;;
+;;This record-type represents references to  other object-type specifications.  It is
+;;a level of indirection used to implement recursive types.
+;;
+
+(define-core-record-type <reference-type-spec>
+  (nongenerative vicare:expander:<reference-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
+  (parent <object-type-spec>)
+  (sealed #t)
+  (fields
+    (mutable	object-type-spec	reference-type-spec.object-type-spec reference-type-spec.object-type-spec-set!)
+    (mutable	predicate-id		reference-type-spec.predicate-id reference-type-spec.predicate-id-set!)
+    #| end of FIELDS |# )
+
+  (protocol
+    (lambda (make-object-type-spec)
+      (define* (make-reference-type-spec {type-name.id identifier?})
+	(let ((parent.ots	(<top>-ots)))
+	  ((make-object-type-spec type-name.id (object-type-spec.uids-list parent.ots)
+				  parent.ots reference-type-spec.type-annotation-maker
+				  #f				;constructor-stx
+				  #f				;destructor-stx
+				  make-reference-type-predicate ;type-predicate-stx
+				  #f   ;equality-predicate.id
+				  #f   ;comparison-procedure.id
+				  #f   ;hash-function.id
+				  '()  ;methods-table-public
+				  '()  ;methods-table-protected
+				  '()  ;methods-table-private
+				  '()) ;implemented-references
+	   #f #f)))
+
+      (define (reference-type-spec.type-annotation-maker ots)
+	(object-type-spec.name ots))
+
+      (define (make-reference-type-predicate ots)
+	(or (reference-type-spec.predicate-id ots)
+	    (let* ((predicate.id	(make-syntactic-identifier-for-temporary-variable "pred")))
+	      (reference-type-spec.predicate-id-set! ots predicate.id)
+	      (unwind-protect
+		  (let* ((referenced.ots	(reference-type-spec.dereference ots))
+			 (referenced-pred.stx	(object-type-spec.type-predicate-stx referenced.ots))
+			 (obj.id		(make-syntactic-identifier-for-temporary-variable "obj")))
+		    (bless
+		     `(letrec ((,predicate.id (lambda (,obj.id)
+						(,referenced-pred.stx ,obj.id))))
+			,predicate.id)))
+		(reference-type-spec.predicate-id-set! ots #f)))))
+
+      make-reference-type-spec))
+
+  (custom-printer
+    (lambda (S port sub-printer)
+      (display "#[reference-type-spec " port)
+      (display (object-type-spec.name S) port)
+      (display "]" port)))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(case-define* reference-type-spec.dereference
+  (({ots reference-type-spec?})
+   (reference-type-spec.dereference ots (current-inferior-lexenv)))
+  (({ots reference-type-spec?} lexenv)
+   (or (reference-type-spec.object-type-spec ots)
+       (id->object-type-spec (object-type-spec.name ots) lexenv)
+       (assertion-violation __who__
+	 "attempt to dereference dangling object-type specification"
+	 ots))))
 
 
 ;;;; type annotations

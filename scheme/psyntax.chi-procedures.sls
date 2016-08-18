@@ -511,7 +511,7 @@
 	  ((variable-transformer? rv)
 	   (make-syntactic-binding-descriptor/local-macro/variable-transformer (variable-transformer-procedure rv) rhs.core))
 	  ((object-type-spec? rv)
-	   (make-syntactic-binding-descriptor/object-type-name rv rhs.core))
+	   (make-syntactic-binding-descriptor/local-object-type-name rv rhs.core))
 	  ((expand-time-value? rv)
 	   (make-syntactic-binding-descriptor/local-macro/expand-time-value (expand-time-value-object rv) rhs.core))
 	  ((synonym-transformer? rv)

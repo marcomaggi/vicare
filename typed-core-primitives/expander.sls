@@ -1048,6 +1048,23 @@
    ((<interface-type-spec> <interface-type-spec>)	=> <list>)))
 
 ;;; --------------------------------------------------------------------
+
+(declare-core-rtd <reference-type-spec>-rtd)
+(declare-core-rcd <reference-type-spec>-rcd)
+
+(declare-core-primitive make-reference-type-spec
+    (safe)
+  (signatures
+   ((<syntactic-identifier>)		=> (<reference-type-spec>))))
+
+(declare-type-predicate reference-type-spec?		<reference-type-spec>)
+
+(declare-core-primitive reference-type-spec.dereference
+    (safe)
+  (signatures
+   ((<reference-type-spec>)		=> (<object-type-spec>))))
+
+;;; --------------------------------------------------------------------
 ;;; operations on type specs
 
 (declare-core-primitive union-of-type-specs

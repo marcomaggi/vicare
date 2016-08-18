@@ -224,24 +224,6 @@
 
 ;;;; non-core macro: DEFINE-TYPE, TYPE-ANNOTATION
 
-(define-macro-transformer (define-type input-form.stx)
-  ;;Transformer  function  used  to  expand  Vicare's  DEFINE-TYPE  macros  from  the
-  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
-  ;;syntax object that must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?type-name ?type-annotation)
-     (begin
-       (unless (identifier? ?type-name)
-	 (syntax-violation __who__
-	   "expected identifier as type annotation name"
-	   input-form.stx ?type-name))
-       (let ((ots (type-annotation->object-type-spec ?type-annotation (current-inferior-lexenv) ?type-name)))
-	 (bless
-	  `(define-syntax ,?type-name (quote ,ots))))))
-    (_
-     (__synner__ "invalid syntax in macro use"))))
-
 (define-macro-transformer (type-annotation input-form.stx)
   ;;Transformer  function used  to expand  Vicare's TYPE-ANNOTATION  macros from  the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a

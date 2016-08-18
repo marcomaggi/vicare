@@ -369,7 +369,7 @@
 		 (append unsafe-field-accessor* (%filter-out-falses unsafe-field-mutator*))))
       ,@parent-rtd-definition
       ,@parent-rcd-definition
-      (define-syntax ,foo ,foo-syntactic-binding-form)
+      (define-type ,foo (constructor ,foo-syntactic-binding-form))
       ;;We want these common function definitions after the definition of FOO.
       ,@foo-destructor-definition
       ,@foo-equality-predicate-definition

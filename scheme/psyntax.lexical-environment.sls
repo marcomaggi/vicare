@@ -28,7 +28,7 @@
     make-empty-lexenv
     make-lexenv-entry
     lexenv-entry.label
-    lexenv-entry.binding-descriptor
+    lexenv-entry.binding-descriptor		lexenv-entry.binding-descriptor-set!
     push-entry-on-lexenv			push-entries-on-lexenv
 
     make-syntactic-binding-descriptor
@@ -240,6 +240,12 @@
     interface-type-spec.method-prototypes-table
     assert-implemented-interface-type-and-implementer-interface-type
     build-table-for-interface-types-and-implementer-object-type
+
+    <reference-type-spec>-rtd				<reference-type-spec>-rcd
+    <reference-type-spec>
+    make-reference-type-spec				reference-type-spec?
+    reference-type-spec.object-type-spec		reference-type-spec.object-type-spec-set!
+    reference-type-spec.dereference
 ;;;
     ;; typed variable specification: base type
     <typed-variable-spec>
@@ -784,6 +790,7 @@
 ;;Given the entry from a lexical environment: return the binding value.
 ;;
 (define lexenv-entry.binding-descriptor cdr)
+(define lexenv-entry.binding-descriptor-set! set-cdr!)
 
 (define (push-entry-on-lexenv label descr lexenv)
   (cons (make-lexenv-entry label descr) lexenv))

@@ -193,10 +193,11 @@
 	       ,@mutator*.id  ,@unsafe-mutator*.id)
 	(define/checked ((brace ,predicate.id <boolean>) obj)
 	  ($struct/rtd? obj ',std))
-	(define-syntax ,type.id
-	  (make-struct-type-spec (syntax ,type.id) ',std
-				 (syntax ,constructor.id) (syntax ,predicate.id)
-				 ,methods-table.sexp))
+	(define-type ,type.id
+	  (constructor
+	      (make-struct-type-spec (syntax ,type.id) ',std
+				     (syntax ,constructor.id) (syntax ,predicate.id)
+				     ,methods-table.sexp)))
 	(define/checked ((brace ,constructor.id ,type.id) . ,constructor-arg*.spec)
 	  (receive-and-return (S)
 	      ($struct ',std . ,constructor-arg*.id)
