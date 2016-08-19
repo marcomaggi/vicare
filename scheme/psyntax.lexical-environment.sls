@@ -678,6 +678,13 @@
     interface-implementation-mismatching-method-violation?
     interface-implementation-mismatching-method-violation.object-method-signature
 
+    &dangling-reference-type-spec-rtd
+    &dangling-reference-type-spec-rcd
+    &dangling-reference-type-spec
+    make-dangling-reference-type-spec
+    dangling-reference-type-spec?
+    dangling-reference-type-spec.name
+
     assertion-error
     syntax-violation/internal-error
     assertion-violation/internal-error

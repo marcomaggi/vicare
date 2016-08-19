@@ -275,6 +275,15 @@
 
 ;;; --------------------------------------------------------------------
 
+     &dangling-reference-type-spec-rtd
+     &dangling-reference-type-spec-rcd
+     &dangling-reference-type-spec
+     make-dangling-reference-type-spec
+     dangling-reference-type-spec?
+     dangling-reference-type-spec.name
+
+;;; --------------------------------------------------------------------
+
      assertion-error
      syntax-violation/internal-error
      assertion-violation/internal-error
@@ -611,6 +620,14 @@
   interface-implementation-mismatching-method-violation?
   (object-method-signature	interface-implementation-mismatching-method-violation.object-method-signature)
   #| end of CND::DEFINE-CORE-CONDITION-TYPE |# )
+
+
+;;;; condition-object type for reference-types
+
+(cnd::define-core-condition-type &dangling-reference-type-spec
+    cnd::&violation
+  make-dangling-reference-type-spec dangling-reference-type-spec?
+  (name		dangling-reference-type-spec.name))
 
 
 ;;;; exception raising functions

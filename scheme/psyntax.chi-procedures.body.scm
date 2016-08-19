@@ -1099,7 +1099,7 @@
 				 (let ((reference.entry	(assq type-name.lab lexenv.run))
 				       (new-type.des	(%make-new-object-type-syntactic-binding-descriptor
 							 type-name.id type-annotation.stx lexenv.run lexenv.expand synner)))
-				   (%update-syntactic-binding reference.entry new-type.des)
+				   (%update-syntactic-binding! reference.entry new-type.des synner)
 				   (chi-body* rest-body-form*.stx lexenv.run lexenv.expand
 					      rev-qdef* mod** kwd* export-spec* rib
 					      mix? shadow/redefine-bindings?))
@@ -1128,7 +1128,7 @@
 								  rib shadow/redefine-bindings?)
 	       (let ((new-type.des (%make-new-object-type-syntactic-binding-descriptor type-name.id type-annotation.stx
 										       lexenv.run lexenv.expand synner)))
-		 (%update-syntactic-binding reference.entry new-type.des)
+		 (%update-syntactic-binding! reference.entry new-type.des synner)
 		 (chi-body* rest-body-form*.stx lexenv.run lexenv.expand
 			    rev-qdef* mod** kwd* export-spec* rib
 			    mix? shadow/redefine-bindings?))))
@@ -1202,7 +1202,14 @@
 	       type-annotation.stx new.des)))))
 
       (_
-       (let* ((new.ots	(type-annotation->object-type-spec type-annotation.stx lexenv.run type-name.id))
+       (let* ((new.ots	(with-exception-handler
+			    (lambda (E)
+			      (if (dangling-reference-type-spec? E)
+				  (synner (condition-message E)
+					  (dangling-reference-type-spec.name E))
+				(raise-continuable E)))
+			  (lambda ()
+			    (type-annotation->object-type-spec type-annotation.stx lexenv.run type-name.id))))
 	      (new.core	(build-data no-source new.ots)))
 	 (make-syntactic-binding-descriptor/local-object-type-name new.ots new.core)))))
 
@@ -1215,15 +1222,37 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%update-syntactic-binding reference.entry new-type.des)
+  (define (%update-syntactic-binding! reference.entry new-type.des synner)
     ;;Register  the  syntactic binding  descriptor  NEW-TYPE.DES  as the  object-type
     ;;specification referenced by the lexenv entry REFERENCE.ENTRY.
     ;;
     (let* ((reference.des	(lexenv-entry.binding-descriptor reference.entry))
 	   (reference.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec reference.des))
 	   (new-type.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec new-type.des)))
+      (define (syn message ots)
+	(synner message (object-type-spec.type-annotation ots)))
       (reference-type-spec.object-type-spec-set! reference.ots new-type.ots)
-      (lexenv-entry.binding-descriptor-set! reference.entry new-type.des)))
+      (lexenv-entry.binding-descriptor-set! reference.entry new-type.des)
+      ;;Let's do some validation.
+      (cond ((union-type-spec? new-type.ots)
+	     (for-each (lambda (item.ots)
+			 (when (eq? item.ots reference.ots)
+			   (syn "invalid recursive type: union cannot hold the type itself" item.ots)))
+	       (union-type-spec.item-ots* new-type.ots)))
+
+	    ((intersection-type-spec? new-type.ots)
+	     (for-each (lambda (item.ots)
+			 (when (eq? item.ots reference.ots)
+			   (syn "invalid recursive type: intersection cannot hold the type itself" item.ots)))
+	       (intersection-type-spec.item-ots* new-type.ots)))
+
+	    ((complement-type-spec? new-type.ots)
+	     (when (eq? (complement-type-spec.item-ots new-type.ots) reference.ots)
+	       (syn "invalid recursive type: complement cannot hold the type itself" new-type.ots)))
+
+	    ((reference-type-spec? new-type.ots)
+	     (when (object-type-spec=? reference.ots new-type.ots)
+	       (syn "invalid recursive type: the type is an alias for itself" new-type.ots))))))
 
   #| end of module: CHI-DEFINE-TYPE |# )
 

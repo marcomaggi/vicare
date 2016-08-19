@@ -5360,6 +5360,13 @@
     (interface-implementation-mismatching-method-violation?	$expander)
     (interface-implementation-mismatching-method-violation.object-method-signature $expander)
 ;;;
+    (&dangling-reference-type-spec-rtd)
+    (&dangling-reference-type-spec-rcd)
+    (&dangling-reference-type-spec				$expander)
+    (make-dangling-reference-type-spec				$expander)
+    (dangling-reference-type-spec?				$expander)
+    (dangling-reference-type-spec.name				$expander)
+;;;
     (type-annotation=?					$expander)
     (type-annotation-super-and-sub?			$expander)
     (type-annotation-common-ancestor			$expander)

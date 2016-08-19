@@ -209,6 +209,11 @@
   (or (object-type-spec.list-type-spec? object.ots)
       (object-type-spec.compatible-super-and-sub? (<list>-ots) object.ots)))
 
+(define (%normalise-reference-type-spec ots)
+  (if (reference-type-spec? ots)
+      (reference-type-spec.dereference ots)
+    ots))
+
 ;;; --------------------------------------------------------------------
 
 (define-syntax cond-with-predicates
@@ -502,9 +507,7 @@
   ;;Return false or a syntax object  representing a Scheme expression which, expanded
   ;;and evaluated, returns the hash function for this type.
   ;;
-  (let ((ots	(if (reference-type-spec? ots)
-		    (reference-type-spec.dereference ots)
-		  ots)))
+  (let ((ots (%normalise-reference-type-spec ots)))
     (cond ((object-type-spec.hash-function ots))
 	  ((object-type-spec.parent-ots ots)
 	   => object-type-spec.applicable-hash-function)
@@ -519,9 +522,7 @@
   ;;
   ;;  (<record> <struct> <top>)
   ;;
-  (let ((ots (if (reference-type-spec? ots)
-		 (reference-type-spec.dereference ots)
-	       ots)))
+  (let ((ots (%normalise-reference-type-spec ots)))
     (cond ((object-type-spec.parent-ots ots)
 	   => (lambda (parent.ots)
 		(cons parent.ots (object-type-spec.ancestor-ots* parent.ots))))
@@ -544,9 +545,7 @@
   ;;the  parent of  OTS,  so there  is  no need  to traverse  the  hierarchy of  type
   ;;specifications.
   ;;
-  (let ((ots (if (reference-type-spec? ots)
-		 (reference-type-spec.dereference ots)
-	       ots)))
+  (let ((ots (%normalise-reference-type-spec ots)))
     (cond ((assq method-name.sym (object-type-spec.methods-table-public ots))
 	   ;;The name  is known;  extract the method  implementation object  from the
 	   ;;alist entry and return it.
@@ -571,9 +570,7 @@
   ;;the  parent of  OTS,  so there  is  no need  to traverse  the  hierarchy of  type
   ;;specifications.
   ;;
-  (let ((ots (if (reference-type-spec? ots)
-		 (reference-type-spec.dereference ots)
-	       ots)))
+  (let ((ots (%normalise-reference-type-spec ots)))
     (cond ((assq method-name.sym (object-type-spec.methods-table-private ots))
 	   ;;The name  is known;  extract the method  implementation object  from the
 	   ;;alist entry and return it.
@@ -616,10 +613,10 @@
   (define* (object-type-spec.matching-super-and-sub? super.ots sub.ots)
     (cond
      ((eq? super.ots sub.ots))
+     ((reference-type-spec?	sub.ots)	(object-type-spec.matching-super-and-sub? super.ots (reference-type-spec.dereference sub.ots)))
      ((core-type-spec?		sub.ots)	(%matching-sub/core-type-spec  super.ots sub.ots))
      ((interface-type-spec?	sub.ots)	(%matching-sub/interface-type-spec super.ots sub.ots))
      ((label-type-spec?		sub.ots)	(%matching-sub/label-type-spec super.ots sub.ots))
-     ((reference-type-spec?	sub.ots)	(object-type-spec.matching-super-and-sub? super.ots (reference-type-spec.dereference sub.ots)))
      (else
       (case-specification super.ots
 	(core-type-spec?		(%matching-super/core-type-spec		super.ots sub.ots))
@@ -1320,10 +1317,10 @@
     ;;argument is compatible with a "<number>" operand.
     ;;
     (cond
-     ((core-type-spec?  sub.ots)		(%compatible-sub/core-type-spec   super.ots sub.ots))
+     ((reference-type-spec?	sub.ots)	(%compatible-super-and-sub? super.ots (reference-type-spec.dereference sub.ots)))
+     ((core-type-spec?		sub.ots)	(%compatible-sub/core-type-spec   super.ots sub.ots))
      ((interface-type-spec?	sub.ots)	#f)
      ((label-type-spec?		sub.ots)	(%compatible-sub/label-type-spec  super.ots sub.ots))
-     ((reference-type-spec?	sub.ots)	(%compatible-super-and-sub? super.ots (reference-type-spec.dereference sub.ots)))
      (else
       (case-specification super.ots
 	(core-type-spec?			(%compatible-super/core-type-spec	  super.ots sub.ots))
@@ -2089,6 +2086,12 @@
 	((<void>-ots? ots2)
 	 (<void>-ots))
 
+	((reference-type-spec? ots1)
+	 (object-type-spec.common-ancestor (reference-type-spec.dereference ots1) ots2))
+
+	((reference-type-spec? ots2)
+	 (object-type-spec.common-ancestor ots1 (reference-type-spec.dereference ots2)))
+
 	((and (pair-of-type-spec? ots1)
 	      (pair-of-type-spec? ots2))
 	 (make-pair-of-type-spec (object-type-spec.common-ancestor (pair-of-type-spec.item-ots ots1)
@@ -2171,12 +2174,8 @@
 
 (define ($object-type-spec=? ots1 ots2)
   (or (eq? ots1 ots2)
-      (let ((ots1 (if (reference-type-spec? ots1)
-		      (reference-type-spec.dereference ots1)
-		    ots1))
-	    (ots2 (if (reference-type-spec? ots2)
-		      (reference-type-spec.dereference ots2)
-		    ots2)))
+      (let ((ots1 (%normalise-reference-type-spec ots1))
+	    (ots2 (%normalise-reference-type-spec ots2)))
 	(case-specification ots1
 	  (core-type-spec?
 	   (and (core-type-spec? ots2)
@@ -2542,6 +2541,14 @@
 
 ;;; --------------------------------------------------------------------
 
+(define* (reference-type-spec=? {ots1 object-type-spec?} {ots2 object-type-spec?})
+  ($object-type-spec=? ots1 ots2))
+
+(define ($reference-type-spec=? ots1 ots2)
+  ($object-type-spec=? ots1 ots2))
+
+;;; --------------------------------------------------------------------
+
 (define (object-type-specs-delete-duplicates ell)
   ;;Recursive function.  Given the list of "<object-type-spec>" instances: remove the
   ;;duplicate ones and return a proper list of unique instances.
@@ -2580,12 +2587,22 @@
   ;;types.  For  example: there  may be  multiple instances  of "<scheme-obect-type>"
   ;;representing the same type; so we need to compare them by name.
   ;;
-  (cond ((eq? super.ots sub.ots))
-	(($object-type-spec=? super.ots sub.ots))
-	((object-type-spec.parent-ots sub.ots)
-	 => (lambda (sub-parent.ots)
-	      (%compare-super-with-sub-and-its-parents super.ots sub-parent.ots)))
-	(else #f)))
+  (or (eq? super.ots sub.ots)
+      (let ((super.ots	(%normalise-reference-type-spec super.ots))
+	    (sub.ots	(%normalise-reference-type-spec   sub.ots)))
+	(or ($object-type-spec=? super.ots sub.ots)
+	    (cond ((object-type-spec.parent-ots sub.ots)
+		   => (lambda (sub-parent.ots)
+			(let recur ((super.ots	super.ots)
+				    (sub.ots	(object-type-spec.parent-ots sub.ots)))
+			  (cond ((eq? super.ots sub.ots))
+				(($object-type-spec=? super.ots sub.ots))
+				(else
+				 (cond ((object-type-spec.parent-ots sub.ots)
+					=> (lambda (sub-parent.ots)
+					     (recur super.ots sub-parent.ots)))
+				       (else #f)))))))
+		  (else #f))))))
 
 
 ;;;; basic object-type specification: type descriptors
@@ -2736,6 +2753,9 @@
 
 	 (interface-type-spec?
 	  (stx-expr-to-core-expr (interface-type-spec.type-descriptor-id type.ots)))
+
+	 (reference-type-spec?
+	  (object-type-spec.type-descriptor-core-expr (%normalise-reference-type-spec type.ots)))
 
 	 (else
 	  (assertion-violation __who__ "unknown object type specification" type.ots))))))
@@ -3378,7 +3398,7 @@
 			 (cons component.ots knil))))
       '() component-type*.ots))
 
-  (define (%remove-sub-types in* out*)
+  (define* (%remove-sub-types in* out*)
     ;;Recursive function.  Remove from IN* the items that are sub-types of items that
     ;;follow them.  Build and return a list of the remaining items.  Examples:
     ;;
@@ -5386,10 +5406,10 @@
    (reference-type-spec.dereference ots (current-inferior-lexenv)))
   (({ots reference-type-spec?} lexenv)
    (or (reference-type-spec.object-type-spec ots)
-       (id->object-type-spec (object-type-spec.name ots) lexenv)
-       (assertion-violation __who__
-	 "attempt to dereference dangling object-type specification"
-	 ots))))
+       (raise
+	(condition (make-dangling-reference-type-spec (object-type-spec.name ots))
+		   (make-who-condition __who__)
+		   (make-message-condition "attempt to dereference dangling object-type specification"))))))
 
 
 ;;;; type annotations
@@ -5560,170 +5580,171 @@
      (let ((synner (lambda (message subform)
 		     (syntax-violation __who__ message annotation.stx subform))))
        (make-type-signature (syntax-object->type-signature-specs type.ann lexenv synner))))
-   (syntax-match annotation.stx (pair list vector pair-of list-of nelist-of vector-of nevector-of
-				      hashtable alist condition enumeration
-				      or and not lambda case-lambda => parent-of ancestor-of
-				      type-predicate equality-predicate comparison-procedure hash-function
-				      type-of)
-     (?type-id
-      (identifier? ?type-id)
-      (with-exception-handler
-	  (lambda (E)
-	    (raise (condition (make-who-condition __who__) E)))
-	(lambda ()
-	  (id->object-type-spec ?type-id lexenv))))
+   (parametrise ((current-run-lexenv (lambda () lexenv)))
+     (syntax-match annotation.stx (pair list vector pair-of list-of nelist-of vector-of nevector-of
+					hashtable alist condition enumeration
+					or and not lambda case-lambda => parent-of ancestor-of
+					type-predicate equality-predicate comparison-procedure hash-function
+					type-of)
+       (?type-id
+	(identifier? ?type-id)
+	(with-exception-handler
+	    (lambda (E)
+	      (raise (condition (make-who-condition __who__) E)))
+	  (lambda ()
+	    (id->object-type-spec ?type-id lexenv))))
 
-     ((pair ?car-type ?cdr-type)
-      (let ((car.ots (type-annotation->object-type-spec ?car-type lexenv))
-	    (cdr.ots (type-annotation->object-type-spec ?cdr-type lexenv)))
-	(make-pair-type-spec car.ots cdr.ots name.stx)))
+       ((pair ?car-type ?cdr-type)
+	(let ((car.ots (type-annotation->object-type-spec ?car-type lexenv))
+	      (cdr.ots (type-annotation->object-type-spec ?cdr-type lexenv)))
+	  (make-pair-type-spec car.ots cdr.ots name.stx)))
 
-     ((list ?item-type* ...)
-      (if (null? ?item-type*)
-	  (<null>-ots)
-	(make-list-type-spec (map (lambda (type.stx)
-				    (type-annotation->object-type-spec type.stx lexenv))
-			       ?item-type*)
-			     name.stx)))
-
-     ((vector ?item-type* ...)
-      (if (null? ?item-type*)
-	  (<empty-vector>-ots)
-	(make-vector-type-spec (map (lambda (type.stx)
+       ((list ?item-type* ...)
+	(if (null? ?item-type*)
+	    (<null>-ots)
+	  (make-list-type-spec (map (lambda (type.stx)
 				      (type-annotation->object-type-spec type.stx lexenv))
 				 ?item-type*)
 			       name.stx)))
 
-     ((pair-of ?item-type)
-      (make-pair-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
-			      name.stx))
+       ((vector ?item-type* ...)
+	(if (null? ?item-type*)
+	    (<empty-vector>-ots)
+	  (make-vector-type-spec (map (lambda (type.stx)
+					(type-annotation->object-type-spec type.stx lexenv))
+				   ?item-type*)
+				 name.stx)))
 
-     ((nelist-of ?item-type)
-      (let ((type.ots (type-annotation->object-type-spec ?item-type lexenv)))
-	(make-pair-type-spec type.ots (make-list-of-type-spec type.ots) name.stx)))
-
-     ((list-of ?item-type)
-      (make-list-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
-			      name.stx))
-
-     ((vector-of ?item-type)
-      (make-vector-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
+       ((pair-of ?item-type)
+	(make-pair-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
 				name.stx))
 
-     ;; ((nevector-of ?item-type)
-     ;;  (let ((type.ots (type-annotation->object-type-spec ?item-type lexenv)))
-     ;; 	(make-vector-type-spec type.ots name.stx)))
+       ((nelist-of ?item-type)
+	(let ((type.ots (type-annotation->object-type-spec ?item-type lexenv)))
+	  (make-pair-type-spec type.ots (make-list-of-type-spec type.ots) name.stx)))
 
-     ((hashtable ?key-type ?value-type)
-      (make-hashtable-type-spec (type-annotation->object-type-spec ?key-type)
-				(type-annotation->object-type-spec ?value-type)
+       ((list-of ?item-type)
+	(make-list-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
 				name.stx))
 
-     ((alist ?key-type ?value-type)
-      (make-alist-type-spec (type-annotation->object-type-spec ?key-type)
-			    (type-annotation->object-type-spec ?value-type)
-			    name.stx))
+       ((vector-of ?item-type)
+	(make-vector-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
+				  name.stx))
 
-     ((enumeration ?symbol ?symbol* ...)
-      (let ((sym*.stx (cons ?symbol ?symbol*)))
-	(for-all (lambda (sym.stx)
-		   (unless (identifier? sym.stx)
-		     (syntax-violation __who__
-		       "expected symbol object as component of enumeration"
-		       annotation.stx sym.stx)))
-	  sym*.stx)
-	(let ((sym*.stx (delete-duplicate-identifiers sym*.stx)))
-	  (make-enumeration-type-spec (syntax->datum sym*.stx)
-				      (cons (enumeration-id) sym*.stx)))))
+       ;; ((nevector-of ?item-type)
+       ;;  (let ((type.ots (type-annotation->object-type-spec ?item-type lexenv)))
+       ;; 	(make-vector-type-spec type.ots name.stx)))
 
-     ((condition)
-      (make-compound-condition-type-spec '()))
+       ((hashtable ?key-type ?value-type)
+	(make-hashtable-type-spec (type-annotation->object-type-spec ?key-type)
+				  (type-annotation->object-type-spec ?value-type)
+				  name.stx))
 
-     ((condition ?single-component-type)
-      ;;We want:
-      ;;
-      ;;   (condition &who) == &who
-      ;;   (condition (condition ...)) == (condition ...)
-      ;;   (condition <compound-condition>) == <compound-condition>
-      ;;
-      (receive-and-return (ots)
-	  (type-annotation->object-type-spec ?single-component-type lexenv)
-	(unless (or (simple-condition-object-type-spec? ots)
-		    (compound-condition-type-spec?      ots)
-		    (<compound-condition>-ots?          ots)
-		    (<condition>-ots?                   ots))
-	  (syntax-violation __who__
-	    "expected condition object as component of compound condition object"
-	    annotation.stx ?single-component-type))))
-
-     ((condition ?component-type ?component-type* ...)
-      (make-compound-condition-type-spec (map (lambda (type.stx)
-						(type-annotation->object-type-spec type.stx lexenv))
-					   (cons ?component-type ?component-type*))))
-
-     ((lambda ?argtypes => ?rettypes)
-      (make-closure-type-spec (make-case-lambda-signature
-			       (list (make-lambda-signature (%mk-type-signature ?rettypes)
-							    (%mk-type-signature ?argtypes))))
+       ((alist ?key-type ?value-type)
+	(make-alist-type-spec (type-annotation->object-type-spec ?key-type)
+			      (type-annotation->object-type-spec ?value-type)
 			      name.stx))
 
-     ((case-lambda (?argtypes0 => ?rettypes0) (?argtypes* => ?rettypes*) ...)
-      (make-closure-type-spec (make-case-lambda-signature
-			       (cons (make-lambda-signature
-				      (%mk-type-signature ?rettypes0)
-				      (%mk-type-signature ?argtypes0))
-				     (map (lambda (argtypes.stx rettypes.stx)
-					    (make-lambda-signature
-					     (%mk-type-signature rettypes.stx)
-					     (%mk-type-signature argtypes.stx)))
-				       ?argtypes* ?rettypes*)))
-			      name.stx))
+       ((enumeration ?symbol ?symbol* ...)
+	(let ((sym*.stx (cons ?symbol ?symbol*)))
+	  (for-all (lambda (sym.stx)
+		     (unless (identifier? sym.stx)
+		       (syntax-violation __who__
+			 "expected symbol object as component of enumeration"
+			 annotation.stx sym.stx)))
+	    sym*.stx)
+	  (let ((sym*.stx (delete-duplicate-identifiers sym*.stx)))
+	    (make-enumeration-type-spec (syntax->datum sym*.stx)
+					(cons (enumeration-id) sym*.stx)))))
 
-     ((or ?single-component-type)
-      (type-annotation->object-type-spec ?single-component-type lexenv))
+       ((condition)
+	(make-compound-condition-type-spec '()))
 
-     ((or ?component-type ?component-type* ...)
-      ($union-of-type-specs (map (lambda (type.stx)
-				   (type-annotation->object-type-spec type.stx lexenv))
-			      (cons ?component-type ?component-type*))))
+       ((condition ?single-component-type)
+	;;We want:
+	;;
+	;;   (condition &who) == &who
+	;;   (condition (condition ...)) == (condition ...)
+	;;   (condition <compound-condition>) == <compound-condition>
+	;;
+	(receive-and-return (ots)
+	    (type-annotation->object-type-spec ?single-component-type lexenv)
+	  (unless (or (simple-condition-object-type-spec? ots)
+		      (compound-condition-type-spec?      ots)
+		      (<compound-condition>-ots?          ots)
+		      (<condition>-ots?                   ots))
+	    (syntax-violation __who__
+	      "expected condition object as component of compound condition object"
+	      annotation.stx ?single-component-type))))
 
-     ((and ?single-component-type)
-      (type-annotation->object-type-spec ?single-component-type lexenv))
+       ((condition ?component-type ?component-type* ...)
+	(make-compound-condition-type-spec (map (lambda (type.stx)
+						  (type-annotation->object-type-spec type.stx lexenv))
+					     (cons ?component-type ?component-type*))))
 
-     ((and ?component-type ?component-type* ...)
-      (intersection-of-type-specs (map (lambda (type.stx)
-					 (type-annotation->object-type-spec type.stx lexenv))
-				    (cons ?component-type ?component-type*))))
+       ((lambda ?argtypes => ?rettypes)
+	(make-closure-type-spec (make-case-lambda-signature
+				 (list (make-lambda-signature (%mk-type-signature ?rettypes)
+							      (%mk-type-signature ?argtypes))))
+				name.stx))
 
-     ((not ?item-type)
-      (let ((item.ots (type-annotation->object-type-spec ?item-type lexenv)))
-	(make-complement-type-spec item.ots)))
+       ((case-lambda (?argtypes0 => ?rettypes0) (?argtypes* => ?rettypes*) ...)
+	(make-closure-type-spec (make-case-lambda-signature
+				 (cons (make-lambda-signature
+					(%mk-type-signature ?rettypes0)
+					(%mk-type-signature ?argtypes0))
+				       (map (lambda (argtypes.stx rettypes.stx)
+					      (make-lambda-signature
+					       (%mk-type-signature rettypes.stx)
+					       (%mk-type-signature argtypes.stx)))
+					 ?argtypes* ?rettypes*)))
+				name.stx))
 
-     ((parent-of ?type)
-      (or (object-type-spec.parent-ots (type-annotation->object-type-spec ?type lexenv))
-	  (syntax-violation __who__ "type annotation has no parent" annotation.stx ?type)))
+       ((or ?single-component-type)
+	(type-annotation->object-type-spec ?single-component-type lexenv))
 
-     ((ancestor-of ?type)
-      ;;If ?TYPE has no ancestors: its ancestors list is null.
-      (make-ancestor-of-type-spec (type-annotation->object-type-spec ?type lexenv)))
+       ((or ?component-type ?component-type* ...)
+	($union-of-type-specs (map (lambda (type.stx)
+				     (type-annotation->object-type-spec type.stx lexenv))
+				(cons ?component-type ?component-type*))))
 
-     ((type-predicate ?type)
-      (type-annotation->object-type-spec (bless `(lambda (,?type) => (<boolean>))) lexenv))
+       ((and ?single-component-type)
+	(type-annotation->object-type-spec ?single-component-type lexenv))
 
-     ((equality-predicate ?type)
-      (type-annotation->object-type-spec (bless `(lambda (,?type ,?type) => (<boolean>))) lexenv))
+       ((and ?component-type ?component-type* ...)
+	(intersection-of-type-specs (map (lambda (type.stx)
+					   (type-annotation->object-type-spec type.stx lexenv))
+				      (cons ?component-type ?component-type*))))
 
-     ((comparison-procedure ?type)
-      (type-annotation->object-type-spec (bless `(lambda (,?type ,?type) => (<fixnum>)))  lexenv))
+       ((not ?item-type)
+	(let ((item.ots (type-annotation->object-type-spec ?item-type lexenv)))
+	  (make-complement-type-spec item.ots)))
 
-     ((hash-function ?type)
-      (type-annotation->object-type-spec (bless `(lambda (,?type) => (<non-negative-fixnum>)))))
+       ((parent-of ?type)
+	(or (object-type-spec.parent-ots (type-annotation->object-type-spec ?type lexenv))
+	    (syntax-violation __who__ "type annotation has no parent" annotation.stx ?type)))
 
-     ((type-of ?expr)
-      ((expression-expander-for-type-annotations) ?expr lexenv))
+       ((ancestor-of ?type)
+	;;If ?TYPE has no ancestors: its ancestors list is null.
+	(make-ancestor-of-type-spec (type-annotation->object-type-spec ?type lexenv)))
 
-     (else
-      (syntax-violation __who__ "invalid type annotation" annotation.stx)))))
+       ((type-predicate ?type)
+	(type-annotation->object-type-spec (bless `(lambda (,?type) => (<boolean>))) lexenv))
+
+       ((equality-predicate ?type)
+	(type-annotation->object-type-spec (bless `(lambda (,?type ,?type) => (<boolean>))) lexenv))
+
+       ((comparison-procedure ?type)
+	(type-annotation->object-type-spec (bless `(lambda (,?type ,?type) => (<fixnum>)))  lexenv))
+
+       ((hash-function ?type)
+	(type-annotation->object-type-spec (bless `(lambda (,?type) => (<non-negative-fixnum>)))))
+
+       ((type-of ?expr)
+	((expression-expander-for-type-annotations) ?expr lexenv))
+
+       (else
+	(syntax-violation __who__ "invalid type annotation" annotation.stx))))))
 
 
 ;;;; done
