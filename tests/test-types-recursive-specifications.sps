@@ -138,6 +138,8 @@
 
 (parametrise ((check-test-name	'record-types))
 
+  ;;Definition and type predicates
+  ;;
   (check
       (internal-body
 	(define-record-type <node>
@@ -157,6 +159,54 @@
 
 	(values (is-a? (new <node>) <node>)
 		(is-a? (new <node> (new <node>) (new <node>)) <node>)))
+    => #t #t)
+
+  ;;Field methods.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <node>
+	  (fields (mutable {lx (or <node> <false>)})
+		  (mutable {rx (or <node> <false>)})))
+
+	(define O
+	  (new <node> #f #f))
+
+	(define P
+	  (new <node> #f #f))
+	(define Q
+	  (new <node> #f #f))
+
+	(.lx O P)
+	(.rx O Q)
+	(values (equal? P (.lx O))
+		(equal? Q (.rx O))))
+    => #t #t)
+
+  ;;Methods.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <node>
+	  (fields (mutable {lx (or <node> <false>)})
+		  (mutable {rx (or <node> <false>)}))
+	  (method (left)
+	    (.lx this))
+	  (method (right)
+	    (.rx this)))
+
+	(define O
+	  (new <node> #f #f))
+
+	(define P
+	  (new <node> #f #f))
+	(define Q
+	  (new <node> #f #f))
+
+	(.lx O P)
+	(.rx O Q)
+	(values (equal? P (.left  O))
+		(equal? Q (.right O))))
     => #t #t)
 
   (void))
