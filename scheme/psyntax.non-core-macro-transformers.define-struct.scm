@@ -49,6 +49,31 @@
 		     (list 'cons `(quote ,key.sym) `(syntax ,operator.id)))
 		field-name*.sym operator*.id)))
 
+(define (%parse-fields input-form.stx field*.stx)
+  (define (synner message subform)
+    (syntax-violation __module_who__ message input-form.stx subform))
+  (if (pair? field*.stx)
+      (syntax-match (car field*.stx) (brace)
+	((brace ?name ?type)
+	 (begin
+	   (unless (identifier? ?name)
+	     (synner "expected identifier as field name" ?name))
+	   (receive (name* type*)
+	       (%parse-fields input-form.stx (cdr field*.stx))
+	     (values (cons ?name name*)
+		     (cons ?type type*)))))
+
+	(?name
+	 (identifier? ?name)
+	 (receive (name* type*)
+	     (%parse-fields input-form.stx (cdr field*.stx))
+	   (values (cons ?name name*)
+		   (cons (<top>-type-id) type*))))
+
+	(_
+	 (synner "invalid syntax in struct field definition" (car field*.stx))))
+    (values '() '())))
+
 
 (define-macro-transformer (define-struct input-form.stx)
   (syntax-match input-form.stx (nongenerative)
@@ -71,10 +96,8 @@
 
 
 (define (%build-output-form input-form.stx type.id maker.id predicate.id field*.stx uid)
-  (define-values (field*.id field*.ots)
-    ;;This  call  will  use  "<top>"  as   type  annotation  for  the  untyped  field
-    ;;specifications.
-    (syntax-object.parse-typed-list-of-bindings field*.stx))
+  (define-values (field*.id field*.type)
+    (%parse-fields input-form.stx field*.stx))
   (unless (all-identifiers? field*.id)
     (syntax-violation __module_who__
       "expected list of identifiers as fields speciication"
@@ -120,9 +143,6 @@
       (map (lambda (x)
 	     (string->id (string-append "$set-" type.str "-" x "!")))
 	field*.str))
-
-    (define field*.type
-      (map object-type-spec.name field*.ots))
 
     (define constructor-arg*.id
       (map make-syntactic-identifier-for-temporary-variable field*.str))

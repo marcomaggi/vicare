@@ -164,19 +164,41 @@
 
 (parametrise ((check-test-name	'struct-types))
 
+  ;;Type predicates.
+  ;;
   (check
       (internal-body
 	(define-struct <node>
 	  ({lx (or <node> <false>)}
 	   {rx (or <node> <false>)}))
 
-	(values (is-a? (new <node>) <node>)
-		(is-a? (new <node> (new <node>) (new <node>)) <node>)))
+	(values (is-a? (new <node> #f #f) <node>)
+		(is-a? (new <node> (new <node> #f #f) (new <node> #f #f)) <node>)))
+    => #t #t)
+
+  ;;Field methods.
+  ;;
+  (check
+      (internal-body
+	(define-struct <node>
+	  ({lx (or <node> <false>)}
+	   {rx (or <node> <false>)}))
+
+	(define O
+	  (new <node> #f #f))
+
+	(define P
+	  (new <node> #f #f))
+	(define Q
+	  (new <node> #f #f))
+
+	(.lx O P)
+	(.rx O Q)
+	(values (equal? P (.lx O))
+		(equal? Q (.rx O))))
     => #t #t)
 
   (void))
-
-
 
 
 ;;;; done
