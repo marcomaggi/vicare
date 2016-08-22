@@ -339,7 +339,7 @@
 	 ;;This call will raise an exception if it represents an attempt to illegally
 	 ;;redefine a binding.
 	 (extend-rib! rib id lab shadow/redefine-bindings?)
-	 (let ((entry (cons lab (eval-macro-transformer rhs.core lexenv.run))))
+	 (let ((entry (cons lab (eval-macro-transformer rhs.core))))
 	   (chi-body* (cdr body-form*.stx)
 		      (cons entry lexenv.run)
 		      (cons entry lexenv.expand)
@@ -389,7 +389,7 @@
 	 ;;represents the  definition of the current  value of the fluid  syntax, the
 	 ;;one   that  later   can   be  shadowed   with   internal  definitions   by
 	 ;;FLUID-LET-SYNTAX.
-	 (let* ((descriptor	(eval-macro-transformer rhs.core lexenv.run))
+	 (let* ((descriptor	(eval-macro-transformer rhs.core))
 		(fluid-label	(generate-label-gensym lhs.id))
 		(fluid-entry	(cons fluid-label descriptor))
 		(keyword-entry	(cons lhs.lab (make-syntactic-binding-descriptor/local-global-macro/fluid-syntax fluid-label))))
@@ -448,8 +448,7 @@
 						(push-lexical-contour xrib x))
 					       (else
 						(assertion-violation __module_who__ "internal error" body-form.stx)))))
-				(eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
-							lexenv.run)))
+				(eval-macro-transformer (expand-macro-transformer in-form lexenv.expand))))
 			 ?xrhs*)))
 	  (chi-body*
 	   ;;Splice the internal body forms but add a lexical contour to them.
@@ -1078,8 +1077,11 @@
   (define (chi-define-type input-form.stx lexenv.run lexenv.expand
 			   rest-body-form*.stx rev-qdef* mod** kwd* export-spec* rib
 			   mix? shadow/redefine-bindings?)
-    (define (synner message subform)
-      (syntax-violation __module_who__ message input-form.stx subform))
+    (case-define synner
+      ((message)
+       (synner message #f))
+      ((message subform)
+       (syntax-violation __module_who__ message input-form.stx subform)))
     (receive (type-name.id type-annotation.stx)
 	(%parse-define-type input-form.stx synner)
       (cond ((id->label/local type-name.id)
@@ -1096,13 +1098,14 @@
 				 ;;There  is  a  type  annotation,  so  this  is  the
 				 ;;redefinition   of   a  previously   defined   type
 				 ;;definition: fine.
-				 (let ((reference.entry	(assq type-name.lab lexenv.run))
-				       (new-type.des	(%make-new-object-type-syntactic-binding-descriptor
-							 type-name.id type-annotation.stx lexenv.run lexenv.expand synner)))
-				   (%update-syntactic-binding! reference.entry new-type.des synner)
+				 (receive (new-type.des rev-qdef* kwd* lexenv.run)
+				     (let ((reference.entry (assq type-name.lab lexenv.run)))
+				       (%establish-concrete-object-type-syntactic-binding input-form.stx lexenv.run lexenv.expand
+											  type-name.id type-annotation.stx reference.entry
+											  rev-qdef* kwd* rib shadow/redefine-bindings?
+											  synner))
 				   (chi-body* rest-body-form*.stx lexenv.run lexenv.expand
-					      rev-qdef* mod** kwd* export-spec* rib
-					      mix? shadow/redefine-bindings?))
+					      rev-qdef* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))
 			       ;;There is  no type  annotation, so  this is  a double
 			       ;;forward definition, as in:
 			       ;;
@@ -1113,35 +1116,46 @@
 			       (chi-body* rest-body-form*.stx lexenv.run lexenv.expand
 					  rev-qdef* mod** kwd* export-spec* rib
 					  mix? shadow/redefine-bindings?))
-			   ;;It is a fully defined type definition: error.
-			   (synner "cannot redefine keyword" type-name.id))))
+			   ;;It  is  a  fully  defined type  definition,  as  in  the
+			   ;;following example:
+			   ;;
+			   ;;   (define-type <it> <fixnum>)
+			   ;;   (define-type <it>)	;this one!
+			   ;;
+			   ;;error.
+			   (synner "cannot redefine keyword bound to an object-type specification which is not a forward definition"
+				   type-name.id))))
 
 		      (else
 		       ;;The syntactic binding is not a local type definition.
-		       (synner "cannot redefine keyword" type-name.id))))))
+		       (synner "cannot redefine keyword not bound to an object-type specification" type-name.id))))))
 
 	    (type-annotation.stx
 	     ;;No  syntactic binding  with  identifier TYPE-NAME.ID  exists.  A  type
 	     ;;annotation is provided.  This is a new, full type definition.
-	     (receive (reference.entry lexenv.run lexenv.expand)
-		 (%establish-forward-definition-syntactic-binding type-name.id lexenv.run lexenv.expand
-								  rib shadow/redefine-bindings?)
-	       (let ((new-type.des (%make-new-object-type-syntactic-binding-descriptor type-name.id type-annotation.stx
-										       lexenv.run lexenv.expand synner)))
-		 (%update-syntactic-binding! reference.entry new-type.des synner)
+	     (receive (reference.entry rev-qdef* kwd* lexenv.run lexenv.expand)
+		 (%establish-forward-definition-syntactic-binding input-form.stx lexenv.run lexenv.expand
+								  type-name.id
+								  rev-qdef* kwd* rib shadow/redefine-bindings?
+								  synner)
+	       (receive (new-type.des rev-qdef* kwd* lexenv.run)
+		   (%establish-concrete-object-type-syntactic-binding input-form.stx lexenv.run lexenv.expand
+								       type-name.id type-annotation.stx reference.entry
+								       rev-qdef* kwd* rib shadow/redefine-bindings?
+								       synner)
 		 (chi-body* rest-body-form*.stx lexenv.run lexenv.expand
-			    rev-qdef* mod** kwd* export-spec* rib
-			    mix? shadow/redefine-bindings?))))
+			    rev-qdef* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))))
 
 	    (else
 	     ;;No  syntactic binding  with identifier  TYPE-NAME.ID exists.   No type
 	     ;;annotation is provided.  This is just a forward type definition.
-	     (receive (reference.entry lexenv.run lexenv.expand)
-		 (%establish-forward-definition-syntactic-binding type-name.id lexenv.run lexenv.expand
-								  rib shadow/redefine-bindings?)
+	     (receive (reference.entry rev-qdef* kwd* lexenv.run lexenv.expand)
+		 (%establish-forward-definition-syntactic-binding input-form.stx lexenv.run lexenv.expand
+								  type-name.id
+								  rev-qdef* kwd* rib shadow/redefine-bindings?
+								  synner)
 	       (chi-body* rest-body-form*.stx lexenv.run lexenv.expand
-			  rev-qdef* mod** kwd* export-spec* rib
-			  mix? shadow/redefine-bindings?))))))
+			  rev-qdef* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1164,95 +1178,188 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%establish-forward-definition-syntactic-binding type-name.id lexenv.run lexenv.expand
-							   rib shadow/redefine-bindings?)
-    (let ((lhs.lab	(generate-label-gensym type-name.id))
-	  (rhs.ots	(make-reference-type-spec type-name.id))
-	  (rhs.core	(build-application no-source
-			    (build-primref no-source 'make-reference-type-spec)
-			  (list (build-data no-source type-name.id)))))
-      ;;This call  will raise an exception  if it represents an  attempt to illegally
-      ;;redefine a binding.
-      (extend-rib! rib type-name.id lhs.lab shadow/redefine-bindings?)
-      (let* ((lhs.des	(make-syntactic-binding-descriptor/local-object-type-name rhs.ots rhs.core))
-	     ;;Notice that there is a single entry for both the lexenvs.
-	     (entry	(make-lexenv-entry lhs.lab lhs.des)))
-	(values entry
-		(cons entry lexenv.run)
-		(cons entry lexenv.expand)))))
+  (define (%establish-forward-definition-syntactic-binding input-form.stx lexenv.run lexenv.expand
+							   type-name.id
+							   rev-qdef* kwd* rib shadow/redefine-bindings?
+							   synner)
+    ;;Establish a new syntactic binding  for TYPE-NAME.ID representing a forward type
+    ;;definition.  Establish  a new syntactic  binding representing a  "forward" type
+    ;;predicate for the type.
+    ;;
+    (when (bound-id-member? type-name.id kwd*)
+      (synner "cannot redefine keyword to forward type-definition" type-name.id))
+    ;;Establish the forward type definition's syntactic binding.
+    (let* ((name-lhs.id		type-name.id)
+	   (name-lhs.lab	(generate-label-gensym name-lhs.id))
+	   (name-rhs.ots	(make-reference-type-spec name-lhs.id))
+	   (name-rhs.core	(build-application no-source
+				    (build-primref no-source 'make-reference-type-spec)
+				  (list (build-data no-source name-lhs.id))))
+	   (name-lhs.des	(make-syntactic-binding-descriptor/local-object-type-name name-rhs.ots name-rhs.core)))
+      (extend-rib! rib name-lhs.id name-lhs.lab shadow/redefine-bindings?)
+      ;;Notice that there is a single entry for both the lexenvs.
+      (let* ((reference.entry	(make-lexenv-entry name-lhs.lab name-lhs.des))
+	     (lexenv.run	(cons reference.entry lexenv.run))
+	     (lexenv.expand	(cons reference.entry lexenv.expand)))
+	;;Establish the forward type predicate's syntactic binding.
+	(let* ((pred-lhs.id	(reference-type-spec.predicate-id-forward-definition name-rhs.ots))
+	       (pred-rhs.stx	(reference-type-spec.forward-type-predicate-stx      name-rhs.ots)))
+	  (when (bound-id-member? pred-lhs.id kwd*)
+	    (synner "cannot redefine keyword to forward type-definition type-predicate" pred-lhs.id))
+	  (let* ((pred-lhs.lab	(generate-label-gensym pred-lhs.id))
+		 (pred-qdef	(make-qdef-standard-defvar input-form.stx pred-lhs.id #t pred-rhs.stx))
+		 (pred-lhs.des	(make-syntactic-binding-descriptor/lexical-typed-var/from-data (<top>-ots) (qdef.lex pred-qdef)))
+		 (lexenv.run	(push-entry-on-lexenv pred-lhs.lab pred-lhs.des lexenv.run)))
+	    (extend-rib! rib pred-lhs.id pred-lhs.lab shadow/redefine-bindings?)
+	    (values reference.entry
+		    (cons pred-qdef rev-qdef*)
+		    (cons* name-lhs.id pred-lhs.id kwd*)
+		    lexenv.run lexenv.expand))))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-new-object-type-syntactic-binding-descriptor type-name.id type-annotation.stx lexenv.run lexenv.expand
-							      synner)
+  (module (%establish-concrete-object-type-syntactic-binding)
     ;;Build  and  return  a  new  syntactic  binding's  descriptor  representing  the
     ;;definition of a new object-type specification.
     ;;
     ;;This new descriptor is meant to be inserted in the lexical environment in place
     ;;of a previously defined forward type definition.
     ;;
-    (syntax-match type-annotation.stx (constructor)
-      ((constructor ?constructor-expr)
-       (let ((new.core	(expand-macro-transformer ?constructor-expr lexenv.expand)))
-	 (receive-and-return (new.des)
-	     (eval-macro-transformer new.core lexenv.run)
-	   (unless (%local-object-type-name-descriptor? new.des)
+    (define (%establish-concrete-object-type-syntactic-binding input-form.stx lexenv.run lexenv.expand
+							       type-name.id type-annotation.stx reference.entry
+							       rev-qdef* kwd* rib shadow/redefine-bindings?
+							       synner)
+      (let ((new-type.des (%make-concrete-object-type-syntactic-binding-descriptor type-name.id type-annotation.stx
+										   lexenv.run lexenv.expand synner)))
+	(receive (rev-qdef* kwd* lexenv.run)
+	    (%establish-type-predicate input-form.stx lexenv.run lexenv.expand
+				       reference.entry new-type.des
+				       rev-qdef* kwd* rib shadow/redefine-bindings?
+				       synner)
+	  (%update-syntactic-binding! reference.entry new-type.des synner)
+	  (values new-type.des rev-qdef* kwd* lexenv.run))))
+
+    (define (%make-concrete-object-type-syntactic-binding-descriptor type-name.id type-annotation.stx lexenv.run lexenv.expand
+								     synner)
+      (syntax-match type-annotation.stx (constructor)
+	((constructor ?constructor-expr)
+	 (let* ((new.core	(expand-macro-transformer ?constructor-expr lexenv.expand))
+		(new.ots	(compiler::eval-core (expanded->core new.core))))
+	   (unless (object-type-spec? new.ots)
 	     (assertion-violation __module_who__
 	       "expected instance of <object-type-spec> as return value of type constructor expression"
-	       type-annotation.stx new.des)))))
+	       type-annotation.stx new.ots))
+	   (make-syntactic-binding-descriptor/local-object-type-name new.ots new.core)))
 
-      (_
-       (let* ((new.ots	(with-exception-handler
-			    (lambda (E)
-			      (if (dangling-reference-type-spec? E)
-				  (synner (condition-message E)
-					  (dangling-reference-type-spec.name E))
-				(raise-continuable E)))
-			  (lambda ()
-			    (type-annotation->object-type-spec type-annotation.stx lexenv.run type-name.id))))
-	      (new.core	(build-data no-source new.ots)))
-	 (make-syntactic-binding-descriptor/local-object-type-name new.ots new.core)))))
-
-  (define (%local-object-type-name-descriptor? des)
-    (and (pair? des)
-	 (eq? (syntactic-binding-descriptor.type des) 'local-object-type-name)
-	 (let ((val (syntactic-binding-descriptor.value des)))
-	   (and (pair? val)
-		(object-type-spec? (car val))))))
+	(_
+	 (let* ((new.ots	(with-exception-handler
+				    (lambda (E)
+				      (if (dangling-reference-type-spec? E)
+					  (synner (condition-message E)
+						  (dangling-reference-type-spec.name E))
+					(raise-continuable E)))
+				  (lambda ()
+				    (type-annotation->object-type-spec type-annotation.stx lexenv.run type-name.id))))
+		(new.core	(build-data no-source new.ots)))
+	   (make-syntactic-binding-descriptor/local-object-type-name new.ots new.core)))
+	))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%update-syntactic-binding! reference.entry new-type.des synner)
-    ;;Register  the  syntactic binding  descriptor  NEW-TYPE.DES  as the  object-type
-    ;;specification referenced by the lexenv entry REFERENCE.ENTRY.
-    ;;
-    (let* ((reference.des	(lexenv-entry.binding-descriptor reference.entry))
-	   (reference.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec reference.des))
-	   (new-type.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec new-type.des)))
-      (define (syn message ots)
-	(synner message (object-type-spec.type-annotation ots)))
-      (reference-type-spec.object-type-spec-set! reference.ots new-type.ots)
-      (lexenv-entry.binding-descriptor-set! reference.entry new-type.des)
-      ;;Let's do some validation.
-      (cond ((union-type-spec? new-type.ots)
-	     (for-each (lambda (item.ots)
-			 (when (eq? item.ots reference.ots)
-			   (syn "invalid recursive type: union cannot hold the type itself" item.ots)))
-	       (union-type-spec.item-ots* new-type.ots)))
+    (define (%establish-type-predicate input-form.stx lexenv.run lexenv.expand
+				       reference.entry new-type.des
+				       rev-qdef* kwd* rib shadow/redefine-bindings?
+				       synner)
+      ;;Every  type specification  must be  able to  generate, upon  request, a  type
+      ;;predicate.
+      ;;
+      ;;For  the  "floating"  type  annotations  used in  binding  syntaxes:  a  type
+      ;;predicate expression is generated and inserted in the code upon request.  For
+      ;;example, in the form:
+      ;;
+      ;;   (let (({obj (list-of <fixnum>)} ---))
+      ;;     ---)
+      ;;
+      ;;a  type  predicate  expression  is generated  for  "(list-of  <fixnum>)"  and
+      ;;inserted in the output code if needed.
+      ;;
+      ;;For type annotations defined by DEFINE-TYPE:  we need a proper type predicate
+      ;;definition, otherwise  we will  not be  able to  support recursive  types and
+      ;;forward type definitions.  So DEFINE-TYPE must define a type predicate in the
+      ;;form   of   a   properly   named   function.    Record-types,   struct-types,
+      ;;interface-types, label-types all take care of themselves: they are left alone
+      ;;here.
+      ;;
+      ;;Let's consider:
+      ;;
+      ;;  (define-type <list-of-finxums>
+      ;;    (list-of <fixnum>))
+      ;;
+      ;;we need this syntax use to generate the function:
+      ;;
+      ;;  (define (<list-of-fixnums>? obj)
+      ;;    ---)
+      ;;
+      ;;This is what we do in this function.
+      ;;
+      (let ((new-type.ots (syntactic-binding-descriptor/local-object-type.object-type-spec new-type.des)))
+	(if (or (record-type-spec?	new-type.ots)
+		(struct-type-spec?	new-type.ots)
+		(interface-type-spec?	new-type.ots)
+		(label-type-spec?	new-type.ots))
+	    ;;In all these cases we do not generate a type predicate.
+	    (values rev-qdef* kwd* lexenv.run)
+	  ;;Otherwise we do generate a type predicate.
+	  (let* ((reference.des	(lexenv-entry.binding-descriptor reference.entry))
+		 (reference.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec reference.des))
+		 (lhs.id	(reference-type-spec.predicate-id-concrete-definition reference.ots)))
+	    (when (bound-id-member? lhs.id kwd*)
+	      (synner "cannot redefine keyword to concrete type-definition type-predicate" lhs.id))
+	    (let* ((lhs.lab	(generate-label-gensym lhs.id))
+		   (rhs.stx	(object-type-spec.type-predicate-stx new-type.ots))
+		   (qdef	(make-qdef-standard-defvar input-form.stx lhs.id #t rhs.stx))
+		   (lhs.des	(make-syntactic-binding-descriptor/lexical-typed-var/from-data (<top>-ots) (qdef.lex qdef)))
+		   (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.des lexenv.run)))
+	      ;;This  call will  raise  an exception  if it  represents  an attempt  to
+	      ;;illegally redefine a binding.
+	      (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
+	      (values (cons qdef rev-qdef*) (cons lhs.id kwd*) lexenv.run))))))
 
-	    ((intersection-type-spec? new-type.ots)
-	     (for-each (lambda (item.ots)
-			 (when (eq? item.ots reference.ots)
-			   (syn "invalid recursive type: intersection cannot hold the type itself" item.ots)))
-	       (intersection-type-spec.item-ots* new-type.ots)))
+;;; --------------------------------------------------------------------
 
-	    ((complement-type-spec? new-type.ots)
-	     (when (eq? (complement-type-spec.item-ots new-type.ots) reference.ots)
-	       (syn "invalid recursive type: complement cannot hold the type itself" new-type.ots)))
+    (define (%update-syntactic-binding! reference.entry new-type.des synner)
+      ;;Register  the syntactic  binding descriptor  NEW-TYPE.DES as  the object-type
+      ;;specification referenced by the lexenv entry REFERENCE.ENTRY.
+      ;;
+      (let* ((reference.des	(lexenv-entry.binding-descriptor reference.entry))
+	     (reference.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec reference.des))
+	     (new-type.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec new-type.des)))
+	(define (syn message ots)
+	  (synner message (object-type-spec.type-annotation ots)))
+	(reference-type-spec.object-type-spec-set! reference.ots new-type.ots)
+	(lexenv-entry.binding-descriptor-set! reference.entry new-type.des)
+	;;Let's do some validation.
+	(cond ((union-type-spec? new-type.ots)
+	       (for-each (lambda (item.ots)
+			   (when (eq? item.ots reference.ots)
+			     (syn "invalid recursive type: union cannot hold the type itself" item.ots)))
+		 (union-type-spec.item-ots* new-type.ots)))
 
-	    ((reference-type-spec? new-type.ots)
-	     (when (object-type-spec=? reference.ots new-type.ots)
-	       (syn "invalid recursive type: the type is an alias for itself" new-type.ots))))))
+	      ((intersection-type-spec? new-type.ots)
+	       (for-each (lambda (item.ots)
+			   (when (eq? item.ots reference.ots)
+			     (syn "invalid recursive type: intersection cannot hold the type itself" item.ots)))
+		 (intersection-type-spec.item-ots* new-type.ots)))
+
+	      ((complement-type-spec? new-type.ots)
+	       (when (eq? (complement-type-spec.item-ots new-type.ots) reference.ots)
+		 (syn "invalid recursive type: complement cannot hold the type itself" new-type.ots)))
+
+	      ((reference-type-spec? new-type.ots)
+	       (when (object-type-spec=? reference.ots new-type.ots)
+		 (syn "invalid recursive type: the type is an alias for itself" new-type.ots))))))
+
+    #| end of module: %ESTABLISH-CONCRETE-OBJECT-TYPE-SYNTACTIC-BINDING |# )
 
   #| end of module: CHI-DEFINE-TYPE |# )
 

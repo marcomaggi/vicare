@@ -1486,6 +1486,11 @@
 	       (let ((ots		(car descr.value))
 		     (expanded-expr	(cdr descr.value))
 		     (loc		(generate-storage-location-gensym label)))
+		 (when (reference-type-spec? ots)
+		   (unless (reference-type-spec.object-type-spec ots)
+		     (syntax-violation __module_who__
+		       "attempt to export dangling reference type specification"
+		       (object-type-spec.name ots) #f)))
 		 (loop (cdr lexenv.run)
 		       (cons (make-global-env-entry label 'global-object-type-name loc) global-env)
 		       (cons (make-visit-env-entry loc ots expanded-expr)               visit-env)

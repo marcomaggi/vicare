@@ -2424,7 +2424,7 @@ Scheme source code reader in @code{#!vicare} mode.
 
 @menu
 * types syntaxes type-of::      Determining the type of expressions.
-* types syntaxes types::        Defining type annotations.
+* types syntaxes define::       Defining type annotations.
 * types syntaxes new-delete::   Constructors and destructors.
 * types syntaxes predicates::   Predicate syntaxes.
 * types syntaxes assert::       Validating signatures.
@@ -2558,39 +2558,78 @@ object type specification.
 @end deffn
 
 @c page
-@node types syntaxes types
+@node types syntaxes define
 @subsection Defining type annotations
 
+
+We can define new type annotations using the syntax
+@syntax{define-type}:
+
+@lisp
+(define-type <nnfx>
+  <non-negative-fixnum>)
+
+(define-type <compound>
+  (or <vector> <list>))
+@end lisp
+
+This syntax allows recursive type definitions:
+
+@lisp
+(define-type <it>
+  (or (list-of <fixnum>)
+      (vector-of <it>)))
+@end lisp
+
+This syntax allows @dfn{forward definitions}: type annotations that are
+half--defined to allow for mutually recursive type definitions.  Here is
+an example of forward definition that does nothing useful:
+
+@lisp
+(define-type <it>)      ;forward definition
+(define-type <it>)      ;does nothing
+
+;;Complete the definition of "<it>".
+(define-type <it> <number>)
+@end lisp
+
+@noindent
+Here is a possible definition for a @class{syntax-object} type using
+mutually recursive definitions:
+
+@lisp
+(import (rename (only (vicare expander)
+                      <stx> <syntactic-identifier>)
+                (<stx> <wrapped-syntax-object>)))
+
+(define-type <datum>
+  (or <null> <boolean> <char> <number> <string> <bytevector>))
+
+(define-type <syntax-object>)
+
+(define-type <pair-of-syntax-objects>
+  (pair-of <syntax-object>))
+
+(define-type <vector-of-syntax-objects>
+  (vector-of <syntax-object>))
+
+(define-type <syntax-object>
+  (or <datum>
+      <wrapped-syntax-object>
+      <syntactic-identifier>
+      <pair-of-syntax-objects>
+      <vector-of-syntax-objects>))
+@end lisp
 
 The following syntactic bindings are exported by the library
 @library{vicare}.
 
 
-@deffn Syntax type-annotation @meta{annotation}
-Expand into an expression which, expanded and evaluated, builds and
-returns a new type specification object.  This syntax allows us to
-define type annotations as follows:
-
-@lisp
-(let*-syntax ((<string1> (type-annotation <string>))
-              (<string2> (type-annotation <string1>)))
-  (is-a? "string" <string2>)    @result{} #t
-  (is-a? 123      <string2>))   @result{} #f
-@end lisp
-@end deffn
-
-
-@deffn Syntax define-type @meta{name} @meta{annotation}
+@deffn Syntax define-type @meta{name}
+@deffnx Syntax define-type @meta{name} @meta{annotation}
 Define a new type annotation bound to @meta{name}.  The argument
 @meta{name} must be a syntactic identifier.  The argument
 @meta{annotation} must be a type annotation syntax.
-
-It is equivalent to:
-
-@lisp
-(define-syntax @meta{name}
-  (type-annotation @meta{annotation}))
-@end lisp
 @end deffn
 
 @c page

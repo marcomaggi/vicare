@@ -2037,7 +2037,6 @@
     (case-define/checked 			v $language)
     (define/overload				v $language)
     (define-type				v $language)
-    (type-annotation				v $language)
 ;;;
     (lambda*					v $language)
     (case-lambda*				v $language)

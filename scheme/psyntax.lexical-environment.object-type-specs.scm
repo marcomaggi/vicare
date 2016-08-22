@@ -176,6 +176,9 @@
 	 <reference-type-spec>
 	 make-reference-type-spec			reference-type-spec?
 	 reference-type-spec.object-type-spec		reference-type-spec.object-type-spec-set!
+	 reference-type-spec.predicate-id-forward-definition
+	 reference-type-spec.predicate-id-concrete-definition
+	 reference-type-spec.forward-type-predicate-stx
 	 reference-type-spec.dereference
 
 	 ;;;
@@ -203,13 +206,15 @@
       (and (pair-type-spec? object.ots)
 	   (object-type-spec.list-type-spec? (pair-type-spec.cdr-ots object.ots)))
       (and (pair-of-type-spec? object.ots)
-	   (object-type-spec.list-type-spec? (pair-of-type-spec.item-ots object.ots)))))
+	   (object-type-spec.list-type-spec? (pair-of-type-spec.item-ots object.ots)))
+      (and (reference-type-spec? object.ots)
+	   (object-type-spec.list-type-spec? (reference-type-spec.dereference object.ots)))))
 
 (define (object-type-spec.compatible-list-type-spec? object.ots)
   (or (object-type-spec.list-type-spec? object.ots)
       (object-type-spec.compatible-super-and-sub? (<list>-ots) object.ots)))
 
-(define (%normalise-reference-type-spec ots)
+(define-inline (%normalise-reference-type-spec ots)
   (if (reference-type-spec? ots)
       (reference-type-spec.dereference ots)
     ots))
@@ -611,37 +616,38 @@
       ))
 
   (define* (object-type-spec.matching-super-and-sub? super.ots sub.ots)
-    (cond
-     ((eq? super.ots sub.ots))
-     ((reference-type-spec?	sub.ots)	(object-type-spec.matching-super-and-sub? super.ots (reference-type-spec.dereference sub.ots)))
-     ((core-type-spec?		sub.ots)	(%matching-sub/core-type-spec  super.ots sub.ots))
-     ((interface-type-spec?	sub.ots)	(%matching-sub/interface-type-spec super.ots sub.ots))
-     ((label-type-spec?		sub.ots)	(%matching-sub/label-type-spec super.ots sub.ots))
-     (else
-      (case-specification super.ots
-	(core-type-spec?		(%matching-super/core-type-spec		super.ots sub.ots))
-	(record-type-spec?		(%matching-super/record-type-spec	super.ots sub.ots))
-	(struct-type-spec?		(%matching-super/struct-type-spec	super.ots sub.ots))
-	(list-type-spec?		(%matching-super/list-type-spec	        super.ots sub.ots))
-	(list-of-type-spec?		(%matching-super/list-of-type-spec      super.ots sub.ots))
-	(vector-type-spec?		(%matching-super/vector-type-spec	super.ots sub.ots))
-	(vector-of-type-spec?		(%matching-super/vector-of-type-spec    super.ots sub.ots))
-	(pair-type-spec?		(%matching-super/pair-type-spec		super.ots sub.ots))
-	(pair-of-type-spec?		(%matching-super/pair-of-type-spec      super.ots sub.ots))
-	(compound-condition-type-spec?	(%matching-super/compound-condition-type-spec super.ots sub.ots))
-	(enumeration-type-spec?		(%matching-super/enumeration-type-spec  super.ots sub.ots))
-	(closure-type-spec?		(%matching-super/closure-type-spec      super.ots sub.ots))
-	(hashtable-type-spec?		(%matching-super/hashtable-type-spec    super.ots sub.ots))
-	(union-type-spec?		(%matching-super/union-type-spec	super.ots sub.ots))
-	(intersection-type-spec?	(%matching-super/intersection-type-spec super.ots sub.ots))
-	(complement-type-spec?		(%matching-super/complement-type-spec   super.ots sub.ots))
-	(ancestor-of-type-spec?		(%matching-super/ancestor-of-type-spec  super.ots sub.ots))
-	(else
-	 (cond-with-predicates super.ots
-	   (interface-type-spec?	(%matching-super/interface-type-spec super.ots sub.ots))
-	   (label-type-spec?		(%matching-super/label-type-spec super.ots sub.ots))
-	   (reference-type-spec?	(object-type-spec.matching-super-and-sub? (reference-type-spec.dereference super.ots) sub.ots))
-	   (else			#f)))))))
+    (or (eq? super.ots sub.ots)
+	(let ((super.ots (%normalise-reference-type-spec super.ots))
+	      (sub.ots   (%normalise-reference-type-spec sub.ots)))
+	  (cond
+	   ((eq? super.ots sub.ots))
+	   ((core-type-spec?		sub.ots)	(%matching-sub/core-type-spec  super.ots sub.ots))
+	   ((interface-type-spec?	sub.ots)	(%matching-sub/interface-type-spec super.ots sub.ots))
+	   ((label-type-spec?		sub.ots)	(%matching-sub/label-type-spec super.ots sub.ots))
+	   (else
+	    (case-specification super.ots
+	      (core-type-spec?			(%matching-super/core-type-spec		super.ots sub.ots))
+	      (record-type-spec?		(%matching-super/record-type-spec	super.ots sub.ots))
+	      (struct-type-spec?		(%matching-super/struct-type-spec	super.ots sub.ots))
+	      (list-type-spec?			(%matching-super/list-type-spec	        super.ots sub.ots))
+	      (list-of-type-spec?		(%matching-super/list-of-type-spec      super.ots sub.ots))
+	      (vector-type-spec?		(%matching-super/vector-type-spec	super.ots sub.ots))
+	      (vector-of-type-spec?		(%matching-super/vector-of-type-spec    super.ots sub.ots))
+	      (pair-type-spec?			(%matching-super/pair-type-spec		super.ots sub.ots))
+	      (pair-of-type-spec?		(%matching-super/pair-of-type-spec      super.ots sub.ots))
+	      (compound-condition-type-spec?	(%matching-super/compound-condition-type-spec super.ots sub.ots))
+	      (enumeration-type-spec?		(%matching-super/enumeration-type-spec  super.ots sub.ots))
+	      (closure-type-spec?		(%matching-super/closure-type-spec      super.ots sub.ots))
+	      (hashtable-type-spec?		(%matching-super/hashtable-type-spec    super.ots sub.ots))
+	      (union-type-spec?			(%matching-super/union-type-spec	super.ots sub.ots))
+	      (intersection-type-spec?		(%matching-super/intersection-type-spec super.ots sub.ots))
+	      (complement-type-spec?		(%matching-super/complement-type-spec   super.ots sub.ots))
+	      (ancestor-of-type-spec?		(%matching-super/ancestor-of-type-spec  super.ots sub.ots))
+	      (else
+	       (cond-with-predicates super.ots
+		 (interface-type-spec?	(%matching-super/interface-type-spec super.ots sub.ots))
+		 (label-type-spec?	(%matching-super/label-type-spec super.ots sub.ots))
+		 (else			#f)))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1316,37 +1322,37 @@
     ;;As example:  a "<number>" argument  matches a "<fixnum>" operand;  a "<fixnum>"
     ;;argument is compatible with a "<number>" operand.
     ;;
-    (cond
-     ((reference-type-spec?	sub.ots)	(%compatible-super-and-sub? super.ots (reference-type-spec.dereference sub.ots)))
-     ((core-type-spec?		sub.ots)	(%compatible-sub/core-type-spec   super.ots sub.ots))
-     ((interface-type-spec?	sub.ots)	#f)
-     ((label-type-spec?		sub.ots)	(%compatible-sub/label-type-spec  super.ots sub.ots))
-     (else
-      (case-specification super.ots
-	(core-type-spec?			(%compatible-super/core-type-spec	  super.ots sub.ots))
-	(record-type-spec?			(%compatible-super/record-type-spec	  super.ots sub.ots))
-	(struct-type-spec?			(%compatible-super/struct-type-spec	  super.ots sub.ots))
-	(list-type-spec?			(%compatible-super/list-type-spec	  super.ots sub.ots))
-	(list-of-type-spec?			(%compatible-super/list-of-type-spec      super.ots sub.ots))
-	(vector-type-spec?			(%compatible-super/vector-type-spec	  super.ots sub.ots))
-	(vector-of-type-spec?			(%compatible-super/vector-of-type-spec    super.ots sub.ots))
-	(pair-type-spec?			(%compatible-super/pair-type-spec	  super.ots sub.ots))
-	(pair-of-type-spec?			(%compatible-super/pair-of-type-spec      super.ots sub.ots))
-	(compound-condition-type-spec?		(%compatible-super/compound-condition-type-spec super.ots sub.ots))
-	(enumeration-type-spec?			(%compatible-super/enumeration-type-spec  super.ots sub.ots))
-	(closure-type-spec?			(%compatible-super/closure-type-spec      super.ots sub.ots))
-	(hashtable-type-spec?			(%compatible-super/hashtable-type-spec    super.ots sub.ots))
-	(union-type-spec?			(%compatible-super/union-type-spec	  super.ots sub.ots))
-	(intersection-type-spec?		(%compatible-super/intersection-type-spec super.ots sub.ots))
-	(complement-type-spec?			(%compatible-super/complement-type-spec   super.ots sub.ots))
-	(ancestor-of-type-spec?			(%compatible-super/ancestor-of-type-spec  super.ots sub.ots))
-	(else
-	 (cond-with-predicates super.ots
-	   (interface-type-spec?	#f)
-	   (label-type-spec?		(%compatible-super/label-type-spec super.ots sub.ots))
-	   (reference-type-spec?	(%compatible-super-and-sub? (reference-type-spec.dereference super.ots) sub.ots))
-	   (else
-	    (object-type-spec.matching-super-and-sub? sub.ots super.ots))))))))
+    (let ((super.ots (%normalise-reference-type-spec super.ots))
+	  (sub.ots   (%normalise-reference-type-spec sub.ots)))
+      (cond
+       ((core-type-spec?	sub.ots)	(%compatible-sub/core-type-spec   super.ots sub.ots))
+       ((interface-type-spec?	sub.ots)	#f)
+       ((label-type-spec?	sub.ots)	(%compatible-sub/label-type-spec  super.ots sub.ots))
+       (else
+	(case-specification super.ots
+	  (core-type-spec?			(%compatible-super/core-type-spec	  super.ots sub.ots))
+	  (record-type-spec?			(%compatible-super/record-type-spec	  super.ots sub.ots))
+	  (struct-type-spec?			(%compatible-super/struct-type-spec	  super.ots sub.ots))
+	  (list-type-spec?			(%compatible-super/list-type-spec	  super.ots sub.ots))
+	  (list-of-type-spec?			(%compatible-super/list-of-type-spec      super.ots sub.ots))
+	  (vector-type-spec?			(%compatible-super/vector-type-spec	  super.ots sub.ots))
+	  (vector-of-type-spec?			(%compatible-super/vector-of-type-spec    super.ots sub.ots))
+	  (pair-type-spec?			(%compatible-super/pair-type-spec	  super.ots sub.ots))
+	  (pair-of-type-spec?			(%compatible-super/pair-of-type-spec      super.ots sub.ots))
+	  (compound-condition-type-spec?	(%compatible-super/compound-condition-type-spec super.ots sub.ots))
+	  (enumeration-type-spec?		(%compatible-super/enumeration-type-spec  super.ots sub.ots))
+	  (closure-type-spec?			(%compatible-super/closure-type-spec      super.ots sub.ots))
+	  (hashtable-type-spec?			(%compatible-super/hashtable-type-spec    super.ots sub.ots))
+	  (union-type-spec?			(%compatible-super/union-type-spec	  super.ots sub.ots))
+	  (intersection-type-spec?		(%compatible-super/intersection-type-spec super.ots sub.ots))
+	  (complement-type-spec?		(%compatible-super/complement-type-spec   super.ots sub.ots))
+	  (ancestor-of-type-spec?		(%compatible-super/ancestor-of-type-spec  super.ots sub.ots))
+	  (else
+	   (cond-with-predicates super.ots
+	     (interface-type-spec?	#f)
+	     (label-type-spec?		(%compatible-super/label-type-spec super.ots sub.ots))
+	     (else
+	      (object-type-spec.matching-super-and-sub? sub.ots super.ots)))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3240,14 +3246,14 @@
       (define (make-compound-condition-type-predicate ots)
 	(let* ((component-type*.ots	(compound-condition-type-spec.component-ots* ots))
 	       (component-pred*.stx	(map object-type-spec.type-predicate-stx component-type*.ots))
-	       (obj.sym		(make-syntactic-identifier-for-temporary-variable "obj"))
-	       (pred.sym		(make-syntactic-identifier-for-temporary-variable "pred"))
-	       (item.sym		(make-syntactic-identifier-for-temporary-variable "item")))
+	       (obj.id			(make-syntactic-identifier-for-temporary-variable "obj"))
+	       (pred.id			(make-syntactic-identifier-for-temporary-variable "pred"))
+	       (item.id			(make-syntactic-identifier-for-temporary-variable "item")))
 	  (bless
-	   `(lambda/typed ({_ <boolean>} ,obj.sym)
-	      (and (compound-condition? ,obj.sym)
-		   (for-all (lambda (,pred.sym)
-			      (,pred.sym ,obj.sym))
+	   `(lambda/typed ({_ <boolean>} ,obj.id)
+	      (and (compound-condition? ,obj.id)
+		   (for-all (lambda (,pred.id)
+			      (,pred.id ,obj.id))
 		     (list ,@component-pred*.stx))
 		   #t)))))
 
@@ -3328,14 +3334,16 @@
 			  "impossible to generate union type predicate, component type has no predicate"
 			  type.ots)))
 	    component-type*.ots component-pred*.stx)
-	  (let ((obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
-		(pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
+	  (let ((obj.id		(make-syntactic-identifier-for-temporary-variable "obj"))
+		(pred.id	(make-syntactic-identifier-for-temporary-variable "pred"))
+		(comp-pred*.id	(make-syntactic-identifier-for-temporary-variable "comp-pred*")))
 	    (bless
-	     `(lambda/typed ({_ <boolean>} ,obj.sym)
-		(and (exists (lambda (,pred.sym)
-			       (,pred.sym ,obj.sym))
-		       (list ,@component-pred*.stx))
-		     #t))))))
+	     `(let/checked ((,comp-pred*.id (list ,@component-pred*.stx)))
+		(lambda/typed ({_ <boolean>} ,obj.id)
+		  (and (exists (lambda/typed (,pred.id)
+				 (,pred.id ,obj.id))
+			 ,comp-pred*.id)
+		       #t)))))))
 
       make-union-type-spec))
 
@@ -3600,14 +3608,16 @@
 			  "impossible to generate intersection type predicate, component type has no predicate"
 			  type.ots)))
 	    component-type*.ots component-pred*.stx)
-	  (let ((obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
-		(pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
+	  (let ((obj.id		(make-syntactic-identifier-for-temporary-variable "obj"))
+		(pred.id	(make-syntactic-identifier-for-temporary-variable "pred"))
+		(comp-pred*.id	(make-syntactic-identifier-for-temporary-variable "comp-pred*")))
 	    (bless
-	     `(lambda/typed ({_ <boolean>} ,obj.sym)
-		(and (for-all (lambda (,pred.sym)
-				(,pred.sym ,obj.sym))
-		       (list ,@component-pred*.stx))
-		     #t))))))
+	     `(let/checked ((,comp-pred*.id (list ,@component-pred*.stx)))
+		(lambda/typed ({_ <boolean>} ,obj.id)
+		  (and (for-all (lambda/typed (,pred.id)
+				  (,pred.id ,obj.id))
+			 ,comp-pred*.id)
+		       #t)))))))
 
       make-intersection-type-spec))
 
@@ -3843,14 +3853,16 @@
 			  "impossible to generate ancestor-of type predicate, component type has no predicate"
 			  ancestor.ots)))
 	    ancestor*.ots pred*.stx)
-	  (let ((obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
-		(pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
+	  (let ((obj.id		(make-syntactic-identifier-for-temporary-variable "obj"))
+		(pred.id	(make-syntactic-identifier-for-temporary-variable "pred"))
+		(comp-pred*.id	(make-syntactic-identifier-for-temporary-variable "comp-pred*")))
 	    (bless
-	     `(lambda/typed ({_ <boolean>} ,obj.sym)
-		(and (exists (lambda (,pred.sym)
-			       (,pred.sym ,obj.sym))
-		       (list ,@pred*.stx))
-		     #t))))))
+	     `(let/checked ((,comp-pred*.id (list ,@pred*.stx)))
+		(lambda/typed ({_ <boolean>} ,obj.id)
+		  (and (exists (lambda/typed (,pred.id)
+				 (,pred.id ,obj.id))
+			 ,comp-pred*.id)
+		       #t)))))))
 
       make-ancestor-of-type-spec))
 
@@ -4166,13 +4178,15 @@
 
       (define (make-pair-of-predicate ots)
 	(let ((item-pred.stx	(object-type-spec.type-predicate-stx (pair-of-type-spec.item-ots ots)))
-	      (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
+	      (obj.id		(make-syntactic-identifier-for-temporary-variable "obj"))
+	      (item-pred.id	(make-syntactic-identifier-for-temporary-variable "item-pred")))
 	  (bless
-	   `(lambda/typed ({_ <boolean>} ,obj.sym)
-	      (and (pair? ,obj.sym)
-		   (,item-pred.stx (car ,obj.sym))
-		   (,item-pred.stx (cdr ,obj.sym))
-		   #t)))))
+	   `(let/checked ((,item-pred.id ,item-pred.stx))
+	      (lambda/typed ({_ <boolean>} ,obj.id)
+		(and (pair? ,obj.id)
+		     (,item-pred.id (car ,obj.id))
+		     (,item-pred.id (cdr ,obj.id))
+		     #t))))))
 
       make-pair-of-type-spec))
 
@@ -4268,15 +4282,16 @@
 	(let ((item-pred*.stx	(map object-type-spec.type-predicate-stx (list-type-spec.item-ots* ots)))
 	      (obj.id		(make-syntactic-identifier-for-temporary-variable "obj"))
 	      (pred.id		(make-syntactic-identifier-for-temporary-variable "pred"))
-	      (item.id		(make-syntactic-identifier-for-temporary-variable "item")))
+	      (item.id		(make-syntactic-identifier-for-temporary-variable "item"))
+	      (comp-pred*.id	(make-syntactic-identifier-for-temporary-variable "comp-pred*")))
 	  (bless
-	   `(lambda/typed ({_ <boolean>} ,obj.id)
-	      (and (list? ,obj.id)
-		   (for-all (lambda (,pred.id ,item.id)
-			      (,pred.id ,item.id))
-		     (list ,@item-pred*.stx)
-		     ,obj.id)
-		   #t)))))
+	   `(let/checked ((,comp-pred*.id (list ,@item-pred*.stx)))
+	      (lambda/typed ({_ <boolean>} ,obj.id)
+		(and (list? ,obj.id)
+		     (for-all (lambda (,pred.id ,item.id)
+				(,pred.id ,item.id))
+		       ,comp-pred*.id ,obj.id)
+		     #t))))))
 
       make-list-type-spec))
 
@@ -4393,16 +4408,18 @@
       (define (make-list-of-type-predicate ots)
 	(let* ((item-type.ots	(list-of-type-spec.item-ots ots))
 	       (item-pred.stx	(object-type-spec.type-predicate-stx item-type.ots))
-	       (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
-	       (pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
+	       (obj.id		(make-syntactic-identifier-for-temporary-variable "obj"))
+	       (pred.id		(make-syntactic-identifier-for-temporary-variable "pred"))
+	       (item-pred.id	(make-syntactic-identifier-for-temporary-variable "item-pred")))
 	  (bless
-	   `(letrec/checked ((,pred.sym (lambda ({_ <boolean>} ,obj.sym)
-					  (if (pair? ,obj.sym)
-					      (and (,item-pred.stx (car ,obj.sym))
-						   (,pred.sym      (cdr ,obj.sym))
-						   #t)
-					    (null? ,obj.sym)))))
-	      ,pred.sym))))
+	   `(letrec/checked ((,item-pred.id	,item-pred.stx)
+			     (,pred.id		(lambda/typed ({_ <boolean>} ,obj.id)
+						  (if (pair? ,obj.id)
+						      (and (,item-pred.id (car ,obj.id))
+							   (,pred.id      (cdr ,obj.id))
+							   #t)
+						    (null? ,obj.id)))))
+	      ,pred.id))))
 
       make-list-of-type-spec))
 
@@ -4463,7 +4480,8 @@
 		   (for-all (lambda (,P.sym)
 			      (and (pair? ,P.sym)
 				   (,key-pred.stx   (car ,P.sym))
-				   (,value-pred.stx (cdr ,P.sym))))
+				   (,value-pred.stx (cdr ,P.sym))
+				   #t))
 		     ,obj.sym)
 		   #t)))))
 
@@ -4562,17 +4580,18 @@
 
       (define (make-vector-type-predicate ots)
 	(let* ((item-pred*.stx	(map object-type-spec.type-predicate-stx (vector-type-spec.item-ots* ots)))
-	       (obj.sym		(make-syntactic-identifier-for-temporary-variable "obj"))
-	       (pred.sym		(make-syntactic-identifier-for-temporary-variable "pred"))
-	       (item.sym		(make-syntactic-identifier-for-temporary-variable "item")))
+	       (obj.id		(make-syntactic-identifier-for-temporary-variable "obj"))
+	       (pred.id		(make-syntactic-identifier-for-temporary-variable "pred"))
+	       (item.id		(make-syntactic-identifier-for-temporary-variable "item"))
+	       (comp-pred*.id	(make-syntactic-identifier-for-temporary-variable "comp-pred*")))
 	  (bless
-	   `(lambda/typed ({_ <boolean>} ,obj.sym)
-	      (and (vector? ,obj.sym)
-		   (vector-for-all (lambda (,pred.sym ,item.sym)
-				     (,pred.sym ,item.sym))
-		     (vector ,@item-pred*.stx)
-		     ,obj.sym)
-		   #t)))))
+	   `(let/checked ((,comp-pred*.id (vector ,@item-pred*.stx)))
+	      (lambda/typed ({_ <boolean>} ,obj.id)
+		(and (vector? ,obj.id)
+		     (vector-for-all (lambda/typed (,pred.id ,item.id)
+				       (,pred.id ,item.id))
+		       ,comp-pred*.id ,obj.id)
+		     #t))))))
 
       make-vector-type-spec))
 
@@ -4673,11 +4692,11 @@
 
       (define (make-vector-of-type-predicate ots)
 	(let ((item-pred.stx	(object-type-spec.type-predicate-stx (vector-of-type-spec.item-ots ots)))
-	      (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
+	      (obj.id		(make-syntactic-identifier-for-temporary-variable "obj")))
 	  (bless
-	   `(lambda/typed (,obj.sym)
-	      (and (vector? ,obj.sym)
-		   (vector-for-all ,item-pred.stx ,obj.sym)
+	   `(lambda/typed (,obj.id)
+	      (and (vector? ,obj.id)
+		   (vector-for-all ,item-pred.stx ,obj.id)
 		   #t)))))
 
       make-vector-of-type-spec))
@@ -4821,11 +4840,11 @@
 
       (define (make-enumeration-type-predicate ots)
 	(let ((symbol*	(enumeration-type-spec.symbol* ots))
-	      (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
+	      (obj.id	(make-syntactic-identifier-for-temporary-variable "obj")))
 	  (bless
-	   `(lambda/typed ({_ <boolean>} ,obj.sym)
-	      (and (symbol? ,obj.sym)
-		   (memq ,obj.sym (quote ,symbol*))
+	   `(lambda/typed ({_ <boolean>} ,obj.id)
+	      (and (symbol? ,obj.id)
+		   (memq ,obj.id (quote ,symbol*))
 		   #t)))))
 
       make-enumeration-type-spec))
@@ -5353,7 +5372,14 @@
   (sealed #t)
   (fields
     (mutable	object-type-spec	reference-type-spec.object-type-spec reference-type-spec.object-type-spec-set!)
-    (mutable	predicate-id		reference-type-spec.predicate-id reference-type-spec.predicate-id-set!)
+    (immutable	predicate-id-forward-definition		reference-type-spec.predicate-id-forward-definition)
+		;Syntactic  identifier  to  be  bound  to  a  type  predicate.   This
+		;identifier  is meant  to be  used in  forward definitions.   See the
+		;implementation of DEFINE-TYPE to understand how it is used.
+    (immutable	predicate-id-concrete-definition	reference-type-spec.predicate-id-concrete-definition)
+		;Syntactic  identifier  to  be  bound  to  a  type  predicate.   This
+		;identifier is  meant to  be used in  concrete definitions.   See the
+		;implementation of DEFINE-TYPE to understand how it is used.
     #| end of FIELDS |# )
 
   (protocol
@@ -5362,9 +5388,9 @@
 	(let ((parent.ots	(<top>-ots)))
 	  ((make-object-type-spec type-name.id (object-type-spec.uids-list parent.ots)
 				  parent.ots reference-type-spec.type-annotation-maker
-				  #f				;constructor-stx
-				  #f				;destructor-stx
-				  make-reference-type-predicate ;type-predicate-stx
+				  #f   ;constructor-stx
+				  #f   ;destructor-stx
+				  make-reference-predicate   ;type-predicate-stx
 				  #f   ;equality-predicate.id
 				  #f   ;comparison-procedure.id
 				  #f   ;hash-function.id
@@ -5372,24 +5398,19 @@
 				  '()  ;methods-table-protected
 				  '()  ;methods-table-private
 				  '()) ;implemented-references
-	   #f #f)))
+	   #f			       ;object-type-spec
+	   (make-predicate-id type-name.id "forward-")
+	   (make-predicate-id type-name.id ""))))
 
       (define (reference-type-spec.type-annotation-maker ots)
-	(object-type-spec.name ots))
+	(object-type-spec.type-annotation (reference-type-spec.dereference ots)))
 
-      (define (make-reference-type-predicate ots)
-	(or (reference-type-spec.predicate-id ots)
-	    (let* ((predicate.id	(make-syntactic-identifier-for-temporary-variable "pred")))
-	      (reference-type-spec.predicate-id-set! ots predicate.id)
-	      (unwind-protect
-		  (let* ((referenced.ots	(reference-type-spec.dereference ots))
-			 (referenced-pred.stx	(object-type-spec.type-predicate-stx referenced.ots))
-			 (obj.id		(make-syntactic-identifier-for-temporary-variable "obj")))
-		    (bless
-		     `(letrec ((,predicate.id (lambda (,obj.id)
-						(,referenced-pred.stx ,obj.id))))
-			,predicate.id)))
-		(reference-type-spec.predicate-id-set! ots #f)))))
+      (define (make-predicate-id type-name.id prefix.str)
+	(let ((type-name.str (identifier->string type-name.id)))
+	  (datum->syntax type-name.id (string->symbol (string-append prefix.str type-name.str "?")))))
+
+      (define (make-reference-predicate ots)
+	(reference-type-spec.predicate-id-forward-definition ots))
 
       make-reference-type-spec))
 
@@ -5410,6 +5431,13 @@
 	(condition (make-dangling-reference-type-spec (object-type-spec.name ots))
 		   (make-who-condition __who__)
 		   (make-message-condition "attempt to dereference dangling object-type specification"))))))
+
+(define (reference-type-spec.forward-type-predicate-stx ots)
+  (let ((concrete-pred.id	(reference-type-spec.predicate-id-concrete-definition ots))
+	(obj.id			(make-syntactic-identifier-for-temporary-variable "obj")))
+    (bless
+     `(lambda/typed ({_ <boolean>} ,obj.id)
+	(,concrete-pred.id ,obj.id)))))
 
 
 ;;;; type annotations

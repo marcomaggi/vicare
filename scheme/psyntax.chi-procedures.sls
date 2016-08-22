@@ -389,7 +389,7 @@
   ;;LEXENV.EXPAND.  Raise an exception if something goes wrong.
   ;;
   (let* ((fluid-label  (fluid-syntax-lookup-fluid-label caller-who lhs.id lexenv.run))
-	 (descriptor   (eval-macro-transformer (expand-macro-transformer rhs.stx lexenv.expand) lexenv.run))
+	 (descriptor   (eval-macro-transformer (expand-macro-transformer rhs.stx lexenv.expand)))
 	 (entry        (cons fluid-label descriptor)))
     (values (cons entry lexenv.run)
 	    (cons entry lexenv.expand))))
@@ -498,7 +498,7 @@
       (rtc))
     (psi.core-expr rhs.psi)))
 
-(define* (eval-macro-transformer rhs.core lexenv.run)
+(define* (eval-macro-transformer rhs.core)
   ;;Given a  core language sexp  representing the right-hand  side (RHS) of  a syntax
   ;;definition   (DEFINE-SYNTAX,   LET-SYNTAX,  LETREC-SYNTAX,   DEFINE-FLUID-SYNTAX,
   ;;FLUID-LET-SYNTAX):  compile  it, evaluate  it,  then  return a  proper  syntactic
@@ -508,14 +508,25 @@
   (let ((rv (compiler::eval-core (expanded->core rhs.core))))
     (cond ((procedure? rv)
 	   (make-syntactic-binding-descriptor/local-macro/non-variable-transformer rv rhs.core))
+
 	  ((variable-transformer? rv)
 	   (make-syntactic-binding-descriptor/local-macro/variable-transformer (variable-transformer-procedure rv) rhs.core))
-	  ((object-type-spec? rv)
-	   (make-syntactic-binding-descriptor/local-object-type-name rv rhs.core))
+
+	  ;;NOTE In the past, the following branch allowed the definition of new type
+	  ;;annotations using DEFINE-SYNTAX, LET-SYNTAX  and similar syntaxes; it was
+	  ;;neat.  But  for full  type definitions  (including support  for recursive
+	  ;;types)  the syntax  DEFINE-TYPE  must  be used,  so  this  branch is  now
+	  ;;commented out.  (Marco Maggi; Sat Aug 20, 2016)
+	  ;;
+	  ;; ((object-type-spec? rv)
+	  ;;  (make-syntactic-binding-descriptor/local-object-type-name rv rhs.core))
+
 	  ((expand-time-value? rv)
 	   (make-syntactic-binding-descriptor/local-macro/expand-time-value (expand-time-value-object rv) rhs.core))
+
 	  ((synonym-transformer? rv)
 	   (make-syntactic-binding-descriptor/local-global-macro/synonym-syntax (synonym-transformer-identifier rv)))
+
 	  (else
 	   (raise
 	    (condition
@@ -546,7 +557,8 @@
     ;;LEXENV.RUN is the run-time lexical environment  in which the expression must be
     ;;expanded.
     ;;
-    ;;RIB is false or a struct of type "rib".
+    ;;RIB is  false or  a struct of  type "rib"; it  is a  rib when this  function is
+    ;;called to expand a macro use from an internal body.
     ;;
     (do-macro-call ($symbol-value procname)
 		   input-form.stx lexenv.run rib))
@@ -571,7 +583,8 @@
     ;;LEXENV.RUN is the run-time lexical environment  in which the expression must be
     ;;expanded.
     ;;
-    ;;RIB is false or a struct of type "rib".
+    ;;RIB is  false or  a struct of  type "rib"; it  is a  rib when this  function is
+    ;;called to expand a macro use from an internal body.
     ;;
     (do-macro-call (car bind-val) input-form.stx lexenv.run rib))
 
@@ -601,7 +614,8 @@
     ;;LEXENV.RUN is the run-time lexical environment  in which the expression must be
     ;;expanded.
     ;;
-    ;;RIB is false or a struct of type "rib".
+    ;;RIB is  false or  a struct of  type "rib"; it  is a  rib when this  function is
+    ;;called to expand a macro use from an internal body.
     ;;
     (let ((lib (car bind-val))
 	  (loc (cdr bind-val)))
@@ -951,8 +965,7 @@
 				  (let ((in-form (if (eq? type 'let-syntax)
 						     x
 						   (push-lexical-contour xrib x))))
-				    (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
-							    lexenv.run)))
+				    (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand))))
 			     ?xrhs*)))
 	       (let ((body*.psi (chi-expr* (map (lambda (x)
 						  (push-lexical-contour xrib x))

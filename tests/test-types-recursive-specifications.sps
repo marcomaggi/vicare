@@ -74,6 +74,21 @@
 	O)
     => '(1 2 3))
 
+  (check
+      (internal-body
+	(define-type <it>)
+
+	(define-type <that>
+	  (list-of <it>))
+
+	(define-type <it>
+	  <fixnum>)
+
+	(values (is-a? 123 <it>)
+		(is-a? '(1) <that>)
+		(is-a? (cast-signature (<top>) '(1)) <that>)))
+    => #t #t #t)
+
   #t)
 
 
@@ -94,7 +109,7 @@
 ;;; --------------------------------------------------------------------
 ;;; errors
 
-  (check
+  #;(check
       (try
 	  (%eval '(internal-body
 		    (define-type <damn>
@@ -107,7 +122,7 @@
 	  (else E)))
     => '(not <damn>))
 
-  (check
+  #;(check
       (try
 	  (%eval '(internal-body
 		    (define-type <damn>
@@ -120,7 +135,7 @@
 	  (else E)))
     => '<damn>)
 
-  (check
+  #;(check
       (try
 	  (%eval '(internal-body
 		    (define-type <damn>
@@ -247,6 +262,52 @@
 	(values (equal? P (.lx O))
 		(equal? Q (.rx O))))
     => #t #t)
+
+  (void))
+
+
+(parametrise ((check-test-name	'syntax-object-definition))
+
+  (import (rename (only (vicare expander)
+			<stx> <syntactic-identifier>)
+		  (<stx> <wrapped-syntax-object>)))
+
+  (define-type <datum>
+    (or <null> <boolean> <char> <number> <string> <bytevector>))
+
+  (define-type <syntax-object>)
+
+  (define-type <pair-of-syntax-objects>
+    (pair-of <syntax-object>))
+
+  (define-type <vector-of-syntax-objects>
+    (vector-of <syntax-object>))
+
+  (define-type <syntax-object>
+    (or <datum>
+  	<wrapped-syntax-object>
+  	<syntactic-identifier>
+  	<pair-of-syntax-objects>
+  	<vector-of-syntax-objects>))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(is-a? #t <syntax-object>))
+  (check-for-true	(is-a? #\A <syntax-object>))
+  (check-for-true	(is-a? 1 <syntax-object>))
+  (check-for-true	(is-a? "ciao" <syntax-object>))
+  (check-for-true	(is-a? #vu8(1 2 3) <syntax-object>))
+
+  (check-for-true	(is-a? #'ciao <syntax-object>))
+
+  (check-for-true	(is-a? #'(1 . ciao) <syntax-object>))
+  (check-for-true	(is-a? #'(1 ciao) <syntax-object>))
+  (check-for-true	(is-a? #'#(1 ciao) <syntax-object>))
+
+  (check-for-true	(is-a? '(1 . 2) <syntax-object>))
+  (check-for-true	(is-a? (cons 1 #'ciao) <syntax-object>))
+  (check-for-true	(is-a? (list 1 #'ciao) <syntax-object>))
+  (check-for-true	(is-a? (vector 1 #'ciao) <syntax-object>))
 
   (void))
 

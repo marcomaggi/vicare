@@ -327,11 +327,12 @@
        (METHODS-TABLE-ALIST		(.methods-table-alist		results))
        ((DEFINITION ...)		(reverse (.definitions		results))))
     #`(module (TYPE-NAME)
-	(define-syntax TYPE-NAME
-	  (make-label-type-spec (syntax TYPE-NAME) (quote UID) (syntax PARENT-STX)
-				CONSTRUCTOR-ID DESTRUCTOR-ID TYPE-PREDICATE-ID
-				EQUALITY-PREDICATE-ID COMPARISON-PROCEDURE-ID HASH-FUNCTION-ID
-				METHODS-TABLE-ALIST))
+	(define-type TYPE-NAME
+	  (constructor
+	      (make-label-type-spec (syntax TYPE-NAME) (quote UID) (syntax PARENT-STX)
+				    CONSTRUCTOR-ID DESTRUCTOR-ID TYPE-PREDICATE-ID
+				    EQUALITY-PREDICATE-ID COMPARISON-PROCEDURE-ID HASH-FUNCTION-ID
+				    METHODS-TABLE-ALIST)))
 	DEFINITION ...)))
 
 
