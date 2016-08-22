@@ -1225,10 +1225,10 @@
     ;;This new descriptor is meant to be inserted in the lexical environment in place
     ;;of a previously defined forward type definition.
     ;;
-    (define (%establish-concrete-object-type-syntactic-binding input-form.stx lexenv.run lexenv.expand
-							       type-name.id type-annotation.stx reference.entry
-							       rev-qdef* kwd* rib shadow/redefine-bindings?
-							       synner)
+    (define* (%establish-concrete-object-type-syntactic-binding input-form.stx lexenv.run lexenv.expand
+								type-name.id type-annotation.stx reference.entry
+								rev-qdef* kwd* rib shadow/redefine-bindings?
+								synner)
       (let ((new-type.des (%make-concrete-object-type-syntactic-binding-descriptor type-name.id type-annotation.stx
 										   lexenv.run lexenv.expand synner)))
 	(receive (rev-qdef* kwd* lexenv.run)
@@ -1236,7 +1236,7 @@
 				       reference.entry new-type.des
 				       rev-qdef* kwd* rib shadow/redefine-bindings?
 				       synner)
-	  (%update-syntactic-binding! reference.entry new-type.des synner)
+	  (%update-syntactic-binding! reference.entry new-type.des type-annotation.stx synner)
 	  (values new-type.des rev-qdef* kwd* lexenv.run))))
 
     (define (%make-concrete-object-type-syntactic-binding-descriptor type-name.id type-annotation.stx lexenv.run lexenv.expand
@@ -1327,7 +1327,7 @@
 
 ;;; --------------------------------------------------------------------
 
-    (define (%update-syntactic-binding! reference.entry new-type.des synner)
+    (define* (%update-syntactic-binding! reference.entry new-type.des type-annotation.stx synner)
       ;;Register  the syntactic  binding descriptor  NEW-TYPE.DES as  the object-type
       ;;specification referenced by the lexenv entry REFERENCE.ENTRY.
       ;;
@@ -1335,7 +1335,7 @@
 	     (reference.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec reference.des))
 	     (new-type.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec new-type.des)))
 	(define (syn message ots)
-	  (synner message (object-type-spec.type-annotation ots)))
+	  (synner message type-annotation.stx))
 	(reference-type-spec.object-type-spec-set! reference.ots new-type.ots)
 	(lexenv-entry.binding-descriptor-set! reference.entry new-type.des)
 	;;Let's do some validation.

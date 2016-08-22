@@ -109,7 +109,7 @@
 ;;; --------------------------------------------------------------------
 ;;; errors
 
-  #;(check
+  (check
       (try
 	  (%eval '(internal-body
 		    (define-type <damn>
@@ -122,7 +122,7 @@
 	  (else E)))
     => '(not <damn>))
 
-  #;(check
+  (check
       (try
 	  (%eval '(internal-body
 		    (define-type <damn>
@@ -135,7 +135,7 @@
 	  (else E)))
     => '<damn>)
 
-  #;(check
+  (check
       (try
 	  (%eval '(internal-body
 		    (define-type <damn>
