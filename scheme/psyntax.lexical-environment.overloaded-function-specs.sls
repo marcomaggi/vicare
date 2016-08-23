@@ -97,7 +97,7 @@
   (overloaded-function-spec.signature*-set! lhs.ofs (cons spec.lambda-sig (overloaded-function-spec.signature* lhs.ofs)))
   (overloaded-function-spec.id*-set!        lhs.ofs (cons spec.id         (overloaded-function-spec.id*        lhs.ofs))))
 
-(define* (overloaded-function-spec.register-specialisation! lhs.id spec.id spec.lambda-sig rib)
+(define* (overloaded-function-spec.register-specialisation! lhs.id spec.id spec.lambda-sig)
   ;;Register a specialisation  function in the descriptor of  an overloaded function.
   ;;This function is used  in the visit-code of a library  that defines an overloaded
   ;;function at the top-level.
@@ -109,7 +109,7 @@
   ;;SPEC.LAMBDA-SIG  is an  instance  of "<lambda-signature>"  representing the  type
   ;;signature of the specialisation function.
   ;;
-  (let ((lhs.ofs (let* ((lhs.lab (id->label lhs.id))
+  (let ((lhs.ofs (let* ((lhs.lab (id->label/local lhs.id))
 			(lhs.des (label->syntactic-binding-descriptor lhs.lab (current-inferior-lexenv))))
 		   (case (syntactic-binding-descriptor.type lhs.des)
 		     ((local-overloaded-function)
