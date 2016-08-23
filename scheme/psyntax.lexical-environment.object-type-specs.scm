@@ -4408,18 +4408,17 @@
       (define (make-list-of-type-predicate ots)
 	(let* ((item-type.ots	(list-of-type-spec.item-ots ots))
 	       (item-pred.stx	(object-type-spec.type-predicate-stx item-type.ots))
-	       (obj.id		(make-syntactic-identifier-for-temporary-variable "obj"))
-	       (pred.id		(make-syntactic-identifier-for-temporary-variable "pred"))
-	       (item-pred.id	(make-syntactic-identifier-for-temporary-variable "item-pred")))
+	       (type-pred.id	(make-syntactic-identifier-for-temporary-variable "list-of-type-pred"))
+	       (item-pred.id	(make-syntactic-identifier-for-temporary-variable "item-pred"))
+	       (obj.id		(make-syntactic-identifier-for-temporary-variable "obj")))
 	  (bless
 	   `(letrec/checked ((,item-pred.id	,item-pred.stx)
-			     (,pred.id		(lambda/typed ({_ <boolean>} ,obj.id)
+			     (,type-pred.id	(lambda/typed ({_ <boolean>} ,obj.id)
 						  (if (pair? ,obj.id)
 						      (and (,item-pred.id (car ,obj.id))
-							   (,pred.id      (cdr ,obj.id))
-							   #t)
+							   (,type-pred.id (cdr ,obj.id)))
 						    (null? ,obj.id)))))
-	      ,pred.id))))
+	      ,type-pred.id))))
 
       make-list-of-type-spec))
 
@@ -5400,14 +5399,14 @@
 				  '()) ;implemented-references
 	   #f			       ;object-type-spec
 	   (make-predicate-id type-name.id "forward-")
-	   (make-predicate-id type-name.id ""))))
+	   (make-predicate-id type-name.id "concrete-"))))
 
       (define (reference-type-spec.type-annotation-maker ots)
 	(object-type-spec.type-annotation (reference-type-spec.dereference ots)))
 
       (define (make-predicate-id type-name.id prefix.str)
 	(let ((type-name.str (identifier->string type-name.id)))
-	  (datum->syntax type-name.id (string->symbol (string-append prefix.str type-name.str "?")))))
+	  (datum->syntax type-name.id (gensym (string-append prefix.str type-name.str "?")))))
 
       (define (make-reference-predicate ots)
 	(reference-type-spec.predicate-id-forward-definition ots))

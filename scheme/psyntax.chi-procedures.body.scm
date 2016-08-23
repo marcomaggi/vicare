@@ -1053,24 +1053,73 @@
   ;;Transformer  function  used  to  expand  Vicare's  DEFINE-TYPE  macros  from  the
   ;;top-level built in environment.
   ;;
-  ;;This is what happens:
+  ;;On recursive types: how do recursive types work?
+  ;;------------------------------------------------
   ;;
-  ;;1. Parse the syntactic form.
+  ;;We can imagine the DEFINE-TYPE form:
   ;;
-  ;;2. Expand  the right-hand side expression.   This expansion happens in  a lexical
-  ;;context in  which the syntactic  binding of the macro  itself has *not*  yet been
-  ;;established.
+  ;;  (define-type <it>
+  ;;    (or <vector> (list-of <it>)))
   ;;
-  ;;3.  Add to the rib the  syntactic binding's association between the macro keyword
-  ;;and the label.
+  ;;as expanding into the following pseudo-code:
   ;;
-  ;;4.  Evaluate  the right-hand side expression,  which is meant to  return: a macro
-  ;;transformer function, a compile-time value, a synonym transformer or whatever.
+  ;;  (define-type/forward-definition <it>)
   ;;
-  ;;5. Add  to the lexenv the  syntactic binding's association between  the label and
-  ;;the binding's descriptor.
+  ;;  (define-type/concrete-definition <it>
+  ;;    (or <vector> (list-of <it>)))
   ;;
-  ;;6. Finally recurse to expand the rest of the body.
+  ;;The syntax use of  DEFINE-TYPE/FORWARD-DEFINITION establishes a syntactic binding
+  ;;for "<it>" whose type descriptor represents a "<reference-type-spec>" object-type
+  ;;specification.   Such  reference  is  "dangling":  it  references  the  syntactic
+  ;;identifier "<it>", but has no concrete object-type specification.
+  ;;
+  ;;The syntax use of DEFINE-TYPE/CONCRETE-DEFINITION does the following:
+  ;;
+  ;;1.  Expand  the right-hand side,  building a concrete  object-type specification;
+  ;;nested "<it>" type annotations are represented by the "<reference-type-spec>".
+  ;;
+  ;;2.   Mutate  the   syntactic  binding's  descriptor  for   "<it>"  replacing  the
+  ;;"<reference-type-spec>" with the concrete "<object-type-spec>".
+  ;;
+  ;;3.   Register   the  concrete   object-type  specification   of  "<it>"   in  the
+  ;;"<reference-types-spec>", so that the reference is no more dangling.
+  ;;
+  ;;
+  ;;On forward definitions: how do forward type definitions work?
+  ;;-------------------------------------------------------------
+  ;;
+  ;;We can imagine the DEFINE-TYPE forms:
+  ;;
+  ;;  (define-type <it>)
+  ;;  (define-type <that>
+  ;;    (list-of <it>))
+  ;;  (define-type <it>
+  ;;    <fixnum>)
+  ;;
+  ;;as expanding into the following pseudo-code:
+  ;;
+  ;;  (define-type/forward-definition <it>)
+  ;;
+  ;;  (define-type/forward-definition <that>)
+  ;;  (define-type/concrete-definition <that>
+  ;;    (list-of <it>))
+  ;;
+  ;;  (define-type/concrete-definition <it>
+  ;;    <fixnum>)
+  ;;
+  ;;which do the following:
+  ;;
+  ;;1.   The form  "(define-type/forward-definition  <it>)"  establishes a  syntactic
+  ;;binding  for "<it>"  whose type  descriptor represents  a forward  definition for
+  ;;"<it>"; the descriptor holds a "<reference-type-spec>" referencing the identifier
+  ;;"<it>" but having no concrete object-type specification.
+  ;;
+  ;;2.   The forms  acting on  "<that>" establish  a syntactic  binding for  "<that>"
+  ;;representing an  object-type specification.   The nested type  annotations "<it>"
+  ;;are represented by the associated "<reference-type-spec>".
+  ;;
+  ;;3. The  syntax use "(define-type/concrete-definition <it>  <fixnum>)" mutates the
+  ;;syntactic binding for "<it>" to reference the concrete object-type specification.
   ;;
   (define-module-who chi-define-type)
 
@@ -1232,10 +1281,10 @@
       (let ((new-type.des (%make-concrete-object-type-syntactic-binding-descriptor type-name.id type-annotation.stx
 										   lexenv.run lexenv.expand synner)))
 	(receive (rev-qdef* kwd* lexenv.run)
-	    (%establish-type-predicate input-form.stx lexenv.run lexenv.expand
-				       reference.entry new-type.des
-				       rev-qdef* kwd* rib shadow/redefine-bindings?
-				       synner)
+	    (%establish-concrete-type-predicate input-form.stx lexenv.run lexenv.expand
+						reference.entry new-type.des
+						rev-qdef* kwd* rib shadow/redefine-bindings?
+						synner)
 	  (%update-syntactic-binding! reference.entry new-type.des type-annotation.stx synner)
 	  (values new-type.des rev-qdef* kwd* lexenv.run))))
 
@@ -1266,64 +1315,101 @@
 
 ;;; --------------------------------------------------------------------
 
-    (define (%establish-type-predicate input-form.stx lexenv.run lexenv.expand
-				       reference.entry new-type.des
-				       rev-qdef* kwd* rib shadow/redefine-bindings?
-				       synner)
+    (define (%establish-concrete-type-predicate input-form.stx lexenv.run lexenv.expand
+						reference.entry new-type.des
+						rev-qdef* kwd* rib shadow/redefine-bindings?
+						synner)
       ;;Every  type specification  must be  able to  generate, upon  request, a  type
-      ;;predicate.
+      ;;predicate.  This function  establishes the concrete syntactic  binding of the
+      ;;type predicate.
       ;;
       ;;For  the  "floating"  type  annotations  used in  binding  syntaxes:  a  type
       ;;predicate expression is generated and inserted in the code upon request.  For
       ;;example, in the form:
       ;;
-      ;;   (let (({obj (list-of <fixnum>)} ---))
+      ;;   (let (({obj (list-of <fixnum>)} (read)))
       ;;     ---)
       ;;
-      ;;a  type  predicate  expression  is generated  for  "(list-of  <fixnum>)"  and
-      ;;inserted in the output code if needed.
+      ;;the  return value  of "(read)"  is validated  at run-time;  a type  predicate
+      ;;expression is generated  for "(list-of <fixnum>)" and inserted  in the output
+      ;;code.
       ;;
       ;;For type annotations defined by DEFINE-TYPE:  we need a proper type predicate
       ;;definition, otherwise  we will  not be  able to  support recursive  types and
       ;;forward type definitions.  So DEFINE-TYPE must define a type predicate in the
-      ;;form   of   a   properly   named   function.    Record-types,   struct-types,
-      ;;interface-types, label-types all take care of themselves: they are left alone
-      ;;here.
+      ;;form of a properly named function.  Let's consider:
       ;;
-      ;;Let's consider:
-      ;;
+      ;;  (define-type <list-of-finxums>)
       ;;  (define-type <list-of-finxums>
       ;;    (list-of <fixnum>))
       ;;
-      ;;we need this syntax use to generate the function:
+      ;;we can imagine these for to expand into the following pseudo-code:
       ;;
-      ;;  (define (<list-of-fixnums>? obj)
-      ;;    ---)
+      ;;  (define-type/forward-definition <list-of-fixnums>)
       ;;
-      ;;This is what we do in this function.
+      ;;  (define (#{forward-<list-of-fixnums>? |abcd|} obj)
+      ;;    (#{concrete-<list-of-fixnums>? |efgh|} obj))
       ;;
-      (let ((new-type.ots (syntactic-binding-descriptor/local-object-type.object-type-spec new-type.des)))
-	(if (or (record-type-spec?	new-type.ots)
-		(struct-type-spec?	new-type.ots)
-		(interface-type-spec?	new-type.ots)
-		(label-type-spec?	new-type.ots))
-	    ;;In all these cases we do not generate a type predicate.
-	    (values rev-qdef* kwd* lexenv.run)
-	  ;;Otherwise we do generate a type predicate.
-	  (let* ((reference.des	(lexenv-entry.binding-descriptor reference.entry))
-		 (reference.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec reference.des))
-		 (lhs.id	(reference-type-spec.predicate-id-concrete-definition reference.ots)))
-	    (when (bound-id-member? lhs.id kwd*)
-	      (synner "cannot redefine keyword to concrete type-definition type-predicate" lhs.id))
-	    (let* ((lhs.lab	(generate-label-gensym lhs.id))
-		   (rhs.stx	(object-type-spec.type-predicate-stx new-type.ots))
-		   (qdef	(make-qdef-standard-defvar input-form.stx lhs.id #t rhs.stx))
-		   (lhs.des	(make-syntactic-binding-descriptor/lexical-typed-var/from-data (<top>-ots) (qdef.lex qdef)))
-		   (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.des lexenv.run)))
-	      ;;This  call will  raise  an exception  if it  represents  an attempt  to
-	      ;;illegally redefine a binding.
-	      (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
-	      (values (cons qdef rev-qdef*) (cons lhs.id kwd*) lexenv.run))))))
+      ;;  (define-type/concrete-definition <list-of-fixnums>
+      ;;    (list-of <fixnum>))
+      ;;
+      ;;  (define #{concrete-<list-of-fixnums>? |efgh|}
+      ;;    (letrec ((item-pred fixnum?)
+      ;;             (type-pred (lambda (obj)
+      ;;                          (if (pair? obj)
+      ;;                              (and (item-pred (car obj))
+      ;;                                   (type-pred (cdr obj)))
+      ;;                            (null? obj)))))
+      ;;      type-pred)
+      ;;
+      ;;In the case of struct-types,  record-types and label-types: the definition of
+      ;;the  type predicate  may come  after the  DEFINE-TYPE form.   So we  wrap the
+      ;;predicate into a lambda to avoid an illegal forward identifier reference.  We
+      ;;can imagine the forms:
+      ;;
+      ;;   (define-type <duo>)
+      ;;   (define-struct <duo> (one two))
+      ;;
+      ;;to expand to the following pseudo-code:
+      ;;
+      ;;  (define-type/forward-definition <duo>)
+      ;;
+      ;;  (define (#{forward-<duo>? |abcd|} obj)
+      ;;    (#{concrete-<duo>? |efgh|} obj))
+      ;;
+      ;;  (define-type/concrete-definition <duo>
+      ;;    (constructor (make-struct-type-spec ---)))
+      ;;
+      ;;  (define #{concrete-<duo>? |efgh|}
+      ;;    (lambda (obj)
+      ;;      (<duo>? obj)))
+      ;;
+      ;;  (define (<duo>? obj)
+      ;;    ($struct/rtd? obj <duo>-std))
+      ;;
+      (let* ((new-type.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec new-type.des))
+	     (reference.des	(lexenv-entry.binding-descriptor reference.entry))
+	     (reference.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec reference.des))
+	     (lhs.id		(reference-type-spec.predicate-id-concrete-definition reference.ots)))
+	(when (bound-id-member? lhs.id kwd*)
+	  (synner "cannot redefine keyword to concrete type-definition type-predicate" lhs.id))
+	(let* ((lhs.lab		(generate-label-gensym lhs.id))
+	       (rhs.stx		(let ((pred.stx	(object-type-spec.type-predicate-stx new-type.ots)))
+				  (if (or (record-type-spec? new-type.ots)
+					  (struct-type-spec? new-type.ots)
+					  (label-type-spec?  new-type.ots))
+				      (let ((obj.id (make-syntactic-identifier-for-temporary-variable "obj")))
+					(bless
+					 `(lambda/typed ({_ <boolean>} ,obj.id)
+					    (,pred.stx ,obj.id))))
+				    pred.stx)))
+	       (qdef		(make-qdef-standard-defvar input-form.stx lhs.id #t rhs.stx))
+	       (lhs.des		(make-syntactic-binding-descriptor/lexical-typed-var/from-data (<top>-ots) (qdef.lex qdef)))
+	       (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.des lexenv.run)))
+	  ;;This  call  will raise  an  exception  if  it  represents an  attempt  to
+	  ;;illegally redefine a binding.
+	  (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
+	  (values (cons qdef rev-qdef*) (cons lhs.id kwd*) lexenv.run))))
 
 ;;; --------------------------------------------------------------------
 

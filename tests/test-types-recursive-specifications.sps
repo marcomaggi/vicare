@@ -151,6 +151,45 @@
   (void))
 
 
+(parametrise ((check-test-name	'struct-types))
+
+  ;;Type predicates.
+  ;;
+  (check
+      (internal-body
+	(define-struct <node>
+	  ({lx (or <node> <false>)}
+	   {rx (or <node> <false>)}))
+
+	(values (is-a? (new <node> #f #f) <node>)
+		(is-a? (new <node> (new <node> #f #f) (new <node> #f #f)) <node>)))
+    => #t #t)
+
+  ;;Field methods.
+  ;;
+  (check
+      (internal-body
+	(define-struct <node>
+	  ({lx (or <node> <false>)}
+	   {rx (or <node> <false>)}))
+
+	(define O
+	  (new <node> #f #f))
+
+	(define P
+	  (new <node> #f #f))
+	(define Q
+	  (new <node> #f #f))
+
+	(.lx O P)
+	(.rx O Q)
+	(values (equal? P (.lx O))
+		(equal? Q (.rx O))))
+    => #t #t)
+
+  (void))
+
+
 (parametrise ((check-test-name	'record-types))
 
   ;;Definition and type predicates
@@ -224,44 +263,22 @@
 		(equal? Q (.right O))))
     => #t #t)
 
-  (void))
-
-
-(parametrise ((check-test-name	'struct-types))
-
-  ;;Type predicates.
+  ;;Custom name for type predicate.
   ;;
   (check
       (internal-body
-	(define-struct <node>
-	  ({lx (or <node> <false>)}
-	   {rx (or <node> <false>)}))
-
-	(values (is-a? (new <node> #f #f) <node>)
-		(is-a? (new <node> (new <node> #f #f) (new <node> #f #f)) <node>)))
-    => #t #t)
-
-  ;;Field methods.
-  ;;
-  (check
-      (internal-body
-	(define-struct <node>
-	  ({lx (or <node> <false>)}
-	   {rx (or <node> <false>)}))
+	(define-record-type (<node> make-node node?)
+	  (fields (mutable {lx (or <node> <false>)})
+		  (mutable {rx (or <node> <false>)})))
 
 	(define O
 	  (new <node> #f #f))
 
-	(define P
-	  (new <node> #f #f))
-	(define Q
-	  (new <node> #f #f))
-
-	(.lx O P)
-	(.rx O Q)
-	(values (equal? P (.lx O))
-		(equal? Q (.rx O))))
-    => #t #t)
+	(values (node? (cast-signature (<top>) O))
+		(is-a? (cast-signature (<top>) O) <node>)
+		(is-a? O <node>)
+		(node? 123)))
+    => #t #t #t #f)
 
   (void))
 
