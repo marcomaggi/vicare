@@ -1256,8 +1256,9 @@
 	  (when (bound-id-member? pred-lhs.id kwd*)
 	    (synner "cannot redefine keyword to forward type-definition type-predicate" pred-lhs.id))
 	  (let* ((pred-lhs.lab	(generate-label-gensym pred-lhs.id))
-		 (pred-qdef	(make-qdef-standard-defvar input-form.stx pred-lhs.id #t pred-rhs.stx))
-		 (pred-lhs.des	(make-syntactic-binding-descriptor/lexical-typed-var/from-data (<top>-ots) (qdef.lex pred-qdef)))
+		 (pred-lhs.ots	(make-type-predicate-spec))
+		 (pred-qdef	(make-qdef-typed-defvar input-form.stx pred-lhs.id pred-lhs.ots #t pred-rhs.stx))
+		 (pred-lhs.des	(make-syntactic-binding-descriptor/lexical-typed-var/from-data pred-lhs.ots (qdef.lex pred-qdef)))
 		 (lexenv.run	(push-entry-on-lexenv pred-lhs.lab pred-lhs.des lexenv.run)))
 	    (extend-rib! rib pred-lhs.id pred-lhs.lab shadow/redefine-bindings?)
 	    (values reference.entry
@@ -1403,8 +1404,9 @@
 					 `(lambda/typed ({_ <boolean>} ,obj.id)
 					    (,pred.stx ,obj.id))))
 				    pred.stx)))
-	       (qdef		(make-qdef-standard-defvar input-form.stx lhs.id #t rhs.stx))
-	       (lhs.des		(make-syntactic-binding-descriptor/lexical-typed-var/from-data (<top>-ots) (qdef.lex qdef)))
+	       (lhs.ots		(make-type-predicate-spec))
+	       (qdef		(make-qdef-typed-defvar input-form.stx lhs.id lhs.ots #t rhs.stx))
+	       (lhs.des		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
 	       (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.des lexenv.run)))
 	  ;;This  call  will raise  an  exception  if  it  represents an  attempt  to
 	  ;;illegally redefine a binding.

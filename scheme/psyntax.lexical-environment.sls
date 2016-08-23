@@ -145,6 +145,7 @@
     closure-type-spec.signature				closure-type-spec.set-new-retvals-when-untyped!
     closure-type-spec.thunk?				closure-type-spec.join
     make-closure-type-spec/from-typed-formals
+    make-type-predicate-spec
 
     <struct-type-spec>
     <struct-type-spec>-rtd				<struct-type-spec>-rcd

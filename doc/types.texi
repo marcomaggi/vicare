@@ -2562,6 +2562,18 @@ object type specification.
 @subsection Defining type annotations
 
 
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
+
+@deffn Syntax define-type @meta{name}
+@deffnx Syntax define-type @meta{name} @meta{annotation}
+Define a new type annotation bound to @meta{name}.  The argument
+@meta{name} must be a syntactic identifier.  The argument
+@meta{annotation} must be a type annotation syntax.
+@end deffn
+
+
 We can define new type annotations using the syntax
 @syntax{define-type}:
 
@@ -2621,16 +2633,28 @@ mutually recursive definitions:
       <vector-of-syntax-objects>))
 @end lisp
 
-The following syntactic bindings are exported by the library
-@library{vicare}.
+Forward definitions work only for identifiers defined in the same
+lexical contour.  So the following works:
 
+@lisp
+(define-type <it>)
+(define-type <it>
+  <fixnum>)
+@end lisp
 
-@deffn Syntax define-type @meta{name}
-@deffnx Syntax define-type @meta{name} @meta{annotation}
-Define a new type annotation bound to @meta{name}.  The argument
-@meta{name} must be a syntactic identifier.  The argument
-@meta{annotation} must be a type annotation syntax.
-@end deffn
+@noindent
+but the following will fail:
+
+@lisp
+(define-type <it>)
+(module (<it>)
+  (define-type <it>
+    <fixnum>))
+@end lisp
+
+@noindent
+because the concrete definition is inside a module, which represents a
+lexical contour.
 
 @c page
 @node types syntaxes new-delete

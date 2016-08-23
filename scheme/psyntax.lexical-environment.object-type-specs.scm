@@ -61,6 +61,7 @@
 	 closure-type-spec.thunk?			closure-type-spec.join
 	 closure-type-spec.super-and-sub?
 	 closure-type-spec.match-formals-against-operands
+	 make-type-predicate-spec
 
 	 <struct-type-spec>
 	 <struct-type-spec>-rtd				<struct-type-spec>-rcd
@@ -3996,6 +3997,13 @@
 (define* (closure-type-spec.join {ots1 closure-type-spec?} {ots2 closure-type-spec?})
   (make-closure-type-spec (case-lambda-signature.join (closure-type-spec.signature ots1)
 						      (closure-type-spec.signature ots2))))
+
+;;; --------------------------------------------------------------------
+
+(define (make-type-predicate-spec)
+  (make-closure-type-spec
+   (make-case-lambda-signature (list (make-lambda-signature (make-type-signature/single-boolean)
+							    (make-type-signature/single-top))))))
 
 
 ;;;; heterogeneous pair object spec
