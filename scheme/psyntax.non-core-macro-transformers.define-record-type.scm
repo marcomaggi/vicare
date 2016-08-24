@@ -44,18 +44,51 @@
 	   ;; (receive-and-return (out)
 	   ;;     (%do-define-record input-form.stx ?namespec ?clause* __synner__)
 	   ;;   (debug-print (syntax->datum out)))
-	   (%do-define-record input-form.stx ?namespec ?clause* __synner__))))
+	   (parametrise ((current-table-of-names (make-hashtable string-hash string=?)))
+	     (%do-define-record input-form.stx ?namespec ?clause* __synner__)))))
       (_
        (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; helpers
 
+;;It happens in this module that we have to generate syntactic identifiers associated
+;;to  a field  or method  name.   If we  compose the  name  as a  string, create  the
+;;syntactic identifier and then store the association  in a hashtable: we can be sure
+;;to recreate the same identifier even when we use GENSYM to generate the name of the
+;;identifier from the string name.
+;;
+;;This useful  for methods  defined with  DEFINE/OVERLOAD, which  must have  the same
+;;name.
+;;
+(define current-table-of-names
+  (make-parameter #f))
+
 (define (%named-gensym/suffix foo suffix)
   (make-syntactic-identifier-for-temporary-variable (string-append (symbol->string (syntax->datum foo)) suffix)))
 
 (define (%named-gensym/prefix foo prefix)
   (make-syntactic-identifier-for-temporary-variable (string-append prefix (symbol->string (syntax->datum foo)))))
+
+(define* (private-identifier-append {ctxt identifier?} . str*)
+  ;;Given  the identifier  CTXT  and a  list of  strings  or symbols  or
+  ;;identifiers STR*: concatenate all the items in STR*, with the result
+  ;;build and return a new identifier in the same context of CTXT.
+  ;;
+  (datum->syntax ctxt
+		 (gensym
+		  (apply string-append
+			 (map (lambda (x)
+				(cond ((symbol? x)
+				       (symbol->string x))
+				      ((string? x)
+				       x)
+				      ((identifier? x)
+				       (symbol->string (syntax->datum x)))
+				      (else
+				       (assertion-violation __who__
+					 "expected string, symbol or identifier as item argument" x))))
+			   str*)))))
 
 (define (%filter-out-falses ls)
   ;;Remove all the #f items from the list LS and return the resulting list.
@@ -96,8 +129,12 @@
     (%parse-full-name-spec namespec strip-angular-parentheses? synner))
   (define define-type-descriptors?
     (%get-define-type-descriptors clause*.stx synner))
-  (define foo-rtd (identifier-append foo foo-for-id-generation "-rtd"))
-  (define foo-rcd (identifier-append foo foo-for-id-generation "-rcd"))
+  (define foo-rtd (if define-type-descriptors?
+		      (identifier-append foo foo-for-id-generation "-rtd")
+		    (private-identifier-append foo foo-for-id-generation "-rtd")))
+  (define foo-rcd (if define-type-descriptors?
+		      (identifier-append foo foo-for-id-generation "-rcd")
+		    (private-identifier-append foo foo-for-id-generation "-rcd")))
 
   ;;Code  for  parent  record-type  descriptor  and  parent  record-type  constructor
   ;;descriptor retrieval.
@@ -355,18 +392,23 @@
 					    implemented-interface*.ots))
 
   (bless
-   `(module (,foo
-	     ,make-foo ,foo?
-	     ,@safe-field-accessor*
-	     ,@(%filter-out-falses safe-field-mutator*)
-	     ,@(if define-type-descriptors?
-		   (list foo-rtd foo-rcd)
-		 '())
-	     ;;We  want to  create the  syntactic  bindings of  unsafe accessors  and
-	     ;;mutators only when STRICT-R6RS mode is DISabled.
-	     ,@(if (options::strict-r6rs-enabled?)
-		   '()
-		 (append unsafe-field-accessor* (%filter-out-falses unsafe-field-mutator*))))
+   ;;It would seem a good idea to wrap this form into a MODULE that exports:
+   ;;
+   ;;   ,foo
+   ;; 	,make-foo ,foo?
+   ;; 	,@safe-field-accessor*
+   ;; 	,@(%filter-out-falses safe-field-mutator*)
+   ;; 	,@(if define-type-descriptors?
+   ;; 	      (list foo-rtd foo-rcd)
+   ;;       '())
+   ;;   ,@(if (options::strict-r6rs-enabled?)
+   ;;         '()
+   ;;       (append unsafe-field-accessor* (%filter-out-falses unsafe-field-mutator*)))
+   ;;
+   ;;but doing  so introduces  a lexical  contour that  makes it  impossible to  do a
+   ;;forward definition  of the record-type.   Forward definitions are useful,  so we
+   ;;use a simple BEGIN and use gensysm to make some syntactic bindings "private".
+   `(begin
       ,@parent-rtd-definition
       ,@parent-rcd-definition
       (define-type ,foo (constructor ,foo-syntactic-binding-form))
@@ -392,7 +434,7 @@
 					  safe-field-mutator*  unsafe-field-mutator*)
       ,@(%make-safe-method-code foo field-type*.ann
 				field-methods-alist-private unsafe-field-accessor* unsafe-field-mutator*)
-      #| end of module |# )))
+      #| end of BEGIN |# )))
 
 
 (module (%validate-definition-clauses)
@@ -778,13 +820,17 @@
     (define (%gen-safe-accessor-name field-name.id)
       (identifier-append foo foo-for-id-generation "-" field-name.id))
     (define (%gen-unsafe-accessor-name field-name.id)
-      (identifier-append foo "$" foo-for-id-generation "-" field-name.id))
+      (if (options::strict-r6rs-enabled?)
+	  (private-identifier-append foo "$" foo-for-id-generation "-" field-name.id)
+	(identifier-append foo "$" foo-for-id-generation "-" field-name.id)))
     (define (%gen-safe-mutator-name field-name.id)
       (identifier-append foo foo-for-id-generation "-" field-name.id "-set!"))
     (define (%gen-unsafe-mutator-name field-name.id)
-      (identifier-append foo "$" foo-for-id-generation "-" field-name.id "-set!"))
+      (if (options::strict-r6rs-enabled?)
+	  (private-identifier-append foo "$" foo-for-id-generation "-" field-name.id "-set!")
+	(identifier-append foo "$" foo-for-id-generation "-" field-name.id "-set!")))
     (define (%gen-safe-method-name field-name.id)
-      (identifier-append foo foo-for-id-generation "-" field-name.id "-method"))
+      (private-identifier-append foo foo-for-id-generation "-" field-name.id "-method"))
 
     (let loop ((fields-clause*			fields-clause*)
 	       (i				0)
@@ -2091,12 +2137,14 @@
       ((foo-for-id-generation method-name.sym)
        (%mk-method-procname-id foo-for-id-generation method-name.sym ""))
       ((foo-for-id-generation method-name.sym tail.str)
-       (datum->syntax foo-for-id-generation
-		      (string->symbol
-		       (string-append (symbol->string (syntax->datum foo-for-id-generation))
-				      "-"
-				      (symbol->string method-name.sym)
-				      tail.str)))))
+       (let* ((key	(string-append (identifier->string foo-for-id-generation)
+				       "-"
+				       (symbol->string method-name.sym)
+				       tail.str)))
+	 (or (hashtable-ref (current-table-of-names) key #f)
+	     (receive-and-return (name)
+		 (private-identifier-append foo-for-id-generation key)
+	       (hashtable-set! (current-table-of-names) key name))))))
 
     #| end of module: %PARSE-CLAUSES |# )
 
