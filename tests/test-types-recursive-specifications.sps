@@ -295,6 +295,21 @@
 		(node? 123)))
     => #t #t #t #f)
 
+  ;;Forward definition of record-type.
+  ;;
+  (check
+      (internal-body
+	(define-type <it>)
+	(define-record-type <it>
+	  (fields a))
+
+	(define O
+	  (new <it> 1))
+
+	(values (is-a? O <it>)
+		(.a O)))
+    => #t 1)
+
   (void))
 
 
