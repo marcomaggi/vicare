@@ -25,8 +25,9 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (vicare language-extensions makers)
+  (options typed-language)
   (export
     define-maker
     ;; auxiliary syntaxes
@@ -153,8 +154,7 @@
 	     (((CLAUSE-WITH ...) ...)		(map maker-clause-spec-with    keyword-specs))
 	     (((CLAUSE-WITHOUT ...) ...)	(map maker-clause-spec-without keyword-specs))
 	     ((CLAUSE-FIELD-DEFAULT ...)	(map maker-clause-spec-default keyword-specs))
-	     (OPTIONS				(datum->syntax maker-who-id 'options))
-	     (MAKE-OPTIONS			(datum->syntax maker-who-id 'make-options))
+	     (<OPTIONS>				(datum->syntax maker-who-id '<options>))
 	     ((CLAUSE-FIELD ...)		(map maker-clause-spec-keyword keyword-specs))
 	     ((CLAUSE-FIELD-ACCESSOR ...)	(map (lambda (spec)
 						       (let ((keyword (maker-clause-spec-keyword spec)))
@@ -173,22 +173,22 @@
 								 (list #'CLAUSE-WITH ...)
 								 (list #'CLAUSE-WITHOUT ...))
 					...))))
-		(define-struct OPTIONS
+		(define-struct <OPTIONS>
 		  (CLAUSE-FIELD ...))
 		(lambda (stx)
 		  (define (main stx)
 		    (syntax-case stx ()
 		      ((_ #,@variable-args-stx . ?clauses)
-		       (let ((options (MAKE-OPTIONS #'CLAUSE-FIELD-DEFAULT ...))
-			     (clauses (syntax-clauses-unwrap #'?clauses)))
+		       (let/checked (({options <OPTIONS>} (new <OPTIONS> #'CLAUSE-FIELD-DEFAULT ...))
+				     (clauses (syntax-clauses-unwrap #'?clauses)))
 			 (syntax-clauses-fold-specs combine options clause-specs clauses synner)
 			 (with-syntax
-			     ((CLAUSE-FIELD (CLAUSE-FIELD-ACCESSOR options))
+			     ((CLAUSE-FIELD (method-call CLAUSE-FIELD options))
 			      ...)
 			   #'(#,@maker-sexp-stx #,@variable-args-stx CLAUSE-FIELD ...))))
 		      (_
 		       (synner "invalid syntax in maker invocation"))))
-		  (define (combine options clause-spec args)
+		  (define/checked (combine {options <OPTIONS>} clause-spec args)
 		    ;;Remember  that  ARGS is  a  vector  of vectors  of
 		    ;;syntax objects.  We know that:
 		    ;;
@@ -207,7 +207,7 @@
 				   (_
 				    (synner "invalid maker clause values" args)))))
 		      (case-identifiers (syntax-clause-spec-keyword clause-spec)
-			((CLAUSE-KEYWORD)	(CLAUSE-FIELD-MUTATOR options value))
+			((CLAUSE-KEYWORD)	(method-call CLAUSE-FIELD options value))
 			...))
 		    options)
 		  (define synner

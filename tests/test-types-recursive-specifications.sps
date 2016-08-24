@@ -187,6 +187,21 @@
 		(equal? Q (.rx O))))
     => #t #t)
 
+  ;;Forward definition of struct-type.
+  ;;
+  (check
+      (internal-body
+	(define-type <it>)
+	(define-struct <it>
+	  (a))
+
+	(define O
+	  (new <it> 1))
+
+	(values (is-a? O <it>)
+		(.a O)))
+    => #t 1)
+
   (void))
 
 

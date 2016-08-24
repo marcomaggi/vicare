@@ -2267,17 +2267,19 @@
 
 (module (id->label id->label/local)
 
-  (define* (id->label/local {id identifier?})
-    ;;This is like ID->LABEL, but it  searches the name/label association only in the
-    ;;first rib of ID.
-    ;;
-    (let ((id.source-name	(identifier->symbol id))
-	  (rib			(car (stx-rib* id)))
-	  (mark*		(stx-mark* id))
-	  (fail-kont		(lambda () #f)))
-      (if (rib-sealed/freq rib)
-	  (%search-in-rib/sealed   rib id.source-name mark* fail-kont)
-	(%search-in-rib/non-sealed rib id.source-name mark* fail-kont))))
+  (case-define* id->label/local
+    (({id identifier?})
+     (id->label/local id (car (stx-rib* id))))
+    (({id identifier?} {rib rib?})
+     ;;This is like ID->LABEL, but it searches the name/label association only in the
+     ;;RIB.
+     ;;
+     (let ((id.source-name	(identifier->symbol id))
+	   (mark*		(stx-mark* id))
+	   (fail-kont		(lambda () #f)))
+       (if (rib-sealed/freq rib)
+	   (%search-in-rib/sealed   rib id.source-name mark* fail-kont)
+	 (%search-in-rib/non-sealed rib id.source-name mark* fail-kont)))))
 
   (define* (id->label {id identifier?})
     ;;Given  the syntactic  identifier ID  search its  ribs for  a syntactic  binding

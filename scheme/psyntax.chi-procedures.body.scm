@@ -1133,7 +1133,7 @@
        (syntax-violation __module_who__ message input-form.stx subform)))
     (receive (type-name.id type-annotation.stx)
 	(%parse-define-type input-form.stx synner)
-      (cond ((id->label/local type-name.id)
+      (cond ((id->label/local type-name.id rib)
 	     ;;A syntactic binding with identifier TYPE-NAME.ID already exists.
 	     => (lambda (type-name.lab)
 		  (let ((type-name.des (label->syntactic-binding-descriptor type-name.lab lexenv.run)))
@@ -2281,7 +2281,7 @@
 	;;* BODY*.STX:  a list of syntax  objects representing the body  forms of the
 	;;specialised function.
 	(%parse-macro-use input-form.stx %synner)
-      (cond ((id->label/local lhs.id)
+      (cond ((id->label/local lhs.id rib)
 	     ;;A syntactic binding with identifier LHS.ID already exists.
 	     => (lambda (lhs.lab)
 		  (let ((lhs.des (label->syntactic-binding-descriptor lhs.lab lexenv.run)))
