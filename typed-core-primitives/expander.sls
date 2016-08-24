@@ -66,7 +66,7 @@
 (declare-parameter current-inferior-lexenv)
 
 
-;;;; record types
+;;;; lexical environments
 
 (declare-core-rtd <lexical-environment>-rtd)
 (declare-core-rcd <lexical-environment>-rcd)
@@ -77,24 +77,19 @@
 (declare-core-rtd <interaction-lexical-environment>-rtd)
 (declare-core-rcd <interaction-lexical-environment>-rcd)
 
-(declare-core-rtd <stx>-rtd)
-(declare-core-rcd <stx>-rcd)
-
-(declare-core-rtd <syntactic-identifier>-rtd)
-(declare-core-rcd <syntactic-identifier>-rcd)
-
-(declare-core-rtd <syntax-clause-spec>-rtd)
-(declare-core-rcd <syntax-clause-spec>-rcd)
-
-(declare-core-rtd <type-signature>-rtd)
-(declare-core-rcd <type-signature>-rcd)
-
 
 ;;;; syntax-case, safe procedures
 
 (section
 
 (declare-type-predicate syntax-object?	<syntax-object>)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <stx>-rtd)
+(declare-core-rcd <stx>-rcd)
+
+(declare-type-predicate stx?			<stx>)
 
 (let-syntax
     ((declare (syntax-rules ()
@@ -113,6 +108,9 @@
   #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
+
+(declare-core-rtd <syntactic-identifier>-rtd)
+(declare-core-rcd <syntactic-identifier>-rcd)
 
 (declare-type-predicate syntactic-identifier?		<syntactic-identifier>)
 
@@ -507,6 +505,9 @@
 ;;; syntax clauses specification structs
 
 (section
+
+(declare-core-rtd <syntax-clause-spec>-rtd)
+(declare-core-rcd <syntax-clause-spec>-rcd)
 
 (declare-core-primitive make-syntax-clause-spec
     (safe)
@@ -1078,6 +1079,9 @@
 ;;;; type signatures
 
 (section
+
+(declare-core-rtd <type-signature>-rtd)
+(declare-core-rcd <type-signature>-rcd)
 
 (declare-type-predicate		type-signature?			<type-signature>)
 (declare-list-of-type-predicate	list-of-type-signatures?	<type-signature>)
