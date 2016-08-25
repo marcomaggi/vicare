@@ -135,6 +135,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-streams.texi				\
 	doc/libs-strings.texi				\
 	doc/libs-tracing-syntaxes.texi			\
+	doc/libs-tuples.texi				\
 	doc/libs-vectors.texi				\
 	doc/libs-weak-hashtables.texi			\
 	\
