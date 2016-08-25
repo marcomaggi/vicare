@@ -41,7 +41,7 @@
   (define (main stx)
     (syntax-case stx (fields)
       ((_ ?type-name (fields ?field-spec0 ?field-spec ...))
-       (let ((field-spec* (xp::syntax-unwrap #'(?field-spec0 ?field-spec ...))))
+       (let ((field-spec* (xp::syntax->list #'(?field-spec0 ?field-spec ...))))
 	 (receive (field-name* field-type*)
 	     (%parse-field-specs field-spec*)
 	   (with-syntax
@@ -92,7 +92,7 @@
   (define (main stx)
     (syntax-case stx (fields)
       ((_ ?type-name (fields ?field-spec0 ?field-spec ...))
-       (let ((field-spec* (xp::syntax-unwrap #'(?field-spec0 ?field-spec ...))))
+       (let ((field-spec* (xp::syntax->list #'(?field-spec0 ?field-spec ...))))
 	 (receive (field-name* field-type*)
 	     (%parse-field-specs field-spec*)
 	   (with-syntax
