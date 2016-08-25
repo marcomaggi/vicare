@@ -8794,7 +8794,7 @@ persistent bindings:
 and it is also possible to import additional libraries:
 
 @example
-(eval '(import (nausicaa))
+(eval '(import (vicare posix))
        (interaction-environment))
 @end example
 
