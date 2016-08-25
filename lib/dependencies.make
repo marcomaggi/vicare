@@ -723,6 +723,21 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/friend-functions.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/friend-functions.fasl
 
+lib/vicare/language-extensions/tuples.fasl: \
+		lib/vicare/language-extensions/tuples.vicare.sls \
+		lib/vicare/language-extensions/labels.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_language_extensions_tuples_fasldir = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_tuples_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+nodist_lib_vicare_language_extensions_tuples_fasl_DATA = lib/vicare/language-extensions/tuples.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_language_extensions_tuples_vicare_sls_DATA = lib/vicare/language-extensions/tuples.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/language-extensions/tuples.vicare.sls
+CLEANFILES += lib/vicare/language-extensions/tuples.fasl
+
 lib/vicare/build-tools/automake.fasl: \
 		lib/vicare/build-tools/automake.vicare.sls \
 		lib/vicare/posix.fasl \

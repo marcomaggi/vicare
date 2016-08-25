@@ -22,6 +22,7 @@
 * comparisons::                 Comparison functions.
 * restarts::                    Signaling conditions and restarts.
 * ibodies::                     Instantiable bodies.
+* tuples::                      Tuples on top of lists and vectors.
 @end menu
 
 @c page
@@ -3294,5 +3295,10 @@ Examples:
 @include libs-comparisons.texi
 @include libs-conditions-and-restarts.texi
 @include libs-instantiable-bodies.texi
+@include libs-tuples.texi
 
 @c end of file
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

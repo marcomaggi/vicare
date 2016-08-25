@@ -1,0 +1,88 @@
+@node tuples
+@section Tuples on top of lists and vectors
+
+
+@cindex @library{vicare language-extensions tuples}, library
+@cindex Library @library{vicare language-extensions tuples}
+
+
+The library @library{vicare language-extensions tuples} implements
+tuples on top of ordinary Scheme lists and vectors; the library makes
+use of the typed language.  Tuple--types are label--types used to
+provide convenient read--only access to lists and vectors
+(@vicareref{types labels, Sub-typing with labels}).
+
+The following syntactic bindings are exported by the library
+@library{vicare language-extensions tuples}.
+
+
+@deffn Syntax define-list-tuple-type @meta{name} @meta{clause} @dots{}
+@deffnx Syntax define-vector-tuple-type @meta{name} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} fields
+@deffnx {Auxiliary Syntax} brace
+Define a new tuple type on top of lists or vectors.
+
+At present only the @clause{fields} clause is supported; the syntactic
+bindings @clause{fields} and @clause{brace} are the ones exported by the
+library @library{vicare}.
+
+The clause @clause{fields} must have the following format:
+
+@lisp
+(fields @metao{field-spec} @meta{field-spec} ...)
+@end lisp
+
+@noindent
+where each @meta{field-spec} must have one of the following formats:
+
+@lisp
+@meta{field-name}
+(brace @meta{field-name} @meta{field-type})
+@end lisp
+
+@noindent
+where @meta{field-name} is a syntactic identifier representing the field
+name and @meta{field-type} is a syntax object representing the field's
+type annotation.  When no type annotation is specified: it defaults to
+@class{top}.
+@end deffn
+
+
+Usage examples with lists and untyped fields:
+
+@lisp
+(define-list-tuple-type <stuff>
+  (fields a b c))
+
+(define T
+  (new <stuff> 1 2 3))
+
+(.a T)  @result{} 1
+(.b T)  @result{} 2
+(.c T)  @result{} 3
+@end lisp
+
+@noindent
+usage examples with vectors and typed fields:
+
+@lisp
+(define-vector-tuple-type <stuff>
+  (fields @{a <fixnum>@}
+          @{b <flonum>@}
+          @{c <string>@}))
+
+(define T
+  (new <stuff> 1 2.3 "ciao"))
+
+T                       @result{} #(1 2.3 "ciao")
+(.a T)                  @result{} 1
+(.b T)                  @result{} 2.3
+(.c T)                  @result{} "ciao"
+(.length (.c T))        @result{} 4
+@end lisp
+
+@c end of file
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

@@ -128,7 +128,6 @@
 	   VICARE_BUILT_WITH_SRFI_ENABLED
 	   VICARE_BUILT_WITH_ICONV_ENABLED
 	   VICARE_BUILT_WITH_FFI_ENABLED
-	   VICARE_BUILT_WITH_NAUSICAA_ENABLED
 	   VICARE_BUILT_WITH_POSIX_ENABLED
 	   VICARE_BUILT_WITH_GLIBC_ENABLED
 	   VICARE_BUILT_WITH_LINUX_ENABLED)
@@ -138,7 +137,6 @@
   (define (vicare-built-with-srfi-enabled)	VICARE_BUILT_WITH_SRFI_ENABLED)
   (define (vicare-built-with-iconv-enabled)	VICARE_BUILT_WITH_ICONV_ENABLED)
   (define (vicare-built-with-ffi-enabled)	VICARE_BUILT_WITH_FFI_ENABLED)
-  (define (vicare-built-with-nausicaa-enabled)	VICARE_BUILT_WITH_NAUSICAA_ENABLED)
   (define (vicare-built-with-posix-enabled)	VICARE_BUILT_WITH_POSIX_ENABLED)
   (define (vicare-built-with-glibc-enabled)	VICARE_BUILT_WITH_GLIBC_ENABLED)
   (define (vicare-built-with-linux-enabled)	VICARE_BUILT_WITH_LINUX_ENABLED)
