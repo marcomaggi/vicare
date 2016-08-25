@@ -187,7 +187,7 @@
     (lambda ({this <bitvector>})
       (symbol-hash (.uid this)))))
 
-(method (clone)
+(method ({clone <bitvector>})
   (receive-and-return ({R <bitvector>})
       (new <bitvector> (.length this))
     ($vector-copy! (.pool this) 0
