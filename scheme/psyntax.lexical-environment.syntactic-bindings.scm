@@ -61,7 +61,7 @@
    syntactic-binding-descriptor/local-macro/variable-transformer?
 
 ;;; base object-type descriptors
-   make-syntactic-binding-descriptor/object-type-name
+   make-syntactic-binding-descriptor/local-object-type-name
    syntactic-binding-descriptor/object-type-name?
    syntactic-binding-descriptor/local-object-type.object-type-spec
    syntactic-binding-descriptor/local-object-type.expanded-expr
@@ -588,7 +588,7 @@
 	      (?pred (syntactic-binding-descriptor/core-object-type.object-type-spec obj)))
 	     (else #f))))))
 
-(define* (make-syntactic-binding-descriptor/object-type-name {ots object-type-spec?} rhs.core)
+(define* (make-syntactic-binding-descriptor/local-object-type-name {ots object-type-spec?} rhs.core)
   ;;Given an instance  of "<object-type-spec>" and the core  language expression used
   ;;to build it:  build and return a syntactic binding's  descriptor representing the
   ;;type.  This  function is used to  define syntactic bindings associated  with type

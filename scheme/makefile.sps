@@ -616,6 +616,7 @@
     (case-define/checked			(integrated-macro . case-define/checked))
     (define/overload				(integrated-macro . define/overload))
     (define-syntax				(integrated-macro . define-syntax))
+    (define-type				(integrated-macro . define-type))
     (define-alias				(integrated-macro . define-alias))
     (define-fluid-syntax			(integrated-macro . define-fluid-syntax))
     (module					(integrated-macro . module))
@@ -812,7 +813,6 @@
 	 (record-type-and-record?		(macro . record-type-and-record?))
 	 (define-enumeration			(macro . define-enumeration))
 	 (define-condition-type			(macro . define-condition-type))
-	 (define-type				(macro . define-type))
 	 (type-annotation			(macro . type-annotation))
 ;;;
 	 (pair					(macro . pair))
@@ -2037,7 +2037,6 @@
     (case-define/checked 			v $language)
     (define/overload				v $language)
     (define-type				v $language)
-    (type-annotation				v $language)
 ;;;
     (lambda*					v $language)
     (case-lambda*				v $language)
@@ -5104,6 +5103,13 @@
     (interface-type-spec.method-prototypes-table	$expander)
     (build-table-for-interface-types-and-implementer-object-type $expander)
     (assert-implemented-interface-type-and-implementer-interface-type $expander)
+
+    (<reference-type-spec>-rtd)
+    (<reference-type-spec>-rcd)
+    (<reference-type-spec>				$expander)
+    (make-reference-type-spec				$expander)
+    (reference-type-spec?				$expander)
+    (reference-type-spec.dereference			$expander)
 ;;;
     (<type-signature>-rtd)
     (<type-signature>-rcd)
@@ -5352,6 +5358,13 @@
     (make-interface-implementation-mismatching-method-violation	$expander)
     (interface-implementation-mismatching-method-violation?	$expander)
     (interface-implementation-mismatching-method-violation.object-method-signature $expander)
+;;;
+    (&dangling-reference-type-spec-rtd)
+    (&dangling-reference-type-spec-rcd)
+    (&dangling-reference-type-spec				$expander)
+    (make-dangling-reference-type-spec				$expander)
+    (dangling-reference-type-spec?				$expander)
+    (dangling-reference-type-spec.name				$expander)
 ;;;
     (type-annotation=?					$expander)
     (type-annotation-super-and-sub?			$expander)

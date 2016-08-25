@@ -299,6 +299,12 @@
    (method-prototypes-table	interface-type-spec.method-prototypes-table)
    (type-descriptor-id		interface-type-spec.type-descriptor-id)))
 
+(define-built-in-record-type <reference-type-spec>
+    <object-type-spec>
+  make-reference-type-spec reference-type-spec?
+  (methods
+   (dereference			reference-type-spec.dereference)))
+
 ;;; --------------------------------------------------------------------
 
 (define-built-in-record-type <type-signature>

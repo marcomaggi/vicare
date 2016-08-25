@@ -222,39 +222,6 @@
 (include "psyntax.non-core-macro-transformers.infix-macro.scm"		#t)
 
 
-;;;; non-core macro: DEFINE-TYPE, TYPE-ANNOTATION
-
-(define-macro-transformer (define-type input-form.stx)
-  ;;Transformer  function  used  to  expand  Vicare's  DEFINE-TYPE  macros  from  the
-  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
-  ;;syntax object that must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?type-name ?type-annotation)
-     (begin
-       (unless (identifier? ?type-name)
-	 (syntax-violation __who__
-	   "expected identifier as type annotation name"
-	   input-form.stx ?type-name))
-       (let ((ots (type-annotation->object-type-spec ?type-annotation (current-inferior-lexenv) ?type-name)))
-	 (bless
-	  `(define-syntax ,?type-name (quote ,ots))))))
-    (_
-     (__synner__ "invalid syntax in macro use"))))
-
-(define-macro-transformer (type-annotation input-form.stx)
-  ;;Transformer  function used  to expand  Vicare's TYPE-ANNOTATION  macros from  the
-  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
-  ;;syntax object that must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?type-annotation)
-     (list (core-prim-id 'quote)
-	   (type-annotation->object-type-spec ?type-annotation (current-inferior-lexenv))))
-    (_
-     (__synner__ "invalid syntax in macro use"))))
-
-
 ;;;; non-core macro: DEFINE-AUXILIARY-SYNTAXES
 
 (define-macro-transformer (define-auxiliary-syntaxes input-form.stx)
@@ -819,25 +786,26 @@
 	     ;;it easier to rotate the boot images.
 	     (bless
 	      `(module (,?name ,?constructor ,?predicate . ,?accessor*)
-		 (define-syntax ,?name
-		   (make-record-type-spec (syntax ,?name)
-					  (quote ,UID)
-					  (syntax ,RTD)
-					  (syntax ,RCD)
-					  #f ;super-rcd
-					  (syntax ,?parent-name)
-					  (syntax ,?constructor)
-					  #f ;destructor
-					  (syntax ,?predicate)
-					  #f		;equality-predicate
-					  #f		;comparison-procedure
-					  #f		;hash-function
-					  ,METHOD-TABLE ;method-table-public
-					  ,METHOD-TABLE ;method-table-protected
-					  ,METHOD-TABLE ;method-table-private
-					  '()		;virtual-method-signatures
-					  '()		;implemented-interfaces
-					  ))
+		 (define-type ,?name
+		   (constructor
+		       (make-record-type-spec (syntax ,?name)
+					      (quote ,UID)
+					      (syntax ,RTD)
+					      (syntax ,RCD)
+					      #f ;super-rcd
+					      (syntax ,?parent-name)
+					      (syntax ,?constructor)
+					      #f ;destructor
+					      (syntax ,?predicate)
+					      #f	    ;equality-predicate
+					      #f	    ;comparison-procedure
+					      #f	    ;hash-function
+					      ,METHOD-TABLE ;method-table-public
+					      ,METHOD-TABLE ;method-table-protected
+					      ,METHOD-TABLE ;method-table-private
+					      '() ;virtual-method-signatures
+					      '() ;implemented-interfaces
+					      )))
 		 (define/std ,RTD
 		   (let ((,method-retriever.id ,METHOD-RETRIEVER))
 		     ($make-record-type-descriptor-ex (quote ,?name) (record-type-descriptor ,?parent-name)

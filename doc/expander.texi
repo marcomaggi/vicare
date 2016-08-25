@@ -4836,18 +4836,17 @@ The following syntactic bindings are exported by the library
 
 
 @defun make-type-specification @var{annotation}
-Build and return a new type specification object.  @var{annotation} must
-be a syntax object representing the type annotation.  This function
-allows us to define type annotations as follows:
+Build and return a new object--type specification object.
+@var{annotation} must be a syntax object representing the type
+annotation.  This function allows us to define type annotations as
+follows:
 
 @lisp
 (import (only (psyntax expander)
               make-type-specification))
 
-(let*-syntax ((<string1> (make-type-specification #'<string>))
-              (<string2> (make-type-specification #'<string1>)))
-  (is-a? "string" <string2>)    @result{} #t
-  (is-a? 123      <string2>))   @result{} #f
+(define ots
+  (make-type-specification #'<string>))
 @end lisp
 @end defun
 

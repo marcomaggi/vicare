@@ -49,6 +49,31 @@
 		     (list 'cons `(quote ,key.sym) `(syntax ,operator.id)))
 		field-name*.sym operator*.id)))
 
+(define (%parse-fields input-form.stx field*.stx)
+  (define (synner message subform)
+    (syntax-violation __module_who__ message input-form.stx subform))
+  (if (pair? field*.stx)
+      (syntax-match (car field*.stx) (brace)
+	((brace ?name ?type)
+	 (begin
+	   (unless (identifier? ?name)
+	     (synner "expected identifier as field name" ?name))
+	   (receive (name* type*)
+	       (%parse-fields input-form.stx (cdr field*.stx))
+	     (values (cons ?name name*)
+		     (cons ?type type*)))))
+
+	(?name
+	 (identifier? ?name)
+	 (receive (name* type*)
+	     (%parse-fields input-form.stx (cdr field*.stx))
+	   (values (cons ?name name*)
+		   (cons (<top>-type-id) type*))))
+
+	(_
+	 (synner "invalid syntax in struct field definition" (car field*.stx))))
+    (values '() '())))
+
 
 (define-macro-transformer (define-struct input-form.stx)
   (syntax-match input-form.stx (nongenerative)
@@ -71,17 +96,17 @@
 
 
 (define (%build-output-form input-form.stx type.id maker.id predicate.id field*.stx uid)
-  (define-values (field*.id field*.ots)
-    ;;This  call  will  use  "<top>"  as   type  annotation  for  the  untyped  field
-    ;;specifications.
-    (syntax-object.parse-typed-list-of-bindings field*.stx))
+  (define-values (field*.id field-type*.ann)
+    (%parse-fields input-form.stx field*.stx))
+  (define (string->id str)
+    (datum->syntax type.id (string->symbol str)))
+  (define (private-string->id str)
+    (datum->syntax type.id (gensym str)))
   (unless (all-identifiers? field*.id)
     (syntax-violation __module_who__
       "expected list of identifiers as fields speciication"
       input-form.stx field*.id))
-  (let* ((string->id     (lambda (str)
-			   (datum->syntax type.id (string->symbol str))))
-	 (type.sym       (identifier->symbol type.id))
+  (let* ((type.sym       (identifier->symbol type.id))
 	 (type.str       (symbol->string type.sym))
 	 (field*.sym     (map syntax->datum  field*.id))
 	 (field*.str     (map symbol->string field*.sym))
@@ -108,7 +133,7 @@
 
     (define method*.id
       (map (lambda (x)
-	     (string->id (string-append "on-" type.str "-" x "!")))
+	     (private-string->id (string-append "on-" type.str "-" x)))
 	field*.str))
 
     (define unsafe-accessor*.id
@@ -121,83 +146,88 @@
 	     (string->id (string-append "$set-" type.str "-" x "!")))
 	field*.str))
 
-    (define field*.type
-      (map object-type-spec.name field*.ots))
-
     (define constructor-arg*.id
       (map make-syntactic-identifier-for-temporary-variable field*.str))
 
     (define constructor-arg*.spec
-      (map (lambda (arg.id field.type)
-	     `(brace ,arg.id ,field.type))
-	constructor-arg*.id field*.type))
+      (map (lambda (arg.id field-type.ann)
+	     `(brace ,arg.id ,field-type.ann))
+	constructor-arg*.id field-type*.ann))
 
 ;;; --------------------------------------------------------------------
 
     (define accessor-sexp*
-      (map (lambda (accessor.id unsafe-accessor.id field.type)
+      (map (lambda (accessor.id unsafe-accessor.id field-type.ann)
 	     (let ((stru.id	(make-syntactic-identifier-for-temporary-variable "stru")))
-	       `(define/checked ((brace ,accessor.id ,field.type) (brace ,stru.id ,type.id))
+	       `(define/checked ({,accessor.id ,field-type.ann} {,stru.id ,type.id})
 		  (,unsafe-accessor.id ,stru.id))))
-	accessor*.id unsafe-accessor*.id field*.type))
+	accessor*.id unsafe-accessor*.id field-type*.ann))
 
     (define mutator-sexp*
-      (map (lambda (mutator.id unsafe-mutator.id field.type)
+      (map (lambda (mutator.id unsafe-mutator.id field-type.ann)
 	     (let ((stru.id	(make-syntactic-identifier-for-temporary-variable "stru"))
 		   (val.id	(make-syntactic-identifier-for-temporary-variable "val")))
-	       `(define/checked ((brace ,mutator.id <void>) (brace ,stru.id ,type.id) (brace ,val.id ,field.type))
+	       `(define/checked ({,mutator.id <void>} {,stru.id ,type.id} {,val.id ,field-type.ann})
 		  (,unsafe-mutator.id ,stru.id ,val.id))))
-	mutator*.id unsafe-mutator*.id field*.type))
+	mutator*.id unsafe-mutator*.id field-type*.ann))
 
     (define method-sexp*
-      (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id field.type)
+      (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id field-type.ann)
     	     (let ((stru.id	(make-syntactic-identifier-for-temporary-variable "stru"))
     		   (val.id	(make-syntactic-identifier-for-temporary-variable "val")))
-    	       `(case-define/checked ,method.id
-    		  (((brace _ ,field.type) (brace ,stru.id ,type.id))
-    		   (,unsafe-accessor.id ,stru.id))
-    		  (((brace _ <void>) (brace ,stru.id ,type.id) (brace ,val.id ,field.type))
-    		   (,unsafe-mutator.id ,stru.id ,val.id)))))
-    	method*.id unsafe-accessor*.id unsafe-mutator*.id field*.type))
+    	       `(begin
+		  (define/overload ({,method.id ,field-type.ann} {,stru.id ,type.id})
+		    (,unsafe-accessor.id ,stru.id))
+		  (define/overload ({,method.id <void>}          {,stru.id ,type.id} {,val.id ,field-type.ann})
+		    (,unsafe-mutator.id ,stru.id ,val.id)))))
+    	method*.id unsafe-accessor*.id unsafe-mutator*.id field-type*.ann))
 
 ;;; --------------------------------------------------------------------
 
     (define unsafe-accessor-sexp*
-      (map (lambda (unsafe-accessor.id field.idx field.type)
+      (map (lambda (unsafe-accessor.id field.idx field-type.ann)
 	     (let ((stru.id	(make-syntactic-identifier-for-temporary-variable "stru")))
 	       `(define-syntax ,unsafe-accessor.id
 		  (identifier-syntax
-		   (lambda/typed ((brace _ ,field.type) (brace ,stru.id <struct>))
+		   (lambda/typed ({_ ,field-type.ann} {,stru.id <struct>})
 		     ($struct-ref ,stru.id ,field.idx))))))
-	unsafe-accessor*.id field*.idx field*.type))
+	unsafe-accessor*.id field*.idx field-type*.ann))
 
     (define unsafe-mutator-sexp*
-      (map (lambda (unsafe-mutator.id field.idx field.type)
+      (map (lambda (unsafe-mutator.id field.idx field-type.ann)
 	     (let ((stru.id	(make-syntactic-identifier-for-temporary-variable "stru"))
 		   (val.id	(make-syntactic-identifier-for-temporary-variable "val")))
 	       `(define-syntax ,unsafe-mutator.id
 		  (identifier-syntax
-		   (lambda/typed ((brace _ <void>) (brace ,stru.id <struct>) (brace ,val.id ,field.type))
+		   (lambda/typed ({_ <void>} {,stru.id <struct>} {,val.id ,field-type.ann})
 		     ($struct-set! ,stru.id ,field.idx ,val.id))))))
-	unsafe-mutator*.id field*.idx field*.type))
-
-;;; --------------------------------------------------------------------
+	unsafe-mutator*.id field*.idx field-type*.ann))
 
     (define methods-table.sexp
       (%make-alist-from-ids field*.sym method*.id))
 
+;;; --------------------------------------------------------------------
+
     (bless
-     `(module (,type.id
-	       ,constructor.id ,predicate.id
-	       ,@accessor*.id ,@unsafe-accessor*.id
-	       ,@mutator*.id  ,@unsafe-mutator*.id)
-	(define/checked ((brace ,predicate.id <boolean>) obj)
+     ;;It would seem a good idea to wrap this form into a MODULE that exports:
+     ;;
+     ;;   ,type.id
+     ;;   ,constructor.id ,predicate.id
+     ;;   ,@accessor*.id ,@unsafe-accessor*.id
+     ;;   ,@mutator*.id  ,@unsafe-mutator*.id
+     ;;
+     ;;but doing  so introduces a  lexical contour that makes  it impossible to  do a
+     ;;forward definition of the struct-type.   Forward definitions are useful, so we
+     ;;use a simple BEGIN and use gensysm to make some syntactic bindings "private".
+     `(begin
+	(define/checked ({,predicate.id <boolean>} obj)
 	  ($struct/rtd? obj ',std))
-	(define-syntax ,type.id
-	  (make-struct-type-spec (syntax ,type.id) ',std
-				 (syntax ,constructor.id) (syntax ,predicate.id)
-				 ,methods-table.sexp))
-	(define/checked ((brace ,constructor.id ,type.id) . ,constructor-arg*.spec)
+	(define-type ,type.id
+	  (constructor
+	      (make-struct-type-spec (syntax ,type.id) ',std
+				     (syntax ,constructor.id) (syntax ,predicate.id)
+				     ,methods-table.sexp)))
+	(define/checked ({,constructor.id ,type.id} . ,constructor-arg*.spec)
 	  (receive-and-return (S)
 	      ($struct ',std . ,constructor-arg*.id)
 	    (when ($std-destructor ',std)
@@ -206,7 +236,9 @@
 	,@unsafe-mutator-sexp*
 	,@accessor-sexp*
 	,@mutator-sexp*
-	,@method-sexp*))))
+	,@method-sexp*
+	#| end of begin |# ))
+    ))
 
 
 ;;;; done

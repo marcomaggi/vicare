@@ -429,9 +429,10 @@
 	  (define/typed {TYPE-DESCRIPTOR-ID td::<interface-type-descr>}
 	    (td::make-interface-type-descr (quote TYPE-NAME) (quote UID) PARENT-TYPE-DESCRIPTOR-ID
 					   IMPLEMENTED-INTERFACE-UIDS METHOD-PROTOTYPE-NAMES METHOD-RETRIEVER))
-	  (define-syntax TYPE-NAME
-	    (sys::make-interface-type-spec (syntax TYPE-NAME) (quote UID) (syntax TYPE-DESCRIPTOR-ID) (quote PARENT-OTS)
-					   METHOD-PROTOTYPES-TABLE METHODS-TABLE IMPLEMENTED-INTERFACES))
+	  (define-type TYPE-NAME
+	    (constructor
+		(sys::make-interface-type-spec (syntax TYPE-NAME) (quote UID) (syntax TYPE-DESCRIPTOR-ID) (quote PARENT-OTS)
+					       METHOD-PROTOTYPES-TABLE METHODS-TABLE IMPLEMENTED-INTERFACES)))
 	  DEFINITION ...
 	  ;;We want this validation code after the definitions.
 	  INTERFACE-VALIDATION-FORM ...)))

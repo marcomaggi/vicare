@@ -28,7 +28,7 @@
     make-empty-lexenv
     make-lexenv-entry
     lexenv-entry.label
-    lexenv-entry.binding-descriptor
+    lexenv-entry.binding-descriptor		lexenv-entry.binding-descriptor-set!
     push-entry-on-lexenv			push-entries-on-lexenv
 
     make-syntactic-binding-descriptor
@@ -145,6 +145,7 @@
     closure-type-spec.signature				closure-type-spec.set-new-retvals-when-untyped!
     closure-type-spec.thunk?				closure-type-spec.join
     make-closure-type-spec/from-typed-formals
+    make-type-predicate-spec
 
     <struct-type-spec>
     <struct-type-spec>-rtd				<struct-type-spec>-rcd
@@ -240,6 +241,15 @@
     interface-type-spec.method-prototypes-table
     assert-implemented-interface-type-and-implementer-interface-type
     build-table-for-interface-types-and-implementer-object-type
+
+    <reference-type-spec>-rtd				<reference-type-spec>-rcd
+    <reference-type-spec>
+    make-reference-type-spec				reference-type-spec?
+    reference-type-spec.object-type-spec		reference-type-spec.object-type-spec-set!
+    reference-type-spec.predicate-id-forward-definition
+    reference-type-spec.predicate-id-concrete-definition
+    reference-type-spec.forward-type-predicate-stx
+    reference-type-spec.dereference
 ;;;
     ;; typed variable specification: base type
     <typed-variable-spec>
@@ -298,6 +308,7 @@
     rib-mark**					set-rib-mark**!
     rib-label*					set-rib-label*!
     rib-sealed/freq				set-rib-sealed/freq!
+    rib-uid
 
     ;; rib operations
     false-or-rib?				list-of-ribs?
@@ -672,6 +683,13 @@
     interface-implementation-mismatching-method-violation?
     interface-implementation-mismatching-method-violation.object-method-signature
 
+    &dangling-reference-type-spec-rtd
+    &dangling-reference-type-spec-rcd
+    &dangling-reference-type-spec
+    make-dangling-reference-type-spec
+    dangling-reference-type-spec?
+    dangling-reference-type-spec.name
+
     assertion-error
     syntax-violation/internal-error
     assertion-violation/internal-error
@@ -784,6 +802,7 @@
 ;;Given the entry from a lexical environment: return the binding value.
 ;;
 (define lexenv-entry.binding-descriptor cdr)
+(define lexenv-entry.binding-descriptor-set! set-cdr!)
 
 (define (push-entry-on-lexenv label descr lexenv)
   (cons (make-lexenv-entry label descr) lexenv))
@@ -1210,7 +1229,7 @@
 ;;;; rib type definition
 
 (define-core-record-type rib
-  (nongenerative vicare:expander:rib)
+  (nongenerative *0*vicare:expander:rib)
   (fields
    (mutable name*	rib-name*	set-rib-name*!)
 		;List  of symbols  representing  the original  binding  names in  the
@@ -1235,7 +1254,14 @@
 		;extensible, that is new bindings can be added to it.  When a vector:
 		;this RIB is  sealed; see the documentation in Texinfo  format for an
 		;explanation of the frequency vector.
+   (mutable memoised-uid)
    #| end of FIELDS |# )
+
+  (protocol
+    (lambda (make-record)
+      (lambda (name* mark** label* sealed/freq)
+	(make-record name* mark** label* sealed/freq #f))))
+
   (custom-printer
     (lambda (S port subwriter) ;record printer function
       (define-syntax-rule (%display ?thing)
@@ -1245,7 +1271,7 @@
       (define-syntax-rule (%pretty-print ?thing)
 	(pretty-print* ?thing port 0 #f))
       (%display "#<rib")
-      (%display " name*=")		(%display (rib-name*  S))
+      (%display " uid=")		(%display (rib-uid  S))
       ;; (%display " mark**=")		(subwriter (rib-mark** S))
       ;; (%display " label*=")		(subwriter (rib-label* S))
       ;; (%display " sealed/freq=")	(subwriter (rib-sealed/freq S))
@@ -1253,6 +1279,12 @@
     ))
 
 ;;; --------------------------------------------------------------------
+
+(define (rib-uid rib)
+  (or (rib-memoised-uid rib)
+      (receive-and-return (uid)
+	  (gensym)
+	(rib-memoised-uid-set! rib uid))))
 
 (define (false-or-rib? obj)
   (or (not obj)
@@ -1702,7 +1734,7 @@
     ;;annihilation and the associated removal of shifts from the ribs.
     ;;
     (let ((stx2.mark* (stx-mark*		stx2))
-	  (stx2.rib*  (stx-rib*		stx2))
+	  (stx2.rib*  (stx-rib*			stx2))
 	  (stx2.ae*   (stx-annotated-expr*	stx2)))
       ;;If the first item in stx2.mark* is an anti-mark...
       (if (and (not (null? stx1.mark*))
@@ -1780,7 +1812,7 @@
     ;;
     (%push-down-marks expr.stx mark rib expr.stx '() (list annotated-expr.stx)))
 
-  (define (%push-down-marks top-expr.stx mark rib expr.stx accum-rib* accum-ae*)
+  (define (%push-down-marks top-expr.stx new-mark rib expr.stx accum-rib* accum-ae*)
     ;;Recursive function.   Partially unwraps EXPR.STX  pushing down the  marks, ribs
     ;;and annotated  expressions to nested  "<stx>" instances having  non-empty MARK*
     ;;list; return the resulting syntax object.
@@ -1789,8 +1821,8 @@
     ;;is used only when raising an  exception with compound condition object having a
     ;;component of type "&syntax".
     ;;
-    ;;The argument MARK  is either the anti-mark  or a proper new mark  which we must
-    ;;push on top of all the MARK* lists.
+    ;;The argument  NEW-MARK is either  the anti-mark or a  proper new mark  which we
+    ;;must push on top of all the MARK* lists.
     ;;
     ;;The  argument EXPR.STX  is a  wrapped,  unwrapped or  partially wrapped  syntax
     ;;object  representing  the  expression  we  are  visiting.   Upon  entering  the
@@ -1805,10 +1837,10 @@
     ;;from outer to  inner, collected so far in the  recursion while visiting "<stx>"
     ;;instances with empty MARK*.  Upon entering the recursion:
     ;;
-    ;;* If MARK is the anti-mark: AE* is a list holding a single #f.
+    ;;* If NEW-MARK is the anti-mark: AE* is a list holding a single #f.
     ;;
-    ;;* If MARK is a  proper new mark: AE* is a list holding  the macro input form as
-    ;;single item.
+    ;;* If NEW-MARK is a proper new mark:  AE* is a list holding the macro input form
+    ;;as single item.
     ;;
     ;;This function visits the children of EXPR.STX  if EXPR.STX is: a pair, a vector
     ;;or an  "<stx>" with empty  MARK*.  Whenever an  instance of "<stx>"  with empty
@@ -1830,7 +1862,7 @@
     ;;details.
     ;;
     (define-syntax-rule (%recurse ?expr ?accum-rib* ?accum-ae*)
-      (%push-down-marks top-expr.stx mark rib ?expr ?accum-rib* ?accum-ae*))
+      (%push-down-marks top-expr.stx new-mark rib ?expr ?accum-rib* ?accum-ae*))
     (cond ((stx? expr.stx)
 	   (let ((expr.expr	(stx-expr		expr.stx))
 		 (expr.mark*	(stx-mark*		expr.stx))
@@ -1839,39 +1871,43 @@
 	     (define result.ae*
 	       (%merge-annotated-expr* accum-ae* expr.ae*))
 	     (if (pair? expr.mark*)
-		 ;;EXPR.STX had non-empty MARK*.
+		 ;;EXPR.STX has non-empty MARK*.
 		 (if (anti-mark? (car expr.mark*))
 		     ;;EXPR.STX has the anti-mark as  first mark; this means EXPR.STX
-		     ;;is the input form of a non-core macro transformer call.
+		     ;;is a component of the input form of a macro transformer call.
 		     ;;
-		     ;;Drop both MARK and the  anti-mark (they annihilate each other)
-		     ;;from the resulting MARK*.   Join the collected ACCUM-RIB* with
-		     ;;the  EXPR.RIB*;  the  first  item in  the  resulting  RIB*  is
-		     ;;associated to  the anti-mark  (it is a  "shift" symbol)  so we
-		     ;;drop it.
+		     ;;Drop  both NEW-MARK  and the  anti-mark (they  annihilate each
+		     ;;other)  from   the  resulting   MARK*.   Join   the  collected
+		     ;;ACCUM-RIB* with the EXPR.RIB*; the first item in the resulting
+		     ;;RIB* is associated  to the anti-mark (it is  a "shift" symbol)
+		     ;;so we drop it.
 		     ;;
-		     ;; (assert (or (and (not (null? accum-rib*))
-		     ;;                  (eq? 'shift (car accum-rib*)))
-		     ;;             (and (not (null? expr.rib*))
-		     ;;                  (eq? 'shift (car expr.rib*)))))
-		     (let ((result.mark* (cdr expr.mark*))
-			   (result.rib*  (cdr (append accum-rib* expr.rib*))))
-		       (make-stx-or-syntactic-identifier expr.expr result.mark* result.rib* result.ae*))
+		     (begin
+		       #;(assert (not (anti-mark? new-mark)))
+		       ;; (assert (or (and (not (null? accum-rib*))
+		       ;;                  (eq? 'shift (car accum-rib*)))
+		       ;;             (and (not (null? expr.rib*))
+		       ;;                  (eq? 'shift (car expr.rib*)))))
+		       (let ((result.mark* (cdr expr.mark*)) ;the cdr drops the anti-mark
+			     (result.rib*  (cdr (append accum-rib* expr.rib*)))) ;the cdr drops the shift
+			 (make-stx-or-syntactic-identifier expr.expr result.mark* result.rib* result.ae*)))
 		   ;;EXPR.STX has a proper mark as first mark; this means EXPR.STX is
 		   ;;a syntax object  created by a macro transformer  and inserted in
 		   ;;its output form.
 		   ;;
-		   ;;Push MARK on the resulting MARK*.  Join the collected ACCUM-RIB*
-		   ;;with  the  EXPR.RIB*; push  a  "shift"  on the  resulting  RIB*,
-		   ;;associated to MARK in MARK*.
-		   (let* ((result.mark* (cons mark expr.mark*))
-			  (result.rib*  (cons 'shift (append accum-rib* expr.rib*)))
-			  (result.rib*  (if rib
-					    (cons rib result.rib*)
-					  result.rib*)))
-		     (make-stx-or-syntactic-identifier expr.expr result.mark* result.rib* result.ae*)))
-	       ;;EXPR.STX has empty  MARK*: accumulate its RIB* and  AE* then recurse
-	       ;;into its expression.
+		   ;;Push  NEW-MARK  on  the  resulting MARK*.   Join  the  collected
+		   ;;ACCUM-RIB* with the  EXPR.RIB*; push a "shift"  on the resulting
+		   ;;RIB*, associated to NEW-MARK in MARK*.
+		   (begin
+		     (let* ((result.mark* (cons new-mark expr.mark*))
+			    (result.rib*  (cons 'shift (append accum-rib* expr.rib*)))
+			    (result.rib*  (if rib
+					      (cons rib result.rib*)
+					    result.rib*)))
+		       (make-stx-or-syntactic-identifier expr.expr result.mark* result.rib* result.ae*))))
+	       ;;EXPR.STX has empty MARK*: this happens  when we wrap an "<stx>" into
+	       ;;another "<stx>".  Accumulate its RIB*  and AE* then recurse into its
+	       ;;expression.
 	       (%recurse expr.expr (append accum-rib* expr.rib*) result.ae*))))
 
 	  ((pair? expr.stx)
@@ -2231,16 +2267,19 @@
 
 (module (id->label id->label/local)
 
-  (define* (id->label/local {id identifier?})
-    ;;This is like ID->LABEL, but it searches only the first rib in ID.
-    ;;
-    (let ((id.source-name	(identifier->symbol id))
-	  (rib			(car (stx-rib* id)))
-	  (mark*		(stx-mark* id))
-	  (fail-kont		(lambda () #f)))
-      (if (rib-sealed/freq rib)
-	  (%search-in-rib/sealed rib id.source-name mark* fail-kont)
-	(%search-in-rib/non-sealed rib id.source-name mark* fail-kont))))
+  (case-define* id->label/local
+    (({id identifier?})
+     (id->label/local id (car (stx-rib* id))))
+    (({id identifier?} {rib rib?})
+     ;;This is like ID->LABEL, but it searches the name/label association only in the
+     ;;RIB.
+     ;;
+     (let ((id.source-name	(identifier->symbol id))
+	   (mark*		(stx-mark* id))
+	   (fail-kont		(lambda () #f)))
+       (if (rib-sealed/freq rib)
+	   (%search-in-rib/sealed   rib id.source-name mark* fail-kont)
+	 (%search-in-rib/non-sealed rib id.source-name mark* fail-kont)))))
 
   (define* (id->label {id identifier?})
     ;;Given  the syntactic  identifier ID  search its  ribs for  a syntactic  binding
@@ -2248,7 +2287,6 @@
     ;;binding's label gensym; otherwise return false.
     ;;
     (define id.source-name (identifier->symbol id))
-    #;(debug-print __who__ id.source-name)
     (let search ((rib*  (stx-rib* id))
 		 (mark* (stx-mark* id)))
       (and (pair? rib*)

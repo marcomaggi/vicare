@@ -935,6 +935,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-types-structs.sps					\
 	tests/test-types-syntaxes.sps					\
 	tests/test-types-unions.sps					\
+	tests/test-types-recursive-specifications.sps			\
 	\
 	tests/test-types-objects-core.sps				\
 	tests/test-types-objects-alists.sps				\

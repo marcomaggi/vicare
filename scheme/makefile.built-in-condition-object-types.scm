@@ -312,6 +312,14 @@
    (subject		interface-method-late-binding-error.subject)
    (descriptor		interface-method-late-binding-error.type-descriptor)))
 
+;;; --------------------------------------------------------------------
+
+(define-built-in-condition-type &dangling-reference-type-spec
+    &violation
+  make-dangling-reference-type-spec dangling-reference-type-spec?
+  (methods
+   (name		dangling-reference-type-spec.name)))
+
 
 ;;; Vicare specific, encoding and decoding
 
