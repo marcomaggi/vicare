@@ -37,7 +37,6 @@ dist_man_MANS = doc/vicare.1
 info_TEXINFOS		= \
 	doc/vicare-scheme.texi		\
 	doc/vicare-libs.texi		\
-	doc/nausicaa.texi		\
 	doc/mehve.texi
 
 doc_vicare_scheme_TEXINFOS	= \
@@ -185,38 +184,6 @@ doc_vicare_libs_TEXINFOS = \
 	doc/srfi-testing.texi				\
 	doc/srfi-time.texi				\
 	doc/srfi-vectors.texi
-
-doc_nausicaa_TEXINFOS	= \
-	doc/nausicaa-language.texi			\
-	doc/nausicaa-oopp.texi				\
-	doc/nausicaa-multimethods.texi			\
-	doc/nausicaa-builtins.texi			\
-	doc/nausicaa-conditions.texi			\
-	doc/nausicaa-increments.texi			\
-	doc/nausicaa-simple-match.texi			\
-	doc/nausicaa-infix.texi				\
-	\
-	doc/nausicaa-containers-lists.texi		\
-	doc/nausicaa-containers-vectors.texi		\
-	doc/nausicaa-containers-strings.texi		\
-	doc/nausicaa-containers-arrays.texi		\
-	doc/nausicaa-containers-stacks.texi		\
-	doc/nausicaa-containers-queues.texi		\
-	doc/nausicaa-containers-bitvectors.texi		\
-	doc/nausicaa-containers-iterators.texi		\
-	\
-	doc/nausicaa-parser-tools-source-locations.texi	\
-	doc/nausicaa-parser-tools-lexical-tokens.texi	\
-	doc/nausicaa-parser-tools-lalr.texi		\
-	doc/nausicaa-parser-tools-ip-addresses.texi	\
-	doc/nausicaa-parser-tools-uri.texi		\
-	\
-	doc/nausicaa-uri-uri.texi			\
-	doc/nausicaa-uri-pathnames.texi			\
-	\
-	doc/macros.texi					\
-	doc/fdl-1.3.texi				\
-	doc/gpl-3.0.texi
 
 doc_mehve_TEXINFOS	= \
 	doc/mehve-language.texi				\
@@ -639,7 +606,6 @@ vicare_sed_edit = sed \
 	-e 's|@VICARE_BUILT_WITH_SRFI_ENABLED[@]|$(VICARE_BUILT_WITH_SRFI_ENABLED)|g'	      \
 	-e 's|@VICARE_BUILT_WITH_ICONV_ENABLED[@]|$(VICARE_BUILT_WITH_ICONV_ENABLED)|g'	      \
 	-e 's|@VICARE_BUILT_WITH_FFI_ENABLED[@]|$(VICARE_BUILT_WITH_FFI_ENABLED)|g'	      \
-	-e 's|@VICARE_BUILT_WITH_NAUSICAA_ENABLED[@]|$(VICARE_BUILT_WITH_NAUSICAA_ENABLED)|g' \
 	-e 's|@VICARE_BUILT_WITH_POSIX_ENABLED[@]|$(VICARE_BUILT_WITH_POSIX_ENABLED)|g'	      \
 	-e 's|@VICARE_BUILT_WITH_GLIBC_ENABLED[@]|$(VICARE_BUILT_WITH_GLIBC_ENABLED)|g'	      \
 	-e 's|@VICARE_BUILT_WITH_LINUX_ENABLED[@]|$(VICARE_BUILT_WITH_LINUX_ENABLED)|g'
