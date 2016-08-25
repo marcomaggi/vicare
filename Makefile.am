@@ -36,8 +36,7 @@ dist_man_MANS = doc/vicare.1
 
 info_TEXINFOS		= \
 	doc/vicare-scheme.texi		\
-	doc/vicare-libs.texi		\
-	doc/mehve.texi
+	doc/vicare-libs.texi
 
 doc_vicare_scheme_TEXINFOS	= \
 	doc/gpl-3.0.texi				\
@@ -185,13 +184,6 @@ doc_vicare_libs_TEXINFOS = \
 	doc/srfi-testing.texi				\
 	doc/srfi-time.texi				\
 	doc/srfi-vectors.texi
-
-doc_mehve_TEXINFOS	= \
-	doc/mehve-language.texi				\
-	\
-	doc/macros.texi					\
-	doc/fdl-1.3.texi				\
-	doc/gpl-3.0.texi
 
 #page
 #### C language runtime executable
@@ -1122,60 +1114,6 @@ VICARE_SCHEME_SRFI_TESTS	= \
 VICARE_SCHEME_SRFI_POSIX_TESTS	= \
 	tests/test-srfi-106-socket.sps
 
-VICARE_SCHEME_NAUSICAA_TESTS	= \
-	tests/test-nausicaa-tags-core-classes.sps			\
-	tests/test-nausicaa-tags-core-labels.sps			\
-	tests/test-nausicaa-tags-docs.sps				\
-	tests/test-nausicaa-oopp-generics.sps				\
-	tests/test-nausicaa-oopp-binding-constructs.sps			\
-	tests/test-nausicaa-oopp-builtin-labels.sps			\
-	tests/test-nausicaa-oopp-core.sps				\
-	tests/test-nausicaa-oopp-labels-and-interfaces.sps		\
-	tests/test-nausicaa-oopp-label-core.sps				\
-	tests/test-nausicaa-oopp-label-shadowing.sps			\
-	tests/test-nausicaa-oopp-mixins.sps				\
-	tests/test-nausicaa-oopp-setter-and-getter.sps			\
-	tests/test-nausicaa-oopp-unsafe-field-selectors.sps		\
-	tests/test-nausicaa-oopp-nested-calls.sps			\
-	tests/test-nausicaa-oopp-cast-operator.sps			\
-	tests/test-nausicaa-multimethods-ordinary.sps			\
-	tests/test-nausicaa-multimethods-starred.sps			\
-	tests/test-nausicaa-conditions.sps				\
-	tests/test-nausicaa-simple-match.sps				\
-	tests/test-nausicaa-language-infix.sps				\
-	\
-	tests/test-nausicaa-containers-lists.sps			\
-	tests/test-nausicaa-containers-vectors.sps			\
-	tests/test-nausicaa-containers-strings.sps			\
-	tests/test-nausicaa-containers-arrays.sps			\
-	tests/test-nausicaa-containers-stacks.sps			\
-	tests/test-nausicaa-containers-queues.sps			\
-	tests/test-nausicaa-containers-bitvectors.sps			\
-	tests/test-nausicaa-containers-iterators.sps			\
-	\
-	tests/test-nausicaa-parser-tools-lexical-token.sps		\
-	tests/test-nausicaa-parser-tools-source-location.sps		\
-	tests/test-nausicaa-parser-tools-silex-misc.sps			\
-	tests/test-nausicaa-parser-tools-lalr-lr.sps			\
-	tests/test-nausicaa-parser-tools-lalr-glr.sps			\
-	tests/test-nausicaa-parser-tools-lalr-calc.sps			\
-	tests/test-nausicaa-parser-tools-uri.sps			\
-	\
-	tests/test-nausicaa-uri-ip-address.sps				\
-	tests/test-nausicaa-uri-ipv4-address.sps			\
-	tests/test-nausicaa-uri-ipv6-address.sps			\
-	tests/test-nausicaa-uri-uri.sps					\
-	tests/test-nausicaa-uri-pathnames-unix.sps			\
-	\
-	tests/test-issue-058-lalr-unary-prec.sps			\
-	\
-	tests/test-mehve-language-numerics-arithmetics.sps		\
-	tests/test-mehve-language-numerics-predicates.sps		\
-	tests/test-mehve-language-numerics-parts.sps			\
-	tests/test-mehve-language-numerics-transcendental.sps		\
-	tests/test-mehve-language-infix.sps				\
-	tests/test-mehve-language-input-output.sps
-
 VICARE_SCHEME_FFI_TESTS	= \
 	tests/test-vicare-ffi-core.sps					\
 	tests/test-vicare-ffi-foreign-pointer-wrapper.sps
@@ -1296,7 +1234,6 @@ EXTRA_DIST	+= \
 	$(VICARE_SCHEME_COMPILER_TESTS)			\
 	$(VICARE_SCHEME_SRFI_TESTS)			\
 	$(VICARE_SCHEME_SRFI_POSIX_TESTS)		\
-	$(VICARE_SCHEME_NAUSICAA_TESTS)			\
 	$(VICARE_SCHEME_FFI_TESTS)			\
 	$(VICARE_SCHEME_POSIX_TESTS)			\
 	$(VICARE_SCHEME_GLIBC_TESTS)			\
@@ -1310,20 +1247,6 @@ TESTS		= $(VICARE_SCHEME_R6RS_TESTS) $(VICARE_SCHEME_CORE_TESTS) $(VICARE_SCHEME
 XFAIL_TESTS	= \
 	tests/test-issue-058-lalr-unary-prec.sps
 
-# The following tests fails because Nausicaa and the half-written type
-# system  in  (vicare)  are  incompatible.  In  future  they  will  be
-# converted and fixed to work.  (Marco Maggi; Tue Jun 16, 2015)
-XFAIL_TESTS	+= \
-	tests/test-nausicaa-tags-docs.sps			\
-	tests/test-nausicaa-oopp-binding-constructs.sps		\
-	tests/test-nausicaa-oopp-cast-operator.sps		\
-	tests/test-nausicaa-oopp-core.sps			\
-	tests/test-nausicaa-oopp-builtin-labels.sps		\
-	tests/test-nausicaa-conditions.sps			\
-	tests/test-nausicaa-containers-iterators.sps		\
-	tests/test-mehve-language-numerics-arithmetics.sps	\
-	tests/test-mehve-language-infix.sps
-
 if WANT_64BIT_SUPPORT
 TESTS		+= $(VICARE_SCHEME_COMPILER_TESTS)
 XFAIL_TESTS	+= tests/test-issue-086.sps
@@ -1335,10 +1258,6 @@ if WANT_POSIX
 TESTS		+= $(VICARE_SCHEME_SRFI_POSIX_TESTS)
 endif
 endif
-
-# if WANT_NAUSICAA
-# TESTS		+= $(VICARE_SCHEME_NAUSICAA_TESTS)
-# endif
 
 if WANT_LIBFFI
 TESTS		+= $(VICARE_SCHEME_FFI_TESTS)
