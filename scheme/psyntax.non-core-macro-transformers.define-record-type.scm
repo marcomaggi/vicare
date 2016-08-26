@@ -42,7 +42,8 @@
 	 (lambda ()
 	   (%validate-definition-clauses ?clause* __synner__)
 	   ;; (receive-and-return (out)
-	   ;;     (%do-define-record input-form.stx ?namespec ?clause* __synner__)
+	   ;;     (parametrise ((current-table-of-names (make-hashtable string-hash string=?)))
+	   ;; 	 (%do-define-record input-form.stx ?namespec ?clause* __synner__))
 	   ;;   (debug-print (syntax->datum out)))
 	   (parametrise ((current-table-of-names (make-hashtable string-hash string=?)))
 	     (%do-define-record input-form.stx ?namespec ?clause* __synner__)))))
@@ -2342,7 +2343,7 @@
     ;;; --------------------------------------------------------------------
 
     (define (%make-method-retriever-code foo parent-rtd.id late-binding-methods-alist private?)
-      (define method-name.id	(make-syntactic-identifier-for-temporary-variable "method-name"))
+      (define method-name.id		(make-syntactic-identifier-for-temporary-variable "method-name"))
       (define parent-retriever.id	(make-syntactic-identifier-for-temporary-variable "parent-retriever"))
       (cond ((pair? late-binding-methods-alist)
 	     (let ((retriever-maker.sexp `(lambda/typed (,parent-retriever.id)
