@@ -259,7 +259,7 @@
 	(define-record-type <node>
 	  (fields (mutable {lx (or <node> <false>)})
 		  (mutable {rx (or <node> <false>)}))
-	  (method (left)
+	  (method ({left (or <node> <false>)})
 	    (.lx this))
 	  (method (right)
 	    (.rx this)))
