@@ -4112,28 +4112,28 @@ Type of character values.
 @end deftp
 
 
-@defop Constructor @class{char} new @aclass{char} @var{obj}
+@deftypeop Constructor @class{char} @aclass{char} new @aclass{char} @var{obj}
 The constructor is @func{integer->char}.
-@end defop
+@end deftypeop
 
 
-@defop {Type predicate} @class{char} is-a? @var{obj} @aclass{char}
+@deftypeop {Type predicate} @class{char} @aclass{boolean} is-a? @var{obj} @aclass{char}
 The type predicate is @func{char?}.  Return @true{} if @var{obj} is a
 character object; otherwise return @false{}.
-@end defop
+@end deftypeop
 
 
-@deftypemethod @class{char} @aclass{string} string @var{self}
+@deftypemethod @class{char} @aclass{string} string @{@var{self} @aclass{char}@}
 Apply @func{string} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{char} @aclass{fixnum} integer @var{self}
+@deftypemethod @class{char} @aclass{fixnum} integer @{@var{self} @aclass{char}@}
 Apply @func{char->integer} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{char} @aclass{fixnum} fixnum @var{self}
+@deftypemethod @class{char} @aclass{fixnum} fixnum @{@var{self} @aclass{char}@}
 Apply @func{char->fixnum} to the instance.
 @end deftypemethod
 
