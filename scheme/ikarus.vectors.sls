@@ -1208,7 +1208,7 @@
 #| end of library |# )
 
 
-(library (vicare system vectors)
+(library (vicare vectors unsafe)
   (export $vector-ref $vector-length)
   (import (vicare))
   (define $vector-ref vector-ref)

@@ -2656,7 +2656,7 @@
 #| end of library |#  )
 
 
-(library (vicare system bytevectors)
+(library (vicare bytevectors unsafe)
   (export $make-bytevector $bytevector-length
 	  $bytevector-u8-ref $bytevector-set!)
   (import (vicare))
