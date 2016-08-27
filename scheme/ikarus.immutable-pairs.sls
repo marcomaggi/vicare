@@ -30,6 +30,9 @@
   (import (except (vicare)
 		  <ipair> ipair icar icdr ipair?))
 
+  ;; (define dummy-begin
+  ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.immutable-pairs begin")))
+
   (define-struct (<ipair> ipair ipair?)
     (car cdr))
 
@@ -42,6 +45,9 @@
 
   (define* (icdr {P ipair?})
     ($<ipair>-cdr P))
+
+  ;; #!vicare
+  ;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.immutable-pairs after"))
 
   #| end of library |# )
 

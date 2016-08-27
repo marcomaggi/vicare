@@ -291,6 +291,3 @@
 #| end of library |# )
 
 ;;; end of file
-;; Local Variables:
-;; eval: (put 'cond-numeric-operand 'scheme-indent-function 1)
-;; End:

@@ -135,6 +135,9 @@
 
 ;;;; done
 
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.handlers after"))
+
 #| end of library (vicare system handlers) |# )
 
 ;;; end of file
