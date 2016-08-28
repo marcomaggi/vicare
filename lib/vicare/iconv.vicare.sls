@@ -34,6 +34,7 @@
     iconv-encoding-universe
     iconv-encoding-aliases?	iconv-encoding=?)
   (import (vicare)
+    (vicare system structs)
     (vicare language-extensions syntaxes)
     (vicare platform constants)
     (prefix (vicare unsafe capi)

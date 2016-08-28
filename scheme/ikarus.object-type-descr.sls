@@ -169,6 +169,7 @@
 	  <empty-bytevector>-ctd		<nebytevector>-ctd
 	  <condition>-ctd			<compound-condition>-ctd
 	  <hashtable>-ctd)
+    (vicare system structs)
     (only (ikarus hash-tables)
 	  $hashtable-type-descriptor)
     (only (ikarus records procedural)

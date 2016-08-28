@@ -33,6 +33,7 @@
 	  intern-string)
     (only (vicare.foreign-libraries)
 	  dynamically-load-shared-object-from-identifier)
+    (vicare system structs)
     (vicare system $fx)
     (vicare system $chars)
     (vicare system $flonums)

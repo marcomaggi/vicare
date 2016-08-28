@@ -29,6 +29,7 @@
 
 		  debug-print-enabled?
 		  debug-print			debug-print*)
+    (vicare system structs)
     (only (vicare system $structs)
 	  base-rtd
 	  $struct-rtd)

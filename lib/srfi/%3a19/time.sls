@@ -118,7 +118,7 @@
   (import (rnrs)
     (rnrs r5rs)
     (rnrs mutable-strings)
-    (only (vicare)
+    (only (vicare system structs)
 	  define-struct)
     (prefix (only (vicare)
 		  current-time

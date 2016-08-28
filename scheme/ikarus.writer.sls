@@ -45,6 +45,7 @@
 	  procedure-annotation)
     (only (vicare system $symbols)
 	  $unbound-object?)
+    (vicare system structs)
     (only (vicare system $structs)
 	  base-rtd
 	  $struct-rtd)

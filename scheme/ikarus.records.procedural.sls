@@ -118,6 +118,7 @@
 		  record-type-compose-equality-predicate
 		  record-type-compose-comparison-procedure
 		  record-type-compose-hash-function)
+    (vicare system structs)
     (vicare system $fx)
     (vicare system $pairs)
     (vicare system $structs)

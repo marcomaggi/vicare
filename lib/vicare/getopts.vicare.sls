@@ -76,6 +76,7 @@
     raise-option-requires-no-value
     raise-invalid-option)
   (import (vicare)
+    (vicare system structs)
     (vicare arguments validation)
     (vicare unsafe operations)
     (vicare language-extensions syntaxes)

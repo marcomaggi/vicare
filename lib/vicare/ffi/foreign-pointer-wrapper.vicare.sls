@@ -36,6 +36,7 @@
     collected-struct-type
     fields)
   (import (vicare)
+    (vicare system structs)
     (vicare language-extensions syntaxes)
     (vicare unsafe operations)
     (vicare arguments validation))

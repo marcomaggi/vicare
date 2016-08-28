@@ -32,6 +32,7 @@
     callable-object
     $callable-object)
   (import (vicare)
+    (vicare system structs)
     (vicare system $codes)
     (vicare system $fx))
 

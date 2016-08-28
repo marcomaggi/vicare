@@ -37,6 +37,7 @@
     (vicare system $fx)
     (only (vicare system code-objects)
      	  code?)
+    (vicare system structs)
     (except (vicare system $codes)
 	    code-reloc-vector->sexp)
     (prefix (vicare platform words)

@@ -28,6 +28,7 @@
 (import (vicare)
   (prefix (vicare iconv)
 	  iconv.)
+  (vicare system structs)
   (vicare platform constants)
   (vicare language-extensions syntaxes)
   (vicare checks))

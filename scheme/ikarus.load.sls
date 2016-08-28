@@ -52,6 +52,7 @@
 		  default-include-file-loader
 		  current-include-file-locator
 		  current-include-file-loader)
+    (vicare system structs)
     (prefix (only (ikarus conditions)
 		  define-core-condition-type
 		  &condition)

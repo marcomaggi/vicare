@@ -25,6 +25,7 @@
 
 #!vicare
 (import (vicare)
+  (vicare system structs)
   (only (vicare system $structs)
 	base-rtd)
   (vicare checks))

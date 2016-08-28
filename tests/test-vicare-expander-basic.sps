@@ -52,6 +52,7 @@
 #!vicare
 (program (test-vicare-expander-basic)
   (import (vicare)
+    (vicare system structs)
     (vicare language-extensions callables)
     (prefix (vicare expander) expander::)
     (vicare checks))

@@ -76,7 +76,8 @@
 		  make-enumeration
 		  enum-set?
 		  make-file-options)
-    (vicare system $vectors))
+    (vicare system $vectors)
+    (vicare system structs))
 
 
 ;;;; record types

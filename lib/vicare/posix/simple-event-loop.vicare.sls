@@ -49,6 +49,7 @@
     ;; fragmented tasks
     task-fragment		do-one-task-event)
   (import (vicare)
+    (vicare system structs)
     (prefix (vicare posix) px.)
     (vicare unsafe operations)
     (vicare language-extensions syntaxes)

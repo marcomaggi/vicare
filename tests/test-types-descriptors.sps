@@ -28,6 +28,7 @@
   (options typed-language)
   (import (vicare)
     (vicare checks)
+    (vicare system structs)
     (vicare system type-descriptors))
 
 (check-set-mode! 'report-failed)

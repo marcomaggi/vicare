@@ -294,6 +294,7 @@
 
 		  array-set-c-size_t!			array-set-c-ssize_t!
 		  array-set-c-off_t!			array-set-c-ptrdiff_t!)
+    (vicare system structs)
     (only (vicare system $pointers)
 	  $pointer=)
     (vicare system $bytevectors)

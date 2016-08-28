@@ -75,6 +75,7 @@
     (vicare parser-tools silex nested-comment-l)
     (prefix (vicare language-extensions makers) mk.)
     (vicare arguments validation)
+    (vicare system structs)
     (vicare system posix))
 
 
