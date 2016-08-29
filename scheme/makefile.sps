@@ -1148,6 +1148,9 @@
     ($runtime		(vicare system $runtime)		#f	#t)
 ;;;
     (system-structs	(vicare system structs)			#t	#t)
+    ;;FIXME To be made  required at the next boot image  rotation.  (Marco Maggi; Mon
+    ;;Aug 29, 2016)
+    (system-compar	(vicare system comparison-procedures)	#t	#f)
     ($type-descriptors	(vicare system type-descriptors)	#t	#t)
     ($options		(vicare system options)			#t	#t)
     ($code-objects	(vicare system code-objects)		#t	#t)
@@ -4370,26 +4373,26 @@
 ;;; --------------------------------------------------------------------
 ;;; comparison procedures
 
-    (compar-fixnum				v $language)
-    (compar-bignum				v $language)
-    (compar-exact-integer			v $language)
-    (compar-ratnum				v $language)
-    (compar-exact-real				v $language)
-    (compar-flonum				v $language)
-    (compar-real				v $language)
+    (compar-fixnum				system-compar)
+    (compar-bignum				system-compar)
+    (compar-exact-integer			system-compar)
+    (compar-ratnum				system-compar)
+    (compar-exact-real				system-compar)
+    (compar-flonum				system-compar)
+    (compar-real				system-compar)
 
-    (compar-char				v $language)
-    (compar-string				v $language)
-    (compar-string-ci				v $language)
-    (compar-symbol				v $language)
+    (compar-char				system-compar)
+    (compar-string				system-compar)
+    (compar-string-ci				system-compar)
+    (compar-symbol				system-compar)
 
-    (compar-boolean				v $language)
-    (compar-true				v $language)
-    (compar-false				v $language)
-    (compar-transcoder				v $language)
-    (compar-pointer				v $language)
+    (compar-boolean				system-compar)
+    (compar-true				system-compar)
+    (compar-false				system-compar)
+    (compar-transcoder				system-compar)
+    (compar-pointer				system-compar)
 
-    (make-comparison-procedure			v $language)
+    (make-comparison-procedure			system-compar)
 
 ;;; --------------------------------------------------------------------
 ;;; POSIX functions
