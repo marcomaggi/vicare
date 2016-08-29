@@ -7,6 +7,7 @@
 
 The library @library{vicare net channels} implements utilities to
 transfer data through Scheme binary ports, typically between processes.
+The library is implemented with the typed language.
 
 @menu
 * net channels types::          Data type definitions.
@@ -32,7 +33,7 @@ channels}.
 @subsubheading Base channel type
 
 
-@deftp {@rnrs{6} Record Type} channel
+@deftp {Record Type} @aclass{channel}
 Record type representing an interprocess connection channel.  Whenever
 this documentation refers to arguments being instances of this type: it
 uses the identifier @var{chan}.
@@ -44,21 +45,12 @@ Return @true{} if @var{obj} is an instance of @code{channel}, else
 return @false{}.
 @end defun
 
-
-@deffn {Validation Clause} channel @var{obj}
-@deffnx {Validation Clause} false-or-channel @var{obj}
-Validation clause to be used with the facilities of the library
-@library{vicare arguments validation}.  The first form succeeds if
-@var{obj} is an instance of @code{channel}; the second also accepts
-@false{}.
-@end deffn
-
 @c ------------------------------------------------------------
 
 @subsubheading Binary channel type
 
 
-@deftp {@rnrs{6} Record Type} binary-channel
+@deftp {Record Type} @aclass{binary-channel}
 Record type representing an interprocess connection binary channel.
 @end deftp
 
@@ -68,21 +60,12 @@ Return @true{} if @var{obj} is an instance of @code{binary-channel},
 else return @false{}.
 @end defun
 
-
-@deffn {Validation Clause} binary-channel @var{obj}
-@deffnx {Validation Clause} false-or-binary-channel @var{obj}
-Validation clause to be used with the facilities of the library
-@library{vicare arguments validation}.  The first form succeeds if
-@var{obj} is an instance of @code{binary-channel}; the second also
-accepts @false{}.
-@end deffn
-
 @c ------------------------------------------------------------
 
 @subsubheading Textual channel type
 
 
-@deftp {@rnrs{6} Record Type} textual-channel
+@deftp {@rnrs{6} Record Type} @aclass{textual-channel}
 Record type representing an interprocess connection textual channel.
 @end deftp
 
@@ -91,15 +74,6 @@ Record type representing an interprocess connection textual channel.
 Return @true{} if @var{obj} is an instance of @code{textual-channel},
 else return @false{}.
 @end defun
-
-
-@deffn {Validation Clause} textual-channel @var{obj}
-@deffnx {Validation Clause} false-or-textual-channel @var{obj}
-Validation clause to be used with the facilities of the library
-@library{vicare arguments validation}.  The first form succeeds if
-@var{obj} is an instance of @code{textual-channel}; the second also
-accepts @false{}.
-@end deffn
 
 @c page
 @node net channels init

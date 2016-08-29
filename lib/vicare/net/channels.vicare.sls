@@ -10,28 +10,30 @@
 ;;;
 ;;;Copyright (C) 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
 #!vicare
-(library (vicare net channels)
+(library (vicare net channels (0 4 2016 08 28))
+  (options typed-language)
   (export
     ;; record type
-    channel
-    binary-channel
-    textual-channel
+    <channel>
+    <binary-channel>			<textual-channel>
+    <binary-input-channel>		<textual-input-channel>
+    <binary-output-channel>		<textual-output-channel>
+    <binary-input/output-channel>	<textual-input/output-channel>
 
     ;; initialisation and finalisation
     open-binary-input-channel		open-textual-input-channel
@@ -51,24 +53,9 @@
     channel-connect-ou-port
 
     ;; predicates and arguments validation
-    channel?
-    channel.vicare-arguments-validation
-    false-or-channel.vicare-arguments-validation
-
-    binary-channel?
-    binary-channel.vicare-arguments-validation
-    false-or-binary-channel.vicare-arguments-validation
-
-    textual-channel?
-    textual-channel.vicare-arguments-validation
-    false-or-textual-channel.vicare-arguments-validation
-
-    receiving-channel?		receiving-channel.vicare-arguments-validation
-    sending-channel?		sending-channel.vicare-arguments-validation
-    inactive-channel?		inactive-channel.vicare-arguments-validation
-    input-channel?		input-channel.vicare-arguments-validation
-    output-channel?		output-channel.vicare-arguments-validation
-    input/output-channel?	input/output-channel.vicare-arguments-validation
+    receiving-channel?
+    sending-channel?
+    inactive-channel?
 
     ;; message reception
     channel-recv-begin!		channel-recv-end!
@@ -98,96 +85,254 @@
     (vicare system $pairs)
     (vicare system $chars)
     (vicare system $strings)
-    (vicare system $bytevectors)
-    (vicare arguments validation)
-    (vicare language-extensions syntaxes))
+    (vicare system $bytevectors))
 
 
-;;;; data structures
-
-(define-record-type-extended channel
-  (nongenerative vicare:net:channels:channel)
-  (fields (immutable connect-in-port)
-		;An input  or input/output  binary port used  to receive
-		;messages from a remote process.
-	  (immutable connect-ou-port)
-		;An  output or  input/output  binary port  used to  send
-		;messages to a remote process.
-	  (mutable action)
-		;False or the symbol "recv" or the symbol "send".
-	  (mutable expiration-time)
-		;A time object representing the  limit of time since the
-		;Epoch  to complete  message delivery;  if the  allotted
-		;time expires:  sending or  receiving this  message will
-		;fail.
-	  (mutable message-buffer)
-		;Null  or a  list of  bytevectors representing  the data
-		;accumulated so far; last input first.
-	  (mutable message-size)
-		;A non-negative  exact integer representing  the current
-		;message size.
-	  (mutable maximum-message-size)
-		;A non-negative exact integer representing the inclusive
-		;maximum  message  size;  if  the size  of  the  message
-		;exceeds this value: message delivery will fail.
-	  (mutable message-terminators)
-		;A non-empty list  of non-empty bytevectors representing
-		;possible message terminators.
-	  (mutable message-terminated?)
-		;A  boolean,  true  if  while receiving  a  message  the
-		;terminator has already been read.
-	  (mutable maximum-message-portion-size)
-		;A positive  fixnum representing  the maximum  number of
-		;units (bytes, characters) read at each "message portion
-		;receive" operation.
-	  )
-  (protocol
-   (lambda (maker)
-     (lambda (in-port ou-port default-terminators max-portion-size)
-       (define who 'channel-constructor)
-       (define-argument-validation (one-port who in-port ou-port)
-	 (or in-port ou-port)
-	 (assertion-violation who "both port arguments are false" in-port ou-port))
-       (with-arguments-validation (who)
-	   ((input-port/false	in-port)
-	    (output-port/false	ou-port)
-	    (one-port		in-port ou-port))
-	 (maker in-port ou-port
-		#f #;action #f #;expiration-time
-		'() #;message-buffer 0 #;message-size 4096 #;maximum-message-size
-		default-terminators #;message-terminators #f #;message-terminated?
-		max-portion-size #;maximum-message-portion-size
-		))))))
-
-(define-record-type-extended binary-channel
-  (nongenerative vicare:net:channels:binary-channel)
-  (parent channel)
-  (protocol
-   (lambda (make-channel)
-     (lambda (in-port ou-port)
-       (define who 'binary-channel-constructor)
-       (with-arguments-validation (who)
-	   ((binary-port/false	in-port)
-	    (binary-port/false	ou-port))
-	 ((make-channel in-port ou-port DEFAULT-BINARY-TERMINATORS 4096)))))))
-
-(define-record-type-extended textual-channel
-  (nongenerative vicare:net:channels:textual-channel)
-  (parent channel)
-  (protocol
-   (lambda (make-channel)
-     (lambda (in-port ou-port)
-       (define who 'textual-channel-constructor)
-       (with-arguments-validation (who)
-	   ((textual-port/false	in-port)
-	    (textual-port/false	ou-port))
-	 ((make-channel in-port ou-port DEFAULT-TEXTUAL-TERMINATORS 1024)))))))
+;;;; helpers
 
 (define-constant DEFAULT-BINARY-TERMINATORS
   '(#ve(ascii "\r\n\r\n") #ve(ascii "\r\n")))
 
 (define-constant DEFAULT-TEXTUAL-TERMINATORS
   '("\r\n\r\n" "\r\n"))
+
+
+;;;; data structures
+
+(define-record-type <channel>
+  (nongenerative vicare:net:channels:<channel>)
+  (fields (immutable {connect-in-port <recv-port>})
+		;An input or input/output binary port used to receive messages from a
+		;remote process.
+	  (immutable {connect-ou-port <send-port>})
+		;An output  or input/output binary  port used  to send messages  to a
+		;remote process.
+	  (mutable {action (enumeration none send recv)})
+		;A symbol representing the current action for this channel.
+	  (mutable {expiration-time <time>})
+		;A   "<time>"  object   (as  defined   by  the   library  "(vicare)")
+		;representing the limit  of time since the Epoch  to complete message
+		;delivery; if  the allotted time  expires: sending or  receiving this
+		;message will fail.
+	  (mutable {message-buffer (list-of <nebytevector>)})
+		;Null or a  list of bytevectors representing the  data accumulated so
+		;far; last input first.
+	  (mutable {message-size <non-negative-exact-integer>})
+		;A non-negative exact integer representing the current message size.
+	  (mutable {maximum-message-size <non-negative-exact-integer>})
+		;A  non-negative exact  integer  representing  the inclusive  maximum
+		;message size; if the size of the message exceeds this value: message
+		;delivery will fail.
+	  (mutable {message-terminators <terminators>})
+		;A  non-empty list  of  non-empty  bytevectors representing  possible
+		;message terminators.
+	  (mutable {message-terminated? <boolean>})
+		;A  boolean, true  if while  receiving a  message the  terminator has
+		;already been read.
+	  (mutable {maximum-message-portion-size <positive-fixnum>})
+		;A positive fixnum  representing the maximum number  of units (bytes,
+		;characters) read at each "message portion receive" operation.
+	  #| end of FIELDS |# )
+  (protocol
+    (lambda (make-channel)
+      (define (make-channel {in-port <input-port>} {ou-port <output-port>} default-terminators max-portion-size)
+	(let ((expiration-time (new <time> (greatest-fixnum) 0)))
+	  (make-channel in-port ou-port
+			#f		  ;action
+			expiration-time	  ;expiration-time
+			'()		  ;message-buffer
+			0		  ;message-size
+			4096		  ;maximum-message-size
+			default-terminators ;message-terminators
+			#f		    ;message-terminated?
+			max-portion-size    ;maximum-message-portion-size
+			)))
+      make-channel))
+  (constructor-signature
+    (lambda (<input-port> <output-port> <top> <positive-fixnum>) => (<channel>)))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define-type <binary-terminators>
+  (nelist-of <nebytevector>))
+
+(define-type <textual-terminators>
+  (nelist-of <nestring>))
+
+(define-type <terminators>
+  (or <binary-terminators>
+      <textual-terminators>))
+
+;;; --------------------------------------------------------------------
+
+(define-record-type <binary-channel>
+  (nongenerative vicare:net:channels:<binary-channel>)
+  (parent <channel>)
+  (protocol
+    (lambda (make-channel)
+      (define ({make-binary-channel <binary-channel>}
+	       {in-port (or <false> <binary-input-port>)}
+	       {ou-port (or <false> <binary-output-port>)})
+	((make-channel in-port ou-port DEFAULT-BINARY-TERMINATORS 4096)))
+      make-binary-channel))
+  (constructor-signature
+    (lambda ((or <false> <binary-input-port>) (or <false> <binary-output-port>)) => (<binary-channel>)))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define-record-type <textual-channel>
+  (nongenerative vicare:net:channels:<textual-channel>)
+  (parent <channel>)
+  (protocol
+    (lambda (make-channel)
+      (define ({make-textual-channel <textual-channel>}
+	       {in-port (or <false> <textual-input-port>)}
+	       {ou-port (or <false> <textual-output-port>)})
+	((make-channel in-port ou-port DEFAULT-TEXTUAL-TERMINATORS 4096)))
+      make-textual-channel))
+  (constructor-signature
+    (lambda ((or <false> <textual-input-port>) (or <false> <textual-output-port>)) => (<textual-channel>)))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+;;; --------------------------------------------------------------------
+
+(define-record-type <binary-input-channel>
+  (nongenerative vicare:net:channels:<binary-input-channel>)
+  (parent <binary-channel>)
+  (protocol
+    (lambda (make-binary-channel)
+      (define ({make-binary-input-channel <binary-input-channel>} {port <binary-input-port>})
+	((make-binary-channel port #f)))
+      make-binary-input-channel))
+  (constructor-signature
+    (lambda (<binary-input-port>) => (<binary-input-channel>))))
+
+(define-record-type <binary-output-channel>
+  (nongenerative vicare:net:channels:<binary-output-channel>)
+  (parent <binary-channel>)
+  (protocol
+    (lambda (make-binary-channel)
+      (define ({make-binary-output-channel <binary-output-channel>} {port <binary-output-port>})
+	((make-binary-channel #f port)))
+      make-binary-output-channel))
+  (constructor-signature
+    (lambda (<binary-output-port>) => (<binary-output-channel>))))
+
+(define-record-type <binary-input/output-channel>
+  (nongenerative vicare:net:channels:<binary-input/output-channel>)
+  (parent <binary-channel>)
+  (protocol
+    (lambda (make-binary-channel)
+      (define ({make-binary-input/output-channel <binary-input/output-channel>} {port <binary-input/output-port>})
+	((make-binary-channel port port)))
+      make-binary-input/output-channel))
+  (constructor-signature
+    (lambda (<binary-input/output-port>) => (<binary-input/output-channel>))))
+
+;;; --------------------------------------------------------------------
+
+(define-record-type <textual-input-channel>
+  (nongenerative vicare:net:channels:<textual-input-channel>)
+  (parent <textual-channel>)
+  (protocol
+    (lambda (make-textual-channel)
+      (define ({make-textual-input-channel <textual-input-channel>} {port <textual-input-port>})
+	((make-textual-channel port #f)))
+      make-textual-input-channel))
+  (constructor-signature
+    (lambda (<textual-input-port>) => (<textual-input-channel>))))
+
+(define-record-type <textual-output-channel>
+  (nongenerative vicare:net:channels:<textual-output-channel>)
+  (parent <textual-channel>)
+  (protocol
+    (lambda (make-textual-channel)
+      (define ({make-textual-output-channel <textual-output-channel>} {port <textual-output-port>})
+	((make-textual-channel #f port)))
+      make-textual-output-channel))
+  (constructor-signature
+    (lambda (<textual-output-port>) => (<textual-output-channel>))))
+
+(define-record-type <textual-input/output-channel>
+  (nongenerative vicare:net:channels:<textual-input/output-channel>)
+  (parent <textual-channel>)
+  (protocol
+    (lambda (make-textual-channel)
+      (define ({make-textual-input/output-channel <textual-input/output-channel>} {port <textual-input/output-port>})
+	((make-textual-channel port port)))
+      make-textual-input/output-channel))
+  (constructor-signature
+    (lambda (<textual-input/output-port>) => (<textual-input/output-channel>))))
+
+
+;;;; type definitions: interfaces
+
+(define-interface-type <binary-recv-channel>
+  (nongenerative vicare:net:channels:<binary-recv-channel>)
+
+  (method-prototype channel-recv-begin!
+    (lambda () => (<void>)))
+		;Configure a channel to start receiving a message; return unspecified
+		;values.  It is an error if the channel is not inactive.
+
+  (method-prototype channel-recv-end!
+    (lambda () => (<bytevector>)))
+		;Finish receiving  a message and  return the accumulated octets  in a
+		;bytevector.  It is an  error if the channel is not  in the course of
+		;receiving a message.
+		;
+		;After this function  is applied to a channel: the  channel itself is
+		;configured  as  inactive; so  it  is  available to  start  receiving
+		;another message or to send a message.
+
+  (method-prototype recv-end!/rbl
+    (lambda () => ((list-of <nebytevector>) <positive-exact-integer>)))
+		;Finish  receiving a  message  and return  the 2  values:  a list  of
+		;bytevectors  representing the  data buffers  accumulated in  reverse
+		;order; a  positive exact integer  representing the total  data size.
+		;It is an  error if the channel  is not in the course  of receiving a
+		;message.
+		;
+		;After this function  is applied to a channel: the  channel itself is
+		;configured  as  inactive; so  it  is  available to  start  receiving
+		;another message or to send a message.
+
+  (method-prototype recv-message-portion!
+    (lambda () => ((or <boolean> <eof>))))
+		;Receive a portion of input message from the given channel.  It is an
+		;error if the channel is not in the course of receiving a message.
+		;
+		;* Return  true if a configured  message terminator is read  from the
+		;input port or if the channel already read a terminator in a previous
+		;operation.   If  a  message  terminator is  received:  set  CHAN  to
+		;"message terminated" status.
+		;
+		;* Return the EOF object if EOF  is read from the input port before a
+		;message terminator.
+		;
+		;* Return false  if neither a message terminator nor  EOF is read; in
+		;this  case we  need to  call this  function again  later to  receive
+		;further message portions.
+		;
+		;*  If the  message  delivery  timeout is  expired  or expires  while
+		;receiving data: raise an exception.
+		;
+		;* If the accumulated data exceeds the maximum message size: raise an
+		;exception.
+
+  (method-prototype recv-full-message
+    (lambda () => ()))
+		;Receive  a full  message.  It  is  an error  if the  channel is  not
+		;inactive.
+		;
+		;Read a full  message from the channel and  return: eof, would-block,
+		;or a bytevector holding the message contents.
+
+  #| end of DEFINE-INTERFACE-TYPE |# )
+
+;;; --------------------------------------------------------------------
+
+(define-interface-type <textual-recv-channel>
+  (nongenerative vicare:net:channels:<textual-recv-channel>)
+  #| end of DEFINE-INTERFACE-TYPE |# )
 
 
 ;;;; unsafe operations
@@ -214,74 +359,38 @@
 
 ;;;; initialisation and finalisation
 
-(define (open-binary-input-channel port)
-  (define who 'open-binary-input-channel)
-  (with-arguments-validation (who)
-      ((binary-port	port)
-       (input-port	port))
-    (make-binary-channel port #f)))
+(define ({open-binary-input-channel <binary-channel>} {port <binary-input-port>})
+  (new <binary-channel> port #f))
 
-(define (open-binary-output-channel port)
-  (define who 'open-binary-output-channel)
-  (with-arguments-validation (who)
-      ((binary-port	port)
-       (output-port	port))
-    (make-binary-channel #f port)))
+(define ({open-binary-output-channel <binary-channel>} {port <binary-output-port>})
+  (new <binary-channel> #f port))
 
-(define open-binary-input/output-channel
-  (case-lambda
-   ((port)
-    (open-binary-input/output-channel port port))
-   ((in-port ou-port)
-    (define who 'open-binary-input/output-channel)
-    (with-arguments-validation (who)
-	((binary-port	in-port)
-	 (binary-port	ou-port)
-	 (input-port	in-port)
-	 (output-port	ou-port))
-      (make-binary-channel in-port ou-port)))))
+(define/overload ({open-binary-input/output-channel <binary-channel>} {port <binary-input/output-port>})
+  (new <binary-channel> port port))
+
+(define/overload ({open-binary-input/output-channel <binary-channel>} {in-port <binary-input-port>} {ou-port <binary-ouptut-port>})
+  (new <binary-channel> in-port ou-port))
 
 ;;; --------------------------------------------------------------------
 
-(define (open-textual-input-channel port)
-  (define who 'open-textual-input-channel)
-  (with-arguments-validation (who)
-      ((textual-port	port)
-       (input-port	port))
-    (make-textual-channel port #f)))
+(define ({open-textual-input-channel <textual-channel>} {port <textual-input-port>})
+  (new <textual-channel> port #f))
 
-(define (open-textual-output-channel port)
-  (define who 'open-textual-output-channel)
-  (with-arguments-validation (who)
-      ((textual-port	port)
-       (output-port	port))
-    (make-textual-channel #f port)))
+(define ({open-textual-output-channel <textual-channel>} {port <textual-output-port>})
+  (new <textual-channel> #f port))
 
-(define open-textual-input/output-channel
-  (case-lambda
-   ((port)
-    (open-textual-input/output-channel port port))
-   ((in-port ou-port)
-    (define who 'open-textual-input/output-channel)
-    (with-arguments-validation (who)
-	((textual-port	in-port)
-	 (textual-port	ou-port)
-	 (input-port	in-port)
-	 (output-port	ou-port))
-      (make-textual-channel in-port ou-port)))))
+(define/overload ({open-textual-input/output-channel <textual-channel>} {port <textual-input/output-port>})
+  (new <textual-channel> port port))
+
+(define/overload ({open-textual-input/output-channel <textual-channel>} {in-port <textual-input-port>} {ou-port <textual-ouptut-port>})
+  (new <textual-channel> in-port ou-port))
 
 ;;; --------------------------------------------------------------------
 
-(define (close-channel chan)
-  ;;Finalise a  channel closing its connection  port; return unspecified
-  ;;values.  A pending message delivery is aborted.
+(define ({close-channel <void>} {chan <channel>})
+  ;;Finalise a  channel closing  its connection port;  return unspecified  values.  A
+  ;;pending message delivery is aborted.
   ;;
-  (define who 'close-channel)
-  (with-arguments-validation (who)
-      ((channel		chan))
-    ($close-channel chan)))
-
-(define ($close-channel chan)
   (define (%close port)
     (when port
       (close-port port)))
@@ -290,302 +399,130 @@
   (record-reset chan)
   (void))
 
-(define (channel-abort! chan)
-  ;;Abort  the current  operation  and reset  the  channel to  inactive;
-  ;;return unspecified values.
+(define ({channel-abort! <void>} {chan <channel>})
+  ;;Abort the current operation and reset the channel to inactive; return unspecified
+  ;;values.
   ;;
-  (define who 'channel-abort!)
-  (with-arguments-validation (who)
-      ((channel		chan))
-    ($channel-abort! chan)))
-
-(define ($channel-abort! chan)
-  ($channel-action-set!              chan #f)
+  ($channel-action-set!              chan 'none)
   ($channel-message-buffer-set!      chan '())
   ($channel-message-size-set!        chan 0)
   ($channel-message-terminated?-set! chan #f)
   (void))
+
 
 ;;;; configuration
 
-(define (channel-set-maximum-message-size! chan maximum-message-size)
-  ;;MAXIMUM-MESSAGE-SIZE must  be a positive exact  integer representing
-  ;;the inclusive maximum  message size in octets or  characters; if the
-  ;;size of the message exceeds this value: message delivery will fail.
+(define ({channel-set-maximum-message-size! <void>} {chan <channel>} {maximum-message-size <positive-exact-integer>})
+  ;;MAXIMUM-MESSAGE-SIZE must be a positive  exact integer representing the inclusive
+  ;;maximum message size in octets or characters;  if the size of the message exceeds
+  ;;this value: message delivery will fail.
   ;;
-  (define who 'channel-set-maximum-message-size!)
-  (with-arguments-validation (who)
-      ((channel			chan)
-       (positive-exact-integer	maximum-message-size))
-    ($channel-maximum-message-size-set! chan maximum-message-size)
-    (void)))
+  ($channel-maximum-message-size-set! chan maximum-message-size)
+  (void))
 
-(define (channel-set-expiration-time! chan expiration-time)
-  ;;EXPIRATION-TIME  must be  false or  a time  object representing  the
-  ;;limit of time  since the Epoch to complete message  delivery; if the
-  ;;allotted time expires: message delivery will fail.
+(define ({channel-set-expiration-time! <void>} {chan <channel>} {expiration-time (or <time> <false>)})
+  ;;EXPIRATION-TIME must  be false or  a time object  representing the limit  of time
+  ;;since  the Epoch  to complete  message delivery;  if the  allotted time  expires:
+  ;;message delivery will fail.
   ;;
-  (define who 'channel-set-expiration-time!)
-  (with-arguments-validation (who)
-      ((channel		chan)
-       (time/false	expiration-time))
-    ($channel-expiration-time-set! chan expiration-time)
-    (void)))
+  ($channel-expiration-time-set! chan expiration-time)
+  (void))
 
-(module (channel-set-message-terminators!)
-
-  (define (channel-set-message-terminators! chan terminators)
-    ;;TERMINATORS must be  a non-empty list of  non-empty bytevectors or
-    ;;strings representing possible message terminators.
-    ;;
-    (define who 'channel-set-message-terminators!)
-    (cond ((binary-channel? chan)
-	   (with-arguments-validation (who)
-	       ((binary-terminators	terminators))
-	     ($channel-message-terminators-set! chan terminators)))
-	  ((textual-channel? chan)
-	   (with-arguments-validation (who)
-	       ((textual-terminators	terminators))
-	     ($channel-message-terminators-set! chan terminators)))
-	  (else
-	   (assertion-violation who
-	     "expected textual or binary channel as argument" chan)))
-    (void))
-
-  (define-argument-validation (binary-terminators who obj)
-    (and (not (null? obj))
-	 (list? obj)
-	 (for-all (lambda (item)
-		    (and (bytevector? item)
-			 (not ($fxzero? ($bytevector-length item)))))
-	   obj))
-    (assertion-violation who
-      "expected non-empty list of non-empty bytevectors as argument" obj))
-
-  (define-argument-validation (textual-terminators who obj)
-    (and (not (null? obj))
-	 (list? obj)
-	 (for-all (lambda (item)
-		    (and (string? item)
-			 (not ($fxzero? ($string-length item)))))
-	   obj))
-    (assertion-violation who
-      "expected non-empty list of non-empty strings as argument" obj))
-
-  #| end of module |# )
-
-(define (channel-set-maximum-message-portion-size! chan max-portion-size)
-  ;;MAX-PORTION-SIZE  must   be  a  positive  fixnum   representing  the
-  ;;inclusive  maximum size,  in  octets or  characters, requested  when
-  ;;receiving message portions.
+(define/overload ({channel-set-message-terminators! <void>} {chan <binary-channel>} {terminators <binary-terminators>})
+  ;;TERMINATORS  must be  a non-empty  list of  non-empty bytevectors  representing
+  ;;possible message terminators.
   ;;
-  (define who 'channel-set-maximum-message-portion-size!)
-  (with-arguments-validation (who)
-      ((channel			chan)
-       (positive-fixnum		max-portion-size))
-    ($channel-maximum-message-portion-size-set! chan max-portion-size)
-    (void)))
+  ($channel-message-terminators-set! chan terminators))
+
+(define/overload ({channel-set-message-terminators! <void>} {chan <textual-channel>} {terminators <textual-terminators>})
+  ;;TERMINATORS must be a non-empty list of non-empty strings representing possible
+  ;;message terminators.
+  ;;
+  ($channel-message-terminators-set! chan terminators))
+
+(define ({channel-set-maximum-message-portion-size! <void>} {chan <channel>} {max-portion-size <positive-fixnum>})
+  ;;MAX-PORTION-SIZE must  be a  positive fixnum  representing the  inclusive maximum
+  ;;size, in octets or characters, requested when receiving message portions.
+  ;;
+  ($channel-maximum-message-portion-size-set! chan max-portion-size)
+  (void))
 
 
 ;;;; predicates and arguments validation: receiving messages
 
-(define (receiving-channel? chan)
-  ;;Return #t  if CHAN  is in  the course of  receiving a  message, else
-  ;;return #f.  It is an error if CHAN is not an instance of CHANNEL.
+(define ({receiving-channel? <boolean>} {chan <channel>})
+  ;;Return #t if CHAN is in the course of receiving a message, else return #f.
   ;;
-  (define who 'receiving-channel?)
-  (with-arguments-validation (who)
-      ((channel	chan))
-    ($receiving-channel? chan)))
-
-(define ($receiving-channel? chan)
-  ;;Unsafe function returning #t if CHAN is in the course of receiving a
-  ;;message, else return #f.
-  ;;
-  (eq? 'recv ($channel-action chan)))
+  (eq? 'recv (.action chan)))
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (receiving-channel who obj)
-  ;;Succeed if OBJ is an instance of  CHANNEL and it is in the course of
+(define (assert-receiving-channel {who <symbol>} {chan <channel>})
+  ;;Succeed  if CHAN  is  an instance  of  "<channel>" and  it is  in  the course  of
   ;;receiving a message.
   ;;
-  (and (channel? obj)
-       ($receiving-channel? obj))
-  (assertion-violation who
-    "expected channel in the course of receving a message as argument" obj))
+  (unless (receiving-channel? chan)
+    (assertion-violation who
+      "expected channel in the course of receving a message as argument" chan)))
 
-(define-argument-validation (not-receiving-channel who chan)
-  ;;Succeed if  CHAN is an  instance of CHANNEL and  it is *not*  in the
-  ;;course of receiving a message.
+(define (assert-not-receiving-channel {who <symbol>} {chan <channel>})
+  ;;Succeed if CHAN  is an instance of "<channel>"  and it is *not* in  the course of
+  ;;receiving a message.
   ;;
-  (and (channel? chan)
-       (not ($receiving-channel? chan)))
-  (assertion-violation who
-    "expected channel not in the course of receving a message as argument" chan))
+  (when (receiving-channel? chan)
+    (assertion-violation who
+      "expected channel not in the course of receving a message as argument" chan)))
 
 
 ;;;; predicates and arguments validation: sending messages
 
-(define (sending-channel? chan)
-  ;;Return #t if CHAN is in the course of sending a message, else return
-  ;;#f.  It is an error if CHAN is not an instance of CHANNEL.
+(define ({sending-channel? <boolean>} {chan <channel>})
+  ;;Return #t if CHAN is in the course of sending a message, else return #f.
   ;;
-  (define who 'sending-channel?)
-  (with-arguments-validation (who)
-      ((channel	chan))
-    ($sending-channel? chan)))
-
-(define ($sending-channel? chan)
-  ;;Unsafe function returning  #t if CHAN is in the  course of sending a
-  ;;message, else return #f.
-  ;;
-  (eq? 'send ($channel-action chan)))
+  (eq? 'send (.action chan)))
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (sending-channel who obj)
-  ;;Succeed if OBJ is an instance of  CHANNEL and it is in the course of
+(define (assert-sending-channel {who <symbol>} {chan <channel>})
+  ;;Succeed if CHAN is an instance of "<channel>"  and it is in the course of sending
+  ;;a message.
+  ;;
+  (unless (sending-channel? chan)
+    (assertion-violation who
+      "expected channel in the course of sending a message as argument" chan)))
+
+(define (asert-not-sending-channel {who <symbol>} {chan <channel>})
+  ;;Succeed if CHAN  is an instance of "<channel>"  and it is *not* in  the course of
   ;;sending a message.
   ;;
-  (and (channel? obj)
-       ($sending-channel? obj))
-  (assertion-violation who
-    "expected channel in the course of sending a message as argument" obj))
-
-(define-argument-validation (not-sending-channel who chan)
-  ;;Succeed if  CHAN is an  instance of CHANNEL and  it is *not*  in the
-  ;;course of sending a message.
-  ;;
-  (and (channel? chan)
-       (not ($sending-channel? chan)))
-  (assertion-violation who
-    "expected channel not in the course of sending a message as argument" chan))
+  (when (sending-channel? chan)
+    (assertion-violation who
+      "expected channel not in the course of sending a message as argument" chan)))
 
 
 ;;;; predicates and arguments validation: inactive channel
 
-(define (inactive-channel? chan)
-  ;;Return #t if CHAN is neither  in the course of sending nor receiving
-  ;;a  message, else  return #f.   It  is an  error  if CHAN  is not  an
-  ;;instance of CHANNEL.
-  ;;
-  (define who 'inactive-channel?)
-  (with-arguments-validation (who)
-      ((channel	chan))
-    ($inactive-channel? chan)))
-
-(define ($inactive-channel? chan)
-  ;;Unsafe function  returning #t if  CHAN is  neither in the  course of
-  ;;sending nor receiving a message, else return #f.
-  ;;
-  (not ($channel-action chan)))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (inactive-channel who obj)
-  ;;Succeed if OBJ  is an instance of  CHANNEL and it is  neither in the
-  ;;course of sending nor receiving a message.
-  ;;
-  (and (channel? obj)
-       ($inactive-channel? obj))
-  (assertion-violation who "expected inactive channel as argument" obj))
-
-(define-argument-validation (not-inactive-channel who chan)
-  ;;Succeed if CHAN  is an instance of CHANNEL and  it is either sending
-  ;;or receiving a message.
-  ;;
-  (and (channel? chan)
-       (not ($inactive-channel? chan)))
-  (assertion-violation who "expected inactive channel as argument" chan))
-
-
-;;;; predicates and arguments validation: input channel
-
-(define (input-channel? chan)
-  ;;Return #t if  CHAN is an input or input/output  channel, else return
-  ;;#f.  It is an error if CHAN is not an instance of CHANNEL.
-  ;;
-  (define who 'input-channel?)
-  (with-arguments-validation (who)
-      ((channel	chan))
-    ($input-channel? chan)))
-
-(define ($input-channel? chan)
-  ;;Unsafe function  returning #t  if CHAN is  an input  or input/output
-  ;;channel, else return #f.
-  ;;
-  (and ($channel-connect-in-port chan) #t))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (input-channel who obj)
-  ;;Succeed if  OBJ is  an instance  of CHANNEL  and it  is an  input or
-  ;;input/output channel.
-  ;;
-  (and (channel? obj)
-       ($input-channel? obj))
-  (assertion-violation who
-    "expected input or input/output channel as argument" obj))
-
-
-;;;; predicates and arguments validation: output channel
-
-(define (output-channel? chan)
-  ;;Return #t if CHAN is an  output or input/output channel, else return
-  ;;#f.  It is an error if CHAN is not an instance of CHANNEL.
-  ;;
-  (define who 'output-channel?)
-  (with-arguments-validation (who)
-      ((channel	chan))
-    ($output-channel? chan)))
-
-(define ($output-channel? chan)
-  ;;Unsafe function  returning #t if  CHAN is an output  or input/output
-  ;;channel, else return #f.
-  ;;
-  (and ($channel-connect-ou-port chan) #t))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (output-channel who obj)
-  ;;Succeed if  OBJ is  an instance of  CHANNEL and it  is an  output or
-  ;;input/output channel.
-  ;;
-  (and (channel? obj)
-       ($output-channel? obj))
-  (assertion-violation who
-    "expected output or input/output channel as argument" obj))
-
-
-;;;; predicates and arguments validation: input/output channel
-
-(define (input/output-channel? chan)
-  ;;Return #t if CHAN is an input/output channel, else return #f.  It is
-  ;;an error if CHAN is not an instance of CHANNEL.
-  ;;
-  (define who 'input/output-channel?)
-  (with-arguments-validation (who)
-      ((channel	chan))
-    ($input/output-channel? chan)))
-
-(define ($input/output-channel? chan)
-  ;;Unsafe function  returning #t  if CHAN  is an  input/output channel,
+(define ({inactive-channel? <boolean>} {chan <channel>})
+  ;;Return #t if  CHAN is neither in  the course of sending nor  receiving a message,
   ;;else return #f.
   ;;
-  (and ($channel-connect-in-port chan)
-       ($channel-connect-ou-port chan)
-       #t))
+  (eq? 'none (.action chan)))
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (input/output-channel who obj)
-  ;;Succeed if OBJ  is an instance of CHANNEL and  it is an input/output
-  ;;channel.
+(define (assert-inactive-channel {who <symbol>} {chan <channel>})
+  ;;Succeed if CHAN is an instance of "<channel>"  and it is neither in the course of
+  ;;sending nor receiving a message.
   ;;
-  (and (channel? obj)
-       ($input/output-channel? obj))
-  (assertion-violation who "expected input/output channel as argument" obj))
+  (unless (inactive-channel? chan)
+    (assertion-violation who "expected inactive channel as argument" chan)))
+
+(define (assert-not-inactive-channel {who <symbol>} {chan <channel>})
+  ;;Succeed  if CHAN  is an  instance  of "<channel>"  and  it is  either sending  or
+  ;;receiving a message.
+  ;;
+  (when (inactive-channel? chan)
+    (assertion-violation who "expected inactive channel as argument" chan)))
 
 
 ;;;; condition objects and exception raising
@@ -594,7 +531,7 @@
     &condition
   make-channel-condition
   channel-condition?
-  (channel	condition-channel))
+  ({channel <channel>}	condition-channel))
 
 (define-condition-type &delivery-timeout-expired
     &error
@@ -608,10 +545,10 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (%error-message-delivery-timeout-expired who chan)
-  ;;Raise a  non-continuable exception  representing the  error: message
-  ;;message delivery  timeout expired.  The raised  condition object has
-  ;;components: &who, &message, &channel, &timeout-expired.
+(define ({%error-message-delivery-timeout-expired . <bottom>} {who <symbol>} {chan <channel>})
+  ;;Raise  a  non-continuable  exception  representing the  error:  message  delivery
+  ;;timeout expired.   The raised  condition object  has components:  &who, &message,
+  ;;&channel, &timeout-expired.
   ;;
   (raise
    (condition (make-channel-condition chan)
@@ -619,10 +556,10 @@
 	      (make-who-condition who)
 	      (make-message-condition "message reception timeout expired"))))
 
-(define (%error-maximum-message-size-exceeded who chan)
-  ;;Raise a  non-continuable exception  representing the  error: maximum
-  ;;message size exceeded.  The  raised condition object has components:
-  ;;&who, &message, &channel, &maximum-message-size-exceeded.
+(define ({%error-maximum-message-size-exceeded . <bottom>} {who <symbol>} {chan <channel>})
+  ;;Raise a  non-continuable exception representing  the error: maximum  message size
+  ;;exceeded.  The raised condition object  has components: &who, &message, &channel,
+  ;;&maximum-message-size-exceeded.
   ;;
   (raise
    (condition (make-channel-condition chan)
@@ -633,41 +570,28 @@
 
 ;;;; receiving messages
 
-(define (channel-recv-begin! chan)
-  ;;Configure a channel to start receiving a message; return unspecified
-  ;;values.  CHAN  must be an  input or  input/output channel; it  is an
-  ;;error if the channel is not inactive.
+(define ({channel-recv-begin! <void>} {chan <channel>})
+  ;;Configure  a channel  to start  receiving a  message; return  unspecified values.
+  ;;CHAN must be an  input or input/output channel; it is an error  if the channel is
+  ;;not inactive.
   ;;
-  (define who 'channel-recv-begin!)
-  (with-arguments-validation (who)
-      ((inactive-channel	chan)
-       (input-channel		chan))
-    ($channel-recv-begin! chan)))
-
-(define ($channel-recv-begin! chan)
-  ($channel-action-set!              chan 'recv)
-  ($channel-message-buffer-set!      chan '())
-  ($channel-message-size-set!        chan 0)
-  ($channel-message-terminated?-set! chan #f)
+  (assert-inactive-channel __who__ chan)
+  (.action		chan 'recv)
+  (.message-buffer	chan '())
+  (.message-size	chan 0)
+  (.message-terminated?	chan #f)
   (void))
 
-;;; --------------------------------------------------------------------
-
-(define (channel-recv-end! chan)
-  ;;Finish receiving  a message and  return the accumulated octets  in a
-  ;;bytevector or chars in  a string.  It is an error  if the channel is
-  ;;not in the course of receiving a message.
+(define ({channel-recv-end! <top>} {chan <channel>})
+  ;;Finish receiving a  message and return the accumulated octets  in a bytevector or
+  ;;chars  in a  string.  It  is an  error if  the channel  is not  in the  course of
+  ;;receiving a message.
   ;;
-  ;;After this function  is applied to a channel: the  channel itself is
-  ;;configured  as  inactive; so  it  is  available to  start  receiving
-  ;;another message or to send a message.
+  ;;After this function is applied to a  channel: the channel itself is configured as
+  ;;inactive; so  it is  available to start  receiving another message  or to  send a
+  ;;message.
   ;;
-  (define who 'channel-recv-end!)
-  (with-arguments-validation (who)
-      ((receiving-channel	chan))
-    ($channel-recv-end! chan)))
-
-(define ($channel-recv-end! chan)
+  (assert-receiving-channel __who__ chan)
   (receive (reverse-buffers total-size)
       ($channel-recv-end!/rbl chan)
     (if (binary-channel? chan)
@@ -675,55 +599,45 @@
       ($string-reverse-and-concatenate total-size reverse-buffers))))
 
 (define (channel-recv-end!/rbl chan)
-  ;;Finish  receiving a  message  and return  the 2  values:  a list  of
-  ;;bytevectors or strings representing  the data buffers accumulated in
-  ;;reverse order,  an exact integer  representing the total  data size.
-  ;;It is an  error if the channel  is not in the course  of receiving a
+  ;;Finish receiving  a message  and return the  2 values: a  list of  bytevectors or
+  ;;strings  representing the  data buffers  accumulated in  reverse order,  an exact
+  ;;integer representing the total  data size.  It is an error if  the channel is not
+  ;;in the course of receiving a message.
+  ;;
+  ;;After this function is applied to a  channel: the channel itself is configured as
+  ;;inactive; so  it is  available to start  receiving another message  or to  send a
   ;;message.
   ;;
-  ;;After this function  is applied to a channel: the  channel itself is
-  ;;configured  as  inactive; so  it  is  available to  start  receiving
-  ;;another message or to send a message.
-  ;;
-  (define who 'channel-recv-end!/rbl)
-  (with-arguments-validation (who)
-      ((receiving-channel	chan))
-    ($channel-recv-end!/rbl chan)))
-
-(define ($channel-recv-end!/rbl chan)
+  (assert-receiving-channel __who__ chan)
   (begin0
       (values ($channel-message-buffer chan)
 	      ($channel-message-size   chan))
-    ($channel-action-set!          chan #f)
-    ($channel-message-buffer-set!  chan '())
-    ($channel-message-size-set!    chan 0)
-    ($channel-message-terminated?-set! chan #f)))
+    (.action			chan 'none)
+    (.message-buffer		chan '())
+    (.message-size		chan 0)
+    (.message-terminated?	chan #f)))
 
 ;;; --------------------------------------------------------------------
 
 (define (channel-recv-message-portion! chan)
-  ;;Receive a portion of input message from the given channel.  It is an
-  ;;error if the channel is not in the course of receiving a message.
+  ;;Receive a portion of input message from the given channel.  It is an error if the
+  ;;channel is not in the course of receiving a message.
   ;;
-  ;;* Return  true if a configured  message terminator is read  from the
-  ;;input port or if the channel already read a terminator in a previous
-  ;;operation.   If  a  message  terminator is  received:  set  CHAN  to
-  ;;"message terminated" status.
+  ;;* Return true if  a configured message terminator is read from  the input port or
+  ;;  if the channel already read a terminator in a previous operation.  If a message
+  ;;  terminator is received: set CHAN to "message terminated" status.
   ;;
-  ;;* Return the EOF object if EOF  is read from the input port before a
-  ;;message terminator.
+  ;;* Return  the EOF  object if EOF  is read  from the input  port before  a message
+  ;;  terminator.
   ;;
-  ;;* Return false  if neither a message terminator nor  EOF is read; in
-  ;;this  case we  need to  call this  function again  later to  receive
-  ;;further message portions.
+  ;;* Return false if  neither a message terminator nor EOF is read;  in this case we
+  ;;  need to call this function again later to receive further message portions.
   ;;
-  ;;*  If the  message  delivery  timeout is  expired  or expires  while
-  ;;receiving data: raise an exception.
+  ;;* If  the message delivery  timeout is expired  or expires while  receiving data:
+  ;;  raise an exception.
   ;;
-  ;;* If the accumulated data exceeds the maximum message size: raise an
-  ;;exception.
+  ;;* If the accumulated data exceeds the maximum message size: raise an exception.
   ;;
-  (define who 'channel-recv-message-portion!)
   (cond ((and (binary-channel?     chan)
 	      ($receiving-channel? chan))
 	 ($channel-recv-binary-message-portion! chan))
@@ -731,19 +645,12 @@
 	      ($receiving-channel? chan))
 	 ($channel-recv-textual-message-portion! chan))
 	(else
-	 (assertion-violation who
+	 (assertion-violation __who__
 	   "expected net channel in the course of receiving a message as argument" chan))))
 
 ;;; --------------------------------------------------------------------
 
-(define (channel-recv-full-message chan)
-  (define who 'channel-recv-full-message)
-  (with-arguments-validation (who)
-      ((inactive-channel	chan)
-       (input-channel		chan))
-    ($channel-recv-full-message chan)))
-
-(define ($channel-recv-full-message chan)
+(define (channel-recv-full-message {chan <recv-channel>})
   ($channel-recv-begin! chan)
   (let next-portion ()
     (let ((rv (if (binary-channel? chan)
@@ -1178,6 +1085,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
