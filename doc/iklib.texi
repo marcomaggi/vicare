@@ -19132,6 +19132,14 @@ Comparison procedure for booleans.  @true{} is considered greater than
 @end defun
 
 
+@defun compar-true @var{A} @var{B}
+@defunx compar-false @var{A} @var{B}
+Comparison procedure for booleans true and false.  The arguments must
+be, respectively, both @true{} or both @false{}; when the arguments are
+correct, the return value is always the fixnum zero.
+@end defun
+
+
 @defun compar-transcoder @var{A} @var{B}
 Comparison procedure for transcoders.  Comparison is performed on the
 internal representation as exact integers.

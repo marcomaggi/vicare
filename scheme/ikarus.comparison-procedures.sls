@@ -45,6 +45,8 @@
 
     ;; misc comparison
     compar-boolean
+    compar-true
+    compar-false
     compar-transcoder
     compar-pointer
 
@@ -69,6 +71,8 @@
 
 		  ;; misc comparison
 		  compar-boolean
+		  compar-true
+		  compar-false
 		  compar-transcoder
 		  compar-pointer
 
@@ -135,6 +139,12 @@
 	(A		+1)
 	(B		-1)
 	(else		0)))
+
+(define* (compar-true {A true?} {B true?})
+  0)
+
+(define* (compar-false {A true?} {B true?})
+  0)
 
 
 ;;;; done

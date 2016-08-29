@@ -56,7 +56,10 @@
 (define-scheme-type <true>
     <boolean>
   (constructor #t)
-  (type-predicate true?))
+  (type-predicate true?)
+  (equality-predicate eq?)
+  (comparison-procedure compar-boolean)
+  (hash-function boolean-hash))
 
 (define-scheme-type <false>
     <boolean>

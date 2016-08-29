@@ -4384,6 +4384,8 @@
     (compar-symbol				v $language)
 
     (compar-boolean				v $language)
+    (compar-true				v $language)
+    (compar-false				v $language)
     (compar-transcoder				v $language)
     (compar-pointer				v $language)
 
