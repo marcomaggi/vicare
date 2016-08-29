@@ -18806,27 +18806,27 @@ return value from the foreign function and the value of the C variable
 The following bindings are exported by the library @library{vicare}.
 
 
-@defun current-time
-Return an object of disjoint type representing the current time as
+@deftypefun @aclass{time} current-time
+Return an instance of @class{time} representing the current time as
 determined by @cfunc{gettimeofday}: this is the elapsed time since the
 Epoch.
-@end defun
+@end deftypefun
 
 
-@defun time-from-now @var{delta}
-Return a time object representing the current time plus the time object
-@var{delta}.
-@end defun
+@deftypefun @aclass{time} time-from-now @{@var{delta} @aclass{time}@}
+Return a @class{time} object representing the current time plus the
+@class{time} object @var{delta}.
+@end deftypefun
 
 
 @defun make-time @var{seconds} @var{nanoseconds}
-Build and return a new time object with microseconds resolution.  If
-@var{nanoseconds} exceeds @math{1000000} its value is normalised and the
-excess added to @var{seconds}.
+Build and return a new @class{time} object with microseconds resolution.
+If @var{nanoseconds} exceeds @math{1000000} its value is normalised and
+the excess added to @var{seconds}.
 @end defun
 
 
-@deftp {Object Time} @class{time}
+@deftp {Object Time} @aclass{time}
 Type name identifier of disjoint time objects.
 @end deftp
 
