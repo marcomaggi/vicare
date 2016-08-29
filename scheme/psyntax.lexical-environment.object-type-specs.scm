@@ -3056,8 +3056,8 @@
 		;   (?method-name . (?protection . ?method-signature))
 		;
 		;in which: ?METHOD-NAME  is a symbol representing  a parent's virtual
-		;or sealed method  name; ?PROTECTION is a the fixnum  0 for public, 1
-		;for protected, 2 for private; ?METHOD-SIGNATURE is:
+		;or sealed method name; ?PROTECTION is the fixnum 0 for public, 1 for
+		;protected, 2 for private; ?METHOD-SIGNATURE is:
 		;
 		;*  When  the  method  is   an  open  virtual  method:  instances  of
 		;"<closure-type-spec>" representing the type signature of the method.
