@@ -807,7 +807,7 @@
 					      '() ;implemented-interfaces
 					      )))
 		 (define/std ,RTD
-		   (let ((,method-retriever.id ,METHOD-RETRIEVER))
+		   (let/checked ((,method-retriever.id ,METHOD-RETRIEVER))
 		     ($make-record-type-descriptor-ex (quote ,?name) (record-type-descriptor ,?parent-name)
 						      (quote ,UID) #f ,SEALED? ,OPAQUE?
 						      (quote ,FIELDS-VECTOR) (quote ,NORMAL-FIELDS-VECTOR)
@@ -816,8 +816,8 @@
 						      #f ;equality-predicate
 						      #f ;comparison-procedure
 						      #f ;hash-function
-						      ,method-retriever.id
-						      ,method-retriever.id ;method-retriever-private
+						      ,method-retriever.id ;method-retriever-retriever-public
+						      ,method-retriever.id ;method-retriever-retriever-private
 						      #f ;implemented-interfaces
 						      )))
 		 (define/std ,RCD

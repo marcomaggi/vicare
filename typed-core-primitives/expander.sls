@@ -790,7 +790,7 @@
      (alist <symbol> <syntactic-identifier>) ;methods-table-public
      (alist <symbol> <syntactic-identifier>) ;methods-table-protected
      (alist <symbol> <syntactic-identifier>) ;methods-table-private
-     (alist <symbol> (pair <fixnum> (or <false> <closure-type-spec>))) ;virtual-method-signatures
+     (alist <symbol> (pair <fixnum> (or <false> <closure-type-spec>)))	;virtual-method-signatures
      (list-of <syntactic-identifier>)) ;implemented-interfaces
     => (<record-type-spec>))))
 
@@ -811,10 +811,16 @@
 ;;   (signatures
 ;;    ((<record-type-spec>)		=> ((or <false> <syntactic-identifier>)))))
 
-;; (declare-core-primitive record-type-spec.virtual-method-signatures
-;;     (safe)
-;;   (signatures
-;;    ((<record-type-spec>)		=> ((alist <symbol> (pair <fixnum> (or <false> <closure-type-spec>)))))))
+(declare-core-primitive record-type-spec.virtual-method-signatures
+    (safe)
+  (signatures
+   ((<record-type-spec>)		=> ((alist <symbol> (pair <fixnum> (or <false> <closure-type-spec>)))))))
+
+(declare-core-primitive record-type-spec.virtual-method-signatures-set!
+    (safe)
+  (signatures
+   ((<record-type-spec> (alist <symbol> (pair <fixnum> (or <false> <closure-type-spec>))))
+    => (<void>))))
 
 (declare-core-primitive record-type-spec.parent-and-child?
     (safe)

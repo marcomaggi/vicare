@@ -72,7 +72,8 @@
 	 <record-type-spec>-rtd				<record-type-spec>-rcd
 	 make-record-type-spec				record-type-spec?
 	 record-type-spec.rtd-id			record-type-spec.rcd-id
-	 record-type-spec.super-protocol-id		record-type-spec.virtual-method-signatures
+	 record-type-spec.super-protocol-id
+	 record-type-spec.virtual-method-signatures	record-type-spec.virtual-method-signatures-set!
 	 simple-condition-object-type-spec?		record-type-spec.parent-and-child?
 
 	 <compound-condition-type-spec>
@@ -3050,8 +3051,9 @@
 		;False  if  this  record-type has  no  super-type  record-constructor
 		;descriptor;  otherwise   the  syntactic  identifier  to   which  the
 		;super-RCD is bound.
-    (immutable virtual-method-signatures	record-type-spec.virtual-method-signatures)
-		;An alist having entries with format:
+    (mutable	virtual-method-signatures	record-type-spec.virtual-method-signatures record-type-spec.virtual-method-signatures-set!)
+		;This field  is initialised  to null  and mutated  later to  an alist
+		;having entries with format:
 		;
 		;   (?method-name . (?protection . ?method-signature))
 		;
@@ -3063,6 +3065,12 @@
 		;"<closure-type-spec>" representing the type signature of the method.
 		;
 		;* When the method has been sealed: the boolean false.
+		;
+		;NOTE  The  only  reason  this  field is  mutable  is  to  allow  the
+		;implementation  of   recursive  record-types:  to  build   a  method
+		;signature  object whose  type signature  references the  record-type
+		;itself, the record-type must be  already defined.  (Marco Maggi; Tue
+		;Aug 30, 2016)
     #| end of FIELDS |# )
 
   (protocol
