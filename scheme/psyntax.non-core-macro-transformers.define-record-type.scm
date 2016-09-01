@@ -1526,12 +1526,12 @@
     (syntax-match clause ()
       ((_ ?destructor-protocol-expr)
        ;;This record definition has a destructor protocol.
-       `(let ((,foo-destructor-protocol ,?destructor-protocol-expr))
+       `(let/checked ((,foo-destructor-protocol ,?destructor-protocol-expr))
 	  (unless (procedure? ,foo-destructor-protocol)
 	    (assertion-violation (quote ,foo)
 	      "expected closure object as result of evaluating the destructor protocol expression"
 	      ,foo-destructor-protocol))
-	  (receive-and-return (,destructor-tmp)
+	  (receive-and-return/checked (,destructor-tmp)
 	      ,(if (or foo-parent parent-rtd.sym)
 		   `(,foo-destructor-protocol (internal-applicable-record-type-destructor ,parent-rtd.sym))
 		 `(,foo-destructor-protocol))
@@ -1597,8 +1597,8 @@
 	 (if parent-rtd
 	     ;;The new  record-type has a parent:  we apply the protocol  function to
 	     ;;the parent's equality predicate function.
-	     `(let ((,proto-func.sym ,?proto-expr))
-		(receive-and-return (,pred-func.sym)
+	     `(let/checked ((,proto-func.sym ,?proto-expr))
+		(receive-and-return/checked ({,pred-func.sym (equality-predicate ,foo)})
 		    (,proto-func.sym ($record-type-equality-predicate ,parent-rtd))
 		  (unless (procedure? ,pred-func.sym)
 		    (assertion-violation (quote ,foo)
@@ -1606,8 +1606,8 @@
 		      ,pred-func.sym))))
 	   ;;The  new  record-type has  no  parent:  we  just evaluate  the  protocol
 	   ;;function with no arguments.
-	   `(let ((,proto-func.sym ,?proto-expr))
-	      (receive-and-return (,pred-func.sym)
+	   `(let/checked ((,proto-func.sym ,?proto-expr))
+	      (receive-and-return/checked ({,pred-func.sym (equality-predicate ,foo)})
 		  (,proto-func.sym)
 		(unless (procedure? ,pred-func.sym)
 		  (assertion-violation (quote ,foo)
@@ -1636,8 +1636,8 @@
 	 (if parent-rtd
 	     ;;The new  record-type has a parent:  we apply the protocol  function to
 	     ;;the parent's comparison procedure.
-	     `(let ((,proto-func.sym ,?proto-expr))
-		(receive-and-return (,compar-func.sym)
+	     `(let/checked ((,proto-func.sym ,?proto-expr))
+		(receive-and-return/checked ({,compar-func.sym (comparison-procedure ,foo)})
 		    (,proto-func.sym ($record-type-comparison-procedure ,parent-rtd))
 		  (unless (procedure? ,compar-func.sym)
 		    (assertion-violation (quote ,foo)
@@ -1645,8 +1645,8 @@
 		      ,compar-func.sym))))
 	   ;;The  new  record-type has  no  parent:  we  just evaluate  the  protocol
 	   ;;function with no arguments.
-	   `(let ((,proto-func.sym ,?proto-expr))
-	      (receive-and-return (,compar-func.sym)
+	   `(let/checked ((,proto-func.sym ,?proto-expr))
+	      (receive-and-return/checked ({,compar-func.sym (comparison-procedure ,foo)})
 		  (,proto-func.sym)
 		(unless (procedure? ,compar-func.sym)
 		  (assertion-violation (quote ,foo)
@@ -1674,8 +1674,8 @@
 	 (if parent-rtd
 	     ;;The new  record-type has a parent:  we apply the protocol  function to
 	     ;;the parent's comparison procedure.
-	     `(let ((,proto-func.sym ,?proto-expr))
-		(receive-and-return (,hash-func.sym)
+	     `(let/checked ((,proto-func.sym ,?proto-expr))
+		(receive-and-return/checked ({,hash-func.sym (hash-function ,foo)})
 		    (,proto-func.sym ($record-type-hash-function ,parent-rtd))
 		  (unless (procedure? ,hash-func.sym)
 		    (assertion-violation (quote ,foo)
@@ -1683,8 +1683,8 @@
 		      ,hash-func.sym))))
 	   ;;The  new  record-type has  no  parent:  we  just evaluate  the  protocol
 	   ;;function with no arguments.
-	   `(let ((,proto-func.sym ,?proto-expr))
-	      (receive-and-return (,hash-func.sym)
+	   `(let/checked ((,proto-func.sym ,?proto-expr))
+	      (receive-and-return/checked ({,hash-func.sym (hash-function ,foo)})
 		  (,proto-func.sym)
 		(unless (procedure? ,hash-func.sym)
 		  (assertion-violation (quote ,foo)
