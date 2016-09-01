@@ -48,7 +48,7 @@
 
 
 (library (psyntax.non-core-macro-transformers)
-  (export)
+  (export record-type-process-method-forms)
   (import (except (rnrs)
 		  eval
 		  environment		environment?

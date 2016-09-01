@@ -769,6 +769,19 @@
 
 ;;; --------------------------------------------------------------------
 
+(declare-core-primitive record-type-process-method-forms
+    (safe)
+  (signatures
+   ((<syntactic-identifier>		;foo
+     <syntactic-identifier>		;foo-for-id-generation
+     <top>				;method-clause*.stx
+     <list>				;field-methods-alist-public
+     <list>				;field-methods-alist-protected
+     <list>				;field-methods-alist-private
+     <syntactic-identifier>		;method-retriever-code-public.id
+     <syntactic-identifier>)		;method-retriever-code-private.id
+    => (<syntax-object>))))
+
 (declare-core-rtd <record-type-spec>-rtd)
 (declare-core-rcd <record-type-spec>-rcd)
 

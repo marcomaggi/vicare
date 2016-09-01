@@ -282,7 +282,7 @@
 
   ;;Methods with record-type name in the signature.
   ;;
-  #;(check
+  (check
       (internal-body
 	(define-record-type <node>
 	  (fields (mutable {lx (or <node> <false>)})

@@ -4957,6 +4957,10 @@
     (object-type-spec.list-sub-type?			$expander)
     (object-type-spec.vector-sub-type?			$expander)
     ;;
+    (object-type-spec.methods-table-public-set!)
+    (object-type-spec.methods-table-protected-set!)
+    (object-type-spec.methods-table-private-set!)
+    ;;
     (object-type-spec.matching-super-and-sub?		$expander)
     (object-type-spec.compatible-super-and-sub?		$expander)
     (object-type-spec.common-ancestor			$expander)
@@ -4984,6 +4988,8 @@
     (record-type-spec.rtd-id				$expander)
     (record-type-spec.rcd-id				$expander)
     (record-type-spec.parent-and-child?			$expander)
+    (record-type-spec.virtual-method-signatures-set!)
+    (record-type-process-method-forms)
 
     (<compound-condition-type-spec>-rtd)
     (<compound-condition-type-spec>-rcd)
