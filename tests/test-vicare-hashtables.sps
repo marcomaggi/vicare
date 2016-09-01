@@ -25,6 +25,7 @@
 
 #!r6rs
 (import (vicare)
+  (vicare system structs)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

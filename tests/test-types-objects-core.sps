@@ -27,6 +27,7 @@
 (program (test-vicare-typed-language-scheme-objects)
   (options typed-language)
   (import (vicare)
+    (vicare system structs)
     (prefix (vicare expander) expander::)
     (only (vicare expander)
 	  type-annotation=?

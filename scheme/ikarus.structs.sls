@@ -571,9 +571,10 @@
 #| end of libray (ikarus structs) |# )
 
 
-(library (vicare systems structs)
+(library (vicare structs unsafe)
   (export $struct-ref $struct/rtd?)
-  (import (vicare))
+  (import (vicare)
+    (vicare system structs))
   (define $struct-ref struct-ref)
   (define ($struct/rtd? x rtd)
     (import (vicare system $structs))

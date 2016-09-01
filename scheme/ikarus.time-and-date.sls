@@ -42,7 +42,8 @@
 		  time-addition		time-difference
 		  time=?
 		  time<?		time<=?
-		  time>?		time>=?))
+		  time>?		time>=?)
+    (vicare system structs))
 
 
 (define-struct (time %make-time time?)

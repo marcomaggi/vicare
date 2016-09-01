@@ -85,6 +85,7 @@
     ;;See the source file for the customisable interface to types.
     (prefix (vicare language-extensions multimethods types (0 4)) type::)
     (prefix (vicare language-extensions multimethods methods-table (0 4)) mt::)
+    (vicare system structs)
     (for (vicare expander)
       expand))
 

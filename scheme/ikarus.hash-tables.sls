@@ -152,6 +152,8 @@
 	    sys::)
     (only (vicare system $structs)
 	  $set-std-printer!)
+    (except (vicare system structs)
+	    struct-hash)
     (only (ikarus unique-objects)
 	  SENTINEL))
 

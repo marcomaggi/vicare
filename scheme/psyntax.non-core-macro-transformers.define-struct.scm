@@ -175,11 +175,16 @@
       (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id field-type.ann)
     	     (let ((stru.id	(make-syntactic-identifier-for-temporary-variable "stru"))
     		   (val.id	(make-syntactic-identifier-for-temporary-variable "val")))
-    	       `(begin
-		  (define/overload ({,method.id ,field-type.ann} {,stru.id ,type.id})
-		    (,unsafe-accessor.id ,stru.id))
-		  (define/overload ({,method.id <void>}          {,stru.id ,type.id} {,val.id ,field-type.ann})
-		    (,unsafe-mutator.id ,stru.id ,val.id)))))
+	       ;;NOTE Structs are  used in the boot image, for  example, to implement
+	       ;;keyword objects.  We may be tempted to use DEFINE/OVERLOAD here, but
+	       ;;it would introduce a dependency from the overloaded functions' code.
+	       ;;If we use CASE-DEFINE/CHECKED there is no dependency.  (Marco Maggi;
+	       ;;Sat Aug 27, 2016)
+    	       `(case-define/checked ,method.id
+		  (({_ ,field-type.ann} {,stru.id ,type.id})
+		   (,unsafe-accessor.id ,stru.id))
+		  (({_ <void>} {,stru.id ,type.id} {,val.id ,field-type.ann})
+		   (,unsafe-mutator.id ,stru.id ,val.id)))))
     	method*.id unsafe-accessor*.id unsafe-mutator*.id field-type*.ann))
 
 ;;; --------------------------------------------------------------------

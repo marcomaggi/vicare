@@ -1389,7 +1389,7 @@
 #| end of library |# )
 
 
-(library (vicare system strings)
+(library (vicare strings unsafe)
   (export $make-string
 	  $string-length
 	  $string-ref

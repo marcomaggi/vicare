@@ -153,6 +153,8 @@
 
 (parametrise ((check-test-name	'struct-types))
 
+  (import (vicare system structs))
+
   ;;Type predicates.
   ;;
   (check
@@ -262,6 +264,32 @@
 	  (method (left)
 	    (.lx this))
 	  (method (right)
+	    (.rx this)))
+
+	(define O
+	  (new <node> #f #f))
+
+	(define P
+	  (new <node> #f #f))
+	(define Q
+	  (new <node> #f #f))
+
+	(.lx O P)
+	(.rx O Q)
+	(values (equal? P (.left  O))
+		(equal? Q (.right O))))
+    => #t #t)
+
+  ;;Methods with record-type name in the signature.
+  ;;
+  (check
+      (internal-body
+	(define-record-type <node>
+	  (fields (mutable {lx (or <node> <false>)})
+		  (mutable {rx (or <node> <false>)}))
+	  (method ({left (or <node> <false>)})
+	    (.lx this))
+	  (method ({right (or <node> <false>)})
 	    (.rx this)))
 
 	(define O

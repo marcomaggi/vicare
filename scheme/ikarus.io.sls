@@ -646,6 +646,7 @@
 		  make-textual-socket-output-port*
 		  make-textual-socket-input/output-port
 		  make-textual-socket-input/output-port*)
+    (vicare system structs)
     (only (ikarus.options)
 	  strict-r6rs)
     (vicare system $fx)

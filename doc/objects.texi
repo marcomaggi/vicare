@@ -2801,16 +2801,15 @@ Scheme symbol used as unique identifier for this type.
 
 @item
 False or closure object to be used as destructor for instances of this
-type (@pxref{iklib structs define, Automatic finalisation of
-structures}).
+type (@pxref{syslib structs safe final, Finalisation of structures}).
 @end enumerate
 
 Type descriptors are best defined at the Scheme level using the
-functions from the @library{vicare} library (@pxref{iklib structs
-define, define-struct}).  To instantiate a structure at the C language
-level we should write a C function accepting the type descriptor as
-argument, and have the Scheme code hand the descriptor to it.  For
-example, at the Scheme level we do:
+functions from the library @library{vicare system structs} (@pxref{syslib
+structs safe define, define-struct}).  To instantiate a structure at the
+C language level we should write a C function accepting the type
+descriptor as argument, and have the Scheme code hand the descriptor to
+it.  For example, at the Scheme level we do:
 
 @example
 (define-struct timeval

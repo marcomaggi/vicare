@@ -115,7 +115,7 @@
 #| end of library |# )
 
 
-(library (vicare system chars)
+(library (vicare chars unsafe)
   (export $char= $char->fixnum $fixnum->char)
   (import (vicare))
   (define $char=	char=?)

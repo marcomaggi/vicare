@@ -23,7 +23,8 @@
   (import (except (vicare)
 		  force
 		  make-promise
-		  promise?))
+		  promise?)
+    (vicare system structs))
 
 
 (define-struct (promise %make-promise promise?)

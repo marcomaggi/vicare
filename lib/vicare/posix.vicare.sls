@@ -458,6 +458,7 @@
 		  list-of-string-pathnames?
 		  list-of-bytevector-pathnames?)
 	    posix::)
+    (vicare system structs)
     (vicare language-extensions syntaxes)
     (vicare platform constants)
     (vicare arguments validation)

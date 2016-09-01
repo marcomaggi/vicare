@@ -35,6 +35,7 @@
   (export equal?)
   (import (except (vicare)
 		  equal?)
+    (vicare system structs)
     (only (vicare system $records)
       	  $record-type-equality-predicate)
     (only (vicare system $pointers)

@@ -33,6 +33,8 @@
     ;; auxiliary syntaxes
     mandatory optional with without)
   (import (except (vicare) with)
+    (for (vicare system structs)
+      expand)
     (for (vicare expander)
       expand))
 

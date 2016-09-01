@@ -15,6 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus predicates)
   (export
     fixnum?		flonum?		bignum?
@@ -349,7 +350,7 @@
 
 ;; #!vicare
 ;; (define dummy
-;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.predicates")))
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.predicates end")))
 
 #| end of library |# )
 

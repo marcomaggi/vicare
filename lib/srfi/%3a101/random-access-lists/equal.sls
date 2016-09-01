@@ -39,6 +39,7 @@
   (export equal?)
   (import (except (vicare)
 		  equal?)
+    (vicare system structs)
     (prefix (srfi :101)
 	    srfi.))
 

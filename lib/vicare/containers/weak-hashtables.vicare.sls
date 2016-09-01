@@ -37,6 +37,7 @@
     weak-hashtable-keys		weak-hashtable-entries
     weak-hashtable-update!)
   (import (vicare)
+    (vicare system structs)
     (vicare unsafe operations)
     (vicare language-extensions syntaxes)
     (vicare arguments validation))

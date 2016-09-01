@@ -102,6 +102,9 @@
 
 ;;;; done
 
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.exceptions after"))
+
 #| end of library |# )
 
 ;;; end of file

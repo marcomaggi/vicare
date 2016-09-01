@@ -57,6 +57,7 @@
     (only (ikarus records procedural)
 	  $record-type-printer-set!)
     (prefix (vicare platform words) words.)
+    (vicare system structs)
     (only (vicare system posix)
 	  file-string-pathname?))
 

@@ -41,6 +41,7 @@
 		  print-condition)
 	    ikarus.)
     (only (ikarus control) call/cf)
+    (vicare system structs)
     (prefix (vicare platform words)
 	    words.)
     (prefix (vicare unsafe capi)

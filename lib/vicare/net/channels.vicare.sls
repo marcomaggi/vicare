@@ -287,7 +287,7 @@
       (close-port port)))
   (%close ($channel-connect-in-port chan))
   (%close ($channel-connect-ou-port chan))
-  (struct-reset chan)
+  (record-reset chan)
   (void))
 
 (define (channel-abort! chan)

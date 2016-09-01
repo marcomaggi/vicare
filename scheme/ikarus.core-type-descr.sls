@@ -71,6 +71,7 @@
      	  tcbucket?)
     (only (vicare system code-objects)
      	  code?)
+    (vicare system structs)
     (only (vicare expander)
 	  syntax-clauses-unwrap
 	  syntax-clauses-collapse

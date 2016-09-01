@@ -1044,8 +1044,7 @@
 			       constructor-sexp destructor-sexp type-predicate-sexp
 			       equality-predicate.id comparison-procedure.id hash-function.id
 			       methods-table methods-table methods-table
-			       virtual-method-signatures
-			       implemented-interfaces))
+			       virtual-method-signatures implemented-interfaces))
       (set-car! descriptor 'core-object-type-name)
       (set-cdr! descriptor (cons ots hard-coded-sexp)))))
 
@@ -1100,8 +1099,8 @@
 	 (comparison-procedure.id	#f)
 	 (hash-function.id		(core-prim-id 'record-hash))
 	 (methods-table			(%alist-ref-or-null hard-coded-sexp 7))
-	 (implemented-interfaces	'())
-	 (virtual-method-signatures	'()))
+	 (virtual-method-signatures	'())
+	 (implemented-interfaces	'()))
     (let ((methods-table (if parent.id
 			     (append methods-table (object-type-spec.methods-table-public (id->object-type-spec parent.id)))
 			   methods-table)))
@@ -1111,8 +1110,7 @@
 			       constructor.id destructor.id type-predicate.id
 			       equality-predicate.id comparison-procedure.id hash-function.id
 			       methods-table methods-table methods-table
-			       virtual-method-signatures
-			       implemented-interfaces))
+			       virtual-method-signatures implemented-interfaces))
       (set-car! descriptor 'core-object-type-name)
       (set-cdr! descriptor (cons ots hard-coded-sexp)))))
 

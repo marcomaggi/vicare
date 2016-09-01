@@ -30,6 +30,7 @@
 #!vicare
 (program (test-srfi-114-comparators)
   (import (vicare)
+    (vicare system structs)
     (vicare checks)
     (srfi :114))
 

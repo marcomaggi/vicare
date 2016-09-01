@@ -28,6 +28,7 @@
   (options strict-r6rs)
   (import (vicare)
     (vicare checks)
+    (vicare system structs)
     (vicare system $structs))
 
 (print-unicode #f)

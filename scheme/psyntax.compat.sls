@@ -206,6 +206,7 @@
     (prefix (only (vicare.foreign-libraries)
 		  dynamically-load-shared-object-from-identifier)
 	    foreign::)
+    (vicare system structs)
     ;;The syntactic  binding EXPAND-LIBRARY  is needed by  the implementation  of the
     ;;LIBRARY syntax, which  (for source code partitioning  reasons) cannot reference
     ;;the one defined in "psyntax.expander.sls".

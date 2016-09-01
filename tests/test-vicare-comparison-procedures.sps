@@ -27,6 +27,7 @@
 (program (test-vicare-comparison-procedures)
   (options typed-language)
   (import (vicare)
+    (vicare system comparison-procedures)
     (vicare checks))
 
 (check-set-mode! 'report-failed)

@@ -19,7 +19,7 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(module ()
+(module (record-type-process-method-forms)
   ;;Transformer function  used to  expand R6RS's  DEFINE-RECORD-TYPE macros  from the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
@@ -42,7 +42,8 @@
 	 (lambda ()
 	   (%validate-definition-clauses ?clause* __synner__)
 	   ;; (receive-and-return (out)
-	   ;;     (%do-define-record input-form.stx ?namespec ?clause* __synner__)
+	   ;;     (parametrise ((current-table-of-names (make-hashtable string-hash string=?)))
+	   ;; 	 (%do-define-record input-form.stx ?namespec ?clause* __synner__))
 	   ;;   (debug-print (syntax->datum out)))
 	   (parametrise ((current-table-of-names (make-hashtable string-hash string=?)))
 	     (%do-define-record input-form.stx ?namespec ?clause* __synner__)))))
@@ -156,13 +157,6 @@
   ;;PARENT-RCD-DEFINITION: null or  a list holding a DEFINE form  defining the parent
   ;;RCD syntactic binding, the list is spliced in the output.
   ;;
-  ;;PARENT-EARLY-BINDING-METHODS-ALIST-PUBLIC: null or an  alist associated to public
-  ;;methods having: as keys, symbols  representing method names; as values, syntactic
-  ;;identifiers bound to the method implementation functions.
-  ;;
-  ;;PARENT-EARLY-BINDING-METHODS-ALIST-PROTECTED:  null  or  an alist  associated  to
-  ;;protected methods.
-  ;;
   ;;PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST an alist having  entries with format:
   ;;
   ;;   (?method-name . (?protection . ?method-signature))
@@ -176,11 +170,8 @@
   ;;
   ;;* When the method has been sealed: the boolean false.
   ;;
-  (define-values (foo-parent.id
-		  parent-rtd.id parent-rcd.id parent-rtd-definition parent-rcd-definition
-		  parent-early-binding-methods-alist-public
-		  parent-early-binding-methods-alist-protected
-		  parent-virtual-method-signatures-alist)
+  (define-values (foo-parent.id parent-rtd.id parent-rcd.id parent-rtd-definition parent-rcd-definition
+				parent-virtual-method-signatures-alist)
     (%make-parent-rtd+rcd-code clause*.stx foo input-form.stx synner))
 
   ;;Parsing fields clauses.
@@ -251,7 +242,7 @@
   ;;type is the super-type  of another; otherwise it is a list  holding a DEFINE form
   ;;defining the supertype record-constructor  descriptor syntactic binding, the list
   ;;is spliced in the output.
-  (define-values (foo-super-rcd.id super-rcd-definition)
+  (define-values (foo-super-rcd.id foo-super-rcd-definition)
     (cond ((%make-super-rcd-code clause*.stx foo foo-rtd foo-parent.id parent-rcd.id synner)
 	   => (lambda (foo-super-rcd-code)
 		(let ((foo-super-rcd.id (%named-gensym/suffix foo "-super-protocol")))
@@ -309,56 +300,35 @@
 	  (else
 	   (values #f '()))))
 
-  ;;Parse METHOD and similar clauses.  Build the following values:
+  (define method-retriever-code-public.id
+    (%named-gensym/suffix foo-for-id-generation "-method-retriever/public"))
+
+  (define method-retriever-code-private.id
+    (%named-gensym/suffix foo-for-id-generation "-method-retriever/private"))
+
+  ;;Parse METHOD and similar clausess.  Build and return a symbolic expression (to be
+  ;;BLESSed later)  which, expanded  and evaluated at  expand-time, returns  a syntax
+  ;;object representing:
   ;;
-  ;;EARLY-BINDING-METHODS-ALIST-PUBLIC an  alist for public methods  having: as keys,
-  ;;symbols  representing the  method names,  including the  field names;  as values,
-  ;;syntactic identifiers that will be bound to the method implementation procedures,
-  ;;including public field methods.
+  ;;* The definition of the method implementation functions.
   ;;
-  ;;EARLY-BINDING-METHODS-ALIST-PROTECTED an  alist for protected methods  having: as
-  ;;keys, symbols representing the method names, including the protected field names;
-  ;;as values, syntactic identifiers that will  be bound to the method implementation
-  ;;procedures, including protected field methods.
+  ;;* The definition of the method-retriever functions.
   ;;
-  ;;EARLY-BINDING-METHODS-ALIST-PRIVATE an alist for private methods having: as keys,
-  ;;symbols  representing the  method names,  including the  private field  names; as
-  ;;values, syntactic  identifiers that  will be bound  to the  method implementation
-  ;;procedures, including private field methods.
+  ;;*  The  code needed  to  update  the  "<record-type-spec>" instance  with  method
+  ;;informations.
   ;;
-  ;;METHOD-FORM*.SEXP  is  a,   possibly  empty,  list  of   forms  representing  the
-  ;;definitions of method implementation procedures.
+  ;;This  ugly  double-step  is  needed   to  implement  recursive  record-types  (in
+  ;;particular,  record-type  in which  the  record-type  annotation appears  in  the
+  ;;methods' type signatures).
   ;;
-  ;;METHOD-RETRIEVER-CODE.SEXP  is false  or  a symbolic  expression  (to be  BLESSed
-  ;;later)  representing  a  Scheme  expression   returning  a  closure  object:  the
-  ;;late-binding method-retriever function.
-  ;;
-  ;;METHOD-RETRIEVER-CODE-PRIVATE.SEXP  is  false or  a  symbolic  expression (to  be
-  ;;BLESSed later) representing  a Scheme expression returning a  closure object: the
-  ;;late-binding private method-retriever function.
-  ;;
-  ;;VIRTUAL-METHOD-SIGNATURES-ALIST an  alist having:  as keys,  symbols representing
-  ;;the  virtual   method  names;  as  values,   instances  of  "<closure-type-spec>"
-  ;;representing  the  signature   of  the  method.   This   alist  already  contains
-  ;;appropriate entries for the parent record-type, if any.
-  ;;
-  (define-values (early-binding-methods-alist-public
-		  early-binding-methods-alist-protected
-		  early-binding-methods-alist-private
-		  method-form*.sexp
-		  method-retriever-code.sexp method-retriever-code-private.sexp
-		  virtual-method-signatures-alist)
-    (%parse-method-clauses clause*.stx foo foo-for-id-generation
-			   parent-rtd.id parent-virtual-method-signatures-alist
-			   ;;early-binding-methods-alist-public
-			   (append field-methods-alist-public    parent-early-binding-methods-alist-public)
-			   ;;early-binding-methods-alist-protected
-			   (append field-methods-alist-protected parent-early-binding-methods-alist-protected)
-			   ;;early-binding-methods-alist-private
-			   (append field-methods-alist-private   parent-early-binding-methods-alist-protected)
-			   field-methods-alist-public
-			   field-methods-alist-private
-			   synner))
+  (define method-parser.sexp
+    (%make-method-parser-sexp clause*.stx foo foo-for-id-generation
+			      field-methods-alist-public
+			      field-methods-alist-protected
+			      field-methods-alist-private
+			      method-retriever-code-public.id
+			      method-retriever-code-private.id
+			      synner))
 
   ;;Null  or a  proper  list of  "<interface-type-spec>"  instances representing  the
   ;;interfaces implemented by this record-type.
@@ -375,7 +345,7 @@
     (%make-rtd-definitions foo foo-rtd foo-uid generative? clause*.stx parent-rtd.id fields-vector-spec
 			   foo-destructor.id (%make-custom-printer-code clause*.stx foo synner)
 			   foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
-			   method-retriever-code.sexp method-retriever-code-private.sexp
+			   method-retriever-code-public.id method-retriever-code-private.id
 			   implemented-interfaces-table.sexp synner))
 
   ;;A  symbolic expression  representing  a  form which,  expanded  and evaluated  at
@@ -385,10 +355,6 @@
     (%make-type-name-syntactic-binding-form foo foo-uid make-foo foo? foo-super-rcd.id foo-destructor.id
 					    foo-parent.id foo-rtd foo-rcd
 					    foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
-					    early-binding-methods-alist-public
-					    early-binding-methods-alist-protected
-					    early-binding-methods-alist-private
-					    virtual-method-signatures-alist
 					    implemented-interface*.ots))
 
   (bless
@@ -417,14 +383,14 @@
       ,@foo-equality-predicate-definition
       ,@foo-comparison-procedure-definition
       ,@foo-hash-function-definition
-      ;;We want  the RTD definition after  the common functions definitions,  so that
-      ;;the RTD can reference them.
+      ;;The  RTD needs  to reference  the: destructor  function, equality  predicate,
+      ;;comparison procedure, hash function,  method-retriever functions.  So the RTD
+      ;;definition must come after these functions definitions.
       ,@foo-rtd-definitions
       ,@foo-rcd-definitions
+      ,@foo-super-rcd-definition
       ,@foo-maker-definitions
       ,@foo-predicate-definitions
-      ,@super-rcd-definition
-      ,@method-form*.sexp
       ,@(%make-unsafe-accessor+mutator-code foo foo-rtd
 					    field-name*.sym field-relative-idx* field-type*.ann
 					    unsafe-field-accessor* unsafe-field-mutator*)
@@ -432,8 +398,9 @@
 					  field-name*.sym field-relative-idx* field-type*.ann
 					  safe-field-accessor* unsafe-field-accessor*
 					  safe-field-mutator*  unsafe-field-mutator*)
-      ,@(%make-safe-method-code foo field-type*.ann
-				field-methods-alist-private unsafe-field-accessor* unsafe-field-mutator*)
+      ,@(%make-safe-field-methods-code foo field-type*.ann
+				       field-methods-alist-private unsafe-field-accessor* unsafe-field-mutator*)
+      ,method-parser.sexp
       #| end of BEGIN |# )))
 
 
@@ -1250,7 +1217,7 @@
     (append safe-field-accessor-form* safe-field-mutator-form*)))
 
 
-(define (%make-safe-method-code foo field-type*.ann field-methods-alist unsafe-field-accessor* unsafe-field-mutator*)
+(define (%make-safe-field-methods-code foo field-type*.ann field-methods-alist unsafe-field-accessor* unsafe-field-mutator*)
   ;;Return a list  holding a symbolic expressions (to be  BLESSed later) representing
   ;;Scheme  expressions  which,  expanded  and  evaluated  at  run-time,  define  the
   ;;syntactic  bindings of  the field  methods.   The returned  list is  meant to  be
@@ -1306,14 +1273,7 @@
   ;;5.  PARENT-RCD-DEFINITION: null  or a  list holding  a DEFINE  form defining  the
   ;;parent RCD syntactic binding, the list is spliced in the output.
   ;;
-  ;;6.   PARENT-EARLY-BINDING-METHODS-ALIST-PUBLIC: null  or an  alist associated  to
-  ;;public methods  having: as  keys, symbols representing  method names;  as values,
-  ;;syntactic identifiers bound to the method implementation functions.
-  ;;
-  ;;7.  PARENT-EARLY-BINDING-METHODS-ALIST-PROTECTED: null or  an alist associated to
-  ;;protected methods.
-  ;;
-  ;;8.   PARENT-VIRTUAL-METHODS-ALIST: an  alist  representing  the parent's  virtual
+  ;;6.   PARENT-VIRTUAL-METHODS-ALIST: an  alist  representing  the parent's  virtual
   ;;methods and sealed methods.
   ;;
   (let ((parent-clause (%get-clause 'parent clause*)))
@@ -1337,12 +1297,9 @@
 		     ;;If the parent has a super-type constructor descriptor: use it;
 		     ;;otherwise use the default constructor descriptor.
 		     ,(or parent-proto `(record-constructor-descriptor ,?parent-name))))
-		 ;;parent-early-binding-methods-alist-public
-		 (object-type-spec.methods-table-public parent.ots)
-		 ;;parent-early-binding-methods-alist-protected
-		 (object-type-spec.methods-table-protected parent.ots)
 		 ;;parent-virtual-methods-alist
-		 (record-type-spec.virtual-method-signatures parent.ots))))
+		 (record-type-spec.virtual-method-signatures parent.ots)
+		 )))
 
       ;;If there is no PARENT clause try to retrieve the expression evaluating to the
       ;;RTD.
@@ -1359,8 +1316,6 @@
 		      ;;parent-rcd-definition
 		      `((define/typed {,parent-rcd.id <record-constructor-descriptor>}
 			  ,?parent-rcd))
-		      '() ;parent-early-binding-methods-alist-public
-		      '() ;parent-early-binding-methods-alist-protected
 		      '() ;parent-virtual-methods-alist
 		      )))
 
@@ -1372,9 +1327,7 @@
 		    #f	;parent-rcd
 		    '() ;parent-rtd-definition
 		    '() ;parent-rcd-definition
-		    '()	;parent-early-binding-methods-alist-public
-		    '()	;parent-early-binding-methods-alist-protected
-		    '()	;parent-virtual-methods-alist
+		    '() ;parent-virtual-methods-alist
 		    ))
 
 	   (_
@@ -1388,7 +1341,7 @@
 			       clause* parent-rtd fields-vector-spec
 			       destructor printer
 			       equality-predicate comparison-procedure hash-function
-			       method-retriever method-retriever-private
+			       method-retriever-code-public.id method-retriever-code-private.id
 			       implemented-interfaces-table synner)
   ;;Return a list of symbolic expressions (to be BLESSed later) representing a Scheme
   ;;definitions which,  expanded and  evaluated at  run-time, define  the record-type
@@ -1417,14 +1370,18 @@
 
 	(normalised-fields-vec	`(quote ,(vector-map (lambda (item)
 						       (cons (eq? 'mutable (car item)) (cadr item)))
-					   fields-vector-spec))))
+					   fields-vector-spec)))
+	(method-name.id		(make-syntactic-identifier-for-temporary-variable "method-name")))
     `((define/typed (brace ,foo-rtd <record-type-descriptor>)
 	($make-record-type-descriptor-ex (quote ,foo) ,parent-rtd
 					 (quote ,foo-uid) ,generative? ,sealed? ,opaque?
 					 ,fields-vec ,normalised-fields-vec
 					 ,destructor ,printer
 					 ,equality-predicate ,comparison-procedure ,hash-function
-					 ,method-retriever ,method-retriever-private
+					 (lambda/std (,method-name.id)
+					   (,method-retriever-code-public.id  ,method-name.id))
+					 (lambda/std (,method-name.id)
+					   (,method-retriever-code-private.id ,method-name.id))
 					 ,implemented-interfaces-table)))))
 
 
@@ -1741,10 +1698,225 @@
        (synner "invalid syntax in HASH-FUNCTION clause" clause)))))
 
 
+(module (%make-method-parser-sexp)
+  ;;Parse METHOD and similar clauses.  Build  and return a symbolic expression (to be
+  ;;BLESSed later)  which, expanded  and evaluated at  expand-time, returns  a syntax
+  ;;object representing:
+  ;;
+  ;;* The definition of the method implementation functions.
+  ;;
+  ;;* The definition of the method-retriever functions.
+  ;;
+  ;;*  The  code needed  to  update  the  "<record-type-spec>" instance  with  method
+  ;;informations.
+  ;;
+  ;;This  ugly  double-step  is  needed   to  implement  recursive  record-types  (in
+  ;;particular,  record-type  in which  the  record-type  annotation appears  in  the
+  ;;methods' type signatures).
+  ;;
+  ;;The arguments FIELD-METHODS-ALIST-* are alists  for public, protected and private
+  ;;fields  having:  as  keys,  symbols  representing the  field  names;  as  values,
+  ;;syntactic  identifiers that  will be  bound  to the  safe field  accessor/mutator
+  ;;methods.
+  ;;
+  ;;The arguments METHOD-RETRIEVER-CODE-*.ID are syntactic identifiers that are meant
+  ;;to be bound to the method-retriever functions for this record-type.
+  ;;
+  (define* (%make-method-parser-sexp clause*.stx foo foo-for-id-generation
+				     field-methods-alist-public field-methods-alist-protected field-methods-alist-private
+				     method-retriever-code-public.id method-retriever-code-private.id
+				     synner)
+    (define method-clause*.stx
+      (%parse-clauses clause*.stx synner))
+
+    (define field-methods-alist-public.sexp
+      `(list . ,(map (lambda (entry)
+		       `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+		  field-methods-alist-public)))
+
+    (define field-methods-alist-protected.sexp
+      `(list . ,(map (lambda (entry)
+		       `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+		  field-methods-alist-protected)))
+
+    (define field-methods-alist-private.sexp
+      `(list . ,(map (lambda (entry)
+		       `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+		  field-methods-alist-private)))
+
+    (define output-form.sexp
+      `(expand-time-expr
+	(record-type-process-method-forms (syntax ,foo)
+					  (syntax ,foo-for-id-generation)
+					  (syntax ,method-clause*.stx)
+					  ,field-methods-alist-public.sexp
+					  ,field-methods-alist-protected.sexp
+					  ,field-methods-alist-private.sexp
+					  (syntax ,method-retriever-code-public.id)
+					  (syntax ,method-retriever-code-private.id))))
+
+    ;;(debug-print __who__ (syntax->datum output-form.sexp))
+    output-form.sexp)
+
+  (define (%parse-clauses clause*.stx synner)
+    ;;Recursive function.  Select and parse the METHOD clauses in CLAUSE*.STX, return
+    ;;a list of method clauses.
+    ;;
+    (define-syntax-rule (recurse)
+      (%parse-clauses (cdr clause*.stx) synner))
+    (if (pair? clause*.stx)
+	(let ((clause.stx (car clause*.stx)))
+	  (syntax-match clause.stx (method virtual-method seal-method)
+	    ((method         . ?stuff)	(cons clause.stx (recurse)))
+	    ((virtual-method . ?stuff)	(cons clause.stx (recurse)))
+	    ((seal-method    . ?stuff)	(cons clause.stx (recurse)))
+	    (_				(recurse))))
+      '()))
+
+  #| end of module: %MAKE-METHOD-PARSER-SEXP |# )
+
+
+(define* (record-type-process-method-forms foo foo-for-id-generation
+					   method-clause*.stx
+					   field-methods-alist-public
+					   field-methods-alist-protected
+					   field-methods-alist-private
+					   method-retriever-code-public.id
+					   method-retriever-code-private.id)
+  ;;Parse METHOD and  similar clauses coming from the original  input form.  Return a
+  ;;single syntax object representing a BEGIN form.
+  ;;
+  ;;Inside the returned BEGIN form there are Scheme definitions representing:
+  ;;
+  ;;* The definition of the method implementation functions.
+  ;;
+  ;;* The definition of the method-retriever functions.
+  ;;
+  ;;This function updates the "<record-type-spec>" instance with method informations.
+  ;;
+  ;;The arguments FIELD-METHODS-ALIST-* are alists  for public, protected and private
+  ;;fields  having:  as  keys,  symbols  representing the  field  names;  as  values,
+  ;;syntactic  identifiers that  will be  bound  to the  safe field  accessor/mutator
+  ;;methods.
+  ;;
+  ;;The arguments METHOD-RETRIEVER-CODE-*.ID are syntactic identifiers that are meant
+  ;;to be bound to the method-retriever functions for this record-type.
+  ;;
+  (define record.ots
+    (type-annotation->object-type-spec foo))
+
+  ;;We  need to  remember that  record-types always  have a  parent: either  a proper
+  ;;record-type or the core-type "<record>".
+  (define parent.ots			(object-type-spec.parent-ots record.ots))
+  ;;We need this multiple times below.
+  (define has-record-type-parent?	(record-type-spec?           parent.ots))
+  ;;False or the syntactic identifier bound to the parent record-type descriptor.  It
+  ;;is used to access the parent's method-retriever procedure.  This must be false if
+  ;;the parent of the record-type is "<record>".
+  (define parent-rtd.id
+    (and has-record-type-parent?
+	 (record-type-spec.rtd-id parent.ots)))
+
+  ;;PARENT-EARLY-BINDING-METHODS-ALIST-PUBLIC: null or an  alist associated to public
+  ;;methods having: as keys, symbols  representing method names; as values, syntactic
+  ;;identifiers bound to the method implementation functions.
+  ;;
+  ;;PARENT-EARLY-BINDING-METHODS-ALIST-PROTECTED:  null  or  an alist  associated  to
+  ;;protected methods.
+  ;;
+  (define parent-early-binding-methods-alist-public
+    (if has-record-type-parent?
+	(object-type-spec.methods-table-public parent.ots)
+      '()))
+  (define parent-early-binding-methods-alist-protected
+    (if has-record-type-parent?
+	(object-type-spec.methods-table-protected parent.ots)
+      '()))
+
+  ;;A possibly empty alist having entries with format:
+  ;;
+  ;;   (?method-name . (?protection . ?method-signature))
+  ;;
+  ;;in which:  ?METHOD-NAME is  a symbol  representing a  parent's virtual  or sealed
+  ;;method name;  ?PROTECTION is a the  fixnum 0 for  public, 1 for protected,  2 for
+  ;;private; ?METHOD-SIGNATURE is:
+  ;;
+  ;;* When the method is an open virtual method: instances of "<closure-type-spec>"
+  ;;representing the type signature of the method.
+  ;;
+  ;;* When the method has been sealed: the boolean false.
+  ;;
+  (define parent-virtual-method-signatures-alist
+    (if has-record-type-parent?
+	(record-type-spec.virtual-method-signatures parent.ots)
+      ;;The core-type "<record>" does not have a virtual methods table.
+      '()))
+
+  ;;EARLY-BINDING-METHODS-ALIST-PUBLIC an  alist for public methods  having: as keys,
+  ;;symbols  representing the  method names,  including the  field names;  as values,
+  ;;syntactic identifiers that will be bound to the method implementation procedures,
+  ;;including public field methods.
+  ;;
+  ;;EARLY-BINDING-METHODS-ALIST-PROTECTED an  alist for protected methods  having: as
+  ;;keys, symbols representing the method names, including the protected field names;
+  ;;as values, syntactic identifiers that will  be bound to the method implementation
+  ;;procedures, including protected field methods.
+  ;;
+  ;;EARLY-BINDING-METHODS-ALIST-PRIVATE an alist for private methods having: as keys,
+  ;;symbols  representing the  method names,  including the  private field  names; as
+  ;;values, syntactic  identifiers that  will be bound  to the  method implementation
+  ;;procedures, including private field methods.
+  ;;
+  (define early-binding-methods-alist-public.tail
+    (append field-methods-alist-public	parent-early-binding-methods-alist-public))
+  (define early-binding-methods-alist-protected.tail
+    (append field-methods-alist-protected	parent-early-binding-methods-alist-protected))
+  (define early-binding-methods-alist-private.tail
+    (append field-methods-alist-private	parent-early-binding-methods-alist-protected))
+
+  (case-define synner
+    ((message)
+     (synner message #f))
+    ((message subform)
+     (syntax-violation __module_who__ message (bless `(define-record-type ,foo ...)) subform)))
+
+  (define-values (method-form*.sexp
+		  early-binding-methods-alist-public
+		  early-binding-methods-alist-protected
+		  early-binding-methods-alist-private
+		  virtual-method-signatures-alist)
+    (parametrise ((current-table-of-names (make-hashtable string-hash string=?)))
+      (%parse-method-clauses method-clause*.stx foo foo-for-id-generation
+			     method-retriever-code-public.id method-retriever-code-private.id
+			     parent-rtd.id parent-virtual-method-signatures-alist
+			     early-binding-methods-alist-public.tail
+			     early-binding-methods-alist-protected.tail
+			     early-binding-methods-alist-private.tail
+			     field-methods-alist-public
+			     field-methods-alist-private
+			     synner)))
+
+  ;;Update the record-type spec instance with method tables.
+  (object-type-spec.methods-table-public-set!		record.ots early-binding-methods-alist-public)
+  (object-type-spec.methods-table-protected-set!	record.ots early-binding-methods-alist-protected)
+  (object-type-spec.methods-table-private-set!	record.ots early-binding-methods-alist-private)
+  (record-type-spec.virtual-method-signatures-set!	record.ots virtual-method-signatures-alist)
+
+  ;;Build the return syntax object.
+  (let ((output-form.stx (bless `(begin ,@method-form*.sexp))))
+    ;;(debug-print __who__ (syntax->datum output-form.stx))
+    output-form.stx))
+
+
 (module (%parse-method-clauses)
   ;;Parse METHOD and similar clauses in  CLAUSE*.STX; build a list of "<method-spec>"
   ;;instances  representing  the  specifications;  perform some  validations  on  the
   ;;specifications; finally build and return the following values:
+  ;;
+  ;;*  METHOD-FORM*.SEXP, a  list of  forms representing  the definitions  of: method
+  ;;implementation procedures and related  stuff; method-retriever functions for both
+  ;;public methods  and private methods, to  be used when performing  late binding of
+  ;;methods.
   ;;
   ;;* EARLY-BINDING-METHODS-ALIST-PUBLIC an alist for public methods having: as keys,
   ;;symbols  representing the  method names,  including the  field names;  as values,
@@ -1761,19 +1933,6 @@
   ;;as values, syntactic identifiers that will  be bound to the method implementation
   ;;procedures, including private field methods.
   ;;
-  ;;*  METHOD-FORM*.SEXP, a  list of  forms  representing the  definitions of  method
-  ;;implementation procedures and related stuff.
-  ;;
-  ;;*  METHOD-RETRIEVER-CODE.SEXP, false  or  a symbolic  expression  (to be  BLESSed
-  ;;later)  representing  a  Scheme  expression   returning  a  closure  object:  the
-  ;;method-retriever function.  The method retriever function is used when performing
-  ;;late binding of methods.
-  ;;
-  ;;*  METHOD-RETRIEVER-CODE-PRIVATE.SEXP,  false or  a  symbolic  expression (to  be
-  ;;BLESSed later) representing  a Scheme expression returning a  closure object: the
-  ;;private method-retriever  function.  The method  retriever function is  used when
-  ;;performing late binding of methods.
-  ;;
   ;;* VIRTUAL-METHOD-SIGNATURES-ALIST an alist  having: as keys, symbols representing
   ;;the virtual and sealed method names; as values:
   ;;
@@ -1785,6 +1944,7 @@
   ;;the alist has, as tail, the argument PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST.
   ;;
   (define (%parse-method-clauses clause*.stx foo foo-for-id-generation
+				 method-retriever-code-public.id method-retriever-code-private.id
 				 parent-rtd.id parent-virtual-method-signatures-alist
 				 early-binding-methods-alist-public
 				 early-binding-methods-alist-protected
@@ -1799,9 +1959,13 @@
     ;;FOO-FOR-ID-GENERATION,  the syntactic  identifier representing  the record-type
     ;;name preprocessed to be used as prefix in procnames generation.
     ;;
+    ;;METHOD-RETRIEVER-CODE-PUBLIC.ID and METHOD-RETRIEVER-CODE-PRIVATE.ID, syntactic
+    ;;identifiers  to which  the  method  retriever functions  will  be bound.   This
+    ;;function generates the definition forms for these functions.
+    ;;
     ;;PARENT-RTD.ID,  false  or   the  syntactic  identifier  bound   to  the  parent
     ;;record-type descriptor.   It is  used to  access the  parent's method-retriever
-    ;;procedure.
+    ;;procedure.  This must be false if the parent of the record-type is "<record>".
     ;;
     ;;PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST an alist having  entries with format:
     ;;
@@ -1844,6 +2008,7 @@
       (%check-that-overriding-methods-have-the-same-protection-of-the-parent-virtual-method
        group* parent-virtual-method-signatures-alist synner)
       (%process-method-specs group* foo parent-rtd.id parent-virtual-method-signatures-alist
+			     method-retriever-code-public.id method-retriever-code-private.id
 			     early-binding-methods-alist-public
 			     early-binding-methods-alist-protected
 			     early-binding-methods-alist-private
@@ -2153,6 +2318,7 @@
   (module (%process-method-specs)
 
     (define (%process-method-specs init-group* foo parent-rtd.id parent-virtual-method-signatures-alist
+				   method-retriever-code-public.id method-retriever-code-private.id
 				   early-binding-methods-alist-public
 				   early-binding-methods-alist-protected
 				   early-binding-methods-alist-private
@@ -2169,10 +2335,6 @@
       ;;* EARLY-BINDING-METHODS-ALIST-PRIVATE, the return value of the whole module.
       ;;
       ;;* METHOD-FORM*.SEXP, the return value of the whole module.
-      ;;
-      ;;* METHOD-RETRIEVER-CODE.SEXP, the return value of the whole module.
-      ;;
-      ;;* METHOD-RETRIEVER-CODE-PRIVATE.SEXP, the return value of the whole module.
       ;;
       ;;* VIRTUAL-METHOD-SIGNATURES-ALIST  an alist having  the format of  the return
       ;;value of the  whole module, but not  yet including the entries  of the parent
@@ -2222,13 +2384,16 @@
 							   (lambda (a b c d e f)
 							     (loop (cdr group*) a b c d e f)))))
 	  ;;No more groups.
-	  (values early-binding-methods-alist-public
-		  early-binding-methods-alist-protected
-		  early-binding-methods-alist-private
-		  method-form*.sexp
-		  (%make-method-retriever-code foo parent-rtd.id late-binding-methods-alist-public  #f)
-		  (%make-method-retriever-code foo parent-rtd.id late-binding-methods-alist-private #t)
-		  (%make-virtual-method-signatures-alist init-group* parent-virtual-method-signatures-alist synner)))))
+	  (let ((method-form*.sexp (cons* (%make-method-retriever-code foo parent-rtd.id method-retriever-code-public.id
+								       late-binding-methods-alist-public   #f)
+					  (%make-method-retriever-code foo parent-rtd.id method-retriever-code-private.id
+								       late-binding-methods-alist-private #t)
+					  method-form*.sexp)))
+	    (values method-form*.sexp
+		    early-binding-methods-alist-public
+		    early-binding-methods-alist-protected
+		    early-binding-methods-alist-private
+		    (%make-virtual-method-signatures-alist init-group* parent-virtual-method-signatures-alist synner))))))
 
     ;;; --------------------------------------------------------------------
 
@@ -2341,34 +2506,45 @@
 
     ;;; --------------------------------------------------------------------
 
-    (define (%make-method-retriever-code foo parent-rtd.id late-binding-methods-alist private?)
-      (define method-name.id	(make-syntactic-identifier-for-temporary-variable "method-name"))
+    (define (%make-method-retriever-code foo parent-rtd.id procname.id late-binding-methods-alist private?)
+      ;;Build and return a symbolic expression (to be BLESSed later) representing the
+      ;;definition of  a method  retriever function.  Given  a symbol  representing a
+      ;;method name: such function returns the corresponding implementation function,
+      ;;if any.
+      ;;
+      ;;If PRIVATE? is true: the generated function is for private methods, otherwise
+      ;;it is for public methods.
+      ;;
+      (define method-name.id		(make-syntactic-identifier-for-temporary-variable "method-name"))
       (define parent-retriever.id	(make-syntactic-identifier-for-temporary-variable "parent-retriever"))
-      (cond ((pair? late-binding-methods-alist)
-	     (let ((retriever-maker.sexp `(lambda/typed (,parent-retriever.id)
-					    (lambda/typed ({_ (or <false> <procedure>)} {,method-name.id <symbol>})
-					      (case ,method-name.id
-						,@(map (lambda (P)
-							 (let ((name (car P))
-							       (proc (cdr P)))
-							   `((,name) ,proc)))
-						    late-binding-methods-alist)
-						(else
-						 (,parent-retriever.id ,method-name.id)))))))
-	       `(,retriever-maker.sexp ,(if parent-rtd.id
-					    (if private?
-						`($record-type-method-retriever-private ,parent-rtd.id)
-					      `($record-type-method-retriever ,parent-rtd.id))
-					  '(core-type-descriptor.method-retriever <record>-ctd)))))
+      `(define/typed {,procname.id <type-method-retriever>}
+	 ,(cond ((pair? late-binding-methods-alist)
+		 (let ((retriever-maker.sexp `(lambda/typed ({_ <type-method-retriever>} ,parent-retriever.id)
+						(lambda/typed ({_ (or <false> <procedure>)} {,method-name.id <symbol>})
+						  (case ,method-name.id
+						    ,@(map (lambda (P)
+							     (let ((name (car P))
+								   (proc (cdr P)))
+							       `((,name) ,proc)))
+							late-binding-methods-alist)
+						    (else
+						     (,parent-retriever.id ,method-name.id)))))))
+		   `(,retriever-maker.sexp ,(if parent-rtd.id
+						(if private?
+						    `($record-type-method-retriever-private ,parent-rtd.id)
+						  `($record-type-method-retriever ,parent-rtd.id))
+					      '(core-type-descriptor.method-retriever <record>-ctd)))))
 
-	    (parent-rtd.id
-	     ;;This record-type has no methods, but it has a parent.
-	     `($record-type-method-retriever ,parent-rtd.id))
+		(parent-rtd.id
+		 ;;This record-type has no methods, but it has a parent.
+		 (if private?
+		     `($record-type-method-retriever-private ,parent-rtd.id)
+		   `($record-type-method-retriever ,parent-rtd.id)))
 
-	    (else
-	     ;;This record-type has no methods, and no parent.  The default parent is
-	     ;;"<record>".
-	     '(core-type-descriptor.method-retriever <record>-ctd))))
+		(else
+		 ;;This record-type has no methods, and no parent.  The default parent is
+		 ;;"<record>".
+		 '(core-type-descriptor.method-retriever <record>-ctd)))))
 
     ;;; --------------------------------------------------------------------
 
@@ -2477,10 +2653,6 @@
 						 foo-equality-predicate.id
 						 foo-comparison-procedure.id
 						 foo-hash-function.id
-						 early-binding-methods-alist-public
-						 early-binding-methods-alist-protected
-						 early-binding-methods-alist-private
-						 virtual-method-signatures-alist
 						 implemented-interface*.ots)
   ;;Build and return symbolic expression (to  be BLESSed later) representing a Scheme
   ;;expression which, expanded and evaluated  at expand-time, returns the record-type
@@ -2510,15 +2682,6 @@
   ;;FOO-RTD.SYM must be a  gensym: it will become the name  of the identifier bound
   ;;to the record-constructor descriptor.
   ;;
-  ;;EARLY-BINDING-METHODS-ALIST-* an alist having:  as keys, symbols representing the
-  ;;method names,  including the field  names; as values, syntactic  identifiers that
-  ;;will be bound to the method implementation procedures, including field methods.
-  ;;
-  ;;VIRTUAL-METHOD-SIGNATURES-ALIST an  alist having:  as keys,  symbols representing
-  ;;the  virtual   method  names;  as  values,   instances  of  "<closure-type-spec>"
-  ;;representing  the  signature   of  the  method.   This   alist  already  contains
-  ;;appropriate entries for the parent record-type, if any.
-  ;;
   ;;IMPLEMENTED-INTERFACE*.OTS  null  or  a proper  list  of  "<interface-type-spec>"
   ;;instances representing the interfaces that this record-type implements.
   ;;
@@ -2527,23 +2690,23 @@
     (or foo-hash-function.id
 	(core-prim-id 'record-hash)))
 
-  (define foo-methods-table-public
-    `(list . ,(map (lambda (entry)
-		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
-		early-binding-methods-alist-public)))
+  ;; (define foo-methods-table-public
+  ;;   `(list . ,(map (lambda (entry)
+  ;; 		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+  ;; 		early-binding-methods-alist-public)))
 
-  (define foo-methods-table-protected
-    `(list . ,(map (lambda (entry)
-		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
-		early-binding-methods-alist-protected)))
+  ;; (define foo-methods-table-protected
+  ;;   `(list . ,(map (lambda (entry)
+  ;; 		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+  ;; 		early-binding-methods-alist-protected)))
 
-  (define foo-methods-table-private
-    `(list . ,(map (lambda (entry)
-		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
-		early-binding-methods-alist-private)))
+  ;; (define foo-methods-table-private
+  ;;   `(list . ,(map (lambda (entry)
+  ;; 		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+  ;; 		early-binding-methods-alist-private)))
 
-  (define foo-virtual-method-signatures.table
-    `(quote ,virtual-method-signatures-alist))
+  ;; (define foo-virtual-method-signatures.table
+  ;;   `(quote ,virtual-method-signatures-alist))
 
   (define implemented-interfaces
     (if (null? implemented-interface*.ots)
@@ -2566,10 +2729,10 @@
 			  (syntax ,foo-equality-predicate.id)
 			  (syntax ,foo-comparison-procedure.id)
 			  (syntax ,foo-hash-function.id)
-			  ,foo-methods-table-public
-			  ,foo-methods-table-protected
-			  ,foo-methods-table-private
-			  ,foo-virtual-method-signatures.table
+			  '() ;foo-methods-table-public
+			  '() ;foo-methods-table-protected
+			  '() ;foo-methods-table-private
+			  '() ;foo-virtual-method-signatures.table
 			  ,implemented-interfaces))
 
 
@@ -2596,15 +2759,12 @@
   ;;
   (if (null? implemented-interface*.ots)
       #f
-    (let ((macro.id		(make-syntactic-identifier-for-temporary-variable "macro"))
-	  (stx.id		(make-syntactic-identifier-for-temporary-variable "stx"))
-	  (object-type-ots.id	(make-syntactic-identifier-for-temporary-variable "object-type.ots")))
-      `(expand-time-expr
-	(quasisyntax
-	 (vector (unsyntax-splicing
-		  (build-table-for-interface-types-and-implementer-object-type
-		   (quote ,implemented-interface*.ots)
-		   (make-type-specification (syntax ,foo))))))))))
+    `(expand-time-expr
+      (quasisyntax
+       (vector (unsyntax-splicing
+		(build-table-for-interface-types-and-implementer-object-type
+		 (quote ,implemented-interface*.ots)
+		 (make-type-specification (syntax ,foo)))))))))
 
 
 ;;;; done

@@ -29,6 +29,7 @@
 	  ffi::)
   (prefix (vicare ffi foreign-pointer-wrapper)
 	  ffi::)
+  (vicare system structs)
   (vicare arguments validation)
   (vicare checks))
 

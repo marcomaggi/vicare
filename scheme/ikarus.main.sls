@@ -107,6 +107,9 @@
 		  real-pathname
 		  split-search-path-string)
 	    posix::)
+    (except (vicare system structs)
+	    struct-guardian-logger
+	    struct-guardian-log)
     (only (vicare system $structs)
 	  $struct-ref
 	  $struct-rtd)

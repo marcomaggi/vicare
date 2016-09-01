@@ -56,7 +56,8 @@
 		  os-name
 		  os-version
 
-		  host-info))
+		  host-info)
+    (vicare system structs))
 
   (include "ikarus.config.scm")
 

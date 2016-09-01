@@ -121,6 +121,7 @@
 	  syntax->list)
     (only (ikarus.printing-messages)
 	  print-stderr-message)
+    (vicare system structs)
     (prefix (only (vicare system $symbols)
 		  $getprop
 		  $symbol-value

@@ -18,7 +18,7 @@ collection}.
 @item
 Wrap the reference to the resource in a @value{PRJNAME} data structure
 and register a finalisation function in the structure type descriptor,
-@ref{iklib structs define, Automatic finalisation of structures}.
+@ref{syslib structs safe final, Finalisation of structures}.
 
 @item
 Wrap the reference to the resource in a @rnrs{6} record and register a

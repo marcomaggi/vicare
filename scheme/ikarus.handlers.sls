@@ -14,7 +14,7 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(library (vicare system parameters)
+(library (ikarus.parameters)
   (export make-parameter)
   (import (except (vicare) make-parameter))
   (define make-parameter
@@ -41,7 +41,7 @@
     (pointer-value x)))
 
 
-(library (vicare system handlers)
+(library (ikarus.handlers)
   (export
     interrupt-handler engine-handler
     $apply-nonprocedure-error-handler
@@ -135,6 +135,9 @@
 
 ;;;; done
 
-#| end of library (vicare system handlers) |# )
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.handlers after"))
+
+#| end of library |# )
 
 ;;; end of file

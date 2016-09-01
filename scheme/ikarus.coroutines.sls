@@ -44,6 +44,7 @@
 	  cafe-nested-depth)
     (only (ikarus control)
 	  private-shift-meta-continuation)
+    (vicare system structs)
     (vicare system $pairs))
 
 

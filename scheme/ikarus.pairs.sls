@@ -114,7 +114,7 @@
 #| end of library |# )
 
 
-(library (vicare system pairs)
+(library (vicare pairs unsafe)
   (export $car $cdr)
   (import (vicare))
   (define $car car)

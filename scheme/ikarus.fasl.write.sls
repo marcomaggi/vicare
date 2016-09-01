@@ -41,6 +41,7 @@
 	  $struct-rtd)
     (prefix (vicare system code-objects)
     	    code-objects::)
+    (vicare system structs)
     (prefix (only (vicare system options)
     		  debug-mode-enabled?
     		  writing-boot-image?)

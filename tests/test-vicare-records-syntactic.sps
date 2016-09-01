@@ -28,6 +28,7 @@
 #!vicare
 (program (test-vicare-records-syntactic)
   (import (vicare)
+    (vicare system structs)
     (vicare system $structs)
     (libtest records-lib)
     (prefix (vicare expander) expander::)

@@ -28,6 +28,7 @@
   (options typed-language)
   (import (vicare)
     (prefix (vicare expander) expander::)
+    (vicare system structs)
     (only (vicare expander)
 	  type-annotation=?
 	  type-annotation-super-and-sub?

@@ -25,6 +25,7 @@
 		  string->symbol
 		  $symbol-table-size
 		  $log-symbol-table-status)
+    (vicare system structs)
     (vicare system $fx)
     (vicare system $pairs)
     (vicare system $strings)

@@ -38,7 +38,8 @@
 		  stats-gc-user-secs		stats-gc-user-usecs
 		  stats-gc-sys-secs		stats-gc-sys-usecs
 		  stats-gc-real-secs		stats-gc-real-usecs
-		  stats-bytes-minor		stats-bytes-major))
+		  stats-bytes-minor		stats-bytes-major)
+    (vicare system structs))
 
 
 (define-struct (stats %make-stats stats?)

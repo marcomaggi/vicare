@@ -24,7 +24,7 @@ public interface exported by @library{vicare} and @library{rnrs}.
 * syslib chars::                Low level character operations.
 * syslib pairs::                Low level pair operations.
 * syslib lists::                Low level list operations.
-* syslib structs::              Low level structure operations.
+* syslib structs::              System structure operations.
 * syslib records::              Low level records operations.
 * syslib vectors::              Low level vector operations.
 * syslib bytevectors::          Low level bytevector operations.
@@ -35,6 +35,7 @@ public interface exported by @library{vicare} and @library{rnrs}.
 * syslib hashtables::           Low level hashtable objects operations.
 * syslib codes::                Low level code objects operations.
 * syslib closures::             Low level closures operations.
+* syslib compar::               Comparison procedures.
 @end menu
 
 @c page
@@ -5494,7 +5495,766 @@ length of @var{ell}.
 
 @c page
 @node syslib structs
-@section Low level structure operations
+@section System structure operations
+
+
+@menu
+* syslib structs safe::         High level structure operations.
+* syslib structs unsafe::       Low level structure operations.
+@end menu
+
+@c page
+@node syslib structs safe
+@subsection High level structure operations
+
+
+@cindex @library{vicare system structs}, library
+@cindex Library @library{vicare system structs}
+
+
+A @value{PRJNAME}'s struct is a record object, lighter than records as
+defined by @rnrs{6}.  @ref{objects structs} for more informations on the
+internals of structs.
+
+@menu
+* syslib structs safe define::  Defining struct types.
+* syslib structs safe using::   Using struct types.
+* syslib structs safe inspect:: Inspecting struct types.
+* syslib structs safe printer:: Struct printer customisation.
+* syslib structs safe final::   Finalisation of structs.
+* syslib structs safe data::    Inspecting data structures.
+@end menu
+
+@c page
+@node syslib structs safe define
+@subsubsection Defining structure types
+
+
+@deffn Syntax define-struct @meta{type-name} (@meta{field} @dots{})
+@deffnx Syntax define-struct @meta{type-name} (@meta{field} @dots{}) (nongenerative @meta{uid})
+@deffnx Syntax define-struct (@meta{type-name} @meta{constructor} @meta{predicate}) (@meta{field} @dots{})
+@deffnx Syntax define-struct (@meta{type-name} @meta{constructor} @meta{predicate}) (@meta{field} @dots{}) (nongenerative @meta{uid})
+@deffnx {Auxiliary Syntax} nongenerative
+Define a new struct type.  This macro is embedded in the expander.
+
+@meta{type-name} must be a symbol representing the name of the structure; it
+is used to build names for the constructor, predicate, field accessors
+and mutators.  When @meta{constructor} is used: it must be an identifier
+representing the name of the constructor.  When @meta{predicate} is
+used: it must be an identifier representing the name of the predicate.
+
+The @meta{field} values must be either symbols representing the names of
+the fields or @syntax{brace} forms representing the name and type of
+fields:
+
+@lisp
+(brace @meta{field-name} @meta{tag})
+@end lisp
+
+@noindent
+they are used to build names for the accessors and mutators.
+
+When the @clause{nongenerative} clause is used: @meta{uid} must be a
+symbol uniquely identifying the struct type.  Multiple definitions of
+struct type using the same @meta{uid} must have the same type name and
+field names, and represent the same type definition.  See
+@func{make-struct-type} for more details.
+
+The following definition:
+
+@example
+(define-struct color
+  (red green blue))
+@end example
+
+@noindent
+expands to the definition of the following syntactic bindings:
+
+@table @code
+@item color
+A syntactic identifier representing the type name.  When the tagged
+language is enabled, we can use this identifier to tag a variable
+syntactic binding:
+
+@lisp
+(define @{O color@}
+  (make-color 1 2 3))
+
+(O red)         @result{} 1
+(O green)       @result{} 2
+(O blue)        @result{} 3
+@end lisp
+
+We can use the identifier as argument for the @syntax{is-a?} syntax:
+
+@lisp
+(is-a? (make-color 1 2 3) color)        @result{} #t
+(is-a? "ciao" color)                    @result{} #f
+@end lisp
+
+When the identifier is used in macro keyword position with the syntax:
+
+@example
+(@meta{type-name} (@meta{expr} ...))
+@end example
+
+@noindent
+the form is expanded to the application of the constructor to the
+results of evaluating the @meta{expr} arguments:
+
+@example
+(color (1 2 3)) @result{} #["color" red=1 green=2 blue=3]
+@end example
+
+@item make-color @var{red} @var{green} @var{blue}
+A structure constructor accepting as much arguments as there are fields.
+The constructor makes use of the @func{$struct} low level operation.
+
+@item color? @var{obj}
+A predicate to distinguish between references to @code{color} structures
+and other values.  This predicate makes use of the @func{$struct/rtd?}
+low level operation.
+
+@item color-red @var{stru}
+@itemx color-green @var{stru}
+@itemx color-blue @var{stru}
+Accessor functions for the fields of the structure.  These accessors
+make use of the @func{$struct/rtd?} low level operation to validate the
+argument and if successful they use @func{$struct-ref} to extract the
+value; if the argument is of invalid type: an assertion violation is
+raised.
+
+@item set-color-red! @var{stru} @var{red}
+@itemx set-color-green! @var{stru} @var{green}
+@itemx set-color-blue! @var{stru} @var{blue}
+Mutator functions for the fields of the structure.  These mutators make
+use of the @func{$struct/rtd?} low level operation to validate the
+argument @var{stru} and if successful they use @func{$struct-set!} to
+set the value; if the argument @var{stru} is of invalid type: an
+assertion violation is raised.
+
+@item $color-red @var{stru}
+@itemx $color-green @var{stru}
+@itemx $color-blue @var{stru}
+Unsafe accessor syntaxes for the fields of the structure.  These
+accessors do not validate the arguments and expand directly to a use of
+@func{$struct-ref} to extract the value; if the argument is invalid: the
+behaviour is undefined.
+
+@item $set-color-red! @var{stru} @var{red}
+@itemx $set-color-green! @var{stru} @var{green}
+@itemx $set-color-blue! @var{stru} @var{blue}
+Unsafe mutator syntaxes for the fields of the structure.  These mutators
+do not validate the arguments and expand directly to a use of
+@func{$struct-set!} to set the value; if the argument @var{stru} is
+invalid: the behaviour is undefined.
+@end table
+@end deffn
+
+
+@defun make-struct-type @var{type-name} @var{fields}
+@defunx make-struct-type @var{type-name} @var{fields} @var{uid}
+Build and return a new struct--type descriptor.  @var{type-name} must be
+a string representing the type name.  @var{fields} must be a list of
+symbols representing the field names.
+
+The optional @var{uid} argument must be a symbol uniquely identifying
+this type; when not supplied, a symbol is automatically generated.  The
+@code{value} field of the symbol object @var{uid} is set to the newly
+created @rtd{}; if @var{uid} already has a symbol value: such value must
+be a struct descriptor equal to the newly created @rtd{}.
+
+The use of a @var{uid} allows us to define a unique struct type in
+different libraries without sharing the definition by importing
+syntactic bindings.  For example, we can define a struct type in a
+library and import the definition in other libraries:
+
+@example
+(library (one)
+  (export
+    make-color color?
+    color-red color-green color-blue)
+  (import (vicare))
+  (define-struct color
+    (red green blue)))
+
+(library (two)
+  (export C)
+  (import (vicare) (one))
+  (define C (make-color 1 2 3)))
+
+(library (three)
+  (export)
+  (import (vicare) (one) (two))
+  (display (color-red C)))
+@end example
+
+@noindent
+but, by specifying a @var{uid}, we can also do:
+
+@example
+(library (two)
+  (export C)
+  (import (vicare))
+  (define-struct color
+    (red green blue)
+    (nongenerative the-color))
+  (define C
+    (make-color 1 2 3)))
+
+(library (three)
+  (export)
+  (import (vicare))
+  (define-struct color
+    (red green blue)
+    (nongenerative the-color))
+  (display (color-red C)))
+@end example
+
+@noindent
+and everything will work as before.
+@end defun
+
+@c page
+@node syslib structs safe using
+@subsubsection Using structure types
+
+
+@deffn Syntax struct-type-descriptor @meta{type-name}
+Evaluate to the type descriptor of the data structure @meta{type-name}, which
+must be the first argument to a previous use of @func{define-struct}.
+@end deffn
+
+
+@defun struct-type-descriptor? @var{obj}
+Return @true{} if @var{obj} is a struct--type descriptor, otherwise
+return @false{}.  This predicate returns @false{} when applied to
+@rnrs{6} record--type descriptors.
+@end defun
+
+
+@defun struct-constructor @var{std}
+Return a constructor function for struct of type defined by the type
+descriptor @var{std}.  The returned constructor accepts as many
+arguments as there are fields specified by @var{std} and it returns a
+new struct instance.
+
+@lisp
+(define duo-std
+  (make-struct-type "duo" '(one two)))
+
+(define make-duo
+  (struct-constructor duo-std))
+
+(make-duo 1 2)  @result{} #[struct duo one=1 two=2]
+@end lisp
+@end defun
+
+
+@defun struct-predicate @var{std}
+Return a predicate function for structs of type defined by the type
+descriptor @var{std}.
+
+@lisp
+(define duo-std
+  (make-struct-type "duo" '(one two)))
+
+(define make-duo
+  (struct-constructor duo-std))
+
+(define duo?
+  (struct-predicate duo-std))
+
+(duo? (make-duo 1 2))   @result{} #t
+@end lisp
+@end defun
+
+
+@defun struct-field-accessor @var{std} @var{index/name}
+@defunx struct-field-mutator @var{std} @var{index/name}
+Return an accessor or mutator function for the field at @var{index/name}
+of structs of type defined by the type descriptor @var{std}.
+@var{index/name} can be a field index or a symbol representing a field
+name.
+
+@example
+(define-struct color
+  (red green blue))
+
+(define stru
+  (make-color 1 2 3))
+
+((struct-field-accessor (struct-type-descriptor color) 'red)
+ stru)
+@result{} 1
+
+((struct-field-accessor (struct-type-descriptor color) 0)
+ stru)
+@result{} 1
+@end example
+@end defun
+
+
+@defun struct-field-method @var{std} @var{index/name}
+Return a ``method'' function for the field at @var{index/name} of
+structs of type defined by the type descriptor @var{std}.
+@var{index/name} can be a field index or a symbol representing a field
+name.  When the method function is applied to @math{1} argument: it
+behaves like a field accessor.  When the method function is applied to
+@math{2} arguments: it behaves like a field mutator.
+
+@example
+(define-struct color
+  (red green blue))
+
+(define stru
+  (make-color 1 2 3))
+
+(define red-method
+  (struct-field-method (struct-type-descriptor color) 'red))
+
+(red-method stru)       @result{} 1
+(red-method stru 11)
+(red-method stru)       @result{} 11
+@end example
+@end defun
+
+@c page
+@node syslib structs safe inspect
+@subsubsection Inspecting struct types
+
+
+@defun struct-type-name @var{std}
+Return a string representing the name of structs of type @var{std}.
+@end defun
+
+
+@defun struct-type-symbol @var{std}
+Return a symbol uniquely identifying the struct type @var{std}.
+@end defun
+
+
+@defun struct-type-field-names @var{std}
+Return a list of symbols representing the names of fields in structs of
+type @var{std}.
+@end defun
+
+@c page
+@node syslib structs safe printer
+@subsubsection Structs printer customisation
+
+
+@value{PRJNAME}'s built--in Scheme objects writer can print structs just
+fine, handling cyclic references and shared objects:
+
+@lisp
+(import (vicare))
+(print-graph #t)
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode none))
+
+(define-struct duo (one two))
+
+;; simple struct
+(display (make-duo 1 2))
+@print{} #[struct duo one=1 two=2]
+
+;; struct with shared object
+(let* ((A (make-duo 1 2))
+       (B (make-duo A A)))
+  (display B))
+@print{} #[struct duo one=#0=#[struct duo one=1 two=2] two=#0#]
+
+;; struct with cyclic reference to itself
+(let ((A (make-duo 1 (void))))
+  (set-duo-two! A A)
+  (display A))
+@print{} #0=#[struct duo one=1 two=#0#]
+@end lisp
+
+The Scheme objects writer is able to differentiate between
+@func{display}, @func{write} and @func{pretty-print} printing.  When
+printing structs, the built--in writer makes @strong{no} difference
+between printing with @func{display} and @func{write}; it does it
+differently when printing with @func{pretty-print}:
+
+@lisp
+(import (vicare))
+(print-graph #t)
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode none))
+
+(define-struct duo (one two))
+
+;; simple struct
+(pretty-print (make-duo 1 2))
+@print{} (struct duo (one 1) (two 2))
+
+;; struct with shared object
+(let* ((A (make-duo 1 2))
+       (B (make-duo A A)))
+  (pretty-print B))
+@print{} (struct duo (one #0=(struct duo (one 1) (two 2))) (two #0#))
+
+;; struct with cyclic reference to itself
+(let ((A (make-duo 1 (void))))
+  (set-duo-two! A A)
+  (pretty-print A))
+@print{} #0=(struct duo (one 1) (two #0#))
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Custom printers
+
+Sometimes, we need to print a struct with a customised representation.
+For example keyword objects (@pxref{iklib keywords, Keyword objects})
+are structs with a custom printer function:
+
+@lisp
+(display #:ciao)        @result{} #:ciao
+@end lisp
+
+For every struct type it is possible to set a custom printer function;
+it accepts @math{3} arguments: the struct to be printed; a textual
+output port into which to write a string representation of the struct in
+the style of @func{display}, @func{write} or @func{pretty-print}; a
+sub--printer function to be optionally used to print component objects.
+The sub--printer function accepts as single argument the object to
+print; it allows us to interface with the shared objects printer that
+handles shared and cyclic references.
+
+As example, the following code defines a custom printer, making use of
+the parameter @func{printer-printing-style} to differentiate the style:
+
+@lisp
+(import (vicare))
+(print-graph #t)
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode none))
+
+(define-struct duo (one two))
+
+(define (duo-printer stru port sub-printer)
+  (case (printer-printing-style)
+    ((display)
+     (display "#@{duo " port)
+     (sub-printer (duo-one stru))
+     (display " " port)
+     (sub-printer (duo-two stru))
+     (display "@}" port))
+    ((write)
+     (display "(" port)
+     ;;By using the sub-printer: we make this sexp shared too.
+     (sub-printer '(struct-constructor
+                      (struct-type-descriptor duo)))
+     (display " " port)
+     (sub-printer (duo-one stru))
+     (display " " port)
+     (sub-printer (duo-two stru))
+     (display ")" port))
+    ((pretty-print)
+     (sub-printer `(struct duo
+                           #:one ,(duo-one stru)
+                           #:two ,(duo-two stru))))))
+
+(set-struct-type-printer! (struct-type-descriptor duo)
+                          duo-printer)
+
+(define O
+  (make-duo 1 2))
+
+(display O)
+@print{} #@{duo 1 2@}"
+
+(write O)
+@print{} ((struct-constructor (struct-type-descriptor duo)) 1 2)
+
+(pretty-print O)
+@print{} (struct duo #:one 1 #:two 2)
+
+;; shared object, display
+(let* ((A (make-duo 1 2))
+       (B (make-duo A A)))
+  (display B))
+@print{} #@{duo #0=#@{duo 1 2@} #0#@}
+
+;; shared object, write
+(let* ((A (make-duo 1 2))
+       (B (make-duo A A)))
+  (write B))
+@print{} (#0=(struct-constructor (struct-type-descriptor duo)) \
+  #1=(#0# 1 2) #1#)
+@end lisp
+
+
+@defun set-struct-type-printer! @var{std} @var{printer}
+@defunx set-rtd-printer! @var{std} @var{printer}
+Select the procedure @var{printer} as printer for structs of type
+@var{std}; if @var{printer} is @false{}, instances of type @var{std}
+make use of the built--in Scheme objects printer.  Return the old
+printer function or @false{} if no printer function was set for this
+@var{std}.
+@end defun
+
+
+@defun struct-type-printer @var{std}
+Return @false{} or a function previously set as custom struct printer
+for instances of struct type @var{std}.  When the return value is
+@false{}: instances of type @var{std} make use of the built--in Scheme
+objects printer.
+@end defun
+
+@c page
+@node syslib structs safe final
+@subsubsection Finalisation of structs
+
+
+@cindex Automatic finalisation of structs
+@cindex Structs, automatic finalisation
+@cindex Structs, destructors
+@cindex Finalisation of structs
+@cindex Destructors for structs
+
+
+@value{PRJNAME} allows structs to be finalised either explicitly or
+automatically by the garbage collector, by applying a destructor
+function to them; here is how automatic finalisation works:
+
+@example
+vicare> (define-struct duo (one two))
+vicare> (set-struct-type-destructor! (struct-type-descriptor duo)
+   (lambda (stru)
+     (printf "destroying ~s\n" stru)))
+vicare> (make-duo 1 2)
+$1 = (struct duo (one 1) (two 2))
+vicare> (collect)
+destroying #[struct duo one=1 two=2]
+vicare>
+@end example
+
+A destructor function is associated to a struct--type by registering it
+in the struct--type descriptor.  After a destructor is set in the
+descriptor: new instances of the struct--type are registered, upon
+creation, into an internal guardian, @ref{iklib guardians} for details;
+whenever such structs are garbage collected: the guardian applies the
+destructor to them.
+
+When the destructor is called by the garbage collector: exceptions
+raised by it are catched with @syntax{guard} and discarded; destructor
+functions should take care of exceptions by themselves.
+
+It is possible for a destructor function to be applied multiple times to
+the same struct: once a destructor is set in the descriptor, it can be
+explicitly applied to structs and later applied again by the garbage
+collector.  Destructor functions must be written in such a way that
+multiple applications are not a problem.  For example, it is usually
+possible, upon destruction, to reset some struct fields to the void
+object: when the destructor detects a field set to void, it knows that
+the struct has already been finalised.
+
+
+@defun set-struct-type-destructor! @var{std} @var{destructor}
+@defunx set-rtd-destructor! @var{std} @var{destructor}
+Select the procedure @var{destructor} as destructor for data structs of
+type @var{std}; return the old destructor function or @false{} if no
+destructor was set for @var{std}.  The destructor accepts a single
+argument being the struct instance to finalise; the destructor can
+return unspecified values.
+@end defun
+
+
+@defun struct-type-destructor @var{std}
+Return @false{} or a procedure being the destructor for instances of
+@var{std}.
+@end defun
+
+
+@deffn Parameter struct-guardian-logger
+@cindex Parameter @func{struct-guardian-logger}
+Select data structs destruction logging mode for debugging purposes.
+When a struct is finalised by the garbage collector, using the
+destructor registered in the @rtd{}:
+
+@itemize
+@item
+If this parameter is set to @false{}: no additional actions are
+performed.
+
+@item
+If this parameter is set to @true{}: the function
+@func{struct-guardian-log} is used to log the operations to the textual
+output port returned by @code{current-error-port}.
+
+@item
+If this parameter is set to a procedure: such procedure is used to log
+the operations in a user selected way.
+@end itemize
+
+See the documentation of @func{struct-guardian-log} for the calling
+protocol of the logger functions.
+@end deffn
+
+
+@defun struct-guardian-log @var{struct} @var{exception} @var{action}
+Built in logger function to be used to log struct finalisation
+operations by the garbage collector.  @var{struct} is the instance to be
+finalised; @var{exception} is @false{} or an object raised by the struct
+destructor; @var{action} is one of the symbols:
+@code{before-destruction}, @code{after-destruction}, @code{exception}.
+
+When this function is used as value for the parameter
+@func{struct-guardian-logger}:
+
+@itemize
+@item
+The function is called whenever a struct is registered for destruction
+with @var{action} set to the symbol @code{registration} and
+@var{exception} set to @false{}.
+
+@item
+The function is called just before the struct is finalised with
+@var{action} set to the symbol @code{before-destruction} and
+@var{exception} set to @false{}.
+
+@item
+The function is called right after the struct has been finalised with
+@var{action} set to the symbol @code{after-destruction} and
+@var{exception} set to @false{}.
+
+@item
+If an exception is raised by the destructor: such exception is catched
+and this function is called with @var{action} set to @code{exception}
+and @var{exception} set to the raised object.
+@end itemize
+
+The current implementation is the following:
+
+@smallexample
+(define (struct-guardian-log S E action)
+  (case action
+    ((registration)
+     (fprintf (current-error-port)
+              "*** Vicare debug: struct guardian: registered struct:\n\
+               ***\t~s\n" S))
+    ((before-destruction)
+     (fprintf (current-error-port)
+       "*** Vicare debug: struct guardian: before destruction:\n\
+        ***\t~s\n" S))
+    ((after-destruction)
+     (fprintf (current-error-port)
+       "*** Vicare debug: struct guardian: after destruction:\n\
+        ***\t~s\n" S))
+    ((exception)
+     (fprintf (current-error-port)
+       "*** Vicare debug: struct guardian: exception:\n\
+        ***\t~s\n\
+        ***\t~s\n" S E))
+    (else
+     (assertion-violation 'struct-guardian-log
+       "invalid action in struct destruction process" S action))))
+@end smallexample
+@end defun
+
+@c page
+@node syslib structs safe data
+@subsubsection Inspecting data structures
+
+
+@defun struct? @var{stru}
+@defunx struct? @var{stru} @var{std}
+When no @var{std} argument is given: return true if @var{stru} is a data
+structure.  When @var{std} is given: return true if @var{stru} is a data
+structure and it is of type @var{std}, which must be a struct type
+descriptor.
+@end defun
+
+
+@defun struct-and-std? @var{stru} @var{std}
+Return @true{} if @var{stru} is a struct with struct--type descriptor
+equal to @var{std}; otherwise return @false{}.  Raise an error if
+@var{std} is not a struct--type descriptor.
+@end defun
+
+
+@defun struct-std @var{stru}
+@defunx struct-rtd @var{stru}
+Return the struct--type descriptor of the data structure @var{stru}.
+Notice that this function works with both Vicare's structs and @rnrs{6}
+records.
+@end defun
+
+
+@defun struct-length @var{stru}
+Return the number of fields in the data structure @var{stru}.  Notice
+that this function works with both Vicare's structs and @rnrs{6}
+records.
+@end defun
+
+
+@defun struct-field-names @var{stru}
+Return a list of symbols representing the field names of the structure
+@var{stru}.
+@end defun
+
+
+@defun struct-name @var{stru}
+Return a string representing the name of the data structure @var{stru}.
+Notice that this function works with both Vicare's structs and @rnrs{6}
+records.
+@end defun
+
+
+@defun struct-printer @var{stru}
+Return @false{} or the procedure being the printer function for the data
+structure @var{stru}.
+@end defun
+
+
+@defun struct-destructor @var{stru}
+Return @false{} or the procedure being the destructor function for the
+data structure @var{stru}.
+@end defun
+
+
+@defun struct-ref @var{stru} @var{index}
+Return the value of field at @var{index} in the data structure
+@var{stru}.
+@end defun
+
+
+@defun struct-set! @var{stru} @var{index} @var{value}
+Store @var{value} in the field at @var{index} in the data structure
+@var{stru}.
+@end defun
+
+
+@defun struct-and-std-ref @var{stru} @var{index} @var{std}
+Check that @var{stru} is a struct of type @var{std}, then return the
+value of field at @var{index} in the data structure @var{stru}.
+@end defun
+
+
+@defun struct-and-std-set! @var{stru} @var{index} @var{std} @var{value}
+Check that @var{stru} is a struct of type @var{std}, store @var{value}
+in the field at @var{index} in the data structure @var{stru}.
+@end defun
+
+
+@defun struct=? @vari{obj} @varii{obj}
+Return true if @vari{obj} and @varii{obj} are two structures having the
+same @rtd{} and equal field values according to @func{eqv?}.  Note that
+this function also works when applied to @rnrs{6} records.
+@end defun
+
+
+@defun struct-reset @var{stru}
+Reset to void all the fields of a structure.
+@end defun
+
+@c page
+@node syslib structs unsafe
+@subsection Low level structure operations
 
 
 @cindex @library{vicare system $structs}, library
@@ -7238,6 +7998,163 @@ annotated closure is applied: it applies @var{clo} to the arguments.
 @defun $annotated-procedure-annotation @var{clo}
 Given a closure object @var{clo} being an annotated procedure created by
 @func{$make-annotated-procedure}: return the annotation object.
+@end defun
+
+@c page
+@node syslib compar
+@section Comparison procedures
+
+
+@cindex @library{vicare system comparison-procedures}, library
+@cindex Library @library{vicare system comparison-procedures}
+
+
+The library @library{vicare system comparison-procedures} defines
+comparison procedures or the core object--types.  When applied to two
+values @var{A} and @var{B} of the same type, a comparison procedure
+returns a fixnum:
+
+@table @samp
+@item -1
+If @var{A} is less than @var{B}.
+
+@item 0
+If @var{A} is equal to @var{B}.
+
+@item +1
+If @var{A} is greater than @var{B}.
+@end table
+
+
+The following syntactic binding are exported by the library
+@library{vicare system comparison-procedures}.
+
+
+@defun make-comparison-procedure @var{type-pred} @var{equal-to} @var{less-than}
+Build and return a comparison procedure using the equality predicate
+@var{equal-to} and the ``less than'' predicate @var{less-than}.  The
+arguments of the comparison procedures are validated using the type
+predicate @var{type-pred}.
+
+@lisp
+(define compar-fx
+  (make-comparison-procedure fixnum? fx=? fx<?))
+
+(compar-fx -1 +1)       @result{} -1
+(compar-fx +1 +1)       @result{}  0
+(compar-fx +1 -1)       @result{} +1
+@end lisp
+@end defun
+
+
+@menu
+* syslib compar numerics::      Numeric comparison procedures.
+* syslib compar textual::       Textual comparison procedures.
+* syslib compar misc::          Miscellaneous comparison procedures.
+@end menu
+
+@c page
+@node syslib compar numerics
+@subsection Numeric comparison procedures
+
+
+The following syntactic binding are exported by the library
+@library{vicare system comparison-procedures}.
+
+
+@defun compar-fixnum @var{A} @var{B}
+Comparison procedure for fixnums.
+@end defun
+
+
+@defun compar-bignum @var{A} @var{B}
+Comparison procedure for bignums.
+@end defun
+
+
+@defun compar-exact-integer @var{A} @var{B}
+Comparison procedure for exact integers (fixnums and bignums).
+@end defun
+
+
+@defun compar-ratnum @var{A} @var{B}
+Comparison procedure for ratnums.
+@end defun
+
+
+@defun compar-exact-real @var{A} @var{B}
+Comparison procedure for exact reals (fixnums, bignum, ratnums).
+@end defun
+
+
+@defun compar-flonum @var{A} @var{B}
+Comparison procedure for flonums.
+@end defun
+
+
+@defun compar-real @var{A} @var{B}
+Comparison procedure for reals (fixnums, bignums, ratnums, flonums).
+@end defun
+
+@c page
+@node syslib compar textual
+@subsection Textual comparison procedures
+
+
+The following syntactic binding are exported by the library
+@library{vicare system comparison-procedures}.
+
+
+@defun compar-char @var{A} @var{B}
+Comparison procedure for characters.
+@end defun
+
+
+@defun compar-string @var{A} @var{B}
+Comparison procedure for strings.
+@end defun
+
+
+@defun compar-string-ci @var{A} @var{B}
+Comparison procedure for strings, using case--insensitive functions.
+@end defun
+
+
+@defun compar-symbol @var{A} @var{B}
+Comparison procedure for symbols.
+@end defun
+
+@c page
+@node syslib compar misc
+@subsection Miscellaneous comparison procedures
+
+
+The following syntactic binding are exported by the library
+@library{vicare system comparison-procedures}.
+
+
+@defun compar-boolean @var{A} @var{B}
+Comparison procedure for booleans.  @true{} is considered greater than
+@false{}.
+@end defun
+
+
+@defun compar-true @var{A} @var{B}
+@defunx compar-false @var{A} @var{B}
+Comparison procedure for booleans true and false.  The arguments must
+be, respectively, both @true{} or both @false{}; when the arguments are
+correct, the return value is always the fixnum zero.
+@end defun
+
+
+@defun compar-transcoder @var{A} @var{B}
+Comparison procedure for transcoders.  Comparison is performed on the
+internal representation as exact integers.
+@end defun
+
+
+@defun compar-pointer @var{A} @var{B}
+Comparison procedure for pointers.
 @end defun
 
 @c end of file

@@ -37,7 +37,8 @@
 		  would-block-object	would-block-object?
 		  sentinel		sentinel?)
     (only (vicare system $structs)
-	  $struct))
+	  $struct)
+    (vicare system structs))
 
 
 (define-struct unique-object

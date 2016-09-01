@@ -67,6 +67,7 @@
     (only (vicare system $records)
 	  $record-type-method-retriever
 	  $record-type-hash-function)
+    (vicare system structs)
     (prefix (only (ikarus records procedural)
 		  record-type-implemented-interfaces)
 	    td::)

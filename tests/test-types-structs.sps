@@ -38,6 +38,7 @@
 	  type-signature-common-ancestor
 	  type-signature-matching
 	  type-signature-union)
+    (vicare system structs)
     (vicare checks))
 
 (check-set-mode! 'report-failed)

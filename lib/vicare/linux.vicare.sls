@@ -119,6 +119,7 @@
     ether-line			ether-line/string
     )
   (import (vicare)
+    (vicare system structs)
     (vicare language-extensions syntaxes)
     (vicare platform constants)
     (vicare arguments validation)
