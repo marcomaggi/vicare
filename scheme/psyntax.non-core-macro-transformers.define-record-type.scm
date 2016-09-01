@@ -157,13 +157,6 @@
   ;;PARENT-RCD-DEFINITION: null or  a list holding a DEFINE form  defining the parent
   ;;RCD syntactic binding, the list is spliced in the output.
   ;;
-  ;;PARENT-EARLY-BINDING-METHODS-ALIST-PUBLIC: null or an  alist associated to public
-  ;;methods having: as keys, symbols  representing method names; as values, syntactic
-  ;;identifiers bound to the method implementation functions.
-  ;;
-  ;;PARENT-EARLY-BINDING-METHODS-ALIST-PROTECTED:  null  or  an alist  associated  to
-  ;;protected methods.
-  ;;
   ;;PARENT-VIRTUAL-METHOD-SIGNATURES-ALIST an alist having  entries with format:
   ;;
   ;;   (?method-name . (?protection . ?method-signature))
@@ -177,11 +170,8 @@
   ;;
   ;;* When the method has been sealed: the boolean false.
   ;;
-  (define-values (foo-parent.id
-		  parent-rtd.id parent-rcd.id parent-rtd-definition parent-rcd-definition
-		  parent-early-binding-methods-alist-public
-		  parent-early-binding-methods-alist-protected
-		  parent-virtual-method-signatures-alist)
+  (define-values (foo-parent.id parent-rtd.id parent-rcd.id parent-rtd-definition parent-rcd-definition
+				parent-virtual-method-signatures-alist)
     (%make-parent-rtd+rcd-code clause*.stx foo input-form.stx synner))
 
   ;;Parsing fields clauses.
@@ -339,57 +329,6 @@
 			      method-retriever-code-public.id
 			      method-retriever-code-private.id
 			      synner))
-
-  ;;Parse METHOD and similar clauses.  Build the following values:
-  ;;
-  ;;EARLY-BINDING-METHODS-ALIST-PUBLIC an  alist for public methods  having: as keys,
-  ;;symbols  representing the  method names,  including the  field names;  as values,
-  ;;syntactic identifiers that will be bound to the method implementation procedures,
-  ;;including public field methods.
-  ;;
-  ;;EARLY-BINDING-METHODS-ALIST-PROTECTED an  alist for protected methods  having: as
-  ;;keys, symbols representing the method names, including the protected field names;
-  ;;as values, syntactic identifiers that will  be bound to the method implementation
-  ;;procedures, including protected field methods.
-  ;;
-  ;;EARLY-BINDING-METHODS-ALIST-PRIVATE an alist for private methods having: as keys,
-  ;;symbols  representing the  method names,  including the  private field  names; as
-  ;;values, syntactic  identifiers that  will be bound  to the  method implementation
-  ;;procedures, including private field methods.
-  ;;
-  ;;METHOD-FORM*.SEXP  is  a,   possibly  empty,  list  of   forms  representing  the
-  ;;definitions of method implementation procedures.
-  ;;
-  ;;METHOD-RETRIEVER-CODE.SEXP  is false  or  a symbolic  expression  (to be  BLESSed
-  ;;later)  representing  a  Scheme  expression   returning  a  closure  object:  the
-  ;;late-binding method-retriever function.
-  ;;
-  ;;METHOD-RETRIEVER-CODE-PRIVATE.SEXP  is  false or  a  symbolic  expression (to  be
-  ;;BLESSed later) representing  a Scheme expression returning a  closure object: the
-  ;;late-binding private method-retriever function.
-  ;;
-  ;;VIRTUAL-METHOD-SIGNATURES-ALIST an  alist having:  as keys,  symbols representing
-  ;;the  virtual   method  names;  as  values,   instances  of  "<closure-type-spec>"
-  ;;representing  the  signature   of  the  method.   This   alist  already  contains
-  ;;appropriate entries for the parent record-type, if any.
-  ;;
-  #;(define-values (early-binding-methods-alist-public
-		  early-binding-methods-alist-protected
-		  early-binding-methods-alist-private
-		  method-form*.sexp
-		  virtual-method-signatures-alist)
-    (%parse-method-clauses clause*.stx foo foo-for-id-generation
-			   method-retriever-code-public.id method-retriever-code-private.id
-                           parent-rtd.id parent-virtual-method-signatures-alist
-			   ;;early-binding-methods-alist-public
-			   (append field-methods-alist-public    parent-early-binding-methods-alist-public)
-			   ;;early-binding-methods-alist-protected
-			   (append field-methods-alist-protected parent-early-binding-methods-alist-protected)
-			   ;;early-binding-methods-alist-private
-			   (append field-methods-alist-private   parent-early-binding-methods-alist-protected)
-			   field-methods-alist-public
-			   field-methods-alist-private
-			   synner))
 
   ;;Null  or a  proper  list of  "<interface-type-spec>"  instances representing  the
   ;;interfaces implemented by this record-type.
@@ -1334,14 +1273,7 @@
   ;;5.  PARENT-RCD-DEFINITION: null  or a  list holding  a DEFINE  form defining  the
   ;;parent RCD syntactic binding, the list is spliced in the output.
   ;;
-  ;;6.   PARENT-EARLY-BINDING-METHODS-ALIST-PUBLIC: null  or an  alist associated  to
-  ;;public methods  having: as  keys, symbols representing  method names;  as values,
-  ;;syntactic identifiers bound to the method implementation functions.
-  ;;
-  ;;7.  PARENT-EARLY-BINDING-METHODS-ALIST-PROTECTED: null or  an alist associated to
-  ;;protected methods.
-  ;;
-  ;;8.   PARENT-VIRTUAL-METHODS-ALIST: an  alist  representing  the parent's  virtual
+  ;;6.   PARENT-VIRTUAL-METHODS-ALIST: an  alist  representing  the parent's  virtual
   ;;methods and sealed methods.
   ;;
   (let ((parent-clause (%get-clause 'parent clause*)))
@@ -1365,12 +1297,9 @@
 		     ;;If the parent has a super-type constructor descriptor: use it;
 		     ;;otherwise use the default constructor descriptor.
 		     ,(or parent-proto `(record-constructor-descriptor ,?parent-name))))
-		 ;;parent-early-binding-methods-alist-public
-		 (object-type-spec.methods-table-public parent.ots)
-		 ;;parent-early-binding-methods-alist-protected
-		 (object-type-spec.methods-table-protected parent.ots)
 		 ;;parent-virtual-methods-alist
-		 (record-type-spec.virtual-method-signatures parent.ots))))
+		 (record-type-spec.virtual-method-signatures parent.ots)
+		 )))
 
       ;;If there is no PARENT clause try to retrieve the expression evaluating to the
       ;;RTD.
@@ -1387,8 +1316,6 @@
 		      ;;parent-rcd-definition
 		      `((define/typed {,parent-rcd.id <record-constructor-descriptor>}
 			  ,?parent-rcd))
-		      '() ;parent-early-binding-methods-alist-public
-		      '() ;parent-early-binding-methods-alist-protected
 		      '() ;parent-virtual-methods-alist
 		      )))
 
@@ -1400,9 +1327,7 @@
 		    #f	;parent-rcd
 		    '() ;parent-rtd-definition
 		    '() ;parent-rcd-definition
-		    '()	;parent-early-binding-methods-alist-public
-		    '()	;parent-early-binding-methods-alist-protected
-		    '()	;parent-virtual-methods-alist
+		    '() ;parent-virtual-methods-alist
 		    ))
 
 	   (_
