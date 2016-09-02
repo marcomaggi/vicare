@@ -11,6 +11,7 @@ bits.
 
 @menu
 * bitvectors type::             Record type of bitvectors.
+* bitvectors inspection::       Inspecting bitvectors.
 * bitvectors bits::             Bitwise operations on bitvectors.
 * bitvectors conv::             Conversion operations on bitvectors.
 * bitvectors comp::             Comparison operations on bitvectors.
@@ -27,38 +28,38 @@ bitvectors}.
 
 
 @deftp {Record Type} @aclass{bitvector}
-Name of object--type representing bitvectors.
+Name of object--type representing bitvectors.  The current
+implementation is as vector of fixnums.
 @end deftp
 
 
-@defop Constructor @aclass{bitvector} constructor @{@var{length} <non-negative-exact-integer>@}
+@defop Constructor @aclass{bitvector} new @aclass{bitvector} @{@var{length} <non-negative-exact-integer>@}
 Build and return a new @class{bitvector} object capable of holding
-@var{length} bits.  The bits are initialised to zero.
+@var{length} bits.  The bits are initialised to @false{}.
+
+@lisp
+(new <bitvector> 2)
+@end lisp
 @end defop
 
 
-@defop {Maker syntax} @aclass{bitvector} @aclass{bitvector} (@meta{length})
-Build and return a new @class{bitvector} using the default constructor.
+@defop {Type Predicate} @aclass{bitvector} is-a? @var{obj} @aclass{bitvector}
+Return @true{} if @var{obj} is a @class{bitvector} otherwise return
+@false{}.
 @end defop
 
-@c ------------------------------------------------------------
+@c page
+@node bitvectors inspection
+@section Inspecting bitvectors
+
+
+The following bindings are exported by the library @library{vicare containers
+bitvectors}.
+
 
 @defcv {Immutable field} @aclass{bitvector} length
 The number of bits.
 @end defcv
-
-@c ------------------------------------------------------------
-
-@defop {Setter syntax} @aclass{bitvector} set! (@meta{bitvector} (@meta{index})) @meta{bool}
-Set the bit at @meta{index} in the @class{bitvector} @meta{bitvector} to
-one if @meta{bool} is true, or to zero if @meta{bool} is false.
-@end defop
-
-
-@defop {Getter syntax} @aclass{bitvector} @meta{bitvector} (@meta{index})
-Return a boolean representing the bit at @meta{index} in the
-@class{bitvector} @meta{bitvector}.
-@end defop
 
 @c page
 @node bitvectors bits
@@ -67,6 +68,18 @@ Return a boolean representing the bit at @meta{index} in the
 
 The following bindings are exported by the library @library{vicare containers
 bitvectors}.
+
+
+@deftypemethod @aclass{bitvector} @aclass{void} bit-set! @var{bit-index} @var{bool}
+Set the bit at @meta{index} in the @class{bitvector} @meta{bitvector} to
+one if @meta{bool} is true, or to zero if @meta{bool} is false.
+@end deftypemethod
+
+
+@defop {Getter syntax} @aclass{bitvector} @meta{bitvector} (@meta{index})
+Return a boolean representing the bit at @meta{index} in the
+@class{bitvector} @meta{bitvector}.
+@end defop
 
 
 @defmethod @aclass{bitvector} set-all!

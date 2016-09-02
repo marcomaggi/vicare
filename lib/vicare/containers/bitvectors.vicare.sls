@@ -197,6 +197,12 @@
 		  (pool R) 0
 		  (pool-length this))))
 
+(custom-printer
+  (lambda ({this <bitvector>} {P <textual-output-port>} subprinter)
+    (display "#[<bitvector>" P)
+    (display " length=" P) (display (.length this) P)
+    (display "]" P)))
+
 
 ;;;; bitwise methods
 

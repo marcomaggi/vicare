@@ -92,6 +92,18 @@
   (void))
 
 
+(parametrise ((check-test-name	'printer))
+
+  (check
+      (let ((O (new <bitvector> 8)))
+	(with-output-to-string
+	  (lambda ()
+	    (display O))))
+    => "#[<bitvector> length=8]")
+
+  (void))
+
+
 (parametrise ((check-test-name	'length))
 
   (define-syntax doit
