@@ -1130,6 +1130,23 @@ endif
 EXTRA_DIST += lib/vicare/containers/iteration-thunks.vicare.sls
 CLEANFILES += lib/vicare/containers/iteration-thunks.fasl
 
+lib/vicare/containers/bitvectors.fasl: \
+		lib/vicare/containers/bitvectors.vicare.sls \
+		lib/vicare/platform/words.fasl \
+		lib/vicare/language-extensions/friend-functions.fasl \
+		lib/vicare/language-extensions/mixins.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_bitvectors_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_bitvectors_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_bitvectors_fasl_DATA = lib/vicare/containers/bitvectors.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_bitvectors_vicare_sls_DATA = lib/vicare/containers/bitvectors.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/bitvectors.vicare.sls
+CLEANFILES += lib/vicare/containers/bitvectors.fasl
+
 lib/vicare/containers/bytevectors.fasl: \
 		lib/vicare/containers/bytevectors.vicare.sls \
 		$(FASL_PREREQUISITES)

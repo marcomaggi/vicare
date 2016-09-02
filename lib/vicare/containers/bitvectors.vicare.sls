@@ -5,8 +5,8 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;	We  implement  a  bitvector as  a  vector  of  fixnums.   We want  a  mutable
-;;;	bit-vector here.
+;;;	This library implements bitvectors as vectors  of fixnums.  We want a mutable
+;;;	bit-vectors here.
 ;;;
 ;;;     Notice  that: while  it could  appear convenient  to use  a single  fixnum or
 ;;;     bignum as  storage for  bits, such  objects are immutable  and would  lead to
@@ -30,7 +30,7 @@
 
 #!vicare
 (library (vicare containers bitvectors)
-  (options typed-language)
+  (options typed-language #;strict-type-checking)
   (export
     <bitvector>
     list->bitvector

@@ -119,6 +119,7 @@
 
      (vicare containers comparators)
      (vicare containers iteration-thunks)
+     (vicare containers bitvectors)
      (vicare containers bytevectors)
      (vicare containers auxiliary-syntaxes)
      (vicare containers weak-hashtables)
