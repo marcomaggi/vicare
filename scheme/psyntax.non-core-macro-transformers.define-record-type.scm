@@ -1896,16 +1896,41 @@
 			     field-methods-alist-private
 			     synner)))
 
-  ;;Update the record-type spec instance with method tables.
-  (object-type-spec.methods-table-public-set!		record.ots early-binding-methods-alist-public)
-  (object-type-spec.methods-table-protected-set!	record.ots early-binding-methods-alist-protected)
-  (object-type-spec.methods-table-private-set!	record.ots early-binding-methods-alist-private)
-  (record-type-spec.virtual-method-signatures-set!	record.ots virtual-method-signatures-alist)
+  (define foo-methods-table-public
+    `(list . ,(map (lambda (entry)
+  		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+  		early-binding-methods-alist-public)))
+
+  (define foo-methods-table-protected
+    `(list . ,(map (lambda (entry)
+  		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+  		early-binding-methods-alist-protected)))
+
+  (define foo-methods-table-private
+    `(list . ,(map (lambda (entry)
+  		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+  		early-binding-methods-alist-private)))
+
+  (define foo-virtual-method-signatures.table
+    `(quote ,virtual-method-signatures-alist))
 
   ;;Build the return syntax object.
-  (let ((output-form.stx (bless `(begin ,@method-form*.sexp))))
-    ;;(debug-print __who__ (syntax->datum output-form.stx))
-    output-form.stx))
+  (define output-form.stx
+    (let ((record.ots	(make-syntactic-identifier-for-temporary-variable "record.ots")))
+      (bless
+       `(begin
+	  (begin-for-syntax
+	    (let ((,record.ots (make-type-specification (syntax ,foo))))
+	      ;;Update the record-type spec instance with method tables.
+	      (object-type-spec.methods-table-public-set!	,record.ots ,foo-methods-table-public)
+	      (object-type-spec.methods-table-protected-set!	,record.ots ,foo-methods-table-protected)
+	      (object-type-spec.methods-table-private-set!	,record.ots ,foo-methods-table-private)
+	      (record-type-spec.virtual-method-signatures-set!	,record.ots ,foo-virtual-method-signatures.table)
+	      ))
+	  ,@method-form*.sexp))))
+
+  ;;(debug-print __who__ (syntax->datum output-form.stx))
+  output-form.stx)
 
 
 (module (%parse-method-clauses)

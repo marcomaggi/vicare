@@ -721,6 +721,26 @@
 ;;   (signatures
 ;;    ((<object-type-spec>)		=> ((alist <symbol> <syntactic-identifier>)))))
 
+(declare-core-primitive object-type-spec.methods-table-public-set!
+    (safe)
+  (signatures
+   ((<object-type-spec> <list>)		=> (<void>))))
+
+(declare-core-primitive object-type-spec.methods-table-protected-set!
+    (safe)
+  (signatures
+   ((<object-type-spec> <list>)		=> (<void>))))
+
+(declare-core-primitive object-type-spec.methods-table-private-set!
+    (safe)
+  (signatures
+   ((<object-type-spec> <list>)		=> (<void>))))
+
+(declare-core-primitive object-type-spec.virtual-method-signatures-set!
+    (safe)
+  (signatures
+   ((<object-type-spec> <list>)		=> (<void>))))
+
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive make-type-specification
