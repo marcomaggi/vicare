@@ -34,11 +34,21 @@
 
   (define-syntax (define/friend stx)
     (syntax-case stx (brace)
+      ((_ ((brace ?who . ?rv-types) (brace ?subject ?ann) . ?formals) ?body0 ?body ...)
+       #'(define/checked ((brace ?who . ?rv-types) (brace ?subject ?ann) . ?formals)
+	   (typed-variable-with-private-access! ?subject)
+	   ?body0 ?body ...))
+
       ((_ (?who (brace ?subject ?ann) . ?formals) ?body0 ?body ...)
        #'(define/checked (?who (brace ?subject ?ann) . ?formals)
 	   (typed-variable-with-private-access! ?subject)
 	   ?body0 ?body ...))
-      ))
+
+      ((_ (?who) ?body0 ?body ...)
+       (__synner__ "missing subject argument"))
+
+      (_
+       (__synner__ "invalid syntax in input form"))))
 
   #| end of library |# )
 
