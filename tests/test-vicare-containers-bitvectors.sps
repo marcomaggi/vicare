@@ -37,50 +37,50 @@
 
 ;;;; helpers
 
-(define (%bits->list {o <bitvector>})
+(define (%bits->list {O <bitvector>})
   (let loop ((result '())
 	     (i 0))
-    (if (= i (o length))
+    (if (= i (.length O))
 	result
-      (loop (cons (.bit-ref o i) result) (+ 1 i)))))
+      (loop (cons (.bit-ref O i) result) (+ 1 i)))))
 
 
 (parametrise ((check-test-name	'constructor))
 
   (check
-      (let (({o <bitvector>} (new <bitvector> 8)))
-	(.vector o))
+      (let (({O <bitvector>} (new <bitvector> 8)))
+	(.vector O))
     => '#(#f #f #f #f  #f #f #f #f))
 ;;;        0  1  2  3   4  5  6  7
 
   (check
-      (let (({o <bitvector>} (new <bitvector> 17)))
-	(.vector o))
+      (let (({O <bitvector>} (new <bitvector> 17)))
+	(.vector O))
     => '#( ;;
 	  #f #f #f #f  #f #f #f #f
 	  #f #f #f #f  #f #f #f #f
 	  #f))
 
   (check
-      (let (({o <bitvector>} (new <bitvector> (+ 16 16 8))))
-	(.vector o))
+      (let (({O <bitvector>} (new <bitvector> (+ 16 16 8))))
+	(.vector O))
     => '#( ;;
 	  #f #f #f #f  #f #f #f #f    #f #f #f #f  #f #f #f #f
 	  #f #f #f #f  #f #f #f #f    #f #f #f #f  #f #f #f #f
 	  #f #f #f #f  #f #f #f #f))
 
   (check
-      (let (({o <bitvector>} (new <bitvector> 1234)))
-	(.vector o))
+      (let (({O <bitvector>} (new <bitvector> 1234)))
+	(.vector O))
     => (make-vector 1234 #f))
 
   (check
-      (let (({o <bitvector>} (new <bitvector> 1024)))
-	(.bit-set! o 100 #t)
-	(.bit-set! o 200 #t)
-	(.bit-set! o 500 #t)
-	(.bit-set! o 1023 #t)
-	(.vector o))
+      (let (({O <bitvector>} (new <bitvector> 1024)))
+	(.bit-set! O 100 #t)
+	(.bit-set! O 200 #t)
+	(.bit-set! O 500 #t)
+	(.bit-set! O 1023 #t)
+	(.vector O))
     => (receive-and-return (V)
 	   (make-vector 1024 #f)
 	 (vector-set! V 100 #t)
@@ -92,22 +92,92 @@
   (void))
 
 
+(parametrise ((check-test-name	'length))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?len)
+       (check
+	   (.length (new <bitvector> ?len))
+	 => ?len))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit	0)
+  (doit	1)
+  (doit	2)
+  (doit	3)
+  (doit	4)
+  (doit	5)
+  (doit	6)
+  (doit	7)
+  (doit	8)
+  (doit	9)
+
+  (doit	10)
+  (doit	11)
+  (doit	12)
+  (doit	13)
+  (doit	14)
+  (doit	15)
+  (doit	16)
+  (doit	17)
+  (doit	18)
+  (doit	19)
+
+  (doit	30)
+  (doit	31)
+  (doit	32)
+  (doit	33)
+  (doit	34)
+  (doit	35)
+  (doit	36)
+  (doit	37)
+  (doit	38)
+  (doit	39)
+
+  (doit	60)
+  (doit	61)
+  (doit	62)
+  (doit	63)
+  (doit	64)
+  (doit	65)
+  (doit	66)
+  (doit	67)
+  (doit	68)
+  (doit	69)
+
+  (doit	110)
+  (doit	111)
+  (doit	112)
+  (doit	113)
+  (doit	114)
+  (doit	115)
+  (doit	116)
+  (doit	117)
+  (doit	118)
+  (doit	119)
+
+  (void))
+
+
 (parametrise ((check-test-name	'setter-getter))
 
 ;;; 8 bits
 
   (check
-      (let (({o <bitvector>} (new <bitvector> 8)))
-	(%bits->list o))
+      (let (({O <bitvector>} (new <bitvector> 8)))
+	(%bits->list O))
     => '(#f #f #f #f  #f #f #f #f))
 ;;;       0  1  2  3   4  5  6  7
 
   (check
-      (let (({o <bitvector>} (new <bitvector> 8)))
-	(.bit-set! o 0 #t)
-	(.bit-set! o 3 #t)
-	(.bit-set! o 5 #t)
-	(%bits->list o))
+      (let (({O <bitvector>} (new <bitvector> 8)))
+	(.bit-set! O 0 #t)
+	(.bit-set! O 3 #t)
+	(.bit-set! O 5 #t)
+	(%bits->list O))
     => '(#f #f #t #f  #t #f #f #t))
 ;;;       0  1  2  3   4  5  6  7
 
@@ -115,8 +185,8 @@
 ;;; 19 bits
 
   (check
-      (let (({o <bitvector>} (new <bitvector> 19)))
-	(%bits->list o))
+      (let (({O <bitvector>} (new <bitvector> 19)))
+	(%bits->list O))
     => '( ;;
 	 #f #f #f
 ;;;      18 17 16
@@ -126,11 +196,11 @@
 ;;;       7  6  5  4   3  2  1  0
 
   (check
-      (let (({o <bitvector>} (<bitvector> (19))))
-	(.bit-set! o  0 #t) (.bit-set! o  3 #t)
-	(.bit-set! o  5 #t) (.bit-set! o  9 #t)
-	(.bit-set! o 13 #t) (.bit-set! o 17 #t)
-	(%bits->list o))
+      (let (({O <bitvector>} (new <bitvector> 19)))
+	(.bit-set! O  0 #t) (.bit-set! O  3 #t)
+	(.bit-set! O  5 #t) (.bit-set! O  9 #t)
+	(.bit-set! O 13 #t) (.bit-set! O 17 #t)
+	(%bits->list O))
     => '( ;;
 	 #f #t #f
 ;;;      18 17 16
@@ -147,20 +217,20 @@
 ;;; 8 bits
 
   (check
-      (let (({o <bitvector>} (new <bitvector> 8)))
-	(.bit-set! o 0 #t)
-	(.bit-set! o 3 #t)
-	(.bit-set! o 5 #t)
-	(.list o))
+      (let (({O <bitvector>} (new <bitvector> 8)))
+	(.bit-set! O 0 #t)
+	(.bit-set! O 3 #t)
+	(.bit-set! O 5 #t)
+	(.list O))
     => '(#t #f #f #t  #f #t #f #f))
 ;;;       0  1  2  3   4  5  6  7
 
   (check
-      (let (({o <bitvector>} (new <bitvector> 8)))
-	(.bit-set! o 0 #t)
-	(.bit-set! o 3 #t)
-	(.bit-set! o 5 #t)
-	(.vector o))
+      (let (({O <bitvector>} (new <bitvector> 8)))
+	(.bit-set! O 0 #t)
+	(.bit-set! O 3 #t)
+	(.bit-set! O 5 #t)
+	(.vector O))
     => '#(#t #f #f #t  #f #t #f #f))
 ;;;        0  1  2  3   4  5  6  7
 
@@ -168,11 +238,11 @@
 ;;; 19 bits
 
   (check
-      (let (({o <bitvector>} (new <bitvector> 19)))
-	(.bit-set! o  0 #t) (.bit-set! o  3 #t)
-	(.bit-set! o  5 #t) (.bit-set! o  9 #t)
-	(.bit-set! o 13 #t) (.bit-set! o 17 #t)
-	(.list o))
+      (let (({O <bitvector>} (new <bitvector> 19)))
+	(.bit-set! O  0 #t) (.bit-set! O  3 #t)
+	(.bit-set! O  5 #t) (.bit-set! O  9 #t)
+	(.bit-set! O 13 #t) (.bit-set! O 17 #t)
+	(.list O))
     => '( ;;
 	 #t #f #f #t  #f #t #f #f
 ;;;       0  1  2  3   4  5  6  7
@@ -182,11 +252,11 @@
 ;;;      16 17 18
 
   (check
-      (let (({o <bitvector>} (new <bitvector> 19)))
-	(.bit-set! o  0 #t) (.bit-set! o  3 #t)
-	(.bit-set! o  5 #t) (.bit-set! o  9 #t)
-	(.bit-set! o 13 #t) (.bit-set! o 17 #t)
-	(.vector o))
+      (let (({O <bitvector>} (new <bitvector> 19)))
+	(.bit-set! O  0 #t) (.bit-set! O  3 #t)
+	(.bit-set! O  5 #t) (.bit-set! O  9 #t)
+	(.bit-set! O 13 #t) (.bit-set! O 17 #t)
+	(.vector O))
     => '#( ;;
 	  #t #f #f #t  #f #t #f #f
 ;;;        0  1  2  3   4  5  6  7
@@ -199,14 +269,14 @@
 
   (let ((ell '(#t #f #f #t  #f #t #f #f)))
     (check
-	(let (({o <bitvector>} (list->bitvector ell)))
-	  (.list o))
+	(let (({O <bitvector>} (list->bitvector ell)))
+	  (.list O))
       => ell))
 
   (let ((V '#(#t #f #f #t  #f #t #f #f)))
     (check
-	(let (({o <bitvector>} (vector->bitvector V)))
-	  (.vector o))
+	(let (({O <bitvector>} (vector->bitvector V)))
+	  (.vector O))
       => V))
 
   #t)
@@ -233,35 +303,35 @@
 (parametrise ((check-test-name	'bit-ops))
 
   (check
-      (let (({o <bitvector>} (new <bitvector> 8)))
-	(.toggle! o 0)
-	(.toggle! o 3)
-	(.toggle! o 5)
-	(.list o))
+      (let (({O <bitvector>} (new <bitvector> 8)))
+	(.toggle! O 0)
+	(.toggle! O 3)
+	(.toggle! O 5)
+	(.list O))
     => '(#t #f #f #t  #f #t #f #f))
 ;;;       0  1  2  3   4  5  6  7
 
 ;;; --------------------------------------------------------------------
 
   (check	;not
-      (let (({o <bitvector>} (new <bitvector> 8)))
-	(.bit-set! o 0 #t)
-	(.bit-set! o 3 #t)
-	(.bit-set! o 5 #t)
-	(let (({r <bitvector>} (.not o)))
-	  (list (.list o) (.list r))))
+      (let (({O <bitvector>} (new <bitvector> 8)))
+	(.bit-set! O 0 #t)
+	(.bit-set! O 3 #t)
+	(.bit-set! O 5 #t)
+	(let (({r <bitvector>} (.not O)))
+	  (list (.list O) (.list r))))
     => '((#t #f #f #t  #f #t #f #f)
 	 (#f #t #t #f  #t #f #t #t)))
 ;;;        0  1  2  3   4  5  6  7
 
   (check	;not!
-      (let (({o <bitvector>} (new <bitvector> 8)))
-	(.bit-set! o 0 #t)
-	(.bit-set! o 3 #t)
-	(.bit-set! o 5 #t)
-	(let ((L (.list o)))
-	  (.not! o)
-	  (list L (.list o))))
+      (let (({O <bitvector>} (new <bitvector> 8)))
+	(.bit-set! O 0 #t)
+	(.bit-set! O 3 #t)
+	(.bit-set! O 5 #t)
+	(let ((L (.list O)))
+	  (.not! O)
+	  (list L (.list O))))
     => '((#t #f #f #t  #f #t #f #f)
 	 (#f #t #t #f  #t #f #t #t)))
 ;;;        0  1  2  3   4  5  6  7
@@ -318,62 +388,62 @@
 ;;; bit count
 
   (check
-      (let (({o <bitvector>}	(list->bitvector '(#t #f #f #t))))
-	(.bit-count o))
+      (let (({O <bitvector>}	(list->bitvector '(#t #f #f #t))))
+	(.bit-count O))
     => 2)
 
   (check
-      (let (({o <bitvector>}	(list->bitvector '(#t #f #f #t  #f #t #t #f))))
-	(.bit-count o))
+      (let (({O <bitvector>}	(list->bitvector '(#t #f #f #t  #f #t #t #f))))
+	(.bit-count O))
     => 4)
 
   (check
-      (let (({o <bitvector>}	(list->bitvector '( ;;
+      (let (({O <bitvector>}	(list->bitvector '( ;;
 				      #t #f #f #t  #f #t #t #f
 				      #t #f #f #t  #f #t #t #f
 				      #t #f #f #t  #f #t #t #f))))
-	(.bit-count o))
+	(.bit-count O))
     => 12)
 
 ;;; --------------------------------------------------------------------
 ;;; first bit set
 
   (check
-      (let (({o <bitvector>}	(list->bitvector '(#t #f #f #t))))
-	(.first-bit-set o))
+      (let (({O <bitvector>}	(list->bitvector '(#t #f #f #t))))
+	(.first-bit-set O))
     => 0)
 
   (check
-      (let (({o <bitvector>}	(list->bitvector '(#f #t #f #t))))
-	(.first-bit-set o))
+      (let (({O <bitvector>}	(list->bitvector '(#f #t #f #t))))
+	(.first-bit-set O))
     => 1)
 
   (check
-      (let (({o <bitvector>}	(list->bitvector '(#f #f #t #t))))
-	(.first-bit-set o))
+      (let (({O <bitvector>}	(list->bitvector '(#f #f #t #t))))
+	(.first-bit-set O))
     => 2)
 
   (check
-      (let (({o <bitvector>}	(list->bitvector '(#f #f #f #t))))
-	(.first-bit-set o))
+      (let (({O <bitvector>}	(list->bitvector '(#f #f #f #t))))
+	(.first-bit-set O))
     => 3)
 
   (check
-      (let (({o <bitvector>}	(list->bitvector '(#f #f #f #f  #f #f #f #t))))
-	(.first-bit-set o))
+      (let (({O <bitvector>}	(list->bitvector '(#f #f #f #f  #f #f #f #t))))
+	(.first-bit-set O))
     => 7)
 
   (check
-      (let (({o <bitvector>}	(list->bitvector '(#f #f #f #f  #f #f #f #f))))
-	(.first-bit-set o))
+      (let (({O <bitvector>}	(list->bitvector '(#f #f #f #f  #f #f #f #f))))
+	(.first-bit-set O))
     => -1)
 
   (check
-      (let (({o <bitvector>}	(list->bitvector '( ;;
+      (let (({O <bitvector>}	(list->bitvector '( ;;
 				      #f #f #f #f  #f #f #f #f
 				      #f #f #f #f  #f #f #f #f
 				      #f #f #f #f  #f #f #t #f))))
-	(.first-bit-set o))
+	(.first-bit-set O))
     => 22)
 
   #t)
@@ -388,15 +458,15 @@
     => '(#t #f #f #t))
 
   (check	;set-all!
-      (let (({o <bitvector>} (list->bitvector '(#t #f #f #t))))
-	(.set-all! o)
-	(.list o))
+      (let (({O <bitvector>} (list->bitvector '(#t #f #f #t))))
+	(.set-all! O)
+	(.list O))
     => '(#t #t #t #t))
 
   (check	;clear-all!
-      (let (({o <bitvector>} (list->bitvector '(#t #f #f #t))))
-	(.clear-all! o)
-	(.list o))
+      (let (({O <bitvector>} (list->bitvector '(#t #f #f #t))))
+	(.clear-all! O)
+	(.list O))
     => '(#f #f #f #f))
 
   #t)

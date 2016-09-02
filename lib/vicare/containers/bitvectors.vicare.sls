@@ -99,12 +99,12 @@
 (define-type <booleans>
   (list-of <boolean>))
 
-(define (%bit-ref fx bit-offset)
+(define ({%bit-ref <boolean>} {fx <fixnum>} {bit-offset <nnfx>})
   ;;Return true if the bit at BIT-OFFSET in FX is set to 1, else return false.
   ;;
   (fxbit-set? fx bit-offset))
 
-(define (%bit-set! fx bit-offset bit-boolean-value)
+(define ({%bit-set! <fixnum>} {fx <fixnum>} {bit-offset <nnfx>} {bit-boolean-value <boolean>})
   ;;Set a single bit in a fx and return the resulting fx.
   ;;
   (let ((mask (fxarithmetic-shift-left 1 bit-offset)))
@@ -112,13 +112,13 @@
 	(fxior fx mask)
       (fxand fx (fxnot mask)))))
 
-(define (%bit-mask number-of-bits)
+(define ({%bit-mask <fixnum>} {number-of-bits <nnfx>})
   ;;Return a fixnum representing a  bitmask with the NUMBER-OF-BITS least significant
   ;;bits set to 1 and all the other bits set to 0.
   ;;
   (+ -1 (expt 2 number-of-bits)))
 
-(define (bit-offset? offset number-of-bits)
+(define ({bit-offset? <boolean>} {offset <top>} {number-of-bits <nnei>})
   ;;Return  true  if   OFFSET  is  a  valid  bit  offset   for  a  bytevector  having
   ;;NUMBER-OF-BITS.
   ;;
@@ -158,7 +158,7 @@
 
   (protocol
     (lambda (make-record)
-      (define (make-<bitvector> {number-of-bits <nnei>})
+      (define ({make-<bitvector> <bitvector>} {number-of-bits <nnei>})
 	(receive (D M)
 	    (div-and-mod number-of-bits NUMBER-OF-BITS-IN-FIXNUM)
 	  (unless (and (fixnum? D)
@@ -175,24 +175,27 @@
 
       make-<bitvector>))
 
+  (constructor-signature
+    (lambda (<nnei>) => (<bitvector>)))
+
 
 ;;;; common object-type features
 
 (equality-predicate
-  (lambda ()
+  (lambda ({_ (equality-predicate <bitvector>)})
     <bitvector>-equality-predicate))
 
 (hash-function
-  (lambda ()
-    (lambda ({this <bitvector>})
+  (lambda ({_ (hash-function <bitvector>)})
+    (lambda ({_ <non-negative-fixnum>} {this <bitvector>})
       (symbol-hash (.uid this)))))
 
 (method ({clone <bitvector>})
   (receive-and-return ({R <bitvector>})
       (new <bitvector> (.length this))
-    ($vector-copy! (.pool this) 0
-		   (.pool R) 0
-		   (.pool-length this))))
+    (vector-copy! (.pool this) 0
+		  (pool R) 0
+		  (pool-length this))))
 
 
 ;;;; bitwise methods
@@ -207,19 +210,19 @@
     (let ((word (vector-ref (.pool this) word-index)))
       (vector-set! (.pool this) word-index (%bit-set! word bit-index boolean-value)))))
 
-(method ({bit-ref <boolean>} offset)
+(method ({bit-ref <boolean>} {offset <nnei>})
   (assert-bit-offset __who__ this offset)
   (receive ({word-index <nnfx>} {bit-index <nnfx>})
       (offset->indexes offset)
     (%bit-ref (pool-ref this word-index) bit-index)))
 
-(method (set-all!)
-  (vector-fill! (.pool this) 0 (.pool-length this) (greatest-fixnum)))
+(method ({set-all! <void>})
+  (vector-fill! (.pool this) (greatest-fixnum)))
 
-(method (clear-all!)
-  (vector-fill! (.pool this) 0 (.pool-length this) 0))
+(method ({clear-all! <void>})
+  (vector-fill! (.pool this) 0))
 
-(method (toggle! offset)
+(method ({toggle! <void>} {offset <nnei>})
   (assert-bit-offset __who__ this offset)
   (receive ({word-index <nnfx>} {bit-index <nnfx>})
       (offset->indexes offset)
@@ -230,12 +233,12 @@
 ;;;; bitwise negation
 
 (method ({not <bitvector>})
-  (let ((imax			(pool-length this))
-	({R <bitvector>}	(new <bitvector> (.length this))))
+  (let ((imax	(pool-length this))
+	(R	(new <bitvector> (.length this))))
     (do ((i 0 (add1 i)))
 	((= i imax)
 	 R)
-      (.bit-set! R i (fxnot (pool-ref this i))))))
+      (pool-set! R i (fxnot (pool-ref this i))))))
 
 (method ({not! <bitvector>})
   (let ((imax (pool-length this)))
@@ -249,13 +252,16 @@
 
 (method ({and <bitvector>} {that <bitvector>})
   (assert-bitvectors-of-equal-length __who__ this that)
-  (let ((imax			(pool-length this))
-	({R <bitvector>}	(new <bitvector> imax)))
+  (let* ((imax		(pool-length this))
+	 (R		(new <bitvector> (.length this)))
+	 (this.pool	(.pool this))
+	 (that.pool	(pool that))
+	 (R.pool	(pool R)))
     (do ((i 0 (add1 i)))
 	((= i imax)
 	 R)
-      (pool-set! R i (fxand (pool-ref this i)
-			    (pool-ref that i))))))
+      (vector-set! R.pool i (fxand (vector-ref this.pool i)
+				   (vector-ref that.pool i))))))
 
 (method (and! {that <bitvector>})
   (assert-bitvectors-of-equal-length __who__ this that)
@@ -271,8 +277,8 @@
 
 (method ({ior <bitvector>} {that <bitvector>})
   (assert-bitvectors-of-equal-length __who__ this that)
-  (let ((imax			(pool-length this))
-	({R <bitvector>}	(new <bitvector> imax)))
+  (let* ((imax			(pool-length this))
+	 ({R <bitvector>}	(new <bitvector> (.length this))))
     (do ((i 0 (add1 i)))
 	((= i imax)
 	 R)
@@ -293,8 +299,8 @@
 
 (method ({xor <bitvector>} {that <bitvector>})
   (assert-bitvectors-of-equal-length __who__ this that)
-  (let ((imax			(pool-length this))
-	({R <bitvector>}	(new <bitvector> imax)))
+  (let* ((imax			(pool-length this))
+	 ({R <bitvector>}	(new <bitvector> (.length this))))
     (do ((i 0 (add1 i)))
 	((= i imax)
 	 R)
@@ -320,7 +326,7 @@
 	 (+ count (fxbit-count (%most-significant-word this))))
       (++ count (fxbit-count (pool-ref this i))))))
 
-(method ({first-bit-set <exact-integer>} {O <bitvector>})
+(method ({first-bit-set <exact-integer>})
   ;;Return an exact integer representing the offset  of the first bit set to true; if
   ;;all the bits are set to false: return -1.
   ;;
@@ -346,7 +352,7 @@
 		   ({full-word-index	<nnfx>}		0))
     (if (= full-word-index (.number-of-full-words this))
 	;;We have reached the last word in the pool vector.
-	(let (({word <nnfx>} (pool-ref this full-word-index)))
+	(let (({word <fixnum>} (pool-ref this full-word-index)))
 	  (let bits-loop-tail-word (({bits	<booleans>}	bits)
 				    ({bit-index	<nnfx>}		0))
 	    (if (= bit-index (.number-of-bits-in-last-word this))
@@ -354,7 +360,7 @@
 	      (bits-loop-tail-word (cons (%bit-ref word bit-index) bits)
 				   (fxadd1 bit-index)))))
       ;;We are in the middle of the pool vector.
-      (let (({word <nnfx>} (pool-ref this full-word-index)))
+      (let (({word <fixnum>} (pool-ref this full-word-index)))
 	(words-loop (let bits-loop-full-word (({bits      <booleans>}	bits)
 					      ({bit-index <nnfx>}	0))
 		      (if (= bit-index NUMBER-OF-BITS-IN-FIXNUM)
@@ -364,12 +370,12 @@
 		    (fxadd1 full-word-index))))))
 
 (method ({vector (vector-of <boolean>)})
-  (let (({V (vector-of <boolean>)} (make-vector (.length this))))
+  (let (({V (vector-of <boolean>)} (make-vector (.length this) #f)))
     (do (({full-word-index <nnfx>} 0 (fxadd1 full-word-index))
 	 ({vector-index    <nnfx>} 0 vector-index)) ;we increment it below
 	((fx=? full-word-index (.number-of-full-words this))
 	 ;;Here we do the last word.
-	 (let (({word <nnfx>} (pool-ref this full-word-index)))
+	 (let (({word <fixnum>} (pool-ref this full-word-index)))
 	   (do (({bit-index <nnfx>} 0 (fxadd1 bit-index)))
 	       ((fx=? bit-index (.number-of-bits-in-last-word this))
 		V)
@@ -386,43 +392,48 @@
 
 ;;;; bitvector functions
 
-(define/friend (<bitvector>-equality-predicate {A <bitvector>} {B <bitvector>})
-  (and (= (.length A) (.length B))
-       (vector-for-all fx=? (.pool A) (.pool B))))
+(define/friend ({<bitvector>-equality-predicate <boolean>} {A <bitvector>} {B <bitvector>})
+  (or (eq? A B)
+      (and (= (.length A) (.length B))
+	   (unsafe-cast-signature (<boolean>)
+	     (vector-for-all fx=? (.pool A) (pool B))))))
 
-(define ({list->bitvector <bitvector>} {ell (list-of <nnfx>)})
+(define ({list->bitvector <bitvector>} {ell (list-of <boolean>)})
   (let* ((len (length ell))
-	 ({bv <bitvector>} (new <bitvector> len)))
+	 (biv (new <bitvector> len)))
     (if (zero? len)
-	bv
-      (let (({ell (nelist-of <nnfx>)} ell))
+	biv
+      (let (({ell (nelist-of <boolean>)} ell))
 	(do ((i 0 (add1 i))
 	     (ell ell (cdr ell)))
 	    ((= i len)
-	     bv)
-	  (bytevector-u8-set! bv i (car ell)))))))
+	     biv)
+	  (.bit-set! biv i (car ell)))))))
 
-(define ({vector->bitvector <bitvector>} {V (vector-of <nnfx>)})
+(define ({vector->bitvector <bitvector>} {V (vector-of <boolean>)})
   (let* ((len (.length V))
-	 ({bv <bitvector>} (new <bitvector> len)))
-    (if (fxzero? len)
-	bv
+	 (biv (new <bitvector> len)))
+    (if (zero? len)
+	biv
       (do ((i 0 (add1 i)))
 	  ((= i (.length V))
-	   bv)
-	(bytevector-u8-set! bv i (vector-ref V i))))))
+	   biv)
+	(.bit-set! biv i (vector-ref V i))))))
 
 
 ;;;; pool functions
+
+(define/friend ({pool (vector-of <fixnum>)} {this <bitvector>})
+  (.pool this))
 
 (define/friend ({pool-length <nnfx>} {this <bitvector>})
   (vector-length (.pool this)))
 
 (define/friend ({pool-ref <fixnum>} {this <bitvector>} {i <nnfx>})
-  (unsafe-cast-signature (<fixnum>) ($vector-ref (.pool this) i)))
+  (unsafe-cast-signature (<fixnum>) (vector-ref (.pool this) i)))
 
 (define/friend ({pool-set! <void>} {this <bitvector>} {i <nnfx>} {word <fixnum>})
-  ($vector-set! (.pool this) i word))
+  (vector-set! (.pool this) i word))
 
 
 ;;;; helpers
@@ -437,7 +448,7 @@
   ;;all the other bits are set to 0.
   ;;
   (fxand (%bit-mask (.number-of-bits-in-last-word O))
-	 (vector-ref (.pool O) (.index-of-last-word O))))
+	 (vector-ref (pool O) (.index-of-last-word O))))
 
 (define (assert-bitvectors-of-equal-length who {A <bitvector>} {B <bitvector>})
   (unless (= (.length A) (.length B))
