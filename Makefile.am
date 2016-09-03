@@ -1010,6 +1010,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-containers-arrays.sps				\
 	tests/test-vicare-containers-binary-heaps.sps			\
 	tests/test-vicare-containers-binary-search-trees.sps		\
+	tests/test-vicare-containers-bitvectors.sps			\
 	tests/test-vicare-containers-bytevector-compounds.sps		\
 	tests/test-vicare-containers-bytevectors-s8-high.sps		\
 	tests/test-vicare-containers-bytevectors-s8-low.sps		\
