@@ -1896,38 +1896,48 @@
 			     field-methods-alist-private
 			     synner)))
 
-  (define foo-methods-table-public
-    `(list . ,(map (lambda (entry)
-  		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
-  		early-binding-methods-alist-public)))
+  ;;NOTE  We  know  that  the  implementation  of  DEFINE-TYPE  embeds  the  prebuilt
+  ;;RECORD.OTS in the visit code of the library (or program) being compiled.  So here
+  ;;we mutate  that very object with  method informations.  Below, commented  out, is
+  ;;the code  we should use  to include in  the visit code  the mutation of  the OTS.
+  ;;(Marco Maggi; Sat Sep 3, 2016)
+  ;;
+  (begin
+    ;;Build the return syntax object.
+    (define output-form.stx (bless `(begin ,@method-form*.sexp)))
+    (object-type-spec.methods-table-public-set!		record.ots early-binding-methods-alist-public)
+    (object-type-spec.methods-table-protected-set!	record.ots early-binding-methods-alist-protected)
+    (object-type-spec.methods-table-private-set!	record.ots early-binding-methods-alist-private)
+    (record-type-spec.virtual-method-signatures-set!	record.ots virtual-method-signatures-alist))
 
-  (define foo-methods-table-protected
-    `(list . ,(map (lambda (entry)
-  		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
-  		early-binding-methods-alist-protected)))
-
-  (define foo-methods-table-private
-    `(list . ,(map (lambda (entry)
-  		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
-  		early-binding-methods-alist-private)))
-
-  (define foo-virtual-method-signatures.table
-    `(quote ,virtual-method-signatures-alist))
-
-  ;;Build the return syntax object.
-  (define output-form.stx
-    (let ((record.ots	(make-syntactic-identifier-for-temporary-variable "record.ots")))
-      (bless
-       `(begin
-	  (begin-for-syntax
-	    (let ((,record.ots (make-type-specification (syntax ,foo))))
-	      ;;Update the record-type spec instance with method tables.
-	      (object-type-spec.methods-table-public-set!	,record.ots ,foo-methods-table-public)
-	      (object-type-spec.methods-table-protected-set!	,record.ots ,foo-methods-table-protected)
-	      (object-type-spec.methods-table-private-set!	,record.ots ,foo-methods-table-private)
-	      (record-type-spec.virtual-method-signatures-set!	,record.ots ,foo-virtual-method-signatures.table)
-	      ))
-	  ,@method-form*.sexp))))
+  #;(begin
+    (define foo-methods-table-public
+      `(list . ,(map (lambda (entry)
+		       `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+		  early-binding-methods-alist-public)))
+    (define foo-methods-table-protected
+      `(list . ,(map (lambda (entry)
+		       `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+		  early-binding-methods-alist-protected)))
+    (define foo-methods-table-private
+      `(list . ,(map (lambda (entry)
+		       `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
+		  early-binding-methods-alist-private)))
+    (define foo-virtual-method-signatures.table
+      `(quote ,virtual-method-signatures-alist))
+    ;;Build the return syntax object.
+    (define output-form.stx
+      (let ((record-ots.id	(make-syntactic-identifier-for-temporary-variable "record.ots")))
+	(bless
+	 `(begin
+	    (begin-for-syntax
+	      (let ((,record-ots.id (make-type-specification (syntax ,foo))))
+	        ;;Update the record-type spec instance with method tables.
+	        (object-type-spec.methods-table-public-set!		,record-ots.id ,foo-methods-table-public)
+	        (object-type-spec.methods-table-protected-set!		,record-ots.id ,foo-methods-table-protected)
+	        (object-type-spec.methods-table-private-set!		,record-ots.id ,foo-methods-table-private)
+	        (record-type-spec.virtual-method-signatures-set!	,record-ots.id ,foo-virtual-method-signatures.table)))
+	    ,@method-form*.sexp)))))
 
   ;;(debug-print __who__ (syntax->datum output-form.stx))
   output-form.stx)
