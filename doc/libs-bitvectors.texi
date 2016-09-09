@@ -1,0 +1,174 @@
+@node bitvectors
+@chapter Bitvectors
+
+
+@cindex Library @library{vicare containers bitvectors}
+@cindex @library{vicare containers bitvectors}, library
+
+
+The library @library{vicare containers bitvectors} implements vectors of
+bits.
+
+@menu
+* bitvectors type::             Record type of bitvectors.
+* bitvectors inspection::       Inspecting bitvectors.
+* bitvectors bits::             Bitwise operations on bitvectors.
+* bitvectors conv::             Conversion operations on bitvectors.
+@end menu
+
+@c page
+@node bitvectors type
+@section Record type of bitvectors
+
+
+The following bindings are exported by the library @library{vicare containers
+bitvectors}.
+
+
+@deftp {Record Type} @aclass{bitvector}
+Name of object--type representing bitvectors.  The current
+implementation is as vector of fixnums.  Instances of this type can be
+compared with @func{equal?}.
+@end deftp
+
+
+@defop Constructor @aclass{bitvector} @aclass{bitvector} constructor @bracearg{length, non-negative-exact-integer}
+Build and return a new @class{bitvector} object capable of holding
+@var{length} bits.  The bits are initialised to @false{}.
+@end defop
+
+
+@deftypeop {Hash function} @aclass{bitvector} @aclass{non-negative-fixnum} hash @bracearg{obj, bitvector}
+Return the hash value for the @class{bitvector}.
+@end deftypeop
+
+
+@deftypemethod @aclass{bitvector} @aclass{bitvector} clone
+Return a new @class{bitvector} instance equal to this instance.
+@end deftypemethod
+
+@c page
+@node bitvectors inspection
+@section Inspecting bitvectors
+
+
+The following bindings are exported by the library @library{vicare containers
+bitvectors}.
+
+
+@deftypemethod @aclass{bitvector} @aclass{non-negative-exact-integer} length
+Return the number of bits.
+@end deftypemethod
+
+@c page
+@node bitvectors bits
+@section Bitwise operations on bitvectors
+
+
+The following bindings are exported by the library @library{vicare containers
+bitvectors}.
+
+
+@deftypemethod @aclass{bitvector} @aclass{void} bit-set! @bracearg{bit-index, non-negative-exact-integer} @var{bool}
+Set the bit at @var{bit-index} in the @class{bitvector} to one if
+@var{bool} is non--false, or to zero if @var{bool} is @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{bitvector} @aclass{boolean} bit-ref @bracearg{bit-index, non-negative-exact-integer}
+Return a boolean representing the bit at @var{bit-index} in the
+@class{bitvector}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{bitvector} @aclass{void} set-all!
+@deftypemethodx @aclass{bitvector} @aclass{void} clear-all!
+Set all the bits to true or to false.
+@end deftypemethod
+
+
+@deftypemethod @aclass{bitvector} @aclass{void} toggle! @var{bit-index}
+Invert the bit at @var{bit-index}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{bitvector} @aclass{bitvector} not
+Apply the bitwise NOT to the instance and return a new @class{bitvector}
+object holding the result.
+@end deftypemethod
+
+
+@deftypemethod @aclass{bitvector} @aclass{bitvector} not!
+Mutate this instance by applying the bitwise NOT operation and storing
+the result in the instance itself.  The return value is the instance
+object itself.
+@end deftypemethod
+
+
+@deftypemethod @aclass{bitvector} @aclass{bitvector} and @bracearg{B, bitvector}
+@deftypemethodx @aclass{bitvector} @aclass{bitvector} ior @bracearg{B, bitvector}
+@deftypemethodx @aclass{bitvector} @aclass{bitvector} xor @bracearg{B, bitvector}
+Apply the bitwise AND, inclusive OR or exclusive OR to the instance and
+@var{B}, then return a new @class{bitvector} object representing the
+result.  @var{B} must have the same length of the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{bitvector} @aclass{bitvector} and! @bracearg{B, bitvector}
+@deftypemethodx @aclass{bitvector} @aclass{bitvector} ior! @bracearg{B, bitvector}
+@deftypemethodx @aclass{bitvector} @aclass{bitvector} xor! @bracearg{B, bitvector}
+Mutate this instance by applying the bitwise AND, inclusive OR or
+exclusive OR to the instance and @var{B} and storing the result in the
+instance itself.  @var{B} must have the same length of the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{bitvector} @aclass{non-negative-exact-integer} bit-count
+Return an exact integer being the number of bits set to true.
+@end deftypemethod
+
+
+@deftypemethod @aclass{bitvector} @aclass{exact-integer} first-bit-set
+Return an exact integer being the offset of the first bit set to true;
+if all the bits are set to false: return @math{-1}.
+@end deftypemethod
+
+@c page
+@node bitvectors conv
+@section Conversion operations on bitvectors
+
+
+The following bindings are exported by the library @library{vicare containers
+bitvectors}.
+
+
+@deftypemethod @aclass{bitvector} {(list-of @aclass{boolean})} list
+@deftypemethodx @aclass{bitvector} {(vector-of @aclass{boolean})} vector
+Return a list or vector filled with boolean values representing the bits
+of the bitvector.  The boolean at index zero in the returned sequence
+corresponds to the bit at index zero in the bitvector.
+@end deftypemethod
+
+
+@deftypemethod @aclass{bitvector} @aclass{non-negative-exact-integer} non-negative-exact-integer
+Return an exact integer representing the bits in the instance.
+@end deftypemethod
+
+
+@deftypefun @aclass{bitvector} list->bitvector @{@var{ell} (list-of @aclass{boolean})@}
+@deftypefunx @aclass{bitvector} vector->bitvector @{@var{vec} (vector-of @aclass{boolean})@}
+Build and return a new @class{bitvector} object representing the values
+in the list @var{ell} or vector @var{vec}.
+@end deftypefun
+
+
+@deftypefun @aclass{bitvector} non-negative-exact-integer->bitvector @bracearg{N, non-negative-exact-integer}
+Build and return a new @class{bitvector} object being the bitwise
+representation given exact integer.
+@end deftypefun
+
+@c end of file
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

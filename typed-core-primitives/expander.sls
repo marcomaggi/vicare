@@ -721,6 +721,26 @@
 ;;   (signatures
 ;;    ((<object-type-spec>)		=> ((alist <symbol> <syntactic-identifier>)))))
 
+(declare-core-primitive object-type-spec.methods-table-public-set!
+    (safe)
+  (signatures
+   ((<object-type-spec> <list>)		=> (<void>))))
+
+(declare-core-primitive object-type-spec.methods-table-protected-set!
+    (safe)
+  (signatures
+   ((<object-type-spec> <list>)		=> (<void>))))
+
+(declare-core-primitive object-type-spec.methods-table-private-set!
+    (safe)
+  (signatures
+   ((<object-type-spec> <list>)		=> (<void>))))
+
+(declare-core-primitive object-type-spec.virtual-method-signatures-set!
+    (safe)
+  (signatures
+   ((<object-type-spec> <list>)		=> (<void>))))
+
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive make-type-specification
@@ -769,6 +789,19 @@
 
 ;;; --------------------------------------------------------------------
 
+(declare-core-primitive record-type-process-method-forms
+    (safe)
+  (signatures
+   ((<syntactic-identifier>		;foo
+     <syntactic-identifier>		;foo-for-id-generation
+     <top>				;method-clause*.stx
+     <list>				;field-methods-alist-public
+     <list>				;field-methods-alist-protected
+     <list>				;field-methods-alist-private
+     <syntactic-identifier>		;method-retriever-code-public.id
+     <syntactic-identifier>)		;method-retriever-code-private.id
+    => (<syntax-object>))))
+
 (declare-core-rtd <record-type-spec>-rtd)
 (declare-core-rcd <record-type-spec>-rcd)
 
@@ -790,7 +823,7 @@
      (alist <symbol> <syntactic-identifier>) ;methods-table-public
      (alist <symbol> <syntactic-identifier>) ;methods-table-protected
      (alist <symbol> <syntactic-identifier>) ;methods-table-private
-     (alist <symbol> (pair <fixnum> (or <false> <closure-type-spec>))) ;virtual-method-signatures
+     (alist <symbol> (pair <fixnum> (or <false> <closure-type-spec>)))	;virtual-method-signatures
      (list-of <syntactic-identifier>)) ;implemented-interfaces
     => (<record-type-spec>))))
 
@@ -811,10 +844,16 @@
 ;;   (signatures
 ;;    ((<record-type-spec>)		=> ((or <false> <syntactic-identifier>)))))
 
-;; (declare-core-primitive record-type-spec.virtual-method-signatures
-;;     (safe)
-;;   (signatures
-;;    ((<record-type-spec>)		=> ((alist <symbol> (pair <fixnum> (or <false> <closure-type-spec>)))))))
+(declare-core-primitive record-type-spec.virtual-method-signatures
+    (safe)
+  (signatures
+   ((<record-type-spec>)		=> ((alist <symbol> (pair <fixnum> (or <false> <closure-type-spec>)))))))
+
+(declare-core-primitive record-type-spec.virtual-method-signatures-set!
+    (safe)
+  (signatures
+   ((<record-type-spec> (alist <symbol> (pair <fixnum> (or <false> <closure-type-spec>))))
+    => (<void>))))
 
 (declare-core-primitive record-type-spec.parent-and-child?
     (safe)

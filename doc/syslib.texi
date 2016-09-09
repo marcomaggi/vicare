@@ -35,6 +35,7 @@ public interface exported by @library{vicare} and @library{rnrs}.
 * syslib hashtables::           Low level hashtable objects operations.
 * syslib codes::                Low level code objects operations.
 * syslib closures::             Low level closures operations.
+* syslib compar::               Comparison procedures.
 @end menu
 
 @c page
@@ -7997,6 +7998,163 @@ annotated closure is applied: it applies @var{clo} to the arguments.
 @defun $annotated-procedure-annotation @var{clo}
 Given a closure object @var{clo} being an annotated procedure created by
 @func{$make-annotated-procedure}: return the annotation object.
+@end defun
+
+@c page
+@node syslib compar
+@section Comparison procedures
+
+
+@cindex @library{vicare system comparison-procedures}, library
+@cindex Library @library{vicare system comparison-procedures}
+
+
+The library @library{vicare system comparison-procedures} defines
+comparison procedures or the core object--types.  When applied to two
+values @var{A} and @var{B} of the same type, a comparison procedure
+returns a fixnum:
+
+@table @samp
+@item -1
+If @var{A} is less than @var{B}.
+
+@item 0
+If @var{A} is equal to @var{B}.
+
+@item +1
+If @var{A} is greater than @var{B}.
+@end table
+
+
+The following syntactic binding are exported by the library
+@library{vicare system comparison-procedures}.
+
+
+@defun make-comparison-procedure @var{type-pred} @var{equal-to} @var{less-than}
+Build and return a comparison procedure using the equality predicate
+@var{equal-to} and the ``less than'' predicate @var{less-than}.  The
+arguments of the comparison procedures are validated using the type
+predicate @var{type-pred}.
+
+@lisp
+(define compar-fx
+  (make-comparison-procedure fixnum? fx=? fx<?))
+
+(compar-fx -1 +1)       @result{} -1
+(compar-fx +1 +1)       @result{}  0
+(compar-fx +1 -1)       @result{} +1
+@end lisp
+@end defun
+
+
+@menu
+* syslib compar numerics::      Numeric comparison procedures.
+* syslib compar textual::       Textual comparison procedures.
+* syslib compar misc::          Miscellaneous comparison procedures.
+@end menu
+
+@c page
+@node syslib compar numerics
+@subsection Numeric comparison procedures
+
+
+The following syntactic binding are exported by the library
+@library{vicare system comparison-procedures}.
+
+
+@defun compar-fixnum @var{A} @var{B}
+Comparison procedure for fixnums.
+@end defun
+
+
+@defun compar-bignum @var{A} @var{B}
+Comparison procedure for bignums.
+@end defun
+
+
+@defun compar-exact-integer @var{A} @var{B}
+Comparison procedure for exact integers (fixnums and bignums).
+@end defun
+
+
+@defun compar-ratnum @var{A} @var{B}
+Comparison procedure for ratnums.
+@end defun
+
+
+@defun compar-exact-real @var{A} @var{B}
+Comparison procedure for exact reals (fixnums, bignum, ratnums).
+@end defun
+
+
+@defun compar-flonum @var{A} @var{B}
+Comparison procedure for flonums.
+@end defun
+
+
+@defun compar-real @var{A} @var{B}
+Comparison procedure for reals (fixnums, bignums, ratnums, flonums).
+@end defun
+
+@c page
+@node syslib compar textual
+@subsection Textual comparison procedures
+
+
+The following syntactic binding are exported by the library
+@library{vicare system comparison-procedures}.
+
+
+@defun compar-char @var{A} @var{B}
+Comparison procedure for characters.
+@end defun
+
+
+@defun compar-string @var{A} @var{B}
+Comparison procedure for strings.
+@end defun
+
+
+@defun compar-string-ci @var{A} @var{B}
+Comparison procedure for strings, using case--insensitive functions.
+@end defun
+
+
+@defun compar-symbol @var{A} @var{B}
+Comparison procedure for symbols.
+@end defun
+
+@c page
+@node syslib compar misc
+@subsection Miscellaneous comparison procedures
+
+
+The following syntactic binding are exported by the library
+@library{vicare system comparison-procedures}.
+
+
+@defun compar-boolean @var{A} @var{B}
+Comparison procedure for booleans.  @true{} is considered greater than
+@false{}.
+@end defun
+
+
+@defun compar-true @var{A} @var{B}
+@defunx compar-false @var{A} @var{B}
+Comparison procedure for booleans true and false.  The arguments must
+be, respectively, both @true{} or both @false{}; when the arguments are
+correct, the return value is always the fixnum zero.
+@end defun
+
+
+@defun compar-transcoder @var{A} @var{B}
+Comparison procedure for transcoders.  Comparison is performed on the
+internal representation as exact integers.
+@end defun
+
+
+@defun compar-pointer @var{A} @var{B}
+Comparison procedure for pointers.
 @end defun
 
 @c end of file

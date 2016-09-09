@@ -830,27 +830,28 @@
 	    (OPAQUE?		#f)
 	    (METHOD-RETRIEVER	(if (null? (syntax->datum #'(?field ...)))
 				    #f
-				  #'(lambda (name)
+				  #'(lambda/typed ({_ (or <false> <procedure>)} {name <symbol>})
 				      (case name
 					((?field)	?accessor)
 					...
 					(else #f))))))
-	 ;;We use the records procedural layer  and the unsafe functions to make it
+	 ;;We use  the records procedural layer  and the unsafe functions  to make it
 	 ;;easier to rotate the boot images.
 	 #'(begin ;;module (RTD RCD ?constructor ?predicate ?accessor ...)
 	     (define RTD
-	       ($make-record-type-descriptor-ex (quote ?name) (?parent-name rtd)
-						(quote UID) GENERATIVE? SEALED? OPAQUE?
-						'#((immutable ?field) ...) '#((#f . ?field) ...)
-						#f ;destructor
-						#f ;printer
-						#f ;equality-predicate
-						#f ;comparison-procedure
-						#f ;hash-function
-						METHOD-RETRIEVER
-						METHOD-RETRIEVER ;method-retriever-private
-						#f ;implemented-interfaces
-						))
+	       (let/checked ((method-retriever METHOD-RETRIEVER))
+		 ($make-record-type-descriptor-ex (quote ?name) (?parent-name rtd)
+						  (quote UID) GENERATIVE? SEALED? OPAQUE?
+						  '#((immutable ?field) ...) '#((#f . ?field) ...)
+						  #f   ;destructor
+						  #f   ;printer
+						  #f   ;equality-predicate
+						  #f   ;comparison-procedure
+						  #f   ;hash-function
+						  method-retriever ;method-retriever-retriever-public
+						  method-retriever ;method-retriever-retriever-private
+						  #f ;implemented-interfaces
+						  )))
 	     (define RCD
 	       ($make-record-constructor-descriptor RTD (?parent-name rcd) #f))
 	     (define ?constructor
@@ -860,9 +861,9 @@
 	     (define ?accessor
 	       ($condition-accessor RTD ($record-accessor/index RTD ACCESSOR-IDX (quote ?accessor)) (quote ?accessor)))
 	     ...
-	     ;;We define this syntactic binding with  the only purpose of using it to
-	     ;;access the  syntactic bindings RTD and  RCD in the lexical  context of
-	     ;;the definition.
+	     ;;We define this  syntactic binding with the only purpose  of using it
+	     ;;to access the syntactic bindings RTD  and RCD in the lexical context
+	     ;;of the definition.
 	     (define-condition-type-syntax ?name RTD RCD)
 	     )))
       ))

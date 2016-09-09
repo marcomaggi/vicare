@@ -404,8 +404,8 @@
      (or <false> <equality-predicate>)	   ;equality-predicate
      (or <false> <comparison-procedure>)   ;comparison-procedure
      (or <false> <hash-function>)	   ;hash-function
-     (or <false> <type-method-retriever>)  ;method-retriever
-     (or <false> <type-method-retriever>)  ;method-retriever-private
+     (or <false> <type-method-retriever>)  ;method-retriever-retriever-public
+     (or <false> <type-method-retriever>)  ;method-retriever-retriever-private
      (or <false> (vector-of (pair <symbol> <type-method-retriever>)))) ;implemented-interfaces
     => (<record-type-descriptor>))))
 

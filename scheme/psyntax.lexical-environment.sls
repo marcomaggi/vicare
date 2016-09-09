@@ -119,8 +119,9 @@
     object-type-spec.constructor-stx			object-type-spec.destructor-stx
     object-type-spec.type-predicate-stx			object-type-spec.equality-predicate
     object-type-spec.comparison-procedure		object-type-spec.hash-function
-    object-type-spec.methods-table-public		object-type-spec.methods-table-protected
-    object-type-spec.methods-table-private
+    object-type-spec.methods-table-public		object-type-spec.methods-table-public-set!
+    object-type-spec.methods-table-protected		object-type-spec.methods-table-protected-set!
+    object-type-spec.methods-table-private		object-type-spec.methods-table-private-set!
     object-type-spec.applicable-method-stx		object-type-spec.applicable-private-method-stx
     object-type-spec.applicable-hash-function
     object-type-spec.single-value-validator-lambda-stx	object-type-spec.list-validator-lambda-stx
@@ -156,7 +157,8 @@
     <record-type-spec>-rtd				<record-type-spec>-rcd
     make-record-type-spec				record-type-spec?
     record-type-spec.rtd-id				record-type-spec.rcd-id
-    record-type-spec.super-protocol-id			record-type-spec.virtual-method-signatures
+    record-type-spec.virtual-method-signatures		record-type-spec.virtual-method-signatures-set!
+    record-type-spec.super-protocol-id
     simple-condition-object-type-spec?
 
     <compound-condition-type-spec>

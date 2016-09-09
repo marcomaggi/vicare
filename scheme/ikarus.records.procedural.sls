@@ -294,14 +294,14 @@
 		;17.  False or a comparison procedure for this record-object type.
    hash-function
 		;18.  False or a hash function for this record-object type.
-   method-retriever
-		;19.   False  or  a  function,  accepting a  method  name  as  single
-		;argument,  returning a  method's implementation  function as  single
-		;return value.
+   method-retriever-public
+		;19.  False  or the public  method-retriever: a function  accepting a
+		;method   name  as   single   argument  and   returning  a   method's
+		;implementation function as single return value.
    method-retriever-private
-		;20.   False  or  a  function,  accepting a  method  name  as  single
-		;argument, returning  a private  method's implementation  function as
-		;single return value.
+		;20.  False or  the private method-retriever: a  function accepting a
+		;method  name as  single argument  and returning  a private  method's
+		;implementation function as single return value.
    implemented-interfaces
 		;21.  False  or a  vector of  pairs representing  the interface-types
 		;implemented by this  record-type.  Each pair has: as car  the UID of
@@ -1780,27 +1780,27 @@
 
 ;;;; non-R6RS extensions: method retriever
 
-(define* (record-type-method-retriever-set! {rtd record-type-descriptor?} {func (or not procedure?)})
+(define* (record-type-method-retriever-set! {rtd record-type-descriptor?} {func (or false? procedure?)})
   ;;Store false  or a function  as method retriever  procedure in a  R6RS record-type
   ;;descriptor.  Return the void object.
   ;;
-  ($set-<rtd>-method-retriever! rtd func))
+  ($set-<rtd>-method-retriever-public! rtd func))
 
 (define ($record-type-method-retriever-set! rtd func)
   ;;Store false  or a function  as method retriever  procedure in a  R6RS record-type
   ;;descriptor.  Return the void object.
   ;;
-  ($set-<rtd>-method-retriever! rtd func))
+  ($set-<rtd>-method-retriever-public! rtd func))
 
 (define* (record-type-method-retriever {rtd record-type-descriptor?})
   ;;Return false or the method retriever procedure from RTD.
   ;;
-  ($<rtd>-method-retriever rtd))
+  ($<rtd>-method-retriever-public rtd))
 
 (define ($record-type-method-retriever rtd)
   ;;Return false or the method retriever procedure from RTD.
   ;;
-  ($<rtd>-method-retriever rtd))
+  ($<rtd>-method-retriever-public rtd))
 
 (define ($record-type-method-retriever-private rtd)
   ;;Return false or the private method retriever procedure from RTD.
@@ -1813,13 +1813,13 @@
   ;;Return false or the method retriever procedure from the record-type descriptor of
   ;;RECO.
   ;;
-  ($<rtd>-method-retriever ($struct-rtd reco)))
+  ($<rtd>-method-retriever-public ($struct-rtd reco)))
 
 (define ($record-method-retriever reco)
   ;;Return false or the method retriever procedure from the record-type descriptor of
   ;;RECO.
   ;;
-  ($<rtd>-method-retriever ($struct-rtd reco)))
+  ($<rtd>-method-retriever-public ($struct-rtd reco)))
 
 ;;; --------------------------------------------------------------------
 

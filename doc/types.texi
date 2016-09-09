@@ -4070,36 +4070,148 @@ notice that the type signature is the improper list @code{<bottom>},
 @subsection Type of boolean values
 
 
-@deftp {Core Type} @aclass{boolean}
-@deftpx {Parent Type} @aclass{top}
+@menu
+* types built-in booleans boolean::     Type of boolean values.
+* types built-in booleans true::        Type of true booleans.
+* types built-in booleans false::       Type of false booleans.
+@end menu
+
+@c page
+@node types built-in booleans boolean
+@subsubsection Type of boolean values
+
+
+@deftp {Core Type} @class{boolean}
+@deftpx {Parent Type} @class{top}
 Type of the boolean values @true{} and @false{}.
 @end deftp
 
 
-@defop Constructor @class{boolean} new @aclass{boolean} @var{obj}
+@c ------------------------------------------------------------------------
+
+@subsubheading Operations
+
+
+@deftypeop Constructor @class{boolean} @class{boolean} constructor @var{obj}
 Return @true{} if @var{obj} is true; otherwise return @false{}.
-@end defop
+
+@lisp
+(new <boolean> #f)      @result{} #f
+(new <boolean> #t)      @result{} #t
+(new <boolean> 12)      @result{} #t
+@end lisp
+@end deftypeop
 
 
-@defop {Type predicate} @class{boolean} is-a? @var{obj} @aclass{boolean}
+@deftypeop {Type predicate} @class{boolean} @class{boolean} predicate @var{obj}
 The type predicate is @func{boolean?}.  Return @true{} if @var{obj} is
 @true{} or @false{}; otherwise return @false{}.
-@end defop
+
+@lisp
+(is-a? #t <boolean>)    @result{} #t
+(is-a? #f <boolean>)    @result{} #t
+(is-a? 12 <boolean>)    @result{} #f
+@end lisp
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{boolean} @class{non-negative-fixnum} hash @var{bool}
+The hash function is @func{boolean-hash}.
+
+@lisp
+(hash #f)       @result{} 0
+(hash #t)       @result{} 1
+@end lisp
+@end deftypeop
+
+@c page
+@node types built-in booleans true
+@subsubsection Type of true booleans
+
+
+@deftp {Core Type} @class{true}
+@deftpx {Parent Type} @class{boolean}
+Type of the boolean value @true{}.
+@end deftp
 
 @c ------------------------------------------------------------------------
 
-@deftp {Core Type} @aclass{true}
-@deftpx {Parent Type} @aclass{boolean}
-Type of the boolean value @true{}.  There is no constructor.  There is
-no predicate.
-@end deftp
+@subsubheading Operations
+
+
+@deftypeop Constructor @class{true} @class{true} constructor @var{obj}
+Return @true{} if @var{obj} is @true{}.
+
+@lisp
+(new <true> #t)         @result{} #t
+(new <true> 12)         @error{} type violation
+@end lisp
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{true} @class{boolean} predicate @var{obj}
+The type predicate is @func{true?}.  Return @true{} if @var{obj} is
+@true{}.
+
+@lisp
+(is-a? #t <true>)       @result{} #t
+(is-a? #f <true>)       @error{} type error
+@end lisp
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{true} @class{non-negative-fixnum} hash @var{true}
+The hash function is @func{boolean-hash}.
+
+@lisp
+(hash #t)       @result{} 1
+@end lisp
+@end deftypeop
+
+@c page
+@node types built-in booleans false
+@subsubsection Type of false booleans
 
 
 @deftp {Core Type} @aclass{false}
 @deftpx {Parent Type} @aclass{boolean}
-Type of the boolean value @false{}.  There is no constructor.  There is
-no predicate.
+Type of the boolean value @false{}.
 @end deftp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Operations
+
+
+@deftypeop Constructor @class{false} @class{false} constructor @var{obj}
+Return @false{} if @var{obj} is @false{}.
+
+@lisp
+(new <false> #f)         @result{} #f
+(new <false> 12)         @error{} type violation
+@end lisp
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{false} @class{boolean} predicate @var{obj}
+The type predicate is @func{false?}.  Return @false{} if @var{obj} is
+@false{}.
+
+@lisp
+(is-a? #f <false>)       @result{} #f
+(is-a? #t <false>)       @error{} type error
+@end lisp
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{false} @class{non-negative-fixnum} hash @var{false}
+The hash function is @func{boolean-hash}.
+
+@lisp
+(hash #f)       @result{} 0
+@end lisp
+@end deftypeop
+
 
 @c page
 @node types built-in chars
@@ -4111,30 +4223,68 @@ no predicate.
 Type of character values.
 @end deftp
 
+@c ------------------------------------------------------------------------
 
-@deftypeop Constructor @class{char} @aclass{char} new @aclass{char} @var{obj}
+@subsubheading Operations
+
+
+@deftypeop Constructor @class{char} @class{char} constructor @{@var{fx} @class{non-negative-fixnum}@}
 The constructor is @func{integer->char}.
+
+@lisp
+(new <char> 65)         @result{} #\A
+@end lisp
 @end deftypeop
 
 
-@deftypeop {Type predicate} @class{char} @aclass{boolean} is-a? @var{obj} @aclass{char}
+@deftypeop {Type predicate} @class{char} @class{boolean} predicate @var{obj}
 The type predicate is @func{char?}.  Return @true{} if @var{obj} is a
 character object; otherwise return @false{}.
+
+@lisp
+(is-a? #\A <char>)      @result{} #t
+(is-a? 123 <char>)      @result{} #f
+@end lisp
 @end deftypeop
 
 
-@deftypemethod @class{char} @aclass{string} string @{@var{self} @aclass{char}@}
+@deftypeop {Hash function} @class{char} @class{non-negative-fixnum} hash @var{ch}
+The hash function is @func{char-hash}.
+
+@lisp
+(hash #\A)      @result{} 65
+@end lisp
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{char} @class{string} string
 Apply @func{string} to the instance.
+
+@lisp
+(.string #\A)   @result{} "A"
+@end lisp
 @end deftypemethod
 
 
-@deftypemethod @class{char} @aclass{fixnum} integer @{@var{self} @aclass{char}@}
+@deftypemethod @class{char} @class{fixnum} integer
 Apply @func{char->integer} to the instance.
+
+@lisp
+(.integer #\A)  @result{} 65
+@end lisp
 @end deftypemethod
 
 
-@deftypemethod @class{char} @aclass{fixnum} fixnum @{@var{self} @aclass{char}@}
+@deftypemethod @class{char} @class{fixnum} fixnum
 Apply @func{char->fixnum} to the instance.
+
+@lisp
+(.fixnum #\A)   @result{} 65
+@end lisp
 @end deftypemethod
 
 @c page

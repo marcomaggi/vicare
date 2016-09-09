@@ -1241,9 +1241,11 @@
     (let* ((name-lhs.id		type-name.id)
 	   (name-lhs.lab	(generate-label-gensym name-lhs.id))
 	   (name-rhs.ots	(make-reference-type-spec name-lhs.id))
-	   (name-rhs.core	(build-application no-source
-				    (build-primref no-source 'make-reference-type-spec)
-				  (list (build-data no-source name-lhs.id))))
+	   ;;(name-rhs.core	(build-application no-source
+	   ;; 			    (build-primref no-source 'make-reference-type-spec)
+	   ;; 			  (list (build-data no-source name-lhs.id))))
+	   ;;(name-lhs.des	(make-syntactic-binding-descriptor/local-object-type-name name-rhs.ots name-rhs.core))
+	   (name-rhs.core	(build-data no-source name-rhs.ots))
 	   (name-lhs.des	(make-syntactic-binding-descriptor/local-object-type-name name-rhs.ots name-rhs.core)))
       (extend-rib! rib name-lhs.id name-lhs.lab shadow/redefine-bindings?)
       ;;Notice that there is a single entry for both the lexenvs.
@@ -1286,8 +1288,12 @@
 						reference.entry new-type.des
 						rev-qdef* kwd* rib shadow/redefine-bindings?
 						synner)
-	  (%update-syntactic-binding! reference.entry new-type.des type-annotation.stx synner)
+	  (%update-syntactic-binding! reference.entry new-type.des)
+	  (%perform-validations reference.entry new-type.des lexenv.run (lambda (message)
+									  (synner message type-annotation.stx)))
 	  (values new-type.des rev-qdef* kwd* lexenv.run))))
+
+;;; --------------------------------------------------------------------
 
     (define (%make-concrete-object-type-syntactic-binding-descriptor type-name.id type-annotation.stx lexenv.run lexenv.expand
 								     synner)
@@ -1299,7 +1305,8 @@
 	     (assertion-violation __module_who__
 	       "expected instance of <object-type-spec> as return value of type constructor expression"
 	       type-annotation.stx new.ots))
-	   (make-syntactic-binding-descriptor/local-object-type-name new.ots new.core)))
+	   ;;(make-syntactic-binding-descriptor/local-object-type-name new.ots new.core)
+	   (make-syntactic-binding-descriptor/local-object-type-name new.ots (build-data no-source new.ots))))
 
 	(_
 	 (let* ((new.ots	(with-exception-handler
@@ -1311,7 +1318,8 @@
 				  (lambda ()
 				    (type-annotation->object-type-spec type-annotation.stx lexenv.run type-name.id))))
 		(new.core	(build-data no-source new.ots)))
-	   (make-syntactic-binding-descriptor/local-object-type-name new.ots new.core)))
+	   ;;(make-syntactic-binding-descriptor/local-object-type-name new.ots new.core)
+	   (make-syntactic-binding-descriptor/local-object-type-name new.ots (build-data no-source new.ots))))
 	))
 
 ;;; --------------------------------------------------------------------
@@ -1415,37 +1423,50 @@
 
 ;;; --------------------------------------------------------------------
 
-    (define* (%update-syntactic-binding! reference.entry new-type.des type-annotation.stx synner)
+    (define (%perform-validations reference.entry new-type.des lexenv.run syn)
+      ;;Let's do some validation.
+      ;;
+      (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+	(let* ((new-type.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec new-type.des))
+	       (reference.des	(lexenv-entry.binding-descriptor reference.entry))
+	       (reference.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec reference.des)))
+	  (define (%same? item.ots)
+	    (or (eq? item.ots reference.ots)
+		(eq? item.ots new-type.ots)
+		(object-type-spec=? item.ots reference.ots)
+		(object-type-spec=? item.ots new-type.ots)))
+	  (cond ((union-type-spec? new-type.ots)
+		 (for-each (lambda (item.ots)
+			     (when (%same? item.ots)
+			       (syn "invalid recursive type: union cannot hold the type itself")))
+		   (union-type-spec.item-ots* new-type.ots)))
+
+		((intersection-type-spec? new-type.ots)
+		 (for-each (lambda (item.ots)
+			     (when (%same? item.ots)
+			       (syn "invalid recursive type: intersection cannot hold the type itself")))
+		   (intersection-type-spec.item-ots* new-type.ots)))
+
+		((complement-type-spec? new-type.ots)
+		 (when (%same? (complement-type-spec.item-ots new-type.ots))
+		   (syn "invalid recursive type: complement cannot hold the type itself")))
+
+		((reference-type-spec? new-type.ots)
+		 (when (object-type-spec=? reference.ots new-type.ots)
+		   (syn "invalid recursive type: the type is an alias for itself")))))))
+
+;;; --------------------------------------------------------------------
+
+    (define* (%update-syntactic-binding! reference.entry new-type.des)
       ;;Register  the syntactic  binding descriptor  NEW-TYPE.DES as  the object-type
       ;;specification referenced by the lexenv entry REFERENCE.ENTRY.
       ;;
       (let* ((reference.des	(lexenv-entry.binding-descriptor reference.entry))
 	     (reference.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec reference.des))
 	     (new-type.ots	(syntactic-binding-descriptor/local-object-type.object-type-spec new-type.des)))
-	(define (syn message ots)
-	  (synner message type-annotation.stx))
-	(reference-type-spec.object-type-spec-set! reference.ots new-type.ots)
-	(lexenv-entry.binding-descriptor-set! reference.entry new-type.des)
-	;;Let's do some validation.
-	(cond ((union-type-spec? new-type.ots)
-	       (for-each (lambda (item.ots)
-			   (when (eq? item.ots reference.ots)
-			     (syn "invalid recursive type: union cannot hold the type itself" item.ots)))
-		 (union-type-spec.item-ots* new-type.ots)))
-
-	      ((intersection-type-spec? new-type.ots)
-	       (for-each (lambda (item.ots)
-			   (when (eq? item.ots reference.ots)
-			     (syn "invalid recursive type: intersection cannot hold the type itself" item.ots)))
-		 (intersection-type-spec.item-ots* new-type.ots)))
-
-	      ((complement-type-spec? new-type.ots)
-	       (when (eq? (complement-type-spec.item-ots new-type.ots) reference.ots)
-		 (syn "invalid recursive type: complement cannot hold the type itself" new-type.ots)))
-
-	      ((reference-type-spec? new-type.ots)
-	       (when (object-type-spec=? reference.ots new-type.ots)
-		 (syn "invalid recursive type: the type is an alias for itself" new-type.ots))))))
+	(reference-type-spec.object-type-spec-set! reference.ots   new-type.ots)
+	(lexenv-entry.binding-descriptor-set!      reference.entry new-type.des)
+	(void)))
 
     #| end of module: %ESTABLISH-CONCRETE-OBJECT-TYPE-SYNTACTIC-BINDING |# )
 

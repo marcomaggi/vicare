@@ -566,6 +566,16 @@ Revised^6 Report on the algorithmic language Scheme
 
 @c ------------------------------------------------------------------------
 
+@macro brace{THING}
+@{\THING\@}
+@end macro
+
+@macro bracearg {ONE, TWO}
+@{@var{\ONE\} @aclass{\TWO\}@}
+@end macro
+
+@c ------------------------------------------------------------------------
+
 @macro lexenv{}
 @sc{lexenv}
 @end macro
