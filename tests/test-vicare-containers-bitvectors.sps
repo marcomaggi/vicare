@@ -127,6 +127,39 @@
   (void))
 
 
+(parametrise ((check-test-name	'equality))
+
+  (check
+      (let* ((L			'(#t #f #f #t))
+	     ({a <bitvector>}	(list->bitvector L))
+	     ({b <bitvector>}	(list->bitvector L)))
+	(equal? a b))
+    => #t)
+
+  (check
+      (let (({a <bitvector>} (list->bitvector '(#t #f #f #t)))
+	    ({b <bitvector>} (list->bitvector '(#t #f #t #t))))
+	(equal? a b))
+    => #f)
+
+  (check-for-true
+   (equal? (non-negative-exact-integer->bitvector (least-positive-bignum))
+	   (non-negative-exact-integer->bitvector (least-positive-bignum))))
+
+  (check-for-true
+   (let ((N (bitwise-arithmetic-shift-left (greatest-fixnum) 22)))
+     (equal? (non-negative-exact-integer->bitvector N)
+	     (non-negative-exact-integer->bitvector N))))
+
+  (check-for-false
+   (let ((N (bitwise-arithmetic-shift-left (greatest-fixnum) 22))
+	 (M (bitwise-arithmetic-shift-left (greatest-fixnum) 23)))
+     (equal? (non-negative-exact-integer->bitvector N)
+	     (non-negative-exact-integer->bitvector M))))
+
+  #t)
+
+
 (parametrise ((check-test-name	'length))
 
   (define-syntax doit
@@ -420,24 +453,6 @@
       (let ((O (non-negative-exact-integer->bitvector (bitwise-arithmetic-shift-left (least-positive-bignum) 1234))))
 	(.non-negative-exact-integer O))
     => (bitwise-arithmetic-shift-left (least-positive-bignum) 1234))
-
-  #t)
-
-
-(parametrise ((check-test-name	'comparison))
-
-  (check
-      (let* ((L			'(#t #f #f #t))
-	     ({a <bitvector>}	(list->bitvector L))
-	     ({b <bitvector>}	(list->bitvector L)))
-	(equal? a b))
-    => #t)
-
-  (check
-      (let (({a <bitvector>} (list->bitvector '(#t #f #f #t)))
-	    ({b <bitvector>} (list->bitvector '(#t #f #t #t))))
-	(equal? a b))
-    => #f)
 
   #t)
 

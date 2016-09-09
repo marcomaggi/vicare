@@ -27,7 +27,8 @@ bitvectors}.
 
 @deftp {Record Type} @aclass{bitvector}
 Name of object--type representing bitvectors.  The current
-implementation is as vector of fixnums.
+implementation is as vector of fixnums.  Instances of this type can be
+compared with @func{equal?}.
 @end deftp
 
 
