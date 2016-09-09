@@ -149,10 +149,21 @@ corresponds to the bit at index zero in the bitvector.
 @end deftypemethod
 
 
+@deftypemethod @aclass{bitvector} @aclass{non-negative-exact-integer} non-negative-exact-integer
+Return an exact integer representing the bits in the instance.
+@end deftypemethod
+
+
 @deftypefun @aclass{bitvector} list->bitvector @{@var{ell} (list-of @aclass{boolean})@}
 @deftypefunx @aclass{bitvector} vector->bitvector @{@var{vec} (vector-of @aclass{boolean})@}
 Build and return a new @class{bitvector} object representing the values
 in the list @var{ell} or vector @var{vec}.
+@end deftypefun
+
+
+@deftypefun @aclass{bitvector} non-negative-exact-integer->bitvector @bracearg{N, non-negative-exact-integer}
+Build and return a new @class{bitvector} object being the bitwise
+representation given exact integer.
 @end deftypefun
 
 @c end of file
