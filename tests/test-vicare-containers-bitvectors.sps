@@ -104,6 +104,29 @@
   (void))
 
 
+(parametrise ((check-test-name	'comparison))
+
+  (define compar
+    (comparison-procedure <bitvector>))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?A ?B => ?result)
+       (check
+	   (compar (list->bitvector (quote ?A))
+		   (list->bitvector (quote ?B)))
+	 => ?result))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (#t #t) (#t #t)	=> 0)
+  (doit (#f #t) (#t #t)	=> -1)
+  (doit (#t #t) (#f #t)	=> +1)
+
+  (void))
+
+
 (parametrise ((check-test-name	'length))
 
   (define-syntax doit
@@ -224,7 +247,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'conversion))
+(parametrise ((check-test-name	'compound-conversion))
 
 ;;; 8 bits
 
@@ -290,6 +313,113 @@
 	(let (({O <bitvector>} (vector->bitvector V)))
 	  (.vector O))
       => V))
+
+  #t)
+
+
+(parametrise ((check-test-name	'number-conversion))
+
+  (module (exact-integer->fixnums fixnums->exact-integer)
+    (import (only (vicare platform words)
+		  case-word-size))
+
+    (define (exact-integer->fixnums {N <non-negative-exact-integer>})
+      (if (zero? N)
+	  '()
+	(let ((fx (bitwise-and N BITS-IN-FIXNUM-MASK))
+	      (N  (bitwise-arithmetic-shift-right N NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM)))
+	  (cons fx (exact-integer->fixnums N)))))
+
+    (define (fixnums->exact-integer {fxs (list-of <non-negative-fixnum>)})
+      (let loop ((N 0) (fxs (reverse fxs)))
+	(if (null? fxs)
+	    N
+	  (let* ((fx (car fxs))
+		 (N  (bitwise-arithmetic-shift-left N NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM))
+		 (N  (bitwise-ior N fx)))
+	    (loop N (cdr fxs))))))
+
+    (define-constant NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM
+      (case-word-size
+       ((32)	29)
+       ((64)	60)))
+
+    (define-constant BITS-IN-FIXNUM-MASK
+      (greatest-fixnum))
+
+    #| end of module: EXACT-INTEGER->FIXNUMS |# )
+
+;;; --------------------------------------------------------------------
+
+  (check (exact-integer->fixnums 0)				=> '())
+  (check (exact-integer->fixnums 1)				=> '(1))
+  (check (exact-integer->fixnums 234)				=> '(234))
+  (check (exact-integer->fixnums (greatest-fixnum))		=> (list (greatest-fixnum)))
+  (check (exact-integer->fixnums (least-positive-bignum))	=> (list 0 1))
+  (check (exact-integer->fixnums (+ 2 (least-positive-bignum)))	=> (list 2 1))
+  (check (exact-integer->fixnums (* 2 (least-positive-bignum)))	=> (list 0 2))
+
+  (check
+      (exact-integer->fixnums (bitwise-arithmetic-shift-left (least-positive-bignum) 1234))
+    => '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 17179869184))
+
+;;; --------------------------------------------------------------------
+
+  (check (fixnums->exact-integer '())				=> 0)
+  (check (fixnums->exact-integer '(1))				=> 1)
+  (check (fixnums->exact-integer '(234))			=> 234)
+  (check (fixnums->exact-integer (list (greatest-fixnum)))	=> (greatest-fixnum))
+  (check (fixnums->exact-integer (list 0 1))			=> (least-positive-bignum))
+  (check (fixnums->exact-integer (list 2 1))			=> (+ 2 (least-positive-bignum)))
+  (check (fixnums->exact-integer '(0 2))			=> (* 2 (least-positive-bignum)))
+
+  (check
+      (fixnums->exact-integer '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 17179869184))
+    => (bitwise-arithmetic-shift-left (least-positive-bignum) 1234))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((O (non-negative-exact-integer->bitvector 1)))
+	(.list O))
+    => '(#t))
+
+  (check
+      (let ((O (non-negative-exact-integer->bitvector 4)))
+	(.list O))
+    => '(#f #f #t))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((O (non-negative-exact-integer->bitvector 1)))
+	(.non-negative-exact-integer O))
+    => 1)
+
+  (check
+      (let ((O (non-negative-exact-integer->bitvector 4)))
+	(.non-negative-exact-integer O))
+    => 4)
+
+  (check
+      (let ((O (non-negative-exact-integer->bitvector 234)))
+	(.non-negative-exact-integer O))
+    => 234)
+
+  (check
+      (let ((O (non-negative-exact-integer->bitvector (greatest-fixnum))))
+	(.non-negative-exact-integer O))
+    => (greatest-fixnum))
+
+  (check
+      (let ((O (non-negative-exact-integer->bitvector (least-positive-bignum))))
+	(.non-negative-exact-integer O))
+    => (least-positive-bignum))
+
+  (check
+      (let ((O (non-negative-exact-integer->bitvector (bitwise-arithmetic-shift-left (least-positive-bignum) 1234))))
+	(.non-negative-exact-integer O))
+    => (bitwise-arithmetic-shift-left (least-positive-bignum) 1234))
 
   #t)
 
