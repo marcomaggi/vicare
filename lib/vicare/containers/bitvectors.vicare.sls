@@ -30,7 +30,7 @@
 
 #!vicare
 (library (vicare containers bitvectors)
-  (options typed-language #;strict-type-checking)
+  (options typed-language strict-type-checking)
   (export
     <bitvector>
     list->bitvector
