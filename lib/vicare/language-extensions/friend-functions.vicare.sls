@@ -27,7 +27,7 @@
 #!vicare
 (library (vicare language-extensions friend-functions (0 4 2016 07 29))
   (options typed-language)
-  (export define/friend)
+  (export define/friend brace)
   (import (vicare)
     (only (psyntax system $all)
 	  typed-variable-with-private-access!))
