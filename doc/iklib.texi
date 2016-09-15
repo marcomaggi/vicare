@@ -140,7 +140,7 @@ Turn on strict support for @rnrs{6} language.
 
 
 @defvr {Library Option} strict-type-checking
-Turn on strict type checking when the typed language is enabled
+Turn on strict type checking warnings when the typed language is enabled
 (@pxref{types, The typed language}).
 @end defvr
 
@@ -286,7 +286,7 @@ Turn on strict support for @rnrs{6} language.
 
 
 @defvr {Library Option} strict-type-checking
-Turn on strict type checking when the typed language is enabled
+Turn on strict type checking warnings when the typed language is enabled
 (@pxref{types, The typed language}).
 @end defvr
 

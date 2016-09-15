@@ -551,6 +551,7 @@
 	((?obj-tag)				=> (<true>))
 	(((ancestor-of ?obj-tag))		=> (<boolean>))
 	(((not ?obj-tag))			=> (<false>))
+	((<top>)				=> (<boolean>))
 	#| end of SIGNATURES |# )
        (attributes
 	((_)		foldable effect-free))))
@@ -573,7 +574,8 @@
 	(((or (ancestor-of ?obj-tag)
 	      (ancestor-of <false>)))		=> (<boolean>))
 	(((and (not ?obj-tag)
-	       (not <false>)))			=> (<boolean>)))
+	       (not <false>)))			=> (<boolean>))
+	((<top>)				=> (<boolean>)))
        (attributes
 	((_)		foldable effect-free))))
     ))

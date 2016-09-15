@@ -101,7 +101,8 @@
    %error-number-of-operands-deceeds-minimum-arguments-count
    %error-operand-with-multiple-return-values
    %error-mismatch-between-args-signature-and-operands-signature
-   %warning-mismatch-between-args-signature-and-operands-signature)
+   %warning-mismatch-between-args-signature-and-operands-signature
+   %warning-non-exact-match-between-args-signature-and-operands-signature)
 
   (define (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
 	    rator.stx rand*.stx maximum-arguments-count given-operands-count)
@@ -163,6 +164,21 @@
     (when (options::warn-about-compatible-operands-signature-in-procedure-application)
       (raise-compound-condition-object/continuable 'chi-application
 	"expand-time mismatch between closure object's arguments signatures and operands signature"
+	input-form.stx
+	(condition (make-expand-time-type-signature-warning)
+		   (common input-form.stx arguments-signature* operands-signature)))))
+
+  (define (%warning-non-exact-match-between-args-signature-and-operands-signature
+	   input-form.stx arguments-signature* operands-signature)
+    ;;ARGUMENTS-SIGNATURE*   must  be   a   list   of  "<type-signature>"   instances
+    ;;representing the closure object's arguments signatures.
+    ;;
+    ;;OPERANDS-SIGNATURE must  be an  insance of "<type-signature>"  representing the
+    ;;signature of the operands, when each operand returns a single value.
+    ;;
+    (when (options::strict-type-checking?)
+      (raise-compound-condition-object/continuable 'chi-application
+	"expand-time non-exact match between closure object's arguments signatures and operands signature"
 	input-form.stx
 	(condition (make-expand-time-type-signature-warning)
 		   (common input-form.stx arguments-signature* operands-signature)))))
@@ -1025,6 +1041,10 @@
 	     ;;There  is at  least  one clause  with  a possible  match.   It is  not
 	     ;;possible to fully  validate the signatures at expand-time;  we rely on
 	     ;;run-time checking.
+	     (%warning-non-exact-match-between-args-signature-and-operands-signature
+	      input-form.stx
+	      (map lambda-signature.argvals (case-lambda-signature.clause-signature* rator.clambda-sig))
+	      rands.sig)
 	     (case-expander-language
 	       ((typed)
 		(%chi-application-with-compatible-signature input-form.stx lexenv.run lexenv.expand

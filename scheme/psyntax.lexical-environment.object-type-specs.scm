@@ -1360,14 +1360,12 @@
 
   (define (super-and-sub? super.ots sub.ots)
     (or (object-type-spec.matching-super-and-sub?   super.ots sub.ots)
-	(%compatible-super-and-sub?                 super.ots sub.ots)))
+	(object-type-spec.compatible-super-and-sub? super.ots sub.ots)))
+
+  (define-syntax-rule (%compatible-super-and-sub? super.ots sub.ots)
+    (object-type-spec.compatible-super-and-sub? super.ots sub.ots))
 
   (define (object-type-spec.compatible-super-and-sub? super.ots sub.ots)
-    (if (options::strict-type-checking?)
-	#f
-      (%compatible-super-and-sub? super.ots sub.ots)))
-
-  (define (%compatible-super-and-sub? super.ots sub.ots)
     ;;This  function is  used to  check  for non-matching  compatibility between  two
     ;;object-type    specifications.    It    is    meant   to    be   called    when
     ;;OBJECT-TYPE-SPEC.MATCHING-SUPER-AND-SUB? has  already returned #f  when applied

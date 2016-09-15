@@ -252,8 +252,8 @@ typed-language-enabled?}).
 @subsubheading Strict type checking
 
 An additional option is available for both programs and libraries:
-@code{strict-type-checking}.  Under the typed language, the default
-behaviour is this:
+@code{strict-type-checking}.  Under the typed language, the types of
+variables and values are matched as:
 
 @lisp
 (import (prefix (vicare expander) xp::))
@@ -277,18 +277,8 @@ argument of type @class{fixnum}.  The operand validation is successful
 at expand--time, but further validation at run--time is required.
 @end itemize
 
-When the option @code{strict-type-checking} is used, the behaviour is:
-
-@lisp
-(import (prefix (vicare expander) xp::))
-
-(xp::type-annotation-matching <number> <fixnum>) @result{} exact-match
-(xp::type-annotation-matching <fixnum> <number>) @result{} no-match
-@end lisp
-
-@noindent
-that is: compatibility validation is turned off, only expand--time exact
-matching is used to validate operands against expected arguments.
+When the option @code{strict-type-checking} is used: a warning is raised
+when a possible match is detected.
 
 @c page
 @node types intro type ids

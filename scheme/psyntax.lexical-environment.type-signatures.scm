@@ -1067,12 +1067,10 @@
   ;;in the  homologous positions  are compatible  super-type and  sub-type; otherwise
   ;;return false.
   ;;
-  (if (options::strict-type-checking?)
-      #f
-    (%type-signature.criterion-super-and-sub? __who__ formals.sig operands.sig
-					      (lambda (formal.ots operand.ots)
-						(or (object-type-spec.matching-super-and-sub?   formal.ots operand.ots)
-						    (object-type-spec.compatible-super-and-sub? formal.ots operand.ots))))))
+  (%type-signature.criterion-super-and-sub? __who__ formals.sig operands.sig
+					    (lambda (formal.ots operand.ots)
+					      (or (object-type-spec.matching-super-and-sub?   formal.ots operand.ots)
+						  (object-type-spec.compatible-super-and-sub? formal.ots operand.ots)))))
 
 (define (%type-signature.criterion-super-and-sub? caller-who formals.sig operands.sig
 						  super-and-sub?)
