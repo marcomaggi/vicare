@@ -506,6 +506,7 @@ syntaxes like the following:
 (list-of   <fixnum>)
 (nelist-of <fixnum>)
 (vector-of <fixnum>)
+(nevector-of <fixnum>)
 (hashtable <symbol> <string>)
 (alist     <symbol> <string>)
 (enumeration @metao{symbol} @meta{symbol} ...)
@@ -638,6 +639,19 @@ annotation.
 @lisp
 (is-a? '#(1 2) (vector-of <fixnum>))    @result{} #t
 (is-a? '#()    (vector-of <fixnum>))    @result{} #t
+@end lisp
+@end deftp
+
+@c ------------------------------------------------------------
+
+@deftp {Type Annotation} nevector-of @meta{item-type}
+@deftpx {Parent Type} @aclass{nevector}
+Describe a vector holding one or more items all of the specified type.
+The syntax @meta{item-type} is a nested type annotation.
+
+@lisp
+(is-a? '#(1 2) (nevector-of <fixnum>))  @result{} #t
+(is-a? '#()    (nevector-of <fixnum>))  @result{} #f
 @end lisp
 @end deftp
 
@@ -4578,7 +4592,7 @@ Type of procedures acting as custom printers for object of a specified
 type.  The definition of this type is equivalent to:
 
 @lisp
-(define-type-annotation <type-printer>
+(define-type <type-printer>
   (lambda (<bottom> <textual-output-port> <procedure>) => <list>))
 @end lisp
 @end deftp
@@ -4698,6 +4712,56 @@ Type of real values.  There is no constructor.  The type predicate is
 @func{real?}.
 @end deftp
 
+
+@deftp {Core Type} @aclass{positive-real}
+Type of positive real values.  Its definition is equivalent to:
+
+@lisp
+(define-type <positive-real>
+  (or <positive-fixnum> <positive-bignum> <positive-flonum>))
+@end lisp
+@end deftp
+
+
+@deftp {Core Type} @aclass{negative-real}
+Type of negative real values.  Its definition is equivalent to:
+
+@lisp
+(define-type <negative-real>
+  (or <negative-fixnum> <negative-bignum> <negative-flonum>))
+@end lisp
+@end deftp
+
+
+@deftp {Core Type} @aclass{zero-real}
+Type of zero real values.  Its definition is equivalent to:
+
+@lisp
+(define-type <zero-real>
+  (or <zero-fixnum> <zero-flonum>))
+@end lisp
+@end deftp
+
+
+@deftp {Core Type} @aclass{non-zero-real}
+Type of non--zero real values.  Its definition is equivalent to:
+
+@lisp
+(define-type <non-zero-real>
+  (or <non-zero-fixnum> <bignum> <non-zero-flonum>))
+@end lisp
+@end deftp
+
+
+@deftp {Core Type} @aclass{non-negative-real}
+Type of non--negative real values.  Its definition is equivalent to:
+
+@lisp
+(define-type <non-negative-real>
+  (or <non-negative-fixnum> <positive-bignum> <positive-flonum>))
+@end lisp
+@end deftp
+
 @c page
 @node types built-in numerics rational-valued
 @subsubsection Type of rational--valued values
@@ -4727,6 +4791,28 @@ Type of exact rational values.  Its definition is equivalent to:
 @lisp
 (define-type <exact-rational>
   (or <exact-integer> <ratnum>))
+@end lisp
+@end deftp
+
+
+@deftp {Core Type} @aclass{non-negative-exact-rational}
+Type of non--negative exact rational values.  Its definition is
+equivalent to:
+
+@lisp
+(define-type <non-negative-exact-rational>
+  (or <non-negative-exact-integer> <positive-ratnum>))
+@end lisp
+@end deftp
+
+
+@deftp {Core Type} @aclass{non-zero-exact-rational}
+Type of non--zero exact rational values.  Its definition is equivalent
+to:
+
+@lisp
+(define-type <non-zero-exact-rational>
+  (or <non-zero-exact-integer> <ratnum>))
 @end lisp
 @end deftp
 
@@ -4797,6 +4883,16 @@ Type of negative exact integers.  Its definition is equivalent to:
 @end lisp
 @end deftp
 
+
+@deftp {Core Type} @aclass{non-zero-exact-integer}
+Type of non--zero exact integers.  Its definition is equivalent to:
+
+@lisp
+(define-type <non-zero-exact-integer>
+  (or <non-zero-fixnum> <bignum>))
+@end lisp
+@end deftp
+
 @c page
 @node types built-in numerics fixnums
 @subsubsection Type of fixnum values
@@ -4846,6 +4942,16 @@ Type of non--positive fixnum values.  Its definition is equivalent to:
 @lisp
 (define-type <non-positive-fixnum>
   (or <zero-fixnum> <negative-fixnum>))
+@end lisp
+@end deftp
+
+
+@deftp {Core Type} @aclass{non-zero-fixnum}
+Type of non--zero fixnum values.  Its definition is equivalent to:
+
+@lisp
+(define-type <non-zero-fixnum>
+  (or <positive-fixnum> <negative-fixnum>))
 @end lisp
 @end deftp
 
@@ -4909,6 +5015,17 @@ predicate is @func{positive-zero-flonum?}.
 Type of negative zero flonum values.  There is no constructor.  The type
 predicate is @func{negative-zero-flonum?}.
 @end deftp
+
+
+@deftp {Core Type} @aclass{non-zero-flonum}
+Type of non--zero flonum values.  The definition is equivalent to:
+
+@lisp
+(define-type <non-zero-flonum>
+  (or <positive-flonum> <negative-flonum>))
+@end lisp
+@end deftp
+
 
 @c ------------------------------------------------------------------------
 

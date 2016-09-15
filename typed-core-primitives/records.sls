@@ -489,7 +489,7 @@
 (declare-core-primitive $record-and-rtd?
     (unsafe)
   (signatures
-   ((<record> <record-type-descriptor>)		=> (<boolean>)))
+   ((<struct> <record-type-descriptor>)		=> (<boolean>)))
   (attributes
    ((_)						effect-free)))
 

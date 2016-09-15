@@ -267,6 +267,12 @@
   (methods
    (item-ots			vector-of-type-spec.item-ots)))
 
+(define-built-in-record-type <nevector-of-type-spec>
+    <object-type-spec>
+  make-nevector-of-type-spec nevector-of-type-spec?
+  (methods
+   (item-ots			nevector-of-type-spec.item-ots)))
+
 (define-built-in-record-type <hashtable-type-spec>
     <object-type-spec>
   make-hashtable-type-spec hashtable-type-spec?
@@ -444,6 +450,12 @@
   make-vector-of-type-descr vector-of-type-descr?
   (methods
    (item-des		vector-of-type-descr.item-des)))
+
+(define-built-in-record-type <nevector-of-type-descr>
+    <record>
+  make-nevector-of-type-descr nevector-of-type-descr?
+  (methods
+   (item-des		nevector-of-type-descr.item-des)))
 
 ;;; --------------------------------------------------------------------
 

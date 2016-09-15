@@ -41,7 +41,13 @@
 (declare-type-predicate <nevector>-type-predicate	<nevector>)
 
 (declare-vector-predicate vector-empty?)
-(declare-vector-predicate non-empty-vector?)
+
+(declare-core-primitive non-empty-vector?
+    (safe)
+  (signatures
+   ((<nevector>)		=> (<true>))
+   ((<empty-vector>)		=> (<false>))
+   ((<top>)			=> (<boolean>))))
 
 (declare-core-primitive vectors-of-same-length?
     (safe)
@@ -323,6 +329,8 @@
 (declare-core-primitive $vector-length
     (unsafe)
   (signatures
+   ((<nevector>)		=> (<positive-fixnum>))
+   ((<empty-vector>)		=> (<zero-fixnum>))
    ((<vector>)			=> (<non-negative-fixnum>)))
   (attributes
    ((_)				foldable effect-free result-true)))

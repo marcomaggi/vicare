@@ -216,6 +216,11 @@
     <vector-of-type-spec>-rtd				<vector-of-type-spec>-rcd
     make-vector-of-type-spec				vector-of-type-spec?
     vector-of-type-spec.item-ots
+
+    <nevector-of-type-spec>
+    <nevector-of-type-spec>-rtd				<nevector-of-type-spec>-rcd
+    make-nevector-of-type-spec				nevector-of-type-spec?
+    nevector-of-type-spec.item-ots
 ;;;
     <hashtable-type-spec>
     <hashtable-type-spec>-rtd				<hashtable-type-spec>-rcd
@@ -369,6 +374,7 @@
     private-id
     procedure-pred-id
     list-of-id				vector-of-id
+    nevector-of-id
     hashtable-id			alist-id
     enumeration-id			void-object?-id?
     define/checked-id			case-define/checked-id
@@ -2781,6 +2787,7 @@
   (define-core-prim-id-retriever brace-id		brace)
   (define-core-prim-id-retriever list-of-id		list-of)
   (define-core-prim-id-retriever vector-of-id		vector-of)
+  (define-core-prim-id-retriever nevector-of-id		nevector-of)
   (define-core-prim-id-retriever hashtable-id		hashtable)
   (define-core-prim-id-retriever alist-id		alist)
   (define-core-prim-id-retriever enumeration-id		enumeration)

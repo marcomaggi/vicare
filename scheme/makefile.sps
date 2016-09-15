@@ -3826,6 +3826,7 @@
     (<negative-fixnum>				v $language)
     (<non-negative-fixnum>			v $language)
     (<non-positive-fixnum>			v $language)
+    (<non-zero-fixnum>				v $language)
 
     (<positive-bignum>				v $language)
     (<negative-bignum>				v $language)
@@ -3840,10 +3841,22 @@
     (<non-positive-flonum>			v $language)
     (<non-negative-flonum>			v $language)
     (<zero-flonum>				v $language)
+    (<non-zero-flonum>				v $language)
 
     (<non-negative-exact-integer>		v $language)
     (<positive-exact-integer>			v $language)
     (<negative-exact-integer>			v $language)
+    (<non-zero-exact-integer>			v $language)
+
+    (<exact-rational>				v $language)
+    (<non-negative-exact-rational>		v $language)
+    (<non-zero-exact-rational>			v $language)
+
+    (<zero-real>				v $language)
+    (<positive-real>				v $language)
+    (<negative-real>				v $language)
+    (<non-zero-real>				v $language)
+    (<non-negative-real>			v $language)
 
     (<exact-compnum>				v $language)
     (<inexact-compnum>				v $language)
@@ -3856,7 +3869,6 @@
 
     (<zero>					v $language)
 
-    (<exact-rational>				v $language)
     (<exact>					v $language)
     (<inexact>					v $language)
 
@@ -4195,6 +4207,13 @@
     (make-vector-of-type-descr			system-type-descriptors)
     (vector-of-type-descr?			system-type-descriptors)
     (vector-of-type-descr.item-des		system-type-descriptors)
+
+    (<nevector-of-type-descr>-rtd)
+    (<nevector-of-type-descr>-rcd)
+    (<nevector-of-type-descr>			system-type-descriptors)
+    (make-nevector-of-type-descr		system-type-descriptors)
+    (nevector-of-type-descr?			system-type-descriptors)
+    (nevector-of-type-descr.item-des		system-type-descriptors)
 
     (<enumeration-type-descr>-rtd)
     (<enumeration-type-descr>-rcd)
@@ -5065,12 +5084,12 @@
     (vector-type-spec.item-ots*				$expander)
     (vector-type-spec.length				$expander)
 
-    (<vector-of-type-spec>-rtd)
-    (<vector-of-type-spec>-rcd)
-    (<vector-of-type-spec>				$expander)
-    (make-vector-of-type-spec				$expander)
-    (vector-of-type-spec?				$expander)
-    (vector-of-type-spec.item-ots			$expander)
+    (<nevector-of-type-spec>-rtd)
+    (<nevector-of-type-spec>-rcd)
+    (<nevector-of-type-spec>				$expander)
+    (make-nevector-of-type-spec				$expander)
+    (nevector-of-type-spec?				$expander)
+    (nevector-of-type-spec.item-ots			$expander)
 
     (<hashtable-type-spec>-rtd)
     (<hashtable-type-spec>-rcd)

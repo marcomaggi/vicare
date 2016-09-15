@@ -1134,7 +1134,9 @@
 				       return-values? cast-signature?))
 
 		(else
-		 (case (type-signature.match-formals-against-operands asrt.sig expr.sig)
+		 ;;We want to turn off strict type checking here to allow casting to work.
+		 (case (parametrise ((options::strict-type-checking? #f))
+			 (type-signature.match-formals-against-operands asrt.sig expr.sig))
 		   ((exact-match)
 		    ;;Good.  Everything is all right  at expand-time.  We replace the
 		    ;;expression's type  signature with the asserted  type signature:
@@ -1350,7 +1352,9 @@
 	    (expr.sig		(psi.retvals-signature expr.psi)))
        (define (%do-unsafe-cast-signature)
 	 (make-psi input-form.stx expr.core target.sig))
-       (case (type-signature.match-formals-against-operands target.sig expr.sig)
+       ;;We want to turn off strict type checking here to allow casting to work.
+       (case (parametrise ((options::strict-type-checking? #f))
+	       (type-signature.match-formals-against-operands target.sig expr.sig))
 	 ((exact-match)
 	  ;;Good,   matching  type   signatures:   we  are   generalising  the   type
 	  ;;specification.  For example:

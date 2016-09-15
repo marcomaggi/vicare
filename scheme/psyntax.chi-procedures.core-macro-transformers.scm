@@ -3786,7 +3786,7 @@
 	(make-type-signature/single-value (core-prim-spec '<record-constructor-descriptor> lexenv.run)))))
 
   (define (%make-core-type-descriptor input-form.stx lexenv.run lexenv.expand
-					  ots)
+				      ots)
     (let* ((expr.stx (core-type-spec.type-descriptor-id ots))
 	   (expr.psi (chi-expr expr.stx lexenv.run lexenv.expand)))
       (make-psi input-form.stx
@@ -3796,7 +3796,26 @@
   (define (%make-ann-type-descriptor input-form.stx lexenv.run lexenv.expand type.ots)
     (make-psi input-form.stx
       (object-type-spec.type-descriptor-core-expr type.ots)
-      (make-type-signature/single-value (core-prim-spec '<type-descriptor> lexenv.run))))
+      (make-type-signature/single-value
+       (core-prim-spec (cond
+			((pair-type-spec?		type.ots)	'<pair-type-descr>)
+			((pair-of-type-spec?		type.ots)	'<pair-of-type-descr>)
+			((list-type-spec?		type.ots)	'<list-type-descr>)
+			((list-of-type-spec?		type.ots)	'<list-of-type-descr>)
+			((vector-type-spec?		type.ots)	'<vector-type-descr>)
+			((nevector-of-type-spec?	type.ots)	'<nevector-of-type-descr>)
+			((vector-of-type-spec?		type.ots)	'<vector-of-type-descr>)
+			((enumeration-type-spec?	type.ots)	'<enumeration-type-descr>)
+			((closure-type-spec?		type.ots)	'<closure-type-descr>)
+			((ancestor-of-type-spec?	type.ots)	'<ancestor-of-type-descr>)
+			((hashtable-type-spec?		type.ots)	'<hashtable-type-descr>)
+			((alist-type-spec?		type.ots)	'<alist-type-descr>)
+			((union-type-spec?		type.ots)	'<union-type-descr>)
+			((intersection-type-spec?	type.ots)	'<intersection-type-descr>)
+			((complement-type-spec?		type.ots)	'<complement-type-descr>)
+			((interface-type-spec?		type.ots)	'<interface-type-descr>)
+			(else						'<type-descriptor>))
+		       lexenv.run))))
 
   #| end of module |# )
 

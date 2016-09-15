@@ -163,10 +163,10 @@
 	     (let ((h ($cdr h)))
 	       (if (pair? h)
 		   (if (not (eq? h t))
-		       (%race ($cdr h) ($cdr t) ls ($fx+ n 2))
+		       (%race ($cdr h) ($cdr t) ls (fx+ n 2))
 		     (%error-circular-list-is-invalid-as-argument ls))
 		 (if (null? h)
-		     ($fxadd1 n)
+		     (fxadd1 n)
 		   (%error-improper-list-is-invalid-as-argument ls)))))
 	    ((null? h)
 	     n)
@@ -180,7 +180,7 @@
   (let recur ((len 0)
 	      (ell ell))
     (if (pair? ell)
-	(recur ($fxadd1 len) ($cdr ell))
+	(recur (fxadd1 len) ($cdr ell))
       len)))
 
 

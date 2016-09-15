@@ -550,7 +550,8 @@
        (signatures
 	((?obj-tag)				=> (<true>))
 	(((ancestor-of ?obj-tag))		=> (<boolean>))
-	(((not ?obj-tag))			=> (<false>)))
+	(((not ?obj-tag))			=> (<false>))
+	#| end of SIGNATURES |# )
        (attributes
 	((_)		foldable effect-free))))
     ))

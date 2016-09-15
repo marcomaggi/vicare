@@ -1106,6 +1106,9 @@
 		      (($car)	(chi-car-application input-form.stx rator.psi rand*.psi rands.sig '$car))
 		      (($cdr)	(chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig '$cdr))
 		      ;;
+		      ((vector-ref)	(chi-vector-ref-application input-form.stx rator.psi rand*.psi rands.sig 'vector-ref))
+		      (($vector-ref)	(chi-vector-ref-application input-form.stx rator.psi rand*.psi rands.sig '$vector-ref))
+		      ;;
 		      ((condition)
 		       (chi-condition-application		input-form.stx rator.psi rand*.psi rands.sig))
 		      ((call-with-values)
@@ -1261,6 +1264,9 @@
 		    (($car)	(chi-car-application input-form.stx rator.psi rand*.psi rands.sig '$car))
 		    (( cdr)	(chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig  'cdr))
 		    (($cdr)	(chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig '$cdr))
+		    ;;
+		    ((vector-ref)	(chi-vector-ref-application input-form.stx rator.psi rand*.psi rands.sig 'vector-ref))
+		    (($vector-ref)	(chi-vector-ref-application input-form.stx rator.psi rand*.psi rands.sig '$vector-ref))
 		    ;;
 		    ((condition)
 		     (chi-condition-application			input-form.stx rator.psi rand*.psi rands.sig))
@@ -1515,6 +1521,67 @@
 	  (psi.core-expr rator.psi)
 	(map psi.core-expr rand*.psi))
       application.sig)))
+
+
+;;;; special applications: VECTOR-REF, $VECTOR-REF
+
+(module (chi-vector-ref-application)
+  (define-module-who chi-vector-ref-application)
+
+  (define* (chi-vector-ref-application input-form.stx
+				       rator.psi rand*.psi rands.sig original-prim-name)
+    ;;The input form has the syntax:
+    ;;
+    ;;   (vector-ref ?vec-expr ?idx-expr)
+    ;;
+    ;;We have already  validated the number of operands and  determined that the type
+    ;;of the operands is either an exact or compatible match.  The argument RATOR.PSI
+    ;;represents the  expanded VECTOR-REF  or $VECTOR-REF syntactic  identifier.  The
+    ;;argument  RAND*.PSI  is  a list  of  two  items,  having  a single  value  type
+    ;;signature.   The argument  RANDS.SIG is  a "<type-signature>"  representing the
+    ;;type of the operands.
+    ;;
+    ;;The application of VECTOR-REF is special because we want to extract the type of
+    ;;the returned value from the type of the first operand.
+    ;;
+    (receive (prim-name application.sig)
+	(%single-value-operand-signature->application-signature input-form.stx rands.sig original-prim-name)
+      (make-psi input-form.stx
+	(build-application (syntax-annotation input-form.stx)
+	    (build-primref no-source prim-name)
+	  (list (psi.core-expr (car  rand*.psi))
+		(psi.core-expr (cadr rand*.psi))))
+	application.sig)))
+
+  (define (%single-value-operand-signature->application-signature input-form.stx rands.sig original-prim-name)
+    (let* ((vec-rand.ots (car (type-signature.object-type-specs rands.sig)))
+	   (vec-rand.ots (if (label-type-spec? vec-rand.ots)
+			     (object-type-spec.parent-ots vec-rand.ots)
+			   vec-rand.ots)))
+      (cond ((vector-of-type-spec? vec-rand.ots)
+	     (values original-prim-name (make-type-signature/single-value (vector-of-type-spec.item-ots vec-rand.ots))))
+
+	    ((nevector-of-type-spec? vec-rand.ots)
+	     (values original-prim-name (make-type-signature/single-value (nevector-of-type-spec.item-ots vec-rand.ots))))
+
+	    ((vector-type-spec? vec-rand.ots)
+	     ;;FIXME It would  be greate if we  could know the index of  the item and
+	     ;;select the  associated OTS from  VEC-RAND.OTS.  (Marco Maggi;  Sun Sep
+	     ;;11, 2016)
+	     (values original-prim-name (make-type-signature/single-top)))
+
+	    ((<nevector>-ots? vec-rand.ots)
+	     (values original-prim-name (make-type-signature/single-top)))
+
+	    ((object-type-spec.compatible-super-and-sub? (<nevector>-ots) vec-rand.ots)
+	     (values original-prim-name (make-type-signature/single-top)))
+
+	    (else
+	     ;;This should never happen.
+	     (assertion-violation __module_who__
+	       "internal error, core primitive operand of wrong type" input-form.stx rands.sig)))))
+
+  #| end of module: CHI-VECTOR-REF-APPLICATION |# )
 
 
 ;;;; special applications: CONDITION

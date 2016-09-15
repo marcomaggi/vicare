@@ -102,6 +102,10 @@
     make-vector-of-type-descr			vector-of-type-descr?
     vector-of-type-descr.item-des
 
+    <nevector-of-type-descr>-rtd		<nevector-of-type-descr>-rcd
+    make-nevector-of-type-descr			nevector-of-type-descr?
+    nevector-of-type-descr.item-des
+
 ;;; --------------------------------------------------------------------
 
     <ancestor-of-type-descr>-rtd		<ancestor-of-type-descr>-rcd
@@ -670,6 +674,16 @@
   (strip-angular-parentheses)
   (fields
     (immutable item-des		vector-of-type-descr.item-des)
+    #| end of FIELDS |# ))
+
+(define-core-record-type <nevector-of-type-descr>
+  (nongenerative vicare:type-descriptors:<nevector-of-type-descr>)
+  (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
+  (parent <vector-of-type-descr>)
+  (fields
+    (immutable item-des		nevector-of-type-descr.item-des)
     #| end of FIELDS |# ))
 
 

@@ -968,6 +968,13 @@
 
 ;;; --------------------------------------------------------------------
 
+(declare-core-rtd <nevector-of-type-spec>-rtd)
+(declare-core-rcd <nevector-of-type-spec>-rcd)
+
+(declare-type-predicate nevector-of-type-spec?		<nevector-of-type-spec>)
+
+;;; --------------------------------------------------------------------
+
 (declare-core-rtd <vector-type-spec>-rtd)
 (declare-core-rcd <vector-type-spec>-rcd)
 

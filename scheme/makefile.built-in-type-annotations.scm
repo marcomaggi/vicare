@@ -48,6 +48,9 @@
 (define-type-annotation <non-positive-fixnum>
   (or <zero-fixnum> <negative-fixnum>))
 
+(define-type-annotation <non-zero-fixnum>
+  (or <negative-fixnum> <positive-fixnum>))
+
 ;;; --------------------------------------------------------------------
 
 (define-type-annotation <non-negative-exact-integer>
@@ -59,10 +62,19 @@
 (define-type-annotation <negative-exact-integer>
   (or <negative-fixnum> <negative-bignum>))
 
+(define-type-annotation <non-zero-exact-integer>
+  (or <non-zero-fixnum> <bignum>))
+
 ;;; --------------------------------------------------------------------
 
 (define-type-annotation <exact-rational>
   (or <exact-integer> <ratnum>))
+
+(define-type-annotation <non-negative-exact-rational>
+  (or <non-negative-exact-integer> <positive-ratnum>))
+
+(define-type-annotation <non-zero-exact-rational>
+  (or <non-zero-exact-integer> <ratnum>))
 
 ;;; --------------------------------------------------------------------
 
@@ -71,6 +83,26 @@
 
 (define-type-annotation <non-positive-flonum>
   (or <negative-flonum> <zero-flonum>))
+
+(define-type-annotation <non-zero-flonum>
+  (or <positive-flonum> <negative-flonum>))
+
+;;; --------------------------------------------------------------------
+
+(define-type-annotation <zero-real>
+  (or <zero-fixnum> <zero-flonum>))
+
+(define-type-annotation <non-zero-real>
+  (or <non-zero-fixnum> <bignum> <non-zero-flonum>))
+
+(define-type-annotation <non-negative-real>
+  (or <non-negative-fixnum> <positive-bignum> <positive-flonum>))
+
+(define-type-annotation <positive-real>
+  (or <positive-fixnum> <positive-bignum> <positive-flonum>))
+
+(define-type-annotation <negative-real>
+  (or <negative-fixnum> <negative-bignum> <negative-flonum>))
 
 ;;; --------------------------------------------------------------------
 
@@ -179,7 +211,7 @@
       <record-type-descriptor> <record-constructor-descriptor>
       <pair-type-descr> <pair-of-type-descr>
       <list-type-descr> <list-of-type-descr>
-      <vector-type-descr> <vector-of-type-descr>
+      <vector-type-descr> <vector-of-type-descr> <nevector-of-type-descr>
       <enumeration-type-descr> <closure-type-descr> <ancestor-of-type-descr>
       <hashtable-type-descr> <alist-type-descr>
       <union-type-descr> <intersection-type-descr> <complement-type-descr>

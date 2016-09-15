@@ -90,7 +90,7 @@
   (define-label-type <pos-fx>
     (parent <fixnum>)
     (type-predicate
-      (lambda ({parent? <type-predicate>})
+      (lambda ({_ <type-predicate>} {parent? <type-predicate>})
 	(lambda ({_ <boolean>} obj)
 	  (and (parent?   obj)
 	       (positive? obj))))))
