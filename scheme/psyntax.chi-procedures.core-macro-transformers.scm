@@ -2537,7 +2537,7 @@
 	   ;;will perform at run-time the number of values validation.
 	   => (lambda (producer.ots)
 		(let ((producer-item.ots	(list-of-type-spec.item-ots producer.ots))
-		      (formals.specs	(type-signature.object-type-specs formals.sig)))
+		      (formals.specs		(type-signature.object-type-specs formals.sig)))
 		  (if (type-signature.only-<untyped>-and-<list>? formals.sig)
 		      ;;We perform  type propagation by replacing  FORMALS.SIG with a
 		      ;;signature having PRODUCER-ITEM.OTS as types.
@@ -2548,14 +2548,14 @@
 							  producer.psi consumer*.stx))
 		    ;;We  validate   the  PRODUCER-ITEM.OTS  against  the   types  in
 		    ;;FORMALS.SIG.
-		    (let ((state 'exact-match))
-		      (for-each (lambda (formal.ots)
-				  (cond ((object-type-spec.matching-super-and-sub? formal.ots producer-item.ots))
-					((object-type-spec.compatible-super-and-sub? formal.ots producer-item.ots)
-					 (set! state 'possible-match))
-					(else
-					 (%error-mismatch "type mismatch between expected and returned values"))))
-			formals.specs)
+		    (let ((state (fold-left (lambda (state formal.ots)
+					      (cond ((object-type-spec.matching-super-and-sub? formal.ots producer-item.ots)
+						     state)
+						    ((object-type-spec.compatible-super-and-sub? formal.ots producer-item.ots)
+						     'possible-match)
+						    (else
+						     (%error-mismatch "type mismatch between expected and returned values"))))
+				   'exact-match formals.specs)))
 		      (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 							caller-who return-values?
 							standard-formals.stx cleared-formals.sig

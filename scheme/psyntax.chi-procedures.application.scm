@@ -528,6 +528,7 @@
 
 (module (chi-call-with-values-application/stx-operands)
   (define-module-who chi-call-with-values-application/stx-operands)
+  (import CLOSURE-APPLICATION-ERRORS)
 
   (define* (chi-call-with-values-application/stx-operands input-form.stx lexenv.run lexenv.expand
 							  producer.stx consumer-stuff.stx)
@@ -566,12 +567,12 @@
 				   producer.psi producer.ots)
     (let* ((producer-retvals.sig	(case-lambda-signature.retvals (closure-type-spec.signature producer.ots)))
 	   (consumer-argvals.sig	(lambda-signature.argvals consumer-clause-signature))
-	   (match-symbol		(let ((clear-argvals.sig (type-signature.untyped-to-top consumer-argvals.sig)))
-					  (case-type-signature-full-structure producer-retvals.sig
-					    (<bottom>
-					     'no-return)
-					    (else
-					     (type-signature.match-formals-against-operands clear-argvals.sig producer-retvals.sig))))))
+	   (clear-argvals.sig		(type-signature.untyped-to-top consumer-argvals.sig))
+	   (match-symbol		(case-type-signature-full-structure producer-retvals.sig
+					  (<bottom>
+					   'no-return)
+					  (else
+					   (type-signature.match-formals-against-operands clear-argvals.sig producer-retvals.sig)))))
       (case match-symbol
 	((exact-match)
 	 ;;Here we use CHI-LAMBDA/TYPED/PARSED-FORMALS.
@@ -581,6 +582,8 @@
 				 chi-lambda/typed/parsed-formals))
 	((possible-match)
 	 ;;Here we use CHI-LAMBDA/CHECKED/PARSED-FORMALS.
+	 (%warning-non-exact-match-between-args-signature-and-operands-signature
+	  input-form.stx (list clear-argvals.sig) producer-retvals.sig)
 	 (%build-thunk-core-expr input-form.stx lexenv.run lexenv.expand
 				 producer.psi producer-retvals.sig
 				 consumer-standard-formals.stx consumer-clause-signature consumer-body*.stx
@@ -1922,7 +1925,8 @@
 	    (psi.input-form proc.psi) (map psi.input-form proc-rand*.psi)
 	    maximum-arguments-count min-given-operands-count))))
     ;;Search for matching clauses.
-    (let* ((selected-clause-signature* '())
+    (let* ((selected-clause-signature*	'())
+	   (clause-signature*		(case-lambda-signature.clause-signature* proc.clambda-sig))
 	   (state (returnable
 		    (fold-left (lambda (state clause-signature)
 				 (let ((formals.sig (lambda-signature.argvals clause-signature)))
@@ -1934,7 +1938,7 @@
 				      (set-cons! selected-clause-signature* clause-signature)
 				      'possible-match)
 				     (else state))))
-		      'no-match (case-lambda-signature.clause-signature* proc.clambda-sig)))))
+		      'no-match clause-signature*))))
       (define (%default-core-expr)
 	(%build-default-application (%compute-application-signature input-form.stx selected-clause-signature*)))
       (case state
@@ -1946,6 +1950,8 @@
 	 ;;There is at least one clause with a possible match.  It is not possible to
 	 ;;fully  validate  the  signatures  at  expand-time;  we  rely  on  run-time
 	 ;;checking.
+	 (%warning-non-exact-match-between-args-signature-and-operands-signature
+	  input-form.stx clause-signature* proc-rands.sig)
 	 (%default-core-expr))
 	(else
 	 ;;There are no  matching clauses, not even possible  matches.  Arguments and
