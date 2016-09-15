@@ -1452,7 +1452,7 @@
 	   (cast-signature (<type-predicate>)
 	     (,?type-predicate-expr (lambda/typed ({_ <boolean>} ,obj.id)
 				      (and ($struct? ,obj.id)
-					   ($record-and-rtd? (cast-signature (<struct>) ,obj.id) ,foo-rtd))))))
+					   ($record-and-rtd? (unsafe-cast-signature (<struct>) ,obj.id) ,foo-rtd))))))
 	 (define/checked ((brace ,foo? <boolean>) ,obj.id)
 	   (,internal-predicate.id ,obj.id)))))
 
@@ -1462,7 +1462,7 @@
      (let ((obj.id (make-syntactic-identifier-for-temporary-variable "obj")))
        `((define/typed ((brace ,foo? <boolean>) ,obj.id)
 	   (and ($struct? ,obj.id)
-		($record-and-rtd? (cast-signature (<struct>) ,obj.id) ,foo-rtd))))))
+		($record-and-rtd? (unsafe-cast-signature (<struct>) ,obj.id) ,foo-rtd))))))
 
     (?invalid-clause
      (synner "invalid syntax in TYPE-PREDICATE clause" ?invalid-clause))))
