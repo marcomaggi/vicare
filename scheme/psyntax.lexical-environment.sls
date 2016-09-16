@@ -626,6 +626,38 @@
     returned-type-signature-condition?
     condition-returned-type-signature
 
+    &typed-variable-left-hand-side-rtd
+    &typed-variable-left-hand-side-rcd
+    &typed-variable-left-hand-side
+    make-typed-variable-left-hand-side-condition
+    typed-variable-left-hand-side-condition?
+    condition-typed-variable-left-hand-side.input-form
+    condition-typed-variable-left-hand-side.object-type-spec
+
+    &typed-variable-right-hand-side-rtd
+    &typed-variable-right-hand-side-rcd
+    &typed-variable-right-hand-side
+    make-typed-variable-right-hand-side-condition
+    typed-variable-right-hand-side-condition?
+    condition-typed-variable-right-hand-side.input-form
+    condition-typed-variable-right-hand-side.object-type-spec
+
+    &typed-formals-left-hand-side-rtd
+    &typed-formals-left-hand-side-rcd
+    &typed-formals-left-hand-side
+    make-typed-formals-left-hand-side-condition
+    typed-formals-left-hand-side-condition?
+    condition-typed-formals-left-hand-side.input-form
+    condition-typed-formals-left-hand-side.type-signature
+
+    &typed-formals-right-hand-side-rtd
+    &typed-formals-right-hand-side-rcd
+    &typed-formals-right-hand-side
+    make-typed-formals-right-hand-side-condition
+    typed-formals-right-hand-side-condition?
+    condition-typed-formals-right-hand-side.input-form
+    condition-typed-formals-right-hand-side.type-signature
+
     &macro-expansion-trace
     &macro-expansion-trace-rtd
     &macro-expansion-trace-rcd

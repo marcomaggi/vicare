@@ -641,6 +641,40 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-built-in-condition-type &typed-variable-left-hand-side
+    &condition
+  make-typed-variable-left-hand-side-condition
+  typed-variable-left-hand-side-condition?
+  (methods
+   (input-form				condition-typed-variable-left-hand-side.input-form)
+   (object-type-spec			condition-typed-variable-left-hand-side.object-type-spec)))
+
+(define-built-in-condition-type &typed-variable-right-hand-side
+    &condition
+  make-typed-variable-right-hand-side-condition
+  typed-variable-right-hand-side-condition?
+  (methods
+   (input-form				condition-typed-variable-right-hand-side.input-form)
+   (object-type-spec			condition-typed-variable-right-hand-side.object-type-spec)))
+
+(define-built-in-condition-type &typed-formals-left-hand-side
+    &condition
+  make-typed-formals-left-hand-side-condition
+  typed-formals-left-hand-side-condition?
+  (methods
+   (input-form				condition-typed-formals-left-hand-side.input-form)
+   (type-signature			condition-typed-formals-left-hand-side.type-signature)))
+
+(define-built-in-condition-type &typed-formals-right-hand-side
+    &condition
+  make-typed-formals-right-hand-side-condition
+  typed-formals-right-hand-side-condition?
+  (methods
+   (input-form				condition-typed-formals-right-hand-side.input-form)
+   (type-signature			condition-typed-formals-right-hand-side.type-signature)))
+
+;;; --------------------------------------------------------------------
+
 (define-built-in-condition-type &warning-unused-lexical-variable
     &warning
   make-warning-unused-lexical-variable warning-unused-lexical-variable?)

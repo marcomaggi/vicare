@@ -144,7 +144,7 @@
     ;;ARGUMENTS-SIGNATURE*   must  be   a   list   of  "<type-signature>"   instances
     ;;representing the closure object's arguments signatures.
     ;;
-    ;;OPERANDS-SIGNATURE must  be an  insance of "<type-signature>"  representing the
+    ;;OPERANDS-SIGNATURE must  be an instance of  "<type-signature>" representing the
     ;;signature of the operands, when each operand returns a single value.
     ;;
     (raise-compound-condition-object 'chi-application
@@ -158,7 +158,7 @@
     ;;ARGUMENTS-SIGNATURE*   must  be   a   list   of  "<type-signature>"   instances
     ;;representing the closure object's arguments signatures.
     ;;
-    ;;OPERANDS-SIGNATURE must  be an  insance of "<type-signature>"  representing the
+    ;;OPERANDS-SIGNATURE must  be an instance of  "<type-signature>" representing the
     ;;signature of the operands, when each operand returns a single value.
     ;;
     (when (options::warn-about-compatible-operands-signature-in-procedure-application)
@@ -173,7 +173,7 @@
     ;;ARGUMENTS-SIGNATURE*   must  be   a   list   of  "<type-signature>"   instances
     ;;representing the closure object's arguments signatures.
     ;;
-    ;;OPERANDS-SIGNATURE must  be an  insance of "<type-signature>"  representing the
+    ;;OPERANDS-SIGNATURE must  be an instance of  "<type-signature>" representing the
     ;;signature of the operands, when each operand returns a single value.
     ;;
     (when (options::strict-type-checking?)

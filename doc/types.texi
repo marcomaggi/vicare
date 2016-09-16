@@ -278,7 +278,19 @@ at expand--time, but further validation at run--time is required.
 @end itemize
 
 When the option @code{strict-type-checking} is used: a warning is raised
-when a possible match is detected.
+when a possible match is detected.  For example, the following
+@syntax{let} syntax use will raise a warning because the right--hand
+side expression returns a @class{integer}, while the syntactic binding
+for @var{O} expects a @class{fixnum}:
+
+@lisp
+(let ((@{O <fixnum>@} (cast-signature (<integer>) (read))))
+  ---)
+@end lisp
+
+Notice that: for some built--in syntaxes which expand into other syntax
+used, multiple warnings may be raised for the same non--exact type
+matching.
 
 @c page
 @node types intro type ids

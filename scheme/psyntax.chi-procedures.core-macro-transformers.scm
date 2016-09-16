@@ -157,6 +157,73 @@
     input-form.stx))
 
 
+;;;; non-exact match between variables' types and values' types
+
+(define (%warning-non-exact-match-between-variables-signature-and-values-signature
+	 caller-who input-form.stx lhs.stx lhs.sig rhs.stx rhs.sig)
+  ;;Whenever a  typed binding syntax detects  that a typed variable  has a "possible"
+  ;;with its initialisation value (rather than an "exact"): it calls this function to
+  ;;let  the programmer  know.  This  function is  for syntaxes  that bind  "formals"
+  ;;variables, like RECEIVE and LET-VALUES.
+  ;;
+  ;;The  argument LHS.STX  must be  a syntax  object representing  the typed  formals
+  ;;specification  in the  original  input form.   The argument  LHS.SIG  must be  an
+  ;;instance of "<type-signature>" representing the formals's types.
+  ;;
+  ;;The argument  RHS.STX must be  a syntax  object representing the  right-hand side
+  ;;expression in the original input form.   The argument RHS.SIG must be an instance
+  ;;of "<type-signature>" representing the value's type.
+  ;;
+  ;;NOTE This function is meant to be used when the function application:
+  ;;
+  ;;   (type-signature.match-formals-against-operands lhs.sig rhs.sig)
+  ;;
+  ;;returns "possible-match".
+  ;;
+  (when (options::strict-type-checking?)
+    (raise-compound-condition-object/continuable caller-who
+      "expression used as right-hand side in syntactic bindings has only possible (not exact) type matching with the formals' types"
+      input-form.stx
+      (condition (make-expand-time-type-signature-warning)
+		 (make-syntax-violation input-form.stx rhs.stx)
+		 (make-typed-formals-left-hand-side-condition  lhs.stx lhs.sig)
+		 (make-typed-formals-right-hand-side-condition rhs.stx rhs.sig)))))
+
+(define (%warning-non-exact-match-between-variable-type-and-value-type
+	 caller-who input-form.stx lhs.stx lhs.ots rhs.stx rhs.ots)
+  ;;Whenever a  typed binding syntax detects  that a typed variable  has a "possible"
+  ;;with its initialisation value (rather than an "exact"): it calls this function to
+  ;;let  the programmer  know.  This  function  is for  syntaxes that  bind a  single
+  ;;variable at a time, like LET.
+  ;;
+  ;;The argument  LHS.STX must  be a  syntax object  representing the  typed variable
+  ;;specification  in the  original  input form.   The argument  LHS.OTS  must be  an
+  ;;instance of "<object-type-spec>" representing the variable's type.
+  ;;
+  ;;The argument  RHS.STX must be  a syntax  object representing the  right-hand side
+  ;;expression in the original input form.   The argument RHS.OTS must be an instance
+  ;;of "<object-type-spec>" representing the value's type.
+  ;;
+  ;;NOTE This function is meant to be used when the function application:
+  ;;
+  ;;   (object-type-spec.matching-super-and-sub? lhs.ots rhs.ots)
+  ;;
+  ;;returns false, and the function applicatoin:
+  ;;
+  ;;   (object-type-spec.compatible-super-and-sub? lhs.ots rhs.ots)
+  ;;
+  ;;return true.
+  ;;
+  (when (options::strict-type-checking?)
+    (raise-compound-condition-object/continuable caller-who
+      "expression used as right-hand side in syntactic binding has only possible (not exact) type matching with the variable's type"
+      input-form.stx
+      (condition (make-expand-time-type-signature-warning)
+		 (make-syntax-violation input-form.stx rhs.stx)
+		 (make-typed-variable-left-hand-side-condition  lhs.stx lhs.ots)
+		 (make-typed-variable-right-hand-side-condition rhs.stx rhs.ots)))))
+
+
 ;;;; external modules
 
 (include "psyntax.chi-procedures.type-macro-transformers.scm" #t)
@@ -479,11 +546,11 @@
 
 (module LET-UTILITIES
   (%generate-lhs-type-and-rhs-core-expr
-   %process-rhs-signature
+   ;;This is exported for use by RECEIVE.
    %generate-rhs-code)
 
   (define (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
-						caller-who lhs*.source-ots rhs*.psi)
+						caller-who lhs*.stx lhs*.source-ots rhs*.psi)
     ;;In  a  LET, LET*,  LETREC  or  LETREC*  syntax,  the syntactic  bindings  have:
     ;;LHS*.SOURCE-OTS has  types specified  in the source  code, "<untyped>"  is used
     ;;when no type was specified; RHS.PSI as expanded right-hand side expression.
@@ -491,8 +558,12 @@
     ;;Here  we  take  care  of   performing  right-hand  side  type  propagation  and
     ;;validation.
     ;;
+    ;;LHS*.STX must  be a list  of syntax  objects representing the  typed variable's
+    ;;specification  in the  original  input form;  it is  used  for error  reporting
+    ;;purposes.
+    ;;
     (map-for-two-retvals
-	(lambda (lhs.source-ots rhs.psi)
+	(lambda (lhs.stx lhs.source-ots rhs.psi)
 	  ;;Here we process the  RHS type signature to make sure  it returns a single
 	  ;;value.
 	  (define rhs.ots (%process-rhs-signature caller-who input-form.stx rhs.psi))
@@ -505,8 +576,8 @@
 	    ;;validate RHS as returning a single value of correct type.
 	    (values lhs.source-ots
 		    (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
-					caller-who lhs.source-ots rhs.psi rhs.ots))))
-      lhs*.source-ots rhs*.psi))
+					caller-who lhs.stx lhs.source-ots rhs.psi rhs.ots))))
+      lhs*.stx lhs*.source-ots rhs*.psi))
 
 ;;; --------------------------------------------------------------------
 
@@ -570,7 +641,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
-			      caller-who lhs.ots rhs.psi rhs.ots)
+			      caller-who lhs.stx lhs.ots rhs.psi rhs.ots)
     ;;In a LET, LET*,  LETREC or LETREC* syntax, a syntactic  binding has: LHS.OTS as
     ;;variables's type;  RHS.PSI as expanded  right-hand side expression;  RHS.OTS as
     ;;type of the single value returned by the RHS expression.
@@ -587,6 +658,8 @@
     (cond ((object-type-spec.matching-super-and-sub? lhs.ots rhs.ots)
 	   (psi.core-expr rhs.psi))
 	  ((object-type-spec.compatible-super-and-sub? lhs.ots rhs.ots)
+	   (%warning-non-exact-match-between-variable-type-and-value-type
+	    caller-who input-form.stx lhs.stx lhs.ots (psi.input-form rhs.psi) rhs.ots)
 	   (let* ((validator.stx (object-type-spec.single-value-validator-lambda-stx lhs.ots #t))
 		  (validator.psi (chi-expr validator.stx lexenv.run lexenv.expand)))
 	     (build-application no-source
@@ -599,11 +672,10 @@
 	    (condition (make-expand-time-type-signature-violation)
 		       (make-who-condition caller-who)
 		       (make-message-condition
-			"expression used as right-hand side in syntactic binding has type not matching the variable type")
+			"expression used as right-hand side in syntactic binding has type not matching the variable's type")
 		       (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
 		       (make-expected-type-signature-condition (make-type-signature/single-value lhs.ots))
 		       (make-returned-type-signature-condition (psi.retvals-signature rhs.psi)))))))
-
 
   #| end of module: LET-UTILITIES |# )
 
@@ -780,7 +852,7 @@
 	       ;;Here we take care of performing right-hand side type propagation and
 	       ;;validation.
 	       (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
-						     __who__ lhs*.ots rhs*.psi)
+						     __who__ ?lhs* lhs*.ots rhs*.psi)
 	     (receive (rib lexenv.run lhs*.lex lhs*.lab)
 		 (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.out-ots lexenv.run)
 	       (begin0
@@ -848,28 +920,30 @@
 	     ;;*  False  if  the  source  code  left  the  syntactic  binding's  type
 	     ;;unspecified.
 	     ;;
-	     (receive (this-lhs*.id this-lhs*.ots)
-		 (syntax-object.parse-typed-list-of-bindings/let-star (list (car lhs*.stx)) (<untyped>-ots))
-	       (let ((rhs.psi (chi-expr (car rhs*.stx) lexenv.run lexenv.expand)))
-		 (receive (this-lhs*.out-ots this-rhs*.core)
-		     ;;Here  we   take  care  of  performing   right-hand  side  type
-		     ;;propagation and validation.
-		     (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
-							   __who__ this-lhs*.ots (list rhs.psi))
-		   (receive (rib lexenv.run this-lhs*.lex this-lhs*.lab)
-		       (%establish-typed-syntactic-bindings-lhs* this-lhs*.id this-lhs*.out-ots lexenv.run)
-		     (loop
-		      ;;Yes, we push the lexical contour on the LHS, too.  Who knows,
-		      ;;in future, what  is required to compose  the type annotation?
-		      ;;Better safe than sorry.  (Marco Maggi; Sat Apr 30, 2016)
-		      (map (lambda (lhs.stx) (push-lexical-contour rib lhs.stx)) (cdr lhs*.stx))
-		      (map (lambda (rhs.stx) (push-lexical-contour rib rhs.stx)) (cdr rhs*.stx))
-		      (cons (car this-lhs*.lex)  lhs*.lex)
-		      (cons (car this-rhs*.core) rhs*.core)
-		      (push-lexical-contour rib body*.stx)
-		      lexenv.run
-		      (cons (car this-lhs*.id)  all-lhs*.id)
-		      (cons (car this-lhs*.lab) all-lhs*.lab))))))
+	     (let ((this-lhs*.stx (list (car lhs*.stx))))
+	       (receive (this-lhs*.id this-lhs*.ots)
+		   (syntax-object.parse-typed-list-of-bindings/let-star this-lhs*.stx (<untyped>-ots))
+		 (let ((rhs.psi (chi-expr (car rhs*.stx) lexenv.run lexenv.expand)))
+		   (receive (this-lhs*.out-ots this-rhs*.core)
+		       ;;Here  we  take  care  of  performing  right-hand  side  type
+		       ;;propagation and validation.
+		       (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
+							     __who__ this-lhs*.stx this-lhs*.ots (list rhs.psi))
+		     (receive (rib lexenv.run this-lhs*.lex this-lhs*.lab)
+			 (%establish-typed-syntactic-bindings-lhs* this-lhs*.id this-lhs*.out-ots lexenv.run)
+		       (loop
+			;;Yes,  we push  the lexical  contour on  the LHS,  too.  Who
+			;;knows,  in future,  what is  required to  compose the  type
+			;;annotation?  Better safe than sorry.  (Marco Maggi; Sat Apr
+			;;30, 2016)
+			(map (lambda (lhs.stx) (push-lexical-contour rib lhs.stx)) (cdr lhs*.stx))
+			(map (lambda (rhs.stx) (push-lexical-contour rib rhs.stx)) (cdr rhs*.stx))
+			(cons (car this-lhs*.lex)  lhs*.lex)
+			(cons (car this-rhs*.core) rhs*.core)
+			(push-lexical-contour rib body*.stx)
+			lexenv.run
+			(cons (car this-lhs*.id)  all-lhs*.id)
+			(cons (car this-lhs*.lab) all-lhs*.lab)))))))
 	   (begin0
 	       (%build-core-expr input-form.stx lexenv.run lexenv.expand
 				 (reverse lhs*.lex) (reverse rhs*.core) body*.stx
@@ -1025,14 +1099,15 @@
 	   (if (pair? lhs*.id)
 	       ;;For every syntactic binding: expand  the RHS and either: validate it
 	       ;;as matching the LHS.OTS; propagate RHS.OTS on the LHS.
-	       (let ((this-lhs*.id		(list (car lhs*.id)))
+	       (let ((this-lhs*.stx		(list (car ?lhs*)))
+		     (this-lhs*.id		(list (car lhs*.id)))
 		     (this-lhs*.source-ots	(list (car lhs*.ots)))
 		     (this-rhs*.psi		(list (chi-expr (car rhs*.stx) lexenv.run lexenv.expand))))
 		 (receive (this-lhs*.out-ots this-rhs*.core)
 		     ;;Here  we   perform  right-hand   side  type   propagation  and
 		     ;;validation.
 		     (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
-							   caller-who this-lhs*.source-ots this-rhs*.psi)
+							   caller-who this-lhs*.stx this-lhs*.source-ots this-rhs*.psi)
 		   (unless (eq? (car this-lhs*.source-ots) (car this-lhs*.out-ots))
 		     ;;Here we mutate the syntactic binding's descriptor of LHS.ID to
 		     ;;represent a  typed lexical variable having  type THIS-LHS.OTS.
@@ -2249,26 +2324,28 @@
 						 standard-formals.stx formals.sig
 						 ?producer consumer*.stx))
 	       ((list-of-single-item? standard-formals.stx)
-		(let ((arg.id	(car standard-formals.stx))
-		      (arg.ots	(syntax-match ?formals ()
-				  ((?arg)
-				   (identifier? ?arg)
-				   #f)
-				  (_
-				   (car (type-signature.object-type-specs formals.sig))))))
+		(let* ((arg.stx	(syntax-match ?formals () ((?arg) ?arg)))
+		       (arg.id	(car standard-formals.stx))
+		       ;;ARG.OTS is false  if there is no  type annotation; otherwise
+		       ;;it is an instance of "<object-type-spec>".
+		       (arg.ots	(if (identifier? arg.stx)
+				    ;;No type annotation.
+				    #f
+				  (car (type-signature.object-type-specs formals.sig)))))
 		  (%the-consumer-expects-a-single-value input-form.stx lexenv.run lexenv.expand
-							caller-who return-values? arg.id arg.ots
+							caller-who return-values? arg.stx arg.id arg.ots
 							?producer consumer*.stx)))
 	       ((list? standard-formals.stx)
 		(%the-consumer-expects-two-or-more-mandatory-values input-form.stx lexenv.run lexenv.expand
 								    caller-who return-values?
-								    standard-formals.stx formals.sig
+								    ?formals standard-formals.stx formals.sig
 								    ?producer consumer*.stx))
 	       (else
 		;;The formals are an improper  list.  The consumer accepts any number
 		;;of values; we have to determine how many are mandatory.
 		(%the-consumer-expects-some-values input-form.stx lexenv.run lexenv.expand
-						   caller-who return-values? standard-formals.stx formals.sig
+						   caller-who return-values?
+						   ?formals standard-formals.stx formals.sig
 						   ?producer consumer*.stx)))))
       (_
        (__synner__ "invalid syntax in macro use"))))
@@ -2327,7 +2404,7 @@
   (module (%the-consumer-expects-a-single-value)
 
     (define (%the-consumer-expects-a-single-value input-form.stx lexenv.run lexenv.expand
-						  caller-who return-values? arg.id arg.ots
+						  caller-who return-values? arg.stx arg.id arg.ots
 						  producer.stx consumer*.stx)
       (let* ((producer.psi	(chi-expr producer.stx lexenv.run lexenv.expand))
 	     (producer.sig	(psi.retvals-signature producer.psi)))
@@ -2344,7 +2421,7 @@
 	      (if arg.ots
 		  (let* ((producer-item.ots	(<top>-ots))
 			 (producer.core		(%generate-rhs-code input-form.stx lexenv.run lexenv.expand
-								    caller-who arg.ots producer.psi producer-item.ots)))
+								    caller-who arg.stx arg.ots producer.psi producer-item.ots)))
 		    (values arg.id arg.ots producer.core))
 		;;Single   untyped  argument.    We  would   like  to   perform  type
 		;;propagation, but there is no type from the producer...
@@ -2392,7 +2469,7 @@
 		(raise-continuable
 		 (condition (make-expand-time-type-signature-warning)   (common))))))
 	   (let ((producer.core (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
-						    caller-who arg.ots producer.psi (<void>-ots))))
+						    caller-who arg.stx arg.ots producer.psi (<void>-ots))))
 	     (%build-single-value-output input-form.stx lexenv.run lexenv.expand
 					 caller-who return-values?
 					 arg.id arg.ots producer.core consumer*.stx)))
@@ -2402,7 +2479,7 @@
 	   => (lambda (producer.ots)
 		(%process-single-operand input-form.stx lexenv.run lexenv.expand
 					 caller-who return-values?
-					 arg.id arg.ots producer.ots
+					 arg.stx arg.id arg.ots producer.ots
 					 producer.psi consumer*.stx)))
 
 	  (<list-spec>
@@ -2414,7 +2491,7 @@
 		    (let ((producer-item.ots (car (list-type-spec.item-ots* producer.ots))))
 		      (%process-single-operand input-form.stx lexenv.run lexenv.expand
 					       caller-who return-values?
-					       arg.id arg.ots producer-item.ots
+					       arg.stx arg.id arg.ots producer-item.ots
 					       producer.psi consumer*.stx))
 		  (%error-mismatch "mismatching number of arguments in type signatures"))))
 
@@ -2427,7 +2504,7 @@
 			;;Single typed argument.
 			(let* ((producer-item.ots	(list-of-type-spec.item-ots producer.ots))
 			       (producer.core		(%generate-rhs-code input-form.stx lexenv.run lexenv.expand
-									    caller-who arg.ots producer.psi producer-item.ots)))
+									    caller-who arg.stx arg.ots producer.psi producer-item.ots)))
 			  (values arg.id arg.ots producer.core))
 		      ;;Single UNtyped argument.  We want to perform type propagation.
 		      (let* ((producer-item.ots	(list-of-type-spec.item-ots producer.ots))
@@ -2465,12 +2542,12 @@
 
     (define (%process-single-operand input-form.stx lexenv.run lexenv.expand
 				     caller-who return-values?
-				     arg.id arg.ots producer.ots
+				     arg.stx arg.id arg.ots producer.ots
 				     producer.psi consumer*.stx)
       (if arg.ots
 	  ;;Single typed argument.
 	  (let ((producer.core (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
-						   caller-who arg.ots producer.psi producer.ots)))
+						   caller-who arg.stx arg.ots producer.psi producer.ots)))
 	    (%build-single-value-output input-form.stx lexenv.run lexenv.expand
 					caller-who return-values?
 					arg.id arg.ots producer.core consumer*.stx))
@@ -2489,7 +2566,7 @@
 
     (define (%the-consumer-expects-two-or-more-mandatory-values input-form.stx lexenv.run lexenv.expand
 								caller-who return-values?
-								standard-formals.stx formals.sig
+								input-formals.stx standard-formals.stx formals.sig
 								producer.stx consumer*.stx)
       (let* ((producer.psi		(chi-expr producer.stx lexenv.run lexenv.expand))
 	     (producer.sig		(psi.retvals-signature producer.psi))
@@ -2556,6 +2633,10 @@
 						    (else
 						     (%error-mismatch "type mismatch between expected and returned values"))))
 				   'exact-match formals.specs)))
+		      (when (eq? state 'possible-match)
+			(%warning-non-exact-match-between-variables-signature-and-values-signature
+			 caller-who input-form.stx input-formals.stx formals.sig
+			 (psi.input-form producer.psi) (psi.retvals-signature producer.psi)))
 		      (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 							caller-who return-values?
 							standard-formals.stx cleared-formals.sig
@@ -2589,20 +2670,20 @@
 		(let ((producer.sig (make-type-signature (list-type-spec.item-ots* producer.ots))))
 		  (%process-fixed-number-of-operands input-form.stx lexenv.run lexenv.expand
 						     caller-who return-values?
-						     standard-formals.stx formals.sig cleared-formals.sig producer.sig
-						     producer.psi consumer*.stx %error-mismatch))))
+						     input-formals.stx standard-formals.stx formals.sig cleared-formals.sig
+						     producer.sig producer.psi consumer*.stx %error-mismatch))))
 
 	  (else
 	   ;;The producer expression returns two or more values.  Good.
 	   (%process-fixed-number-of-operands input-form.stx lexenv.run lexenv.expand
 					      caller-who return-values?
-					      standard-formals.stx formals.sig cleared-formals.sig producer.sig
-					      producer.psi consumer*.stx %error-mismatch)))))
+					      input-formals.stx standard-formals.stx formals.sig cleared-formals.sig
+					      producer.sig producer.psi consumer*.stx %error-mismatch)))))
 
     (define (%process-fixed-number-of-operands input-form.stx lexenv.run lexenv.expand
 					       caller-who return-values?
-					       standard-formals.stx formals.sig cleared-formals.sig producer.sig
-					       producer.psi consumer*.stx
+					       input-formals.stx standard-formals.stx formals.sig cleared-formals.sig
+					       producer.sig producer.psi consumer*.stx
 					       %error-mismatch)
       (define (%mk-propagated-signature producer.sig)
 	(with-exception-handler
@@ -2625,10 +2706,13 @@
 					   standard-formals.stx (%mk-propagated-signature producer.sig)
 					   producer.psi consumer*.stx chi-lambda/typed/parsed-formals))
 	((possible-match)
+	 (%warning-non-exact-match-between-variables-signature-and-values-signature
+	  caller-who input-form.stx input-formals.stx formals.sig
+	  (psi.input-form producer.psi) (psi.retvals-signature producer.psi))
 	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
-					   caller-who return-values?
-					   standard-formals.stx (%mk-propagated-signature producer.sig)
-					   producer.psi consumer*.stx))
+	  caller-who return-values?
+	  standard-formals.stx (%mk-propagated-signature producer.sig)
+	  producer.psi consumer*.stx))
 	(else
 	 (%error-mismatch "type mismatch between expected and returned values"))))
 
@@ -2640,7 +2724,7 @@
 
     (define (%the-consumer-expects-some-values input-form.stx lexenv.run lexenv.expand
 					       caller-who return-values?
-					       standard-formals.stx formals.sig
+					       input-formals.stx standard-formals.stx formals.sig
 					       producer.stx consumer*.stx)
       (let* ((producer.psi		(chi-expr producer.stx lexenv.run lexenv.expand))
 	     (producer.sig		(psi.retvals-signature producer.psi))
@@ -2694,7 +2778,7 @@
 	   ;;validate at run-time the actual number of arguments.
 	   (%process-some-values input-form.stx lexenv.run lexenv.expand
 				 caller-who return-values?
-				 standard-formals.stx formals.sig cleared-formals.sig
+				 input-formals.stx standard-formals.stx formals.sig cleared-formals.sig
 				 producer.psi producer.sig consumer*.stx
 				 %error-mismatch %mk-propagated-signature))
 
@@ -2709,7 +2793,7 @@
 	   ;;arguments.
 	   (%process-some-values input-form.stx lexenv.run lexenv.expand
 				 caller-who return-values?
-				 standard-formals.stx formals.sig cleared-formals.sig
+				 input-formals.stx standard-formals.stx formals.sig cleared-formals.sig
 				 producer.psi producer.sig consumer*.stx
 				 %error-mismatch %mk-propagated-signature))
 
@@ -2723,7 +2807,7 @@
 		    (let ((producer.sig (make-type-signature (list-type-spec.item-ots* producer.ots))))
 		      (%process-some-values input-form.stx lexenv.run lexenv.expand
 					    caller-who return-values?
-					    standard-formals.stx formals.sig cleared-formals.sig
+					    input-formals.stx standard-formals.stx formals.sig cleared-formals.sig
 					    producer.psi producer.sig consumer*.stx
 					    %error-mismatch %mk-propagated-signature))
 		  (%error-mismatch "mismatching number of arguments in type signatures"))))
@@ -2747,14 +2831,14 @@
 		   (type-signature.min-count producer.sig))
 	       (%process-some-values input-form.stx lexenv.run lexenv.expand
 				     caller-who return-values?
-				     standard-formals.stx formals.sig cleared-formals.sig
+				     input-formals.stx standard-formals.stx formals.sig cleared-formals.sig
 				     producer.psi producer.sig consumer*.stx
 				     %error-mismatch %mk-propagated-signature)
 	     (%error-mismatch "mismatching number of arguments in type signatures"))))))
 
     (define (%process-some-values input-form.stx lexenv.run lexenv.expand
 				  caller-who return-values?
-				  standard-formals.stx formals.sig cleared-formals.sig
+				  input-formals.stx standard-formals.stx formals.sig cleared-formals.sig
 				  producer.psi producer.sig consumer*.stx
 				  %error-mismatch %mk-propagated-signature)
       (case (type-signature.match-formals-against-operands cleared-formals.sig producer.sig)
@@ -2764,6 +2848,8 @@
 					   standard-formals.stx (%mk-propagated-signature producer.sig)
 					   producer.psi consumer*.stx chi-lambda/typed/parsed-formals))
 	((possible-match)
+	 (%warning-non-exact-match-between-variables-signature-and-values-signature
+	  caller-who input-form.stx input-formals.stx formals.sig (psi.input-form producer.psi) producer.sig)
 	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 					   caller-who return-values?
 					   standard-formals.stx (%mk-propagated-signature producer.sig)
