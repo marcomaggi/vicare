@@ -30,7 +30,7 @@
 
 #!vicare
 (library (vicare containers bitvectors)
-  (options typed-language #;strict-type-checking)
+  (options typed-language strict-type-checking)
   (export
     <bitvector>
     list->bitvector
@@ -170,10 +170,8 @@
       (define/overload ({make-<bitvector> <bitvector>} {number-of-bits <positive-exact-integer>})
 	(receive (D M)
 	    (div-and-mod number-of-bits NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM)
-;;;(debug-print (type-of D) (type-of M) (type-of (fixnum? D)) (type-of (fixnum? M)) (type-of (and (fixnum? D) (fixnum? M))))
 	  (unless (and (fixnum? D)
 		       (fixnum? M))
-;;;(debug-print D M (fixnum? D) (fixnum? M) (and (fixnum? D) (fixnum? M)))
 	    (procedure-argument-violation __who__ "requested number of bits too big" number-of-bits))
 	  (let* (({M <nnfx>}			(cast-signature (<nnfx>) M))
 		 ({D <nnfx>}			(cast-signature (<nnfx>) D))
@@ -504,6 +502,8 @@
   (let* (({len <positive-fixnum>}	(length ell))
 	 (biv				(new <bitvector> len)))
     (do (({i <nnfx>} 0 (fxadd1 i))
+	 ;;We iterate  the argument list ELL  until it is  empty, so the type  of ELL
+	 ;;here is LIST-OF, not NELIST-OF.
 	 ({ell (list-of <boolean>)} ell (cdr ell)))
 	((fx=? i len)
 	 biv)
@@ -513,7 +513,7 @@
   (let* ((len (.length V))
 	 (biv (new <bitvector> len)))
     (do (({i <nnfx>} 0 (fxadd1 i)))
-	((fx=? i (.length V))
+	((fx=? i len)
 	 biv)
       (.bit-set! biv i (vector-ref V i)))))
 
