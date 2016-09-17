@@ -241,7 +241,7 @@ For programs:
 
 @noindent
 we usually want to import the library @library{vicare} to use the
-extended syntaxes that recognise type definitions and declarations.
+extended syntaxes that recognise type definitions and annotations.
 
 We can use the function @func{typed-language-enabled?} to enable the
 typed language at the @repl{} (@pxref{iklib expander language,
@@ -252,14 +252,21 @@ typed-language-enabled?}).
 @subsubheading Strict type checking
 
 An additional option is available for both programs and libraries:
-@code{strict-type-checking}.  Under the typed language, the types of
-variables and values are matched as:
+@code{strict-type-checking}.  It enables expand--time warnings about
+non--exact matching between values and the typed variables they are
+assigned to.
+
+Under the typed language, the types of variables and values are matched
+as with the following forms:
 
 @lisp
 (import (prefix (vicare expander) xp::))
 
-(xp::type-annotation-matching <number> <fixnum>) @result{} exact-match
-(xp::type-annotation-matching <fixnum> <number>) @result{} possible-match
+(xp::type-annotation-matching <number> <fixnum>)
+@result{} exact-match
+
+(xp::type-annotation-matching <fixnum> <number>)
+@result{} possible-match
 @end lisp
 
 @noindent
@@ -281,16 +288,25 @@ When the option @code{strict-type-checking} is used: a warning is raised
 when a possible match is detected.  For example, the following
 @syntax{let} syntax use will raise a warning because the right--hand
 side expression returns a @class{integer}, while the syntactic binding
-for @var{O} expects a @class{fixnum}:
+for @code{O} expects a @class{fixnum}:
 
 @lisp
 (let ((@{O <fixnum>@} (cast-signature (<integer>) (read))))
   ---)
 @end lisp
 
-Notice that: for some built--in syntaxes which expand into other syntax
-used, multiple warnings may be raised for the same non--exact type
-matching.
+When examining the raised warnings we must remember that some binding
+syntaxes expand into uses of other binding syntaxes; for some built--in
+syntaxes of this type:
+
+@itemize
+@item
+Multiple warnings may be raised for the same non--exact type matching.
+
+@item
+A warning may be raised by the target syntax use rather than the source
+syntax use.
+@end itemize
 
 @c page
 @node types intro type ids
