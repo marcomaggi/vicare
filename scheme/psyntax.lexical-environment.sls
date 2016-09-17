@@ -688,6 +688,12 @@
     make-expand-time-type-signature-warning-not-returning
     expand-time-type-signature-warning-not-returning?
 
+    &expand-time-type-signature-warning-non-exact-matching-rtd
+    &expand-time-type-signature-warning-non-exact-matching-rcd
+    &expand-time-type-signature-warning-non-exact-matching
+    make-expand-time-type-signature-warning-non-exact-matching
+    expand-time-type-signature-warning-non-exact-matching?
+
     &warning-unused-lexical-variable
     &warning-unused-lexical-variable-rtd
     &warning-unused-lexical-variable-rcd

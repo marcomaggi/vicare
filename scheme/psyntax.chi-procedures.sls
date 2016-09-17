@@ -1422,6 +1422,8 @@
     (cond ((object-type-spec.matching-super-and-sub? lts.ots rhs.ots)
 	   (psi.core-expr rhs.psi))
 	  ((object-type-spec.compatible-super-and-sub? lts.ots rhs.ots)
+	   (%warn-about-non-exact-match-between-variable-type-and-value-type
+	    caller-who input-form.stx lhs.id lts.ots (psi.input-form rhs.psi) rhs.ots)
 	   (let* ((validator.stx (object-type-spec.single-value-validator-lambda-stx lts.ots #t))
 		  (validator.psi (chi-expr validator.stx lexenv.run lexenv.expand)))
 	     (build-application no-source
@@ -1680,7 +1682,7 @@
 	(values rib lexenv lhs*.lex lhs*.lab)))))
 
 
-;;;; unused variable validation
+;;;; warning raisers: unused variable validation
 
 (define (%warn-about-unused-lexical-variables/untyped caller-who lhs*.id lhs*.des)
   ;;Given a list of untyped lexical variables' identifiers LHS*.ID, and a list of the
@@ -1727,6 +1729,75 @@
 		     (assertion-violation __who__
 		       "internal error, cannot resolve label" lhs.id lhs.lab lhs.des)))))
       lhs*.id lhs*.lab)))
+
+
+;;;; warning raisers: non-exact match between variables' types and values' types
+
+(define (%warn-about-non-exact-match-between-variables-signature-and-values-signature
+	 caller-who input-form.stx lhs.stx lhs.sig rhs.stx rhs.sig)
+  ;;Whenever a  typed binding syntax detects  that a typed variable  has a "possible"
+  ;;with its initialisation value (rather than an "exact"): it calls this function to
+  ;;let  the programmer  know.  This  function is  for syntaxes  that bind  "formals"
+  ;;variables, like RECEIVE and LET-VALUES.
+  ;;
+  ;;The  argument LHS.STX  must be  a syntax  object representing  the typed  formals
+  ;;specification  in the  original  input form.   The argument  LHS.SIG  must be  an
+  ;;instance of "<type-signature>" representing the formals's types.
+  ;;
+  ;;The argument  RHS.STX must be  a syntax  object representing the  right-hand side
+  ;;expression in the original input form.   The argument RHS.SIG must be an instance
+  ;;of "<type-signature>" representing the value's type.
+  ;;
+  ;;NOTE This function is meant to be used when the function application:
+  ;;
+  ;;   (type-signature.match-formals-against-operands lhs.sig rhs.sig)
+  ;;
+  ;;returns "possible-match".
+  ;;
+  (when (options::strict-type-checking?)
+    (raise-compound-condition-object/continuable caller-who
+      "expression used as right-hand side in syntactic bindings initialisation or assignment \
+       has only possible (not exact) type matching with the formals' types"
+      input-form.stx
+      (condition (make-expand-time-type-signature-warning-non-exact-matching)
+		 (make-syntax-violation input-form.stx rhs.stx)
+		 (make-typed-formals-left-hand-side-condition  lhs.stx lhs.sig)
+		 (make-typed-formals-right-hand-side-condition rhs.stx rhs.sig)))))
+
+(define (%warn-about-non-exact-match-between-variable-type-and-value-type
+	 caller-who input-form.stx lhs.stx lhs.ots rhs.stx rhs.ots)
+  ;;Whenever a  typed binding syntax detects  that a typed variable  has a "possible"
+  ;;with its initialisation value (rather than an "exact"): it calls this function to
+  ;;let  the programmer  know.  This  function  is for  syntaxes that  bind a  single
+  ;;variable at a time, like LET.
+  ;;
+  ;;The argument  LHS.STX must  be a  syntax object  representing the  typed variable
+  ;;specification  in the  original  input form.   The argument  LHS.OTS  must be  an
+  ;;instance of "<object-type-spec>" representing the variable's type.
+  ;;
+  ;;The argument  RHS.STX must be  a syntax  object representing the  right-hand side
+  ;;expression in the original input form.   The argument RHS.OTS must be an instance
+  ;;of "<object-type-spec>" representing the value's type.
+  ;;
+  ;;NOTE This function is meant to be used when the function application:
+  ;;
+  ;;   (object-type-spec.matching-super-and-sub? lhs.ots rhs.ots)
+  ;;
+  ;;returns false, and the function applicatoin:
+  ;;
+  ;;   (object-type-spec.compatible-super-and-sub? lhs.ots rhs.ots)
+  ;;
+  ;;return true.
+  ;;
+  (when (options::strict-type-checking?)
+    (raise-compound-condition-object/continuable caller-who
+      "expression used as right-hand side in syntactic binding initialisation or assignment \
+       has only possible (not exact) type matching with the variable's type"
+      input-form.stx
+      (condition (make-expand-time-type-signature-warning-non-exact-matching)
+		 (make-syntax-violation input-form.stx rhs.stx)
+		 (make-typed-variable-left-hand-side-condition  lhs.stx lhs.ots)
+		 (make-typed-variable-right-hand-side-condition rhs.stx rhs.ots)))))
 
 
 ;;;; chi procedures: external modules

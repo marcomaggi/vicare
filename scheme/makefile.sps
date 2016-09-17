@@ -5255,6 +5255,12 @@
     (&expand-time-type-signature-warning-not-returning		$expander)
     (make-expand-time-type-signature-warning-not-returning	$expander)
     (expand-time-type-signature-warning-not-returning?		$expander)
+
+    (&expand-time-type-signature-warning-non-exact-matching-rtd)
+    (&expand-time-type-signature-warning-non-exact-matching-rcd)
+    (&expand-time-type-signature-warning-non-exact-matching	$expander)
+    (make-expand-time-type-signature-warning-non-exact-matching	$expander)
+    (expand-time-type-signature-warning-non-exact-matching?	$expander)
 ;;;
     (&type-signature					$expander)
     (&type-signature-rtd)

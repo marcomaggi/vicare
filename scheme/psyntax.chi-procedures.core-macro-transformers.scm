@@ -157,73 +157,6 @@
     input-form.stx))
 
 
-;;;; non-exact match between variables' types and values' types
-
-(define (%warning-non-exact-match-between-variables-signature-and-values-signature
-	 caller-who input-form.stx lhs.stx lhs.sig rhs.stx rhs.sig)
-  ;;Whenever a  typed binding syntax detects  that a typed variable  has a "possible"
-  ;;with its initialisation value (rather than an "exact"): it calls this function to
-  ;;let  the programmer  know.  This  function is  for syntaxes  that bind  "formals"
-  ;;variables, like RECEIVE and LET-VALUES.
-  ;;
-  ;;The  argument LHS.STX  must be  a syntax  object representing  the typed  formals
-  ;;specification  in the  original  input form.   The argument  LHS.SIG  must be  an
-  ;;instance of "<type-signature>" representing the formals's types.
-  ;;
-  ;;The argument  RHS.STX must be  a syntax  object representing the  right-hand side
-  ;;expression in the original input form.   The argument RHS.SIG must be an instance
-  ;;of "<type-signature>" representing the value's type.
-  ;;
-  ;;NOTE This function is meant to be used when the function application:
-  ;;
-  ;;   (type-signature.match-formals-against-operands lhs.sig rhs.sig)
-  ;;
-  ;;returns "possible-match".
-  ;;
-  (when (options::strict-type-checking?)
-    (raise-compound-condition-object/continuable caller-who
-      "expression used as right-hand side in syntactic bindings has only possible (not exact) type matching with the formals' types"
-      input-form.stx
-      (condition (make-expand-time-type-signature-warning)
-		 (make-syntax-violation input-form.stx rhs.stx)
-		 (make-typed-formals-left-hand-side-condition  lhs.stx lhs.sig)
-		 (make-typed-formals-right-hand-side-condition rhs.stx rhs.sig)))))
-
-(define (%warning-non-exact-match-between-variable-type-and-value-type
-	 caller-who input-form.stx lhs.stx lhs.ots rhs.stx rhs.ots)
-  ;;Whenever a  typed binding syntax detects  that a typed variable  has a "possible"
-  ;;with its initialisation value (rather than an "exact"): it calls this function to
-  ;;let  the programmer  know.  This  function  is for  syntaxes that  bind a  single
-  ;;variable at a time, like LET.
-  ;;
-  ;;The argument  LHS.STX must  be a  syntax object  representing the  typed variable
-  ;;specification  in the  original  input form.   The argument  LHS.OTS  must be  an
-  ;;instance of "<object-type-spec>" representing the variable's type.
-  ;;
-  ;;The argument  RHS.STX must be  a syntax  object representing the  right-hand side
-  ;;expression in the original input form.   The argument RHS.OTS must be an instance
-  ;;of "<object-type-spec>" representing the value's type.
-  ;;
-  ;;NOTE This function is meant to be used when the function application:
-  ;;
-  ;;   (object-type-spec.matching-super-and-sub? lhs.ots rhs.ots)
-  ;;
-  ;;returns false, and the function applicatoin:
-  ;;
-  ;;   (object-type-spec.compatible-super-and-sub? lhs.ots rhs.ots)
-  ;;
-  ;;return true.
-  ;;
-  (when (options::strict-type-checking?)
-    (raise-compound-condition-object/continuable caller-who
-      "expression used as right-hand side in syntactic binding has only possible (not exact) type matching with the variable's type"
-      input-form.stx
-      (condition (make-expand-time-type-signature-warning)
-		 (make-syntax-violation input-form.stx rhs.stx)
-		 (make-typed-variable-left-hand-side-condition  lhs.stx lhs.ots)
-		 (make-typed-variable-right-hand-side-condition rhs.stx rhs.ots)))))
-
-
 ;;;; external modules
 
 (include "psyntax.chi-procedures.type-macro-transformers.scm" #t)
@@ -658,7 +591,7 @@
     (cond ((object-type-spec.matching-super-and-sub? lhs.ots rhs.ots)
 	   (psi.core-expr rhs.psi))
 	  ((object-type-spec.compatible-super-and-sub? lhs.ots rhs.ots)
-	   (%warning-non-exact-match-between-variable-type-and-value-type
+	   (%warn-about-non-exact-match-between-variable-type-and-value-type
 	    caller-who input-form.stx lhs.stx lhs.ots (psi.input-form rhs.psi) rhs.ots)
 	   (let* ((validator.stx (object-type-spec.single-value-validator-lambda-stx lhs.ots #t))
 		  (validator.psi (chi-expr validator.stx lexenv.run lexenv.expand)))
@@ -2634,7 +2567,7 @@
 						     (%error-mismatch "type mismatch between expected and returned values"))))
 				   'exact-match formals.specs)))
 		      (when (eq? state 'possible-match)
-			(%warning-non-exact-match-between-variables-signature-and-values-signature
+			(%warn-about-non-exact-match-between-variables-signature-and-values-signature
 			 caller-who input-form.stx input-formals.stx formals.sig
 			 (psi.input-form producer.psi) (psi.retvals-signature producer.psi)))
 		      (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
@@ -2706,7 +2639,7 @@
 					   standard-formals.stx (%mk-propagated-signature producer.sig)
 					   producer.psi consumer*.stx chi-lambda/typed/parsed-formals))
 	((possible-match)
-	 (%warning-non-exact-match-between-variables-signature-and-values-signature
+	 (%warn-about-non-exact-match-between-variables-signature-and-values-signature
 	  caller-who input-form.stx input-formals.stx formals.sig
 	  (psi.input-form producer.psi) (psi.retvals-signature producer.psi))
 	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
@@ -2848,7 +2781,7 @@
 					   standard-formals.stx (%mk-propagated-signature producer.sig)
 					   producer.psi consumer*.stx chi-lambda/typed/parsed-formals))
 	((possible-match)
-	 (%warning-non-exact-match-between-variables-signature-and-values-signature
+	 (%warn-about-non-exact-match-between-variables-signature-and-values-signature
 	  caller-who input-form.stx input-formals.stx formals.sig (psi.input-form producer.psi) producer.sig)
 	 (%build-unspecified-values-output input-form.stx lexenv.run lexenv.expand
 					   caller-who return-values?
