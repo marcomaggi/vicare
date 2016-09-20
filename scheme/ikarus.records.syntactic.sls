@@ -346,7 +346,7 @@
 	  ;;to the parent's function (or false).
 	  #`(#,equality-predicate-protocol (#,parent-name.id equality-predicate))
 	;;With parent, equality predicate protocol undefined.
-	#f)
+	#`(#,parent-name.id equality-predicate))
     (if equality-predicate-protocol
 	;;No parent, equality predicate protocol defined.  We evaluate it as a thunk.
 	#`(#,equality-predicate-protocol)
@@ -354,15 +354,16 @@
       #f)))
 
 (define (<parsing-results>-compose-comparison-procedure-expr results)
-  (define parent-name.id		(<parsing-results>-parent-name        results))
+  (define parent-name.id		(<parsing-results>-parent-name          results))
   (define comparison-procedure-protocol	(<parsing-results>-comparison-procedure results))
   (if parent-name.id
       (if comparison-procedure-protocol
 	  ;;With  parent,  comparison  procedure  protocol  defined.   We  apply  the
 	  ;;protocol to the parent's function (or false).
 	  #`(#,comparison-procedure-protocol (#,parent-name.id comparison-procedure))
-	;;With parent, comparison procedure protocol undefined.
-	#f)
+	;;With parent,  comparison procedure protocol  undefined.  We just  reuse the
+	;;parent's comparison procedure.
+	#`(#,parent-name.id comparison-procedure))
     (if comparison-procedure-protocol
 	;;No  parent, comparison  procedure protocol  defined.  We  evaluate it  as a
 	;;thunk.
@@ -371,20 +372,21 @@
       #f)))
 
 (define (<parsing-results>-compose-hash-function-expr results)
-  (define parent-name.id		(<parsing-results>-parent-name        results))
+  (define parent-name.id		(<parsing-results>-parent-name   results))
   (define hash-function-protocol	(<parsing-results>-hash-function results))
   (if parent-name.id
       (if hash-function-protocol
 	  ;;With parent,  hash function protocol  defined.  We apply the  protocol to
 	  ;;the parent's function (or false).
 	  #`(#,hash-function-protocol (#,parent-name.id hash-function))
-	;;With parent, hash function protocol undefined.
-	#f)
+	;;With parent, hash function protocol  undefined.  We just reuse the parent's
+	;;hash function.
+	#`(#,parent-name.id hash-function))
     (if hash-function-protocol
 	;;No parent, hash function protocol defined.  We evaluate it as a thunk.
 	#`(#,hash-function-protocol)
-      ;;No parent, no hash function protocol undefined.
-      #f)))
+      ;;No parent, no hash function protocol.
+      #'record-hash)))
 
 
 (define (main input-form.stx)
@@ -411,7 +413,11 @@
 							  ;;Compose a non-generative UID.
 							  (string-append "vicare:record-type:"
 									 (symbol->string (syntax->datum type-name.id)))))))
-	   (%build-output results synner)))))
+	   (receive-and-return (out)
+	       (%build-output results synner)
+	     (debug-print (syntax->datum out)))
+	   ;;(%build-output results synner)
+	   ))))
 
     (_
      (synner "invalid DEFINE-CORE-RECORD-TYPE syntax use"))))
@@ -474,6 +480,9 @@
 		 MAKER-ID TYPE-PREDICATE-ID
 		 ACCESSOR-NAME ...
 		 MUTATOR-NAME ...
+		 EQUALITY-PREDICATE-ID
+		 COMPARISON-PROCEDURE-ID
+		 HASH-FUNCTION-ID
 		 VISIBLE-BINDING ...)
 	  PARENT-DEF ...
 

@@ -1010,6 +1010,7 @@
   ;;
   ;;   (?type-name ?uid ?rtd-name ?rcd-name ?parent-id
   ;;    ?constructor-id ?type-predicate-id
+  ;;    ?equality-predicate ?comparison-procedure ?hash-function
   ;;    ?methods-alist)
   ;;
   ;;Syntactic binding descriptors of  type "$core-record-type-name" are hard-coded in
@@ -1030,10 +1031,16 @@
 	 (constructor-sexp		(bless (list-ref hard-coded-sexp 5)))
 	 (destructor-sexp		#f)
 	 (type-predicate-sexp		(bless (list-ref hard-coded-sexp 6)))
-	 (equality-predicate.id		#f)
-	 (comparison-procedure.id	#f)
-	 (hash-function.id		#f)
-	 (methods-table			(%alist-ref-or-null hard-coded-sexp 7))
+	 (equality-predicate.id		(cond ((list-ref hard-coded-sexp 7)
+					       => core-prim-id)
+					      (else #f)))
+	 (comparison-procedure.id	(cond ((list-ref hard-coded-sexp 8)
+					       => core-prim-id)
+					      (else #f)))
+	 (hash-function.id		(cond ((list-ref hard-coded-sexp 9)
+					       => core-prim-id)
+					      (else #f)))
+	 (methods-table			(%alist-ref-or-null hard-coded-sexp 10))
 	 (virtual-method-signatures	'())
 	 (implemented-interfaces	'()))
     (let ((methods-table (if parent.id
