@@ -29,7 +29,7 @@
   (define (%false-or-id? obj)
     (or (identifier? obj)
 	(not (syntax->datum obj))))
-  (syntax-case stx (methods)
+  (syntax-case stx (equality-predicate comparison-procedure hash-function methods)
     ((?kwd ?type-name ?parent-name ?constructor ?predicate)
      (and (identifier? #'?type-name)
 	  (%false-or-id? #'?parent-name)
@@ -37,7 +37,16 @@
 	  (identifier? #'?predicate))
      #'(?kwd ?type-name ?parent-name ?constructor ?predicate (methods)))
 
-    ((_    ?type-name ?parent-name ?constructor ?predicate (methods (?field-name ?accessor-name) ...))
+    ((?kwd ?type-name ?parent-name ?constructor ?predicate (methods (?field-name ?accessor-name) ...))
+     #'(?kwd ?type-name ?parent-name ?constructor ?predicate
+	     (equality-predicate #f) (comparison-procedure #f) (hash-function #f)
+	     (methods (?field-name ?accessor-name) ...)))
+
+    ((_    ?type-name ?parent-name ?constructor ?predicate
+	   (equality-predicate ?equality-predicate)
+	   (comparison-procedure ?comparison-procedure)
+	   (hash-function ?hash-function)
+	   (methods (?field-name ?accessor-name) ...))
      (and (identifier? #'?type-name)
 	  (%false-or-id? #'?parent-name)
 	  (%false-or-id? #'?constructor)
@@ -54,6 +63,7 @@
 		      (quote (?type-name
 			      ($core-record-type-name
 			       . (?type-name UID TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate
+					     ?equality-predicate ?comparison-procedure ?hash-function
 					     ((?field-name . ?accessor-name) ...)))))))))
     ))
 
@@ -84,6 +94,28 @@
    (foreign-library*		library-foreign-library*)))
 
 ;;; --------------------------------------------------------------------
+
+(define-built-in-record-type <time>
+    <record>
+  make-time time?
+  (equality-predicate <time>-equality-predicate)
+  (comparison-procedure <time>-comparison-procedure)
+  (hash-function <time>-hash-function)
+  (methods
+   (second		time-second)
+   (nanosecond		time-nanosecond)))
+
+(define-built-in-record-type <epoch-time>
+    <time>
+  current-time epoch-time?
+  (equality-predicate <epoch-time>-equality-predicate)
+  (comparison-procedure <epoch-time>-comparison-procedure)
+  (hash-function <epoch-time>-hash-function)
+  (methods
+   (gmt-offset		time-gmt-offset)))
+
+
+;;;; built-in record types: expander stuff
 
 (define-built-in-record-type <expander-options>
     <record>
@@ -139,7 +171,7 @@
    (custom-data			syntax-clause-spec-custom-data)))
 
 
-;;;; object type specifications
+;;;; object type specifications: built-in record types
 
 (define-built-in-record-type <object-type-spec>
     <record>
@@ -337,7 +369,7 @@
    (union				type-signature.union)))
 
 
-;;;; object type descriptors
+;;;; built-in record types: object type descriptors
 
 (define-built-in-record-type <core-type-descriptor>
     <record>

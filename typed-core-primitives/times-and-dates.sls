@@ -35,7 +35,13 @@
 
 (section
 
-(declare-type-predicate time?	<time>)
+(declare-core-rtd <time>-rtd)
+(declare-core-rcd <time>-rcd)
+(declare-type-predicate time?		<time>)
+
+(declare-core-rtd <epoch-time>-rtd)
+(declare-core-rcd <epoch-time>-rcd)
+(declare-type-predicate epoch-time?	<epoch-time>)
 
 ;;; --------------------------------------------------------------------
 ;;; constructors
@@ -43,45 +49,39 @@
 (declare-core-primitive make-time
     (safe)
   (signatures
-   ((<exact-integer> <exact-integer>)	=> (<time>)))
+   ((<fixnum> <fixnum>)				=> (<time>))
+   ((<exact-integer> <fixnum> <fixnum>)		=> (<time>)))
   (attributes
    ((_ _)		effect-free result-true)))
 
 (declare-core-primitive current-time
     (safe)
   (signatures
-   (()			=> (<time>)))
+   (()			=> (<epoch-time>)))
   (attributes
    (()			effect-free result-true)))
-
-(declare-core-primitive time-from-now
-    (safe)
-  (signatures
-   ((<time>)		=> (<time>)))
-  (attributes
-   ((_)			effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; accessors
 
-(declare-core-primitive time-second
+(declare-core-primitive time-seconds
     (safe)
   (signatures
    ((<time>)		=> (<exact-integer>)))
   (attributes
    ((_)			effect-free result-true)))
 
-(declare-core-primitive time-nanosecond
+(declare-core-primitive time-nanoseconds
     (safe)
   (signatures
-   ((<time>)		=> (<exact-integer>)))
+   ((<time>)		=> (<fixnum>)))
   (attributes
    ((_)			effect-free result-true)))
 
-(declare-core-primitive time-gmt-offset
+(declare-core-primitive epoch-time-gmt-offset
     (safe)
   (signatures
-   ((<time>)		=> (<exact-integer>)))
+   ((<epoch-time>)	=> (<fixnum>)))
   (attributes
    ((_)			effect-free result-true)))
 

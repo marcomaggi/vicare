@@ -697,15 +697,6 @@
    (source			reader-annotation-source)
    (textual-position		reader-annotation-textual-position)))
 
-(define-scheme-type <time>
-    <struct>
-  (constructor current-time)
-  (type-predicate time?)
-  (equality-predicate struct=?)
-  (methods
-   (second		time-second)
-   (nanosecond		time-nanosecond)))
-
 ;;; --------------------------------------------------------------------
 ;;; unique objects
 

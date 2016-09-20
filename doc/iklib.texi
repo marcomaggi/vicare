@@ -9517,7 +9517,7 @@ comparison procedures.
 
 If the record--type has a parent: the protocol function is applied to
 the comparison procedure of the parent (or @false{} if the parent has no
-equality predicate) and the resulting value must be a function, which
+comparison procedure) and the resulting value must be a function, which
 becomes the comparison procedure of the record--type.
 
 If the record--type has no parent: the protocol function is called as a
@@ -18802,32 +18802,41 @@ return value from the foreign function and the value of the C variable
 @section Basic time and date functions
 
 
+@menu
+* iklib time time::             Time spans object type.
+* iklib time epoch::            Time spans since the Epoch.
+* iklib time date::             Date functions.
+@end menu
+
+@c page
+@node iklib time time
+@subsection Time spans object type
+
+
 The following bindings are exported by the library @library{vicare}.
 
 
-@deftypefun @aclass{time} current-time
-Return an instance of @class{time} representing the current time as
-determined by @cfunc{gettimeofday}: this is the elapsed time since the
-Epoch.
-@end deftypefun
+@deftp {Record Type} @aclass{time}
+@deftpx {Parent Type} @aclass{record}
+Type name time objects.  It can represent both absolute times (typically
+elapsed times since the Epoch) and time spans relative to an arbitrary
+origin.  It has the following public fields:
+
+@table @code
+@item (immutable @{seconds @aclass{exact-integer}@})
+The number of seconds.
+
+@item (immutable @{nanoseconds @aclass{fixnum}@})
+The number of nanoseconds.
+@end table
+@end deftp
 
 
-@deftypefun @aclass{time} time-from-now @{@var{delta} @aclass{time}@}
-Return a @class{time} object representing the current time plus the
-@class{time} object @var{delta}.
-@end deftypefun
-
-
-@defun make-time @var{seconds} @var{nanoseconds}
+@deftypefun @aclass{time} make-time @bracearg{seconds,exact-integer} @bracearg{nanoseconds, fixnum}
 Build and return a new @class{time} object with microseconds resolution.
 If @var{nanoseconds} exceeds @math{1000000} its value is normalised and
 the excess added to @var{seconds}.
-@end defun
-
-
-@deftp {Object Time} @aclass{time}
-Type name identifier of disjoint time objects.
-@end deftp
+@end deftypefun
 
 
 @defun time? @var{obj}
@@ -18836,72 +18845,106 @@ Return @true{} if @var{obj} is a @class{time} object returned by
 @end defun
 
 
-@defun time-second @var{time}
-@defunx time-nanosecond @var{time}
-Accessors, returning exact integers, for the seconds and nanoseconds
-components of the time objects returned by @func{current-time}.
-@end defun
-
-
-@defun time-gmt-offset @var{time}
-Return the @acronym{GMT} offset in seconds of the @var{time} object
-returned by @func{current-time}, as determined ty @cfunc{gmtime_r}.
-@end defun
-
-
-@defun date-string
-Return a string representing the current date in the simple format:
-year, month, day.
-@end defun
+@deftypefun @aclass{exact-integer} time-seconds @bracearg{time, time}
+@deftypefunx @aclass{fixnum} time-nanoseconds @bracearg{time, time}
+Accessors for the fields of @class{time} objects.
+@end deftypefun
 
 @c ------------------------------------------------------------
 
 @subsubheading Time operations
 
 
-@defun time-addition @vari{time} @varii{time}
+@deftypefun @aclass{time} time-addition @braceargi{time, time} @braceargii{time, time}
 Compute the addition between two times: @code{@vari{time} +
 @varii{time}} and return a time struct representing it.
-@end defun
+@end deftypefun
 
 
-@defun time-difference @vari{time} @varii{time}
+@deftypefun @aclass{time} time-difference @braceargi{time, time} @braceargii{time, time}
 Compute the difference between two times: @code{@vari{time} -
 @varii{time}} and return a time struct representing it.
-@end defun
+@end deftypefun
 
 @c ------------------------------------------------------------
 
 @subsubheading Time comparison
 
 
-@defun time=? @vari{time} @varii{time}
+@deftypefun @aclass{boolean} time=? @braceargi{time, time} @braceargii{time, time}
 Return @true{} if the time objects are equal, else return @false{}.
-@end defun
+@end deftypefun
 
 
-@defun time<? @vari{time} @varii{time}
+@deftypefun @aclass{boolean} time<? @braceargi{time, time} @braceargii{time, time}
 Return @true{} if the @vari{time} is less than @varii{time}, else return
 @false{}.
-@end defun
+@end deftypefun
 
 
-@defun time<=? @vari{time} @varii{time}
+@deftypefun @aclass{boolean} time<=? @braceargi{time, time} @braceargii{time, time}
 Return @true{} if the @vari{time} is less than or equal to @varii{time},
 else return @false{}.
-@end defun
+@end deftypefun
 
 
-@defun time>? @vari{time} @varii{time}
+@deftypefun @aclass{boolean} time>? @braceargi{time, time} @braceargii{time, time}
 Return @true{} if the @vari{time} is greater than @varii{time}, else
 return @false{}.
-@end defun
+@end deftypefun
 
 
-@defun time>=? @vari{time} @varii{time}
+@deftypefun @aclass{boolean} time>=? @braceargi{time, time} @braceargii{time, time}
 Return @true{} if the @vari{time} is greater than or equal to
 @varii{time}, else return @false{}.
-@end defun
+@end deftypefun
+
+@c page
+@node iklib time epoch
+@subsection Time spans since the Epoch
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@deftp {Record Type} @aclass{epoch-time}
+@deftpx {Parent Type} @aclass{time}
+Type name Epoch time objects.  It represents the absolute time since the
+Epoch.  It inherits the fields of @class{time} and, in addition, it has
+the following public fields:
+
+@table @code
+@item gmt-offset
+A @class{fixnum} representing the @acronym{GMT} offset in seconds, as
+determined by @cfunc{gmtime_r}.
+@end table
+@end deftp
+
+
+@deftypefun @aclass{epoch-time} current-time
+Return an instance of @class{epoch-time} representing the current time
+as determined by @cfunc{gettimeofday}: this is the elapsed time since
+the Epoch expressed in the timezone selected through the operating
+system facilities.
+@end deftypefun
+
+
+@deftypefun @aclass{fixnum} epoch-time-gmt-offset @bracearg{et, epoch-time}
+Interpret @var{epoch-time} as the time since the Epoch expressed in the
+timezone selected through the operating system facilities.  Return the
+@acronym{GMT} offset in seconds of the @var{epoch-time} object, as
+determined by @cfunc{gmtime_r}.
+@end deftypefun
+
+@c page
+@node iklib time date
+@subsection Date functions
+
+
+@deftypefun @aclass{string} date-string
+Return a string representing the current date in the simple format:
+year, month, day.
+@end deftypefun
 
 @c page
 @node iklib readline

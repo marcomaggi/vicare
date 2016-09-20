@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -35,37 +35,31 @@
 
 (parametrise ((check-test-name	'base))
 
-  (when #f
-    (let ((T (current-time))
-	  (N (time-from-now (make-time 123 123000))))
+  (when #t
+    (let ((T (current-time)))
       (check-pretty-print (list T
-				(time-second     T)
-				(time-nanosecond T)
-				(time-gmt-offset T)
+				(time-seconds     T)
+				(time-nanoseconds T)
+				(epoch-time-gmt-offset T)
 				(date-string)))
-      (check-pretty-print T)
-      (check-pretty-print N)))
+      (check-pretty-print T)))
 
   (check
       (time? (current-time))
     => #t)
 
   (check
-      (time? (time-from-now (make-time 123 123000)))
-    => #t)
-
-  (check
-      (let ((s (time-second (current-time))))
+      (let ((s (time-seconds (current-time))))
 	(or (fixnum? s) (bignum? s)))
     => #t)
 
   (check
-      (let ((s (time-nanosecond (current-time))))
+      (let ((s (time-nanoseconds (current-time))))
 	(or (fixnum? s) (bignum? s)))
     => #t)
 
   (check
-      (fixnum? (time-gmt-offset (current-time)))
+      (fixnum? (epoch-time-gmt-offset (current-time)))
     => #t)
 
   (check
@@ -99,6 +93,67 @@
 		       (make-time  20  40))
     (=> time=?)
     (make-time 80 160))
+
+;;; --------------------------------------------------------------------
+;;; hash
+
+  (check
+      (hash (make-time 123 456))
+    => 507)
+
+  (check
+      (hash (make-time 123 897))
+    => 1019)
+
+  (check-for-true
+   (non-negative-fixnum? (hash (current-time))))
+
+;;; --------------------------------------------------------------------
+;;; equality predicate
+
+  (check-for-true	(equal? (make-time 1 2) (make-time 1 2)))
+  (check-for-false	(equal? (make-time 1 2) (make-time 9 2)))
+  (check-for-false	(equal? (make-time 1 2) (make-time 1 9)))
+
+  (check-for-true	(let ((T (current-time)))
+			  (equal? T T)))
+  (check-for-false	(equal? (current-time) (current-time)))
+
+;;; --------------------------------------------------------------------
+;;; comparison procedure
+
+  (let ((compar-time (comparison-procedure <time>)))
+
+    (check (compar-time (make-time 1 2) (make-time 1 2))	=> 0)
+
+    (check (compar-time (make-time 1 2) (make-time 1 3))	=> -1)
+    (check (compar-time (make-time 1 3) (make-time 1 2))	=> +1)
+
+    (check (compar-time (make-time 2 2) (make-time 1 2))	=> +1)
+    (check (compar-time (make-time 1 2) (make-time 2 2))	=> -1)
+
+    (void))
+
+  (let ((compar-time (comparison-procedure <epoch-time>)))
+
+    (check
+	(let ((T (current-time)))
+	  (compar-time T T))
+      => 0)
+
+    (check
+	(let* ((T1 (current-time))
+	       (T2 (current-time)))
+	  (compar-time T1 T2))
+      => -1)
+
+    (check
+	(let* ((T1 (current-time))
+	       (T2 (current-time)))
+	  (compar-time T2 T1))
+      => +1)
+
+    (void))
 
   #t)
 

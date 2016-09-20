@@ -122,9 +122,9 @@
 	  define-struct)
     (prefix (only (vicare)
 		  current-time
-		  time-nanosecond
-		  time-second
-		  time-gmt-offset)
+		  time-nanoseconds
+		  time-seconds
+		  epoch-time-gmt-offset)
 	    host:)
     (srfi :6 basic-string-ports))
 
@@ -134,7 +134,7 @@
 ;;;Vicare  uses   gettimeofday()  which   gives  microseconds,   so  our
 ;;;resolution is 1000 nanoseconds.
 (define host:time-resolution 1000)
-(define host:timezone-offset (host:time-gmt-offset (host:current-time)))
+(define host:timezone-offset (host:epoch-time-gmt-offset (host:current-time)))
 
 
 ;;;; helpers
@@ -153,8 +153,8 @@
 (define (my:time-helper current-time type proc)
   (let ((x (current-time)))
     (make-time type
-	       (host:time-nanosecond x)
-	       (proc (host:time-second x)))))
+	       (host:time-nanoseconds x)
+	       (proc (host:time-seconds x)))))
 
 (define (my:leap-second-helper s)
   (+ s (tm:leap-second-delta s)))
@@ -370,8 +370,8 @@
 
 (define (tm:get-time-of-day)
   (let* ((T         (host:current-time))
-	 (secs      (host:time-second T))
-	 (millisecs (* #e1e6 (host:time-nanosecond T))))
+	 (secs      (host:time-seconds T))
+	 (millisecs (* #e1e6 (host:time-nanoseconds T))))
     (values secs
 	    (let ((r (remainder millisecs 1000)))
 	      (if (negative? r) (+ 1000 r) r)))))

@@ -9,7 +9,7 @@
 	functions in this module,  see the official Vicare documentation
 	in Texinfo format.
 
-  Copyright (C) 2011, 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008	Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -4840,16 +4840,35 @@ ikrt_posix_nanosleep (ikptr_t s_secs, ikptr_t s_nsecs, ikpcb_t * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr_t
-ikrt_current_time (ikptr_t t)
+ikrt_current_time (ikptr_t s_vec)
 {
 #ifdef HAVE_GETTIMEOFDAY
-  struct timeval s;
-  gettimeofday(&s, 0);
+  struct timespec	s;
+  long int		megaseconds, seconds, nanoseconds, gmt_offset;
+  //gettimeofday(&s, NULL);
+  clock_gettime(CLOCK_REALTIME, &s);
   /* this will break in 8,727,224 years if we stay in 32-bit ptrs */
-  IK_FIELD(t, 0) = IK_FIX(s.tv_sec / 1000000);
-  IK_FIELD(t, 1) = IK_FIX(s.tv_sec % 1000000);
-  IK_FIELD(t, 2) = IK_FIX(s.tv_usec);
-  return t;
+  megaseconds	= s.tv_sec / 1000000;
+  seconds	= s.tv_sec % 1000000;
+  nanoseconds	= s.tv_nsec;
+  {
+    /* This is  the number of  seconds since  the Epoch in  the timezone
+       configured by the operating system facilities. */
+    time_t	clock		= megaseconds * 1000000 + seconds;
+    /* This is the broken-down time in the GMT timezone. */
+    struct tm	m;
+    /* This  is  the number  of  seconds  since  the  Epoch in  the  GMT
+       timezone. */
+    time_t	gmtclock;
+    gmtime_r(&s.tv_sec, &m);
+    gmtclock	= mktime(&m);
+    gmt_offset	= clock - gmtclock;
+  }
+  IK_ITEM(s_vec, 0) = IK_FIX(megaseconds);
+  IK_ITEM(s_vec, 1) = IK_FIX(seconds);
+  IK_ITEM(s_vec, 2) = IK_FIX(nanoseconds);
+  IK_ITEM(s_vec, 3) = IK_FIX(gmt_offset);
+  return s_vec;
 #else
   feature_failure(__func__);
 #endif
@@ -4858,10 +4877,17 @@ ikptr_t
 ikrt_gmt_offset (ikptr_t t)
 {
 #if ((defined HAVE_GMTIME_R) && (defined HAVE_MKTIME))
+  /* This  is the  number of  seconds since  the Epoch  in the  timezone
+     configured by the operating system facilities. */
   time_t	clock;
+  /* This is the broken-down time in the GMT timezone. */
   struct tm	m;
+  /* This  is  the  number  of  seconds  since  the  Epoch  in  the  GMT
+     timezone. */
   time_t	gmtclock;
-  clock	   = IK_UNFIX(IK_FIELD(t, 0)) * 1000000 + IK_UNFIX(IK_FIELD(t, 1));
+  clock	   =
+    IK_UNFIX(IK_FIELD(t, 0)) * 1000000 +	/* megasecs * 1000000 = secs */
+    IK_UNFIX(IK_FIELD(t, 1));			/* secs */
   gmtime_r(&clock, &m);
   gmtclock = mktime(&m);
   return IK_FIX(clock - gmtclock);
