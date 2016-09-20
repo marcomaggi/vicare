@@ -574,6 +574,18 @@ Revised^6 Report on the algorithmic language Scheme
 @{@var{\ONE\} @aclass{\TWO\}@}
 @end macro
 
+@macro braceargi {ONE, TWO}
+@{@vari{\ONE\} @aclass{\TWO\}@}
+@end macro
+
+@macro braceargii {ONE, TWO}
+@{@varii{\ONE\} @aclass{\TWO\}@}
+@end macro
+
+@macro braceargiii {ONE, TWO}
+@{@variii{\ONE\} @aclass{\TWO\}@}
+@end macro
+
 @c ------------------------------------------------------------------------
 
 @macro lexenv{}
