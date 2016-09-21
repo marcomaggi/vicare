@@ -1788,7 +1788,9 @@
 
 	  ;;An identifier starting with a symbol, example: .doit
 	  ((and (port-in-vicare-mode? port)
-		(initial? ch))
+		(or (initial? ch)
+		    ($char= #\+ ch)
+		    ($char= #\- ch)))
 	   (get-char-and-track-textual-position port)
 	   (finish-tokenisation-of-identifier (cons ch '(#\.)) port #t))
 
