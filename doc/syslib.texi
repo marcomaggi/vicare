@@ -60,8 +60,8 @@ Return @true{} if the arguments are equal; otherwise return @false{}.
 
 
 @defun {$boolean!=} @vari{bool} @varii{bool}
-Return @true{} if the arguments are different; otherwise return
-@false{}.
+The arguments must be booleans.  Return @true{} if the arguments are
+different; otherwise return @false{}.
 @end defun
 
 
@@ -151,8 +151,8 @@ according to @func{$string=}; otherwise return @false{}.
 
 
 @defun $symbol!= @vari{sym} @varii{sym}
-Return @true{} if the symbol arguments have different pretty string name
-according to @func{$string!=}; otherwise return @false{}.
+The arguments must be symbols.  Return @true{} if the arguments are
+different; otherwise return @false{}.
 @end defun
 
 
@@ -954,9 +954,10 @@ Perform comparison operations.
 
 
 @deffn {Unsafe Operation} $fl!= @vari{fl} @varii{fl} @var{fl} @dots{}
-Return true if the operands are all different, no two operands are
-equal; otherwise return @false{}.  This operation does @strong{not}
-distinguish between @code{+0.0} and @code{-0.0}.
+The arguments must be flonums.  Return @true{} if the arguments are all
+different: no two arguments are equal; otherwise return @false{}.  When
+applied to a single argument: return @false{}.  This operation does
+@strong{not} distinguish between @code{+0.0} and @code{-0.0}.
 @end deffn
 
 
@@ -5399,7 +5400,8 @@ Evaluate to true if the operands are equal.
 
 
 @deffn {Unsafe Operation} $char!= @vari{ch} @varii{ch}
-Evaluate to true if the operands are different.
+The arguments must be characters.  Return @true{} if the arguments are
+different; otherwise return @false{}.
 @end deffn
 
 
@@ -6759,8 +6761,8 @@ otherwise return @false{}.
 
 
 @defun $bytevector!= @vari{bv} @varii{bv}
-Return @true{} if the bytevector arguments are different; otherwise
-return @false{}.
+The arguments must be bytevectors.  Return @true{} if the arguments are
+different; otherwise return @false{}.
 @end defun
 
 
@@ -7487,8 +7489,8 @@ otherwise return @false{}.
 
 
 @defun $string!=? @vari{str} @varii{str}
-Return @true{} if all the string arguments are different; otherwise
-return @false{}.
+The arguments must be booleans.  Return @true{} if the arguments are
+different; otherwise return @false{}.
 @end defun
 
 
@@ -7743,8 +7745,8 @@ Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
 
 
 @defun $pointer!=? @vari{ptr} @varii{ptr}
-Return @true{} if all the pointer arguments are different; otherwise
-return @false{}.
+The arguments must be pointers.  Return @true{} if the arguments are
+different; otherwise return @false{}.
 @end defun
 
 
