@@ -178,18 +178,6 @@
 
 ;;; --------------------------------------------------------------------
 
-;; (define* (time-seconds {T time?})
-;;   (+ (* (time-megasecs T) #e1e6)
-;;      (time-secs T)))
-
-;; (define* (time-ratnum {T time?})
-;;   (+ (* (time-megasecs T) #e1e6)
-;;      (time-secs T)
-;;      (* (time-nanoseconds T) #e1e-9)))
-
-;; (define* (time-flonum {T time?})
-;;   (inexact (time-ratnum T)))
-
 (define-list-of-type-predicate list-of-times? time?)
 
 
