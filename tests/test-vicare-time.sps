@@ -444,6 +444,15 @@
 
 (parametrise ((check-test-name	'oop))
 
+;;; accessors
+
+  (check
+      (let ((T (make-time 1 2)))
+	(values (.seconds T)
+		(.nanoseconds T)
+		(.ratnum T)
+		(.flonum T)))
+    => 1 2 500000001/500000000 1.0000000020000002)
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics

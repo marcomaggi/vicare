@@ -162,21 +162,33 @@
       (display " nsecs=" port) (display (time-nanoseconds T) port)
       (display "]" port)))
 
+  (method (seconds {T time?})
+    (+ (* (time-megasecs T) #e1e6)
+       (time-secs T)))
+
+  (method (ratnum {T time?})
+    (+ (* (time-megasecs T) #e1e6)
+       (time-secs T)
+       (* (time-nanoseconds T) #e1e-9)))
+
+  (method (flonum {T time?})
+    (inexact (time-ratnum T)))
+
   #| end of DEFINE-RECORD-TYPE |# )
 
 ;;; --------------------------------------------------------------------
 
-(define* (time-seconds {T time?})
-  (+ (* (time-megasecs T) #e1e6)
-     (time-secs T)))
+;; (define* (time-seconds {T time?})
+;;   (+ (* (time-megasecs T) #e1e6)
+;;      (time-secs T)))
 
-(define* (time-ratnum {T time?})
-  (+ (* (time-megasecs T) #e1e6)
-     (time-secs T)
-     (* (time-nanoseconds T) #e1e-9)))
+;; (define* (time-ratnum {T time?})
+;;   (+ (* (time-megasecs T) #e1e6)
+;;      (time-secs T)
+;;      (* (time-nanoseconds T) #e1e-9)))
 
-(define* (time-flonum {T time?})
-  (inexact (time-ratnum T)))
+;; (define* (time-flonum {T time?})
+;;   (inexact (time-ratnum T)))
 
 (define-list-of-type-predicate list-of-times? time?)
 

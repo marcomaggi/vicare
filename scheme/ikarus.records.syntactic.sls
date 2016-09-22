@@ -87,6 +87,7 @@
     (make-syntax-clause-spec #'protocol				0 1      1 1      '() '())
     (make-syntax-clause-spec #'super-protocol			0 1      1 1      '() '())
     (make-syntax-clause-spec #'fields				0 +inf.0 1 +inf.0 '() '())
+    (make-syntax-clause-spec #'method				0 +inf.0 2 +inf.0 '() '())
     ;;
     (make-syntax-clause-spec #'custom-printer			0 1      1 1      '() '())
     (make-syntax-clause-spec #'type-predicate			0 1      1 1      '() '())
@@ -186,6 +187,44 @@
 	  #| end of BEGIN |# ))))
 
 
+;;;; record-type definitions: method specification
+
+(define-record-type <method-spec>
+  (fields
+    (immutable	method-name-id)
+		;A syntactic identifier representing the method name.
+    (immutable	formals-stx)
+		;A  syntax  object representing  the  method  formals for  a  DEFINE*
+		;definition.
+    (immutable	body-stx)
+		;A syntax object representing a list of body forms.
+    (mutable	procname)
+		;Initialised  to  false.   A syntactic  identifier  representing  the
+		;method's procedure name.
+    #| end of FIELDS |# )
+
+  (protocol
+    (lambda (make-record)
+      (named-lambda make-<method-spec> (method-name.id formals.stx body*.stx)
+	(make-record method-name.id formals.stx body*.stx #f))))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define (<method-spec>-compute-procname! spec type-name.id)
+  (<method-spec>-procname-set! spec (mkname "" type-name.id
+					    (string-append "-"
+							   (symbol->string
+							    (syntax->datum
+							     (<method-spec>-method-name-id spec)))))))
+
+(define (<method-spec>-compose-definition spec)
+  (with-syntax
+      ((PROCNAME	(<method-spec>-procname spec))
+       (FORMALS		(<method-spec>-formals-stx spec))
+       ((BODY ...)	(<method-spec>-body-stx spec)))
+    #`(define* (PROCNAME . FORMALS) BODY ...)))
+
+
 ;;;; record-type definitions: clauses parsing results
 
 (define-record-type <parsing-results>
@@ -217,6 +256,8 @@
 		;A boolean.  True if the accessor and mutator syntactic bindings must
 		;strip angular parentheses from the record-type name.
     (mutable	field-spec*)
+		;A possibly empty list of "<field-spec>" instances.
+    (mutable	method-spec*)
 		;A possibly empty list of "<field-spec>" instances.
     (mutable	protocol)
 		;False or a syntax object  representing an expression which, expanded
@@ -256,6 +297,7 @@
 		     #f	 ;define-type-descriptors
 		     #f	 ;strip-angular-parentheses
 		     '() ;field-spec*
+		     '() ;method-spec*
 		     #f	 ;protocol
 		     #f	 ;super-protocol
 		     #f	 ;custom-printer
@@ -320,11 +362,15 @@
 
 (define (<parsing-results>-compose-method-retriever results)
   (with-syntax
-      (((FIELD-NAME ...)	(map <field-spec>-name        (<parsing-results>-field-spec* results)))
-       ((METHOD-NAME ...)	(map <field-spec>-method-name (<parsing-results>-field-spec* results))))
+      (((FIELD-NAME		...) (map <field-spec>-name		(<parsing-results>-field-spec*  results)))
+       ((FIELD-METHOD-NAME	...) (map <field-spec>-method-name	(<parsing-results>-field-spec*  results)))
+       ((METHOD-NAME		...) (map <method-spec>-method-name-id	(<parsing-results>-method-spec* results)))
+       ((METHOD-PROCNAME	...) (map <method-spec>-procname	(<parsing-results>-method-spec* results))))
     #'(lambda (field-name)
 	(case field-name
-	  ((FIELD-NAME)	METHOD-NAME)
+	  ((FIELD-NAME)		FIELD-METHOD-NAME)
+	  ...
+	  ((METHOD-NAME)	METHOD-PROCNAME)
 	  ...
 	  (else #f)))))
 
@@ -431,6 +477,9 @@
 	      (<field-spec>-compute-accessor-name! spec stripped-type-name.id)
 	      (<field-spec>-compute-mutator-name!  spec stripped-type-name.id))
     (<parsing-results>-field-spec* results))
+  (for-each (lambda (spec)
+	      (<method-spec>-compute-procname! spec stripped-type-name.id))
+    (<parsing-results>-method-spec* results))
   (with-syntax
       ((TYPE-NAME		type-name.id)
        (UID			(<parsing-results>-uid results))
@@ -452,6 +501,7 @@
 						  (cons (<field-spec>-mutator-name field-spec) knil)
 						knil))
 				  '() (<parsing-results>-field-spec* results)))
+       ((METHOD-PROCNAME ...)	(map <method-spec>-procname (<parsing-results>-method-spec* results)))
        (FIRST-FIELD-OFFSET-ID	(mkname "" type-name.id "-first-field-offset"))
        (CUSTOM-PRINTER		(<parsing-results>-custom-printer results))
        (EQUALITY-PREDICATE-ID	(mkname "" type-name.id "-equality-predicate"))
@@ -468,6 +518,7 @@
 					       (<field-spec>-compose-field-accessor-and-mutator
 						spec #'FIRST-FIELD-OFFSET-ID #'TYPE-PREDICATE-ID))
 					  (<parsing-results>-field-spec* results)))
+	 ((METHOD-DEFS ...)		(map <method-spec>-compose-definition (<parsing-results>-method-spec* results)))
 	 ((PARENT-DEF ...)		(<parsing-results>-compose-parent-definitions results #'PARENT-RTD-ID #'PARENT-SUPER-RCD-ID))
 	 (SUPER-PROTOCOL-EXPR		(or (<parsing-results>-super-protocol results) #'PROTOCOL-EXPR))
 	 (TYPE-PREDICATE-EXPR		(<parsing-results>-compose-type-predicate            results #'RTD-ID))
@@ -479,6 +530,7 @@
 		 MAKER-ID TYPE-PREDICATE-ID
 		 ACCESSOR-NAME ...
 		 MUTATOR-NAME ...
+		 METHOD-PROCNAME ...
 		 EQUALITY-PREDICATE-ID
 		 COMPARISON-PROCEDURE-ID
 		 HASH-FUNCTION-ID
@@ -490,13 +542,14 @@
 	  (define HASH-FUNCTION-ID		HASH-FUNCTION-EXPR)
 
 	  (define RTD-ID
-	    ($make-record-type-descriptor-ex (quote TYPE-NAME) PARENT-RTD-ID
-					     (quote UID) GENERATIVE SEALED OPAQUE
-					     (quote FIELDS-VEC) (quote NORMALISED-FIELDS-VEC)
-					     #f ;destructor
-					     CUSTOM-PRINTER
-					     EQUALITY-PREDICATE-ID COMPARISON-PROCEDURE-ID HASH-FUNCTION-ID
-					     METHOD-RETRIEVER METHOD-RETRIEVER IMPLEMENTED-INTERFACES))
+	    (let ((method-retriever METHOD-RETRIEVER))
+	      ($make-record-type-descriptor-ex (quote TYPE-NAME) PARENT-RTD-ID
+					       (quote UID) GENERATIVE SEALED OPAQUE
+					       (quote FIELDS-VEC) (quote NORMALISED-FIELDS-VEC)
+					       #f ;destructor
+					       CUSTOM-PRINTER
+					       EQUALITY-PREDICATE-ID COMPARISON-PROCEDURE-ID HASH-FUNCTION-ID
+					       method-retriever method-retriever IMPLEMENTED-INTERFACES)))
 
 	  (define RCD-ID
 	    ($make-record-constructor-descriptor RTD-ID PARENT-SUPER-RCD-ID PROTOCOL-EXPR))
@@ -520,6 +573,7 @@
 	    ($struct-ref RTD-ID 3))
 
 	  FIELD-DEFS ...
+	  METHOD-DEFS ...
 
 	  (define-syntax TYPE-NAME
 	    (lambda (stx)
@@ -575,6 +629,7 @@
      ((protocol)			%process-clause/protocol)
      ((super-protocol)			%process-clause/super-protocol)
      ((fields)				%process-clause/fields)
+     ((method)				%process-clause/method)
      ;;
      ((custom-printer)			%process-clause/custom-printer)
      ((type-predicate)			%process-clause/type-predicate)
@@ -793,6 +848,36 @@
        (synner "invalid field specification" field-spec.stx))))
 
   #| end of module: %PROCESS-CLAUSE/FIELDS |# )
+
+
+(module (%process-clause/method)
+
+  (define (%process-clause/method results clause-spec args)
+    ;;This clause can be present multiple times.   Each input clause must have one of
+    ;;the formats:
+    ;;
+    ;;   (method (?who . ?formals) ?body0 ?body ...)
+    ;;
+    ;;and we expect ARGS to have the format:
+    ;;
+    ;;   #(#((?who . ?formals) ?body0 ?body ...) ...)
+    ;;
+    (<parsing-results>-method-spec*-set!
+     results (vector-fold-left
+		 (lambda (knil arg)
+		   (cons (%process-method arg) knil))
+	       '() args)))
+
+  (define (%process-method vector.stx)
+    (syntax-case vector.stx ()
+      (#((?method-name . ?formals) ?body0 ?body ...)
+       (identifier? #'?method-name)
+       (make-<method-spec> #'?method-name #'?formals #'(?body0 ?body ...)))
+
+      (#(?stuff ...)
+       (synner "invalid method specification" #'(method ?stuff ...)))))
+
+  #| end of module |# )
 
 
 (define (%process-clause/custom-printer results clause-spec args)
