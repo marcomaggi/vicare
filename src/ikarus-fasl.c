@@ -746,7 +746,7 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     if (DEBUG_FASL) ik_debug_message("close %d: bignum object", --object_count);
     return s_bn;
   }
-  else if (c == 'i') {
+  else if (c == 'i') { /* compnum or flonum object */
     if (DEBUG_FASL) ik_debug_message("open %d: complex number object", object_count++);
     ikptr_t	s_real = do_read(pcb, p);
     ikptr_t	s_imag = do_read(pcb, p);
@@ -767,6 +767,21 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     }
     if (DEBUG_FASL) ik_debug_message("close %d: complex number object", --object_count);
     return s_cmp;
+  }
+  else if (c == 'r') { /* ratnum object */
+    if (DEBUG_FASL) ik_debug_message("open %d: ratnum number object", object_count++);
+    ikptr_t	s_denominator	= do_read(pcb, p);
+    ikptr_t	s_numerator	= do_read(pcb, p);
+    ikptr_t	s_ratnum;
+    s_ratnum = ik_unsafe_alloc(pcb, ratnum_size) | vector_tag;
+    IK_RATNUM_TAG(s_ratnum) = ratnum_tag;
+    IK_RATNUM_NUM(s_ratnum) = s_numerator;
+    IK_RATNUM_DEN(s_ratnum) = s_denominator;
+    if (put_mark_index) {
+      p->marks[put_mark_index] = s_ratnum;
+    }
+    if (DEBUG_FASL) ik_debug_message("close %d: ratnum number object", --object_count);
+    return s_ratnum;
   } else {
     ik_abort("invalid type '%c' (0x%02x) found in fasl file", c, c);
     return IK_VOID_OBJECT;
