@@ -413,11 +413,10 @@
 							  ;;Compose a non-generative UID.
 							  (string-append "vicare:record-type:"
 									 (symbol->string (syntax->datum type-name.id)))))))
-	   (receive-and-return (out)
-	       (%build-output results synner)
-	     (debug-print (syntax->datum out)))
-	   ;;(%build-output results synner)
-	   ))))
+	   ;; (receive-and-return (out)
+	   ;;     (%build-output results synner)
+	   ;;   (debug-print (syntax->datum out)))
+	   (%build-output results synner)))))
 
     (_
      (synner "invalid DEFINE-CORE-RECORD-TYPE syntax use"))))

@@ -57,6 +57,7 @@
 (declare-core-primitive make-time
     (safe)
   (signatures
+   ((T:exact-integer T:exact-integer)			=> (T:time))
    ((T:exact-integer T:exact-integer T:exact-integer)	=> (T:time)))
   (attributes
    ((_ _)		effect-free result-true)))
@@ -88,7 +89,7 @@
 (declare-core-primitive epoch-time-gmt-offset
     (safe)
   (signatures
-   ((T:time)		=> (T:exact-integer)))
+   (()			=> (T:exact-integer)))
   (attributes
    ((_)			effect-free result-true)))
 
@@ -101,11 +102,14 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((T:time T:time)	=> (T:boolean)))
+		    ((T:time)				=> (T:boolean))
+		    ((T:time T:time)			=> (T:boolean))
+		    ((T:time T:time T:time . T:time)	=> (T:boolean)))
 		   (attributes
 		    ((_ _)		effect-free))))
 		)))
   (declare time=?)
+  (declare time!=?)
   (declare time<?)
   (declare time>?)
   (declare time<=?)
@@ -121,7 +125,9 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((T:time T:time)	=> (T:time)))
+		    ((T:time)				=> (T:time))
+		    ((T:time T:time)			=> (T:time))
+		    ((T:time T:time T:time . T:time)	=> (T:time)))
 		   (attributes
 		    ((_ _)		effect-free))))
 		)))

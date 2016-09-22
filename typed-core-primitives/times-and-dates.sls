@@ -78,12 +78,51 @@
   (attributes
    ((_)			effect-free result-true)))
 
+(declare-core-primitive time-real
+    (safe)
+  (signatures
+   ((<time>)		=> (<real>)))
+  (attributes
+   ((_)			effect-free result-true)))
+
 (declare-core-primitive epoch-time-gmt-offset
     (safe)
   (signatures
-   ((<epoch-time>)	=> (<fixnum>)))
+   (()			=> (<fixnum>)))
   (attributes
    ((_)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive <time>-equality-predicate
+    (safe)
+  (signatures
+   ((<time> <time>)		=> (<boolean>))))
+
+(declare-core-primitive <time>-comparison-procedure
+    (safe)
+  (signatures
+   ((<time> <time>)		=> (<fixnum>))))
+
+(declare-core-primitive <time>-hash-function
+    (safe)
+  (signatures
+   ((<time>)			=> (<non-negative-fixnum>))))
+
+(declare-core-primitive <epoch-time>-equality-predicate
+    (safe)
+  (signatures
+   ((<epoch-time> <epoch-time>)		=> (<boolean>))))
+
+(declare-core-primitive <epoch-time>-comparison-procedure
+    (safe)
+  (signatures
+   ((<epoch-time> <epoch-time>)		=> (<fixnum>))))
+
+(declare-core-primitive <epoch-time>-hash-function
+    (safe)
+  (signatures
+   ((<epoch-time>)			=> (<non-negative-fixnum>))))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -94,11 +133,12 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((<time> <time>)	=> (<boolean>)))
+		    ((nelist-of <time>)		=> (<boolean>)))
 		   (attributes
-		    ((_ _)		effect-free))))
+		    (_				effect-free))))
 		)))
   (declare time=?)
+  (declare time!=?)
   (declare time<?)
   (declare time>?)
   (declare time<=?)
@@ -114,12 +154,12 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((<time> <time>)	=> (<time>)))
-		   (attributes
-		    ((_ _)		effect-free))))
+		    ((nelist-of <time>)	=> (<time>)))))
 		)))
   (declare time-addition)
   (declare time-difference)
+  (declare time-max)
+  (declare time-min)
   #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------

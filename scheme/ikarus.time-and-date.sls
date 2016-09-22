@@ -19,45 +19,59 @@
   (export
     ;; time spans
     <time>
-    <time>-rtd		<time>-rcd
+    <time>-rtd				<time>-rcd
     <time>-equality-predicate
     <time>-comparison-procedure
     <time>-hash-function
-    make-time		time?
-    time-seconds	time-nanoseconds
-    time-addition	time-difference
-    time=?
-    time<?		time<=?
-    time>?		time>=?
+    make-time
+    time?				list-of-times?
+    time-seconds			time-nanoseconds
+    time-ratnum				time-flonum
+    time-addition			time-difference
+    time=?				time!=?
+    time<?				time<=?
+    time>?				time>=?
+    time-min				time-max
 
     ;; epoch time
     <epoch-time>
-    <epoch-time>-rtd	<epoch-time>-rcd
+    <epoch-time>-rtd			<epoch-time>-rcd
     <epoch-time>-equality-predicate
     <epoch-time>-comparison-procedure
     <epoch-time>-hash-function
-    epoch-time?
+    epoch-time?				list-of-epoch-times?
     current-time
     epoch-time-gmt-offset
 
     ;; date functions
-    date-string)
+    date-string
+    #| end of EXPORT |# )
   (import (except (vicare)
 		  ;; time spans
 		  <time>
-		  <time>-rtd		<time>-rcd
-		  make-time		time?
-		  time-seconds		time-nanoseconds
-		  time-addition		time-difference
-		  time=?
-		  time<?		time<=?
-		  time>?		time>=?
+		  <time>-rtd				<time>-rcd
+		  <time>-equality-predicate
+		  <time>-comparison-procedure
+		  <time>-hash-function
+		  make-time
+		  time?					list-of-times?
+		  time-seconds				time-nanoseconds
+		  time-ratnum				time-flonum
+		  time-addition				time-difference
+		  time=?				time!=?
+		  time<?				time<=?
+		  time>?				time>=?
+		  time-min				time-max
 
 		  ;; epoch time
 		  <epoch-time>
-		  <epoch-time>-rtd	<epoch-time>-rcd
+		  <epoch-time>-rtd			<epoch-time>-rcd
+		  <epoch-time>-equality-predicate
+		  <epoch-time>-comparison-procedure
+		  <epoch-time>-hash-function
+		  epoch-time?				list-of-epoch-times?
 		  current-time
-		  time-gmt-offset
+		  epoch-time-gmt-offset
 
 		  ;; date functions
 		  date-string
@@ -70,6 +84,11 @@
     ;;2016)
     (only (ikarus.comparison-procedures) #;(vicare system comparison-procedures)
 	  compar-fixnum)
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate
+	  define-min/max-comparison
+	  define-equality/sorting-predicate
+	  define-inequality-predicate)
     #| end of IMPORT |# )
 
 
@@ -113,8 +132,10 @@
 
   (equality-predicate
     (lambda ()
-      (lambda (T1 T2)
-	(time=? T1 T2))))
+      (lambda/std (T1 T2)
+	(and (= (time-megasecs  T1)	(time-megasecs  T2))
+	     (= (time-secs      T1)	(time-secs      T2))
+	     (= (time-nanoseconds T1)	(time-nanoseconds T2))))))
 
   (hash-function
     (lambda ()
@@ -144,46 +165,81 @@
   #| end of DEFINE-RECORD-TYPE |# )
 
 ;;; --------------------------------------------------------------------
-;;; public fields accessors
 
-(define* (time-seconds {x time?})
-  (+ (* (time-megasecs x) #e1e6)
-     (time-secs x)))
+(define* (time-seconds {T time?})
+  (+ (* (time-megasecs T) #e1e6)
+     (time-secs T)))
+
+(define* (time-ratnum {T time?})
+  (+ (* (time-megasecs T) #e1e6)
+     (time-secs T)
+     (* (time-nanoseconds T) #e1e-9)))
+
+(define* (time-flonum {T time?})
+  (inexact (time-ratnum T)))
+
+(define-list-of-type-predicate list-of-times? time?)
 
 
 ;;;; time operations
 
-(define* (time-addition {time1 time?} {time2 time?})
-  ;;Compute the addition  between two times: time1  - time2 and return  a time struct
-  ;;representing it.
-  ;;
-  (make-time (+ (time-megasecs  time1) (time-megasecs  time2))
-	     (+ (time-secs      time1) (time-secs      time2))
-	     (+ (time-nanoseconds time1) (time-nanoseconds time2))))
+(case-define* time-addition
+  (({time time?})
+   time)
+  (({time1 time?} {time2 time?})
+   ;;Compute the addition between  two times: time1 + time2 and  return a time object
+   ;;representing it.
+   ;;
+   (make-time (+ (time-megasecs  time1) (time-megasecs  time2))
+	      (+ (time-secs      time1) (time-secs      time2))
+	      (+ (time-nanoseconds time1) (time-nanoseconds time2))))
+  (({T1 time?} {T2 time?} {T3 time?} . {T* time?})
+   (fold-left time-addition T1 (cons* T2 T3 T*))))
 
 ;;; --------------------------------------------------------------------
 
-(define* (time-difference {time1 time?} {time2 time?})
-  ;;Compute the difference between two times: time1  - time2 and return a time struct
-  ;;representing it.
-  ;;
-  (make-time (- (time-megasecs  time1) (time-megasecs  time2))
-	     (- (time-secs      time1) (time-secs      time2))
-	     (- (time-nanoseconds time1) (time-nanoseconds time2))))
+(case-define* time-difference
+  (({T time?})
+   (make-time (- (time-megasecs T))
+	      (- (time-secs T))
+	      (- (time-nanoseconds T))))
+  (({time1 time?} {time2 time?})
+   ;;Compute the difference between two times: time1 - time2 and return a time object
+   ;;representing it.
+   ;;
+   (make-time (- (time-megasecs  time1) (time-megasecs  time2))
+	      (- (time-secs      time1) (time-secs      time2))
+	      (- (time-nanoseconds time1) (time-nanoseconds time2))))
+  (({T1 time?} {T2 time?} {T3 time?} . {T* time?})
+   (fold-left time-difference T1 (cons* T2 T3 T*))))
 
 
 ;;;; time comparison
 
-(define* (time=? {time1 time?} {time2 time?})
+(define-equality/sorting-predicate time=?	$time=	time?)
+(define-equality/sorting-predicate time<?	$time<	time?)
+(define-equality/sorting-predicate time<=?	$time<=	time?)
+(define-equality/sorting-predicate time>?	$time>	time?)
+(define-equality/sorting-predicate time>=?	$time>=	time?)
+(define-inequality-predicate       time!=?	$time!=	time?)
+
+;;; --------------------------------------------------------------------
+
+(define ($time= time1 time2)
   ;;Return true if the time objects are equal, else return false.
   ;;
   (and (= (time-megasecs  time1) (time-megasecs  time2))
        (= (time-secs      time1) (time-secs      time2))
        (= (time-nanoseconds time1) (time-nanoseconds time2))))
 
-;;; --------------------------------------------------------------------
+(define ($time!= time1 time2)
+  ;;Return true if the time objects are different, else return false.
+  ;;
+  (or (!= (time-megasecs  time1) (time-megasecs  time2))
+      (!= (time-secs      time1) (time-secs      time2))
+      (!= (time-nanoseconds time1) (time-nanoseconds time2))))
 
-(define* (time<? {time1 time?} {time2 time?})
+(define ($time< time1 time2)
   ;;Return true if TIME1 is less than TIME2, else return false.
   ;;
   (or (< (time-megasecs time1)
@@ -197,9 +253,7 @@
 		    (< (time-nanoseconds time1)
 		       (time-nanoseconds time2)))))))
 
-;;; --------------------------------------------------------------------
-
-(define* (time<=? {time1 time?} {time2 time?})
+(define ($time<= time1 time2)
   ;;Return true if TIME1 is less than or equal to TIME2, else return false.
   ;;
   (or (< (time-megasecs time1)
@@ -213,9 +267,7 @@
 		    (<= (time-nanoseconds time1)
 			(time-nanoseconds time2)))))))
 
-;;; --------------------------------------------------------------------
-
-(define* (time>? {time1 time?} {time2 time?})
+(define ($time> time1 time2)
   ;;Return true if TIME1 is greater than TIME2, else return false.
   ;;
   (or (> (time-megasecs time1)
@@ -229,9 +281,7 @@
 		    (> (time-nanoseconds time1)
 		       (time-nanoseconds time2)))))))
 
-;;; --------------------------------------------------------------------
-
-(define* (time>=? {time1 time?} {time2 time?})
+(define ($time>= time1 time2)
   ;;Return true if TIME1 is greater than or equal to TIME2, else return false.
   ;;
   (or (> (time-megasecs time1)
@@ -246,6 +296,18 @@
 			(time-nanoseconds time2)))))))
 
 
+;;;; min max
+
+(define-min/max-comparison time-max $time-max time?)
+(define-min/max-comparison time-min $time-min time?)
+
+(define ($time-min T1 T2)
+  (if ($time< T1 T2) T1 T2))
+
+(define ($time-max T1 T2)
+  (if ($time< T1 T2) T2 T1))
+
+
 ;;;; time since the Epoch
 
 (define-core-record-type <epoch-time>
@@ -254,53 +316,35 @@
   (strip-angular-parentheses)
   (parent <time>)
 
-  (fields
-    (immutable gmt-offset)
-		;Fixnum representing the  GMT offset in seconds of  this time object,
-		;as determined by the POSIX function "gmtime_r()".
-    #| end of FIELDS |# )
-
   (protocol
-    (lambda (make-time)
+    (lambda (make-<time>)
       (named-lambda make-<epoch-time> ()
-	(let ((fxs (foreign-call "ikrt_current_time" (make-vector 4))))
-	  ((make-time (vector-ref fxs 0)  ;megaseconds
-		      (vector-ref fxs 1)  ;seconds
-		      (vector-ref fxs 2)) ;nanoseconds
-	   (vector-ref fxs 3))))))
-
-  (equality-predicate
-    (lambda (<time>-equality-predicate)
-      (lambda (ET1 ET2)
-	(and (<time>-equality-predicate ET1 ET2)
-	     (fx=? (epoch-time-gmt-offset ET1)
-		   (epoch-time-gmt-offset ET2))))))
-
-  (comparison-procedure
-    (lambda (<time>-comparison-procedure)
-      (lambda (ET1 ET2)
-	(let ((cmp (<time>-comparison-procedure ET1 ET2)))
-	  (if (fxzero? cmp)
-	      (compar-fixnum (epoch-time-gmt-offset ET1)
-			     (epoch-time-gmt-offset ET2))
-	    cmp)))))
-
-  ;; (hash-function
-  ;;   (lambda (time-hash)
-  ;;     time-hash))
+	(foreign-call "ikrt_current_time" ((make-<time> 0 0 0))))))
 
   (custom-printer
     (lambda (T port subprinter)
       (display "#[<epoch-time>"	port)
       (display " secs="		port) (display (time-seconds		T) port)
       (display " nsecs="	port) (display (time-nanoseconds	T) port)
-      (display " gmt-offset="	port) (display (epoch-time-gmt-offset	T) port)
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
 
 (define (current-time)
   (make-epoch-time))
+
+(define-list-of-type-predicate list-of-epoch-times? epoch-time?)
+
+(define* (epoch-time-gmt-offset)
+  ;;We think of Epoch time as a time point specification in the GMT timezone.  We can
+  ;;ask: what is  the offset between GMT  and the timezone configured  as selected by
+  ;;the  operating system?   This function  answers  this question  by returning  the
+  ;;offset as number of seconds; positive return values mean eastern offset.
+  ;;
+  ;;A return  value of  3600 means:  we are  in Rome  (GMT+01) and  we must  add 3600
+  ;;seconds to the Epoch time to obtain the local time.
+  ;;
+  (foreign-call "ikrt_gmt_offset"))
 
 
 ;;;; date functions

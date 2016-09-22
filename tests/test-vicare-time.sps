@@ -10,22 +10,21 @@
 ;;;
 ;;;Copyright (C) 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (vicare checks))
 
@@ -40,7 +39,9 @@
       (check-pretty-print (list T
 				(time-seconds     T)
 				(time-nanoseconds T)
-				(epoch-time-gmt-offset T)
+				(time-ratnum T)
+				(time-flonum T)
+				(epoch-time-gmt-offset)
 				(date-string)))
       (check-pretty-print T)))
 
@@ -59,7 +60,7 @@
     => #t)
 
   (check
-      (fixnum? (epoch-time-gmt-offset (current-time)))
+      (fixnum? (epoch-time-gmt-offset))
     => #t)
 
   (check
@@ -71,42 +72,10 @@
 
 (parametrise ((check-test-name	'operations))
 
-;;; addition
+;;; type predicate
 
-  (check
-      (time-addition (make-time 100 200)
-		     (make-time  20  40))
-    (=> time=?)
-    (make-time 120 240))
-
-  (check
-      (time-addition (make-time 100100100 200)
-		     (make-time  20020020 40))
-    (=> time=?)
-    (make-time 120120120 240))
-
-;;; --------------------------------------------------------------------
-;;; difference
-
-  (check
-      (time-difference (make-time 100 200)
-		       (make-time  20  40))
-    (=> time=?)
-    (make-time 80 160))
-
-;;; --------------------------------------------------------------------
-;;; hash
-
-  (check
-      (hash (make-time 123 456))
-    => 507)
-
-  (check
-      (hash (make-time 123 897))
-    => 1019)
-
-  (check-for-true
-   (non-negative-fixnum? (hash (current-time))))
+  (check-for-true	(is-a? (new <time> 1 2) <time>))
+  (check-for-false	(is-a? (new <string> #\A) <time>))
 
 ;;; --------------------------------------------------------------------
 ;;; equality predicate
@@ -155,7 +124,90 @@
 
     (void))
 
+;;; --------------------------------------------------------------------
+;;; hash function
+
+  (check
+      (hash (make-time 123 456))
+    => 507)
+
+  (check
+      (hash (make-time 123 897))
+    => 1019)
+
+  (check-for-true
+   (non-negative-fixnum? (hash (current-time))))
+
   #t)
+
+
+(parametrise ((check-test-name	'arithmetics))
+
+;;; addition
+
+  (check
+      (time-addition (make-time 100 200)
+		     (make-time  20  40))
+    => (make-time 120 240))
+
+  (check
+      (time-addition (make-time 100100100 200)
+		     (make-time  20020020 40))
+    => (make-time 120120120 240))
+
+  (check
+      (time-addition (make-time 100 200)
+		     (make-time -20 -40))
+    => (make-time 80 160))
+
+;;;
+
+  (check
+      (time-addition (make-time 100 200))
+    => (make-time 100 200))
+
+  (check
+      (time-addition (make-time 100 200)
+		     (make-time  20  40)
+		     (make-time   4   8))
+    => (make-time 124 248))
+
+  (check
+      (time-addition (make-time 100 200)
+		     (make-time  20  40)
+		     (make-time   4   8)
+		     (make-time 9000 9000))
+    => (make-time 9124 9248))
+
+;;; --------------------------------------------------------------------
+;;; difference
+
+  (check
+      (time-difference (make-time 100 200)
+		       (make-time  20  40))
+    (=> time=?)
+    (make-time 80 160))
+
+;;;
+
+  (check
+      (time-difference (make-time 100 200))
+    => (make-time -101 999999800))
+
+  (check
+      (time-difference (make-time 100 200)
+		       (make-time  20  40)
+		       (make-time   4   8))
+    => (make-time (- 100 20 4) (- 200 40 8)))
+
+  (check
+      (time-difference (make-time 100 200)
+		       (make-time  20  40)
+		       (make-time   4   8)
+		       (make-time 9000 9000))
+    => (make-time (- 100 20 4 9000) (- 200 40 8 9000)))
+
+  (void))
 
 
 (parametrise ((check-test-name	'comparison))
@@ -359,7 +411,86 @@
 	       (make-time 190100100 200000))
     => #f)
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (time-max (make-time 1 2))
+    => (make-time 1 2))
+
+  (check
+      (time-max (make-time 1 2) (make-time 3 4))
+    => (make-time 3 4))
+
+  (check
+      (time-max (make-time 1 2) (make-time 3 4) (make-time 5 6))
+    => (make-time 5 6))
+
+;;;
+
+  (check
+      (time-min (make-time 1 2))
+    => (make-time 1 2))
+
+  (check
+      (time-min (make-time 1 2) (make-time 3 4))
+    => (make-time 1 2))
+
+  (check
+      (time-min (make-time 1 2) (make-time 3 4) (make-time 5 6))
+    => (make-time 1 2))
+
   #t)
+
+
+(parametrise ((check-test-name	'oop))
+
+
+;;; --------------------------------------------------------------------
+;;; arithmetics
+
+  (check
+      (.+ (new <time> 100 200) (new <time> 20 40))
+    => (new <time> 120 240))
+
+  (check
+      (.+ (new <time> 1 2) (new <time> 10 20) (new <time> 100 200))
+    => (new <time> 111 222))
+
+;;;
+
+  (check
+      (.- (new <time> 100 200))
+    => (new <time> -100 -200))
+
+  (check
+      (.- (new <time> 1 1))
+    => (new <time> -1 -1))
+
+  (check
+      (.- (new <time> 100 200) (new <time> 20 40))
+    => (new <time> 80 160))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+  (check-for-true	(.=	(new <time> 100 200000) (new <time> 100 200000)))
+  (check-for-true	(.!=	(new <time> 1 2) (new <time> 1 3)))
+  (check-for-true	(.<	(new <time> 1 2) (new <time> 1 3)))
+  (check-for-false	(.>	(new <time> 1 2) (new <time> 1 3)))
+  (check-for-true	(.<=	(new <time> 1 2) (new <time> 1 3)))
+  (check-for-false	(.>=	(new <time> 1 2) (new <time> 1 3)))
+
+;;;
+
+  (check
+      (.max (new <time> 1 2) (new <time> 1 3))
+    => (new <time> 1 3))
+
+  (check
+      (.min (new <time> 1 2) (new <time> 1 3))
+    => (new <time> 1 2))
+
+  (void))
 
 
 ;;;; done

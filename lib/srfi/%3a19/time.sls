@@ -131,10 +131,10 @@
 
 ;;;; compatibility with Vicare
 
-;;;Vicare  uses   gettimeofday()  which   gives  microseconds,   so  our
-;;;resolution is 1000 nanoseconds.
-(define host:time-resolution 1000)
-(define host:timezone-offset (host:epoch-time-gmt-offset (host:current-time)))
+;;;Vicare  uses "clock_gettime()"  which gives  nanoseconds, so  our resolution  is 1
+;;;nanosecond.
+(define host:time-resolution 1)
+(define host:timezone-offset (host:epoch-time-gmt-offset))
 
 
 ;;;; helpers

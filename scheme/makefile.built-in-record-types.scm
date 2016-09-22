@@ -98,12 +98,24 @@
 (define-built-in-record-type <time>
     <record>
   make-time time?
-  (equality-predicate <time>-equality-predicate)
-  (comparison-procedure <time>-comparison-procedure)
-  (hash-function <time>-hash-function)
+  (equality-predicate	<time>-equality-predicate)
+  (comparison-procedure	<time>-comparison-procedure)
+  (hash-function	<time>-hash-function)
   (methods
-   (second		time-second)
-   (nanosecond		time-nanosecond)))
+   (second		time-seconds)
+   (nanosecond		time-nanoseconds)
+   (ratnum		time-ratnum)
+   (flonum		time-flonum)
+   (+			time-addition)
+   (-			time-difference)
+   (=			time=?)
+   (!=			time!=?)
+   (<			time<?)
+   (<=			time<=?)
+   (>			time>?)
+   (>=			time>=?)
+   (min			time-min)
+   (max			time-max)))
 
 (define-built-in-record-type <epoch-time>
     <time>
@@ -111,8 +123,7 @@
   (equality-predicate <epoch-time>-equality-predicate)
   (comparison-procedure <epoch-time>-comparison-procedure)
   (hash-function <epoch-time>-hash-function)
-  (methods
-   (gmt-offset		time-gmt-offset)))
+  (methods))
 
 
 ;;;; built-in record types: expander stuff
