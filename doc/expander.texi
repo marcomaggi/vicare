@@ -4688,7 +4688,7 @@ lexical environment and are contained in syntactic binding's
 descriptors.
 
 Every type annotation has an internal representation as type
-specification, @ref{types ann, Type annotations}.  The type
+specification, @typedref{annotations, Type annotations}.  The type
 specifications @api{} is exposed mostly for debugging purposes: in
 normal operations we are not meant to use it directly.
 

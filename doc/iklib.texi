@@ -129,7 +129,7 @@ single @clause{options} clause, before the @clause{export} one.
 
 
 @defvr {Library Option} typed-language
-Turn on the typed language extensions (@pxref{types, The typed
+Turn on the typed language extensions (@typedpxref{Top, The typed
 language}).
 @end defvr
 
@@ -141,7 +141,7 @@ Turn on strict support for @rnrs{6} language.
 
 @defvr {Library Option} strict-type-checking
 Turn on strict type checking warnings when the typed language is enabled
-(@pxref{types, The typed language}).
+(@typedpxref{Top, The typed language}).
 @end defvr
 
 @c page
@@ -275,7 +275,7 @@ The following options are supported.
 
 
 @defvr {Program Option} typed-language
-Turn on the typed language extensions (@pxref{types, The typed
+Turn on the typed language extensions (@typedpxref{Top, The typed
 language}).
 @end defvr
 
@@ -287,7 +287,7 @@ Turn on strict support for @rnrs{6} language.
 
 @defvr {Library Option} strict-type-checking
 Turn on strict type checking warnings when the typed language is enabled
-(@pxref{types, The typed language}).
+(@typedpxref{Top, The typed language}).
 @end defvr
 
 @c page
@@ -8957,7 +8957,7 @@ Adhere more strictly to the behaviour defined by @rnrs{6}.  For example:
 report errors at run--time, rather than at expand--time.
 
 @item typed-language
-Turn on the tagged language extensions (@pxref{types, The typed
+Turn on the tagged language extensions (@typedpxref{Top, The typed
 language}).
 
 @item default-language
@@ -9608,7 +9608,7 @@ used as clause keywords in @syntax{define-record-type} to define methods
 and virtual methods for a record--type; they can be used any number of
 times in the same @syntax{define-record-type} macro use.  These clauses
 are accepted by @syntax{define-record-type} only when the typed language
-is used, @ref{types methods, Methods and virtual methods}.
+is used, @typedref{methods, Methods and virtual methods}.
 
 @c page
 @node iklib records defs descriptors
@@ -9735,7 +9735,7 @@ clause:
 
 @noindent
 causes the listed mixins to be included in the record--type definition,
-@ref{types mixins, Sharing object--type definition clauses}.  The clause
+@typedref{mixins, Sharing object--type definition clauses}.  The clause
 @clause{implements} is accepted by @syntax{define-record-type} when the
 non--strict or typed languages are selected.
 
@@ -9756,7 +9756,7 @@ clause:
 
 @noindent
 causes the listed interface names to be included in the list of
-interfaces implemented by this record--type's, @ref{types interfaces,
+interfaces implemented by this record--type's, @typedref{interfaces,
 Interface types}.  The clause @clause{implements} is accepted by
 @syntax{define-record-type} when the typed language is selected.
 

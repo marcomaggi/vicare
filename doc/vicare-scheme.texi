@@ -164,7 +164,6 @@ Trademarks used herein are the property of their respective owners.
                                 libraries.
 * ffi::                         Foreign functions interface.
 * syslib::                      Low level, fast, unsafe operations.
-* types::                       The typed language.
 
 Internals
 
@@ -200,9 +199,8 @@ Indexes
 
 External documents
 
+* types: (vicare-typed).        The typed language.
 * libs: (vicare-libs).          Bundled libraries for Vicare Scheme.
-* nausicaa: (nausicaa).         The language @library{nausicaa}.
-* mehve: (mehve).               The language @library{nausicaa mehve}.
 * libffi: (libffi).             Libffi documentation.
 
 @end menu
@@ -222,7 +220,6 @@ External documents
 @include foreign.texi
 @include ffi.texi
 @include syslib.texi
-@include types.texi
 
 @include objects.texi
 @include debug.texi

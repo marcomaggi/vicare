@@ -1,5 +1,174 @@
-@node types
-@chapter Typed language
+\input texinfo.tex
+@c %**start of header
+@setfilename vicare-typed.info
+@settitle Vicare Scheme's typed language
+@c %**end of header
+
+@include version.texi
+@include macros.texi
+
+@c page
+@c ------------------------------------------------------------
+@c Values.
+@c ------------------------------------------------------------
+
+@set PRJNAME                    Vicare
+
+@set TITLE                      Vicare Scheme's Typed Language
+
+@c To be used as @value{PACKAGE} whenever we need to include the full
+@c name of this package.
+@set PACKAGE                    Vicare Scheme
+
+@c To be used as @value{PACKAGE_NICKNAME} whenever we need to include
+@c the nickname of the project: the name that is used to compose the
+@c distribution tarball or the web address.
+@set PACKAGE_NICKNAME           vicare-scheme
+
+@c To be used as @value{AUTHOR} whenever we need to include the list of
+@c authors of this document.
+@set AUTHOR                     Marco Maggi
+
+@c To be used as @value{AUTHOR_EMAIL} whenever we need to include the
+@c email of the *single* author of this document.
+@set AUTHOR_EMAIL               @email{marco.maggi-ipsu@@poste.it}
+
+@c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
+@c list of copyright years.
+@set COPYRIGHT_YEARS            2016
+
+
+@set TARBALLURL                 @url{https://bitbucket.org/marcomaggi/vicare-scheme/downloads}
+@set REPOSITORYURL              @url{http://github.com/marcomaggi/vicare/}
+@set EXECUTABLE                 @command{vicare}
+@set RAWEXECUTABLE              vicare
+
+@c page
+@c ------------------------------------------------------------
+@c Copyright notice.
+@c ------------------------------------------------------------
+
+@copying
+@noindent
+This document describes version @value{VERSION} of @value{PACKAGE}, an
+@rnrs{6} compliant native compiler for the Scheme language, producing
+single threaded programs running on Intel x86 32-bit and 64-bit
+processors.  @emph{Vicare} is pronounced the etruscan way.  The focus of
+this document is over the typed language extension.
+
+The package, including its documentation, is distributed under the terms
+of the @gnu{} General Public License (@gpl{}) and can be downloaded
+from:
+
+@center @value{TARBALLURL}
+
+@noindent
+the home page of the project is at:
+
+@center @url{http://marcomaggi.github.io/vicare.html}
+
+@noindent
+development takes place at:
+
+@center @url{http://github.com/marcomaggi/vicare/}
+
+@noindent
+and, as a backup, at:
+
+@center @url{https://bitbucket.org/marcomaggi/vicare-scheme/}
+
+@noindent
+Copyright @copyright{} @value{COPYRIGHT_YEARS} by Marco Maggi.@*
+Copyright @copyright{} 2006-2010 by Abdulaziz Ghuloum.
+
+@quotation
+This program is free software: you can redistribute it and/or modify it
+under the terms of the @gnu{} General Public License version 3 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the @gnu{} General Public License
+along with this program.  If not, see
+@url{http://www.gnu.org/licenses/}.
+@end quotation
+
+Trademarks used herein are the property of their respective owners.
+@end copying
+
+@c page
+@c ------------------------------------------------------------
+@c Headers.
+@c ------------------------------------------------------------
+
+@titlepage
+@title @value{TITLE}
+@subtitle Revision @value{VERSION}
+@author @value{AUTHOR} @value{AUTHOR_EMAIL}
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@c ------------------------------------------------------------
+
+@ifinfo
+@dircategory Development
+@direntry
+* vicare-typed: (vicare-typed). @value{TITLE}.
+@end direntry
+@end ifinfo
+
+@c ------------------------------------------------------------
+
+@ignore
+@syncodeindex tp cp
+@syncodeindex vr cp
+@syncodeindex fn cp
+@end ignore
+
+@c page
+@ifnottex
+@node Top
+@top @value{TITLE}
+
+@insertcopying
+
+@menu
+* overview::                    Overview of the typed language.
+* annotations::                 Type annotations.
+* specifications::              Type specifications.
+* descriptors::                 Type descriptors.
+* syntaxes::                    Type-exploiting syntaxes.
+* built-in::                    Built-in object types.
+* methods::                     Methods and virtual methods.
+* protlev::                     Protection levels.
+* mixins::                      Sharing object-type definition clauses.
+* interfaces::                  Interface types.
+* labels::                      Sub-typing with labels.
+* friends::                     Friend functions.
+
+Appendices
+
+* Package License::             GNU General Public License.
+* Documentation License::       GNU Free Documentation License.
+* references::                  Bibliography and references.
+
+Indexes
+
+* concept index::               An entry for each concept.
+* function index::              An entry for each function.
+* variable index::              An entry for each variable.
+* type index::                  An entry for each type.
+@end menu
+@end ifnottex
+
+@c page
+@node overview
+@chapter Overview of the package
 
 
 @value{PRJNAME}'s expander implements an extension to the language
@@ -8,40 +177,15 @@ bindings.  Type annotations are optional: we are free to specify them or
 leave the type of variables unspecified.
 
 @menu
-* types intro::                 Introduction to the typed language.
-* types ann::                   Type annotations.
-* types spec::                  Type specifications.
-* types descr::                 Type descriptors.
-* types syntaxes::              Type-exploiting syntaxes.
-* types built-in::              Built-in object types.
-* types void::                  Handling of void values.
-* types methods::               Methods and virtual methods.
-* types protlev::               Protection levels.
-* types mixins::                Sharing object-type definition clauses.
-* types interfaces::            Interface types.
-* types labels::                Sub-typing with labels.
-* types friends::               Friend functions.
+* overview philosophy::         Typed language philosophy.
+* overview enabling::           Enabling typed language extensions.
+* overview type ids::           Type identifiers.
+* overview typed vars::         Typed lexical variables.
 @end menu
 
 @c page
-@node types intro
-@section Introduction to the typed language
-
-
-@value{PRJNAME}'s typed language adds some expand--time
-syntactic--binding type--checking and extended object--oriented
-programming (@oop{}) syntax to the language specified by @rnrs{6}.
-
-@menu
-* types intro philosophy::      Typed language philosophy.
-* types intro enabling::        Enabling typed language extensions.
-* types intro type ids::        Type identifiers.
-* types intro typed vars::      Typed lexical variables.
-@end menu
-
-@c page
-@node types intro philosophy
-@subsection Typed language philosophy
+@node overview philosophy
+@section Typed language philosophy
 
 
 In this document we refer to the standard Scheme language defined by the
@@ -203,8 +347,8 @@ explicitly add type annotations to the syntaxes that establish syntactic
 bindings.
 
 @c page
-@node types intro enabling
-@subsection Enabling typed language extensions
+@node overview enabling
+@section Enabling typed language extensions
 
 
 Typed language extensions are @strong{off} by default.  To enable the
@@ -223,7 +367,7 @@ For libraries:
 @end lisp
 
 @noindent
-@ref{iklib libraries options, typed-language}.
+@vicareref{iklib libraries options, typed-language}.
 
 @item
 For programs:
@@ -236,7 +380,7 @@ For programs:
 @end lisp
 
 @noindent
-@ref{iklib programs options, typed-language}.
+@vicareref{iklib programs options, typed-language}.
 @end itemize
 
 @noindent
@@ -244,7 +388,7 @@ we usually want to import the library @library{vicare} to use the
 extended syntaxes that recognise type definitions and annotations.
 
 We can use the function @func{typed-language-enabled?} to enable the
-typed language at the @repl{} (@pxref{iklib expander language,
+typed language at the @repl{} (@vicarepxref{iklib expander language,
 typed-language-enabled?}).
 
 @c ------------------------------------------------------------------------
@@ -309,8 +453,8 @@ syntax use.
 @end itemize
 
 @c page
-@node types intro type ids
-@subsection Type identifiers
+@node overview type ids
+@section Type identifiers
 
 
 A @dfn{type identifier} is a bound syntactic identifier whose syntactic
@@ -331,8 +475,8 @@ object types (like @condition{i/o}) are special cases of these.
 The library @library{vicare} exports a set type identifiers (whose
 implementation is integrated in @value{PRJNAME}'s expander) representing
 the types of built--in objects.  Some of them are: @class{fixnum},
-@class{string}, @class{vector}, @class{textual-input-port}.  @ref{types
-built-in, Built-in object types}.
+@class{string}, @class{vector}, @class{textual-input-port}.
+@ref{built-in, Built-in object types}.
 @end itemize
 
 Type identifiers are organised in a tree hierarchy, with subtypes
@@ -345,8 +489,8 @@ parentheses'' @samp{< >}, but this is just a convention.  Any valid
 Scheme symbol can be used as name for a type identifier.
 
 @c page
-@node types intro typed vars
-@subsection Typed lexical variables
+@node overview typed vars
+@section Typed lexical variables
 
 
 A @dfn{typed lexical variable}, shortly @dfn{typed variable}, is a bound
@@ -404,13 +548,13 @@ the follow program is @strong{not} correct:
 and will cause an expand--time syntax violation.
 
 @c page
-@node types ann
-@section Type annotations
+@node annotations
+@chapter Type annotations
 
 
 Type annotations are special forms that make use of the @func{brace}
 syntax to associate a type specification to a lexical variable
-(@pxref{iklib syntaxes misc, brace}).  It works as follows:
+(@vicarepxref{iklib syntaxes misc, brace}).  It works as follows:
 
 @lisp
 (define (brace O @aclass{fixnum})
@@ -433,15 +577,15 @@ can be inserted using actual brace characters:
 @end quotation
 
 @menu
-* types ann inserting::         Inserting type annotations.
-* types ann syntaxes::          The syntax of type annotations.
-* types ann relations::         Relations between type annotations.
-* types ann signatures::        Relations between type signatures.
+* annotations inserting::       Inserting type annotations.
+* annotations syntaxes::        The syntax of type annotations.
+* annotations relations::       Relations between type annotations.
+* annotations signatures::      Relations between type signatures.
 @end menu
 
 @c page
-@node types ann inserting
-@subsection Inserting type annotations
+@node annotations inserting
+@section Inserting type annotations
 
 
 Everywhere the name of a syntactic binding appears in binding position:
@@ -508,8 +652,8 @@ of @class{list}, and so represents a list.  For example:
 @end lisp
 
 @c page
-@node types ann syntaxes
-@subsection The syntax of type annotations
+@node annotations syntaxes
+@section The syntax of type annotations
 
 
 Type annotations are either standalone type identifiers like
@@ -710,7 +854,7 @@ annotation: we can use such identifier to validate symbols.  Example:
 @end lisp
 
 The enumeration identifier is indeed used in the implementation of the
-@syntax{define-enumeration} built--in syntax; @ref{stdlib enum,
+@syntax{define-enumeration} built--in syntax; @vicareref{stdlib enum,
 define-enumeration}.
 
 @lisp
@@ -1015,8 +1159,8 @@ zero, but with empty lexical environment for the other phases:
 @end deftp
 
 @c page
-@node types ann relations
-@subsection Relations between type annotations
+@node annotations relations
+@section Relations between type annotations
 
 
 The following syntactic bindings are exported by the library
@@ -1171,8 +1315,8 @@ ancestors of @meta{type}.  @meta{type} is @strong{not} included.
 @end deffn
 
 @c page
-@node types ann signatures
-@subsection Relations between type signatures
+@node annotations signatures
+@section Relations between type signatures
 
 
 The following syntactic bindings are exported by the library
@@ -1311,8 +1455,8 @@ representing a type signature.
 @end deffn
 
 @c page
-@node types spec
-@section Type specifications
+@node specifications
+@chapter Type specifications
 
 
 Type specifications are expand--time objects that describe the
@@ -1323,12 +1467,12 @@ descriptors.
 Every type annotation has an internal representation as type
 specification.  Usually we do not have to deal with type specifications;
 so most of the syntactic bindings are exported by the library
-@library{vicare expander}.  For details @ref{expander specs, Object-type
-specifications}.
+@library{vicare expander}.  For details @vicareref{expander specs,
+Object-type specifications}.
 
 @c page
-@node types descr
-@section Type descriptors
+@node descriptors
+@chapter Type descriptors
 
 
 @cindex @library{vicare system type-descriptors}, library
@@ -1352,17 +1496,17 @@ should never call directly the constructors of the type descriptor
 types.
 
 @menu
-* types descr retrieving::      Retrieving type descriptors.
-* types descr core::            Core object-type descriptors.
-* types descr compound::        Compound object-type descriptors.
-* types descr other::           Other object-type descriptors.
-* types descr signatures::      Type descriptor signatures.
-* types descr relations::       Relations between type descriptors.
+* descriptors retrieving::      Retrieving type descriptors.
+* descriptors core::            Core object-type descriptors.
+* descriptors compound::        Compound object-type descriptors.
+* descriptors other::           Other object-type descriptors.
+* descriptors signatures::      Type descriptor signatures.
+* descriptors relations::       Relations between type descriptors.
 @end menu
 
 @c page
-@node types descr retrieving
-@subsection Retrieving type descriptors
+@node descriptors retrieving
+@section Retrieving type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1396,8 +1540,8 @@ Return the type descriptor of @var{obj}.
 @end defun
 
 @c page
-@node types descr core
-@subsection Core object--type descriptors
+@node descriptors core
+@section Core object--type descriptors
 
 
 Core object--type descriptors gather the run--time characteristics of
@@ -1496,31 +1640,31 @@ Return the @uid{} of the core--type descriptor @var{ctd}.
 @end defun
 
 @c page
-@node types descr compound
-@subsection Compound object-type descriptors
+@node descriptors compound
+@section Compound object-type descriptors
 
 
 @menu
-* types descr compound pair::      Pair type descriptors.
-* types descr compound pair-of::   Pair-of type descriptors.
-* types descr compound list::      List type descriptors.
-* types descr compound list-of::   List-of type descriptors.
-* types descr compound vector::    Vector type descriptors.
-* types descr compound vector-of:: Vector-of type descriptors.
-* types descr compound condobj::   Condition-object type descriptors.
-* types descr compound enum::      Enumeration type descriptors.
-* types descr compound hashtable:: Hashtable type descriptors.
-* types descr compound alist::     Association list type descriptors.
-* types descr compound closure::   Closure object type descriptors.
-* types descr compound union::     Union type descriptors.
-* types descr compound intersect:: Intersection type descriptors.
-* types descr compound complem::   Complement type descriptors.
-* types descr compound ancestor::  Ancestor-of type descriptors.
+* descriptors compound pair::      Pair type descriptors.
+* descriptors compound pair-of::   Pair-of type descriptors.
+* descriptors compound list::      List type descriptors.
+* descriptors compound list-of::   List-of type descriptors.
+* descriptors compound vector::    Vector type descriptors.
+* descriptors compound vector-of:: Vector-of type descriptors.
+* descriptors compound condobj::   Condition-object type descriptors.
+* descriptors compound enum::      Enumeration type descriptors.
+* descriptors compound hashtable:: Hashtable type descriptors.
+* descriptors compound alist::     Association list type descriptors.
+* descriptors compound closure::   Closure object type descriptors.
+* descriptors compound union::     Union type descriptors.
+* descriptors compound intersect:: Intersection type descriptors.
+* descriptors compound complem::   Complement type descriptors.
+* descriptors compound ancestor::  Ancestor-of type descriptors.
 @end menu
 
 @c page
-@node types descr compound pair
-@subsubsection Pair type descriptors
+@node descriptors compound pair
+@subsection Pair type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1558,8 +1702,8 @@ Accessors for the fields of @class{pair-type-descr} instances.
 @end defun
 
 @c page
-@node types descr compound pair-of
-@subsubsection Pair-of type descriptors
+@node descriptors compound pair-of
+@subsection Pair-of type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1593,8 +1737,8 @@ Accessor for the field of @class{pair-of-type-descr} instances.
 @end defun
 
 @c page
-@node types descr compound list
-@subsubsection List type descriptors
+@node descriptors compound list
+@subsection List type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1633,8 +1777,8 @@ Return the length of the list, a non--negative exact integer.
 @end defun
 
 @c page
-@node types descr compound list-of
-@subsubsection List-of type descriptors
+@node descriptors compound list-of
+@subsection List-of type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1668,8 +1812,8 @@ Accessor for the field of @class{list-of-type-descr} instances.
 @end defun
 
 @c page
-@node types descr compound vector
-@subsubsection Vector type descriptors
+@node descriptors compound vector
+@subsection Vector type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1708,8 +1852,8 @@ Return the length of the vector, a non--negative exact integer.
 @end defun
 
 @c page
-@node types descr compound vector-of
-@subsubsection Vector-of type descriptors
+@node descriptors compound vector-of
+@subsection Vector-of type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1743,8 +1887,8 @@ Accessor for the field of @class{vector-of-type-descr} instances.
 @end defun
 
 @c page
-@node types descr compound condobj
-@subsubsection Condition-object type descriptors
+@node descriptors compound condobj
+@subsection Condition-object type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1781,8 +1925,8 @@ instances.
 @end defun
 
 @c page
-@node types descr compound enum
-@subsubsection Enumeration type descriptors
+@node descriptors compound enum
+@subsection Enumeration type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1816,8 +1960,8 @@ Accessor for the field of @class{enumeration-type-descr} instances.
 @end defun
 
 @c page
-@node types descr compound hashtable
-@subsubsection Hashtable type descriptors
+@node descriptors compound hashtable
+@subsection Hashtable type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1854,8 +1998,8 @@ Accessors for the fields of @class{hashtable-type-descr} instances.
 @end defun
 
 @c page
-@node types descr compound alist
-@subsubsection Association list type descriptors
+@node descriptors compound alist
+@subsection Association list type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1893,8 +2037,8 @@ Accessors for the fields of @class{alist-type-descr} instances.
 @end defun
 
 @c page
-@node types descr compound closure
-@subsubsection Closure object type descriptors
+@node descriptors compound closure
+@subsection Closure object type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1929,8 +2073,8 @@ Accessor for the field of @class{closure-type-descr} instances.
 @end defun
 
 @c page
-@node types descr compound union
-@subsubsection Union type descriptors
+@node descriptors compound union
+@subsection Union type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1964,8 +2108,8 @@ Accessor for the field of @class{union-type-descr} instances.
 @end defun
 
 @c page
-@node types descr compound intersect
-@subsubsection Intersection type descriptors
+@node descriptors compound intersect
+@subsection Intersection type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -1999,8 +2143,8 @@ Accessor for the field of @class{intersection-type-descr} instances.
 @end defun
 
 @c page
-@node types descr compound complem
-@subsubsection Complement type descriptors
+@node descriptors compound complem
+@subsection Complement type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -2034,8 +2178,8 @@ Accessor for the field of @class{complement-type-descr} instances.
 @end defun
 
 @c page
-@node types descr compound ancestor
-@subsubsection Ancestor-of type descriptors
+@node descriptors compound ancestor
+@subsection Ancestor-of type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -2074,17 +2218,17 @@ Accessors for the fields of @class{ancestor-of-type-descr} instances.
 @end defun
 
 @c page
-@node types descr other
-@subsection Other object-type descriptors
+@node descriptors other
+@section Other object-type descriptors
 
 
 @menu
-* types descr other interface::         Interface type descriptors.
+* descriptors other interface::         Interface type descriptors.
 @end menu
 
 @c page
-@node types descr other interface
-@subsubsection Interface type descriptors
+@node descriptors other interface
+@subsection Interface type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -2142,19 +2286,19 @@ Accessors for the fields of @class{interface-type-descr} instances.
 @end defun
 
 @c page
-@node types descr signatures
-@subsection Type descriptor signatures
+@node descriptors signatures
+@section Type descriptor signatures
 
 
 @menu
-* types descr signatures descriptors::  Descriptors signatures.
-* types descr signatures lambda::       Lambda signature descriptors.
-* types descr signatures case-lambda::  Case-lambda signature descriptors.
+* descriptors signatures descriptors::  Descriptors signatures.
+* descriptors signatures lambda::       Lambda signature descriptors.
+* descriptors signatures case-lambda::  Case-lambda signature descriptors.
 @end menu
 
 @c page
-@node types descr signatures descriptors
-@subsubsection Descriptors signatures
+@node descriptors signatures descriptors
+@subsection Descriptors signatures
 
 
 The following syntactic bindings are exported by the library
@@ -2189,8 +2333,8 @@ Accessor for the field of @class{descriptors-signature} instances.
 @end defun
 
 @c page
-@node types descr signatures lambda
-@subsubsection Lambda signature descriptors
+@node descriptors signatures lambda
+@subsection Lambda signature descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -2230,8 +2374,8 @@ Accessors for the fields of @class{lambda-descriptors} instances.
 @end defun
 
 @c page
-@node types descr signatures case-lambda
-@subsubsection Case-lambda signature descriptors
+@node descriptors signatures case-lambda
+@subsection Case-lambda signature descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -2266,8 +2410,8 @@ Accessor for the field of @class{case-lambda-descriptors} instances.
 @end defun
 
 @c page
-@node types descr relations
-@subsection Relations between type descriptors
+@node descriptors relations
+@section Relations between type descriptors
 
 
 The following syntactic bindings are exported by the library
@@ -2441,8 +2585,8 @@ Usage examples:
 @end deffn
 
 @c page
-@node types syntaxes
-@section Type--exploiting syntaxes
+@node syntaxes
+@chapter Type--exploiting syntaxes
 
 
 @value{PRJNAME} allows us to perform some operations on objects through
@@ -2455,21 +2599,21 @@ examples, we always assume: to have imported the library
 Scheme source code reader in @code{#!vicare} mode.
 
 @menu
-* types syntaxes type-of::      Determining the type of expressions.
-* types syntaxes define::       Defining type annotations.
-* types syntaxes new-delete::   Constructors and destructors.
-* types syntaxes predicates::   Predicate syntaxes.
-* types syntaxes assert::       Validating signatures.
-* types syntaxes unsafe-cast::  Casting the type of expressions.
-* types syntaxes case-type::    Branching on type of expression.
-* types syntaxes variables::    Defining typed variables.
-* types syntaxes overloads::    Overloaded functions.
-* types syntaxes operations::   Miscellaneous operations.
+* syntaxes type-of::      Determining the type of expressions.
+* syntaxes define::       Defining type annotations.
+* syntaxes new-delete::   Constructors and destructors.
+* syntaxes predicates::   Predicate syntaxes.
+* syntaxes assert::       Validating signatures.
+* syntaxes unsafe-cast::  Casting the type of expressions.
+* syntaxes case-type::    Branching on type of expression.
+* syntaxes variables::    Defining typed variables.
+* syntaxes overloads::    Overloaded functions.
+* syntaxes operations::   Miscellaneous operations.
 @end menu
 
 @c page
-@node types syntaxes type-of
-@subsection Determining the type of expressions
+@node syntaxes type-of
+@section Determining the type of expressions
 
 
 The following syntactic bindings are exported by the library
@@ -2590,8 +2734,8 @@ object type specification.
 @end deffn
 
 @c page
-@node types syntaxes define
-@subsection Defining type annotations
+@node syntaxes define
+@section Defining type annotations
 
 
 The following syntactic bindings are exported by the library
@@ -2689,8 +2833,8 @@ because the concrete definition is inside a module, which represents a
 lexical contour.
 
 @c page
-@node types syntaxes new-delete
-@subsection Constructors and destructors
+@node syntaxes new-delete
+@section Constructors and destructors
 
 
 The syntaxes @syntax{new} and @syntax{delete} allow us to retrieve the
@@ -2733,8 +2877,8 @@ If the object has no destructor function: an exception is raised.
 @end deffn
 
 @c page
-@node types syntaxes predicates
-@subsection Predicate syntaxes
+@node syntaxes predicates
+@section Predicate syntaxes
 
 
 The following syntactic bindings are exported by the library
@@ -2767,8 +2911,8 @@ predicate function.
 @end deffn
 
 @c page
-@node types syntaxes assert
-@subsection Validating signatures
+@node syntaxes assert
+@section Validating signatures
 
 
 The following syntactic bindings are exported by the library
@@ -3172,8 +3316,8 @@ there is no need to insert a validation form because any number of
 return values of any type matches the type signature.
 
 @c page
-@node types syntaxes unsafe-cast
-@subsection Casting the type of expressions
+@node syntaxes unsafe-cast
+@section Casting the type of expressions
 
 
 It is sometimes useful to explicitly declare the type signature of an
@@ -3248,8 +3392,8 @@ the expression as returning a tuple of values with type signature
 @end deffn
 
 @c page
-@node types syntaxes case-type
-@subsection Branching on type of expression
+@node syntaxes case-type
+@section Branching on type of expression
 
 
 The following syntactic bindings are exported by the library
@@ -3300,8 +3444,8 @@ Examples:
 @end deffn
 
 @c page
-@node types syntaxes variables
-@subsection Defining typed variables
+@node syntaxes variables
+@section Defining typed variables
 
 
 In all the following syntax definitions, we assume the following formats
@@ -3680,8 +3824,8 @@ name is bound to the fluid syntax @syntax{__who__}.
 @end deffn
 
 @c page
-@node types syntaxes overloads
-@subsection Overloaded functions
+@node syntaxes overloads
+@section Overloaded functions
 
 
 @cindex Overloaded functions
@@ -3792,7 +3936,7 @@ At run--time:
 @enumerate
 @item
 The type of the operands is determined using @func{type-descriptor-of},
-@ref{types descr retrieving, type-descriptor-of}.
+@ref{descriptors retrieving, type-descriptor-of}.
 
 @item
 The set of specialised functions is visited and the better matching one
@@ -3802,8 +3946,9 @@ application.
 
 @item
 If no matching function is found: an exception is raised with type
-@condition{overloaded-function-late-binding-error}, @ref{iklib
-conditions late-bind overload}.
+@condition{overloaded-function-late-binding-error}, @vicareref{iklib
+conditions late-bind overload, Overloaded function late binding
+conditions}.
 @end enumerate
 
 Specialised functions are ranked to select the better matching.  At both
@@ -3878,8 +4023,8 @@ validate the type of the operands used in an application.
 @end deffn
 
 @c page
-@node types syntaxes operations
-@subsection Miscellaneous operations
+@node syntaxes operations
+@section Miscellaneous operations
 
 
 @value{PRJNAME} allows us to specify special procedures for built--in
@@ -3889,8 +4034,8 @@ Scheme types, record--types and label--types; they are:
 @item Type predicates
 When applied to a value the type predicate returns @true{} if the value
 matches the type; otherwise it returns @false{}.  It is always possible
-to use the type predicate with the @syntax{is-a?} syntax, @pxref{types
-syntaxes predicates, is-a?}.
+to use the type predicate with the @syntax{is-a?} syntax,
+@pxref{syntaxes predicates, is-a?}.
 
 @item Equality predicates
 When applied to two values of the same type: the predicate returns
@@ -3970,8 +4115,8 @@ specified, @func{record-hash} is used.
 @end defmac
 
 @c page
-@node types built-in
-@section Built--in object types
+@node built-in
+@chapter Built--in object types
 
 
 The library @library{vicare} exports keyword syntactic bindings
@@ -3979,36 +4124,36 @@ representing the types of built--in objects: fixnum, strings, vectors,
 et cetera.
 
 @menu
-* types built-in void::         Type of the void object.
-* types built-in top::          The universal super-type.
-* types built-in bottom::       The universal sub-type.
-* types built-in booleans::     Type of boolean objects.
-* types built-in chars::        Type of character objects.
-* types built-in symbols::      Type of symbol objects.
-* types built-in gensyms::      Type of gensym values.
-* types built-in keywords::     Type of keyword objects.
-* types built-in pointers::     Type of pointer objects.
-* types built-in transcoders::  Type of transcoder objects.
-* types built-in procedures::   Type of procedures objects.
-* types built-in numerics::     Type of numeric objects.
-* types built-in strings::      Type of string objects.
-* types built-in vectors::      Type of vector objects.
-* types built-in lists::        Type of list objects.
-* types built-in pairs::        Type of pair objects.
-* types built-in ipairs::       Type of immutable pair objects.
-* types built-in bytevectors::  Type of bytevector objects.
-* types built-in hashtables::   Type of hashtable objects.
-* types built-in structs::      Type of struct objects.
-* types built-in records::      Type of record objects.
-* types built-in conditions::   Type of condition objects.
-* types built-in ports::        Types of input/output ports.
-* types built-in sentinel::     Type of sentinel object.
-* types built-in misc::         Miscellaneous built-in types.
+* built-in void::         Type of the void object.
+* built-in top::          The universal super-type.
+* built-in bottom::       The universal sub-type.
+* built-in booleans::     Type of boolean objects.
+* built-in chars::        Type of character objects.
+* built-in symbols::      Type of symbol objects.
+* built-in gensyms::      Type of gensym values.
+* built-in keywords::     Type of keyword objects.
+* built-in pointers::     Type of pointer objects.
+* built-in transcoders::  Type of transcoder objects.
+* built-in procedures::   Type of procedures objects.
+* built-in numerics::     Type of numeric objects.
+* built-in strings::      Type of string objects.
+* built-in vectors::      Type of vector objects.
+* built-in lists::        Type of list objects.
+* built-in pairs::        Type of pair objects.
+* built-in ipairs::       Type of immutable pair objects.
+* built-in bytevectors::  Type of bytevector objects.
+* built-in hashtables::   Type of hashtable objects.
+* built-in structs::      Type of struct objects.
+* built-in records::      Type of record objects.
+* built-in conditions::   Type of condition objects.
+* built-in ports::        Types of input/output ports.
+* built-in sentinel::     Type of sentinel object.
+* built-in misc::         Miscellaneous built-in types.
 @end menu
 
 @c page
-@node types built-in void
-@subsection The type of the void value
+@node built-in void
+@section The type of the void value
 
 
 The type @class{void} is the type of the void object returned by
@@ -4017,7 +4162,61 @@ because the only legitimate use of the void object is as single return
 value of functions returning ``unspecified values'' (under
 @value{PRJNAME} returning a single value is faster than returning zero
 values).  If we need a unique value: we should use the sentinel value
-(@pxref{iklib sentinel, The sentinel object}).
+(@vicarepxref{iklib sentinel, The sentinel object}).
+
+Expressions of type @class{void} are deprecated as operands in function
+applications and forbidden in logic predicates.  For example:
+
+@lisp
+(display (vector-set! (vector 1) 0 2))
+@end lisp
+
+@noindent
+raises an exception because @func{vector-set!} returns the void value.
+The type @class{void} has no parent (it is @strong{not} a sub--type of
+@class{top}) and it should be like not--a--number for numeric
+computations.  Here are some consequences:
+
+@itemize
+@item
+Composing @class{void} with other types results in void:
+
+@lisp
+(type-annotation-syntax (or <fixnum> <void>))
+@result{} <void>
+
+(type-annotation-syntax (and <fixnum> <void>))
+@result{} <void>
+
+(type-annotation-syntax (not <void>))
+@result{} <void>
+@end lisp
+
+@item
+A void expression as operand of @syntax{and}, @syntax{or}, @syntax{xor}
+and test of @syntax{if} will cause an expand--time syntax violation.
+
+@item
+A void expression as operand of @syntax{not} will cause an expand--time
+syntax violation if the expander can determine the type of the operand.
+
+@item
+Remembering that @syntax{cond} and @syntax{case} return void when no
+@clause{else} clause is present and no clause matches: when
+@syntax{cond} or @syntax{case} are used as operands, an @syntax{else}
+clause is mandatory.
+
+@item
+Remembering that @syntax{when} and @syntax{unless} return void when the
+body is not evaluated: @syntax{when} and @syntax{unless} cannot be used
+as operands.
+
+@item
+The syntax @syntax{set!} cannot be used as operand.
+@end itemize
+
+The only function that is allowed to have a void operand is the core
+primitive @func{void-object?}.
 
 
 @deftp {Core Type} @aclass{void}
@@ -4038,8 +4237,8 @@ is void; otherwise return @false{}.
 @end defop
 
 @c page
-@node types built-in top
-@subsection The universal super--type
+@node built-in top
+@section The universal super--type
 
 
 @deftp {Core Type} @aclass{top}
@@ -4058,8 +4257,8 @@ Always return @true{}.
 @end defop
 
 @c page
-@node types built-in bottom
-@subsection The universal sub--type
+@node built-in bottom
+@section The universal sub--type
 
 
 @deftp {Core Type} @aclass{bottom}
@@ -4098,19 +4297,19 @@ notice that the type signature is the improper list @code{<bottom>},
 @end deftp
 
 @c page
-@node types built-in booleans
-@subsection Type of boolean values
+@node built-in booleans
+@section Type of boolean values
 
 
 @menu
-* types built-in booleans boolean::     Type of boolean values.
-* types built-in booleans true::        Type of true booleans.
-* types built-in booleans false::       Type of false booleans.
+* built-in booleans boolean::     Type of boolean values.
+* built-in booleans true::        Type of true booleans.
+* built-in booleans false::       Type of false booleans.
 @end menu
 
 @c page
-@node types built-in booleans boolean
-@subsubsection Type of boolean values
+@node built-in booleans boolean
+@subsection Type of boolean values
 
 
 @deftp {Core Type} @class{boolean}
@@ -4157,8 +4356,8 @@ The hash function is @func{boolean-hash}.
 @end deftypeop
 
 @c page
-@node types built-in booleans true
-@subsubsection Type of true booleans
+@node built-in booleans true
+@subsection Type of true booleans
 
 
 @deftp {Core Type} @class{true}
@@ -4201,8 +4400,8 @@ The hash function is @func{boolean-hash}.
 @end deftypeop
 
 @c page
-@node types built-in booleans false
-@subsubsection Type of false booleans
+@node built-in booleans false
+@subsection Type of false booleans
 
 
 @deftp {Core Type} @aclass{false}
@@ -4246,8 +4445,8 @@ The hash function is @func{boolean-hash}.
 
 
 @c page
-@node types built-in chars
-@subsection Type of character values
+@node built-in chars
+@section Type of character values
 
 
 @deftp {Core Type} @aclass{char}
@@ -4320,8 +4519,8 @@ Apply @func{char->fixnum} to the instance.
 @end deftypemethod
 
 @c page
-@node types built-in symbols
-@subsection Type of symbol values
+@node built-in symbols
+@section Type of symbol values
 
 
 @deftp {Core Type} @aclass{symbol}
@@ -4380,8 +4579,8 @@ Apply @func{property-list} to the instance.
 @end deftypemethod
 
 @c page
-@node types built-in gensyms
-@subsection Type of gensym values
+@node built-in gensyms
+@section Type of gensym values
 
 
 @deftp {Core Type} @aclass{gensym}
@@ -4403,8 +4602,8 @@ gensym object; otherwise return @false{}.
 @end defop
 
 @c page
-@node types built-in keywords
-@subsection Type of keyword values
+@node built-in keywords
+@section Type of keyword values
 
 
 @deftp {Core Type} @aclass{keyword}
@@ -4434,8 +4633,8 @@ Apply @func{keyword->string} to the instance.
 @end deftypemethod
 
 @c page
-@node types built-in pointers
-@subsection Type of pointer values
+@node built-in pointers
+@section Type of pointer values
 
 
 @deftp {Core Type} @aclass{pointer}
@@ -4515,8 +4714,8 @@ Apply @func{set-pointer-null!)} to the instance.
 @end deftypemethod
 
 @c page
-@node types built-in transcoders
-@subsection Type of transcoder values
+@node built-in transcoders
+@section Type of transcoder values
 
 
 @deftp {Core Type} @aclass{transcoder}
@@ -4553,8 +4752,8 @@ Apply @func{transcoder-error-handling-mode} to the instance.
 @end deftypemethod
 
 @c page
-@node types built-in procedures
-@subsection Type of procedures values
+@node built-in procedures
+@section Type of procedures values
 
 
 @deftp {Core Type} @aclass{procedure}
@@ -4660,35 +4859,35 @@ specified type.  The definition of this type is equivalent to:
 @end deftp
 
 @c page
-@node types built-in numerics
-@subsection Type of numeric values
+@node built-in numerics
+@section Type of numeric values
 
 
 @menu
-* types built-in numerics number::           Type of number values.
-* types built-in numerics complex::          Type of complex values.
-* types built-in numerics real-valued::      Type of real-valued values.
-* types built-in numerics real::             Type of real values.
-* types built-in numerics rational-valued::  Type of rational-valued values.
-* types built-in numerics rational::         Type of rational values.
-* types built-in numerics integer-valued::   Type of integer-valued values.
-* types built-in numerics integer::          Type of integer values.
-* types built-in numerics exact-integer::    Type of exact-integer values.
-* types built-in numerics fixnums::          Type of fixnum values.
-* types built-in numerics bignums::          Type of bignum values.
-* types built-in numerics flonums::          Type of flonum values.
-* types built-in numerics ratnums::          Type of ratnum values.
-* types built-in numerics compnums::         Type of compnum values.
-* types built-in numerics cflonums::         Type of cflonum values.
-* types built-in numerics bytes::            Type of byte values.
-* types built-in numerics octets::           Type of octet values.
-* types built-in numerics exactness::        Exactness of numeric values.
-* types built-in numerics sign::             Sign of numeric values.
+* built-in numerics number::           Type of number values.
+* built-in numerics complex::          Type of complex values.
+* built-in numerics real-valued::      Type of real-valued values.
+* built-in numerics real::             Type of real values.
+* built-in numerics rational-valued::  Type of rational-valued values.
+* built-in numerics rational::         Type of rational values.
+* built-in numerics integer-valued::   Type of integer-valued values.
+* built-in numerics integer::          Type of integer values.
+* built-in numerics exact-integer::    Type of exact-integer values.
+* built-in numerics fixnums::          Type of fixnum values.
+* built-in numerics bignums::          Type of bignum values.
+* built-in numerics flonums::          Type of flonum values.
+* built-in numerics ratnums::          Type of ratnum values.
+* built-in numerics compnums::         Type of compnum values.
+* built-in numerics cflonums::         Type of cflonum values.
+* built-in numerics bytes::            Type of byte values.
+* built-in numerics octets::           Type of octet values.
+* built-in numerics exactness::        Exactness of numeric values.
+* built-in numerics sign::             Sign of numeric values.
 @end menu
 
 @c page
-@node types built-in numerics number
-@subsubsection Type of number values
+@node built-in numerics number
+@subsection Type of number values
 
 
 @deftp {Core Type} @aclass{number}
@@ -4698,8 +4897,8 @@ Type of numeric values.  There is no constructor.  The type predicate is
 @end deftp
 
 @c page
-@node types built-in numerics complex
-@subsubsection Type of complex values
+@node built-in numerics complex
+@subsection Type of complex values
 
 
 @deftp {Core Type} @aclass{complex}
@@ -4709,8 +4908,8 @@ The type predicate is @func{complex?}.
 @end deftp
 
 @c page
-@node types built-in numerics real-valued
-@subsubsection Type of real--valued values
+@node built-in numerics real-valued
+@subsection Type of real--valued values
 
 
 @deftp {Core Type} @aclass{real-valued}
@@ -4720,8 +4919,8 @@ predicate is @func{real-valued?}.
 @end deftp
 
 @c page
-@node types built-in numerics real
-@subsubsection Type of real values
+@node built-in numerics real
+@subsection Type of real values
 
 
 @deftp {Core Type} @aclass{real}
@@ -4781,8 +4980,8 @@ Type of non--negative real values.  Its definition is equivalent to:
 @end deftp
 
 @c page
-@node types built-in numerics rational-valued
-@subsubsection Type of rational--valued values
+@node built-in numerics rational-valued
+@subsection Type of rational--valued values
 
 
 @deftp {Core Type} @aclass{rational-valued}
@@ -4792,8 +4991,8 @@ predicate is @func{rational-valued?}.
 @end deftp
 
 @c page
-@node types built-in numerics rational
-@subsubsection Type of rational values
+@node built-in numerics rational
+@subsection Type of rational values
 
 
 @deftp {Core Type} @aclass{rational}
@@ -4835,8 +5034,8 @@ to:
 @end deftp
 
 @c page
-@node types built-in numerics integer-valued
-@subsubsection Type of integer--valued values
+@node built-in numerics integer-valued
+@subsection Type of integer--valued values
 
 
 @deftp {Core Type} @aclass{integer-valued}
@@ -4846,8 +5045,8 @@ predicate is @func{integer-valued?}.
 @end deftp
 
 @c page
-@node types built-in numerics integer
-@subsubsection Type of integer values
+@node built-in numerics integer
+@subsection Type of integer values
 
 
 Notice that @class{integer} is a @class{rational}, not a
@@ -4861,8 +5060,8 @@ Type of integer values.  There is no constructor.  The type predicate is
 @end deftp
 
 @c page
-@node types built-in numerics exact-integer
-@subsubsection Type of exact--integer values
+@node built-in numerics exact-integer
+@subsection Type of exact--integer values
 
 
 @deftp {Core Type} @aclass{exact-integer}
@@ -4912,8 +5111,8 @@ Type of non--zero exact integers.  Its definition is equivalent to:
 @end deftp
 
 @c page
-@node types built-in numerics fixnums
-@subsubsection Type of fixnum values
+@node built-in numerics fixnums
+@subsection Type of fixnum values
 
 
 @deftp {Core Type} @aclass{fixnum}
@@ -4974,8 +5173,8 @@ Type of non--zero fixnum values.  Its definition is equivalent to:
 @end deftp
 
 @c page
-@node types built-in numerics bignums
-@subsubsection Type of bignum values
+@node built-in numerics bignums
+@subsection Type of bignum values
 
 
 @deftp {Core Type} @aclass{bignum}
@@ -4999,8 +5198,8 @@ predicate is @func{negative-bignum?}.
 @end deftp
 
 @c page
-@node types built-in numerics flonums
-@subsubsection Type of flonum values
+@node built-in numerics flonums
+@subsection Type of flonum values
 
 
 @deftp {Core Type} @aclass{flonum}
@@ -5090,8 +5289,8 @@ to:
 @end deftp
 
 @c page
-@node types built-in numerics ratnums
-@subsubsection Type of ratnum values
+@node built-in numerics ratnums
+@subsection Type of ratnum values
 
 
 @deftp {Core Type} @aclass{ratnum}
@@ -5115,8 +5314,8 @@ predicate is @func{negative-ratnum?}.
 @end deftp
 
 @c page
-@node types built-in numerics compnums
-@subsubsection Type of compnum values
+@node built-in numerics compnums
+@subsection Type of compnum values
 
 
 @deftp {Core Type} @aclass{compnum}
@@ -5187,8 +5386,8 @@ different from zero.  Its definition is equivalent to:
 @end deftp
 
 @c page
-@node types built-in numerics cflonums
-@subsubsection Type of cflonum values
+@node built-in numerics cflonums
+@subsection Type of cflonum values
 
 
 @deftp {Core Type} @aclass{cflonum}
@@ -5214,8 +5413,8 @@ different from zero.  There is no constructor.  The type predicate is
 @end deftp
 
 @c page
-@node types built-in numerics bytes
-@subsubsection Type of byte values
+@node built-in numerics bytes
+@subsection Type of byte values
 
 
 @deftp {Core Type} @class{byte}
@@ -5237,8 +5436,8 @@ is a byte value; otherwise return @false{}.
 @end defop
 
 @c page
-@node types built-in numerics octets
-@subsubsection Type of octet values
+@node built-in numerics octets
+@subsection Type of octet values
 
 
 @deftp {Core Type} @class{octet}
@@ -5260,8 +5459,8 @@ is a octet value; otherwise return @false{}.
 @end defop
 
 @c page
-@node types built-in numerics exactness
-@subsubsection Exactness of values
+@node built-in numerics exactness
+@subsection Exactness of values
 
 
 @deftp {Core Type} @class{exact}
@@ -5284,8 +5483,8 @@ Type of inexact numeric values.  Its definition is equivalent to:
 @end deftp
 
 @c page
-@node types built-in numerics sign
-@subsubsection Sign of numeric values
+@node built-in numerics sign
+@subsection Sign of numeric values
 
 
 @deftp {Core Type} @class{positive}
@@ -5343,19 +5542,19 @@ Type of zero numeric values.  Its definition is equivalent to:
 @end deftp
 
 @c page
-@node types built-in strings
-@subsection Type of string values
+@node built-in strings
+@section Type of string values
 
 
 @menu
-* types built-in strings base::         Base string type.
-* types built-in strings empty::        Empty string type.
-* types built-in strings non-empty::    Non-empty string type.
+* built-in strings base::         Base string type.
+* built-in strings empty::        Empty string type.
+* built-in strings non-empty::    Non-empty string type.
 @end menu
 
 @c page
-@node types built-in strings base
-@subsubsection Base string type
+@node built-in strings base
+@subsection Base string type
 
 
 @deftp {Core Type} @class{string}
@@ -5627,8 +5826,8 @@ Apply @func{string->list} to the instance.
 @end deftypemethod
 
 @c page
-@node types built-in strings empty
-@subsubsection Empty string type
+@node built-in strings empty
+@subsection Empty string type
 
 
 @deftp {Core Type} @aclass{empty-string}
@@ -5637,8 +5836,8 @@ Type of empty string values.
 @end deftp
 
 @c page
-@node types built-in strings non-empty
-@subsubsection Non--empty string type
+@node built-in strings non-empty
+@subsection Non--empty string type
 
 
 @deftp {Core Type} @aclass{nestring}
@@ -5660,19 +5859,19 @@ Apply @func{string-set!} to the instance and the arguments.
 @end deftypemethod
 
 @c page
-@node types built-in vectors
-@subsection Type of vector values
+@node built-in vectors
+@section Type of vector values
 
 
 @menu
-* types built-in vectors base::         Base vector type.
-* types built-in vectors empty::        Empty vector type.
-* types built-in vectors non-empty::    Non-empty vector type.
+* built-in vectors base::         Base vector type.
+* built-in vectors empty::        Empty vector type.
+* built-in vectors non-empty::    Non-empty vector type.
 @end menu
 
 @c page
-@node types built-in vectors base
-@subsubsection Base vector type
+@node built-in vectors base
+@subsection Base vector type
 
 
 @deftp {Core Type} @aclass{vector}
@@ -5788,8 +5987,8 @@ Apply @func{vector->list} to the instance.
 @end deftypemethod
 
 @c page
-@node types built-in vectors empty
-@subsubsection Empty vector type
+@node built-in vectors empty
+@subsection Empty vector type
 
 
 @deftp {Core Type} @aclass{empty-vector}
@@ -5798,8 +5997,8 @@ Type of empty vector values.
 @end deftp
 
 @c page
-@node types built-in vectors non-empty
-@subsubsection Non--empty vector type
+@node built-in vectors non-empty
+@subsection Non--empty vector type
 
 
 @deftp {Core Type} @aclass{nevector}
@@ -5821,19 +6020,19 @@ Apply @func{vector-set!} to the instance and the arguments.
 @end deftypemethod
 
 @c page
-@node types built-in lists
-@subsection Type of list objects
+@node built-in lists
+@section Type of list objects
 
 
 @menu
-* types built-in lists base::       Base type of list objects.
-* types built-in lists null::       Type of empty lists.
-* types built-in lists non-empty::  Type of non-empty list objects.
+* built-in lists base::       Base type of list objects.
+* built-in lists null::       Type of empty lists.
+* built-in lists non-empty::  Type of non-empty list objects.
 @end menu
 
 @c page
-@node types built-in lists base
-@subsubsection Base type of list objects
+@node built-in lists base
+@subsection Base type of list objects
 
 
 @deftp {Core Type} @aclass{list}
@@ -5856,8 +6055,8 @@ or a proper list object; otherwise return @false{}.
 @end defop
 
 @c page
-@node types built-in lists null
-@subsubsection Type of empty lists
+@node built-in lists null
+@subsection Type of empty lists
 
 
 @deftp {Core Type} @aclass{null}
@@ -5879,8 +6078,8 @@ null; otherwise return @false{}.
 @end defop
 
 @c page
-@node types built-in lists non-empty
-@subsubsection Type of non--empty list objects
+@node built-in lists non-empty
+@subsection Type of non--empty list objects
 
 
 @deftp {Core Type} @aclass{nelist}
@@ -5912,8 +6111,8 @@ Apply @func{cdr} to the type instance.
 @end defmethod
 
 @c page
-@node types built-in pairs
-@subsection Type of pair objects
+@node built-in pairs
+@section Type of pair objects
 
 
 @deftp {Core Type} @aclass{pair}
@@ -5944,8 +6143,8 @@ Apply @func{cdr} to the type instance.
 @end defmethod
 
 @c page
-@node types built-in ipairs
-@subsection Type of immutable pair objects
+@node built-in ipairs
+@section Type of immutable pair objects
 
 
 @deftp {Core Type} @aclass{ipair}
@@ -5976,8 +6175,8 @@ Apply @func{icdr} to the type instance.
 @end defmethod
 
 @c page
-@node types built-in bytevectors
-@subsection Type of bytevector objects
+@node built-in bytevectors
+@section Type of bytevector objects
 
 
 @deftp {Core Type} @aclass{bytevector}
@@ -5999,8 +6198,8 @@ Type of non--empty bytevector objects.
 @end deftp
 
 @c page
-@node types built-in hashtables
-@subsection Type of hashtable objects
+@node built-in hashtables
+@section Type of hashtable objects
 
 
 @deftp {Core Type} @aclass{hashtable}
@@ -6031,8 +6230,8 @@ Type of @func{equal?} hashtables.  The constructor is
 @end deftp
 
 @c page
-@node types built-in structs
-@subsection Type of struct objects
+@node built-in structs
+@section Type of struct objects
 
 
 @deftp {Core Type} @aclass{struct}
@@ -6050,8 +6249,8 @@ Type of struct--type descriptor objects.  The constructor is
 @end deftp
 
 @c page
-@node types built-in records
-@subsection Type of record objects
+@node built-in records
+@section Type of record objects
 
 
 @deftp {Core Type} @aclass{record}
@@ -6077,8 +6276,8 @@ Type of record--constructor descriptor objects.  The constructor is
 @end deftp
 
 @c page
-@node types built-in conditions
-@subsection Type of condition objects
+@node built-in conditions
+@section Type of condition objects
 
 
 @deftp {Core Type} @aclass{condition}
@@ -6101,23 +6300,23 @@ Apply @func{print-condition} to the instance.
 @end defmethod
 
 @c page
-@node types built-in ports
-@subsection Types of input/output ports
+@node built-in ports
+@section Types of input/output ports
 
 
 @menu
-* types built-in ports base::            Base port types.
-* types built-in ports textual in::      Textual input port types.
-* types built-in ports textual out::     Textual output port types.
-* types built-in ports textual in/out::  Textual input/output port types.
-* types built-in ports binary in::       Binary input port types.
-* types built-in ports binary out::      Binary output port types.
-* types built-in ports binary in/out::   Binary input/output port types.
+* built-in ports base::            Base port types.
+* built-in ports textual in::      Textual input port types.
+* built-in ports textual out::     Textual output port types.
+* built-in ports textual in/out::  Textual input/output port types.
+* built-in ports binary in::       Binary input port types.
+* built-in ports binary out::      Binary output port types.
+* built-in ports binary in/out::   Binary input/output port types.
 @end menu
 
 @c page
-@node types built-in ports base
-@subsubsection Base port types
+@node built-in ports base
+@subsection Base port types
 
 
 @deftp {Core Type} @aclass{port}
@@ -6172,8 +6371,8 @@ Type of binary ports.  Its definition is equivalent to:
 @end deftp
 
 @c page
-@node types built-in ports textual in
-@subsubsection Textual input port types
+@node built-in ports textual in
+@subsection Textual input port types
 
 
 @deftp {Core Type} @aclass{textual-input-port}
@@ -6183,8 +6382,8 @@ predicate is @func{textual-input-port?}.
 @end deftp
 
 @c page
-@node types built-in ports textual out
-@subsubsection Textual output port types
+@node built-in ports textual out
+@subsection Textual output port types
 
 
 @deftp {Core Type} @aclass{textual-output-port}
@@ -6194,8 +6393,8 @@ predicate is @func{textual-output-port?}.
 @end deftp
 
 @c page
-@node types built-in ports textual in/out
-@subsubsection Textual input/output port types
+@node built-in ports textual in/out
+@subsection Textual input/output port types
 
 
 @deftp {Core Type} @aclass{textual-input/output-port}
@@ -6205,8 +6404,8 @@ predicate is @func{textual-input/output-port?}.
 @end deftp
 
 @c page
-@node types built-in ports binary in
-@subsubsection Binary input port types
+@node built-in ports binary in
+@subsection Binary input port types
 
 
 @deftp {Core Type} @aclass{binary-input-port}
@@ -6216,8 +6415,8 @@ predicate is @func{binary-input-port?}.
 @end deftp
 
 @c page
-@node types built-in ports binary out
-@subsubsection Binary output port types
+@node built-in ports binary out
+@subsection Binary output port types
 
 
 @deftp {Core Type} @aclass{binary-output-port}
@@ -6227,8 +6426,8 @@ predicate is @func{binary-output-port?}.
 @end deftp
 
 @c page
-@node types built-in ports binary in/out
-@subsubsection Binary input/output port types
+@node built-in ports binary in/out
+@subsection Binary input/output port types
 
 
 @deftp {Core Type} @aclass{binary-input/output-port}
@@ -6238,13 +6437,13 @@ predicate is @func{binary-input/output-port?}.
 @end deftp
 
 @c page
-@node types built-in sentinel
-@subsection Type of sentinel object
+@node built-in sentinel
+@section Type of sentinel object
 
 
 @deftp {Built-in Type} @aclass{sentinel}
 @deftpx {Parent Type} @aclass{struct}
-Type of the sentinel object (@pxref{iklib sentinel, The sentinel
+Type of the sentinel object (@vicarepxref{iklib sentinel, The sentinel
 object}).
 @end deftp
 
@@ -6260,8 +6459,8 @@ the sentinel object; otherwise return @false{}.
 @end defop
 
 @c page
-@node types built-in misc
-@subsection Miscellaneous built-in types
+@node built-in misc
+@section Miscellaneous built-in types
 
 
 @deftp {Built--In Type} @class{&who-value}
@@ -6285,67 +6484,8 @@ The type of file descriptor values.  Its definition is equivalent to:
 @end deftp
 
 @c page
-@node types void
-@section Handling of void
-
-
-Expressions of type @class{void} are deprecated as operands in function
-applications and forbidden in logic predicates.  For example:
-
-@lisp
-(display (vector-set! (vector 1) 0 2))
-@end lisp
-
-@noindent
-raises an exception because @func{vector-set!} returns the void value.
-The type @class{void} has no parent (it is @strong{not} a sub--type of
-@class{top}) and it should be like not--a--number for numeric
-computations.  Here are some consequences:
-
-@itemize
-@item
-Composing @class{void} with other types results in void:
-
-@lisp
-(type-annotation-syntax (or <fixnum> <void>))
-@result{} <void>
-
-(type-annotation-syntax (and <fixnum> <void>))
-@result{} <void>
-
-(type-annotation-syntax (not <void>))
-@result{} <void>
-@end lisp
-
-@item
-A void expression as operand of @syntax{and}, @syntax{or}, @syntax{xor}
-and test of @syntax{if} will cause an expand--time syntax violation.
-
-@item
-A void expression as operand of @syntax{not} will cause an expand--time
-syntax violation if the expander can determine the type of the operand.
-
-@item
-Remembering that @syntax{cond} and @syntax{case} return void when no
-@clause{else} clause is present and no clause matches: when
-@syntax{cond} or @syntax{case} are used as operands, an @syntax{else}
-clause is mandatory.
-
-@item
-Remembering that @syntax{when} and @syntax{unless} return void when the
-body is not evaluated: @syntax{when} and @syntax{unless} cannot be used
-as operands.
-
-@item
-The syntax @syntax{set!} cannot be used as operand.
-@end itemize
-
-The only function that is allowed to have a void operand is the core
-primitive @func{void-object?}.
-
-@c page
-@node types methods
-@section Methods and virtual methods
+@node methods
+@chapter Methods and virtual methods
 
 
 @cindex Methods
@@ -6380,15 +6520,15 @@ The clauses @clause{virtual-method} and @clause{seal-method} are also
 accepted by @syntax{define-mixin-type}.
 
 @menu
-* types methods concrete::      Concrete methods.
-* types methods virtual::       Virtual methods.
-* types methods sealing::       Sealing methods.
-* types methods calling::       Calling object-type methods.
+* methods concrete::      Concrete methods.
+* methods virtual::       Virtual methods.
+* methods sealing::       Sealing methods.
+* methods calling::       Calling object-type methods.
 @end menu
 
 @c page
-@node types methods concrete
-@subsection Concrete methods
+@node methods concrete
+@section Concrete methods
 
 
 We can think of @clause{method} as acting like @syntax{define/checked}
@@ -6436,18 +6576,18 @@ and using the object--oriented syntax style:
 The syntax @syntax{method-call} searches for a record--type's methods by
 using @func{eq?} to search for the method's name, as symbol, in the
 record--type's internal table of methods (it does @strong{not} use the
-syntactic identifiers with @func{free-identifier=?}).  @ref{types
-methods calling, Calling object--type methods}.
+syntactic identifiers with @func{free-identifier=?}).  @ref{methods
+calling, Calling object--type methods}.
 
 @menu
-* types methods concrete overloaded::  Overloaded methods.
-* types methods concrete fields::      Field methods.
-* types methods concrete override::    Overriding methods.
+* methods concrete overloaded::  Overloaded methods.
+* methods concrete fields::      Field methods.
+* methods concrete override::    Overriding methods.
 @end menu
 
 @c page
-@node types methods concrete overloaded
-@subsubsection Overloaded methods
+@node methods concrete overloaded
+@subsection Overloaded methods
 
 
 The clause @clause{method} allows the definition of overloaded
@@ -6500,8 +6640,8 @@ definitions:
 where @var{subject} is a non--accessible identifier.
 
 @c page
-@node types methods concrete fields
-@subsubsection Field methods
+@node methods concrete fields
+@subsection Field methods
 
 
 When methods are defined for record-types: method names cannot be equal
@@ -6533,8 +6673,8 @@ So we can access and mutate fields as follows:
 @end lisp
 
 @c page
-@node types methods concrete override
-@subsubsection Overriding methods
+@node methods concrete override
+@subsection Overriding methods
 
 
 When a hierarchy of record--types is defined: the sub--types can
@@ -6572,8 +6712,8 @@ the two methods are allowed to have completely different type
 signatures.
 
 @c page
-@node types methods virtual
-@subsection Virtual methods
+@node methods virtual
+@section Virtual methods
 
 
 The clause @clause{virtual-method} allows the definition of virtual
@@ -6716,8 +6856,8 @@ sub--types can no more use it; it does not matter if the super--types
 actually use it or not.
 
 @c page
-@node types methods sealing
-@subsection Sealing methods
+@node methods sealing
+@section Sealing methods
 
 
 It happens that we want to define virtual methods in a super--type,
@@ -6781,8 +6921,8 @@ named @func{doit}:
 @end lisp
 
 @c page
-@node types methods calling
-@subsection Calling object-type methods
+@node methods calling
+@section Calling object-type methods
 
 
 The following keyword syntactic bindings are involved in the definition
@@ -6792,8 +6932,8 @@ and use of methods: @clause{method}, @clause{virtual-method},
 binding'' (run--time dispatching).
 
 The keyword @clause{method} is used in @syntax{define-record-type} to
-define methods for a record--type (@pxref{iklib records defs methods,
-Record--type methods}).  For example:
+define methods for a record--type (@vicarepxref{iklib records defs
+methods, Record--type methods}).  For example:
 
 @lisp
 (define-record-type duo
@@ -6970,8 +7110,8 @@ following program:
 @end lisp
 
 @c page
-@node types protlev
-@section Protection levels
+@node protlev
+@chapter Protection levels
 
 
 @cindex Protection levels for record--type's members
@@ -7190,8 +7330,8 @@ the same protection level:
 @end lisp
 
 @c page
-@node types mixins
-@section Sharing object--type definition clauses
+@node mixins
+@chapter Sharing object--type definition clauses
 
 
 @cindex Library @library{vicare language-extensions mixins}
@@ -7314,8 +7454,8 @@ implements
 @end deffn
 
 @c page
-@node types interfaces
-@section Interface types
+@node interfaces
+@chapter Interface types
 
 
 @cindex Library @library{vicare language-extensions interfaces}
@@ -7331,15 +7471,15 @@ Interfaces are implemented half in the boot image and half in the
 library @library{vicare language-extensions interfaces}.
 
 @menu
-* types interfaces intro::      Introduction to interfaces.
-* types interfaces defs::       Defining interfaces.
-* types interfaces descr::      Interfaces type descriptors.
-* types interfaces examples::   Interfaces by examples.
+* interfaces intro::      Introduction to interfaces.
+* interfaces defs::       Defining interfaces.
+* interfaces descr::      Interfaces type descriptors.
+* interfaces examples::   Interfaces by examples.
 @end menu
 
 @c page
-@node types interfaces intro
-@subsection Introduction to interfaces
+@node interfaces intro
+@section Introduction to interfaces
 
 
 Let's consider this code:
@@ -7424,8 +7564,8 @@ happen @strong{only} if the expander is able to determine the type of
 example, it is impossible for label types to implement interfaces.
 
 @c page
-@node types interfaces defs
-@subsection Defining interfaces
+@node interfaces defs
+@section Defining interfaces
 
 
 The following syntactic bindings are exported by the library
@@ -7517,12 +7657,12 @@ prototype with default implementation.
 @end deffn
 
 @c page
-@node types interfaces descr
-@subsection Interfaces type descriptors
+@node interfaces descr
+@section Interfaces type descriptors
 
 
 Interfaces have run--time type descriptors, accessible through the
-@syntax{type-descriptor} syntax, @ref{types descr other interface,
+@syntax{type-descriptor} syntax, @ref{descriptors other interface,
 Interface type descriptors}.  Example:
 
 @lisp
@@ -7546,8 +7686,8 @@ Interface type descriptors}.  Example:
 @end lisp
 
 @c page
-@node types interfaces examples
-@subsection Interfaces by examples
+@node interfaces examples
+@section Interfaces by examples
 
 
 Let's illustrate the features and limitations of interface--types by
@@ -8144,8 +8284,8 @@ Here we use an ``instantiable body'' to define a ``generic'' interface--type:
 @end lisp
 
 @c page
-@node types labels
-@section Sub--typing with labels
+@node labels
+@chapter Sub--typing with labels
 
 
 @cindex Library @library{vicare language-extensions labels}
@@ -8424,8 +8564,8 @@ Here we show how to include mixin clauses in a label definition:
 @end lisp
 
 @c page
-@node types friends
-@section Friend functions
+@node friends
+@chapter Friend functions
 
 
 @cindex Friend functions
@@ -8467,4 +8607,46 @@ Usage example:
 (add O)  @result{} 3
 @end lisp
 
+@c page
+@c ------------------------------------------------------------
+@c Appendices.
+@c ------------------------------------------------------------
+
+@include gpl-3.0.texi
+@include fdl-1.3.texi
+
+@c page
+@node references
+@appendix Bibliography and references
+
+
+
+@c page
+@node concept index
+@appendix An entry for each concept
+
+@printindex cp
+
+@node function index
+@appendix An entry for each function.
+
+@printindex fn
+
+@node variable index
+@appendix An entry for each variable.
+
+@printindex vr
+
+@node type index
+@appendix An entry for each type.
+
+@printindex tp
+
+@contents
+@bye
+
 @c end of file
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: t
+@c End:

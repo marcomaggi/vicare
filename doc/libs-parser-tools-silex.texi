@@ -31,7 +31,7 @@ original code is available at (@aurl{} last verified Oct 8, 2013):
 The library @library{vicare parser-tools silex utilities} implements
 convenience facilities to use SILex.  It is suggested to use SILex with
 the facilities of the libraries in the hierarchey @library{nausicaa
-parser-tools ---}, @nauref{lexical-tokens, Describing lexical tokens}.
+parser-tools ---}.
 
 @menu
 * silex example::               A lexer example for a calculator.
