@@ -18816,156 +18816,11 @@ return value from the foreign function and the value of the C variable
 @subsection Time spans object--type
 
 
-The following bindings are exported by the library @library{vicare}.
-
-
-@deftp {Record Type} @aclass{time}
-@deftpx {Parent Type} @aclass{record}
-Type name of time objects.  It can represent both absolute times
-(typically elapsed times since the Epoch) and positive and negative time
-spans relative to an arbitrary origin.  The internal time representation
-has nanosecond resolution and it is immutable.
-@end deftp
-
-@menu
-* iklib time time oop::         Object-oriented @api{}.
-* iklib time time proc::        Procedural @api{}.
-@end menu
-
-@c page
-@node iklib time time oop
-@subsubsection Object--oriented @api{}
-
-
-The following bindings are exported by the library @library{vicare}.
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Operations
-
-
-@deftypeop Constructor @aclass{time} @aclass{time} constructor @bracearg{seconds, exact-integer} @bracearg{nanoseconds, exact-integer}
-@deftypeopx Constructor @aclass{time} @aclass{time} constructor @bracearg{megaseconds, exact-integer} @bracearg{seconds, exact-integer} @bracearg{nanoseconds, exact-integer}
-Build and return a new @class{time} object.  If @var{nanoseconds}
-exceeds @code{#e1e9} its value is normalised and the excess added to
-@var{seconds}.  If @var{seconds} exceeds @code{#e1e6} its value is
-normalised and the excess added to @var{megaseconds}.
-@end deftypeop
-
-
-@deftypeop {Type predicate} @aclass{time} @aclass{boolean} type-predicate @var{obj}
-Return @true{} if @var{obj} is a @class{time} object; otherwise return
-@false{}.
-@end deftypeop
-
-
-@deftypeop {Equality predicate} @aclass{time} @aclass{boolean} equality-predicate @bracearg{this, time} @bracearg{T, time}
-Return @true{} if the @class{time} objects are true, otherwise return
-@false{}.  This equality predicate is used by @func{equal?}.
-@end deftypeop
-
-
-@deftypeop {Comparison procedure} @aclass{time} @aclass{fixnum} comparison-procedure @bracearg{this, time} @bracearg{T, time}
-Return @code{-1} if @vari{T} is less than @varii{T}; return @code{0} if
-@vari{T} is equal to @varii{T}; return @code{+1} if @vari{T} is greater
-than @varii{T}.
-@end deftypeop
-
-
-@deftypeop {Hash function} @aclass{time} @aclass{fixnum} hash-function @bracearg{this, time}
-Return a non--negative fixnum representing the hash value for @var{T}.
-This hash function is used by the syntax @syntax{hash}.
-@end deftypeop
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Accessors
-
-
-@deftypemethod @aclass{time} @aclass{exact-integer} seconds @bracearg{this, time}
-The number of seconds in the represented time span.
-@end deftypemethod
-
-
-@deftypemethod @aclass{time} @aclass{fixnum} nanoseconds @bracearg{this, time}
-The number of nanoseconds in the represented time span.
-@end deftypemethod
-
-
-@deftypemethod @aclass{time} @aclass{ratnum} ratnum @bracearg{this, time}
-@deftypemethodx @aclass{time} @aclass{flonum} flonum @bracearg{this, time}
-Return a real number representing the time in seconds.  This single
-number is built from seconds and nanoseconds.
-@end deftypemethod
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Arithmetics
-
-
-@deftypemethod @aclass{time} @aclass{time} + @bracearg{this, time} @bracearg{T, time} @dots{}
-Compute the addition between time objects: @code{@var{this} + @var{T} +
-...} and return a time object representing it.
-@end deftypemethod
-
-
-@deftypemethod @aclass{time} @aclass{time} - @bracearg{this, time} @bracearg{T, time} @dots{}
-When only the instance @var{this} is given: return the negation of the
-time object.  When additional arguments @var{T} are given, compute the
-difference between time objects: @code{@var{this} - (@var{T} + ...)}
-and return a time object representing it.
-@end deftypemethod
-
-@c ------------------------------------------------------------
-
-@subsubheading Time comparison
-
-
-@deftypemethod @aclass{time} @aclass{boolean} = @bracearg{this, time} @bracearg{T, time} @dots{}
-Return @true{} if the time objects are equal, else return @false{}.
-@end deftypemethod
-
-
-@deftypemethod @aclass{time} @aclass{boolean} != @bracearg{this, time} @bracearg{T, time} @dots{}
-Return @true{} if the arguments are all different: no two arguments are
-equal; otherwise return @false{}.  When @var{this} is the only argument:
-return @false{}.
-@end deftypemethod
-
-
-@deftypemethod @aclass{time} @aclass{boolean} < @bracearg{this, time} @bracearg{T, time} @dots{}
-Return @true{} if the time objects are monotonically increasing; else
-return @false{}.
-@end deftypemethod
-
-
-@deftypemethod @aclass{time} @aclass{boolean} <= @bracearg{this, time} @bracearg{T, time} @dots{}
-Return @true{} if the time objects are monotonically non--decreasing;
-else return @false{}.
-@end deftypemethod
-
-
-@deftypemethod @aclass{time} @aclass{boolean} > @bracearg{this, time} @bracearg{T, time} @dots{}
-Return @true{} if the time objects are monotonically decreasing; else
-return @false{}.
-@end deftypemethod
-
-
-@deftypemethod @aclass{time} @aclass{boolean} >= @bracearg{this, time} @bracearg{T, time} @dots{}
-Return @true{} if the time objects are monotonically non--increasing;
-else return @false{}.
-@end deftypemethod
-
-
-@deftypemethod @aclass{time} @aclass{boolean} max @bracearg{this, time} @bracearg{T, time} @dots{}
-@deftypemethodx @aclass{time} @aclass{boolean} min @bracearg{this, time} @bracearg{T, time} @dots{}
-Return the maximum or minimum between the arguments.
-@end deftypemethod
-
-@c page
-@node iklib time time proc
-@subsubsection Procedural @api{}
-
+Time spans are represented by instances of @class{time} objects, which
+is a disjoint object--type.  A @class{time} object can represent both
+absolute times (typically elapsed times since the Epoch) and positive
+and negative time spans relative to an arbitrary origin.  The internal
+time representation has nanosecond resolution and it is immutable.
 
 The following bindings are exported by the library @library{vicare}.
 
@@ -19076,22 +18931,22 @@ Return the maximum or minimum between the arguments.
 @subsection Time spans since the Epoch
 
 
+Time spans since the Epoch are represented by instances of
+@class{epoch-time} objects, which is a disjoint object--type; the
+object--type @class{epoch-time} is a subtype of @class{time}.  A
+@class{epoch-time} object represents the time elapsed since the Epoch as
+determined by the @posix{} function @cfunc{clock_gettime} with the
+argument @code{CLOCK_REALTIME}.  @manpage{clock_gettime, Clock and time
+functions}.
+
 The following bindings are exported by the library @library{vicare}.
 
 
-@deftp {Record Type} @aclass{epoch-time}
-@deftpx {Parent Type} @aclass{time}
-Type name of time objects representing the time elapsed since the Epoch
-as determined by the @posix{} function @cfunc{clock_gettime} with the
-argument @code{CLOCK_REALTIME}.
-@end deftp
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Procedural @api{}
-
 @deftypefun @aclass{epoch-time} current-time
-Return an instance of @class{epoch-time} representing the current time.
+Return an instance of @class{epoch-time} representing the current time
+elapsed since the Epoch as determined by the @posix{} function
+@cfunc{clock_gettime} (@manpage{clock_gettime, Clock and time
+functions}) with the argument @code{CLOCK_REALTIME}.
 @end deftypefun
 
 
@@ -19113,21 +18968,6 @@ We can interpret the Epoch time as time as expressed in the
 offset in seconds from the local time zone to @acronym{UTC}; in Rome
 (@acronym{GMT}+01) this function returns @code{3600}.
 @end deftypefun
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Object--oriented @api{}
-
-
-@deftypeop Constructor @aclass{epoch-time} @aclass{epoch-time} constructor
-Build and return a new @class{epoch-time} object.
-@end deftypeop
-
-
-@deftypeop {Type predicate} @aclass{epoch-time} @aclass{boolean} type-predicate @var{obj}
-Return @true{} if @var{obj} is a @class{epoch-time} object; otherwise
-return @false{}.
-@end deftypeop
 
 @c page
 @node iklib time date

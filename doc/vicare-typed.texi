@@ -4148,6 +4148,7 @@ et cetera.
 * built-in conditions::   Type of condition objects.
 * built-in ports::        Types of input/output ports.
 * built-in sentinel::     Type of sentinel object.
+* built-in time::         Type of time objects.
 * built-in misc::         Miscellaneous built-in types.
 @end menu
 
@@ -6457,6 +6458,176 @@ The constructor is @func{sentinel}.  Return the sentinel object.
 The type predicate is @func{sentinel?}.  Return @true{} if @var{obj} is
 the sentinel object; otherwise return @false{}.
 @end defop
+
+@c page
+@node built-in time
+@section Type of time objects
+
+
+@menu
+* built-in time time::          Time spans object-type.
+* built-in time epoch::         Time spans since the Epoch.
+@end menu
+
+@c page
+@node built-in time time
+@subsection Time spans object-type
+
+
+@deftp {Built-in Type} @aclass{time}
+@deftpx {Parent Type} @aclass{record}
+Type name of time objects.  It can represent both absolute times
+(typically elapsed times since the Epoch) and positive and negative time
+spans relative to an arbitrary origin.  The internal time representation
+has nanosecond resolution and it is immutable.
+@end deftp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Operations
+
+
+@deftypeop Constructor @aclass{time} @aclass{time} constructor @bracearg{seconds, exact-integer} @bracearg{nanoseconds, exact-integer}
+@deftypeopx Constructor @aclass{time} @aclass{time} constructor @bracearg{megaseconds, exact-integer} @bracearg{seconds, exact-integer} @bracearg{nanoseconds, exact-integer}
+Build and return a new @class{time} object.  If @var{nanoseconds}
+exceeds @code{#e1e9} its value is normalised and the excess added to
+@var{seconds}.  If @var{seconds} exceeds @code{#e1e6} its value is
+normalised and the excess added to @var{megaseconds}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @aclass{time} @aclass{boolean} type-predicate @var{obj}
+Return @true{} if @var{obj} is a @class{time} object; otherwise return
+@false{}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @aclass{time} @aclass{boolean} equality-predicate @bracearg{this, time} @bracearg{T, time}
+Return @true{} if the @class{time} objects are true, otherwise return
+@false{}.  This equality predicate is used by @func{equal?}.
+@end deftypeop
+
+
+@deftypeop {Comparison procedure} @aclass{time} @aclass{fixnum} comparison-procedure @bracearg{this, time} @bracearg{T, time}
+Return @code{-1} if @vari{T} is less than @varii{T}; return @code{0} if
+@vari{T} is equal to @varii{T}; return @code{+1} if @vari{T} is greater
+than @varii{T}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @aclass{time} @aclass{fixnum} hash-function @bracearg{this, time}
+Return a non--negative fixnum representing the hash value for @var{T}.
+This hash function is used by the syntax @syntax{hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Accessors
+
+
+@deftypemethod @aclass{time} @aclass{exact-integer} seconds @bracearg{this, time}
+The number of seconds in the represented time span.
+@end deftypemethod
+
+
+@deftypemethod @aclass{time} @aclass{fixnum} nanoseconds @bracearg{this, time}
+The number of nanoseconds in the represented time span.
+@end deftypemethod
+
+
+@deftypemethod @aclass{time} @aclass{ratnum} ratnum @bracearg{this, time}
+@deftypemethodx @aclass{time} @aclass{flonum} flonum @bracearg{this, time}
+Return a real number representing the time in seconds.  This single
+number is built from seconds and nanoseconds.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Arithmetics
+
+
+@deftypemethod @aclass{time} @aclass{time} + @bracearg{this, time} @bracearg{T, time} @dots{}
+Compute the addition between time objects: @code{@var{this} + @var{T} +
+...} and return a time object representing it.
+@end deftypemethod
+
+
+@deftypemethod @aclass{time} @aclass{time} - @bracearg{this, time} @bracearg{T, time} @dots{}
+When only the instance @var{this} is given: return the negation of the
+time object.  When additional arguments @var{T} are given, compute the
+difference between time objects: @code{@var{this} - (@var{T} + ...)}
+and return a time object representing it.
+@end deftypemethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Time comparison
+
+
+@deftypemethod @aclass{time} @aclass{boolean} = @bracearg{this, time} @bracearg{T, time} @dots{}
+Return @true{} if the time objects are equal, else return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{time} @aclass{boolean} != @bracearg{this, time} @bracearg{T, time} @dots{}
+Return @true{} if the arguments are all different: no two arguments are
+equal; otherwise return @false{}.  When @var{this} is the only argument:
+return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{time} @aclass{boolean} < @bracearg{this, time} @bracearg{T, time} @dots{}
+Return @true{} if the time objects are monotonically increasing; else
+return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{time} @aclass{boolean} <= @bracearg{this, time} @bracearg{T, time} @dots{}
+Return @true{} if the time objects are monotonically non--decreasing;
+else return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{time} @aclass{boolean} > @bracearg{this, time} @bracearg{T, time} @dots{}
+Return @true{} if the time objects are monotonically decreasing; else
+return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{time} @aclass{boolean} >= @bracearg{this, time} @bracearg{T, time} @dots{}
+Return @true{} if the time objects are monotonically non--increasing;
+else return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{time} @aclass{boolean} max @bracearg{this, time} @bracearg{T, time} @dots{}
+@deftypemethodx @aclass{time} @aclass{boolean} min @bracearg{this, time} @bracearg{T, time} @dots{}
+Return the maximum or minimum between the arguments.
+@end deftypemethod
+
+@c page
+@node built-in time epoch
+@subsection Time spans since the Epoch
+
+
+@deftp {Built-in Type} @aclass{epoch-time}
+@deftpx {Parent Type} @aclass{time}
+Type name of time objects representing the time elapsed since the Epoch
+as determined by the @posix{} function @cfunc{clock_gettime}
+(@manpage{clock_gettime, Clock and time functions}) with the argument
+@code{CLOCK_REALTIME}.
+@end deftp
+
+
+@deftypeop Constructor @aclass{epoch-time} @aclass{epoch-time} constructor
+Build and return a new @class{epoch-time} object.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @aclass{epoch-time} @aclass{boolean} type-predicate @var{obj}
+Return @true{} if @var{obj} is a @class{epoch-time} object; otherwise
+return @false{}.
+@end deftypeop
 
 @c page
 @node built-in misc
