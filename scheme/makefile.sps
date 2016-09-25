@@ -1380,7 +1380,7 @@
     (<epoch-time>				v $language)
     (current-time				v $language)
     (epoch-time?				v $language)
-    (epoch-time-gmt-offset			v $language)
+    (time-gmt-offset				v $language)
     ;;
     (date-string				v $language)
 ;;;

@@ -41,7 +41,7 @@
     <epoch-time>-hash-function
     epoch-time?				list-of-epoch-times?
     current-time
-    epoch-time-gmt-offset
+    time-gmt-offset
 
     ;; date functions
     date-string
@@ -71,7 +71,7 @@
 		  <epoch-time>-hash-function
 		  epoch-time?				list-of-epoch-times?
 		  current-time
-		  epoch-time-gmt-offset
+		  time-gmt-offset
 
 		  ;; date functions
 		  date-string
@@ -335,7 +335,7 @@
 
 (define-list-of-type-predicate list-of-epoch-times? epoch-time?)
 
-(define* (epoch-time-gmt-offset)
+(define* (time-gmt-offset)
   ;;We think of Epoch time as a time point specification in the GMT timezone.  We can
   ;;ask: what is  the offset between GMT  and the timezone configured  as selected by
   ;;the  operating system?   This function  answers  this question  by returning  the

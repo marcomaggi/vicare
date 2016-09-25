@@ -85,7 +85,7 @@
   (attributes
    ((_)			effect-free result-true)))
 
-(declare-core-primitive epoch-time-gmt-offset
+(declare-core-primitive time-gmt-offset
     (safe)
   (signatures
    (()			=> (<fixnum>)))

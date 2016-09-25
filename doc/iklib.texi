@@ -18962,7 +18962,7 @@ Return @true{} if @var{obj} is a (possibly empty) proper list of
 @end defun
 
 
-@deftypefun @aclass{fixnum} epoch-time-gmt-offset
+@deftypefun @aclass{fixnum} time-gmt-offset
 We can interpret the Epoch time as time as expressed in the
 @acronym{UTC} or @acronym{GMT}+00 time zone.  This function returns the
 offset in seconds from the local time zone to @acronym{UTC}; in Rome

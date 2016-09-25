@@ -41,7 +41,7 @@
 				(time-nanoseconds T)
 				(time-ratnum T)
 				(time-flonum T)
-				(epoch-time-gmt-offset)
+				(time-gmt-offset)
 				(date-string)))
       (check-pretty-print T)))
 
@@ -60,7 +60,7 @@
     => #t)
 
   (check
-      (fixnum? (epoch-time-gmt-offset))
+      (fixnum? (time-gmt-offset))
     => #t)
 
   (check

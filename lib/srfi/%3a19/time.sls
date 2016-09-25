@@ -124,7 +124,7 @@
 		  current-time
 		  time-nanoseconds
 		  time-seconds
-		  epoch-time-gmt-offset)
+		  time-gmt-offset)
 	    host:)
     (srfi :6 basic-string-ports))
 
@@ -134,7 +134,7 @@
 ;;;Vicare  uses "clock_gettime()"  which gives  nanoseconds, so  our resolution  is 1
 ;;;nanosecond.
 (define host:time-resolution 1)
-(define host:timezone-offset (host:epoch-time-gmt-offset))
+(define host:timezone-offset (host:time-gmt-offset))
 
 
 ;;;; helpers
