@@ -494,16 +494,14 @@
 (declare-core-primitive port-fd
     (safe)
   (signatures
-   #;((<port>)		=> ((or <false> <file-descriptor>)))
-   ((<port>)		=> (<top>)))
+   ((<port>)		=> ((or <false> <file-descriptor>))))
   (attributes
    ((_)			effect-free result-true)))
 
 (declare-core-primitive port-transcoder
     (safe)
   (signatures
-   #;((<port>)		=> ((or <false> <transcoder>)))
-   ((<port>)		=> (<transcoder>)))
+   ((<port>)		=> ((or <false> <transcoder>))))
   (attributes
    ((_)			effect-free)))
 
@@ -656,32 +654,32 @@
 (declare-core-primitive get-bytevector-all
     (safe)
   (signatures
-   #;((<binary-input-port>)		=> ((or <eof> <would-block> <bytevector>)))
-   ((<binary-input-port>)		=> (<top>)))
+   ((<binary-input-port>)		=> ((or <eof> <would-block> <nebytevector>))))
   (attributes
    ((_)					result-true)))
 
 (declare-core-primitive get-bytevector-n
     (safe)
   (signatures
-   #;((<binary-input-port> <non-negative-fixnum>)		=> ((or <eof> <would-block> <bytevector>)))
-   ((<binary-input-port> <non-negative-fixnum>)		=> (<top>)))
+   ((<binary-input-port> <non-negative-fixnum>)		=> ((or <eof> <would-block> <nebytevector>))))
   (attributes
    ((_ _)			result-true)))
 
 (declare-core-primitive get-bytevector-n!
     (safe)
   (signatures
-   #;((<binary-input-port> <bytevector> <non-negative-fixnum> <non-negative-fixnum>) => ((or <eof> <would-block> <bytevector>)))
-   ((<binary-input-port> <bytevector> <non-negative-fixnum> <non-negative-fixnum>) => (<top>)))
+   ((<binary-input-port>	;port
+     <bytevector>		;bv
+     <non-negative-fixnum>	;start
+     <non-negative-fixnum>	;count
+     ) => ((or <eof> <would-block> <bytevector>))))
   (attributes
    ((_ _ _ _)			result-true)))
 
 (declare-core-primitive get-bytevector-some
     (safe)
   (signatures
-   #;((<binary-input-port>)	=> ((or <eof> <would-block> <bytevector>)))
-   ((<binary-input-port>)	=> (<top>)))
+   ((<binary-input-port>)	=> ((or <eof> <would-block> <nebytevector>))))
   (attributes
    ((_ _ _ _)			result-true)))
 
@@ -690,32 +688,28 @@
 (declare-core-primitive get-string-all
     (safe)
   (signatures
-   #;((<textual-input-port>)		=> ((or <eof> <would-block> <string>)))
-   ((<textual-input-port>)		=> (<top>)))
+   ((<textual-input-port>)		=> ((or <eof> <would-block> <nestring>))))
   (attributes
    ((_)					result-true)))
 
 (declare-core-primitive get-string-n
     (safe)
   (signatures
-   #;((<textual-input-port> <non-negative-fixnum>)	=> ((or <eof> <would-block> <string>)))
-   ((<textual-input-port> <non-negative-fixnum>)	=> (<top>)))
+   ((<textual-input-port> <non-negative-fixnum>)	=> ((or <eof> <would-block> <nestring>))))
   (attributes
    ((_ _)			result-true)))
 
 (declare-core-primitive get-string-n!
     (safe)
   (signatures
-   #;((<textual-input-port> <string> <non-negative-fixnum> <non-negative-fixnum>) => ((or <eof> <would-block> <string>)))
-   ((<textual-input-port> <string> <non-negative-fixnum> <non-negative-fixnum>) => (<top>)))
+   ((<textual-input-port> <string> <non-negative-fixnum> <non-negative-fixnum>) => ((or <eof> <would-block> <nestring>))))
   (attributes
    ((_ _ _ _)			result-true)))
 
 (declare-core-primitive get-string-some
     (safe)
   (signatures
-   #;((<textual-input-port>)	=> ((or <eof> <would-block> <string>)))
-   ((<textual-input-port>)	=> (<top>)))
+   ((<textual-input-port>)	=> ((or <eof> <would-block> <nestring>))))
   (attributes
    ((_)				result-true)))
 
@@ -724,40 +718,35 @@
 (declare-core-primitive get-u8
     (safe)
   (signatures
-   #;((<binary-input-port>)	=> ((or <eof> <would-block> <octet>)))
-   ((<binary-input-port>)	=> (<top>)))
+   ((<binary-input-port>)	=> ((or <eof> <would-block> <non-negative-fixnum>))))
   (attributes
    ((_)				result-true)))
 
 (declare-core-primitive get-char
     (safe)
   (signatures
-   #;((<textual-input-port>)	=> ((or <eof> <would-block> <char>)))
-   ((<textual-input-port>)	=> (<top>)))
+   ((<textual-input-port>)	=> ((or <eof> <would-block> <char>))))
   (attributes
    ((_)				result-true)))
 
 (declare-core-primitive get-char-and-track-textual-position
     (safe)
   (signatures
-   #;((<textual-input-port>)	=> ((or <eof> <would-block> <char>)))
-   ((<textual-input-port>)	=> (<top>)))
+   ((<textual-input-port>)	=> ((or <eof> <would-block> <char>))))
   (attributes
    ((_)				result-true)))
 
 (declare-core-primitive get-datum
     (safe)
   (signatures
-   #;((<textual-input-port>)	=> ((or <eof> <would-block> <top>)))
-   ((<textual-input-port>)	=> (<top>)))
+   ((<textual-input-port>)	=> ((or <eof> <would-block> <top>))))
   (attributes
    ((_)				result-true)))
 
 (declare-core-primitive get-line
     (safe)
   (signatures
-   #;((<textual-input-port>)	=> ((or <eof> <would-block> <string>)))
-   ((<textual-input-port>)	=> (<top>)))
+   ((<textual-input-port>)	=> ((or <eof> <would-block> <string>))))
   (attributes
    ((_)				result-true)))
 
@@ -766,24 +755,22 @@
 (declare-core-primitive lookahead-u8
     (safe)
   (signatures
-   #;((<binary-input-port>)	=> ((or <eof> <would-block> <octet>)))
-   ((<binary-input-port>)	=> (<top>)))
+   ((<binary-input-port>)	=> ((or <eof> <would-block> <non-negative-fixnum>))))
   (attributes
    ((_)				result-true)))
 
 (declare-core-primitive lookahead-two-u8
     (safe)
   (signatures
-   #;((<binary-input-port>)	=> ((or <eof> <would-block> <octet>) (or <eof> <would-block> <octet>)))
-   ((<binary-input-port>)	=> (<top> <top>)))
+   ((<binary-input-port>)	=> ((or <eof> <would-block> <non-negative-fixnum>)
+				    (or <eof> <would-block> <non-negative-fixnum>))))
   (attributes
    ((_)				result-true)))
 
 (declare-core-primitive lookahead-char
     (safe)
   (signatures
-   #;((<textual-input-port>)	=> ((or <eof> <would-block> <char>)))
-   ((<textual-input-port>)	=> (<top>)))
+   ((<textual-input-port>)	=> ((or <eof> <would-block> <char>))))
   (attributes
    ((_)				result-true)))
 
@@ -798,10 +785,8 @@
 (declare-core-primitive read-char
     (safe)
   (signatures
-   #;(()			=> ((or <eof> <would-block> <char>)))
-   #;((<textual-input-port>)	=> ((or <eof> <would-block> <char>)))
-   (()				=> (<top>))
-   ((<textual-input-port>)	=> (<top>)))
+   (()				=> ((or <eof> <would-block> <char>)))
+   ((<textual-input-port>)	=> ((or <eof> <would-block> <char>))))
   (attributes
    (()				result-true)
    ((_)				result-true)))
@@ -809,10 +794,8 @@
 (declare-core-primitive peek-char
     (safe)
   (signatures
-   #;(()			=> ((or <eof> <would-block> <char>)))
-   #;((<textual-input-port>)	=> ((or <eof> <would-block> <char>)))
-   (()				=> (<top>))
-   ((<textual-input-port>)	=> (<top>)))
+   (()				=> ((or <eof> <would-block> <char>)))
+   ((<textual-input-port>)	=> ((or <eof> <would-block> <char>))))
   (attributes
    (()				result-true)
    ((_)				result-true)))
@@ -820,10 +803,8 @@
 (declare-core-primitive read-line
     (safe)
   (signatures
-   #;(()			=> ((or <eof> <would-block> <string>)))
-   #;((<textual-input-port>)	=> ((or <eof> <would-block> <string>)))
-   (()				=> (<top>))
-   ((<textual-input-port>)	=> (<top>)))
+   (()				=> ((or <eof> <would-block> <string>)))
+   ((<textual-input-port>)	=> ((or <eof> <would-block> <string>))))
   (attributes
    (()				result-true)
    ((_)				result-true)))
