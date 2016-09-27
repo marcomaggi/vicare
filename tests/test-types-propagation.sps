@@ -4237,6 +4237,21 @@
 	      (else	#f))
 	=> ((or <positive-fixnum> <positive-flonum> <false>)))
 
+;;; --------------------------------------------------------------------
+;;; type specialisation
+
+  (doit (let (({var <list>} '(1 2 3)))
+	  (cond ((pair? var)
+		 var)
+		(else #f)))
+	=> ((or <nelist> <false>)))
+
+  (doit (let (({var <list>} '(1 2 3)))
+	  (cond ((null? var)
+		 var)
+		(else #f)))
+	=> ((or <null> <false>)))
+
   (void))
 
 
@@ -4314,6 +4329,24 @@
 
   (doit (and 1 2 (and 3.1 3.2))
 	=> (<positive-flonum>))
+
+;;; --------------------------------------------------------------------
+;;; type specialisation
+
+  (doit (let (({var <list>} '(1 2 3)))
+	  (and (null? var)
+	       var))
+	=> ((or <null> <false>)))
+
+  (doit (let (({var <list>} '(1 2 3)))
+	  (and (pair? var)
+	       var))
+	=> ((or <nelist> <false>)))
+
+  (doit (let (({var (list-of <fixnum>)} '(1 2 3)))
+	  (and (pair? var)
+	       var))
+	=> ((or (pair <fixnum> (list-of <fixnum>)) <false>)))
 
   (void))
 
