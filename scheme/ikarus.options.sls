@@ -36,7 +36,7 @@
     drop-assertions?
     writing-boot-image?
     strict-r6rs
-    strict-type-checking?
+
     ;; vicare configuration options
     vicare-built-with-arguments-validation-enabled
     vicare-built-with-srfi-enabled
@@ -99,8 +99,6 @@
     ))
 
 (define-parameter-boolean-option strict-r6rs #f)
-
-(define-parameter-boolean-option strict-type-checking? #f)
 
 ;;When  set to  true: expand  every ASSERT  macro into  its expression,  dropping the
 ;;assertions.  Specifically:

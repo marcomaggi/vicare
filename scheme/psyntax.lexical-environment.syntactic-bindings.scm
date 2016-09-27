@@ -35,6 +35,7 @@
 ;;; local lexical variables, typed variant
    make-syntactic-binding-descriptor/lexical-typed-var
    make-syntactic-binding-descriptor/lexical-typed-var/from-data
+   copy-syntactic-binding-descriptor/lexical-typed-var/from-data
    syntactic-binding-descriptor/lexical-typed-var?
    syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec
 
@@ -354,6 +355,10 @@
 				  (list (build-data no-source (object-type-spec.name variable.ots))
 					(build-data no-source lex)))))
     (make-syntactic-binding-descriptor/lexical-typed-var lts lts-maker.core-expr)))
+
+(define* (copy-syntactic-binding-descriptor/lexical-typed-var/from-data descr {new-variable.ots object-type-spec?})
+  (make-syntactic-binding-descriptor/lexical-typed-var/from-data
+   new-variable.ots (lexical-typed-variable-spec.lex (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr))))
 
 ;;; --------------------------------------------------------------------
 

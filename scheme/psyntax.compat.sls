@@ -92,7 +92,6 @@
     compiler::options::strict-r6rs
 
     ;; runtime options
-    options::strict-type-checking?
     options::debug-mode-enabled?
     options::drop-assertions?
     options::enable-arguments-validation?
@@ -170,7 +169,6 @@
 		    (strict-r6rs-compilation	strict-r6rs))
 	    compiler::options::)
     (prefix (rename (only (ikarus.options)
-			  strict-type-checking?
 			  debug-mode-enabled?
 			  drop-assertions?
 			  print-loaded-libraries?

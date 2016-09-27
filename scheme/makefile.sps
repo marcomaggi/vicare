@@ -4364,7 +4364,6 @@
     (writing-boot-image?				system-options)
     (compilation-wordsize				system-options)
     (strict-r6rs					system-options)
-    (strict-type-checking?				system-options)
     (vicare-built-with-arguments-validation-enabled	system-options)
     (vicare-built-with-descriptive-labels-generation	system-options)
     (vicare-built-with-srfi-enabled			system-options)
@@ -4724,7 +4723,13 @@
     (debug-call)
 
 ;;; --------------------------------------------------------------------
-;;; syntax utilities
+;;; expander: configuration
+
+    (strict-type-checking?			$expander)
+    (predicate-type-propagation?		$expander)
+
+;;; --------------------------------------------------------------------
+;;; expander: syntax utilities
 
     (identifier->string				$expander)
     (string->identifier				$expander)

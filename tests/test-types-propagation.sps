@@ -25,7 +25,7 @@
 
 #!vicare
 (program (test-types-rhs-type-propagation)
-  (options typed-language)
+  (options typed-language predicate-type-propagation)
   (import (vicare)
     (prefix (vicare expander) expander::)
     (only (vicare expander)
@@ -4162,6 +4162,62 @@
     => '(1 2.3 (one)))
 
   #| end of PARAMETRISE |# )
+
+
+(parametrise ((check-test-name	'if))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?expr => ?expected)
+       (check
+	   (.syntax-object (type-of ?expr))
+	 (=> expander::syntax=?)
+	 (syntax (?expected))))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; PAIR? in test
+
+  (doit (let (({var <list>} '(1 2 3)))
+	  (if (pair? var)
+	      var
+	    #f))
+	=> (or <nelist> <false>))
+
+  (doit (let ((var '(1 2 3)))
+	  (if (pair? var)
+	      var
+	    #f))
+	=> (list <positive-fixnum> <positive-fixnum> <positive-fixnum>))
+
+  (doit (let (({var (list-of <fixnum>)} '(1 2 3)))
+	  (if (pair? var)
+	      var
+	    #f))
+	=> (or (pair <fixnum> (list-of <fixnum>)) <false>))
+
+  (doit (let (({var <pair>} '(1 2 3)))
+	  (if (pair? var)
+	      var
+	    #f))
+	=> <pair>)
+
+  (doit (let (({var <top>} '(1 2 3)))
+	  (if (pair? var)
+	      var
+	    #f))
+	=> (or <pair> <false>))
+
+;;; --------------------------------------------------------------------
+;;; NULL? in test
+
+  (doit (let (({var <list>} '(1 2 3)))
+	  (if (null? var)
+	      var
+	    #f))
+	=> (or <null> <false>))
+
+  (void))
 
 
 (parametrise ((check-test-name	'cond))

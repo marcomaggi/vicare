@@ -94,15 +94,7 @@
 		  syntax-violation	make-variable-transformer)
     (prefix (rnrs syntax-case) sys::)
     (psyntax.compat)
-    (prefix (only (psyntax.config)
-		  typed-language-enabled?
-		  strict-r6rs-enabled?
-		  warn-about-logic-constants
-		  warn-about-not-returning-expressions
-		  warn-about-compatible-operands-signature-in-procedure-application
-		  warn-about-unused-lexical-variables
-		  warn-about-overloaded-function-late-binding)
-	    options::)
+    (prefix (psyntax.config) options::)
     (psyntax.builders)
     (psyntax.lexical-environment)
     (only (psyntax.import-spec-parser)

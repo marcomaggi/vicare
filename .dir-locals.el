@@ -44,6 +44,7 @@
      (eval . (put 'cond-boot-expansion							'scheme-indent-function 1))
      (eval . (put 'cond-numeric-operand							'scheme-indent-function 1))
      (eval . (put 'cond-with-predicates							'scheme-indent-function 1))
+     (eval . (put 'case-predicate-application						'scheme-indent-function 2))
      (eval . (put 'closure-type-spec.signature-set!					'scheme-indent-function 1))
      (eval . (put 'core-lang-builder							'scheme-indent-function 1))
      (eval . (put 'declare-core-primitive						'scheme-indent-function 2))

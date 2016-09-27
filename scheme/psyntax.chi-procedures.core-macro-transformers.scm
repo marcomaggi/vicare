@@ -1126,351 +1126,106 @@
      (__synner__ "invalid syntax in macro use"))))
 
 
-;;;; module core-macro-transformer: IF, AND, OR
-
-(module (if-transformer and-transformer or-transformer)
-
-  (define-core-transformer (if input-form.stx lexenv.run lexenv.expand)
-    ;;Transformer function used  to expand R6RS IF syntaxes from  the top-level built
-    ;;in environment.  Expand the syntax object  INPUT-FORM.STX in the context of the
-    ;;given LEXENV; return a PSI object.
+(module TYPE-SPECIALISATION-FOR-PREDICATE-APPLICATION
+  (%perform-type-specialisation-for-predicate-application)
+  ;;This  module  is   used  by  the  transformers  of:  IF,   AND  to  perform  type
+  ;;specialisation consequent to type predicate application.
+  ;;
+  ;;If a test expression  is a predicate application we want to  update the lexenv to
+  ;;reflect that knowledge.  For example:
+  ;;
+  ;;   (if (pair? var)
+  ;;       (car var)
+  ;;     #f)
+  ;;
+  ;;when expanding the  consequent "(car var)" we  want to update the type  of VAR to
+  ;;reflect the knowledge that it is a pair.
+  ;;
+  ;;At present  type specialisation  is performed  if the test  expression is  a type
+  ;;predicate  application  with  a  syntactic   identifier  as  operand,  where  the
+  ;;identifier is bound to a lexical typed variable.
+  ;;
+  (define (%perform-type-specialisation-for-predicate-application test.psi lexenv)
+    ;;Examine TEST.PSI and, if possible, pushes a new entry on LEXENV to override the
+    ;;type of a variable; return the possibly updated LEXENV.
     ;;
-    (define caller-who __who__)
-    (define (%signature-union-synner message cnd)
-      (raise
-       (condition (make-who-condition caller-who)
-		  (make-message-condition message)
-		  (make-syntax-violation input-form.stx #f)
-		  cnd)))
-    (syntax-match input-form.stx ()
-      ((_ ?test ?consequent ?alternate)
-       (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
-	     (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand))
-	     (alternate.psi  (chi-expr ?alternate  lexenv.run lexenv.expand)))
-	 (let ((sym (%validate-and-qualify-single-signature caller-who input-form.stx test.psi)))
-	   (case sym
-	     ((maybe-false)
-	      ;;The test might return false.
-	      (make-psi input-form.stx
-		(build-conditional no-source
-		    (psi.core-expr test.psi)
-		  (psi.core-expr consequent.psi)
-		  (psi.core-expr alternate.psi))
-		(type-signature.union-same-number-of-operands
-		 %signature-union-synner
-		 (psi.retvals-signature consequent.psi)
-		 (psi.retvals-signature alternate.psi))))
-	     ((always-false)
-	      ;;The test always returns false.
-	      (make-psi input-form.stx
-		(build-sequence no-source
-		  (list (psi.core-expr test.psi)
-			(psi.core-expr alternate.psi)))
-		(psi.retvals-signature alternate.psi)))
-
-	     ((always-true)
-	      ;;The test always returns non-false.
-	      (make-psi input-form.stx
-		(build-sequence no-source
-		  (list (psi.core-expr test.psi)
-			(psi.core-expr consequent.psi)))
-		(psi.retvals-signature consequent.psi)))
-
-	     ((no-return)
-	      ;;The test raises an exception or exits the process.
-	      test.psi)
-
-	     (else
-	      (assertion-violation caller-who "internal error" input-form.stx sym))))))
-
-      ((_ ?test ?consequent)
-       (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
-	     (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand)))
-	 ;;We build  code to make  the one-armed IF return  void if the  alternate is
-	 ;;unspecified; according to R6RS:
-	 ;;
-	 ;;* If the test  succeeds: the return value must be the  return value of the
-	 ;;  consequent.
-	 ;;
-	 ;;* If the test fails and there  *is* an alternate: the return value must be
-	 ;;  the return value of the alternate.
-	 ;;
-	 ;;*  If  the  test fails  and  there  is  *no*  alternate: this  syntax  has
-	 ;;  unspecified return values.
-	 ;;
-	 ;;Notice that one-armed IF is also used in the expansion of WHEN and UNLESS;
-	 ;;R6RS states  that, for  those syntaxes,  when the  body *is*  executed the
-	 ;;return value must be the return value of the last expression in the body.
-	 (let ((sym (%validate-and-qualify-single-signature caller-who input-form.stx test.psi)))
-	   (case sym
-	     ((maybe-false)
-	      ;;The test might return false.
-	      (make-psi input-form.stx
-		(build-conditional no-source
-		    (psi.core-expr test.psi)
-		  (psi.core-expr consequent.psi)
-		  (build-void))
-		(make-type-signature/single-void)))
-
-	     ((always-false)
-	      ;;The test always returns false.
-	      test.psi)
-
-	     ((always-true)
-	      ;;The test always returns non-false.
-	      (make-psi input-form.stx
-		(build-sequence no-source
-		  (list (psi.core-expr test.psi)
-			(psi.core-expr consequent.psi)))
-		(psi.retvals-signature consequent.psi)))
-
-	     ((no-return)
-	      ;;The test raises an exception or exits the process.
-	      test.psi)
-
-	     (else
-	      (assertion-violation caller-who "internal error" input-form.stx sym))))))
-
-      (_
-       (__synner__ "invalid syntax in macro use"))))
+    (case-predicate-application test.psi rand.stx
+      ((pair?)
+       (%do-branch rand.stx %build-updated-ots/pair? lexenv))
+      ((null?)
+       (%do-branch rand.stx %build-updated-ots/null? lexenv))
+      (else
+       lexenv)))
 
 ;;; --------------------------------------------------------------------
 
-  (define-core-transformer (and input-form.stx lexenv.run lexenv.expand)
-    ;;Transformer function used to expand R6RS AND macros from the top-level built in
-    ;;environment.  Expand the contents of INPUT-FORM.STX in the context of the given
-    ;;LEXENV; return a PSI object.
-    ;;
-    ;;The syntax use:
-    ;;
-    ;;   (and ?expr1 ?expr2 ?expr3)
-    ;;
-    ;;could be expanded as a non-core macro into:
-    ;;
-    ;;   (if ?expr1
-    ;;       (if ?expr2
-    ;;           ?expr3
-    ;;         #f)
-    ;;     #f)
-    ;;
-    ;;and the type annotation of the returned value is:
-    ;;
-    ;;   (or (type-of ?expr3) <false>)
-    ;;
-    ;;But, if we determine at expand-time that all the expressions return a type that
-    ;;is different from: <top>, <boolean>, <false>, we can expand into:
-    ;;
-    ;;   (begin
-    ;;     ?expr1
-    ;;     ?expr2
-    ;;     ?expr3)
-    ;;
-    ;;in this case using an AND syntax  is useless, so we should raise an expand-time
-    ;;warning.
-    ;;
-    ;;Here  we do  a mixture:  if an  expression might  return false,  we generate  a
-    ;;conditional; if an expression always returns non-false, we generate a sequence.
-    ;;
-    (define caller-who __who__)
-    (define (%signature-union-synner message cnd)
-      (raise
-       (condition (make-who-condition caller-who)
-		  (make-message-condition message)
-		  (make-syntax-violation input-form.stx #f)
-		  cnd)))
-    (syntax-match input-form.stx ()
-      ((_)
-       (make-psi/single-true input-form.stx))
+  (define-syntax case-predicate-application
+    (syntax-rules ()
+      ((_ ?psi ?rand.stx ((?predicate) . ?body) ... (else . ?else-body))
+       (syntax-match (psi.input-form ?psi) (?predicate ...)
+	 ((?predicate ?expr)
+	  (identifier? ?expr)
+	  (let ((?rand.stx ?expr)) . ?body))
+	 ...
+	 (_
+	  . ?else-body)))
+      ))
 
-      ((_ ?expr)
-       (chi-expr ?expr lexenv.run lexenv.expand))
-
-      ;;This is the plain version that expands into nested conditionals, one for each
-      ;;expression but the last.  It is kept here as reference.
-      ;;
-      ;; ((_ ?expr0 ?expr1 ?expr* ...)
-      ;;  (let* ((expr*.stx        (cons* ?expr0 ?expr1 ?expr*))
-      ;;         (expr*.psi        (chi-expr* expr*.stx lexenv.run lexenv.expand))
-      ;;         (expr*.sig        (map psi.retvals-signature expr*.psi)))
-      ;;    (make-psi input-form.stx
-      ;;      (let recur ((expr*.psi expr*.psi))
-      ;;        (if (pair? (cdr expr*.psi))
-      ;;            (build-conditional no-source
-      ;;                (psi.core-expr (car expr*.psi))
-      ;;              (recur (cdr expr*.psi))
-      ;;              (build-data no-source #f))
-      ;;          (psi.core-expr (car expr*.psi))))
-      ;;      (car (last-pair expr*.sig)))))
-
-      ((_ ?expr0 ?expr1 ?expr* ...)
-       (let* ((expr*.stx	(cons* ?expr0 ?expr1 ?expr*))
-	      (expr*.psi	(chi-expr* expr*.stx lexenv.run lexenv.expand))
-	      ;;This is set  to the type signature of the  last evaluated expression,
-	      ;;when all the previous expressions return true.
-	      (last-expr.sig	#f)
-	      ;;This is set to true if at least one expression may return false.
-	      (false-flag	#f))
-	 (define code.core
-	   (let recur ((expr*.psi expr*.psi))
-	     (define-syntax-rule (recursion)
-	       (recur (cdr expr*.psi)))
-	     (let* ((expr.psi	(car expr*.psi))
-		    (expr.core	(psi.core-expr         expr.psi))
-		    (expr.sig	(psi.retvals-signature expr.psi)))
-	       (if (pair? (cdr expr*.psi))
-		   (let ((sym (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)))
-		     (case sym
-		       ((maybe-false)
-			;;The expression might return false.
-			(set! false-flag #t)
-			(build-conditional no-source
-			    expr.core
-			  (recursion)
-			  (build-data no-source #f)))
-		       ((always-false)
-			;;The expression always  returns false.  There is  no need to
-			;;include the trailing expressions.
-			(set! last-expr.sig expr.sig)
-			expr.core)
-		       ((always-true)
-			;;The expression always returns non-false.
-			(build-sequence no-source
-			  (list expr.core (recursion))))
-		       ((no-return)
-			;;The expression  raises an  exception or exits  the process.
-			;;There is no need to include the trailing expressions.
-			(set! last-expr.sig expr.sig)
-			expr.core)
-		       (else
-			(assertion-violation caller-who "internal error" input-form.stx sym))))
-		 (begin
-		   ;;We must validate the last expression, too.
-		   (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)
-		   (set! last-expr.sig expr.sig)
-		   expr.core)))))
-	 (define output-form.sig
-	   (if false-flag
-	       (type-signature.union-same-number-of-operands
-		%signature-union-synner
-		last-expr.sig (make-type-signature/single-false))
-	     last-expr.sig))
-	 #;(assert last-expr.sig)
-	 (make-psi input-form.stx code.core output-form.sig)))
-
-      (_
-       (__synner__ "invalid syntax in macro use"))))
+  (define-syntax-rule (%do-branch ?rand ?updated-ots-builder ?lexenv)
+    (cond ((id->label ?rand)
+	   => (lambda (label)
+		(let ((descr (label->syntactic-binding-descriptor label ?lexenv)))
+		  (case (syntactic-binding-descriptor.type descr)
+		    ((lexical-typed)
+		     (let* ((old-lts   (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr))
+			    (old-ots   (typed-variable-spec.ots old-lts))
+			    (new-ots   (?updated-ots-builder old-ots))
+			    (new-descr (copy-syntactic-binding-descriptor/lexical-typed-var/from-data descr new-ots)))
+		       (push-entry-on-lexenv label new-descr ?lexenv)))
+		    (else ?lexenv)))))
+	  (else ?lexenv)))
 
 ;;; --------------------------------------------------------------------
 
-  (define-core-transformer (or input-form.stx lexenv.run lexenv.expand)
-    ;;Transformer function used to expand R6RS  OR macros from the top-level built in
-    ;;environment.  Expand the contents of INPUT-FORM.STX in the context of the given
-    ;;LEXENV; return a PSI object.
-    ;;
-    ;;The syntax use:
-    ;;
-    ;;   (or ?expr1 ?expr2 ?expr3)
-    ;;
-    ;;can be expanded into:
-    ;;
-    ;;   (let ((tmp1 ?expr1))
-    ;;     (if tmp1
-    ;;         tmp1
-    ;;       (let ((tmp2 ?expr2))
-    ;;         (if tmp2
-    ;;             tmp2
-    ;;           ?expr3))))
-    ;;
-    ;;But, if we determine at expand-time that all the expressions return a type that
-    ;;is different from: <top>, <boolean>, <true>, we can expand into:
-    ;;
-    ;;   (begin
-    ;;     ?expr1
-    ;;     ?expr2
-    ;;     ?expr3)
-    ;;
-    ;;in this case using  an OR syntax is useless, so we  should raise an expand-time
-    ;;warning.
-    ;;
-    (define caller-who __who__)
-    (define (%signature-union-synner message cnd)
-      (raise
-       (condition (make-who-condition caller-who)
-		  (make-message-condition message)
-		  (make-syntax-violation input-form.stx #f)
-		  cnd)))
-    (syntax-match input-form.stx ()
-      ((_)
-       (make-psi/single-false input-form.stx))
+  (define (%build-updated-ots/pair? old-ots)
+    (cond ((<list>-ots? old-ots)
+	   (<nelist>-ots))
+	  ((or (list-type-spec? old-ots)
+	       (pair-type-spec? old-ots)
+	       (pair-of-type-spec? old-ots))
+	   old-ots)
+	  ((list-of-type-spec? old-ots)
+	   (let ((item-ots (list-of-type-spec.item-ots old-ots)))
+	     (make-pair-type-spec item-ots old-ots)))
+	  (else
+	   (<pair>-ots))))
 
-      ((_ ?expr ?expr* ...)
-       (let* ((expr*.stx	(cons ?expr ?expr*))
-	      (expr*.psi	(chi-expr* expr*.stx lexenv.run lexenv.expand))
-	      ;;This  is  set to  the  list  of  type  signatures associated  to  the
-	      ;;expression which might return false or non-false.
-	      (middle-expr*.sig	'())
-	      ;;This is set  to the type signature of the  last evaluated expression,
-	      ;;when all the previous expressions return false.
-	      (last-expr.sig	#f))
-	 (define out.core
-	   (let recur ((expr.psi	(car expr*.psi))
-		       (expr*.psi	(cdr expr*.psi)))
-	     (define-syntax-rule (recursion)
-	       (recur (car expr*.psi) (cdr expr*.psi)))
-	     (let ((expr.core	(psi.core-expr expr.psi))
-		   (expr.sig	(psi.retvals-signature expr.psi)))
-	       (if (pair? expr*.psi)
-		   (let ((sym (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)))
-		     (case sym
-		       ((maybe-false)
-			;;The  expression might  return  false or  non-false.  If  it
-			;;returns false:  this false value is  discarded and trailing
-			;;expressions are  evaluated.  If  it returns  non-false: the
-			;;non-false value  is returned.  So to  compute the signature
-			;;that contributes to  the possible final result:  we have to
-			;;filter-out the "<false>" from EXPR.SIG.
-			(set-cons! middle-expr*.sig (%cleanup-possibly-false-signature expr.sig))
-			(let ((tmp.lex (gensym "tmp")))
-			  (build-let no-source
-			      (list tmp.lex) (list expr.core)
-			    (build-conditional no-source tmp.lex tmp.lex (recursion)))))
-		       ((always-false)
-			;;The expression always returns false.
-			(build-sequence no-source
-			  (list expr.core (recursion))))
-		       ((always-true)
-			;;The expression always returns  non-false.  There is no need
-			;;to include the trailing expressions.
-			(set! last-expr.sig expr.sig)
-			expr.core)
-		       ((no-return)
-			;;The expression  raises an  exception or exits  the process.
-			;;There is no need to include the trailing expressions.
-			(set! last-expr.sig expr.sig)
-			expr.core)
-		       (else
-			(assertion-violation caller-who "internal error" input-form.stx sym))))
-		 (begin
-		   ;;We must validate the last expression, too.
-		   (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)
-		   (set! last-expr.sig expr.sig)
-		   expr.core)))))
-	 (define out.sig
-	   ;;Strictly  thinking: reversing  the  list  is not  needed,  the order  of
-	   ;;signatures is  irrelevant.  But when testing  the code: it is  useful to
-	   ;;have predictable results, it makes it simple to write tests.
-	   (apply type-signature.union-same-number-of-operands
-		  %signature-union-synner
-		  (reverse (cons last-expr.sig middle-expr*.sig))))
-	 (make-psi input-form.stx out.core out.sig)))
+  (define (%build-updated-ots/null? old-ots)
+    (<null>-ots))
 
-      (_
-       (__synner__ "invalid syntax in macro use"))))
+  #| end of module: %PERFORM-TYPE-SPECIALISATION-FOR-PREDICATE-APPLICATION |# )
 
-;;; --------------------------------------------------------------------
+
+(module LOGIC-PREDICATE-PROCESSING
+  (%validate-and-qualify-single-signature
+   %cleanup-possibly-false-signature)
+  ;;This module  is used by  the transformers  of: IF, AND,  OR to validate  the test
+  ;;expressions and perform some optimisation in the generated core language.
 
   (define (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)
-    ;;Return a symbol among: always-true, always-false, maybe-false, no-return.
+    ;;Analyse EXPR.PSI to  validate it as returning a single  value; determine if the
+    ;;returned value  is non-false, false, or  an unspecified truth value.   Return a
+    ;;symbol among: always-true, always-false, maybe-false, no-return.
+    ;;
+    ;;The argument INPUT-FORM.STX must be the full syntax input form, for example the
+    ;;IF, AND, OR form.
+    ;;
+    ;;The  argument EXPR.PSI  must  be  the result  of  expanding  a logic  predicate
+    ;;expression.  For example, in the form:
+    ;;
+    ;;   (if ?test ?consequent ?alternate)
+    ;;
+    ;;the argument EXPR.PSI is the result of expanding ?TEST.
     ;;
     (define expr.sig (psi.retvals-signature expr.psi))
     (define (common message)
@@ -1549,7 +1304,7 @@
 
   (define (%cleanup-possibly-false-signature expr.sig)
     ;;Here we  assume that  EXPR.SIG is  an instance  of "<type-signature>".   If the
-    ;;signature specifies a single value and  such value is a union:
+    ;;signature specifies a single value and such value is a union:
     ;;
     ;;1. If there is a "<false>" component: remove it from the union.
     ;;
@@ -1589,6 +1344,357 @@
        rv)))
 
   #| end of module |# )
+
+
+;;;; module core-macro-transformer: IF
+
+(define-core-transformer (if input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand R6RS  IF syntaxes from the top-level built in
+  ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
+  ;;LEXENV; return a PSI object.
+  ;;
+  (import TYPE-SPECIALISATION-FOR-PREDICATE-APPLICATION LOGIC-PREDICATE-PROCESSING)
+  (define caller-who __who__)
+  (define (%signature-union-synner message cnd)
+    (raise
+     (condition (make-who-condition caller-who)
+		(make-message-condition message)
+		(make-syntax-violation input-form.stx #f)
+		cnd)))
+  (syntax-match input-form.stx ()
+    ((_ ?test ?consequent ?alternate)
+     (let* ((test.psi		(chi-expr ?test lexenv.run lexenv.expand))
+	    (consequent.psi	(let ((lexenv.run (if (options::predicate-type-propagation?)
+						      (%perform-type-specialisation-for-predicate-application test.psi lexenv.run)
+						    lexenv.run)))
+				  (chi-expr ?consequent lexenv.run lexenv.expand)))
+	    (alternate.psi	(chi-expr ?alternate  lexenv.run lexenv.expand)))
+       (let ((sym (%validate-and-qualify-single-signature caller-who input-form.stx test.psi)))
+	 (case sym
+	   ((maybe-false)
+	    ;;The test might return false.
+	    (make-psi input-form.stx
+	      (build-conditional no-source
+		  (psi.core-expr test.psi)
+		(psi.core-expr consequent.psi)
+		(psi.core-expr alternate.psi))
+	      (type-signature.union-same-number-of-operands
+	       %signature-union-synner
+	       (psi.retvals-signature consequent.psi)
+	       (psi.retvals-signature alternate.psi))))
+	   ((always-false)
+	    ;;The test always returns false.
+	    (make-psi input-form.stx
+	      (build-sequence no-source
+		(list (psi.core-expr test.psi)
+		      (psi.core-expr alternate.psi)))
+	      (psi.retvals-signature alternate.psi)))
+
+	   ((always-true)
+	    ;;The test always returns non-false.
+	    (make-psi input-form.stx
+	      (build-sequence no-source
+		(list (psi.core-expr test.psi)
+		      (psi.core-expr consequent.psi)))
+	      (psi.retvals-signature consequent.psi)))
+
+	   ((no-return)
+	    ;;The test raises an exception or exits the process.
+	    test.psi)
+
+	   (else
+	    (assertion-violation caller-who "internal error" input-form.stx sym))))))
+
+    ((_ ?test ?consequent)
+     (let* ((test.psi		(chi-expr ?test lexenv.run lexenv.expand))
+	    (consequent.psi	(let ((lexenv.run (if (options::predicate-type-propagation?)
+						      (%perform-type-specialisation-for-predicate-application test.psi lexenv.run)
+						    lexenv.run)))
+				  (chi-expr ?consequent lexenv.run lexenv.expand))))
+       ;;We build  code to  make the  one-armed IF  return void  if the  alternate is
+       ;;unspecified; according to R6RS:
+       ;;
+       ;;* If  the test succeeds: the  return value must  be the return value  of the
+       ;;consequent.
+       ;;
+       ;;* If the  test fails and there  *is* an alternate: the return  value must be
+       ;;the return value of the alternate.
+       ;;
+       ;;* If the test fails and there is *no* alternate: this syntax has unspecified
+       ;;return values.
+       ;;
+       ;;Notice that one-armed IF  is also used in the expansion  of WHEN and UNLESS;
+       ;;R6RS states that, for those syntaxes, when the body *is* executed the return
+       ;;value must be the return value of the last expression in the body.
+       (let ((sym (%validate-and-qualify-single-signature caller-who input-form.stx test.psi)))
+	 (case sym
+	   ((maybe-false)
+	    ;;The test might return false.
+	    (make-psi input-form.stx
+	      (build-conditional no-source
+		  (psi.core-expr test.psi)
+		(psi.core-expr consequent.psi)
+		(build-void))
+	      (make-type-signature/single-void)))
+
+	   ((always-false)
+	    ;;The test always returns false.
+	    test.psi)
+
+	   ((always-true)
+	    ;;The test always returns non-false.
+	    (make-psi input-form.stx
+	      (build-sequence no-source
+		(list (psi.core-expr test.psi)
+		      (psi.core-expr consequent.psi)))
+	      (psi.retvals-signature consequent.psi)))
+
+	   ((no-return)
+	    ;;The test raises an exception or exits the process.
+	    test.psi)
+
+	   (else
+	    (assertion-violation caller-who "internal error" input-form.stx sym))))))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
+
+
+;;;; module core-macro-transformer: AND
+
+(define-core-transformer (and input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used  to expand R6RS AND macros from  the top-level built in
+  ;;environment.  Expand the  contents of INPUT-FORM.STX in the context  of the given
+  ;;LEXENV; return a PSI object.
+  ;;
+  ;;The syntax use:
+  ;;
+  ;;   (and ?expr1 ?expr2 ?expr3)
+  ;;
+  ;;could be expanded as a non-core macro into:
+  ;;
+  ;;   (if ?expr1
+  ;;       (if ?expr2
+  ;;           ?expr3
+  ;;         #f)
+  ;;     #f)
+  ;;
+  ;;and the type annotation of the returned value is:
+  ;;
+  ;;   (or (type-of ?expr3) <false>)
+  ;;
+  ;;But, if we determine  at expand-time that all the expressions  return a type that
+  ;;is different from: <top>, <boolean>, <false>, we can expand into:
+  ;;
+  ;;   (begin
+  ;;     ?expr1
+  ;;     ?expr2
+  ;;     ?expr3)
+  ;;
+  ;;in this case  using an AND syntax  is useless, so we should  raise an expand-time
+  ;;warning.
+  ;;
+  ;;Here  we do  a  mixture: if  an  expression  might return  false,  we generate  a
+  ;;conditional; if an expression always returns non-false, we generate a sequence.
+  ;;
+  (import TYPE-SPECIALISATION-FOR-PREDICATE-APPLICATION LOGIC-PREDICATE-PROCESSING)
+  (define caller-who __who__)
+  (define (%signature-union-synner message cnd)
+    (raise
+     (condition (make-who-condition caller-who)
+		(make-message-condition message)
+		(make-syntax-violation input-form.stx #f)
+		cnd)))
+  (syntax-match input-form.stx ()
+    ((_)
+     (make-psi/single-true input-form.stx))
+
+    ((_ ?expr)
+     (chi-expr ?expr lexenv.run lexenv.expand))
+
+    ;;This is the  plain version that expands into nested  conditionals, one for each
+    ;;expression but the last.  It is kept here as reference.
+    ;;
+    ;; ((_ ?expr0 ?expr1 ?expr* ...)
+    ;;  (let* ((expr*.stx        (cons* ?expr0 ?expr1 ?expr*))
+    ;;         (expr*.psi        (chi-expr* expr*.stx lexenv.run lexenv.expand))
+    ;;         (expr*.sig        (map psi.retvals-signature expr*.psi)))
+    ;;    (make-psi input-form.stx
+    ;;      (let recur ((expr*.psi expr*.psi))
+    ;;        (if (pair? (cdr expr*.psi))
+    ;;            (build-conditional no-source
+    ;;                (psi.core-expr (car expr*.psi))
+    ;;              (recur (cdr expr*.psi))
+    ;;              (build-data no-source #f))
+    ;;          (psi.core-expr (car expr*.psi))))
+    ;;      (car (last-pair expr*.sig)))))
+
+    ((_ ?expr0 ?expr1 ?expr* ...)
+     (let* ((expr*.stx	(cons* ?expr0 ?expr1 ?expr*))
+	    (expr*.psi	(chi-expr* expr*.stx lexenv.run lexenv.expand))
+	    ;;This is  set to the  type signature  of the last  evaluated expression,
+	    ;;when all the previous expressions return true.
+	    (last-expr.sig	#f)
+	    ;;This is set to true if at least one expression may return false.
+	    (false-flag	#f))
+       (define code.core
+	 (let recur ((expr*.psi expr*.psi))
+	   (define-syntax-rule (recursion)
+	     (recur (cdr expr*.psi)))
+	   (let* ((expr.psi	(car expr*.psi))
+		  (expr.core	(psi.core-expr         expr.psi))
+		  (expr.sig	(psi.retvals-signature expr.psi)))
+	     (if (pair? (cdr expr*.psi))
+		 (let ((sym (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)))
+		   (case sym
+		     ((maybe-false)
+		      ;;The expression might return false.
+		      (set! false-flag #t)
+		      (build-conditional no-source
+			  expr.core
+			(recursion)
+			(build-data no-source #f)))
+		     ((always-false)
+		      ;;The expression  always returns  false.  There  is no  need to
+		      ;;include the trailing expressions.
+		      (set! last-expr.sig expr.sig)
+		      expr.core)
+		     ((always-true)
+		      ;;The expression always returns non-false.
+		      (build-sequence no-source
+			(list expr.core (recursion))))
+		     ((no-return)
+		      ;;The  expression raises  an  exception or  exits the  process.
+		      ;;There is no need to include the trailing expressions.
+		      (set! last-expr.sig expr.sig)
+		      expr.core)
+		     (else
+		      (assertion-violation caller-who "internal error" input-form.stx sym))))
+	       (begin
+		 ;;We must validate the last expression, too.
+		 (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)
+		 (set! last-expr.sig expr.sig)
+		 expr.core)))))
+       (define output-form.sig
+	 (if false-flag
+	     (type-signature.union-same-number-of-operands
+	      %signature-union-synner
+	      last-expr.sig (make-type-signature/single-false))
+	   last-expr.sig))
+	 #;(assert last-expr.sig)
+       (make-psi input-form.stx code.core output-form.sig)))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
+
+
+;;;; module core-macro-transformer: AND
+
+(define-core-transformer (or input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand R6RS  OR macros from the  top-level built in
+  ;;environment.  Expand the  contents of INPUT-FORM.STX in the context  of the given
+  ;;LEXENV; return a PSI object.
+  ;;
+  ;;The syntax use:
+  ;;
+  ;;   (or ?expr1 ?expr2 ?expr3)
+  ;;
+  ;;can be expanded into:
+  ;;
+  ;;   (let ((tmp1 ?expr1))
+  ;;     (if tmp1
+  ;;         tmp1
+  ;;       (let ((tmp2 ?expr2))
+  ;;         (if tmp2
+  ;;             tmp2
+  ;;           ?expr3))))
+  ;;
+  ;;But, if we determine  at expand-time that all the expressions  return a type that
+  ;;is different from: <top>, <boolean>, <true>, we can expand into:
+  ;;
+  ;;   (begin
+  ;;     ?expr1
+  ;;     ?expr2
+  ;;     ?expr3)
+  ;;
+  ;;in this  case using an OR  syntax is useless,  so we should raise  an expand-time
+  ;;warning.
+  ;;
+  (import TYPE-SPECIALISATION-FOR-PREDICATE-APPLICATION LOGIC-PREDICATE-PROCESSING)
+  (define caller-who __who__)
+  (define (%signature-union-synner message cnd)
+    (raise
+     (condition (make-who-condition caller-who)
+		(make-message-condition message)
+		(make-syntax-violation input-form.stx #f)
+		cnd)))
+  (syntax-match input-form.stx ()
+    ((_)
+     (make-psi/single-false input-form.stx))
+
+    ((_ ?expr ?expr* ...)
+     (let* ((expr*.stx	(cons ?expr ?expr*))
+	    (expr*.psi	(chi-expr* expr*.stx lexenv.run lexenv.expand))
+	    ;;This is set to the list of type signatures associated to the expression
+	    ;;which might return false or non-false.
+	    (middle-expr*.sig	'())
+	    ;;This is  set to the  type signature  of the last  evaluated expression,
+	    ;;when all the previous expressions return false.
+	    (last-expr.sig	#f))
+       (define out.core
+	 (let recur ((expr.psi	(car expr*.psi))
+		     (expr*.psi	(cdr expr*.psi)))
+	   (define-syntax-rule (recursion)
+	     (recur (car expr*.psi) (cdr expr*.psi)))
+	   (let ((expr.core	(psi.core-expr expr.psi))
+		 (expr.sig	(psi.retvals-signature expr.psi)))
+	     (if (pair? expr*.psi)
+		 (let ((sym (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)))
+		   (case sym
+		     ((maybe-false)
+		      ;;The  expression  might  return  false or  non-false.   If  it
+		      ;;returns  false: this  false value  is discarded  and trailing
+		      ;;expressions  are evaluated.   If  it  returns non-false:  the
+		      ;;non-false  value is  returned.  So  to compute  the signature
+		      ;;that contributes  to the  possible final  result: we  have to
+		      ;;filter-out the "<false>" from EXPR.SIG.
+		      (set-cons! middle-expr*.sig (%cleanup-possibly-false-signature expr.sig))
+		      (let ((tmp.lex (gensym "tmp")))
+			(build-let no-source
+			    (list tmp.lex) (list expr.core)
+			  (build-conditional no-source tmp.lex tmp.lex (recursion)))))
+		     ((always-false)
+		      ;;The expression always returns false.
+		      (build-sequence no-source
+			(list expr.core (recursion))))
+		     ((always-true)
+		      ;;The expression always returns non-false.  There is no need to
+		      ;;include the trailing expressions.
+		      (set! last-expr.sig expr.sig)
+		      expr.core)
+		     ((no-return)
+		      ;;The  expression raises  an  exception or  exits the  process.
+		      ;;There is no need to include the trailing expressions.
+		      (set! last-expr.sig expr.sig)
+		      expr.core)
+		     (else
+		      (assertion-violation caller-who "internal error" input-form.stx sym))))
+	       (begin
+		 ;;We must validate the last expression, too.
+		 (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)
+		 (set! last-expr.sig expr.sig)
+		 expr.core)))))
+       (define out.sig
+	 ;;Strictly  thinking:  reversing  the  list  is not  needed,  the  order  of
+	 ;;signatures is irrelevant.  But when testing the code: it is useful to have
+	 ;;predictable results, it makes it simple to write tests.
+	 (apply type-signature.union-same-number-of-operands
+		%signature-union-synner
+		(reverse (cons last-expr.sig middle-expr*.sig))))
+       (make-psi input-form.stx out.core out.sig)))
+
+    (_
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; module core-macro-transformer: BEGIN0

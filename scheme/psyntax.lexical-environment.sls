@@ -34,6 +34,7 @@
     make-syntactic-binding-descriptor
     syntactic-binding-descriptor.type		syntactic-binding-descriptor.type-set!
     syntactic-binding-descriptor.value		syntactic-binding-descriptor.value-set!
+    copy-syntactic-binding-descriptor/lexical-typed-var/from-data
 
     ;; module interfaces
     PSYNTAX-SYNTAX-MATCH
