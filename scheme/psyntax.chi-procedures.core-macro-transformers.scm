@@ -1149,13 +1149,18 @@
     ;;Examine TEST.PSI and, if possible, pushes a new entry on LEXENV to override the
     ;;type of a variable; return the possibly updated LEXENV.
     ;;
-    (case-predicate-application test.psi rand.stx
-      ((pair?)
+    (case-type-predicate-syntax test.psi rand.stx
+      ((<pair>)
        (%do-branch rand.stx %build-updated-ots/pair? lexenv))
-      ((null?)
+      ((<null>)
        (%do-branch rand.stx %build-updated-ots/null? lexenv))
       (else
-       lexenv)))
+       (case-predicate-application test.psi rand.stx
+	 ((pair?)
+	  (%do-branch rand.stx %build-updated-ots/pair? lexenv))
+	 ((null?)
+	  (%do-branch rand.stx %build-updated-ots/null? lexenv))
+	 (else lexenv)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1164,6 +1169,18 @@
       ((_ ?psi ?rand.stx ((?predicate) . ?body) ... (else . ?else-body))
        (syntax-match (psi.input-form ?psi) (?predicate ...)
 	 ((?predicate ?expr)
+	  (identifier? ?expr)
+	  (let ((?rand.stx ?expr)) . ?body))
+	 ...
+	 (_
+	  . ?else-body)))
+      ))
+
+  (define-syntax case-type-predicate-syntax
+    (syntax-rules ()
+      ((_ ?psi ?rand.stx ((?type) . ?body) ... (else . ?else-body))
+       (syntax-match (psi.input-form ?psi) (is-a?)
+	 ((is-a? ?expr ?type)
 	  (identifier? ?expr)
 	  (let ((?rand.stx ?expr)) . ?body))
 	 ...
