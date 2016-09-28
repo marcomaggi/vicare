@@ -18956,6 +18956,14 @@ functions}) with the argument @code{CLOCK_REALTIME}.
 @end deftypefun
 
 
+@deftypefun @aclass{epoch-time} faraway-time
+Return an instance of @class{epoch-time} representing a time since the
+Epoch with @code{(greatest-fixnum)} seconds and zero nanoseconds.  This
+@class{epoch-time} object is meant to represent a time in the not near
+future.
+@end deftypefun
+
+
 @deftypefun @aclass{boolean} epoch-time? @var{obj}
 Return @true{} if @var{obj} is a @class{epoch-time} object; otherwise
 return @false{}.

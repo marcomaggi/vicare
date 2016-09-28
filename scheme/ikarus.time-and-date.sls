@@ -42,7 +42,7 @@
     make-epoch-time
     epoch-time?				list-of-epoch-times?
     epoch-time-addition			epoch-time-subtraction
-    current-time
+    current-time			faraway-time
     time-gmt-offset
 
     ;; date functions
@@ -74,7 +74,7 @@
 		  make-epoch-time
 		  epoch-time?				list-of-epoch-times?
 		  epoch-time-addition			epoch-time-subtraction
-		  current-time
+		  current-time				faraway-time
 		  time-gmt-offset
 
 		  ;; date functions
@@ -338,7 +338,10 @@
   #| end of DEFINE-RECORD-TYPE |# )
 
 (define (current-time)
-  (foreign-call "ikrt_current_time" (make-time 0 0 0)))
+  (foreign-call "ikrt_current_time" (make-epoch-time 0 0 0)))
+
+(define (faraway-time)
+  (make-epoch-time 0 (greatest-fixnum) 0))
 
 (define-list-of-type-predicate list-of-epoch-times? epoch-time?)
 

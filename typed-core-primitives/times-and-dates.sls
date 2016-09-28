@@ -70,6 +70,13 @@
   (attributes
    (()			effect-free result-true)))
 
+(declare-core-primitive faraway-time
+    (safe)
+  (signatures
+   (()			=> (<epoch-time>)))
+  (attributes
+   (()			effect-free result-true)))
+
 ;;; --------------------------------------------------------------------
 ;;; accessors
 

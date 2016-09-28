@@ -1383,6 +1383,7 @@
     (epoch-time-addition			v $language)
     (epoch-time-subtraction			v $language)
     (current-time				v $language)
+    (faraway-time				v $language)
     (time-gmt-offset				v $language)
     ;;
     (date-string				v $language)
