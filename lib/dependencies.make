@@ -2204,8 +2204,8 @@ CLEANFILES += lib/vicare/parser-tools/unix-pathnames.fasl
 
 lib/vicare/net/channels.fasl: \
 		lib/vicare/net/channels.vicare.sls \
-		lib/vicare/arguments/validation.fasl \
-		lib/vicare/language-extensions/syntaxes.fasl \
+		lib/vicare/language-extensions/mixins.fasl \
+		lib/vicare/platform/words.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
