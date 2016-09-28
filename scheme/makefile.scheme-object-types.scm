@@ -505,7 +505,11 @@
   (constructor make-bytevector)
   (type-predicate bytevector?)
   (hash-function bytevector-hash)
-  (equality-predicate bytevector=?))
+  (equality-predicate bytevector=?)
+  (methods
+   (length		bytevector-length)
+   (=			bytevector=?)
+   (!=			bytevector!=?)))
 
 (define-scheme-type <empty-bytevector>
     <bytevector>
