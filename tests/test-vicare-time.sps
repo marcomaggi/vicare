@@ -25,25 +25,15 @@
 
 
 #!vicare
-(import (vicare)
-  (vicare checks))
+(program (test-vicare-time)
+  (import (vicare)
+    (vicare checks))
 
-(check-set-mode! 'report-failed)
-(check-display "*** testing Vicare basic time functions\n")
+  (check-set-mode! 'report-failed)
+  (check-display "*** testing Vicare basic time functions\n")
 
 
-(parametrise ((check-test-name	'base))
-
-  (when #t
-    (let ((T (current-time)))
-      (check-pretty-print (list T
-				(time-seconds     T)
-				(time-nanoseconds T)
-				(time-ratnum T)
-				(time-flonum T)
-				(time-gmt-offset)
-				(date-string)))
-      (check-pretty-print T)))
+(parametrise ((check-test-name	'time-base))
 
   (check
       (time? (current-time))
@@ -59,15 +49,57 @@
 	(or (fixnum? s) (bignum? s)))
     => #t)
 
+  #t)
+
+
+(parametrise ((check-test-name	'epoch-time-base))
+
+  (when #t
+    (let ((T (current-time)))
+      (check-pretty-print (list T
+				(time-seconds     T)
+				(time-nanoseconds T)
+				(time-ratnum T)
+				(time-flonum T)
+				(time-gmt-offset)
+				(date-string)))
+      (check-pretty-print T)))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(time? (current-time)))
+  (check-for-true	(time? (make-epoch-time (greatest-fixnum) 123)))
+  (check-for-true	(epoch-time? (make-epoch-time (greatest-fixnum) 123)))
+
+  (check
+      (let ((s (time-seconds (current-time))))
+	(or (fixnum? s) (bignum? s)))
+    => #t)
+
+  (check
+      (let ((s (time-nanoseconds (current-time))))
+	(or (fixnum? s) (bignum? s)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((ET (make-epoch-time 0 0)))
+	(epoch-time-addition ET (make-time 1 2)))
+    => (make-epoch-time 1 2))
+
+  (check
+      (let ((ET (make-epoch-time 0 0)))
+	(epoch-time-subtraction ET (make-time 1 2)))
+    => (make-epoch-time -1 -2))
+
+;;; --------------------------------------------------------------------
+
   (check
       (fixnum? (time-gmt-offset))
     => #t)
 
-  (check
-      (string? (date-string))
-    => #t)
-
-  #t)
+  (void))
 
 
 (parametrise ((check-test-name	'operations))
@@ -502,8 +534,19 @@
   (void))
 
 
+(parametrise ((check-test-name	'date))
+
+  (check
+      (string? (date-string))
+    => #t)
+
+  (void))
+
+
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file

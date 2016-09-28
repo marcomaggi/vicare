@@ -49,8 +49,17 @@
 (declare-core-primitive make-time
     (safe)
   (signatures
-   ((<fixnum> <fixnum>)				=> (<time>))
-   ((<exact-integer> <fixnum> <fixnum>)		=> (<time>)))
+   ((<exact-integer> <fixnum>)				=> (<time>))
+   ((<exact-integer> <exact-integer> <fixnum>)		=> (<time>)))
+  (attributes
+   ((_ _)		effect-free result-true)
+   ((_ _ _)		effect-free result-true)))
+
+(declare-core-primitive make-epoch-time
+    (safe)
+  (signatures
+   ((<exact-integer> <fixnum>)				=> (<epoch-time>))
+   ((<exact-integer> <exact-integer> <fixnum>)		=> (<epoch-time>)))
   (attributes
    ((_ _)		effect-free result-true)))
 
@@ -78,10 +87,17 @@
   (attributes
    ((_)			effect-free result-true)))
 
-(declare-core-primitive time-real
+(declare-core-primitive time-ratnum
     (safe)
   (signatures
-   ((<time>)		=> (<real>)))
+   ((<time>)		=> (<ratnum>)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive time-flonumnum
+    (safe)
+  (signatures
+   ((<time>)		=> (<flonum>)))
   (attributes
    ((_)			effect-free result-true)))
 
@@ -161,6 +177,16 @@
   (declare time-max)
   (declare time-min)
   #| end of LET-SYNTAX |# )
+
+(declare-core-primitive epoch-time-addition
+    (safe)
+  (signatures
+   ((<epoch-time> <time>)	=> (<epoch-time>))))
+
+(declare-core-primitive epoch-time-subtraction
+    (safe)
+  (signatures
+   ((<epoch-time> <time>)	=> (<epoch-time>))))
 
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous

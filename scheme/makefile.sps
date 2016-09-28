@@ -1378,8 +1378,11 @@
     (<epoch-time>-comparison-procedure)
     (<epoch-time>-hash-function)
     (<epoch-time>				v $language)
-    (current-time				v $language)
+    (make-epoch-time				v $language)
     (epoch-time?				v $language)
+    (epoch-time-addition			v $language)
+    (epoch-time-subtraction			v $language)
+    (current-time				v $language)
     (time-gmt-offset				v $language)
     ;;
     (date-string				v $language)

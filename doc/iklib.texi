@@ -18834,16 +18834,16 @@ normalised and the excess added to @var{megaseconds}.
 @end deftypefun
 
 
-@defun time? @var{obj}
+@deftypefun @aclass{boolean} time? @var{obj}
 Return @true{} if @var{obj} is a @class{time} object; otherwise return
 @false{}.
-@end defun
+@end deftypefun
 
 
-@defun list-of-times? @var{obj}
+@deftypefun @aclass{boolean} list-of-times? @var{obj}
 Return @true{} if @var{obj} is a (possibly empty) proper list of
 @class{time} objects; otherwise return @false{}.
-@end defun
+@end deftypefun
 
 @c ------------------------------------------------------------------------
 
@@ -18933,13 +18933,19 @@ Return the maximum or minimum between the arguments.
 
 Time spans since the Epoch are represented by instances of
 @class{epoch-time} objects, which is a disjoint object--type; the
-object--type @class{epoch-time} is a subtype of @class{time}.  A
+object--type @class{epoch-time} is a subtype of @class{time}.  An
 @class{epoch-time} object represents the time elapsed since the Epoch as
 determined by the @posix{} function @cfunc{clock_gettime} with the
-argument @code{CLOCK_REALTIME}.  @manpage{clock_gettime, Clock and time
+argument @code{CLOCK_REALTIME}; @manpage{clock_gettime, Clock and time
 functions}.
 
 The following bindings are exported by the library @library{vicare}.
+
+
+@deftypefun @aclass{epoch-time} make-epoch-time @bracearg{seconds, exact-integer} @bracearg{nanoseconds, fixnum}
+Build and return a new @class{epoch-time} object.  The arguments are
+normalised as explained for @func{make-time}.
+@end deftypefun
 
 
 @deftypefun @aclass{epoch-time} current-time
@@ -18950,16 +18956,16 @@ functions}) with the argument @code{CLOCK_REALTIME}.
 @end deftypefun
 
 
-@defun epoch-time? @var{obj}
+@deftypefun @aclass{boolean} epoch-time? @var{obj}
 Return @true{} if @var{obj} is a @class{epoch-time} object; otherwise
 return @false{}.
-@end defun
+@end deftypefun
 
 
-@defun list-of-epoch-times? @var{obj}
+@deftypefun @aclass{boolean} list-of-epoch-times? @var{obj}
 Return @true{} if @var{obj} is a (possibly empty) proper list of
 @class{epoch-time} objects; otherwise return @false{}.
-@end defun
+@end deftypefun
 
 
 @deftypefun @aclass{fixnum} time-gmt-offset
@@ -18967,6 +18973,16 @@ We can interpret the Epoch time as time as expressed in the
 @acronym{UTC} or @acronym{GMT}+00 time zone.  This function returns the
 offset in seconds from the local time zone to @acronym{UTC}; in Rome
 (@acronym{GMT}+01) this function returns @code{3600}.
+@end deftypefun
+
+
+@deftypefun @aclass{epoch-time} epoch-time-addition @bracearg{ET, epoch-time} @bracearg{T, time}
+Add @var{T} to @var{ET} and return the result.
+@end deftypefun
+
+
+@deftypefun @aclass{epoch-time} epoch-time-subtraction @bracearg{ET, epoch-time} @bracearg{T, time}
+Subtract @var{T} from @var{ET} and return the result.
 @end deftypefun
 
 @c page

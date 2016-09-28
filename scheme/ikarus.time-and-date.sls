@@ -39,7 +39,9 @@
     <epoch-time>-equality-predicate
     <epoch-time>-comparison-procedure
     <epoch-time>-hash-function
+    make-epoch-time
     epoch-time?				list-of-epoch-times?
+    epoch-time-addition			epoch-time-subtraction
     current-time
     time-gmt-offset
 
@@ -69,7 +71,9 @@
 		  <epoch-time>-equality-predicate
 		  <epoch-time>-comparison-procedure
 		  <epoch-time>-hash-function
+		  make-epoch-time
 		  epoch-time?				list-of-epoch-times?
+		  epoch-time-addition			epoch-time-subtraction
 		  current-time
 		  time-gmt-offset
 
@@ -181,7 +185,7 @@
 (define-list-of-type-predicate list-of-times? time?)
 
 
-;;;; time operations
+;;;; time arithmetics
 
 (case-define* time-addition
   (({time time?})
@@ -318,20 +322,23 @@
 
   (protocol
     (lambda (make-<time>)
-      (named-lambda make-<epoch-time> ()
-	(foreign-call "ikrt_current_time" ((make-<time> 0 0 0))))))
+      (named-case-lambda* make-<epoch-time>
+	(({seconds exact-integer?} {nanoseconds fixnum?})
+	 ((make-<time> seconds nanoseconds)))
+	(({megaseconds exact-integer?} {seconds exact-integer?} {nanoseconds fixnum?})
+	 ((make-<time> megaseconds seconds nanoseconds))))))
 
   (custom-printer
     (lambda (T port subprinter)
       (display "#[<epoch-time>"	port)
-      (display " secs="		port) (display (time-seconds		T) port)
-      (display " nsecs="	port) (display (time-nanoseconds	T) port)
+      (display " seconds="	port) (display (time-seconds		T) port)
+      (display " nanoseconds="	port) (display (time-nanoseconds	T) port)
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
 
 (define (current-time)
-  (make-epoch-time))
+  (foreign-call "ikrt_current_time" (make-time 0 0 0)))
 
 (define-list-of-type-predicate list-of-epoch-times? epoch-time?)
 
@@ -345,6 +352,25 @@
   ;;seconds to the Epoch time to obtain the local time.
   ;;
   (foreign-call "ikrt_gmt_offset"))
+
+
+;;;; epoch time arithmetics
+
+(define* (epoch-time-addition {T1 epoch-time?} {T2 time?})
+  ;;Compute the addition  between two times: T1  + T2 and return  a time object
+  ;;representing it.
+  ;;
+  (make-epoch-time (+ (time-megasecs  T1) (time-megasecs  T2))
+		   (+ (time-secs      T1) (time-secs      T2))
+		   (+ (time-nanoseconds T1) (time-nanoseconds T2))))
+
+(define* (epoch-time-subtraction {T1 epoch-time?} {T2 time?})
+  ;;Compute  the difference  between two  times: T1  - T2  and return  a time  object
+  ;;representing it.
+  ;;
+  (make-epoch-time (- (time-megasecs  T1) (time-megasecs  T2))
+		   (- (time-secs      T1) (time-secs      T2))
+		   (- (time-nanoseconds T1) (time-nanoseconds T2))))
 
 
 ;;;; date functions

@@ -119,11 +119,13 @@
 
 (define-built-in-record-type <epoch-time>
     <time>
-  current-time epoch-time?
+  make-epoch-time epoch-time?
   (equality-predicate <epoch-time>-equality-predicate)
   (comparison-procedure <epoch-time>-comparison-procedure)
   (hash-function <epoch-time>-hash-function)
-  (methods))
+  (methods
+   (+			epoch-time-addition)
+   (-			epoch-time-subtraction)))
 
 
 ;;;; built-in record types: expander stuff
