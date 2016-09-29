@@ -367,7 +367,7 @@
   (attributes
    ((_ ())			foldable effect-free result-true)
    ;;Not foldable because it must return a new string every time.
-   ((_ _)			effect-free result-true)))
+   ((_)				effect-free result-true)))
 
 (declare-core-primitive $string-reverse-and-concatenate
     (unsafe)
