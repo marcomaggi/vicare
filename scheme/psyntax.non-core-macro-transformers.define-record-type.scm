@@ -259,7 +259,8 @@
     (cond ((%make-destructor-code clause*.stx foo foo-parent.id parent-rtd.id synner)
 	   => (lambda (foo-destructor-code)
 		(let ((foo-destructor.id (%named-gensym/suffix foo "-destructor")))
-		  (values foo-destructor.id `((define ,foo-destructor.id ,foo-destructor-code))))))
+		  (values foo-destructor.id
+			  `((define/typed {,foo-destructor.id (lambda (,foo) => <list>)} ,foo-destructor-code))))))
 	  (else
 	   (values #f '()))))
 
@@ -1510,7 +1511,7 @@
      (synner "invalid syntax in SUPER-PROTOCOL clause" ?invalid-clause))))
 
 
-(define (%make-destructor-code clause* foo foo-parent parent-rtd.sym synner)
+(define (%make-destructor-code clause* foo foo-parent parent-rtd.id synner)
   ;;Extract from  the CLAUSE*  the DESTRUCTOR-PROTOCOL one  and return  an expression
   ;;which, expanded and  evaluated at run-time, will return  the destructor function;
   ;;the expression will return false if there is no destructor.
@@ -1520,7 +1521,7 @@
   ;;If FOO-PARENT is  true: this record type  has a parent specified  with the PARENT
   ;;clause.
   ;;
-  ;;PARENT-RTD.SYM is  false if  this record-type  has no parent;  otherwise it  is a
+  ;;PARENT-RTD.ID is  false if  this record-type  has no parent;  otherwise it  is a
   ;;symbol representing the name of the syntactic identifier bound to the parent RTD.
   ;;
   (let ((clause                  (%get-clause 'destructor-protocol clause*))
@@ -1535,8 +1536,8 @@
 	      "expected closure object as result of evaluating the destructor protocol expression"
 	      ,foo-destructor-protocol))
 	  (receive-and-return/checked (,destructor-tmp)
-	      ,(if (or foo-parent parent-rtd.sym)
-		   `(,foo-destructor-protocol (internal-applicable-record-type-destructor ,parent-rtd.sym))
+	      ,(if (or foo-parent parent-rtd.id)
+		   `(,foo-destructor-protocol (internal-applicable-record-type-destructor ,parent-rtd.id))
 		 `(,foo-destructor-protocol))
 	    (unless (procedure? ,destructor-tmp)
 	      (assertion-violation (quote ,foo)
@@ -1553,8 +1554,8 @@
       ;;record destructor variable is set to false.
       ;;
       (#f
-       (if (or foo-parent parent-rtd.sym)
-	   `(record-type-destructor ,parent-rtd.sym)
+       (if (or foo-parent parent-rtd.id)
+	   `(internal-applicable-record-type-destructor ,parent-rtd.id)
 	 ;;Set to false this record-type record destructor variable.
 	 #f))
 

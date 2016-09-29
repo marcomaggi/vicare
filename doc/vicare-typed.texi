@@ -4800,7 +4800,7 @@ The definition of this type is equivalent to:
 
 @lisp
 (define-type <type-destructor>
-  (lambda (<bottom>) => <list>))
+  (lambda (<top>) => <list>))
 @end lisp
 @end deftp
 

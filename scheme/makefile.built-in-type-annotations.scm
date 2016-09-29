@@ -158,7 +158,7 @@
   (lambda (<top>) => (<boolean>)))
 
 (define-type-annotation <type-destructor>
-  (lambda (<bottom>) => <list>))
+  (lambda (<top>) => <list>))
 
 (define-type-annotation <type-printer>
   (lambda (<bottom> <textual-output-port> <procedure>) => <list>))
