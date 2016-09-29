@@ -145,13 +145,13 @@
     ;; auxiliary keywords
     safe unsafe
     signatures attributes replacements
-    <top> <bottom> <list> <nelist>
+    <top> <bottom> <null> <list> <nelist>
     pair pair-of list-of nelist-of vector-of
     alist hashtable enumeration
     type-predicate equality-predicate comparison-procedure hash-function)
   (import (except (vicare)
 		  signatures attributes replacements safe unsafe
-		  <top> <bottom> <list> <nelist>
+		  <top> <bottom> <null> <list> <nelist>
 		  pair pair-of list-of nelist-of vector-of
 		  alist hashtable enumeration
 		  type-predicate equality-predicate comparison-procedure hash-function)
@@ -278,7 +278,7 @@
 
 (define-auxiliary-syntaxes signatures attributes replacements
   safe unsafe
-  <top> <bottom> <list> <nelist>
+  <top> <bottom> <null> <list> <nelist>
   pair pair-of list-of nelist-of vector-of
   alist hashtable enumeration
   type-predicate equality-predicate comparison-procedure hash-function)
@@ -360,11 +360,14 @@
     ;;signature, with the identifiers "_" replaced with "<top>" or "<list>".
     ;;
     (let recur ((sig type-signature.stx))
-      (syntax-case sig (<bottom> <list> <nelist> list list-of pair pair-of)
+      (syntax-case sig (<bottom> <null> <list> <nelist> list list-of pair pair-of)
 	(()
 	 '())
 
 	(<bottom>
+	 sig)
+
+	(<null>
 	 sig)
 
 	(<list>
