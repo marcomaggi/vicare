@@ -8,29 +8,29 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
 #!vicare
-(import (vicare)
-  (prefix (vicare net channels)
-	  chan.)
-  (vicare language-extensions custom-ports)
-  (vicare checks))
+(program (test-vicare-net-channels-binary)
+  (options typed-language)
+  (import (vicare)
+    (vicare net channels)
+    (vicare language-extensions custom-ports)
+    (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare: net channels library, binary channels\n")
@@ -41,142 +41,89 @@
 (define in-port (open-bytevector-input-port '#vu8(1 2 3)))
 
 (define ou-port
-  (let-values (((port extract) (open-bytevector-output-port)))
+  (receive (port extract)
+      (open-bytevector-output-port)
     port))
 
 (define io-port
-  (let-values (((port1 port2) (open-binary-input/output-port-pair)))
+  (receive (port1 port2)
+      (open-binary-input/output-port-pair)
     port1))
 
 
-(parametrise ((check-test-name	'struct))
+(parametrise ((check-test-name	'object))
 
 ;;; input channel
 
   (check
-      (let ((chan (chan.open-binary-input-channel in-port)))
-        (list (chan.channel? chan)
-	      (chan.input-channel? chan)
-	      (chan.output-channel? chan)
-	      (chan.input/output-channel? chan)
-	      (chan.inactive-channel? chan)
-	      (chan.sending-channel? chan)
-	      (chan.receiving-channel? chan)))
-    => '(#t #t #f #f #t #f #f))
+      (let ((chan (new <binary-input-channel> in-port)))
+        (list (is-a? chan <channel>)
+	      (is-a? chan <input-channel>)
+	      (is-a? chan <output-channel>)
+	      (.inactive?  chan)
+	      (.sending?   chan)
+	      (.receiving? chan)))
+    => '(#t #t #f #t #f #f))
+
+   #;(check
+       (let ((chan (new <binary-input-channel> in-port)))
+	 (void-object? (delete chan)))
+    => #t)
 
    (check
-      (let ((chan (chan.open-binary-input-channel in-port)))
-        (chan.close-channel chan))
-    => (void))
-
-   (check
-       (let ((chan (chan.open-binary-input-channel in-port)))
-	 (chan.channel-recv-begin! chan)
-	 (list (chan.inactive-channel? chan)
-	       (chan.sending-channel? chan)
-	       (chan.receiving-channel? chan)))
+       (let ((chan (new <binary-input-channel> in-port)))
+	 (.recv-begin! chan)
+	 (list (.inactive? chan)
+	       (.sending? chan)
+	       (.receiving? chan)))
      => '(#f #f #t))
 
    (check
-       (let ((chan (chan.open-binary-input-channel in-port)))
-	 (chan.channel-recv-begin! chan)
-	 (chan.channel-recv-end! chan)
-	 (list (chan.inactive-channel? chan)
-	       (chan.sending-channel? chan)
-	       (chan.receiving-channel? chan)))
+       (let ((chan (new <binary-input-channel> in-port)))
+	 (.recv-begin! chan)
+	 (.recv-end! chan)
+	 (list (.inactive? chan)
+	       (.sending? chan)
+	       (.receiving? chan)))
      => '(#t #f #f))
 
 ;;; --------------------------------------------------------------------
 ;;; output channel
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port)))
-	(let ((chan (chan.open-binary-output-channel port)))
-	  (list (chan.channel? chan)
-		(chan.input-channel? chan)
-		(chan.output-channel? chan)
-		(chan.input/output-channel? chan)
-		(chan.inactive-channel? chan)
-		(chan.sending-channel? chan)
-		(chan.receiving-channel? chan))))
-    => '(#t #f #t #f #t #f #f))
+      (receive (port extract)
+	  (open-bytevector-output-port)
+	(let ((chan (new <binary-output-channel> port)))
+	  (list (is-a? chan <channel>)
+                (is-a? chan <input-channel>)
+		(is-a? chan <output-channel>)
+		(.inactive? chan)
+		(.sending? chan)
+		(.receiving? chan))))
+    => '(#t #f #t #t #f #f))
 
-  (check
-      (let-values (((port extract) (open-bytevector-output-port)))
-	(let ((chan (chan.open-binary-output-channel port)))
-	  (chan.close-channel chan)))
-    => (void))
+  #;(check
+      (receive (port extract)
+	  (open-bytevector-output-port)
+	(let ((chan (new <binary-output-channel> port)))
+	  (void-object? (delete chan))))
+    => #t)
 
    (check
-       (let ((chan (chan.open-binary-output-channel ou-port)))
-	 (chan.channel-send-begin! chan)
-	 (list (chan.inactive-channel? chan)
-	       (chan.sending-channel? chan)
-	       (chan.receiving-channel? chan)))
+       (let ((chan (new <binary-output-channel> ou-port)))
+	 (.send-begin! chan)
+	 (list (.inactive? chan)
+	       (.sending? chan)
+	       (.receiving? chan)))
      => '(#f #t #f))
 
    (check
-       (let ((chan (chan.open-binary-output-channel ou-port)))
-	 (chan.channel-send-begin! chan)
-	 (chan.channel-send-end! chan)
-	 (list (chan.inactive-channel? chan)
-	       (chan.sending-channel? chan)
-	       (chan.receiving-channel? chan)))
-     => '(#t #f #f))
-
-;;; --------------------------------------------------------------------
-;;; input/output channel
-
-  (check
-      (let-values (((port1 port2) (open-binary-input/output-port-pair)))
-	(let ((chan (chan.open-binary-input/output-channel port1)))
-	  (list (chan.channel? chan)
-		(chan.input-channel? chan)
-		(chan.output-channel? chan)
-		(chan.input/output-channel? chan)
-		(chan.inactive-channel? chan)
-		(chan.sending-channel? chan)
-		(chan.receiving-channel? chan))))
-    => '(#t #t #t #t #t #f #f))
-
-  (check
-      (let-values (((port1 port2) (open-binary-input/output-port-pair)))
-	(let ((chan (chan.open-binary-input/output-channel port1)))
-	  (chan.close-channel chan)))
-    => (void))
-
-   (check
-       (let ((chan (chan.open-binary-input/output-channel io-port)))
-	 (chan.channel-send-begin! chan)
-	 (list (chan.inactive-channel? chan)
-	       (chan.sending-channel? chan)
-	       (chan.receiving-channel? chan)))
-     => '(#f #t #f))
-
-   (check
-       (let ((chan (chan.open-binary-input/output-channel io-port)))
-	 (chan.channel-send-begin! chan)
-	 (chan.channel-send-end! chan)
-	 (list (chan.inactive-channel? chan)
-	       (chan.sending-channel? chan)
-	       (chan.receiving-channel? chan)))
-     => '(#t #f #f))
-
-   (check
-       (let ((chan (chan.open-binary-input/output-channel io-port)))
-	 (chan.channel-recv-begin! chan)
-	 (list (chan.inactive-channel? chan)
-	       (chan.sending-channel? chan)
-	       (chan.receiving-channel? chan)))
-     => '(#f #f #t))
-
-   (check
-       (let ((chan (chan.open-binary-input/output-channel io-port)))
-	 (chan.channel-recv-begin! chan)
-	 (chan.channel-recv-end! chan)
-	 (list (chan.inactive-channel? chan)
-	       (chan.sending-channel? chan)
-	       (chan.receiving-channel? chan)))
+       (let ((chan (new <binary-output-channel> ou-port)))
+	 (.send-begin! chan)
+	 (.send-end! chan)
+	 (list (.inactive? chan)
+	       (.sending? chan)
+	       (.receiving? chan)))
      => '(#t #f #f))
 
   #t)
@@ -185,30 +132,35 @@
 (parametrise ((check-test-name	'config))
 
   (check
-      (let ((chan (chan.open-binary-input-channel in-port)))
-	(chan.channel-set-maximum-message-size! chan 1000))
-    => (void))
+      (let ((chan (new <binary-input-channel> in-port)))
+        (void-object? (.maximum-message-size chan 1000)))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((chan (chan.open-binary-input-channel in-port)))
-	(chan.channel-set-expiration-time! chan (time-from-now (make-time 10 0))))
-    => (void))
+      (let ((chan	(new <binary-input-channel> in-port))
+	    (ET		(.+ (current-time) (new <time> 10 0))))
+	(.expiration-time chan ET)
+	(equal? ET (.expiration-time chan)))
+    => #t)
 
   (check
-      (let ((chan (chan.open-binary-input-channel in-port)))
-	(chan.channel-set-expiration-time! chan #f))
-    => (void))
+      (let ((chan	(new <binary-input-channel> in-port))
+	    (ET		(faraway-time)))
+	(.expiration-time chan ET)
+	(equal? ET (.expiration-time chan)))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((chan (chan.open-binary-input-channel in-port)))
-	(chan.channel-set-message-terminators! chan '(#vu8(1 2 3))))
-    => (void))
+      (let ((chan (new <binary-input-channel> in-port)))
+	(.message-terminators chan '(#vu8(1 2 3)))
+	(.message-terminators chan))
+    => '(#vu8(1 2 3)))
 
-  #t)
+  (void))
 
 
 (parametrise ((check-test-name	'messages))
@@ -220,28 +172,27 @@
     ;;For  debugging purposes  we want  to flush  the output  port after
     ;;every portion is sent.
     ;;
-    (chan.channel-send-begin! chan)
+    (.send-begin! chan)
     (for-each-in-order
 	(lambda (portion)
-	  (chan.channel-send-message-portion! chan portion)
+	  (.send-message-portion! chan portion)
 	  (flush-output-port port)
 	  (yield))
       chunks)
-    (chan.channel-send-end! chan))
+    (.send-end! chan))
 
   (define (recv chan)
-    (chan.channel-recv-begin! chan)
+    (.recv-begin! chan)
     (let loop ()
-      (define rv
-	(chan.channel-recv-message-portion! chan))
-      (cond ((not rv)
-	     (yield)
-	     (loop))
-	    ((eof-object? rv)
-	     (eof-object))
-	    (else
-	     (let ((bv (chan.channel-recv-end! chan)))
-	       (ascii->string bv))))))
+      (let ((rv (.recv-message-portion! chan)))
+	(cond ((not rv)
+	       (yield)
+	       (loop))
+	      ((eof-object? rv)
+	       (eof-object))
+	      (else
+	       (let ((bv (.recv-end! chan)))
+		 (ascii->string bv)))))))
 
   (define (master-log obj)
     (add-result (list 'master-recv obj)))
@@ -253,34 +204,38 @@
 
   (check
       (with-result
-       (let-values (((master.port slave.port) (open-binary-input/output-port-pair)))
-	 (coroutine	;master
-	     (lambda ()
-	       (let ((chan (chan.open-binary-input/output-channel master.port))
-		     (log  master-log))
-		 (chan.channel-set-message-terminators! chan '(#ve(ascii "\r\n\r\n")))
-		 (send master.port chan
-		       (ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
-		 (log (recv chan))
-		 (send master.port chan
-		       (ascii-chunks '("som" "e dat" "a\r" "\n"
-				       "som" "e other dat" "a\r" "\n" "\r" "\n")))
-		 (log (recv chan))
-		 (send master.port chan (ascii-chunks '("quit\r\n\r\n")))
-		 (chan.close-channel chan))))
-	 (coroutine	;slave
-	     (lambda ()
-	       (let ((chan (chan.open-binary-input/output-channel slave.port))
-		     (log  slave-log))
-		 (chan.channel-set-message-terminators! chan '(#ve(ascii "\r\n\r\n")))
-		 (log (recv chan))
-		 (send slave.port chan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
-		 (log (recv chan))
-		 (send slave.port chan (ascii-chunks '("OK" "\r\n" "\r\n")))
-		 (log (recv chan))
-		 (chan.close-channel chan))))
-	 (finish-coroutines)))
-    => `(,(void)
+	(receive (master.port slave.port)
+	    (open-binary-input/output-port-pair)
+	  (coroutine ;master
+	      (lambda ()
+		(let ((chan (new <binary-input/output-channel> master.port master.port))
+		      (log  master-log))
+		  (.message-terminators chan '(#ve(ascii "\r\n\r\n")))
+		  (send master.port chan
+			(ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
+		  (log (recv chan))
+		  (send master.port chan
+			(ascii-chunks '("som" "e dat" "a\r" "\n"
+					"som" "e other dat" "a\r" "\n" "\r" "\n")))
+		  (log (recv chan))
+		  (send master.port chan (ascii-chunks '("quit\r\n\r\n")))
+		  (debug-print (expansion-of (delete chan)))
+		  #;(delete chan)
+		  (close-port master.port))))
+	  (coroutine ;slave
+	      (lambda ()
+		(let ((chan (new <binary-input/output-channel> slave.port slave.port))
+		      (log  slave-log))
+		  (.message-terminators chan '(#ve(ascii "\r\n\r\n")))
+		  (log (recv chan))
+		  (send slave.port chan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
+		  (log (recv chan))
+		  (send slave.port chan (ascii-chunks '("OK" "\r\n" "\r\n")))
+		  (log (recv chan))
+		  #;(delete chan)
+		  (close-port slave.port))))
+	  (void-object? (finish-coroutines))))
+    => `(#t
 	 ((slave-recv "hello slave\r\n\r\n")
 	  (master-recv "hello master\r\n\r\n")
 	  (slave-recv "some data\r\nsome other data\r\n\r\n")
@@ -294,32 +249,30 @@
 (parametrise ((check-test-name	'sending))
 
   (check	;max message size error
-      (let ((chan (chan.open-binary-output-channel ou-port)))
-	(chan.channel-set-maximum-message-size! chan 2)
-	(chan.channel-send-begin! chan)
-	(guard (E (else
-		   (list (who-condition? E)
-			 (message-condition? E)
-			 (chan.channel-condition? E)
-			 (chan.maximum-message-size-exceeded-condition? E)
-			 )))
-	  (chan.channel-send-message-portion! chan '#vu8(1 2 3))))
-    => '(#t #t #t #t))
+      (let ((chan (new <binary-output-channel> ou-port)))
+	(.maximum-message-size chan 2)
+	(.send-begin! chan)
+	(try
+	    (.send-message-portion! chan '#vu8(1 2 3))
+	  (catch E
+	    ((&maximum-message-size-exceeded)
+	     #t)
+	    (else E))))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 
   (check	;timeout expired error
-      (let ((chan (chan.open-binary-output-channel ou-port)))
-	(chan.channel-set-expiration-time! chan (current-time))
-	(chan.channel-send-begin! chan)
-	(guard (E (else
-		   (list (who-condition? E)
-			 (message-condition? E)
-			 (chan.channel-condition? E)
-			 (chan.delivery-timeout-expired-condition? E)
-			 )))
-	  (chan.channel-send-message-portion! chan '#vu8(1 2 3))))
-    => '(#t #t #t #t))
+      (let ((chan (new <binary-output-channel> ou-port)))
+        (.expiration-time chan (current-time))
+	(.send-begin! chan)
+	(try
+	    (.send-message-portion! chan '#vu8(1 2 3))
+	  (catch E
+	    ((&delivery-timeout-expired)
+	     #t)
+	    (else E))))
+    => #t)
 
   #t)
 
@@ -327,38 +280,38 @@
 (parametrise ((check-test-name	'receiving))
 
   (check	;max message size error
-      (let ((chan (chan.open-binary-input-channel (open-bytevector-input-port '#vu8(1 2 3)))))
-	(chan.channel-set-maximum-message-size! chan 2)
-	(chan.channel-recv-begin! chan)
-	(guard (E (else
-		   (list (who-condition? E)
-			 (message-condition? E)
-			 (chan.channel-condition? E)
-			 (chan.maximum-message-size-exceeded-condition? E)
-			 )))
-	  (chan.channel-recv-message-portion! chan)))
-    => '(#t #t #t #t))
+      (let ((chan (new <binary-input-channel> (open-bytevector-input-port '#vu8(1 2 3)))))
+	(.maximum-message-size chan 2)
+	(.recv-begin! chan)
+	(try
+	    (.recv-message-portion! chan)
+	  (catch E
+	    ((&maximum-message-size-exceeded)
+	     #t)
+	    (else E))))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 
   (check	;timeout expired error
-      (let ((chan (chan.open-binary-input-channel in-port)))
-	(chan.channel-set-expiration-time! chan (current-time))
-	(chan.channel-recv-begin! chan)
-	(guard (E (else
-		   (list (who-condition? E)
-			 (message-condition? E)
-			 (chan.channel-condition? E)
-			 (chan.delivery-timeout-expired-condition? E)
-			 )))
-	  (chan.channel-recv-message-portion! chan)))
-    => '(#t #t #t #t))
+      (let ((chan (new <binary-input-channel> in-port)))
+	(.expiration-time chan (current-time))
+	(.recv-begin! chan)
+	(try
+	    (.recv-message-portion! chan)
+	  (catch E
+	    ((&delivery-timeout-expired)
+	     #t)
+	    (else E))))
+    => #t)
 
-  #t)
+  #!void)
 
 
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
