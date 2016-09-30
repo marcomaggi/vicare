@@ -8755,15 +8755,10 @@ Here we show how to include mixin clauses in a label definition:
 
 @cindex Friend functions
 @cindex Record--types, friend functions
-@cindex @library{vicare language-extensions friend-functions}, library
-@cindex Library @library{vicare language-extensions friend-functions}
 
 
 Friend functions are used to access private, public and protected
 members of a record--type from outside of the record--type's methods.
-
-The following syntactic bindings are exported by the library
-@library{vicare language-extensions friend-functions}.
 
 
 @deffn Syntax define/friend (@meta{typed-who} (brace @meta{subject} @meta{type}) . @meta{formals}) . @meta{body}

@@ -41,7 +41,6 @@
 	  compar-fixnum)
     (only (vicare platform words)
 	  case-word-size)
-    (vicare language-extensions friend-functions)
     (vicare language-extensions mixins))
 
 

@@ -829,6 +829,7 @@
 ;;;
 	 (define				(macro . define))
 	 (case-define				(macro . case-define))
+	 (define/friend				(macro . define/friend))
 ;;;
 	 (define-auxiliary-syntaxes		(macro . define-auxiliary-syntaxes))
 	 (define*				(macro . define*))
@@ -2070,6 +2071,7 @@
     (case-define/checked 			v $language)
     (define/overload				v $language)
     (define-type				v $language)
+    (define/friend				v $language)
 ;;;
     (lambda*					v $language)
     (case-lambda*				v $language)

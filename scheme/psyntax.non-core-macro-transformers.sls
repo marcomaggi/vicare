@@ -1920,7 +1920,7 @@
      (__synner__ "invalid syntax in macro use"))))
 
 
-;;;; non-core macro: DEFINE, CASE-DEFINE
+;;;; non-core macro: DEFINE, CASE-DEFINE, DEFINE/FRIEND
 
 (define-macro-transformer (define input-form.stx)
   ;;Transformer function  used to  expand Vicare's DEFINE  macros from  the top-level
@@ -1949,6 +1949,32 @@
 	   ?stuff))
     (_
      (__synner__ "invalid syntax in macro use"))))
+
+;;; --------------------------------------------------------------------
+
+(define-macro-transformer (define/friend input-form.stx)
+  ;;Transformer  function  used to  expand  Vicare's  DEFINE/FRIEND macros  from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx (brace)
+    ((_ ((brace ?who . ?rv-types) (brace ?subject ?ann) . ?formals) ?body0 ?body* ...)
+     (bless
+      `(define/checked ((brace ,?who . ,?rv-types) (brace ,?subject ,?ann) . ,?formals)
+	 (typed-variable-with-private-access! ,?subject)
+	 ,?body0 . ,?body*)))
+
+    ((_ (?who (brace ?subject ?ann) . ?formals) ?body0 ?body* ...)
+     (bless
+      `(define/checked (,?who (brace ,?subject ,?ann) . ,?formals)
+	 (typed-variable-with-private-access! ,?subject)
+	 ,?body0 . ,?body*)))
+
+    ((_ (?who) ?body0 ?body* ...)
+     (__synner__ "missing subject argument"))
+
+    (_
+     (__synner__ "invalid syntax in input form"))))
 
 
 ;;;; non-core macro: DEFINE*, LAMBDA*, NAMED-LAMBDA*, CASE-DEFINE*, CASE-LAMBDA*, NAMED-CASE-LAMBDA*

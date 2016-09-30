@@ -709,20 +709,6 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/instantiable-bodies.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/instantiable-bodies.fasl
 
-lib/vicare/language-extensions/friend-functions.fasl: \
-		lib/vicare/language-extensions/friend-functions.vicare.sls \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_language_extensions_friend_functions_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_friend_functions_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
-nodist_lib_vicare_language_extensions_friend_functions_fasl_DATA = lib/vicare/language-extensions/friend-functions.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_friend_functions_vicare_sls_DATA = lib/vicare/language-extensions/friend-functions.vicare.sls
-endif
-EXTRA_DIST += lib/vicare/language-extensions/friend-functions.vicare.sls
-CLEANFILES += lib/vicare/language-extensions/friend-functions.fasl
-
 lib/vicare/language-extensions/tuples.fasl: \
 		lib/vicare/language-extensions/tuples.vicare.sls \
 		lib/vicare/language-extensions/labels.fasl \
@@ -1133,7 +1119,6 @@ CLEANFILES += lib/vicare/containers/iteration-thunks.fasl
 lib/vicare/containers/bitvectors.fasl: \
 		lib/vicare/containers/bitvectors.vicare.sls \
 		lib/vicare/platform/words.fasl \
-		lib/vicare/language-extensions/friend-functions.fasl \
 		lib/vicare/language-extensions/mixins.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
