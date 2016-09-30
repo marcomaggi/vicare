@@ -65,7 +65,7 @@
 	      (.receiving? chan)))
     => '(#t #t #f #t #f #f))
 
-   #;(check
+  (check
        (let ((chan (new <binary-input-channel> in-port)))
 	 (void-object? (delete chan)))
     => #t)
@@ -102,7 +102,7 @@
 		(.receiving? chan))))
     => '(#t #f #t #t #f #f))
 
-  #;(check
+  (check
       (receive (port extract)
 	  (open-bytevector-output-port)
 	(let ((chan (new <binary-output-channel> port)))
@@ -219,8 +219,7 @@
 					"som" "e other dat" "a\r" "\n" "\r" "\n")))
 		  (log (recv chan))
 		  (send master.port chan (ascii-chunks '("quit\r\n\r\n")))
-		  (debug-print (expansion-of (delete chan)))
-		  #;(delete chan)
+		  (delete chan)
 		  (close-port master.port))))
 	  (coroutine ;slave
 	      (lambda ()
@@ -232,7 +231,7 @@
 		  (log (recv chan))
 		  (send slave.port chan (ascii-chunks '("OK" "\r\n" "\r\n")))
 		  (log (recv chan))
-		  #;(delete chan)
+		  (delete chan)
 		  (close-port slave.port))))
 	  (void-object? (finish-coroutines))))
     => `(#t

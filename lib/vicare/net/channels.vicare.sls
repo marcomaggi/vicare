@@ -38,28 +38,16 @@
 
     ;; condition objects
     &channel
-    ;; make-channel-condition
-    ;; channel-condition?
-    ;; condition-channel
-
     &delivery-timeout-expired
-    ;; make-delivery-timeout-expired-condition
-    ;; delivery-timeout-expired-condition?
-
     &maximum-message-size-exceeded
-    ;; make-maximum-message-size-exceeded-condition
-    ;; maximum-message-size-exceeded-condition?
     #| end of EXPORT |# )
   (import (vicare)
-    (vicare system $fx)
-    (vicare system $pairs)
-    (vicare system $chars)
-    (vicare system $strings)
-    (vicare system $bytevectors)
-    #;(vicare language-extensions interfaces)
+    (only (vicare system $bytevectors)
+	  $bytevector-reverse-and-concatenate)
+    (only (vicare system $strings)
+	  $string-reverse-and-concatenate)
     (vicare language-extensions mixins)
-    (prefix (vicare platform words (0 4))
-	    words::))
+    (prefix (vicare platform words (0 4)) words::))
 
 
 ;;;; helpers
@@ -70,9 +58,10 @@
 (define-constant DEFAULT-TEXTUAL-TERMINATORS
   '("\r\n\r\n" "\r\n"))
 
-;;This is the length (in bytes) of the bytevectors used to hold portions of messages.
-;;We want each bytevector to fill a single memory page.  See the documentation of the
-;;bytevector object layout.
+;;This is the maximum  length (in bytes) of the bytevectors used  to hold portions of
+;;messages; such bytevectors  are never empty.  We want each  bytevector, at most, to
+;;fill a  single memory page (4096  bytes).  See the documentation  of the bytevector
+;;object layout.
 ;;
 (define-constant DEFAULT-BINARY-MESSAGE-MAXIMUM-PORTION-SIZE
   (- 4096
@@ -85,12 +74,16 @@
       ((32)	4)
       ((64)	8))))
 
+;;This is  the maximum  length (in  bytes) of  a full  binary message;  it must  be a
+;;positive fixnum.
+;;
 (define-constant DEFAULT-BINARY-MESSAGE-MAXIMUM-SIZE
   DEFAULT-BINARY-MESSAGE-MAXIMUM-PORTION-SIZE)
 
 ;;This  is the  length  (in characters)  of  the  strings used  to  hold portions  of
-;;messages.  We want each string to fill a single memory page.  See the documentation
-;;of the string object layout.
+;;messages; such strings  are never empty.  We  want each string, at most,  to fill a
+;;single  memory page  (4096  bytes).  See  the documentation  of  the string  object
+;;layout.
 ;;
 (define-constant DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-PORTION-SIZE
   (div (- 4096
@@ -101,6 +94,9 @@
        ;;Every character is represented by a 32-bit slot.
        4))
 
+;;This is the maximum length (in characters) of  a full textual message; it must be a
+;;positive fixnum.
+;;
 (define-constant DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-SIZE
   DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-PORTION-SIZE)
 
@@ -121,13 +117,6 @@
 (define-alias <message-portion-length>
   <non-negative-fixnum>)
 
-;;; --------------------------------------------------------------------
-
-(define ({maximum-expiration-time <epoch-time>})
-  (new <epoch-time> (greatest-fixnum) 0))
-
-;;; --------------------------------------------------------------------
-
 (define-type <binary-recv-port>
   (or <binary-input-port> <binary-input/output-port>))
 
@@ -145,43 +134,40 @@
   (nongenerative vicare:net:channels:<channel>)
   (strip-angular-parentheses)
 
-  (fields
-    (mutable {action (enumeration none send recv)})
+  (protected
+    (fields
+      (mutable {action (enumeration none send recv)})
 		;A symbol representing the current action for this channel.
-    (mutable {maximum-message-size <positive-fixnum>})
-		;A  non-negative exact  integer  representing  the inclusive  maximum
-		;message size; if the size of the message exceeds this value: message
-		;delivery will fail.
-    (mutable {maximum-message-portion-size <positive-fixnum>})
-		;A positive fixnum  representing the maximum number  of units (bytes,
-		;characters) read at each "message portion receive" operation.
-
-    (mutable {message-size <non-negative-fixnum>})
-		;A non-negative exact integer representing the current message size.
-    (mutable {message-terminated? <boolean>})
-		;A  boolean, true  if while  receiving a  message the  terminator has
-		;already been read.
-
+      (mutable {message-terminated? <boolean>})
+		;True if  while receiving a  message the terminator has  already been
+		;read.
+      #| end of FIELDS |# ))
+  (fields
     (mutable {expiration-time <epoch-time>})
-		;A   "<time>"  object   (as  defined   by  the   library  "(vicare)")
-		;representing the limit  of time since the Epoch  to complete message
-		;delivery; if  the allotted time  expires: sending or  receiving this
-		;message will fail.
+		;A time  object (as defined  by the library  "(vicare)") representing
+		;the limit of  time since the Epoch to complete  message delivery; if
+		;the allotted  time expires: sending  or receiving this  message will
+		;fail.
+    (mutable {maximum-message-size <positive-fixnum>})
+		;The  inclusive maximum  message size;  if  the size  of the  message
+		;exceeds this value: message delivery will fail.
+    (mutable {message-size <non-negative-fixnum>})
+		;The current message size.
     #| end of FIELDS |# )
 
   (protocol
     (lambda (make-record)
       (named-lambda make-channel
-	  ({_ <channel>} {max-message-size <positive-fixnum>} {max-portion-size <positive-fixnum>})
-	(make-record 'none	      ;action
+	  ({_ <channel>} {max-message-size <positive-fixnum>})
+	(make-record 'none	    ;action
+		     #f		    ;message-terminated?
+		     (faraway-time) ;expiration-time
 		     max-message-size ;maximum-message-size
-		     max-portion-size ;maximum-message-portion-size
 		     0		      ;message-size
-		     #f		      ;message-terminated?
-		     (maximum-expiration-time)))))
+		     ))))
 
   (constructor-signature
-    (lambda (<positive-fixnum> <positive-fixnum>) => (<channel>)))
+    (lambda (<positive-fixnum>) => (<channel>)))
 
 ;;; --------------------------------------------------------------------
 ;;; status inspection methods
@@ -204,27 +190,31 @@
 
 ;;;
 
-  (method ({delivery-timeout-expired? <boolean>})
-    ;;Return true if the delivery timeout has expired; otherwise return false.
-    ;;
-    (time<=? (.expiration-time this) (current-time)))
+  (protected
+    (method ({delivery-timeout-expired? <boolean>})
+      ;;Return true if the delivery timeout has expired; otherwise return false.
+      ;;
+      (time<=? (.expiration-time this) (current-time))))
 
-  (method ({maximum-size-exceeded? <boolean>})
-    ;;Return true if adding the last portion of message made the total message length
-    ;;exceed the configured maximum; otherwise return false.
-    ;;
-    (> (.message-size this)
-       (.maximum-message-size this)))
+  (protected
+    (method ({maximum-size-exceeded? <boolean>})
+      ;;Return true  if adding  the last  portion of message  made the  total message
+      ;;length exceed the configured maximum; otherwise return false.
+      ;;
+      (fx>? (.message-size this)
+	    (.maximum-message-size this))))
 
 ;;; --------------------------------------------------------------------
 ;;; operation methods
 
-  (method ({message-increment-size! <void>} {delta-size <positive-fixnum>})
-    ;;Increment the total  message size by DELTA-SIZE.  Notice that  DELTA-SIZE is no
-    ;;always the configured "maximum message portion size": at the end of a message a
-    ;;smaller number of units is usually present.
-    ;;
-    (.message-size this (+ delta-size (.message-size this))))
+  (protected
+    (method ({message-increment-size! <void>} {delta-size <positive-fixnum>})
+      ;;Increment the total message size by DELTA-SIZE.
+      ;;
+      ;;FIXME A generic exceptio is raised if the sum of the numbers is not a fixnum.
+      ;;We should do better here.  (Marco Maggi; Thu Sep 29, 2016)
+      ;;
+      (.message-size this (+ delta-size (.message-size this)))))
 
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -232,10 +222,13 @@
 (define-record-type <binary-channel>
   (nongenerative vicare:net:channels:<binary-channel>)
   (parent <channel>)
-  (fields
-    (mutable {message-buffer (list-of <nebytevector>)})
+  (protected
+    (fields
+      (mutable {message-buffer (list-of <nebytevector>)})
 		;Null or a  list of bytevectors representing the  data accumulated so
 		;far; last input first.
+      #| end of FIELDS |# ))
+  (fields
     (mutable {message-terminators <binary-terminators>})
 		;A  non-empty list  of  non-empty  bytevectors representing  possible
 		;message terminators.
@@ -244,7 +237,7 @@
   (protocol
     (lambda (make-channel)
       (named-lambda make-binary-channel ({_ <binary-channel>})
-	((make-channel DEFAULT-BINARY-MESSAGE-MAXIMUM-SIZE DEFAULT-BINARY-MESSAGE-MAXIMUM-PORTION-SIZE)
+	((make-channel DEFAULT-BINARY-MESSAGE-MAXIMUM-SIZE)
 	 '() DEFAULT-BINARY-TERMINATORS))))
 
   (constructor-signature
@@ -252,24 +245,26 @@
 
 ;;; --------------------------------------------------------------------
 
-  (method ({message-buffer-push! <void>} {data <nebytevector>})
-    (.message-buffer this (cons data (.message-buffer this)))
-    (.message-increment-size! this (.length data)))
+  (protected
+    (method ({message-buffer-push! <void>} {data <nebytevector>})
+      (.message-buffer this (cons data (.message-buffer this)))
+      (.message-increment-size! this (.length data))))
 
-  (method ({reverse-and-concatenate-buffer <bytevector>})
-    ($bytevector-reverse-and-concatenate (.message-size this) (.message-buffer this)))
+  (protected
+    (method ({reverse-and-concatenate-buffer <bytevector>})
+      ($bytevector-reverse-and-concatenate (.message-size this) (.message-buffer this))))
 
 ;;; --------------------------------------------------------------------
 
   (method ({abort! <void>})
-    ;;Abort the current operation and reset the channel to inactive; return unspecified
-    ;;values.  Send and receive nothing.
+    ;;Abort  the  current  operation  and  reset  the  channel  to  inactive;  return
+    ;;unspecified values.  Send and receive nothing.
     ;;
     (.action              this 'none)
     (.message-buffer      this '())
     (.message-size        this 0)
     (.message-terminated? this #f)
-    (.expiration-time     this (maximum-expiration-time))
+    (.expiration-time     this (faraway-time))
     (void))
 
   #| end of DEFINE-RECORD-TYPE |# )
@@ -278,10 +273,13 @@
 (define-record-type <textual-channel>
   (nongenerative vicare:net:channels:<textual-channel>)
   (parent <channel>)
-  (fields
-    (mutable {message-buffer (list-of <nestring>)})
+  (protected
+    (fields
+      (mutable {message-buffer (list-of <nestring>)})
 		;Null or a list of strings  representing the data accumulated so far;
 		;last input first.
+      #| end of FIELDS |# ))
+  (fields
     (mutable {message-terminators <textual-terminators>})
 		;A non-empty list of  non-empty strings representing possible message
 		;terminators.
@@ -290,7 +288,7 @@
   (protocol
     (lambda (make-channel)
       (named-lambda make-textual-channel ({_ <textual-channel>})
-	((make-channel DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-SIZE DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-PORTION-SIZE)
+	((make-channel DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-SIZE)
 	 '() DEFAULT-TEXTUAL-TERMINATORS))))
 
   (constructor-signature
@@ -298,24 +296,26 @@
 
 ;;; --------------------------------------------------------------------
 
-  (method ({message-buffer-push! <void>} {data <nestring>})
-    (.message-buffer this (cons data (.message-buffer this)))
-    (.message-increment-size! this (.length data)))
+  (protected
+    (method ({message-buffer-push! <void>} {data <nestring>})
+      (.message-buffer this (cons data (.message-buffer this)))
+      (.message-increment-size! this (.length data))))
 
-  (method ({reverse-and-concatenate-buffer <string>})
-    ($string-reverse-and-concatenate (.message-size this) (.message-buffer this)))
+  (protected
+    (method ({reverse-and-concatenate-buffer <string>})
+      ($string-reverse-and-concatenate (.message-size this) (.message-buffer this))))
 
 ;;; --------------------------------------------------------------------
 
   (method ({abort! <void>})
-    ;;Abort the current operation and reset the channel to inactive; return unspecified
-    ;;values.  Send and receive nothing.
+    ;;Abort  the  current  operation  and  reset  the  channel  to  inactive;  return
+    ;;unspecified values.  Send and receive nothing.
     ;;
     (.action              this 'none)
     (.message-buffer      this '())
     (.message-size        this 0)
     (.message-terminated? this #f)
-    (.expiration-time     this (maximum-expiration-time))
+    (.expiration-time     this (faraway-time))
     (void))
 
   #| end of DEFINE-RECORD-TYPE |# )
@@ -324,6 +324,11 @@
 ;;;; common methods for input channels
 
 (define-mixin-type <receiving-channel-methods>
+  (fields
+    (mutable {maximum-message-portion-size <positive-fixnum>})
+		;The  maximum  number  of  units (bytes,  characters)  read  at  each
+		;"receive message portion" operation.
+    #| end of FIELDS |# )
 
   (method ({recv-begin! <void>})
     ;;Configure a  channel to start  receiving a message; return  unspecified values.
@@ -334,14 +339,21 @@
     (.action this 'recv)
     (void))
 
-  (method (recv-end!/rbl)
+  #| end of DEFINE-MIXIN-TYPE |# )
+
+
+(define-mixin-type <receiving-binary-channel-methods>
+  (mixins <receiving-channel-methods>)
+
+  (method ({recv-end!/rbl <positive-fixnum> (list-of <nebytevector>)})
     ;;Finish receiving a message; it is an error  if the channel is not in the course
     ;;of receiving a message.  Return the values:
     ;;
-    ;;1. A list  of bytevectors or strings representing the  data buffers accumulated
-    ;;in reverse order (reverse bytevector list, RBL).
+    ;;1. A positive fixnum representing the total data size.
     ;;
-    ;;2. An non-negative fixnum representing the total  data size.
+    ;;2.   Null or  a list  of non-empty  bytevectors representing  the data  buffers
+    ;;accumulated in reverse order (reverse bytevector list, RBL).  The data includes
+    ;;the terminator.
     ;;
     ;;After this  function is applied  to a channel: the  channel itself is  reset to
     ;;inactive; so it  is available to start  receiving another message or  to send a
@@ -353,10 +365,10 @@
 		(.message-buffer this))
       (.abort! this)))
 
-  (method (recv-end!)
+  (method ({recv-end! <bytevector>})
     ;;Finish receiving a message; it is an error  if the channel is not in the course
-    ;;of receiving a message.  Return the accumulated octets in a bytevector or chars
-    ;;in a string.
+    ;;of receiving  a message.  Return  the accumulated  octets in a  bytevector; the
+    ;;data includes the terminator.
     ;;
     ;;After this  function is applied  to a channel: the  channel itself is  reset to
     ;;inactive; so it  is available to start  receiving another message or  to send a
@@ -367,14 +379,13 @@
 	(.reverse-and-concatenate-buffer this)
       (.abort! this)))
 
-  ;;Here we let type propagation select the type of the return value.
-  ;;
-  (method (recv-full-message)
+  (method ({recv-full-message (or <eof> <bytevector>)})
     (assert-inactive-channel __who__ this)
     (.recv-begin! this)
     (let next-portion ()
       (let ((rv (.recv-message-portion! this)))
 	(cond ((eof-object? rv)
+	       (.abort! this)
 	       rv)
 	      ((would-block-object? rv)
 	       (next-portion))
@@ -383,30 +394,22 @@
 	      (else
 	       (.recv-end! this))))))
 
-  #| end of DEFINE-MIXIN-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define-mixin-type <receiving-binary-channel-methods>
-
-  (mixins <receiving-channel-methods>)
-
-  (method ({recv-message-portion! (or <bytevector> <eof> <would-block> <boolean>)})
+  (method ({recv-message-portion! (or <eof> <would-block> <boolean>)})
     ;;Receive a  portion of input message  from the channel.   It is an error  if the
     ;;channel is not in the course of receiving a message.
+    ;;
+    ;;* Return false if a portion of message was read, and it does not terminate with
+    ;;a message  terminator; in  this case  we need  to call  this function  again to
+    ;;receive further message portions.
     ;;
     ;;* Return true if a configured message terminator is read from the input port or
     ;;if the channel already read a terminator in a previous operation.  If a message
     ;;terminator is received: set THIS to "message terminated" status.
     ;;
-    ;;* Return  the EOF object if  EOF is read from  the input port before  a message
-    ;;terminator.
+    ;;* Return the EOF object if EOF is read from the input port.
     ;;
     ;;* Return the would-block object if a  would-block object is read from the input
     ;;port.
-    ;;
-    ;;* Return false if neither a message terminator nor EOF is read; in this case we
-    ;;need to call this function again later to receive further message portions.
     ;;
     ;;* If the  message delivery timeout is expired or  expires while receiving data:
     ;;raise an exception.
@@ -414,46 +417,159 @@
     ;;* If the accumulated data exceeds the maximum message size: raise an exception.
     ;;
     (assert-receiving-channel __who__ this)
-    (%channel-recv-binary-message-portion! this (.connect-in-port this)))
+    (cond
+     ;;If the message is terminated: return now, ignore input data.
+     ((.message-terminated? this)
+      #t)
+     ;;If the message is not terminated and the timeout expired: raise an error.
+     ((.delivery-timeout-expired? this)
+      (%error-message-delivery-timeout-expired __who__ this))
+     (else
+      ;;Read the next message portion.
+      (let ((bv (get-bytevector-n (.connect-in-port this) (.maximum-message-portion-size this))))
+	(cond
+	 ;;If the EOF was read here: no new  data was available.  It means we got EOF
+	 ;;before reading a message terminator: return the EOF object.
+	 ((eof-object? bv)
+	  bv)
 
-  #| end of mixin |# )
+	 ;;If a would-block object  was read here: no new data  was available and the
+	 ;;port is configured in non-blocking mode.  Return now to signal the need to
+	 ;;read further message portions later.
+	 ((would-block-object? bv)
+	  #!would-block)
 
-;;; --------------------------------------------------------------------
-
-(define-mixin-type <receiving-textual-channel-methods>
-  (mixins <receiving-channel-methods>)
-
-  (method ({recv-message-portion! (or <string> <eof> <would-block> <boolean>)})
-    ;;Receive a  portion of input message  from the channel.   It is an error  if the
-    ;;channel is not in the course of receiving a message.
-    ;;
-    ;;* Return true if a configured message terminator is read from the input port or
-    ;;if the channel already read a terminator in a previous operation.  If a message
-    ;;terminator is received: set THIS to "message terminated" status.
-    ;;
-    ;;* Return  the EOF object if  EOF is read from  the input port before  a message
-    ;;terminator.
-    ;;
-    ;;* Return the would-block object if a  would-block object is read from the input
-    ;;port.
-    ;;
-    ;;* Return false if neither a message  terminator nor EOF is read; in this case
-    ;;we  need  to call  this  function  again  later  to receive  further  message
-    ;;portions.
-    ;;
-    ;;* If the  message delivery timeout is expired or  expires while receiving data:
-    ;;raise an exception.
-    ;;
-    ;;* If the accumulated data exceeds the maximum message size: raise an exception.
-    ;;
-    (assert-receiving-channel __who__ this)
-    (%channel-recv-textual-message-portion! this (.connect-in-port this)))
+	 ;;If  a message  portion is  read:  push it  on the  internal buffer;  check
+	 ;;message  size  and timeout  expiration;  return  true  if the  message  is
+	 ;;terminated, false otherwise.
+	 (else
+	  (.message-buffer-push! this bv)
+	  (cond ((.maximum-size-exceeded? this)
+		 (%error-maximum-message-size-exceeded __who__ this))
+		((.delivery-timeout-expired? this)
+		 (%error-message-delivery-timeout-expired __who__ this))
+		((%received-binary-message-terminator? this)
+		 (.message-terminated? this #t)
+		 #t)
+		(else #f))))))))
 
   #| end of mixin |# )
 
 
-;;;; common methods for output channels
+(define-mixin-type <receiving-textual-channel-methods>
+  (mixins <receiving-channel-methods>)
 
+  (method ({recv-end!/rbl <positive-fixnum> (list-of <nestring>)})
+    ;;Finish receiving a message; it is an error  if the channel is not in the course
+    ;;of receiving a message.  Return the values:
+    ;;
+    ;;1. A positive fixnum representing the total data size.
+    ;;
+    ;;2. A  list of non-empty  strings representing  the data buffers  accumulated in
+    ;;reverse  order  (reverse   bytevector  list,  RBL).   The   data  includes  the
+    ;;terminator.
+    ;;
+    ;;After this  function is applied  to a channel: the  channel itself is  reset to
+    ;;inactive; so it  is available to start  receiving another message or  to send a
+    ;;message.
+    ;;
+    (assert-receiving-channel __who__ this)
+    (begin0
+	(values (.message-size   this)
+		(.message-buffer this))
+      (.abort! this)))
+
+  (method ({recv-end! <string>})
+    ;;Finish receiving a message; it is an error  if the channel is not in the course
+    ;;of receiving  a message.  Return  the accumulated  characters in a  string; the
+    ;;data includes the terminator.
+    ;;
+    ;;After this  function is applied  to a channel: the  channel itself is  reset to
+    ;;inactive; so it  is available to start  receiving another message or  to send a
+    ;;message.
+    ;;
+    (assert-receiving-channel __who__ this)
+    (begin0
+	(.reverse-and-concatenate-buffer this)
+      (.abort! this)))
+
+  (method ({recv-full-message (or <eof> <string>)})
+    (assert-inactive-channel __who__ this)
+    (.recv-begin! this)
+    (let next-portion ()
+      (let ((rv (.recv-message-portion! this)))
+	(cond ((eof-object? rv)
+	       (.abort! this)
+	       rv)
+	      ((would-block-object? rv)
+	       (next-portion))
+	      ((not rv)
+	       (next-portion))
+	      (else
+	       (.recv-end! this))))))
+
+  (method ({recv-message-portion! (or <eof> <would-block> <boolean>)})
+    ;;Receive a  portion of input message  from the channel.   It is an error  if the
+    ;;channel is not in the course of receiving a message.
+    ;;
+    ;;* Return false if a portion of message was read, and it does not terminate with
+    ;;a message  terminator; in  this case  we need  to call  this function  again to
+    ;;receive further message portions.
+    ;;
+    ;;* Return true if a configured message terminator is read from the input port or
+    ;;if the channel already read a terminator in a previous operation.  If a message
+    ;;terminator is received: set THIS to "message terminated" status.
+    ;;
+    ;;* Return the EOF object if EOF is read from the input port.
+    ;;
+    ;;* Return the would-block object if a  would-block object is read from the input
+    ;;port.
+    ;;
+    ;;* If the  message delivery timeout is expired or  expires while receiving data:
+    ;;raise an exception.
+    ;;
+    ;;* If the accumulated data exceeds the maximum message size: raise an exception.
+    ;;
+    (assert-receiving-channel __who__ this)
+    (cond
+     ;;If the message is terminated: return now, ignore input data.
+     ((.message-terminated? this)
+      #t)
+     ;;If the message is not terminated and the timeout expired: raise an error.
+     ((.delivery-timeout-expired? this)
+      (%error-message-delivery-timeout-expired __who__ this))
+     (else
+      ;;Read a new message portion.
+      (let ((str (get-string-n (.connect-in-port this) (.maximum-message-portion-size this))))
+	(cond
+	 ;;If the EOF is found here: no new  data was available.  It means we got EOF
+	 ;;before reading a message terminator: return the EOF object.
+	 ((eof-object? str)
+	  str)
+
+	 ;;If a would-block object  was read here: no new data  was available and the
+	 ;;port is configured in non-blocking mode.  Return now to signal the need to
+	 ;;read further message portions later.
+	 ((would-block-object? str)
+	  #!would-block)
+
+	 ;;If  a message  portion is  read:  push it  on the  internal buffer;  check
+	 ;;message  size  and timeout  expiration;  return  true  if the  message  is
+	 ;;terminated, false otherwise.
+	 (else
+	  (.message-buffer-push! this str)
+	  (cond ((.maximum-size-exceeded? this)
+		 (%error-maximum-message-size-exceeded __who__ this))
+		((.delivery-timeout-expired? this)
+		 (%error-message-delivery-timeout-expired __who__ this))
+		((%received-textual-message-terminator? this)
+		 (.message-terminated? this #t)
+		 #t)
+		(else #f))))))))
+
+  #| end of mixin |# )
+
+
 (define-mixin-type <sending-channel-methods>
 
   (method ({send-begin! <void>})
@@ -464,10 +580,10 @@
     (.action this 'send)
     (void))
 
-  (method ({send-end! <message-portion-length>})
-    ;;Finish sending  a message  by flushing  the connect port  and return  the total
-    ;;number of octets  or chars sent.  It is  an error if the channel is  not in the
-    ;;course of sending a message.
+  (method ({send-end! <non-negative-fixnum>})
+    ;;Finish sending a  message by flushing the connect port  and returning the total
+    ;;number of octets or  characters sent.  It is an error if the  channel is not in
+    ;;the course of sending a message.
     ;;
     ;;After this function  is applied to a channel: the  channel itself is configured
     ;;as inactive; so it is available to start receiving another message or to send a
@@ -475,16 +591,14 @@
     ;;
     (assert-sending-channel __who__ this)
     (begin0
-	($channel-message-size this)
+	(.message-size this)
       (flush-output-port (.connect-ou-port this))
       (.abort! this)))
 
   #| end of mixin |# )
 
-;;; --------------------------------------------------------------------
-
+
 (define-mixin-type <sending-binary-channel-methods>
-
   (mixins <sending-channel-methods>)
 
   (method ({send-message-portion! <void>} {portion <bytevector>})
@@ -492,7 +606,7 @@
     ;;values.  It  is an  error if  the channel  is not  in the  course of  sending a
     ;;message.
     ;;
-    ;;PORTION must be a bytevector representing the message portion.
+    ;;The argument PORTION must be a bytevector representing the message portion.
     ;;
     ;;This function does not flush the connection port.
     ;;
@@ -506,19 +620,21 @@
 	   (put-bytevector (.connect-ou-port this) portion))))
 
   (method ({send-full-message <message-portion-length>} . {message-portions (list-of <bytevector>)})
+    ;;Send a  full message composed of  the given MESSAGE-PORTIONS; return  the total
+    ;;number of  bytes or  characters sent.   It is an  error if  the channel  is not
+    ;;inactive.
+    ;;
     (assert-inactive-channel __who__ this)
     (.send-begin! this)
-    (for-each-in-order (lambda (portion)
+    (for-each-in-order (lambda ({portion <bytevector>})
 			 (.send-message-portion! this portion))
       message-portions)
     (.send-end! this))
 
   #| end of mixin |# )
 
-;;; --------------------------------------------------------------------
-
+
 (define-mixin-type <sending-textual-channel-methods>
-
   (mixins <sending-channel-methods>)
 
   (method ({send-message-portion! <void>} {portion <string>})
@@ -526,7 +642,7 @@
     ;;values.  It  is an  error if  the channel  is not  in the  course of  sending a
     ;;message.
     ;;
-    ;;PORTION must be a string representing the message portion.
+    ;;The argument PORTION must be a string representing the message portion.
     ;;
     ;;This function does not flush the connection port.
     ;;
@@ -540,9 +656,13 @@
 	   (put-string (.connect-ou-port this) portion))))
 
   (method ({send-full-message <message-portion-length>} . {message-portions (list-of <string>)})
+    ;;Send a  full message composed of  the given MESSAGE-PORTIONS; return  the total
+    ;;number of  bytes or  characters sent.   It is an  error if  the channel  is not
+    ;;inactive.
+    ;;
     (assert-inactive-channel __who__ this)
     (.send-begin! this)
-    (for-each-in-order (lambda (portion)
+    (for-each-in-order (lambda ({portion <string>})
 			 (.send-message-portion! this portion))
       message-portions)
     (.send-end! this))
@@ -562,7 +682,7 @@
   (protocol
     (lambda (make-binary-channel)
       (named-lambda make-binary-input-channel ({_ <binary-input-channel>} {port <binary-recv-port>})
-	((make-binary-channel) port))))
+	((make-binary-channel) port DEFAULT-BINARY-MESSAGE-MAXIMUM-PORTION-SIZE))))
 
   (constructor-signature
     (lambda (<binary-recv-port>) => (<binary-input-channel>)))
@@ -590,7 +710,7 @@
   (protocol
     (lambda (make-textual-channel)
       (named-lambda make-textual-input-channel ({_ <textual-input-channel>} {port <textual-recv-port>})
-	((make-textual-channel) port))))
+	((make-textual-channel) port DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-PORTION-SIZE))))
 
   (constructor-signature
     (lambda (<textual-recv-port>) => (<textual-input-channel>)))
@@ -680,7 +800,7 @@
 	  ({_ <binary-input/output-channel>}
 	   {in-port <binary-recv-port>}
 	   {ou-port <binary-send-port>})
-	((make-binary-channel) in-port ou-port))))
+	((make-binary-channel) in-port ou-port DEFAULT-BINARY-MESSAGE-MAXIMUM-PORTION-SIZE))))
 
   (constructor-signature
     (lambda (<binary-recv-port> <binary-send-port>) => (<binary-input/output-channel>)))
@@ -716,7 +836,7 @@
 	  ({_ <textual-input/output-channel>}
 	   {in-port <textual-recv-port>}
 	   {ou-port <textual-send-port>})
-	((make-textual-channel) in-port ou-port))))
+	((make-textual-channel) in-port ou-port DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-PORTION-SIZE))))
 
   (constructor-signature
     (lambda (<textual-recv-port> <textual-send-port>) => (<textual-input/output-channel>)))
@@ -743,15 +863,6 @@
   (unless (.receiving? chan)
     (assertion-violation who "expected channel in the course of receving a message as argument" chan)))
 
-(define (assert-not-receiving-channel {who <symbol>} {chan <channel>})
-  ;;Succeed if CHAN  is an instance of "<channel>"  and it is *not* in  the course of
-  ;;receiving a message.
-  ;;
-  (when (.receiving? chan)
-    (assertion-violation who "expected channel not in the course of receving a message as argument" chan)))
-
-;;; --------------------------------------------------------------------
-
 (define (assert-sending-channel {who <symbol>} {chan <channel>})
   ;;Succeed if CHAN is an instance of "<channel>"  and it is in the course of sending
   ;;a message.
@@ -759,27 +870,11 @@
   (unless (.sending? chan)
     (assertion-violation who "expected channel in the course of sending a message as argument" chan)))
 
-(define (asert-not-sending-channel {who <symbol>} {chan <channel>})
-  ;;Succeed if CHAN  is an instance of "<channel>"  and it is *not* in  the course of
-  ;;sending a message.
-  ;;
-  (when (.sending? chan)
-    (assertion-violation who "expected channel not in the course of sending a message as argument" chan)))
-
-;;; --------------------------------------------------------------------
-
 (define (assert-inactive-channel {who <symbol>} {chan <channel>})
   ;;Succeed if CHAN is an instance of "<channel>"  and it is neither in the course of
   ;;sending nor receiving a message.
   ;;
   (unless (.inactive? chan)
-    (assertion-violation who "expected inactive channel as argument" chan)))
-
-(define (assert-not-inactive-channel {who <symbol>} {chan <channel>})
-  ;;Succeed  if CHAN  is an  instance  of "<channel>"  and  it is  either sending  or
-  ;;receiving a message.
-  ;;
-  (when (.inactive? chan)
     (assertion-violation who "expected inactive channel as argument" chan)))
 
 
@@ -828,318 +923,187 @@
 
 ;;;; receiving messages: binary message portion
 
-(module (%channel-recv-binary-message-portion!)
+(module (%received-binary-message-terminator?)
 
-  (define-constant __module_who__ 'channel-recv-binary-message-portion!)
-
-  (define ({%channel-recv-binary-message-portion! (or <bytevector> <eof> <would-block> <boolean>)}
-	   {chan <binary-channel>} {in-port <binary-recv-port>})
-    ;;Receive a portion of  input message from the given channel.  It  is an error if
-    ;;the channel is not in the course of receiving a message.
+  (define/friend (%received-binary-message-terminator? {chan <binary-channel>})
+    ;;Compare all  the message  terminators with the  bytevectors accumulated  in the
+    ;;buffer of  CHAN.  If  the tail  of the  buffer equals  one of  the terminators:
+    ;;return true, else return false.
     ;;
-    ;;* Return true if a configured message terminator is read from the input port or
-    ;;if the channel already read a terminator in a previous operation.  If a message
-    ;;terminator is received: set CHAN to "message terminated" status.
+    (let ((terminators (.message-terminators chan))
+	  (buffers     (.message-buffer      chan)))
+      (find (lambda (terminator)
+	      (%terminated-octets-stream? buffers terminator))
+	terminators)))
+
+  (define (%terminated-octets-stream? {reverse-stream (list-of <nebytevector>)} {terminator <nebytevector>})
+    ;;Compare  a terminator  with the  tail of  an octets  stream; if  the stream  is
+    ;;terminated return #t, else return #f.
     ;;
-    ;;* Return  the EOF object if  EOF is read from  the input port before  a message
-    ;;terminator.
+    ;;The argument TERMINATOR must be  a non-empty bytevector representing the stream
+    ;;terminator;  the last  octet in  TERMINATOR  is the  last octet  in a  properly
+    ;;terminated stream.
     ;;
-    ;;* Return false if neither a message terminator nor EOF is read; in this case we
-    ;;need to call this function again later to receive further message portions.
+    ;;The argument REVERSE-SEQUENCE  must be null or a list  of non-empty bytevectors
+    ;;representing  the stream  of octects  in bytevector-reversed  order; as  if the
+    ;;stream of octets has been accumulated (= CONSed) bytevector by bytevector:
     ;;
-    ;;* If the  message delivery timeout is expired or  expires while receiving data:
-    ;;raise an exception.
+    ;;* The first item of REVERSE-SEQUENCE is  the last bytevector in the stream, the
+    ;;last item of REVERSE-SEQUENCE is the first bytevector in the stream.
     ;;
-    ;;* If the accumulated data exceeds the maximum message size: raise an exception.
+    ;;* Every bytevector in REVERSE-SEQUENCE represents  a chunk of stream: the first
+    ;;octet in the bytevector is the first octet  in the chunk, the last octet in the
+    ;;bytevector is the last octet in the chunk.
     ;;
-    (cond
-     ;;If the message is terminated: we do not care anymore about the timeout.
-     ((.message-terminated? chan)
-      #t)
-     ;;If the message is not terminated and the timeout expired: raise an error.
-     ((.delivery-timeout-expired? chan)
-      (%error-message-delivery-timeout-expired __module_who__ chan))
-     (else
-      (let ((bv (get-bytevector-n in-port (.maximum-message-portion-size chan))))
-	(cond
-	 ;;If the  EOF is found before  reading a message terminator:  return the EOF
-	 ;;object.
-	 ((eof-object? bv)
-	  bv)
+    (define ({%bytevector-last-index <fixnum>} {bv <bytevector>})
+      (fxsub1 (.length bv)))
+    (let loop ((terminator.idx  (%bytevector-last-index terminator))
+	       (buffers         reverse-stream))
+      (cond ((fx=? -1 terminator.idx)
+	     #t)
+	    ((null? buffers)
+	     #f)
+	    ((let* ((buf     (car buffers))
+		    (buf.idx (%bytevector-last-index buf)))
+	       (%compare-bytevector-tails terminator terminator.idx buf buf.idx))
+	     => (lambda (terminator.idx)
+		  (loop (fxsub1 terminator.idx) (cdr buffers))))
+	    (else #f))))
 
-	 ;;If reading causes a would-block condition with no input data: return would
-	 ;;block to signal the need to read further message portions.
-	 ((would-block-object? bv)
-	  #!would-block)
+  (define ({%compare-bytevector-tails (or <false> <non-negative-fixnum>)}
+	   {A <bytevector>} {A.idx <non-negative-fixnum>}
+	   {B <bytevector>} {B.idx <non-negative-fixnum>})
+    ;;Recursive  function.   Compare the  bytevector  A,  starting from  index  A.idx
+    ;;inclusive, to the bytevector B, starting from index B.idx inclusive.  If:
+    ;;
+    ;;* All the octets are equal up to (zero?  A.idx) included: return 0.  An example
+    ;;of this case is a call with arguments:
+    ;;
+    ;;   A =       #vu8(3 4 5)	A.idx = 2
+    ;;   B = #vu8(0 1 2 3 4 5)	B.idx = 5
+    ;;
+    ;;another example of this case:
+    ;;
+    ;;   A = #vu8(0 1 2 3 4 5)	A.idx = 5
+    ;;   B = #vu8(0 1 2 3 4 5)	B.idx = 5
+    ;;
+    ;;* All the octets  are equal up to (zero?  B.idx) included:  return the value of
+    ;;A.idx referencing the last  compared octet in A.  An example of  this case is a
+    ;;call with arguments:
+    ;;
+    ;;   A = #vu8(0 1 2 3 4 5)	A.idx = 5
+    ;;   B =       #vu8(3 4 5)	B.idx = 2
+    ;;
+    ;;the returned value is: A.idx == 3.
+    ;;
+    ;;*  Octects having  (positive?   A.idx) and  (positive?   B.idx) are  different:
+    ;;return false.
+    ;;
+    (and (fx=? (bytevector-u8-ref A A.idx)
+	       (bytevector-u8-ref B B.idx))
+	 (cond ((fxzero? A.idx)
+		0)
+	       ((fxzero? B.idx)
+		A.idx)
+	       (else
+		(%compare-bytevector-tails A (fxsub1 A.idx)
+					   B (fxsub1 B.idx))))))
 
-	 ;;NOTE If a bytevector is read: it is non-empty.
-	 ;;
-	 ;; ((and (bytevector? bv)
-	 ;;       (fxzero? (bytevector-length bv)))
-	 ;;  #!would-block)
-
-	 ;;If  a message  portion is  read:  push it  on the  internal buffer;  check
-	 ;;message  size  and timeout  expiration;  return  true  if the  message  is
-	 ;;terminated, false otherwise.
-	 (else
-	  (.message-buffer-push! chan bv)
-	  (cond ((.maximum-size-exceeded? chan)
-		 (%error-maximum-message-size-exceeded __module_who__ chan))
-		((.delivery-timeout-expired? chan)
-		 (%error-message-delivery-timeout-expired __module_who__ chan))
-		((%received-message-terminator? chan)
-		 (.message-terminated? chan #t)
-		 #t)
-		(else #f))))))))
-
-  (module (%received-message-terminator?)
-
-    (define (%received-message-terminator? {chan <binary-channel>})
-      ;;Compare all the  message terminators with the bytevectors  accumulated in the
-      ;;buffer of  CHAN.  If the  tail of the buffer  equals one of  the terminators:
-      ;;return true, else return false.
-      ;;
-      (let ((terminators (.message-terminators chan))
-	    (buffers     (.message-buffer chan)))
-	(find (lambda (terminator)
-		($terminated-octets-stream? buffers terminator))
-	  terminators)))
-
-    (define ($terminated-octets-stream? reverse-stream terminator)
-      ;;Compare a  terminator with  the tail of  an octets stream;  if the  stream is
-      ;;terminated return #t, else return #f.  This is an unsafe function: it assumes
-      ;;the arguments have been already validated.
-      ;;
-      ;;TERMINATOR must be a non-empty bytevector representing the stream terminator;
-      ;;the  last octet  in TERMINATOR  is the  last octet  in a  properly terminated
-      ;;stream.
-      ;;
-      ;;REVERSE-SEQUENCE must be null or a list of non-empty bytevectors representing
-      ;;the  stream of  octects in  bytevector-reversed order;  as if  the stream  of
-      ;;octets has been accumulated (= CONSed) bytevector by bytevector:
-      ;;
-      ;;* The  first item of REVERSE-SEQUENCE  is the last bytevector  in the stream,
-      ;;  the last item of REVERSE-SEQUENCE is the first bytevector in the stream.
-      ;;
-      ;;*  Every bytevector  in REVERSE-SEQUENCE  represents a  chunk of  stream: the
-      ;;  first  octet in the bytevector  is the first  octet in the chunk,  the last
-      ;;  octet in the bytevector is the last octet in the chunk.
-      ;;
-      (define ($bytevector-last-index bv)
-	($fxsub1 ($bytevector-length bv)))
-      (let loop ((terminator.idx  ($bytevector-last-index terminator))
-		 (buffers         reverse-stream))
-	(cond (($fx= -1 terminator.idx)
-	       #t)
-	      ((null? buffers)
-	       #f)
-	      ((let* ((buf     ($car buffers))
-		      (buf.idx ($bytevector-last-index buf)))
-		 ($compare-bytevector-tails terminator terminator.idx buf buf.idx))
-	       => (lambda (terminator.idx)
-		    (loop ($fxsub1 terminator.idx) ($cdr buffers))))
-	      (else #f))))
-
-    (define ($compare-bytevector-tails A A.idx B B.idx)
-      ;;Recursive  function.  Compare  the bytevector  A, starting  from index  A.idx
-      ;;inclusive, to the bytevector B, starting from index B.idx inclusive.  If:
-      ;;
-      ;;*  All the  octets are  equal up  to (zero?  A.idx) included:  return 0.   An
-      ;;example of this case is a call with arguments:
-      ;;
-      ;;   A =       #vu8(3 4 5)	A.idx = 2
-      ;;   B = #vu8(0 1 2 3 4 5)	B.idx = 5
-      ;;
-      ;;another example of this case:
-      ;;
-      ;;   A = #vu8(0 1 2 3 4 5)	A.idx = 5
-      ;;   B = #vu8(0 1 2 3 4 5)	B.idx = 5
-      ;;
-      ;;* All the octets are equal up to (zero?  B.idx) included: return the value of
-      ;;A.idx referencing the last compared octet in A.  An example of this case is a
-      ;;call with arguments:
-      ;;
-      ;;   A = #vu8(0 1 2 3 4 5)	A.idx = 5
-      ;;   B =       #vu8(3 4 5)	B.idx = 2
-      ;;
-      ;;the returned value is: A.idx == 3.
-      ;;
-      ;;* Octects  having (positive?   A.idx) and  (positive?  B.idx)  are different:
-      ;;return false.
-      ;;
-      (and ($fx= ($bytevector-u8-ref A A.idx)
-		 ($bytevector-u8-ref B B.idx))
-	   (cond (($fxzero? A.idx)
-		  0)
-		 (($fxzero? B.idx)
-		  A.idx)
-		 (else
-		  ($compare-bytevector-tails A ($fxsub1 A.idx)
-					     B ($fxsub1 B.idx))))))
-
-    #| end of module: %received-message-terminator? |# )
-
-  #| end of module: channel-recv-message-portion! |# )
+  #| end of module: %RECEIVED-MESSAGE-TERMINATOR? |# )
 
 
 ;;;; receiving messages: textual message portion
 
-(module (%channel-recv-textual-message-portion!)
+(module (%received-textual-message-terminator?)
 
-  (define-constant __module_who__ 'channel-recv-textual-message-portion!)
-
-  (define ({%channel-recv-textual-message-portion! (or <bytevector> <eof> <would-block> <boolean>)}
-	   {chan <textual-channel>} {in-port <textual-recv-port>})
-    ;;Receive a portion of  input message from the given channel.  It  is an error if
-    ;;the channel is not in the course of receiving a message.
+  (define/friend (%received-textual-message-terminator? {chan <textual-channel>})
+    ;;Compare all the message terminators with  the strings accumulated in the buffer
+    ;;of CHAN.  If the tail of the buffer equals one of the terminators: return true,
+    ;;else return false.
     ;;
-    ;;* Return true if a configured message terminator is read from the input port or
-    ;;if the channel already read a terminator in a previous operation.  If a message
-    ;;terminator is received: set CHAN to "message terminated" status.
+    (let ((terminators (.message-terminators chan))
+	  (buffers     (.message-buffer      chan)))
+      (find (lambda (terminator)
+	      (%terminated-chars-stream? buffers terminator))
+	terminators)))
+
+  (define (%terminated-chars-stream? {reverse-stream (list-of <nestring>)} {terminator <nestring>})
+    ;;Compare  a terminator  with the  tail  of an  chars  stream; if  the stream  is
+    ;;terminated return #t, else return #f.
     ;;
-    ;;* Return  the EOF object if  EOF is read from  the input port before  a message
-    ;;terminator.
+    ;;The  argument TERMINATOR  must be  a non-empty  string representing  the stream
+    ;;terminator;  the  last char  in  TERMINATOR  is the  last  char  in a  properly
+    ;;terminated stream.
     ;;
-    ;;* Return false if neither a message terminator nor EOF is read; in this case we
-    ;;need to call this function again later to receive further message portions.
+    ;;The  argument REVERSE-SEQUENCE  must be  null or  a list  of non-empty  strings
+    ;;representing the stream of chars in  string-reversed order; as if the stream of
+    ;;chars has been accumulated (= CONSed) string by string:
     ;;
-    ;;* If the  message delivery timeout is expired or  expires while receiving data:
-    ;;raise an exception.
+    ;;* The first item of REVERSE-SEQUENCE is the last string in the stream, the last
+    ;;item of REVERSE-SEQUENCE is the first string in the stream.
     ;;
-    ;;* If the accumulated data exceeds the maximum message size: raise an exception.
+    ;;* Every string in REVERSE-SEQUENCE represents a chunk of stream: the first char
+    ;;in the string  is the first char in  the chunk, the last char in  the string is
+    ;;the last char in the chunk.
     ;;
-    (cond
-     ;;If the message is terminated: we do not care anymore about the timeout.
-     ((.message-terminated? chan)
-      #t)
-     ;;If the message is not terminated and the timeout expired: raise an error.
-     ((.delivery-timeout-expired? chan)
-      (%error-message-delivery-timeout-expired __module_who__ chan))
-     (else
-      (let ((str (get-string-n in-port (.maximum-message-portion-size chan))))
-	(cond
-	 ;;If the  EOF is found before  reading a message terminator:  return the EOF
-	 ;;object.
-	 ((eof-object? str)
-	  str)
+    (define ({%string-last-index <fixnum>} {str <nestring>})
+      (fxsub1 (.length str)))
+    (let loop (({terminator.idx <fixnum>}		(%string-last-index terminator))
+	       ({buffers (list-of <nestring>)}	reverse-stream))
+      (cond ((fx=? -1 terminator.idx)
+	     #t)
+	    ((and (pair? buffers)
+		  (let* (({buffers (nelist-of <nestring>)}	buffers)
+			 (buf		(car buffers))
+			 (buf.idx	(%string-last-index buf)))
+		    (%compare-string-tails terminator terminator.idx buf buf.idx)))
+	     => (lambda (terminator.idx)
+		  (loop (fxsub1 terminator.idx) (cdr buffers))))
+	    (else #f))))
 
-	 ;;If  reading causes  a would-block  condition  with no  input data:  return
-	 ;;would-block to signal the need to read further message portions.
-	 ((would-block-object? str)
-	  #!would-block)
+  (define ({%compare-string-tails (or <false> <non-negative-fixnum>)}
+	   {A <nestring>} {A.idx <non-negative-fixnum>}
+	   {B <nestring>} {B.idx <non-negative-fixnum>})
+    ;;Recursive function.  Compare the string A, starting from index A.idx inclusive,
+    ;;to the string B, starting from index B.idx inclusive.  If:
+    ;;
+    ;;* All the chars are equal up to (zero? A.idx) included: return 0.  An example
+    ;;of this case is a call with arguments:
+    ;;
+    ;;     A =    "345"	A.idx = 2
+    ;;     B = "012345"	B.idx = 5
+    ;;
+    ;;another example of this case:
+    ;;
+    ;;     A = "012345"	A.idx = 5
+    ;;     B = "012345"	B.idx = 5
+    ;;
+    ;;* All the chars are equal up  to (zero?  B.idx) included: return the value of
+    ;;A.idx referencing the last compared char in  A.  An example of this case is a
+    ;;call with arguments:
+    ;;
+    ;;     A = "012345"	A.idx = 5
+    ;;     B =    "345"	B.idx = 2
+    ;;
+    ;;  the returned value is: A.idx == 3.
+    ;;
+    ;;*  Chars having  (positive?   A.idx) and  (positive?   B.idx) are  different:
+    ;;return false.
+    ;;
+    (and (char=? (string-ref A A.idx)
+		 (string-ref B B.idx))
+	 (cond ((fxzero? A.idx)
+		0)
+	       ((fxzero? B.idx)
+		A.idx)
+	       (else
+		(%compare-string-tails A (fxsub1 A.idx)
+				       B (fxsub1 B.idx))))))
 
-	 ;;NOTE If a string is read it is non-empty.
-	 ;;
-	 ;; ((and (string? str)
-	 ;;       (fxzero? (string-length str)))
-	 ;;  #!would-block)
-
-	 ;;If  a message  portion is  read:  push it  on the  internal buffer;  check
-	 ;;message  size  and timeout  expiration;  return  true  if the  message  is
-	 ;;terminated, false otherwise.
-	 (else
-	  (.message-buffer-push! chan str)
-	  (cond ((.maximum-size-exceeded? chan)
-		 (%error-maximum-message-size-exceeded __module_who__ chan))
-		((.delivery-timeout-expired? chan)
-		 (%error-message-delivery-timeout-expired __module_who__ chan))
-		((%received-message-terminator? chan)
-		 (.message-terminated? chan #t)
-		 #t)
-		(else #f))))))))
-
-  (module (%received-message-terminator?)
-
-    (define (%received-message-terminator? {chan <textual-channel>})
-      ;;Compare  all the  message terminators  with  the strings  accumulated in  the
-      ;;buffer of  CHAN.  If the  tail of the buffer  equals one of  the terminators:
-      ;;return true, else return false.
-      ;;
-      (let ((terminators (.message-terminators chan))
-	    (buffers     (.message-buffer      chan)))
-	(find (lambda (terminator)
-		(%terminated-chars-stream? buffers terminator))
-	  terminators)))
-
-    (define (%terminated-chars-stream? {reverse-stream (list-of <nestring>)} {terminator <nestring>})
-      ;;Compare a  terminator with  the tail  of an  chars stream;  if the  stream is
-      ;;terminated return #t, else return #f.  This is an unsafe function: it assumes
-      ;;the arguments have been already validated.
-      ;;
-      ;;TERMINATOR must be a non-empty string representing the stream terminator; the
-      ;;last char in TERMINATOR is the last char in a properly terminated stream.
-      ;;
-      ;;REVERSE-SEQUENCE must be null or a list of non-empty strings representing the
-      ;;stream of chars in string-reversed order; as  if the stream of chars has been
-      ;;accumulated (= CONSed) string by string:
-      ;;
-      ;;* The first  item of REVERSE-SEQUENCE is  the last string in  the stream, the
-      ;;last item of REVERSE-SEQUENCE is the first string in the stream.
-      ;;
-      ;;* Every  string in REVERSE-SEQUENCE represents  a chunk of stream:  the first
-      ;;char in  the string  is the first  char in  the chunk, the  last char  in the
-      ;;string is the last char in the chunk.
-      ;;
-      (define ({%string-last-index <fixnum>} {str <string>})
-	(fxsub1 (.length str)))
-      (let loop (({terminator.idx <fixnum>}		(%string-last-index terminator))
-		 ({buffers (list-of <nestring>)}	reverse-stream))
-	(cond ((fx=? -1 terminator.idx)
-	       #t)
-	      ((and (pair? buffers)
-		    (let* (({buffers (nelist-of <nestring>)}	buffers)
-			   (buf		(car buffers))
-			   (buf.idx	(%string-last-index buf)))
-		      (%compare-string-tails terminator terminator.idx buf buf.idx)))
-	       => (lambda (terminator.idx)
-		    (loop (fxsub1 terminator.idx) (cdr buffers))))
-	      (else #f))))
-
-    (define ({%compare-string-tails (or <false> <non-negative-fixnum>)}
-	     {A <string>} {A.idx <non-negative-fixnum>}
-	     {B <string>} {B.idx <non-negative-fixnum>})
-      ;;Recursive  function.   Compare  the  string  A,  starting  from  index  A.idx
-      ;;inclusive, to the string B, starting from index B.idx inclusive.  If:
-      ;;
-      ;;* All the chars are equal up to (zero? A.idx) included: return 0.  An example
-      ;;of this case is a call with arguments:
-      ;;
-      ;;     A =    "345"	A.idx = 2
-      ;;     B = "012345"	B.idx = 5
-      ;;
-      ;;another example of this case:
-      ;;
-      ;;     A = "012345"	A.idx = 5
-      ;;     B = "012345"	B.idx = 5
-      ;;
-      ;;* All the chars are equal up  to (zero?  B.idx) included: return the value of
-      ;;A.idx referencing the last compared char in  A.  An example of this case is a
-      ;;call with arguments:
-      ;;
-      ;;     A = "012345"	A.idx = 5
-      ;;     B =    "345"	B.idx = 2
-      ;;
-      ;;  the returned value is: A.idx == 3.
-      ;;
-      ;;*  Chars having  (positive?   A.idx) and  (positive?   B.idx) are  different:
-      ;;return false.
-      ;;
-      (and (char=? (string-ref A A.idx)
-		   (string-ref B B.idx))
-	   (cond ((fxzero? A.idx)
-		  0)
-		 ((fxzero? B.idx)
-		  A.idx)
-		 (else
-		  (%compare-string-tails A (fxsub1 A.idx)
-					 B (fxsub1 B.idx))))))
-
-    #| end of module: %received-message-terminator? |# )
-
-  #| end of module: channel-recv-message-portion! |# )
+  #| end of module: %received-message-terminator? |# )
 
 
-;;;; types
+;;;; more type definitions
 
 (define-type <input-channel>
   (or <binary-input-channel> <textual-input-channel>))
