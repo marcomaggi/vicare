@@ -56,7 +56,7 @@
 ;;; input channel
 
   (check
-      (let ((chan (new <binary-input-channel> in-port)))
+      (let ((chan (new <binary-input-only-channel> in-port)))
         (list (is-a? chan <channel>)
 	      (is-a? chan <input-channel>)
 	      (is-a? chan <output-channel>)
@@ -66,12 +66,12 @@
     => '(#t #t #f #t #f #f))
 
   (check
-       (let ((chan (new <binary-input-channel> in-port)))
+       (let ((chan (new <binary-input-only-channel> in-port)))
 	 (void-object? (delete chan)))
     => #t)
 
    (check
-       (let ((chan (new <binary-input-channel> in-port)))
+       (let ((chan (new <binary-input-only-channel> in-port)))
 	 (.recv-begin! chan)
 	 (list (.inactive? chan)
 	       (.sending? chan)
@@ -79,7 +79,7 @@
      => '(#f #f #t))
 
    (check
-       (let ((chan (new <binary-input-channel> in-port)))
+       (let ((chan (new <binary-input-only-channel> in-port)))
 	 (.recv-begin! chan)
 	 (.recv-end! chan)
 	 (list (.inactive? chan)
@@ -93,7 +93,7 @@
   (check
       (receive (port extract)
 	  (open-bytevector-output-port)
-	(let ((chan (new <binary-output-channel> port)))
+	(let ((chan (new <binary-output-only-channel> port)))
 	  (list (is-a? chan <channel>)
                 (is-a? chan <input-channel>)
 		(is-a? chan <output-channel>)
@@ -105,12 +105,12 @@
   (check
       (receive (port extract)
 	  (open-bytevector-output-port)
-	(let ((chan (new <binary-output-channel> port)))
+	(let ((chan (new <binary-output-only-channel> port)))
 	  (void-object? (delete chan))))
     => #t)
 
    (check
-       (let ((chan (new <binary-output-channel> ou-port)))
+       (let ((chan (new <binary-output-only-channel> ou-port)))
 	 (.send-begin! chan)
 	 (list (.inactive? chan)
 	       (.sending? chan)
@@ -118,7 +118,7 @@
      => '(#f #t #f))
 
    (check
-       (let ((chan (new <binary-output-channel> ou-port)))
+       (let ((chan (new <binary-output-only-channel> ou-port)))
 	 (.send-begin! chan)
 	 (.send-end! chan)
 	 (list (.inactive? chan)
@@ -132,21 +132,21 @@
 (parametrise ((check-test-name	'config))
 
   (check
-      (let ((chan (new <binary-input-channel> in-port)))
+      (let ((chan (new <binary-input-only-channel> in-port)))
         (void-object? (.maximum-message-size chan 1000)))
     => #t)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((chan	(new <binary-input-channel> in-port))
+      (let ((chan	(new <binary-input-only-channel> in-port))
 	    (ET		(.+ (current-time) (new <time> 10 0))))
 	(.expiration-time chan ET)
 	(equal? ET (.expiration-time chan)))
     => #t)
 
   (check
-      (let ((chan	(new <binary-input-channel> in-port))
+      (let ((chan	(new <binary-input-only-channel> in-port))
 	    (ET		(faraway-time)))
 	(.expiration-time chan ET)
 	(equal? ET (.expiration-time chan)))
@@ -155,7 +155,7 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((chan (new <binary-input-channel> in-port)))
+      (let ((chan (new <binary-input-only-channel> in-port)))
 	(.message-terminators chan '(#vu8(1 2 3)))
 	(.message-terminators chan))
     => '(#vu8(1 2 3)))
@@ -248,7 +248,7 @@
 (parametrise ((check-test-name	'sending))
 
   (check	;max message size error
-      (let ((chan (new <binary-output-channel> ou-port)))
+      (let ((chan (new <binary-output-only-channel> ou-port)))
 	(.maximum-message-size chan 2)
 	(.send-begin! chan)
 	(try
@@ -262,7 +262,7 @@
 ;;; --------------------------------------------------------------------
 
   (check	;timeout expired error
-      (let ((chan (new <binary-output-channel> ou-port)))
+      (let ((chan (new <binary-output-only-channel> ou-port)))
         (.expiration-time chan (current-time))
 	(.send-begin! chan)
 	(try
@@ -279,7 +279,7 @@
 (parametrise ((check-test-name	'receiving))
 
   (check	;max message size error
-      (let ((chan (new <binary-input-channel> (open-bytevector-input-port '#vu8(1 2 3)))))
+      (let ((chan (new <binary-input-only-channel> (open-bytevector-input-port '#vu8(1 2 3)))))
 	(.maximum-message-size chan 2)
 	(.recv-begin! chan)
 	(try
@@ -293,7 +293,7 @@
 ;;; --------------------------------------------------------------------
 
   (check	;timeout expired error
-      (let ((chan (new <binary-input-channel> in-port)))
+      (let ((chan (new <binary-input-only-channel> in-port)))
 	(.expiration-time chan (current-time))
 	(.recv-begin! chan)
 	(try

@@ -25,16 +25,19 @@
 
 
 #!vicare
-(library (vicare net channels (0 4 2016 08 28))
+(library (vicare net channels (0 4 2016 09 30))
   (options typed-language predicate-type-propagation)
   (export
     ;; record type
     <channel>
     <binary-channel>			<textual-channel>
-    <binary-input-channel>		<textual-input-channel>
-    <binary-output-channel>		<textual-output-channel>
+    <binary-input-only-channel>		<textual-input-only-channel>
+    <binary-output-only-channel>	<textual-output-only-channel>
     <binary-input/output-channel>	<textual-input/output-channel>
     <input-channel>			<output-channel>
+
+    <binary-input-channel>		<binary-output-channel>
+    <textual-input-channel>		<textual-output-channel>
 
     ;; condition objects
     &channel
@@ -47,6 +50,7 @@
     (only (vicare system $strings)
 	  $string-reverse-and-concatenate)
     (vicare language-extensions mixins)
+    (vicare language-extensions interfaces)
     (prefix (vicare platform words (0 4)) words::))
 
 
@@ -128,6 +132,45 @@
 
 (define-type <textual-send-port>
   (or <textual-output-port> <textual-input/output-port>))
+
+
+;;;; interfaces
+
+(define-interface-type <binary-input-channel>
+  (method-prototype connect-in-port		(lambda () => (<binary-recv-port>)))
+  (method-prototype recv-begin!			(lambda () => (<void>)))
+  (method-prototype recv-end!/rbl		(lambda () => (<positive-fixnum> (list-of <nebytevector>))))
+  (method-prototype recv-end!			(lambda () => (<bytevector>)))
+  (method-prototype recv-full-message		(lambda () => ((or <eof> <bytevector>))))
+  (method-prototype recv-message-portion!	(lambda () => ((or <eof> <would-block> <boolean>))))
+  #| end of DEFINE-INTERFACE-TYPE |# )
+
+(define-interface-type <textual-input-channel>
+  (method-prototype connect-in-port		(lambda () => (<textual-recv-port>)))
+  (method-prototype recv-begin!			(lambda () => (<void>)))
+  (method-prototype recv-end!/rbl		(lambda () => (<positive-fixnum> (list-of <nestring>))))
+  (method-prototype recv-end!			(lambda () => (<string>)))
+  (method-prototype recv-full-message		(lambda () => ((or <eof> <string>))))
+  (method-prototype recv-message-portion!	(lambda () => ((or <eof> <would-block> <boolean>))))
+  #| end of DEFINE-INTERFACE-TYPE |# )
+
+;;; --------------------------------------------------------------------
+
+(define-interface-type <binary-output-channel>
+  (method-prototype connect-ou-port		(lambda () => (<binary-send-port>)))
+  (method-prototype send-begin!			(lambda () => (<void>)))
+  (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
+  (method-prototype send-message-portion!	(lambda (<bytevector>) => (<void>)))
+  (method-prototype send-full-message		(lambda (list-of <bytevector>) => (<message-portion-length>)))
+  #| end of DEFINE-INTERFACE-TYPE |# )
+
+(define-interface-type <textual-output-channel>
+  (method-prototype connect-ou-port		(lambda () => (<textual-send-port>)))
+  (method-prototype send-begin!			(lambda () => (<void>)))
+  (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
+  (method-prototype send-message-portion!	(lambda (<string>) => (<void>)))
+  (method-prototype send-full-message		(lambda (list-of <string>) => (<message-portion-length>)))
+  #| end of DEFINE-INTERFACE-TYPE |# )
 
 
 (define-record-type <channel>
@@ -670,8 +713,8 @@
   #| end of mixin |# )
 
 
-(define-record-type <binary-input-channel>
-  (nongenerative vicare:net:channels:<binary-input-channel>)
+(define-record-type <binary-input-only-channel>
+  (nongenerative vicare:net:channels:<binary-input-only-channel>)
   (parent <binary-channel>)
   (fields
     (immutable {connect-in-port <binary-recv-port>})
@@ -681,25 +724,26 @@
 
   (protocol
     (lambda (make-binary-channel)
-      (named-lambda make-binary-input-channel ({_ <binary-input-channel>} {port <binary-recv-port>})
+      (named-lambda make-binary-input-channel ({_ <binary-input-only-channel>} {port <binary-recv-port>})
 	((make-binary-channel) port DEFAULT-BINARY-MESSAGE-MAXIMUM-PORTION-SIZE))))
 
   (constructor-signature
-    (lambda (<binary-recv-port>) => (<binary-input-channel>)))
+    (lambda (<binary-recv-port>) => (<binary-input-only-channel>)))
 
   (custom-printer
-    (lambda ({this <binary-input-channel>} {port <textual-send-port>} subprinter)
-      (display "#[<binary-input-channel>" port)
+    (lambda ({this <binary-input-only-channel>} {port <textual-send-port>} subprinter)
+      (display "#[<binary-input-only-channel>" port)
       (display " port=" port)	(display (.connect-in-port this) port)
       (display "]" port)))
 
   (mixins <receiving-binary-channel-methods>)
+  (implements <binary-input-channel>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
 
-(define-record-type <textual-input-channel>
-  (nongenerative vicare:net:channels:<textual-input-channel>)
+(define-record-type <textual-input-only-channel>
+  (nongenerative vicare:net:channels:<textual-input-only-channel>)
   (parent <textual-channel>)
   (fields
     (immutable {connect-in-port <textual-recv-port>})
@@ -709,25 +753,26 @@
 
   (protocol
     (lambda (make-textual-channel)
-      (named-lambda make-textual-input-channel ({_ <textual-input-channel>} {port <textual-recv-port>})
+      (named-lambda make-textual-input-channel ({_ <textual-input-only-channel>} {port <textual-recv-port>})
 	((make-textual-channel) port DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-PORTION-SIZE))))
 
   (constructor-signature
-    (lambda (<textual-recv-port>) => (<textual-input-channel>)))
+    (lambda (<textual-recv-port>) => (<textual-input-only-channel>)))
 
   (custom-printer
-    (lambda ({this <textual-input-channel>} {port <textual-send-port>} subprinter)
-      (display "#[<textual-input-channel>" port)
+    (lambda ({this <textual-input-only-channel>} {port <textual-send-port>} subprinter)
+      (display "#[<textual-input-only-channel>" port)
       (display " port=" port)	(display (.connect-in-port this) port)
       (display "]" port)))
 
   (mixins <receiving-textual-channel-methods>)
+  (implements <textual-input-channel>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
 
-(define-record-type <binary-output-channel>
-  (nongenerative vicare:net:channels:<binary-output-channel>)
+(define-record-type <binary-output-only-channel>
+  (nongenerative vicare:net:channels:<binary-output-only-channel>)
   (parent <binary-channel>)
   (fields
     (immutable {connect-ou-port <binary-send-port>})
@@ -737,25 +782,26 @@
 
   (protocol
     (lambda (make-binary-channel)
-      (named-lambda make-binary-output-channel ({_ <binary-output-channel>} {port <binary-send-port>})
+      (named-lambda make-binary-output-channel ({_ <binary-output-only-channel>} {port <binary-send-port>})
 	((make-binary-channel) port))))
 
   (constructor-signature
-    (lambda (<binary-send-port>) => (<binary-output-channel>)))
+    (lambda (<binary-send-port>) => (<binary-output-only-channel>)))
 
   (custom-printer
-    (lambda ({this <binary-output-channel>} {port <textual-send-port>} subprinter)
-      (display "#[<binary-output-channel>" port)
+    (lambda ({this <binary-output-only-channel>} {port <textual-send-port>} subprinter)
+      (display "#[<binary-output-only-channel>" port)
       (display " port=" port)	(display (.connect-ou-port this) port)
       (display "]" port)))
 
   (mixins <sending-binary-channel-methods>)
+  (implements <binary-output-channel>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
 
-(define-record-type <textual-output-channel>
-  (nongenerative vicare:net:channels:<textual-output-channel>)
+(define-record-type <textual-output-only-channel>
+  (nongenerative vicare:net:channels:<textual-output-only-channel>)
   (parent <textual-channel>)
   (fields
     (immutable {connect-ou-port <textual-send-port>})
@@ -765,19 +811,20 @@
 
   (protocol
     (lambda (make-textual-channel)
-      (named-lambda make-textual-output-channel ({_ <textual-output-channel>} {port <textual-send-port>})
+      (named-lambda make-textual-output-channel ({_ <textual-output-only-channel>} {port <textual-send-port>})
 	((make-textual-channel) port))))
 
   (constructor-signature
-    (lambda (<textual-send-port>) => (<textual-output-channel>)))
+    (lambda (<textual-send-port>) => (<textual-output-only-channel>)))
 
   (custom-printer
-    (lambda ({this <textual-output-channel>} {port <textual-send-port>} subprinter)
-      (display "#[<textual-output-channel>" port)
+    (lambda ({this <textual-output-only-channel>} {port <textual-send-port>} subprinter)
+      (display "#[<textual-output-only-channel>" port)
       (display " port=" port)	(display (.connect-ou-port this) port)
       (display "]" port)))
 
   (mixins <sending-textual-channel-methods>)
+  (implements <textual-output-channel>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -812,8 +859,9 @@
       (display " ou-port=" port)	(display (.connect-ou-port this) port)
       (display "]" port)))
 
-  (mixins <sending-binary-channel-methods>)
-  (mixins <receiving-binary-channel-methods>)
+  (mixins <sending-binary-channel-methods>
+	  <receiving-binary-channel-methods>)
+  (implements <binary-input-channel> <binary-output-channel>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -848,8 +896,9 @@
       (display " ou-port=" port)	(display (.connect-ou-port this) port)
       (display "]" port)))
 
-  (mixins <sending-textual-channel-methods>)
-  (mixins <receiving-textual-channel-methods>)
+  (mixins <sending-textual-channel-methods>
+	  <receiving-textual-channel-methods>)
+  (implements <textual-input-channel> <textual-output-channel>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -1106,10 +1155,10 @@
 ;;;; more type definitions
 
 (define-type <input-channel>
-  (or <binary-input-channel> <textual-input-channel>))
+  (or <binary-input-only-channel> <textual-input-only-channel>))
 
 (define-type <output-channel>
-  (or <binary-output-channel> <textual-output-channel>))
+  (or <binary-output-only-channel> <textual-output-only-channel>))
 
 
 ;;;; done
