@@ -1420,6 +1420,7 @@ binding's descriptor is stored in the @code{value} slot of the label.
 * expander lexenv prim rcd::         Core record-constructor
                                      descriptors.
 * expander lexenv prim fluids::      Fluid syntaxes.
+* expander lexenv prim labels::      Core label-type names.
 @end menu
 
 @c page
@@ -2040,6 +2041,70 @@ keyword binding; @ref{expander lexenv fluids, How fluid syntaxes work}.
 Some of the fluid syntaxes are: @syntax{__who__}, @syntax{return},
 @syntax{continue}, @syntax{break}, @syntax{with}, @syntax{brace},
 @syntax{<>}.
+
+@c page
+@node expander lexenv prim labels
+@subsubsection Core label-type names
+
+
+@cindex @code{$core-label-type-name}, syntactic binding type
+@cindex Syntactic binding types, @code{$core-label-type-name}
+
+
+A syntactic binding representing a label--type name defined by the boot
+image has descriptor with format:
+
+@example
+($core-label-type-name
+  . (@meta{type-name} @meta{uid}
+     @meta{parent-annotation}
+     @meta{constructor-name} @meta{destructor-name} @meta{type-predicate-name}
+     @meta{equality-predicate} @meta{comparison-procedure} @meta{hash-function}
+     @meta{methods-alist}))
+@end example
+
+@noindent
+where the values are:
+
+@table @asis
+@item @meta{type-name}
+A symbol representing the public name of the type.
+
+@item @meta{uid}
+A symbol representing a unique identifier for the type.
+
+@item @meta{parent-annotation}
+A symbolic expression representing the parent's type annotation.
+
+@item @meta{constructor-name}
+@false{} or a symbol representing the public name of the syntactic
+identifier to which the constructor is bound.
+
+@item @meta{destructor-name}
+@false{} or a symbol representing the public name of the syntactic
+identifier to which the destructor is bound.
+
+@item @meta{type-predicate-name}
+@false{} or a symbol representing the public name of the syntactic
+identifier to which the type predicate is bound.
+
+@item @meta{equality-predicate}
+@false{} or a symbol representing the public name of the syntactic
+identifier to which the equality predicate is bound.
+
+@item @meta{comparison-procedure}
+@false{} or a symbol representing the public name of the syntactic
+identifier to which the comparison procedure is bound.
+
+@item @meta{hash-function}
+@false{} or a symbol representing the public name of the syntactic
+identifier to which the hash function is bound.
+
+@item @meta{methods-alist}
+An alist having: as keys symbols representing method names; as values
+symbols representing the public name of the syntactic identifier to
+which the method procedure is bound.
+@end table
 
 @c page
 @node expander lexenv imported
