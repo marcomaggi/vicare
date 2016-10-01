@@ -1043,12 +1043,16 @@
 (define VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   '())
 
+(define VICARE-CORE-BUILT-IN-LABEL-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+  '())
+
 ;;; --------------------------------------------------------------------
 
 (include "makefile.scheme-object-types.scm"		#t)
 (include "makefile.built-in-record-types.scm"		#t)
 (include "makefile.built-in-condition-object-types.scm"	#t)
 (include "makefile.built-in-type-annotations.scm"	#t)
+(include "makefile.built-in-label-types.scm"		#t)
 
 
 ;;;; core syntactic binding descriptors: all the bindings established by the boot image
@@ -1058,7 +1062,8 @@
 	  VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 	  VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 	  VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-	  VICARE-CORE-BUILT-IN-TYPE-ANNOTATIONS-SYNTACTIC-BINDING-DESCRIPTORS))
+	  VICARE-CORE-BUILT-IN-TYPE-ANNOTATIONS-SYNTACTIC-BINDING-DESCRIPTORS
+	  VICARE-CORE-BUILT-IN-LABEL-TYPES-SYNTACTIC-BINDING-DESCRIPTORS))
 
 
 ;;;; core syntactic binding descriptors: typed core primitives infrastructure
@@ -3966,6 +3971,11 @@
     (<binary-input-port>			v $language)
     (<binary-output-port>			v $language)
     (<binary-input/output-port>			v $language)
+
+    (<binary-recv-port>				v $language)
+    (<binary-send-port>				v $language)
+    (<textual-recv-port>			v $language)
+    (<textual-send-port>			v $language)
 
     ;;built-in type annotations
     (<&who-value>				v $language)

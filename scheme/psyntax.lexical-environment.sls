@@ -1132,7 +1132,10 @@
 		       (hard-coded-core-record-type-name-binding-descriptor->core-record-type-name-binding-descriptor! descr))
 
 		      ((syntactic-binding-descriptor/hard-coded-type-annotation? descr)
-		       (hard-coded-core-type-annotation-symbolic-binding-descriptor->core-type-annotation-binding-descriptor! descr)))
+		       (hard-coded-core-type-annotation-symbolic-binding-descriptor->core-type-annotation-binding-descriptor! descr))
+
+		      ((syntactic-binding-descriptor/hard-coded-label-type-name? descr)
+		       (hard-coded-core-label-type-name-symbolic-binding-descriptor->core-label-type-name-binding-descriptor! descr)))
 		(when (eq? 'core-prim (car descr))
 		  (fprintf (current-error-port)
 			   "vicare: warning: using untyped core primitive ~s\n" descr))

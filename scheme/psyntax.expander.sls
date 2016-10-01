@@ -1523,7 +1523,7 @@
 		       typed-locs)))
 
 	      (($core-type-name $core-type-descriptor $core-rtd $core-rcd
-		$core-record-type-name $core-condition-object-type-name
+		$core-record-type-name $core-condition-object-type-name $core-label-type-name
 		$module $fluid $synonym)
 	       ;;We expect LEXENV entries of these types to have the format:
 	       ;;
