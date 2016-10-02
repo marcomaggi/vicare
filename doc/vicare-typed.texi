@@ -6376,10 +6376,22 @@ Type of binary ports.  Its definition is equivalent to:
 @subsection Textual input port types
 
 
-@deftp {Core Type} @aclass{textual-input-port}
+@deftp {Core Type} @aclass{textual-input-only-port}
 @deftpx {Parent Type} @aclass{input-port}
-Type of textual input ports.  There is no constructor.  The type
-predicate is @func{textual-input-port?}.
+Type of textual--only input ports.  There is no constructor.  The type
+predicate is @func{textual-input-only-port?}.
+@end deftp
+
+
+@deftp {Label Type} @aclass{textual-input-port}
+Type of textual input ports.  The type predicate is
+@func{textual-input-port?}.  This label--type has the following type
+annotation as parent:
+
+@lisp
+(or <textual-input-only-port>
+    <textual-input/output-port>)
+@end lisp
 @end deftp
 
 @c page
@@ -6387,10 +6399,22 @@ predicate is @func{textual-input-port?}.
 @subsection Textual output port types
 
 
-@deftp {Core Type} @aclass{textual-output-port}
+@deftp {Core Type} @aclass{textual-output-only-port}
 @deftpx {Parent Type} @aclass{output-port}
 Type of textual output port.  There is no constructor.  The type
 predicate is @func{textual-output-port?}.
+@end deftp
+
+
+@deftp {Label Type} @aclass{textual-output-port}
+Type of textual output ports.  The type predicate is
+@func{textual-output-port?}.  This label--type has the following type
+annotation as parent:
+
+@lisp
+(or <textual-output-only-port>
+    <textual-input/output-port>)
+@end lisp
 @end deftp
 
 @c page
@@ -6409,10 +6433,22 @@ predicate is @func{textual-input/output-port?}.
 @subsection Binary input port types
 
 
-@deftp {Core Type} @aclass{binary-input-port}
+@deftp {Core Type} @aclass{binary-input-only-port}
 @deftpx {Parent Type} @aclass{input-port}
 Type of binary input ports.  There is no constructor.  The type
 predicate is @func{binary-input-port?}.
+@end deftp
+
+
+@deftp {Label Type} @aclass{binary-input-port}
+Type of binary input ports.  The type predicate is
+@func{binary-input-port?}.  This label--type has the following type
+annotation as parent:
+
+@lisp
+(or <binary-input-only-port>
+    <binary-input/output-port>)
+@end lisp
 @end deftp
 
 @c page
@@ -6420,10 +6456,22 @@ predicate is @func{binary-input-port?}.
 @subsection Binary output port types
 
 
-@deftp {Core Type} @aclass{binary-output-port}
+@deftp {Core Type} @aclass{binary-output-only-port}
 @deftpx {Parent Type} @aclass{output-port}
 Type of binary output ports.  There is no constructor.  The type
 predicate is @func{binary-output-port?}.
+@end deftp
+
+
+@deftp {Label Type} @aclass{binary-output-port}
+Type of binary output ports.  The type predicate is
+@func{binary-output-port?}.  This label--type has the following type
+annotation as parent:
+
+@lisp
+(or <binary-output-only-port>
+    <binary-input/output-port>)
+@end lisp
 @end deftp
 
 @c page

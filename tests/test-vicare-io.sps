@@ -30,7 +30,9 @@
     (except (vicare checks) with-result add-result)
     (prefix (only (vicare checks)
 		  with-result add-result)
-	    check.))
+	    check.)
+    (prefix (vicare language-extensions custom-ports)
+	    custom-ports::))
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
@@ -10951,6 +10953,159 @@
     => '(salut ohayo))
 
   #t)
+
+
+(parametrise ((check-test-name	'predicates))
+
+  (define-constant BINARY-INPUT-ONLY-PORT
+    (open-bytevector-input-port '#vu8()))
+
+  (define-constant BINARY-OUTPUT-ONLY-PORT
+    (receive (port extract)
+	(open-bytevector-output-port)
+      port))
+
+  (define-constant BINARY-INPUT/OUTPUT-PORT
+    (receive (port1 port2)
+	(custom-ports::open-binary-input/output-port-pair)
+      port1))
+
+;;; --------------------------------------------------------------------
+
+  (define-constant TEXTUAL-INPUT-ONLY-PORT
+    (open-string-input-port ""))
+
+  (define-constant TEXTUAL-OUTPUT-ONLY-PORT
+    (receive (port extract)
+	(open-string-output-port)
+      port))
+
+  (define-constant TEXTUAL-INPUT/OUTPUT-PORT
+    (receive (port1 port2)
+	(custom-ports::open-textual-input/output-port-pair)
+      port1))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(port? BINARY-INPUT-ONLY-PORT))
+  (check-for-true	(port? BINARY-OUTPUT-ONLY-PORT))
+  (check-for-true	(port? BINARY-INPUT/OUTPUT-PORT))
+  (check-for-true	(port? TEXTUAL-INPUT-ONLY-PORT))
+  (check-for-true	(port? TEXTUAL-OUTPUT-ONLY-PORT))
+  (check-for-true	(port? TEXTUAL-INPUT/OUTPUT-PORT))
+  (check-for-false	(port? 123))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(input-port? BINARY-INPUT-ONLY-PORT))
+  (check-for-false	(input-port? BINARY-OUTPUT-ONLY-PORT))
+  (check-for-true	(input-port? BINARY-INPUT/OUTPUT-PORT))
+  (check-for-true	(input-port? TEXTUAL-INPUT-ONLY-PORT))
+  (check-for-false	(input-port? TEXTUAL-OUTPUT-ONLY-PORT))
+  (check-for-true	(input-port? TEXTUAL-INPUT/OUTPUT-PORT))
+  (check-for-false	(input-port? 123))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false	(output-port? BINARY-INPUT-ONLY-PORT))
+  (check-for-true	(output-port? BINARY-OUTPUT-ONLY-PORT))
+  (check-for-true	(output-port? BINARY-INPUT/OUTPUT-PORT))
+  (check-for-false	(output-port? TEXTUAL-INPUT-ONLY-PORT))
+  (check-for-true	(output-port? TEXTUAL-OUTPUT-ONLY-PORT))
+  (check-for-true	(output-port? TEXTUAL-INPUT/OUTPUT-PORT))
+  (check-for-false	(output-port? 123))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false	(input/output-port? BINARY-INPUT-ONLY-PORT))
+  (check-for-false	(input/output-port? BINARY-OUTPUT-ONLY-PORT))
+  (check-for-true	(input/output-port? BINARY-INPUT/OUTPUT-PORT))
+  (check-for-false	(input/output-port? TEXTUAL-INPUT-ONLY-PORT))
+  (check-for-false	(input/output-port? TEXTUAL-OUTPUT-ONLY-PORT))
+  (check-for-true	(input/output-port? TEXTUAL-INPUT/OUTPUT-PORT))
+  (check-for-false	(input/output-port? 123))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(binary-port? BINARY-INPUT-ONLY-PORT))
+  (check-for-true	(binary-port? BINARY-OUTPUT-ONLY-PORT))
+  (check-for-true	(binary-port? BINARY-INPUT/OUTPUT-PORT))
+  (check-for-false	(binary-port? TEXTUAL-INPUT-ONLY-PORT))
+  (check-for-false	(binary-port? TEXTUAL-OUTPUT-ONLY-PORT))
+  (check-for-false	(binary-port? TEXTUAL-INPUT/OUTPUT-PORT))
+  (check-for-false	(binary-port? 123))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false	(textual-port? BINARY-INPUT-ONLY-PORT))
+  (check-for-false	(textual-port? BINARY-OUTPUT-ONLY-PORT))
+  (check-for-false	(textual-port? BINARY-INPUT/OUTPUT-PORT))
+  (check-for-true	(textual-port? TEXTUAL-INPUT-ONLY-PORT))
+  (check-for-true	(textual-port? TEXTUAL-OUTPUT-ONLY-PORT))
+  (check-for-true	(textual-port? TEXTUAL-INPUT/OUTPUT-PORT))
+  (check-for-false	(textual-port? 123))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(binary-input-only-port? BINARY-INPUT-ONLY-PORT))
+  (check-for-false	(binary-input-only-port? BINARY-OUTPUT-ONLY-PORT))
+  (check-for-false	(binary-input-only-port? BINARY-INPUT/OUTPUT-PORT))
+  (check-for-false	(binary-input-only-port? TEXTUAL-INPUT-ONLY-PORT))
+  (check-for-false	(binary-input-only-port? TEXTUAL-OUTPUT-ONLY-PORT))
+  (check-for-false	(binary-input-only-port? TEXTUAL-INPUT/OUTPUT-PORT))
+  (check-for-false	(binary-input-only-port? 123))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false	(textual-input-only-port? BINARY-INPUT-ONLY-PORT))
+  (check-for-false	(textual-input-only-port? BINARY-OUTPUT-ONLY-PORT))
+  (check-for-false	(textual-input-only-port? BINARY-INPUT/OUTPUT-PORT))
+  (check-for-true	(textual-input-only-port? TEXTUAL-INPUT-ONLY-PORT))
+  (check-for-false	(textual-input-only-port? TEXTUAL-OUTPUT-ONLY-PORT))
+  (check-for-false	(textual-input-only-port? TEXTUAL-INPUT/OUTPUT-PORT))
+  (check-for-false	(textual-input-only-port? 123))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(binary-input-port? BINARY-INPUT-ONLY-PORT))
+  (check-for-false	(binary-input-port? BINARY-OUTPUT-ONLY-PORT))
+  (check-for-true	(binary-input-port? BINARY-INPUT/OUTPUT-PORT))
+  (check-for-false	(binary-input-port? TEXTUAL-INPUT-ONLY-PORT))
+  (check-for-false	(binary-input-port? TEXTUAL-OUTPUT-ONLY-PORT))
+  (check-for-false	(binary-input-port? TEXTUAL-INPUT/OUTPUT-PORT))
+  (check-for-false	(binary-input-port? 123))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false	(binary-output-port? BINARY-INPUT-ONLY-PORT))
+  (check-for-true	(binary-output-port? BINARY-OUTPUT-ONLY-PORT))
+  (check-for-true	(binary-output-port? BINARY-INPUT/OUTPUT-PORT))
+  (check-for-false	(binary-output-port? TEXTUAL-INPUT-ONLY-PORT))
+  (check-for-false	(binary-output-port? TEXTUAL-OUTPUT-ONLY-PORT))
+  (check-for-false	(binary-output-port? TEXTUAL-INPUT/OUTPUT-PORT))
+  (check-for-false	(binary-output-port? 123))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false	(textual-input-port? BINARY-INPUT-ONLY-PORT))
+  (check-for-false	(textual-input-port? BINARY-OUTPUT-ONLY-PORT))
+  (check-for-false	(textual-input-port? BINARY-INPUT/OUTPUT-PORT))
+  (check-for-true	(textual-input-port? TEXTUAL-INPUT-ONLY-PORT))
+  (check-for-false	(textual-input-port? TEXTUAL-OUTPUT-ONLY-PORT))
+  (check-for-true	(textual-input-port? TEXTUAL-INPUT/OUTPUT-PORT))
+  (check-for-false	(textual-input-port? 123))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false	(textual-output-port? BINARY-INPUT-ONLY-PORT))
+  (check-for-false	(textual-output-port? BINARY-OUTPUT-ONLY-PORT))
+  (check-for-false	(textual-output-port? BINARY-INPUT/OUTPUT-PORT))
+  (check-for-false	(textual-output-port? TEXTUAL-INPUT-ONLY-PORT))
+  (check-for-true	(textual-output-port? TEXTUAL-OUTPUT-ONLY-PORT))
+  (check-for-true	(textual-output-port? TEXTUAL-INPUT/OUTPUT-PORT))
+  (check-for-false	(textual-output-port? 123))
+
+  (void))
 
 
 ;;;; done

@@ -16834,8 +16834,15 @@ The following bindings are exported by the @library{vicare} library.
 @defun binary-input-port? @var{obj}
 @defunx binary-output-port? @var{obj}
 @defunx binary-input/output-port? @var{obj}
+Return @true{} if @var{obj} is a binary port and, respectively, it is:
+input or input/output; output or input/output; input/output.
+@end defun
+
+
+@defun binary-input-only-port? @var{obj}
+@defunx binary-output-only-port? @var{obj}
 Return @true{} if @var{obj} is a binary port and, respectively, it is
-input, output or input/output.
+input--only or output--only.
 @end defun
 
 
@@ -16985,8 +16992,15 @@ textual output port.
 @defun textual-input-port? @var{obj}
 @defunx textual-output-port? @var{obj}
 @defunx textual-input/output-port? @var{obj}
+Return @true{} if @var{obj} is a textual port and, respectively, it is:
+input or input/output; output or input/output; input/output.
+@end defun
+
+
+@defun textual-input-only-port? @var{obj}
+@defunx textual-output-only-port? @var{obj}
 Return @true{} if @var{obj} is a textual port and, respectively, it is
-input, output or input/output.
+input--only or output--only.
 @end defun
 
 

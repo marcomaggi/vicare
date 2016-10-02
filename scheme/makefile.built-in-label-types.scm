@@ -82,8 +82,8 @@
 
 ;;;; input/output
 
-(define-built-in-label-type <binary-recv-port>
-  (parent (or <binary-input-port> <binary-input/output-port>))
+(define-built-in-label-type <binary-input-port>
+  (parent (or <binary-input-only-port> <binary-input/output-port>))
   (constructor #f)
   (destructor #f)
   (type-predicate #f)
@@ -96,8 +96,8 @@
    (remprop			port-remprop)
    (property-list		port-property-list)))
 
-(define-built-in-label-type <binary-send-port>
-  (parent (or <binary-output-port> <binary-input/output-port>))
+(define-built-in-label-type <binary-output-port>
+  (parent (or <binary-output-only-port> <binary-input/output-port>))
   (constructor #f)
   (destructor #f)
   (type-predicate #f)
@@ -112,8 +112,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-built-in-label-type <textual-recv-port>
-  (parent (or <textual-input-port> <textual-input/output-port>))
+(define-built-in-label-type <textual-input-port>
+  (parent (or <textual-input-only-port> <textual-input/output-port>))
   (constructor #f)
   (destructor #f)
   (type-predicate #f)
@@ -126,8 +126,8 @@
    (remprop			port-remprop)
    (property-list		port-property-list)))
 
-(define-built-in-label-type <textual-send-port>
-  (parent (or <textual-output-port> <textual-input/output-port>))
+(define-built-in-label-type <textual-output-port>
+  (parent (or <textual-output-only-port> <textual-input/output-port>))
   (constructor #f)
   (destructor #f)
   (type-predicate #f)

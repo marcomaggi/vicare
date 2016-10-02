@@ -1467,15 +1467,16 @@
   ;;Whenever the function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used to retrieve the
   ;;descriptor from the label: this function is used to convert the descriptor.
   ;;
-  (let* ((descr.type			(syntactic-binding-descriptor.type  descriptor))
-	 (hard-coded-sexp		(syntactic-binding-descriptor.value descriptor)))
+  (let ((hard-coded-sexp (syntactic-binding-descriptor.value descriptor)))
     (define (%false-or-id idx)
       (cond ((list-ref hard-coded-sexp idx)
 	     => core-prim-id)
 	    (else #f)))
     (let ((type-name.id			(core-prim-id (car hard-coded-sexp)))
 	  (uid.sym			(list-ref hard-coded-sexp 1))
-	  (parent.stx			(bless (list-ref hard-coded-sexp 2)))
+	  (parent.stx			(cond ((list-ref hard-coded-sexp 2)
+					       => bless)
+					      (else #f)))
 	  (constructor.id		(%false-or-id 3))
 	  (destructor.id		(%false-or-id 4))
 	  (type-predicate.id		(%false-or-id 5))

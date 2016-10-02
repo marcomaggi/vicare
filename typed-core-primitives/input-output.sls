@@ -71,6 +71,11 @@
 (declare-type-predicate textual-output-port?		<textual-output-port>)
 (declare-type-predicate textual-input/output-port?	<textual-input/output-port>)
 
+(declare-type-predicate binary-input-only-port?		<binary-input-only-port>)
+(declare-type-predicate binary-output-only-port?	<binary-output-only-port>)
+(declare-type-predicate textual-input-only-port?	<textual-input-only-port>)
+(declare-type-predicate textual-output-only-port?	<textual-output-only-port>)
+
 (let-syntax
     ((declare (syntax-rules ()
 		((_ ?who)
@@ -125,17 +130,17 @@
 		   (attributes
 		    ((_ _)		effect-free result-true))))
 		)))
-  (declare make-binary-file-descriptor-input-port		<binary-input-port>)
-  (declare make-binary-file-descriptor-input-port*		<binary-input-port>)
-  (declare make-binary-file-descriptor-output-port		<binary-output-port>)
-  (declare make-binary-file-descriptor-output-port*		<binary-output-port>)
+  (declare make-binary-file-descriptor-input-port		<binary-input-only-port>)
+  (declare make-binary-file-descriptor-input-port*		<binary-input-only-port>)
+  (declare make-binary-file-descriptor-output-port		<binary-output-only-port>)
+  (declare make-binary-file-descriptor-output-port*		<binary-output-only-port>)
   (declare make-binary-file-descriptor-input/output-port	<binary-input/output-port>)
   (declare make-binary-file-descriptor-input/output-port*	<binary-input/output-port>)
 
-  (declare make-binary-socket-input-port			<binary-input-port>)
-  (declare make-binary-socket-input-port*			<binary-input-port>)
-  (declare make-binary-socket-output-port			<binary-output-port>)
-  (declare make-binary-socket-output-port*			<binary-output-port>)
+  (declare make-binary-socket-input-port			<binary-input-only-port>)
+  (declare make-binary-socket-input-port*			<binary-input-only-port>)
+  (declare make-binary-socket-output-port			<binary-output-only-port>)
+  (declare make-binary-socket-output-port*			<binary-output-only-port>)
   (declare make-binary-socket-input/output-port			<binary-input/output-port>)
   (declare make-binary-socket-input/output-port*		<binary-input/output-port>)
   #| end of LET-SYNTAX |# )
@@ -150,17 +155,17 @@
 		   (attributes
 		    ((_ _)		effect-free result-true))))
 		)))
-  (declare make-textual-file-descriptor-input-port		<textual-input-port>)
-  (declare make-textual-file-descriptor-input-port*		<textual-input-port>)
-  (declare make-textual-file-descriptor-output-port		<textual-output-port>)
-  (declare make-textual-file-descriptor-output-port*		<textual-output-port>)
+  (declare make-textual-file-descriptor-input-port		<textual-input-only-port>)
+  (declare make-textual-file-descriptor-input-port*		<textual-input-only-port>)
+  (declare make-textual-file-descriptor-output-port		<textual-output-only-port>)
+  (declare make-textual-file-descriptor-output-port*		<textual-output-only-port>)
   (declare make-textual-file-descriptor-input/output-port	<textual-input/output-port>)
   (declare make-textual-file-descriptor-input/output-port*	<textual-input/output-port>)
 
-  (declare make-textual-socket-input-port			<textual-input-port>)
-  (declare make-textual-socket-input-port*			<textual-input-port>)
-  (declare make-textual-socket-output-port			<textual-output-port>)
-  (declare make-textual-socket-output-port*			<textual-output-port>)
+  (declare make-textual-socket-input-port			<textual-input-only-port>)
+  (declare make-textual-socket-input-port*			<textual-input-only-port>)
+  (declare make-textual-socket-output-port			<textual-output-only-port>)
+  (declare make-textual-socket-output-port*			<textual-output-only-port>)
   (declare make-textual-socket-input/output-port		<textual-input/output-port>)
   (declare make-textual-socket-input/output-port*		<textual-input/output-port>)
   #| end of LET-SYNTAX |# )
@@ -171,17 +176,17 @@
     (safe)
   (signatures
    ;;id read! get-position set-position close
-   ((<string> <procedure> <false> <false> <false>)		=> (<binary-input-port>))
+   ((<string> <procedure> <false> <false> <false>)		=> (<binary-input-only-port>))
 
-   ((<string> <procedure> <procedure> <false> <false>)		=> (<binary-input-port>))
-   ((<string> <procedure> <false> <procedure> <false>)		=> (<binary-input-port>))
-   ((<string> <procedure> <false> <false> <procedure>)		=> (<binary-input-port>))
+   ((<string> <procedure> <procedure> <false> <false>)		=> (<binary-input-only-port>))
+   ((<string> <procedure> <false> <procedure> <false>)		=> (<binary-input-only-port>))
+   ((<string> <procedure> <false> <false> <procedure>)		=> (<binary-input-only-port>))
 
-   ((<string> <procedure> <procedure> <procedure> <false>)	=> (<binary-input-port>))
-   ((<string> <procedure> <procedure> <false> <procedure>)	=> (<binary-input-port>))
-   ((<string> <procedure> <false> <procedure> <procedure>)	=> (<binary-input-port>))
+   ((<string> <procedure> <procedure> <procedure> <false>)	=> (<binary-input-only-port>))
+   ((<string> <procedure> <procedure> <false> <procedure>)	=> (<binary-input-only-port>))
+   ((<string> <procedure> <false> <procedure> <procedure>)	=> (<binary-input-only-port>))
 
-   ((<string> <procedure> <procedure> <procedure> <procedure>)	=> (<binary-input-port>)))
+   ((<string> <procedure> <procedure> <procedure> <procedure>)	=> (<binary-input-only-port>)))
   (attributes
    ((_ _ _ _ _)		effect-free result-true)))
 
@@ -189,17 +194,17 @@
     (safe)
   (signatures
    ;;id read! get-position set-position close
-   ((<string> <procedure> <false> <false> <false>)		=> (<textual-input-port>))
+   ((<string> <procedure> <false> <false> <false>)		=> (<textual-input-only-port>))
 
-   ((<string> <procedure> <procedure> <false> <false>)		=> (<textual-input-port>))
-   ((<string> <procedure> <false> <procedure> <false>)		=> (<textual-input-port>))
-   ((<string> <procedure> <false> <false> <procedure>)		=> (<textual-input-port>))
+   ((<string> <procedure> <procedure> <false> <false>)		=> (<textual-input-only-port>))
+   ((<string> <procedure> <false> <procedure> <false>)		=> (<textual-input-only-port>))
+   ((<string> <procedure> <false> <false> <procedure>)		=> (<textual-input-only-port>))
 
-   ((<string> <procedure> <procedure> <procedure> <false>)	=> (<textual-input-port>))
-   ((<string> <procedure> <procedure> <false> <procedure>)	=> (<textual-input-port>))
-   ((<string> <procedure> <false> <procedure> <procedure>)	=> (<textual-input-port>))
+   ((<string> <procedure> <procedure> <procedure> <false>)	=> (<textual-input-only-port>))
+   ((<string> <procedure> <procedure> <false> <procedure>)	=> (<textual-input-only-port>))
+   ((<string> <procedure> <false> <procedure> <procedure>)	=> (<textual-input-only-port>))
 
-   ((<string> <procedure> <procedure> <procedure> <procedure>)	=> (<textual-input-port>)))
+   ((<string> <procedure> <procedure> <procedure> <procedure>)	=> (<textual-input-only-port>)))
   (attributes
    ((_ _ _ _ _)		effect-free result-true)))
 
@@ -209,17 +214,17 @@
     (safe)
   (signatures
    ;;id write! get-position set-position close
-   ((<string> <procedure> <false> <false> <false>)		=> (<binary-output-port>))
+   ((<string> <procedure> <false> <false> <false>)		=> (<binary-output-only-port>))
 
-   ((<string> <procedure> <procedure> <false> <false>)		=> (<binary-output-port>))
-   ((<string> <procedure> <false> <procedure> <false>)		=> (<binary-output-port>))
-   ((<string> <procedure> <false> <false> <procedure>)		=> (<binary-output-port>))
+   ((<string> <procedure> <procedure> <false> <false>)		=> (<binary-output-only-port>))
+   ((<string> <procedure> <false> <procedure> <false>)		=> (<binary-output-only-port>))
+   ((<string> <procedure> <false> <false> <procedure>)		=> (<binary-output-only-port>))
 
-   ((<string> <procedure> <procedure> <procedure> <false>)	=> (<binary-output-port>))
-   ((<string> <procedure> <procedure> <false> <procedure>)	=> (<binary-output-port>))
-   ((<string> <procedure> <false> <procedure> <procedure>)	=> (<binary-output-port>))
+   ((<string> <procedure> <procedure> <procedure> <false>)	=> (<binary-output-only-port>))
+   ((<string> <procedure> <procedure> <false> <procedure>)	=> (<binary-output-only-port>))
+   ((<string> <procedure> <false> <procedure> <procedure>)	=> (<binary-output-only-port>))
 
-   ((<string> <procedure> <procedure> <procedure> <procedure>)	=> (<binary-output-port>)))
+   ((<string> <procedure> <procedure> <procedure> <procedure>)	=> (<binary-output-only-port>)))
   (attributes
    ((_ _ _ _ _)		effect-free result-true)))
 
@@ -227,17 +232,17 @@
     (safe)
   (signatures
    ;;id write! get-position set-position close
-   ((<string> <procedure> <false> <false> <false>)		=> (<textual-output-port>))
+   ((<string> <procedure> <false> <false> <false>)		=> (<textual-output-only-port>))
 
-   ((<string> <procedure> <procedure> <false> <false>)		=> (<textual-output-port>))
-   ((<string> <procedure> <false> <procedure> <false>)		=> (<textual-output-port>))
-   ((<string> <procedure> <false> <false> <procedure>)		=> (<textual-output-port>))
+   ((<string> <procedure> <procedure> <false> <false>)		=> (<textual-output-only-port>))
+   ((<string> <procedure> <false> <procedure> <false>)		=> (<textual-output-only-port>))
+   ((<string> <procedure> <false> <false> <procedure>)		=> (<textual-output-only-port>))
 
-   ((<string> <procedure> <procedure> <procedure> <false>)	=> (<textual-output-port>))
-   ((<string> <procedure> <procedure> <false> <procedure>)	=> (<textual-output-port>))
-   ((<string> <procedure> <false> <procedure> <procedure>)	=> (<textual-output-port>))
+   ((<string> <procedure> <procedure> <procedure> <false>)	=> (<textual-output-only-port>))
+   ((<string> <procedure> <procedure> <false> <procedure>)	=> (<textual-output-only-port>))
+   ((<string> <procedure> <false> <procedure> <procedure>)	=> (<textual-output-only-port>))
 
-   ((<string> <procedure> <procedure> <procedure> <procedure>)	=> (<textual-output-port>)))
+   ((<string> <procedure> <procedure> <procedure> <procedure>)	=> (<textual-output-only-port>)))
   (attributes
    ((_ _ _ _ _)		effect-free result-true)))
 
@@ -284,25 +289,25 @@
 (declare-core-primitive open-input-file
     (safe)
   (signatures
-   ((<string>)		=> (<textual-input-port>)))
+   ((<string>)		=> (<textual-input-only-port>)))
   (attributes
    ((_)			result-true)))
 
 (declare-core-primitive open-output-file
     (safe)
   (signatures
-   ((<string>)		=> (<textual-output-port>)))
+   ((<string>)		=> (<textual-output-only-port>)))
   (attributes
    ((_)			result-true)))
 
 (declare-core-primitive open-file-input-port
     (safe)
   (signatures
-   ((<string>)					=> (<binary-input-port>))
-   ((<string> <enum-set>)			=> (<binary-input-port>))
-   ((<string> <enum-set> <symbol>)		=> (<binary-input-port>))
-   ((<string> <enum-set> <symbol> <false>)	=> (<binary-input-port>))
-   ((<string> <enum-set> <symbol> <transcoder>)	=> (<textual-input-port>)))
+   ((<string>)					=> (<binary-input-only-port>))
+   ((<string> <enum-set>)			=> (<binary-input-only-port>))
+   ((<string> <enum-set> <symbol>)		=> (<binary-input-only-port>))
+   ((<string> <enum-set> <symbol> <false>)	=> (<binary-input-only-port>))
+   ((<string> <enum-set> <symbol> <transcoder>)	=> (<textual-input-only-port>)))
   (attributes
    ((_)					result-true)
    ((_ _)				result-true)
@@ -312,11 +317,11 @@
 (declare-core-primitive open-file-output-port
     (safe)
   (signatures
-   ((<string>)					=> (<binary-output-port>))
-   ((<string> <enum-set>)			=> (<binary-output-port>))
-   ((<string> <enum-set> <symbol>)		=> (<binary-output-port>))
-   ((<string> <enum-set> <symbol> <false>)	=> (<binary-output-port>))
-   ((<string> <enum-set> <symbol> <transcoder>)	=> (<textual-output-port>)))
+   ((<string>)					=> (<binary-output-only-port>))
+   ((<string> <enum-set>)			=> (<binary-output-only-port>))
+   ((<string> <enum-set> <symbol>)		=> (<binary-output-only-port>))
+   ((<string> <enum-set> <symbol> <false>)	=> (<binary-output-only-port>))
+   ((<string> <enum-set> <symbol> <transcoder>)	=> (<textual-output-only-port>)))
   (attributes
    ((_)					result-true)
    ((_ _)				result-true)
@@ -342,8 +347,8 @@
 (declare-core-primitive open-string-input-port
     (safe)
   (signatures
-   ((<string>)		=> (<textual-input-port>))
-   ((<string> <symbol>)	=> (<textual-input-port>)))
+   ((<string>)		=> (<textual-input-only-port>))
+   ((<string> <symbol>)	=> (<textual-input-only-port>)))
   (attributes
    ((_)			effect-free result-true)
    ((_ _)		effect-free result-true)))
@@ -351,8 +356,8 @@
 (declare-core-primitive open-string-input-port/id
     (safe)
   (signatures
-   ((<string> <string>)			=> (<textual-input-port>))
-   ((<string> <string> <symbol>)	=> (<textual-input-port>)))
+   ((<string> <string>)			=> (<textual-input-only-port>))
+   ((<string> <string> <symbol>)	=> (<textual-input-only-port>)))
   (attributes
    ((_ _)		effect-free result-true)
    ((_ _ _)		effect-free result-true)))
@@ -360,8 +365,8 @@
 (declare-core-primitive open-string-output-port
     (safe)
   (signatures
-   (()			=> (<textual-output-port> <procedure>))
-   ((<symbol>)		=> (<textual-output-port> <procedure>)))
+   (()			=> (<textual-output-only-port> <procedure>))
+   ((<symbol>)		=> (<textual-output-only-port> <procedure>)))
   (attributes
    (()			effect-free)))
 
@@ -370,9 +375,9 @@
 (declare-core-primitive open-bytevector-input-port
     (safe)
   (signatures
-   ((<bytevector>)		=> (<binary-input-port>))
-   ((<bytevector> <false>)	=> (<binary-input-port>))
-   ((<bytevector> <transcoder>)	=> (<textual-input-port>)))
+   ((<bytevector>)		=> (<binary-input-only-port>))
+   ((<bytevector> <false>)	=> (<binary-input-only-port>))
+   ((<bytevector> <transcoder>)	=> (<textual-input-only-port>)))
   (attributes
    ((_)			effect-free result-true)
    ((_ _)		effect-free result-true)))
@@ -380,9 +385,9 @@
 (declare-core-primitive open-bytevector-output-port
     (safe)
   (signatures
-   (()			=> (<binary-output-port> <procedure>))
-   ((<false>)		=> (<binary-output-port> <procedure>))
-   ((<transcoder>)	=> (<textual-output-port> <procedure>)))
+   (()			=> (<binary-output-only-port> <procedure>))
+   ((<false>)		=> (<binary-output-only-port> <procedure>))
+   ((<transcoder>)	=> (<textual-output-only-port> <procedure>)))
   (attributes
    (()			effect-free)
    ((_)			effect-free)))

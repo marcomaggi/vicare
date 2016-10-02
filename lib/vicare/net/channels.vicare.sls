@@ -121,23 +121,11 @@
 (define-alias <message-portion-length>
   <non-negative-fixnum>)
 
-(define-type <binary-recv-port>
-  (or <binary-input-port> <binary-input/output-port>))
-
-(define-type <binary-send-port>
-  (or <binary-output-port> <binary-input/output-port>))
-
-(define-type <textual-recv-port>
-  (or <textual-input-port> <textual-input/output-port>))
-
-(define-type <textual-send-port>
-  (or <textual-output-port> <textual-input/output-port>))
-
 
 ;;;; interfaces
 
 (define-interface-type <binary-input-channel>
-  (method-prototype connect-in-port		(lambda () => (<binary-recv-port>)))
+  (method-prototype connect-in-port		(lambda () => (<binary-input-port>)))
   (method-prototype recv-begin!			(lambda () => (<void>)))
   (method-prototype recv-end!/rbl		(lambda () => (<positive-fixnum> (list-of <nebytevector>))))
   (method-prototype recv-end!			(lambda () => (<bytevector>)))
@@ -146,7 +134,7 @@
   #| end of DEFINE-INTERFACE-TYPE |# )
 
 (define-interface-type <textual-input-channel>
-  (method-prototype connect-in-port		(lambda () => (<textual-recv-port>)))
+  (method-prototype connect-in-port		(lambda () => (<textual-input-port>)))
   (method-prototype recv-begin!			(lambda () => (<void>)))
   (method-prototype recv-end!/rbl		(lambda () => (<positive-fixnum> (list-of <nestring>))))
   (method-prototype recv-end!			(lambda () => (<string>)))
@@ -157,7 +145,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-interface-type <binary-output-channel>
-  (method-prototype connect-ou-port		(lambda () => (<binary-send-port>)))
+  (method-prototype connect-ou-port		(lambda () => (<binary-output-port>)))
   (method-prototype send-begin!			(lambda () => (<void>)))
   (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
   (method-prototype send-message-portion!	(lambda (<bytevector>) => (<void>)))
@@ -165,7 +153,7 @@
   #| end of DEFINE-INTERFACE-TYPE |# )
 
 (define-interface-type <textual-output-channel>
-  (method-prototype connect-ou-port		(lambda () => (<textual-send-port>)))
+  (method-prototype connect-ou-port		(lambda () => (<textual-output-port>)))
   (method-prototype send-begin!			(lambda () => (<void>)))
   (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
   (method-prototype send-message-portion!	(lambda (<string>) => (<void>)))
@@ -717,21 +705,21 @@
   (nongenerative vicare:net:channels:<binary-input-only-channel>)
   (parent <binary-channel>)
   (fields
-    (immutable {connect-in-port <binary-recv-port>})
+    (immutable {connect-in-port <binary-input-port>})
 		;An input or input/output binary port used to receive messages from a
 		;remote process.
     #| end of FIELDS |# )
 
   (protocol
     (lambda (make-binary-channel)
-      (named-lambda make-binary-input-channel ({_ <binary-input-only-channel>} {port <binary-recv-port>})
+      (named-lambda make-binary-input-channel ({_ <binary-input-only-channel>} {port <binary-input-port>})
 	((make-binary-channel) port DEFAULT-BINARY-MESSAGE-MAXIMUM-PORTION-SIZE))))
 
   (constructor-signature
-    (lambda (<binary-recv-port>) => (<binary-input-only-channel>)))
+    (lambda (<binary-input-port>) => (<binary-input-only-channel>)))
 
   (custom-printer
-    (lambda ({this <binary-input-only-channel>} {port <textual-send-port>} subprinter)
+    (lambda ({this <binary-input-only-channel>} {port <textual-output-port>} subprinter)
       (display "#[<binary-input-only-channel>" port)
       (display " port=" port)	(display (.connect-in-port this) port)
       (display "]" port)))
@@ -746,21 +734,21 @@
   (nongenerative vicare:net:channels:<textual-input-only-channel>)
   (parent <textual-channel>)
   (fields
-    (immutable {connect-in-port <textual-recv-port>})
+    (immutable {connect-in-port <textual-input-port>})
 		;An input or input/output textual port used to receive messages from a
 		;remote process.
     #| end of FIELDS |# )
 
   (protocol
     (lambda (make-textual-channel)
-      (named-lambda make-textual-input-channel ({_ <textual-input-only-channel>} {port <textual-recv-port>})
+      (named-lambda make-textual-input-channel ({_ <textual-input-only-channel>} {port <textual-input-port>})
 	((make-textual-channel) port DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-PORTION-SIZE))))
 
   (constructor-signature
-    (lambda (<textual-recv-port>) => (<textual-input-only-channel>)))
+    (lambda (<textual-input-port>) => (<textual-input-only-channel>)))
 
   (custom-printer
-    (lambda ({this <textual-input-only-channel>} {port <textual-send-port>} subprinter)
+    (lambda ({this <textual-input-only-channel>} {port <textual-output-port>} subprinter)
       (display "#[<textual-input-only-channel>" port)
       (display " port=" port)	(display (.connect-in-port this) port)
       (display "]" port)))
@@ -775,21 +763,21 @@
   (nongenerative vicare:net:channels:<binary-output-only-channel>)
   (parent <binary-channel>)
   (fields
-    (immutable {connect-ou-port <binary-send-port>})
+    (immutable {connect-ou-port <binary-output-port>})
 		;An output  or input/output binary  port used  to send messages  to a
 		;remote process.
     #| end of FIELDS |# )
 
   (protocol
     (lambda (make-binary-channel)
-      (named-lambda make-binary-output-channel ({_ <binary-output-only-channel>} {port <binary-send-port>})
+      (named-lambda make-binary-output-channel ({_ <binary-output-only-channel>} {port <binary-output-port>})
 	((make-binary-channel) port))))
 
   (constructor-signature
-    (lambda (<binary-send-port>) => (<binary-output-only-channel>)))
+    (lambda (<binary-output-port>) => (<binary-output-only-channel>)))
 
   (custom-printer
-    (lambda ({this <binary-output-only-channel>} {port <textual-send-port>} subprinter)
+    (lambda ({this <binary-output-only-channel>} {port <textual-output-port>} subprinter)
       (display "#[<binary-output-only-channel>" port)
       (display " port=" port)	(display (.connect-ou-port this) port)
       (display "]" port)))
@@ -804,21 +792,21 @@
   (nongenerative vicare:net:channels:<textual-output-only-channel>)
   (parent <textual-channel>)
   (fields
-    (immutable {connect-ou-port <textual-send-port>})
+    (immutable {connect-ou-port <textual-output-port>})
 		;An output  or input/output textual  port used  to send messages  to a
 		;remote process.
     #| end of FIELDS |# )
 
   (protocol
     (lambda (make-textual-channel)
-      (named-lambda make-textual-output-channel ({_ <textual-output-only-channel>} {port <textual-send-port>})
+      (named-lambda make-textual-output-channel ({_ <textual-output-only-channel>} {port <textual-output-port>})
 	((make-textual-channel) port))))
 
   (constructor-signature
-    (lambda (<textual-send-port>) => (<textual-output-only-channel>)))
+    (lambda (<textual-output-port>) => (<textual-output-only-channel>)))
 
   (custom-printer
-    (lambda ({this <textual-output-only-channel>} {port <textual-send-port>} subprinter)
+    (lambda ({this <textual-output-only-channel>} {port <textual-output-port>} subprinter)
       (display "#[<textual-output-only-channel>" port)
       (display " port=" port)	(display (.connect-ou-port this) port)
       (display "]" port)))
@@ -833,10 +821,10 @@
   (nongenerative vicare:net:channels:<binary-input/output-channel>)
   (parent <binary-channel>)
   (fields
-    (immutable {connect-in-port <binary-recv-port>})
+    (immutable {connect-in-port <binary-input-port>})
 		;An input or input/output binary  port used to receive messages from
 		;a remote process.
-    (immutable {connect-ou-port <binary-send-port>})
+    (immutable {connect-ou-port <binary-output-port>})
 		;An output  or input/output binary port  used to send messages  to a
 		;remote process.
     #| end of FIELDS |# )
@@ -845,15 +833,15 @@
     (lambda (make-binary-channel)
       (named-lambda make-binary-input/output-channel
 	  ({_ <binary-input/output-channel>}
-	   {in-port <binary-recv-port>}
-	   {ou-port <binary-send-port>})
+	   {in-port <binary-input-port>}
+	   {ou-port <binary-output-port>})
 	((make-binary-channel) in-port ou-port DEFAULT-BINARY-MESSAGE-MAXIMUM-PORTION-SIZE))))
 
   (constructor-signature
-    (lambda (<binary-recv-port> <binary-send-port>) => (<binary-input/output-channel>)))
+    (lambda (<binary-input-port> <binary-output-port>) => (<binary-input/output-channel>)))
 
   (custom-printer
-    (lambda ({this <binary-input/output-channel>} {port <textual-send-port>} subprinter)
+    (lambda ({this <binary-input/output-channel>} {port <textual-output-port>} subprinter)
       (display "#[<binary-input/output-channel>" port)
       (display " in-port=" port)	(display (.connect-in-port this) port)
       (display " ou-port=" port)	(display (.connect-ou-port this) port)
@@ -870,10 +858,10 @@
   (nongenerative vicare:net:channels:<textual-input/output-channel>)
   (parent <textual-channel>)
   (fields
-    (immutable {connect-in-port <textual-recv-port>})
+    (immutable {connect-in-port <textual-input-port>})
 		;An input or input/output textual  port used to receive messages from
 		;a remote process.
-    (immutable {connect-ou-port <textual-send-port>})
+    (immutable {connect-ou-port <textual-output-port>})
 		;An output  or input/output textual port  used to send messages  to a
 		;remote process.
     #| end of FIELDS |# )
@@ -882,15 +870,15 @@
     (lambda (make-textual-channel)
       (named-lambda make-textual-input/output-channel
 	  ({_ <textual-input/output-channel>}
-	   {in-port <textual-recv-port>}
-	   {ou-port <textual-send-port>})
+	   {in-port <textual-input-port>}
+	   {ou-port <textual-output-port>})
 	((make-textual-channel) in-port ou-port DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-PORTION-SIZE))))
 
   (constructor-signature
-    (lambda (<textual-recv-port> <textual-send-port>) => (<textual-input/output-channel>)))
+    (lambda (<textual-input-port> <textual-output-port>) => (<textual-input/output-channel>)))
 
   (custom-printer
-    (lambda ({this <textual-input/output-channel>} {port <textual-send-port>} subprinter)
+    (lambda ({this <textual-input/output-channel>} {port <textual-output-port>} subprinter)
       (display "#[<textual-input/output-channel>" port)
       (display " in-port=" port)	(display (.connect-in-port this) port)
       (display " ou-port=" port)	(display (.connect-ou-port this) port)

@@ -41,7 +41,14 @@
     overloaded-function-late-binding
     #| end of EXPORT |# )
   (import (except (vicare)
-		  method-call-late-binding)
+		  method-call-late-binding
+
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Sat Oct 1, 2016)
+		  binary-input-only-port?
+		  binary-output-only-port?
+		  textual-input-only-port?
+		  textual-output-only-port?)
     (ikarus records syntactic)
     (only (ikarus.core-type-descr)
 	  core-type-descriptor?
@@ -55,8 +62,8 @@
 	  <null>-ctd <nelist>-ctd <pair>-ctd
 	  <bytevector>-ctd
 	  <fixnum>-ctd <flonum>-ctd <ratnum>-ctd <bignum>-ctd <compnum>-ctd <cflonum>-ctd
-	  <textual-input/output-port>-ctd <binary-input/output-port>-ctd <textual-output-port>-ctd
-	  <binary-output-port>-ctd <textual-input-port>-ctd <binary-input-port>-ctd
+	  <textual-input/output-port>-ctd <binary-input/output-port>-ctd <textual-output-only-port>-ctd
+	  <binary-output-only-port>-ctd <textual-input-only-port>-ctd <binary-input-only-port>-ctd
 	  <boolean>-ctd <char>-ctd <gensym>-ctd <symbol>-ctd <keyword>-ctd <pointer>-ctd <transcoder>-ctd
 	  <void>-ctd <would-block>-ctd <eof>-ctd)
     (only (vicare system $fx)
@@ -79,7 +86,14 @@
 		  select-most-specific-lambda-descriptors
 		  make-descriptors-signature
 		  type-descriptor-of)
-	    td::))
+	    td::)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Oct 1,
+    ;;2016)
+    (only (ikarus.io)
+	  binary-input-only-port?
+	  binary-output-only-port?
+	  textual-input-only-port?
+	  textual-output-only-port?))
 
 
 ;;;; helpers for object-type method calls
@@ -162,10 +176,10 @@
 	((port? subject)
 	 (cond ((textual-input/output-port? subject)	(%built-in-scheme-object-call <textual-input/output-port>-ctd))
 	       ((binary-input/output-port?  subject)	(%built-in-scheme-object-call <binary-input/output-port>-ctd))
-	       ((textual-output-port?       subject)	(%built-in-scheme-object-call <textual-output-port>-ctd))
-	       ((binary-output-port?        subject)	(%built-in-scheme-object-call <binary-output-port>-ctd))
-	       ((textual-input-port?        subject)	(%built-in-scheme-object-call <textual-input-port>-ctd))
-	       ((binary-input-port?         subject)	(%built-in-scheme-object-call <binary-input-port>-ctd))
+	       ((textual-output-only-port?  subject)	(%built-in-scheme-object-call <textual-output-only-port>-ctd))
+	       ((binary-output-only-port?   subject)	(%built-in-scheme-object-call <binary-output-only-port>-ctd))
+	       ((textual-input-only-port?   subject)	(%built-in-scheme-object-call <textual-input-only-port>-ctd))
+	       ((binary-input-only-port?    subject)	(%built-in-scheme-object-call <binary-input-only-port>-ctd))
 	       (else
 		(%error-object-type-has-no-methods-table))))
 
@@ -239,10 +253,10 @@
 	((port? subject)
 	 (cond ((textual-input/output-port? subject)	(%built-in-scheme-object-call <textual-input/output-port>-ctd))
 	       ((binary-input/output-port?  subject)	(%built-in-scheme-object-call <binary-input/output-port>-ctd))
-	       ((textual-output-port?       subject)	(%built-in-scheme-object-call <textual-output-port>-ctd))
-	       ((binary-output-port?        subject)	(%built-in-scheme-object-call <binary-output-port>-ctd))
-	       ((textual-input-port?        subject)	(%built-in-scheme-object-call <textual-input-port>-ctd))
-	       ((binary-input-port?         subject)	(%built-in-scheme-object-call <binary-input-port>-ctd))
+	       ((textual-output-only-port?  subject)	(%built-in-scheme-object-call <textual-output-only-port>-ctd))
+	       ((binary-output-only-port?   subject)	(%built-in-scheme-object-call <binary-output-only-port>-ctd))
+	       ((textual-input-only-port?   subject)	(%built-in-scheme-object-call <textual-input-only-port>-ctd))
+	       ((binary-input-only-port?    subject)	(%built-in-scheme-object-call <binary-input-only-port>-ctd))
 	       (else
 		(%error))))
 

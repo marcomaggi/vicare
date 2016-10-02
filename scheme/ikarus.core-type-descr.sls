@@ -60,7 +60,13 @@
     <empty-bytevector>-constructor	<empty-bytevector>-type-predicate
 
     #| end of EXPORT |# )
-  (import (vicare)
+  (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Sat Oct 1, 2016)
+		  binary-input-only-port?
+		  binary-output-only-port?
+		  textual-input-only-port?
+		  textual-output-only-port?)
     (ikarus records syntactic)
     (only (vicare system $fx)
 	  $fxadd1)
@@ -80,7 +86,14 @@
 	  syntax-clauses-validate-specs
 	  syntax-clause-spec-keyword
 	  syntax-clause-spec?
-	  make-syntax-clause-spec))
+	  make-syntax-clause-spec)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Oct 1,
+    ;;2016)
+    (only (ikarus.io)
+	  binary-input-only-port?
+	  binary-output-only-port?
+	  textual-input-only-port?
+	  textual-output-only-port?))
 
 
 ;;;; built-in object-types descriptor
