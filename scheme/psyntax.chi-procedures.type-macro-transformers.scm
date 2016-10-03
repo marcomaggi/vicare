@@ -71,7 +71,6 @@
 				     (type-annotation->object-type-spec type.ann ?lexenv ?type-annotation)
 				   (catch E
 				     (else
-(debug-print E)
 				      #;(syntax-violation __who__ "invalid type annotation" ?input-form.stx type.ann)
 				      (raise
 				       (condition (make-who-condition __who__)
