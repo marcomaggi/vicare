@@ -101,7 +101,8 @@
    %error-number-of-operands-deceeds-minimum-arguments-count
    %error-operand-with-multiple-return-values
    %error-mismatch-between-args-signature-and-operands-signature
-   %warning-mismatch-between-args-signature-and-operands-signature)
+   %warning-mismatch-between-args-signature-and-operands-signature
+   %warning-non-exact-match-between-args-signature-and-operands-signature)
 
   (define (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
 	    rator.stx rand*.stx maximum-arguments-count given-operands-count)
@@ -143,7 +144,7 @@
     ;;ARGUMENTS-SIGNATURE*   must  be   a   list   of  "<type-signature>"   instances
     ;;representing the closure object's arguments signatures.
     ;;
-    ;;OPERANDS-SIGNATURE must  be an  insance of "<type-signature>"  representing the
+    ;;OPERANDS-SIGNATURE must  be an instance of  "<type-signature>" representing the
     ;;signature of the operands, when each operand returns a single value.
     ;;
     (raise-compound-condition-object 'chi-application
@@ -157,12 +158,27 @@
     ;;ARGUMENTS-SIGNATURE*   must  be   a   list   of  "<type-signature>"   instances
     ;;representing the closure object's arguments signatures.
     ;;
-    ;;OPERANDS-SIGNATURE must  be an  insance of "<type-signature>"  representing the
+    ;;OPERANDS-SIGNATURE must  be an instance of  "<type-signature>" representing the
     ;;signature of the operands, when each operand returns a single value.
     ;;
     (when (options::warn-about-compatible-operands-signature-in-procedure-application)
       (raise-compound-condition-object/continuable 'chi-application
 	"expand-time mismatch between closure object's arguments signatures and operands signature"
+	input-form.stx
+	(condition (make-expand-time-type-signature-warning)
+		   (common input-form.stx arguments-signature* operands-signature)))))
+
+  (define (%warning-non-exact-match-between-args-signature-and-operands-signature
+	   input-form.stx arguments-signature* operands-signature)
+    ;;ARGUMENTS-SIGNATURE*   must  be   a   list   of  "<type-signature>"   instances
+    ;;representing the closure object's arguments signatures.
+    ;;
+    ;;OPERANDS-SIGNATURE must  be an instance of  "<type-signature>" representing the
+    ;;signature of the operands, when each operand returns a single value.
+    ;;
+    (when (options::strict-type-checking?)
+      (raise-compound-condition-object/continuable 'chi-application
+	"expand-time non-exact match between closure object's arguments signatures and operands signature"
 	input-form.stx
 	(condition (make-expand-time-type-signature-warning)
 		   (common input-form.stx arguments-signature* operands-signature)))))
@@ -512,6 +528,7 @@
 
 (module (chi-call-with-values-application/stx-operands)
   (define-module-who chi-call-with-values-application/stx-operands)
+  (import CLOSURE-APPLICATION-ERRORS)
 
   (define* (chi-call-with-values-application/stx-operands input-form.stx lexenv.run lexenv.expand
 							  producer.stx consumer-stuff.stx)
@@ -550,12 +567,12 @@
 				   producer.psi producer.ots)
     (let* ((producer-retvals.sig	(case-lambda-signature.retvals (closure-type-spec.signature producer.ots)))
 	   (consumer-argvals.sig	(lambda-signature.argvals consumer-clause-signature))
-	   (match-symbol		(let ((clear-argvals.sig (type-signature.untyped-to-top consumer-argvals.sig)))
-					  (case-type-signature-full-structure producer-retvals.sig
-					    (<bottom>
-					     'no-return)
-					    (else
-					     (type-signature.match-formals-against-operands clear-argvals.sig producer-retvals.sig))))))
+	   (clear-argvals.sig		(type-signature.untyped-to-top consumer-argvals.sig))
+	   (match-symbol		(case-type-signature-full-structure producer-retvals.sig
+					  (<bottom>
+					   'no-return)
+					  (else
+					   (type-signature.match-formals-against-operands clear-argvals.sig producer-retvals.sig)))))
       (case match-symbol
 	((exact-match)
 	 ;;Here we use CHI-LAMBDA/TYPED/PARSED-FORMALS.
@@ -565,6 +582,8 @@
 				 chi-lambda/typed/parsed-formals))
 	((possible-match)
 	 ;;Here we use CHI-LAMBDA/CHECKED/PARSED-FORMALS.
+	 (%warning-non-exact-match-between-args-signature-and-operands-signature
+	  input-form.stx (list clear-argvals.sig) producer-retvals.sig)
 	 (%build-thunk-core-expr input-form.stx lexenv.run lexenv.expand
 				 producer.psi producer-retvals.sig
 				 consumer-standard-formals.stx consumer-clause-signature consumer-body*.stx
@@ -1025,6 +1044,10 @@
 	     ;;There  is at  least  one clause  with  a possible  match.   It is  not
 	     ;;possible to fully  validate the signatures at expand-time;  we rely on
 	     ;;run-time checking.
+	     (%warning-non-exact-match-between-args-signature-and-operands-signature
+	      input-form.stx
+	      (map lambda-signature.argvals (case-lambda-signature.clause-signature* rator.clambda-sig))
+	      rands.sig)
 	     (case-expander-language
 	       ((typed)
 		(%chi-application-with-compatible-signature input-form.stx lexenv.run lexenv.expand
@@ -1105,6 +1128,9 @@
 		      ((cdr)	(chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig  'cdr))
 		      (($car)	(chi-car-application input-form.stx rator.psi rand*.psi rands.sig '$car))
 		      (($cdr)	(chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig '$cdr))
+		      ;;
+		      ((vector-ref)	(chi-vector-ref-application input-form.stx rator.psi rand*.psi rands.sig 'vector-ref))
+		      (($vector-ref)	(chi-vector-ref-application input-form.stx rator.psi rand*.psi rands.sig '$vector-ref))
 		      ;;
 		      ((condition)
 		       (chi-condition-application		input-form.stx rator.psi rand*.psi rands.sig))
@@ -1261,6 +1287,9 @@
 		    (($car)	(chi-car-application input-form.stx rator.psi rand*.psi rands.sig '$car))
 		    (( cdr)	(chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig  'cdr))
 		    (($cdr)	(chi-cdr-application input-form.stx rator.psi rand*.psi rands.sig '$cdr))
+		    ;;
+		    ((vector-ref)	(chi-vector-ref-application input-form.stx rator.psi rand*.psi rands.sig 'vector-ref))
+		    (($vector-ref)	(chi-vector-ref-application input-form.stx rator.psi rand*.psi rands.sig '$vector-ref))
 		    ;;
 		    ((condition)
 		     (chi-condition-application			input-form.stx rator.psi rand*.psi rands.sig))
@@ -1515,6 +1544,67 @@
 	  (psi.core-expr rator.psi)
 	(map psi.core-expr rand*.psi))
       application.sig)))
+
+
+;;;; special applications: VECTOR-REF, $VECTOR-REF
+
+(module (chi-vector-ref-application)
+  (define-module-who chi-vector-ref-application)
+
+  (define* (chi-vector-ref-application input-form.stx
+				       rator.psi rand*.psi rands.sig original-prim-name)
+    ;;The input form has the syntax:
+    ;;
+    ;;   (vector-ref ?vec-expr ?idx-expr)
+    ;;
+    ;;We have already  validated the number of operands and  determined that the type
+    ;;of the operands is either an exact or compatible match.  The argument RATOR.PSI
+    ;;represents the  expanded VECTOR-REF  or $VECTOR-REF syntactic  identifier.  The
+    ;;argument  RAND*.PSI  is  a list  of  two  items,  having  a single  value  type
+    ;;signature.   The argument  RANDS.SIG is  a "<type-signature>"  representing the
+    ;;type of the operands.
+    ;;
+    ;;The application of VECTOR-REF is special because we want to extract the type of
+    ;;the returned value from the type of the first operand.
+    ;;
+    (receive (prim-name application.sig)
+	(%single-value-operand-signature->application-signature input-form.stx rands.sig original-prim-name)
+      (make-psi input-form.stx
+	(build-application (syntax-annotation input-form.stx)
+	    (build-primref no-source prim-name)
+	  (list (psi.core-expr (car  rand*.psi))
+		(psi.core-expr (cadr rand*.psi))))
+	application.sig)))
+
+  (define (%single-value-operand-signature->application-signature input-form.stx rands.sig original-prim-name)
+    (let* ((vec-rand.ots (car (type-signature.object-type-specs rands.sig)))
+	   (vec-rand.ots (if (label-type-spec? vec-rand.ots)
+			     (object-type-spec.parent-ots vec-rand.ots)
+			   vec-rand.ots)))
+      (cond ((vector-of-type-spec? vec-rand.ots)
+	     (values original-prim-name (make-type-signature/single-value (vector-of-type-spec.item-ots vec-rand.ots))))
+
+	    ((nevector-of-type-spec? vec-rand.ots)
+	     (values original-prim-name (make-type-signature/single-value (nevector-of-type-spec.item-ots vec-rand.ots))))
+
+	    ((vector-type-spec? vec-rand.ots)
+	     ;;FIXME It would  be greate if we  could know the index of  the item and
+	     ;;select the  associated OTS from  VEC-RAND.OTS.  (Marco Maggi;  Sun Sep
+	     ;;11, 2016)
+	     (values original-prim-name (make-type-signature/single-top)))
+
+	    ((<nevector>-ots? vec-rand.ots)
+	     (values original-prim-name (make-type-signature/single-top)))
+
+	    ((object-type-spec.compatible-super-and-sub? (<nevector>-ots) vec-rand.ots)
+	     (values original-prim-name (make-type-signature/single-top)))
+
+	    (else
+	     ;;This should never happen.
+	     (assertion-violation __module_who__
+	       "internal error, core primitive operand of wrong type" input-form.stx rands.sig)))))
+
+  #| end of module: CHI-VECTOR-REF-APPLICATION |# )
 
 
 ;;;; special applications: CONDITION
@@ -1835,7 +1925,8 @@
 	    (psi.input-form proc.psi) (map psi.input-form proc-rand*.psi)
 	    maximum-arguments-count min-given-operands-count))))
     ;;Search for matching clauses.
-    (let* ((selected-clause-signature* '())
+    (let* ((selected-clause-signature*	'())
+	   (clause-signature*		(case-lambda-signature.clause-signature* proc.clambda-sig))
 	   (state (returnable
 		    (fold-left (lambda (state clause-signature)
 				 (let ((formals.sig (lambda-signature.argvals clause-signature)))
@@ -1847,7 +1938,7 @@
 				      (set-cons! selected-clause-signature* clause-signature)
 				      'possible-match)
 				     (else state))))
-		      'no-match (case-lambda-signature.clause-signature* proc.clambda-sig)))))
+		      'no-match clause-signature*))))
       (define (%default-core-expr)
 	(%build-default-application (%compute-application-signature input-form.stx selected-clause-signature*)))
       (case state
@@ -1859,6 +1950,8 @@
 	 ;;There is at least one clause with a possible match.  It is not possible to
 	 ;;fully  validate  the  signatures  at  expand-time;  we  rely  on  run-time
 	 ;;checking.
+	 (%warning-non-exact-match-between-args-signature-and-operands-signature
+	  input-form.stx clause-signature* proc-rands.sig)
 	 (%default-core-expr))
 	(else
 	 ;;There are no  matching clauses, not even possible  matches.  Arguments and

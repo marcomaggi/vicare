@@ -201,6 +201,40 @@
 
 ;;; --------------------------------------------------------------------
 
+     &typed-variable-left-hand-side-rtd
+     &typed-variable-left-hand-side-rcd
+     &typed-variable-left-hand-side
+     make-typed-variable-left-hand-side-condition
+     typed-variable-left-hand-side-condition?
+     condition-typed-variable-left-hand-side.input-form
+     condition-typed-variable-left-hand-side.object-type-spec
+
+     &typed-variable-right-hand-side-rtd
+     &typed-variable-right-hand-side-rcd
+     &typed-variable-right-hand-side
+     make-typed-variable-right-hand-side-condition
+     typed-variable-right-hand-side-condition?
+     condition-typed-variable-right-hand-side.input-form
+     condition-typed-variable-right-hand-side.object-type-spec
+
+     &typed-formals-left-hand-side-rtd
+     &typed-formals-left-hand-side-rcd
+     &typed-formals-left-hand-side
+     make-typed-formals-left-hand-side-condition
+     typed-formals-left-hand-side-condition?
+     condition-typed-formals-left-hand-side.input-form
+     condition-typed-formals-left-hand-side.type-signature
+
+     &typed-formals-right-hand-side-rtd
+     &typed-formals-right-hand-side-rcd
+     &typed-formals-right-hand-side
+     make-typed-formals-right-hand-side-condition
+     typed-formals-right-hand-side-condition?
+     condition-typed-formals-right-hand-side.input-form
+     condition-typed-formals-right-hand-side.type-signature
+
+;;; --------------------------------------------------------------------
+
      &type-method-name
      &type-method-name-rtd
      &type-method-name-rcd
@@ -233,6 +267,12 @@
      &expand-time-type-signature-warning-not-returning-rcd
      make-expand-time-type-signature-warning-not-returning
      expand-time-type-signature-warning-not-returning?
+
+     &expand-time-type-signature-warning-non-exact-matching-rtd
+     &expand-time-type-signature-warning-non-exact-matching-rcd
+     &expand-time-type-signature-warning-non-exact-matching
+     make-expand-time-type-signature-warning-non-exact-matching
+     expand-time-type-signature-warning-non-exact-matching?
 
 ;;; --------------------------------------------------------------------
 
@@ -458,6 +498,105 @@
   (returned-type-signature	condition-returned-type-signature))
 
 
+;;;; condition object types: descriptive objects for typed syntactic bindings
+
+;;This condition-object  is used to  describe an error  or warning in  establishing a
+;;typed syntactic binding.  For example, if there is an error while expanding:
+;;
+;;   (let/checked (({obj <fixnum>} ?expr))
+;;     ?body)
+;;
+;;the constructor of this condition-object can be called as:
+;;
+;;   (make-typed-variable-left-hand-side #'(brace obj <fixnum>) <fixnum>-ots)
+;;
+(cnd::define-core-condition-type &typed-variable-left-hand-side
+    cnd::&condition
+  make-typed-variable-left-hand-side-condition
+  typed-variable-left-hand-side-condition?
+  (input-form		condition-typed-variable-left-hand-side.input-form)
+		;A syntax object representing the typed variable specification in the
+		;original input form.
+  (object-type-spec	condition-typed-variable-left-hand-side.object-type-spec)
+		;An  instance of  "<object-type-spec>" representing  the type  of the
+		;typed variable being defined.
+  #| end of DEFINE-CORE-CONDITION-TYPE |# )
+
+;;This condition-object  is used to  describe an error  or warning in  establishing a
+;;typed syntactic binding.  For example, if there is an error while expanding:
+;;
+;;   (let/checked (({obj <fixnum>} (string #\A)))
+;;     ?body)
+;;
+;;the constructor of this condition-object can be called as:
+;;
+;;   (make-typed-variable-right-hand-side #'(string #\A) <nestring>-ots)
+;;
+(cnd::define-core-condition-type &typed-variable-right-hand-side
+    cnd::&condition
+  make-typed-variable-right-hand-side-condition
+  typed-variable-right-hand-side-condition?
+  (input-form		condition-typed-variable-right-hand-side.input-form)
+		;A syntax object  representing the right-hand side  expression in the
+		;original input form.
+  (object-type-spec	condition-typed-variable-right-hand-side.object-type-spec)
+		;An  instance of  "<object-type-spec>" representing  the type  of the
+		;right-hand side expression.
+  #| end of DEFINE-CORE-CONDITION-TYPE |# )
+
+;;; --------------------------------------------------------------------
+
+;;This condition-object is used to describe an error or warning in establishing a set
+;;of typed syntactic binding.  For example, if there is an error while expanding:
+;;
+;;   (receive/checked ({A <fixnum>} {B <string>})
+;;       ?producer
+;;     ?consumer)
+;;
+;;the constructor of this condition-object can be called as:
+;;
+;;   (make-typed-formals-left-hand-side
+;;      #'((brace A <fixnum>) (brace B <string>))
+;;      #[type-signature (<fixnum> <string>)])
+;;
+(cnd::define-core-condition-type &typed-formals-left-hand-side
+    cnd::&condition
+  make-typed-formals-left-hand-side-condition
+  typed-formals-left-hand-side-condition?
+  (input-form		condition-typed-formals-left-hand-side.input-form)
+		;A syntax object representing the  typed formals specification in the
+		;original input form.
+  (type-signature	condition-typed-formals-left-hand-side.type-signature)
+		;An  instance of  "<type-signature>"  representing the  types of  the
+		;typed formals being defined.
+  #| end of DEFINE-CORE-CONDITION-TYPE |# )
+
+;;This condition-object is used to describe an error or warning in establishing a set
+;;of typed syntactic binding.  For example, if there is an error while expanding:
+;;
+;;   (receive/checked ({A <fixnum>} {B <string>})
+;;       (values 1.2 "ciao")
+;;     ?consumer)
+;;
+;;the constructor of this condition-object can be called as:
+;;
+;;   (make-typed-formals-right-hand-side
+;;      #'(values 1.2 "ciao")
+;;      #[type-signature (<flonum> <string>)])
+;;
+(cnd::define-core-condition-type &typed-formals-right-hand-side
+    cnd::&condition
+  make-typed-formals-right-hand-side-condition
+  typed-formals-right-hand-side-condition?
+  (input-form		condition-typed-formals-right-hand-side.input-form)
+		;A syntax object  representing the right-hand side  expression in the
+		;original input form.
+  (type-signature	condition-typed-formals-right-hand-side.type-signature)
+		;An instance  of "<type-signature>"  representing the type  of values
+		;returned by the right-hand side expression.
+  #| end of DEFINE-CORE-CONDITION-TYPE |# )
+
+
 ;;;; condition object types: descriptive objects
 
 ;;This is used to describe a type's  method name involved in an exception.  The field
@@ -494,6 +633,11 @@
     &expand-time-type-signature-warning
   make-expand-time-type-signature-warning-not-returning
   expand-time-type-signature-warning-not-returning?)
+
+(cnd::define-core-condition-type &expand-time-type-signature-warning-non-exact-matching
+    &expand-time-type-signature-warning
+  make-expand-time-type-signature-warning-non-exact-matching
+  expand-time-type-signature-warning-non-exact-matching?)
 
 ;;; --------------------------------------------------------------------
 

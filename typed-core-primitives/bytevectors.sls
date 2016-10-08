@@ -73,8 +73,9 @@
 (declare-core-primitive bytevector-append
     (safe)
   (signatures
+   (<null>				=> (<empty-bytevector>))
    ((list-of <empty-bytevector>)	=> (<empty-bytevector>))
-   ((list-of <nebytevector>)		=> (<nebytevector>))
+   ((nelist-of <nebytevector>)		=> (<nebytevector>))
    ((list-of <bytevector>)		=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a newly allocated bytevector.
@@ -83,15 +84,18 @@
 (declare-core-primitive bytevector-concatenate
     (safe)
   (signatures
+   ((<null>)				=> (<empty-bytevector>))
    (((list-of <empty-bytevector>))	=> (<empty-bytevector>))
-   (((list-of <nebytevector>))		=> (<nebytevector>))
+   (((nelist-of <nebytevector>))	=> (<nebytevector>))
    (((list-of <bytevector>))		=> (<bytevector>))))
 
 (declare-core-primitive bytevector-reverse-and-concatenate
     (safe)
   (signatures
-   ((<null>)			=> (<empty-bytevector>))
-   ((<list>)			=> (<bytevector>)))
+   ((<null>)				=> (<empty-bytevector>))
+   (((list-of <empty-bytevector>))	=> (<empty-bytevector>))
+   (((nelist-of <nebytevector>))	=> (<nebytevector>))
+   (((list-of <bytevector>))		=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a newly allocated bytevector.
    ((_)				effect-free result-true)))
@@ -685,7 +689,7 @@
 (declare-core-primitive $bytevector-concatenate
     (unsafe)
   (signatures
-   ((<exact-integer> (list-of <bytevector>))	=> (<bytevector>)))
+   ((<non-negative-fixnum> (list-of <bytevector>))	=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a newly allocated bytevector.
    ((_ _)			effect-free result-true)))
@@ -693,7 +697,7 @@
 (declare-core-primitive $bytevector-reverse-and-concatenate
     (unsafe)
   (signatures
-   ((<exact-integer> (list-of <bytevector>))	=> (<bytevector>)))
+   ((<non-negative-fixnum> (list-of <bytevector>))	=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a newly allocated bytevector.
    ((_ _)			effect-free result-true)))

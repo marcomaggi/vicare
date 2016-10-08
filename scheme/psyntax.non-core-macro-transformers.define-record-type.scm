@@ -46,7 +46,8 @@
 	   ;; 	 (%do-define-record input-form.stx ?namespec ?clause* __synner__))
 	   ;;   (debug-print (syntax->datum out)))
 	   (parametrise ((current-table-of-names (make-hashtable string-hash string=?)))
-	     (%do-define-record input-form.stx ?namespec ?clause* __synner__)))))
+	     (%do-define-record input-form.stx ?namespec ?clause* __synner__))
+	   )))
       (_
        (__synner__ "invalid syntax in macro use"))))
 
@@ -258,7 +259,8 @@
     (cond ((%make-destructor-code clause*.stx foo foo-parent.id parent-rtd.id synner)
 	   => (lambda (foo-destructor-code)
 		(let ((foo-destructor.id (%named-gensym/suffix foo "-destructor")))
-		  (values foo-destructor.id `((define ,foo-destructor.id ,foo-destructor-code))))))
+		  (values foo-destructor.id
+			  `((define/typed {,foo-destructor.id (lambda (,foo) => <list>)} ,foo-destructor-code))))))
 	  (else
 	   (values #f '()))))
 
@@ -1378,9 +1380,9 @@
 					 ,fields-vec ,normalised-fields-vec
 					 ,destructor ,printer
 					 ,equality-predicate ,comparison-procedure ,hash-function
-					 (lambda/std (,method-name.id)
+					 (lambda/typed ({_ (or <false> <procedure>)} {,method-name.id <symbol>})
 					   (,method-retriever-code-public.id  ,method-name.id))
-					 (lambda/std (,method-name.id)
+					 (lambda/typed ({_ (or <false> <procedure>)} {,method-name.id <symbol>})
 					   (,method-retriever-code-private.id ,method-name.id))
 					 ,implemented-interfaces-table)))))
 
@@ -1413,14 +1415,16 @@
   ;;
   (let ((internal-maker.id	(make-syntactic-identifier-for-temporary-variable (identifier->symbol make-foo)))
 	(args.id		(make-syntactic-identifier-for-temporary-variable "args")))
-    `((define/std ,internal-maker.id
+    `((define/typed ,internal-maker.id
 	($record-constructor ,foo-rcd))
       ,(if constructor-signature.stx
 	   `(begin
-	      (define/checked (brace ,make-foo ,constructor-signature.stx) ,internal-maker.id)
+	      (define/typed ,make-foo
+		(cast-signature (,constructor-signature.stx) ,internal-maker.id))
 	      (begin-for-syntax
-		(unless (type-annotation-super-and-sub? (lambda <bottom> => (,foo))
-							,constructor-signature.stx)
+		;;Does  the user-specified  construtor signature  actually returns  a
+		;;single value of type FOO?  We check it here.
+		(unless (type-annotation-super-and-sub? (lambda <bottom> => (,foo)) ,constructor-signature.stx)
 		  (syntax-violation 'define-record-type
 		    "the record constructor signature is not a closure type with record-type as single return value"
 		    (syntax ,constructor-signature.stx) #f))))
@@ -1442,24 +1446,24 @@
   (syntax-match (%get-clause 'type-predicate clause*) ()
     ((_ ?type-predicate-expr)
      ;;There is a TYPE-PREDICATE clause in this record-type definition.
-     (let ((arg.sym			(make-syntactic-identifier-for-temporary-variable "obj"))
-	   (internal-predicate.sym	(make-syntactic-identifier-for-temporary-variable
+     (let ((obj.id			(make-syntactic-identifier-for-temporary-variable "obj"))
+	   (internal-predicate.id	(make-syntactic-identifier-for-temporary-variable
 					 (string-append "internal-predicate-" (identifier->string foo?)))))
-       `((define/std ,internal-predicate.sym
-	   (,?type-predicate-expr (lambda/checked ({_ <boolean>} ,arg.sym)
-				    (unsafe-cast-signature (<boolean>)
-				      (and ($struct? ,arg.sym)
-					   ($record-and-rtd? ,arg.sym ,foo-rtd))))))
-	 (define/checked ((brace ,foo? <boolean>) ,arg.sym)
-	   (,internal-predicate.sym ,arg.sym)))))
+       `((define/typed {,internal-predicate.id <type-predicate>}
+	   (cast-signature (<type-predicate>)
+	     (,?type-predicate-expr (lambda/typed ({_ <boolean>} ,obj.id)
+				      (and ($struct? ,obj.id)
+					   ($record-and-rtd? (unsafe-cast-signature (<struct>) ,obj.id) ,foo-rtd))))))
+	 (define/checked ((brace ,foo? <boolean>) ,obj.id)
+	   (,internal-predicate.id ,obj.id)))))
 
     (#f
      ;;No TYPE-PREDICATE clause  in this record-type definition.  Return  a list of
      ;;definitions representing the default record-type predicate definition.
-     (let ((arg.sym (make-syntactic-identifier-for-temporary-variable "obj")))
-       `((define/typed ((brace ,foo? <boolean>) ,arg.sym)
-	   (and ($struct? ,arg.sym)
-		($record-and-rtd? ,arg.sym ,foo-rtd))))))
+     (let ((obj.id (make-syntactic-identifier-for-temporary-variable "obj")))
+       `((define/typed ((brace ,foo? <boolean>) ,obj.id)
+	   (and ($struct? ,obj.id)
+		($record-and-rtd? (unsafe-cast-signature (<struct>) ,obj.id) ,foo-rtd))))))
 
     (?invalid-clause
      (synner "invalid syntax in TYPE-PREDICATE clause" ?invalid-clause))))
@@ -1507,7 +1511,7 @@
      (synner "invalid syntax in SUPER-PROTOCOL clause" ?invalid-clause))))
 
 
-(define (%make-destructor-code clause* foo foo-parent parent-rtd.sym synner)
+(define (%make-destructor-code clause* foo foo-parent parent-rtd.id synner)
   ;;Extract from  the CLAUSE*  the DESTRUCTOR-PROTOCOL one  and return  an expression
   ;;which, expanded and  evaluated at run-time, will return  the destructor function;
   ;;the expression will return false if there is no destructor.
@@ -1517,7 +1521,7 @@
   ;;If FOO-PARENT is  true: this record type  has a parent specified  with the PARENT
   ;;clause.
   ;;
-  ;;PARENT-RTD.SYM is  false if  this record-type  has no parent;  otherwise it  is a
+  ;;PARENT-RTD.ID is  false if  this record-type  has no parent;  otherwise it  is a
   ;;symbol representing the name of the syntactic identifier bound to the parent RTD.
   ;;
   (let ((clause                  (%get-clause 'destructor-protocol clause*))
@@ -1532,8 +1536,8 @@
 	      "expected closure object as result of evaluating the destructor protocol expression"
 	      ,foo-destructor-protocol))
 	  (receive-and-return/checked (,destructor-tmp)
-	      ,(if (or foo-parent parent-rtd.sym)
-		   `(,foo-destructor-protocol (internal-applicable-record-type-destructor ,parent-rtd.sym))
+	      ,(if (or foo-parent parent-rtd.id)
+		   `(,foo-destructor-protocol (internal-applicable-record-type-destructor ,parent-rtd.id))
 		 `(,foo-destructor-protocol))
 	    (unless (procedure? ,destructor-tmp)
 	      (assertion-violation (quote ,foo)
@@ -1550,8 +1554,8 @@
       ;;record destructor variable is set to false.
       ;;
       (#f
-       (if (or foo-parent parent-rtd.sym)
-	   `(record-type-destructor ,parent-rtd.sym)
+       (if (or foo-parent parent-rtd.id)
+	   `(internal-applicable-record-type-destructor ,parent-rtd.id)
 	 ;;Set to false this record-type record destructor variable.
 	 #f))
 
@@ -2554,7 +2558,7 @@
       (define parent-retriever.id	(make-syntactic-identifier-for-temporary-variable "parent-retriever"))
       `(define/typed {,procname.id <type-method-retriever>}
 	 ,(cond ((pair? late-binding-methods-alist)
-		 (let ((retriever-maker.sexp `(lambda/typed ({_ <type-method-retriever>} ,parent-retriever.id)
+		 (let ((retriever-maker.sexp `(lambda/typed ({_ <type-method-retriever>} {,parent-retriever.id <type-method-retriever>})
 						(lambda/typed ({_ (or <false> <procedure>)} {,method-name.id <symbol>})
 						  (case ,method-name.id
 						    ,@(map (lambda (P)

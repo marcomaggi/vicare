@@ -32,7 +32,8 @@
     expander-language
     typed-language-enabled?
     strict-r6rs-enabled?
-    (rename (options::strict-type-checking?	strict-type-checking?))
+    strict-type-checking?
+    predicate-type-propagation?
     enable-all-warnings
     disable-all-warnings
     enable-extra-warnings
@@ -62,7 +63,7 @@
     ))
 
 
-;;;; initialiseation
+;;;; initialisation
 
 (define expander-initialisation/initialise-label-gensyms-and-interned-libraries
   (make-parameter #f))
@@ -102,6 +103,9 @@
   ((obj)
    (expander-language (if obj 'strict-r6rs 'default))
    (eq? 'strict-r6rs (expander-language))))
+
+(define-parameter-boolean-option strict-type-checking? #f)
+(define-parameter-boolean-option predicate-type-propagation? #f)
 
 
 ;;;; options: warnings

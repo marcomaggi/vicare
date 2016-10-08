@@ -537,7 +537,7 @@
        ;;INPUT-SIGNATURE.STX must be a proper or improper list of type annotations.
        (cons (ta->ots ?car)
 	     (let recur ((stx ?cdr))
-	       (syntax-match stx (<bottom> <list> <nelist> <null> list list-of pair pair-of nelist-of)
+	       (syntax-match stx (<list> <nelist> <null> list list-of pair pair-of nelist-of)
 		 ((list-of ?type)
 		  (make-list-of-type-spec (ta->ots ?type)))
 
@@ -647,7 +647,10 @@
 	    (%synner type.stx)))))
      (define (%synner subform)
        (syntax-violation __who__ "invalid syntax object as type signature" annotation.stx subform))
-     (syntax-match annotation.stx (<list> <nelist> <null> list list-of pair pair-of nelist-of)
+     (syntax-match annotation.stx (<bottom> <list> <nelist> <null> list list-of pair pair-of nelist-of)
+       (<bottom>
+	(<bottom>-ots))
+
        (<list>
 	(<list>-ots))
 
@@ -1067,12 +1070,10 @@
   ;;in the  homologous positions  are compatible  super-type and  sub-type; otherwise
   ;;return false.
   ;;
-  (if (options::strict-type-checking?)
-      #f
-    (%type-signature.criterion-super-and-sub? __who__ formals.sig operands.sig
-					      (lambda (formal.ots operand.ots)
-						(or (object-type-spec.matching-super-and-sub?   formal.ots operand.ots)
-						    (object-type-spec.compatible-super-and-sub? formal.ots operand.ots))))))
+  (%type-signature.criterion-super-and-sub? __who__ formals.sig operands.sig
+					    (lambda (formal.ots operand.ots)
+					      (or (object-type-spec.matching-super-and-sub?   formal.ots operand.ots)
+						  (object-type-spec.compatible-super-and-sub? formal.ots operand.ots)))))
 
 (define (%type-signature.criterion-super-and-sub? caller-who formals.sig operands.sig
 						  super-and-sub?)
@@ -1326,7 +1327,10 @@
 	 (loop state (list-type-spec.item-ots* formals.specs) operands.specs))
 
 	(else
-	 (%error-invalid-formals-signature)))))
+	 (if (and (<bottom>-ots? formals.specs)
+		  (<bottom>-ots? operands.specs))
+	     'exact-match
+	   (%error-invalid-formals-signature))))))
 
 ;;; --------------------------------------------------------------------
 

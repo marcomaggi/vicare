@@ -36,6 +36,7 @@ dist_man_MANS = doc/vicare.1
 
 info_TEXINFOS		= \
 	doc/vicare-scheme.texi		\
+	doc/vicare-typed.texi		\
 	doc/vicare-libs.texi
 
 doc_vicare_scheme_TEXINFOS	= \
@@ -55,7 +56,6 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/foreign.texi				\
 	doc/ffi.texi					\
 	doc/syslib.texi					\
-	doc/types.texi					\
 	doc/objects.texi				\
 	doc/debug.texi					\
 	doc/expander.texi				\
@@ -76,6 +76,10 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/history.texi				\
 	doc/notes.texi					\
 	doc/references.texi
+
+doc_vicare_typed_TEXINFOS	= \
+	doc/gpl-3.0.texi				\
+	doc/macros.texi
 
 doc_vicare_libs_TEXINFOS = \
 	doc/gpl-3.0.texi				\
@@ -493,7 +497,8 @@ VICARE_BOOT_MAKEFILES	= \
 	scheme/makefile.scheme-object-types.scm			\
 	scheme/makefile.built-in-record-types.scm		\
 	scheme/makefile.built-in-condition-object-types.scm	\
-	scheme/makefile.built-in-type-annotations.scm
+	scheme/makefile.built-in-type-annotations.scm		\
+	scheme/makefile.built-in-label-types.scm
 
 VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS = \
 	typed-core-primitives/build-specs.sps			\

@@ -114,34 +114,26 @@
 (declare-core-primitive string-append
     (safe)
   (signatures
-   ((list-of <nestring>)		=> (<nestring>))
-   ;;Some common cases.
-   ((<nestring> <string>)		=> (<nestring>))
-   ((<string> <nestring>)		=> (<nestring>))
-   ((<nestring> <string> <string>)	=> (<nestring>))
-   ((<string> <nestring> <string>)	=> (<nestring>))
-   ((<string> <string> <nestring>)	=> (<nestring>))
-   ;;This is the default.
-   ((list-of <string>)			=> (<string>)))
-  (attributes
-   (_				effect-free result-true)))
+   (<null>				=> (<empty-bytevector>))
+   ((list-of <empty-string>)		=> (<empty-string>))
+   ((nelist-of <nestring>)		=> (<nestring>))
+   ((list-of <string>)			=> (<string>))))
 
 (declare-core-primitive string-concatenate
     (safe)
   (signatures
-   (((list-of <nestring>))		=> (<nestring>))
-   (((list-of <string>))		=> (<string>)))
-  (attributes
-   ;;Not foldable because it must return a new string every time.
-   ((_ _)			effect-free result-true)))
+   ((<null>)				=> (<empty-string>))
+   (((list-of <empty-string>))		=> (<empty-string>))
+   (((nelist-of <nestring>))		=> (<nestring>))
+   (((list-of <string>))		=> (<string>))))
 
 (declare-core-primitive string-reverse-and-concatenate
     (safe)
   (signatures
-   (((list-of <nestring>))		=> (<nestring>))
-   (((list-of <string>))		=> (<string>)))
-  (attributes
-   ((_)				effect-free result-true)))
+   ((<null>)				=> (<empty-string>))
+   (((list-of <empty-string>))		=> (<empty-string>))
+   (((nelist-of <nestring>))		=> (<nestring>))
+   (((list-of <string>))		=> (<string>))))
 
 ;;; --------------------------------------------------------------------
 ;;; inspection
@@ -402,20 +394,12 @@
 (declare-core-primitive $string-concatenate
     (unsafe)
   (signatures
-   ((<exact-integer> (list-of <string>))	=> (<string>)))
-  (attributes
-   ((_ ())			foldable effect-free result-true)
-   ;;Not foldable because it must return a new string every time.
-   ((_ _)			effect-free result-true)))
+   ((<non-negative-fixnum-integer> (list-of <string>))	=> (<string>))))
 
 (declare-core-primitive $string-reverse-and-concatenate
     (unsafe)
   (signatures
-   ((<exact-integer> (list-of <string>))	=> (<string>)))
-  (attributes
-   ((_ ())			foldable effect-free result-true)
-   ;;Not foldable because it must return a new string every time.
-   ((_ _)			effect-free result-true)))
+   ((<non-negative-fixnum> (list-of <string>))	=> (<string>))))
 
 ;;; --------------------------------------------------------------------
 ;;; inspection

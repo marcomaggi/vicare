@@ -926,13 +926,18 @@
   ;;bindings, then pushes the rib on the body forms before expanding them.
   ;;
   (import LAMBDA-CLAUSE-EXPANSION-HELPERS)
-  (cond
-   ((list? standard-formals.stx)
-    (%expand-guts-with-proper-list-formals   input-form.stx lexenv.run lexenv.expand #t
-					     standard-formals.stx clause-signature body*.stx))
-   (else
-    (%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand #t
-					     standard-formals.stx clause-signature body*.stx))))
+  ;;FIXME This  allows some special  LAMBDA functions  to be correctly  compiled even
+  ;;when strict type checking is enabled;  for example LAMBDAs generated for run-time
+  ;;object-type validations.   This obviously turns  of strict type checking  for all
+  ;;the body forms.  Is this what we really want?  (Marco Maggi; Wed Sep 14, 2016)
+  (parametrise ((options::strict-type-checking? #f))
+    (cond
+     ((list? standard-formals.stx)
+      (%expand-guts-with-proper-list-formals   input-form.stx lexenv.run lexenv.expand #t
+					       standard-formals.stx clause-signature body*.stx))
+     (else
+      (%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand #t
+					       standard-formals.stx clause-signature body*.stx)))))
 
 
 ;;;; lambda clause expander: typed lambda clause

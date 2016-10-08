@@ -61,9 +61,9 @@
 
 (parametrise ((check-test-name	'time-resolution))
 
-  (check (srfi.time-resolution 'time-tai)	=> 1000)
-  (check (srfi.time-resolution 'time-utc)	=> 1000)
-  (check (srfi.time-resolution 'time-monotonic)	=> 1000)
+  (check (srfi.time-resolution 'time-tai)	=> 1)
+  (check (srfi.time-resolution 'time-utc)	=> 1)
+  (check (srfi.time-resolution 'time-monotonic)	=> 1)
 
   #t)
 

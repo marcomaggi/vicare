@@ -128,7 +128,7 @@
 	   ((kwd*)		(if (identifier? kwd)
 				    (cons kwd kwd*)
 				  kwd*)))
-	#;(debug-print __module_who__ body-form.stx)
+	;;(debug-print __module_who__ body-form.stx)
 	(parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	  (case type
 	    ((integrated-macro)
@@ -2394,13 +2394,13 @@
     (define (%establish-overloaded-function-descriptor ofd.id spec.id spec.lambda-sig rib lexenv.run kwd* shadow/redefine-bindings?)
       (let* ((spec.ann		(object-type-spec.type-annotation
 				 (make-closure-type-spec (make-case-lambda-signature (list spec.lambda-sig)))))
-	     (input-form.stx	(bless `(define/std ,ofd.id
+	     (input-form.stx	(bless `(define/typed {,ofd.id <overloaded-function-descriptor>}
 					  (make-overloaded-function-descriptor
 					   (quote ,ofd.id)
 					   (list (cons (car (case-lambda-descriptors.clause-signature*
 							     (closure-type-descr.signature (type-descriptor ,spec.ann))))
 						       ,spec.id)))))))
-	(chi-define/std input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)))
+	(chi-define/typed input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)))
 
     (define (%establish-overloaded-function-late-binding-function lbf.id ofd.id rib lexenv.run kwd* shadow/redefine-bindings?)
       (let* ((args.id		(make-syntactic-identifier-for-temporary-variable "args"))

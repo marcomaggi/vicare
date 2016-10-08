@@ -381,6 +381,8 @@
     binary-input-port?			textual-input-port?
     binary-output-port?			textual-output-port?
     binary-input/output-port?		textual-input/output-port?
+    binary-input-only-port?		binary-output-only-port?
+    textual-input-only-port?		textual-output-only-port?
     port-eof?
 
     open-input-port?			open-output-port?
@@ -523,6 +525,8 @@
 		  binary-input-port?			textual-input-port?
 		  binary-output-port?			textual-output-port?
 		  binary-input/output-port?		textual-input/output-port?
+		  binary-input-only-port?		binary-output-only-port?
+		  textual-input-only-port?		textual-output-only-port?
 		  port-eof?
 
 		  open-input-port?			open-output-port?

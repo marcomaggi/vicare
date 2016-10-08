@@ -1499,8 +1499,8 @@ hidden.
 Generate (using another @acronym{PRNG}) random integers @math{S} until
 one is found such that: The greatest commond divisor (GCD) between
 @math{S} and @math{M} is @math{1}.  Notice that @rnrs{6} Scheme
-implementations already provide a @func{gcd} function.  @nauref{baselib
-math ops arithmetic, Arithmetic operations}
+implementations already provide a @func{gcd} function.
+@vicareref{baselib math ops arithmetic, Arithmetic operations}.
 
 @item
 Compute the seed @math{X}:

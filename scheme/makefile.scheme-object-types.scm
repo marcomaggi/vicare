@@ -505,7 +505,11 @@
   (constructor make-bytevector)
   (type-predicate bytevector?)
   (hash-function bytevector-hash)
-  (equality-predicate bytevector=?))
+  (equality-predicate bytevector=?)
+  (methods
+   (length		bytevector-length)
+   (=			bytevector=?)
+   (!=			bytevector!=?)))
 
 (define-scheme-type <empty-bytevector>
     <bytevector>
@@ -697,15 +701,6 @@
    (source			reader-annotation-source)
    (textual-position		reader-annotation-textual-position)))
 
-(define-scheme-type <time>
-    <struct>
-  (constructor current-time)
-  (type-predicate time?)
-  (equality-predicate struct=?)
-  (methods
-   (second		time-second)
-   (nanosecond		time-nanosecond)))
-
 ;;; --------------------------------------------------------------------
 ;;; unique objects
 
@@ -743,14 +738,14 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-scheme-type <textual-input-port>
+(define-scheme-type <textual-input-only-port>
     <input-port>
-  (type-predicate textual-input-port?)
+  (type-predicate textual-input-only-port?)
   (equality-predicate eq?))
 
-(define-scheme-type <textual-output-port>
+(define-scheme-type <textual-output-only-port>
     <output-port>
-  (type-predicate textual-output-port?)
+  (type-predicate textual-output-only-port?)
   (equality-predicate eq?))
 
 (define-scheme-type <textual-input/output-port>
@@ -760,14 +755,14 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-scheme-type <binary-input-port>
+(define-scheme-type <binary-input-only-port>
     <input-port>
-  (type-predicate binary-input-port?)
+  (type-predicate binary-input-only-port?)
   (equality-predicate eq?))
 
-(define-scheme-type <binary-output-port>
+(define-scheme-type <binary-output-only-port>
     <output-port>
-  (type-predicate binary-output-port?)
+  (type-predicate binary-output-only-port?)
   (equality-predicate eq?))
 
 (define-scheme-type <binary-input/output-port>

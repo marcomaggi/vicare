@@ -120,6 +120,11 @@
 	 make-vector-of-type-spec			vector-of-type-spec?
 	 vector-of-type-spec.item-ots
 
+	 <nevector-of-type-spec>
+	 <nevector-of-type-spec>-rtd			<nevector-of-type-spec>-rcd
+	 make-nevector-of-type-spec			nevector-of-type-spec?
+	 nevector-of-type-spec.item-ots
+
 	 ;;;
 
 	 <hashtable-type-spec>
@@ -247,7 +252,7 @@
 (define-syntax case-specification
   (syntax-rules (else
 		 core-type-spec? record-type-spec? struct-type-spec?
-		 list-type-spec? list-of-type-spec? vector-type-spec? vector-of-type-spec?
+		 list-type-spec? list-of-type-spec? vector-type-spec? vector-of-type-spec? nevector-of-type-spec?
 		 pair-type-spec? pair-of-type-spec? compound-condition-type-spec? enumeration-type-spec?
 		 closure-type-spec?
 		 hashtable-type-spec? union-type-spec? intersection-type-spec? complement-type-spec?
@@ -259,6 +264,7 @@
 	(list-type-spec?		. ?body-list)
 	(list-of-type-spec?		. ?body-list-of)
 	(vector-type-spec?		. ?body-vector)
+	(nevector-of-type-spec?		. ?body-nevector-of)
 	(vector-of-type-spec?		. ?body-vector-of)
 	(pair-type-spec?		. ?body-pair)
 	(pair-of-type-spec?		. ?body-pair-of)
@@ -279,6 +285,7 @@
 	((list-type-spec? des)			. ?body-list)
 	((list-of-type-spec? des)		. ?body-list-of)
 	((vector-type-spec? des)		. ?body-vector)
+	((nevector-of-type-spec? des)		. ?body-nevector-of)
 	((vector-of-type-spec? des)		. ?body-vector-of)
 	((pair-type-spec? des)			. ?body-pair)
 	((pair-of-type-spec? des)		. ?body-pair-of)
@@ -635,6 +642,7 @@
 	      (list-type-spec?			(%matching-super/list-type-spec	        super.ots sub.ots))
 	      (list-of-type-spec?		(%matching-super/list-of-type-spec      super.ots sub.ots))
 	      (vector-type-spec?		(%matching-super/vector-type-spec	super.ots sub.ots))
+	      (nevector-of-type-spec?		(%matching-super/nevector-of-type-spec  super.ots sub.ots))
 	      (vector-of-type-spec?		(%matching-super/vector-of-type-spec    super.ots sub.ots))
 	      (pair-type-spec?			(%matching-super/pair-type-spec		super.ots sub.ots))
 	      (pair-of-type-spec?		(%matching-super/pair-of-type-spec      super.ots sub.ots))
@@ -718,6 +726,11 @@
 	     (or (and (or-with-predicates sub.ots <list>-ots? <nelist>-ots?)
 		      (<top>-ots? (list-of-type-spec.item-ots super.ots)))
 		 (<null>-ots? sub.ots)))
+
+	    (nevector-of-type-spec?
+	     ;;(super-and-sub? (nevector-of <top>) <nevector>)
+	     (and (<nevector>-ots? sub.ots)
+		  (<top>-ots? (nevector-of-type-spec.item-ots super.ots))))
 
 	    (vector-of-type-spec?
 	     ;;(super-and-sub? (vector-of <top>) <vector>)
@@ -822,10 +835,12 @@
 					  list-type-spec? pair-type-spec?/list pair-of-type-spec?/list))
       ;;(super-and-sub? <vector>	(vector <fixnum>))		=> #t
       ;;(super-and-sub? <vector>	(vector-of <fixnum>))		=> #t
-      (<vector>-ots?			(or-with-predicates sub.ots vector-type-spec? vector-of-type-spec?))
+      ;;(super-and-sub? <vector>	(nevector-of <fixnum>))		=> #t
+      (<vector>-ots?			(or-with-predicates sub.ots vector-type-spec? nevector-of-type-spec? vector-of-type-spec?))
       ;;(super-and-sub? <nevector>	(vector <fixnum>))		=> #t
       ;;(super-and-sub? <nevector>	(vector-of <fixnum>))		=> #f
-      (<nevector>-ots?			(vector-type-spec? sub.ots))
+      ;;(super-and-sub? <nevector>	(nevector-of <fixnum>))		=> #t
+      (<nevector>-ots?			(or-with-predicates sub.ots vector-type-spec? nevector-of-type-spec?))
       ;;(super-and-sub? <symbol>	(enumeration ciao))		=> #t
       (<symbol>-ots?			(enumeration-type-spec? sub.ots))
       ;;(super-and-sub? <hashtable>	(hashtable <string> <fixnum>))	=> #t
@@ -1022,6 +1037,12 @@
 
       ;;No VECTOR-OF because a VECTOR-OF may be empty.
 
+      (nevector-of-type-spec?
+       (let ((sub-item.ots (nevector-of-type-spec.item-ots sub.ots)))
+	 (for-all (lambda (super-item.ots)
+		    (super-and-sub? super-item.ots sub-item.ots))
+	   (vector-type-spec.item-ots* super.ots))))
+
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.ots sub.ots))))
 
@@ -1036,10 +1057,40 @@
 	   (lambda (sub-item.ots)
 	     (super-and-sub? super-item.ots sub-item.ots)))))
 
+      (nevector-of-type-spec?
+       ;;(super-and-sub? (vector-of <number>) (nevector-of <fixnum>))	=> #t
+       (super-and-sub? (vector-of-type-spec.item-ots   super.ots)
+		       (nevector-of-type-spec.item-ots   sub.ots)))
+
       (vector-of-type-spec?
        ;;(super-and-sub? (vector-of <number>) (vector-of <fixnum>))	=> #t
        (super-and-sub? (vector-of-type-spec.item-ots super.ots)
 		       (vector-of-type-spec.item-ots   sub.ots)))
+
+      (else
+       (%matching-sub/union/intersection/complement/ancestor-of super.ots sub.ots))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%matching-super/nevector-of-type-spec super.ots sub.ots)
+    (cond-with-predicates sub.ots
+      (vector-type-spec?
+       ;;(super-and-sub? (nevector-of <number>) (vector <fixnum>))	=> #t
+       (let ((super-item.ots (nevector-of-type-spec.item-ots super.ots)))
+	 (vector-type-spec.for-all sub.ots
+	   (lambda (sub-item.ots)
+	     (super-and-sub? super-item.ots sub-item.ots)))))
+
+      (nevector-of-type-spec?
+       ;;(super-and-sub? (nevector-of <number>) (nevector-of <fixnum>))	=> #t
+       (super-and-sub? (nevector-of-type-spec.item-ots super.ots)
+		       (nevector-of-type-spec.item-ots   sub.ots)))
+
+      (vector-of-type-spec?
+       ;;A vector-of can be empty.
+       ;;
+       ;;(super-and-sub? (nevector-of <number>) (vector-of <fixnum>))	=> #f
+       #f)
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.ots sub.ots))))
@@ -1309,14 +1360,12 @@
 
   (define (super-and-sub? super.ots sub.ots)
     (or (object-type-spec.matching-super-and-sub?   super.ots sub.ots)
-	(%compatible-super-and-sub?                 super.ots sub.ots)))
+	(object-type-spec.compatible-super-and-sub? super.ots sub.ots)))
+
+  (define-syntax-rule (%compatible-super-and-sub? super.ots sub.ots)
+    (object-type-spec.compatible-super-and-sub? super.ots sub.ots))
 
   (define (object-type-spec.compatible-super-and-sub? super.ots sub.ots)
-    (if (options::strict-type-checking?)
-	#f
-      (%compatible-super-and-sub? super.ots sub.ots)))
-
-  (define (%compatible-super-and-sub? super.ots sub.ots)
     ;;This  function is  used to  check  for non-matching  compatibility between  two
     ;;object-type    specifications.    It    is    meant   to    be   called    when
     ;;OBJECT-TYPE-SPEC.MATCHING-SUPER-AND-SUB? has  already returned #f  when applied
@@ -1339,6 +1388,7 @@
 	  (list-type-spec?			(%compatible-super/list-type-spec	  super.ots sub.ots))
 	  (list-of-type-spec?			(%compatible-super/list-of-type-spec      super.ots sub.ots))
 	  (vector-type-spec?			(%compatible-super/vector-type-spec	  super.ots sub.ots))
+	  (nevector-of-type-spec?		(%compatible-super/nevector-of-type-spec  super.ots sub.ots))
 	  (vector-of-type-spec?			(%compatible-super/vector-of-type-spec    super.ots sub.ots))
 	  (pair-type-spec?			(%compatible-super/pair-type-spec	  super.ots sub.ots))
 	  (pair-of-type-spec?			(%compatible-super/pair-of-type-spec      super.ots sub.ots))
@@ -1435,18 +1485,21 @@
 	   (<vector>-ots?
 	    ;;(matching (vector <fixnum>)     <vector>)		=> possible-match
 	    ;;(matching (vector-of <fixnum>)  <vector>)		=> possible-match
+	    ;;(matching (nevector-of <fixnum>)  <vector>)	=> possible-match
 	    (or-with-predicates super.ots
-	      vector-type-spec? vector-of-type-spec?))
+	      vector-type-spec? vector-of-type-spec? nevector-of-type-spec?))
 
 	   (<nevector>-ots?
 	    ;;(matching (vector <fixnum>)     <nevector>)	=> possible-match
 	    ;;(matching (vector-of <fixnum>)  <nevector>)	=> possible-match
+	    ;;(matching (nevector-of <fixnum>)  <nevector>)	=> possible-match
 	    (or-with-predicates super.ots
-	      vector-type-spec? vector-of-type-spec?))
+	      vector-type-spec? vector-of-type-spec? nevector-of-type-spec?))
 
 	   (<empty-vector>-ots?
 	    ;;(matching (vector <fixnum>)     <empty-vector>)	=> no-match
 	    ;;(matching (vector-of <fixnum>)  <empty-vector>)	=> possible-match
+	    ;;(matching (nevector-of <fixnum>)  <empty-vector>)	=> no-match
 	    (or-with-predicates super.ots
 	      vector-of-type-spec?))
 
@@ -1546,13 +1599,15 @@
 	(<nevector>-ots?
 	 ;;(matching <nevector> <vector>)		=> possible-match
 	 ;;(matching <nevector> (vector-of <fixnum>))	=> possible-match
+	 ;;(matching <nevector> (nevector-of <fixnum>))	=> possible-match
 	 (or (or-with-predicates sub.ots
-	       vector-of-type-spec? <vector>-ots?)
+	       nevector-of-type-spec? vector-of-type-spec? <vector>-ots?)
 	     (%matching-sub/union/intersection/complement/ancestor-of super.ots sub.ots)))
 
 	(<empty-vector>-ots?
-	 ;;(matching <empty-vector> <vector>)		=> possible-match
-	 ;;(matching <empty-vector> (vector-of <fixnum>)) => possible-match
+	 ;;(matching <empty-vector> <vector>)			=> possible-match
+	 ;;(matching <empty-vector> (vector-of <fixnum>))	=> possible-match
+	 ;;(matching <empty-vector> (nevector-of <fixnum>))	=> no-match
 	 (or (or-with-predicates sub.ots
 	       vector-of-type-spec? <vector>-ots?)
 	     (%matching-sub/union/intersection/complement/ancestor-of super.ots sub.ots)))
@@ -1823,6 +1878,13 @@
 	      (vector-type-spec.item-ots* super.ots)
 	      (vector-type-spec.item-ots*   sub.ots))))
 
+      (nevector-of-type-spec?
+       ;;(matching (vector <fixnum>) (nevector-of <number>))	=> possible-match
+       (let ((sub-item.ots (nevector-of-type-spec.item-ots sub.ots)))
+	 (vector-type-spec.for-all super.ots
+	   (lambda (super-item.ots)
+	     (super-and-sub? super-item.ots sub-item.ots)))))
+
       (vector-of-type-spec?
        ;;(matching (vector <fixnum>) (vector-of <number>))	=> possible-match
        (let ((sub-item.ots (vector-of-type-spec.item-ots sub.ots)))
@@ -1844,10 +1906,39 @@
 	   (lambda (sub-item.ots)
 	     (super-and-sub? super-item.ots sub-item.ots)))))
 
+      (nevector-of-type-spec?
+       ;;(matching (vector-of <fixnum>) (nevector-of <number>))	=> possible-match
+       (super-and-sub? (vector-of-type-spec.item-ots   super.ots)
+		       (nevector-of-type-spec.item-ots   sub.ots)))
+
       (vector-of-type-spec?
        ;;(matching (vector-of <fixnum>) (vector-of <number>))	=> possible-match
        (super-and-sub? (vector-of-type-spec.item-ots super.ots)
 		       (vector-of-type-spec.item-ots   sub.ots)))
+
+      (else
+       (%matching-sub/union/intersection/complement/ancestor-of super.ots sub.ots))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%compatible-super/nevector-of-type-spec super.ots sub.ots)
+    (cond-with-predicates sub.ots
+      (vector-type-spec?
+       ;;(matching (nevector-of <fixnum>) (vector <number>))	=> possible-match
+       (let ((super-item.ots (nevector-of-type-spec.item-ots super.ots)))
+	 (vector-type-spec.for-all sub.ots
+	   (lambda (sub-item.ots)
+	     (super-and-sub? super-item.ots sub-item.ots)))))
+
+      (nevector-of-type-spec?
+       ;;(matching (nevector-of <fixnum>) (nevector-of <number>))	=> possible-match
+       (super-and-sub? (nevector-of-type-spec.item-ots super.ots)
+		       (nevector-of-type-spec.item-ots   sub.ots)))
+
+      (vector-of-type-spec?
+       ;;(matching (nevector-of <fixnum>) (vector-of <number>))	=> possible-match
+       (super-and-sub? (nevector-of-type-spec.item-ots super.ots)
+		       (vector-of-type-spec.item-ots     sub.ots)))
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.ots sub.ots))))
@@ -2116,6 +2207,11 @@
 	 (make-vector-of-type-spec (object-type-spec.common-ancestor (vector-of-type-spec.item-ots ots1)
 								     (vector-of-type-spec.item-ots ots2))))
 
+	((and (nevector-of-type-spec? ots1)
+	      (nevector-of-type-spec? ots2))
+	 (make-nevector-of-type-spec (object-type-spec.common-ancestor (nevector-of-type-spec.item-ots ots1)
+								       (nevector-of-type-spec.item-ots ots2))))
+
 	((and (pair-type-spec? ots1)
 	      (pair-type-spec? ots2))
 	 (make-pair-type-spec (object-type-spec.common-ancestor (pair-type-spec.car-ots ots1)
@@ -2209,6 +2305,10 @@
 	  (vector-type-spec?
 	   (and (vector-type-spec? ots2)
 		($vector-type-spec=? ots1 ots2)))
+
+	  (nevector-of-type-spec?
+	   (and (nevector-of-type-spec? ots2)
+		($nevector-of-type-spec=? ots1 ots2)))
 
 	  (vector-of-type-spec?
 	   (and (vector-of-type-spec? ots2)
@@ -2319,6 +2419,15 @@
 (define ($vector-of-type-spec=? ots1 ots2)
   ($object-type-spec=? (vector-of-type-spec.item-ots ots1)
 		       (vector-of-type-spec.item-ots ots2)))
+
+;;; --------------------------------------------------------------------
+
+(define* (nevector-of-type-spec=? {ots1 nevector-of-type-spec?} {ots2 nevector-of-type-spec?})
+  ($nevector-of-type-spec=? ots1 ots2))
+
+(define ($nevector-of-type-spec=? ots1 ots2)
+  ($object-type-spec=? (nevector-of-type-spec.item-ots ots1)
+		       (nevector-of-type-spec.item-ots ots2)))
 
 ;;; --------------------------------------------------------------------
 
@@ -2677,6 +2786,12 @@
 		     (build-primref no-source 'list)
 		   item-des*.core-expr)))))
 
+      (nevector-of-type-spec?
+       (let ((item-des.core-expr	(object-type-spec.type-descriptor-core-expr (nevector-of-type-spec.item-ots type.ots))))
+	 (build-application no-source
+	     (build-primref no-source 'make-nevector-of-type-descr)
+	   (list item-des.core-expr))))
+
       (vector-of-type-spec?
        (let ((item-des.core-expr	(object-type-spec.type-descriptor-core-expr (vector-of-type-spec.item-ots type.ots))))
 	 (build-application no-source
@@ -2831,7 +2946,7 @@
   ;;
   ;;When RETURN-VALUES? is true, the returned expression is:
   ;;
-  ;;   (lambda/std (?value ?value-index ?caller-who)
+  ;;   (lambda/typed ({?value <top>} {?value-index <positive-fixnum>} {?caller-who <&who-value>})
   ;;     (if (?type-predicate ?value)
   ;;         ?value
   ;;       (expression-return-value-violation ?caller-who
@@ -2839,35 +2954,36 @@
   ;;
   ;;When RETURN-VALUES? is false, the returned expression is:
   ;;
-  ;;   (lambda/std (?value ?value-index ?caller-who)
+  ;;   (lambda/typed ({?value <top>} {?value-index <positive-fixnum>} {?caller-who <&who-value>})
   ;;     (unless (?type-predicate ?value)
   ;;       (expression-return-value-violation ?caller-who
   ;;         "return value of invalid type" ?value-index '(is-a? _ ?type-name) ?value)))
   ;;
-  (let* ((value.sym		(gensym "obj"))
-	 (value-index.sym	(gensym "value-index"))
-	 (caller-who.sym	(gensym "caller-who"))
+  (let* ((value.id		(make-syntactic-identifier-for-temporary-variable "obj"))
+	 (value-index.id	(make-syntactic-identifier-for-temporary-variable "value-index"))
+	 (caller-who.id		(make-syntactic-identifier-for-temporary-variable "caller-who"))
 	 (pred.stx		(object-type-spec.type-predicate-stx type.ots))
 	 (name.stx		(object-type-spec.name type.ots))
-	 (test.sexp		`(,pred.stx ,value.sym))
-	 (raiser.sexp		`(expression-return-value-violation ,caller-who.sym
-				   "return value of invalid type" ,value-index.sym '(is-a? _ ,name.stx) ,value.sym))
-	 (body.sexp		(if return-values?
-				    `(if ,test.sexp ,value.sym ,raiser.sexp)
-				  `(unless ,test.sexp ,raiser.sexp))))
+	 (test.sexp		`(,pred.stx ,value.id))
+	 (raiser.sexp		`(expression-return-value-violation ,caller-who.id
+				   "return value of invalid type" ,value-index.id '(is-a? _ ,name.stx) ,value.id)))
     (bless
-     `(lambda/std (,value.sym ,value-index.sym ,caller-who.sym) ,body.sexp))))
+     (if return-values?
+	 `(lambda/std (,value.id ,value-index.id ,caller-who.id)
+	    (if ,test.sexp ,value.id ,raiser.sexp))
+       `(lambda/std (,value.id ,value-index.id ,caller-who.id)
+	  (unless ,test.sexp ,raiser.sexp))))))
 
 (define* (object-type-spec.list-validator-lambda-stx {type.ots object-type-spec?} return-values?)
   ;;Build and return  a syntax object representing an expression  which, expanded and
   ;;evaluated, returns a  procedure that validates an expression as  returning a list
   ;;of values of type TYPE.OTS.
   ;;
-  ;;When RETURN-VALUES? is true, the returned expression is:
+  ;;When RETURN-VALUES? is false, the returned expression is:
   ;;
-  ;; (lambda/std (?list-value ?first-value-index ?caller-who)
-  ;;   (fold-left (lambda/std (?value-index ?value)
-  ;;                ((lambda/std (?value ?value-index ?caller-who)
+  ;; (lambda/typed ({?list-value <list>} {?first-value-index <positive-fixnum>} {?caller-who <&who-value>})
+  ;;   (fold-left (lambda/typed ({?value-index <positive-fixnum>} {?value <top>})
+  ;;                ((lambda/typed ({?value <top>} {?value-index <positive-fixnum>} {?caller-who <&who-value>})
   ;;                   (unless (?type-predicate ?value)
   ;;                     (expression-return-value-violation ?caller-who
   ;;                       "return value of invalid type" ?value-index '(is-a? _ ?type-name) ?value)))
@@ -2875,11 +2991,11 @@
   ;;                (fxadd1 ?value-index))
   ;;     ?first-value-index ?list-value))
   ;;
-  ;;When RETURN-VALUES? is false, the returned expression is:
+  ;;When RETURN-VALUES? is true, the returned expression is:
   ;;
-  ;; (lambda/std (?list-value ?first-value-index ?caller-who)
-  ;;   (fold-left (lambda/std (?value-index ?value)
-  ;;                ((lambda/std (?value ?value-index ?caller-who)
+  ;; (lambda/typed ({?list-value <list>} {?first-value-index <positive-fixnum>} {?caller-who <&who-value>})
+  ;;   (fold-left (lambda/typed ({?value-index <positive-fixnum>} {?value <top>})
+  ;;                ((lambda/typed ({?value <top>} {?value-index <positive-fixnum>} {?caller-who <&who-value>})
   ;;                   (unless (?type-predicate ?value)
   ;;                     (expression-return-value-violation ?caller-who
   ;;                       "return value of invalid type" ?value-index '(is-a? _ ?type-name) ?value)))
@@ -2888,21 +3004,24 @@
   ;;     ?first-value-index ?list-value)
   ;;   ?list-value)
   ;;
-  (let* ((list-value.sym	(gensym "list-value"))
-	 (first-value-index.sym	(gensym "first-value-index"))
-	 (caller-who.sym	(gensym "caller-who"))
-	 (item-index.sym	(gensym "item-index"))
-	 (item-value.sym	(gensym "item-value"))
+  (let* ((list-value.id		(make-syntactic-identifier-for-temporary-variable "list-value"))
+	 (first-value-index.id	(make-syntactic-identifier-for-temporary-variable "first-value-index"))
+	 (name.stx		(object-type-spec.name type.ots))
+	 (caller-who.id		(make-syntactic-identifier-for-temporary-variable "caller-who"))
+	 (item-index.id		(make-syntactic-identifier-for-temporary-variable "item-index"))
+	 (item-value.id		(make-syntactic-identifier-for-temporary-variable "item-value"))
 	 (item-validator.stx	(object-type-spec.single-value-validator-lambda-stx type.ots #f))
-	 (list-validator.sexp	`(fold-left (lambda/std (,item-index.sym ,item-value.sym)
-					      (,item-validator.stx ,item-value.sym ,item-index.sym ,caller-who.sym)
-					      (fxadd1 ,item-index.sym))
-				   ,first-value-index.sym ,list-value.sym)))
+	 (list-validator.sexp	`(fold-left (lambda/std (,item-index.id ,item-value.id)
+					      (,item-validator.stx ,item-value.id ,item-index.id ,caller-who.id)
+					      (fxadd1 ,item-index.id))
+				   ,first-value-index.id ,list-value.id)))
     (bless
-     `(lambda/std (,list-value.sym ,first-value-index.sym ,caller-who.sym)
-	,@(if return-values?
-	      `(,list-validator.sexp ,list-value.sym)
-	    (list list-validator.sexp))))))
+     (if return-values?
+	 `(lambda/std (,list-value.id ,first-value-index.id ,caller-who.id)
+	    ,list-validator.sexp
+	    ,list-value.id)
+       `(lambda/std (,list-value.id ,first-value-index.id ,caller-who.id)
+	  ,list-validator.sexp)))))
 
 
 ;;;; built-in Scheme object-type specification
@@ -4092,13 +4211,14 @@
       (define (make-pair-predicate ots)
 	(let ((car-pred.stx	(object-type-spec.type-predicate-stx (pair-type-spec.car-ots ots)))
 	      (cdr-pred.stx	(object-type-spec.type-predicate-stx (pair-type-spec.cdr-ots ots)))
-	      (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
+	      (obj.id		(make-syntactic-identifier-for-temporary-variable "obj")))
 	  (bless
-	   `(lambda/typed ({_ <boolean>} ,obj.sym)
-	      (and (pair? ,obj.sym)
-		   (,car-pred.stx (car ,obj.sym))
-		   (,cdr-pred.stx (cdr ,obj.sym))
-		   #t)))))
+	   `(lambda/typed ({_ <boolean>} ,obj.id)
+	      (and (pair? ,obj.id)
+		   (let/checked (({,obj.id <pair>} (unsafe-cast-signature (<pair>) ,obj.id)))
+		     (and (,car-pred.stx (car ,obj.id))
+			  (,cdr-pred.stx (cdr ,obj.id))
+			  #t)))))))
 
       make-pair-type-spec))
 
@@ -4201,9 +4321,10 @@
 	   `(let/checked ((,item-pred.id ,item-pred.stx))
 	      (lambda/typed ({_ <boolean>} ,obj.id)
 		(and (pair? ,obj.id)
-		     (,item-pred.id (car ,obj.id))
-		     (,item-pred.id (cdr ,obj.id))
-		     #t))))))
+		     (let/checked (({,obj.id <pair>} (unsafe-cast-signature (<pair>) ,obj.id)))
+		       (and (,item-pred.id (car ,obj.id))
+			    (,item-pred.id (cdr ,obj.id))
+			    #t))))))))
 
       make-pair-of-type-spec))
 
@@ -4305,10 +4426,11 @@
 	   `(let/checked ((,comp-pred*.id (list ,@item-pred*.stx)))
 	      (lambda/typed ({_ <boolean>} ,obj.id)
 		(and (list? ,obj.id)
-		     (for-all (lambda (,pred.id ,item.id)
-				(,pred.id ,item.id))
-		       ,comp-pred*.id ,obj.id)
-		     #t))))))
+		     (let/checked (({,obj.id <list>} (unsafe-cast-signature (<list>) ,obj.id)))
+		       (and (for-all (lambda (,pred.id ,item.id)
+				       (,pred.id ,item.id))
+			      ,comp-pred*.id ,obj.id)
+			    #t))))))))
 
       make-list-type-spec))
 
@@ -4432,8 +4554,9 @@
 	   `(letrec/checked ((,item-pred.id	,item-pred.stx)
 			     (,type-pred.id	(lambda/typed ({_ <boolean>} ,obj.id)
 						  (if (pair? ,obj.id)
-						      (and (,item-pred.id (car ,obj.id))
-							   (,type-pred.id (cdr ,obj.id)))
+						      (let/checked (({,obj.id <pair>} (unsafe-cast-signature (<pair>) ,obj.id)))
+							(and (,item-pred.id (car ,obj.id))
+							     (,type-pred.id (cdr ,obj.id))))
 						    (null? ,obj.id)))))
 	      ,type-pred.id))))
 
@@ -4488,17 +4611,18 @@
 	;;through the spine of the list.  (Marco Maggi; Mon Apr 4, 2016)
 	(let ((key-pred.stx	(object-type-spec.type-predicate-stx (alist-type-spec.key-ots   ots)))
 	      (value-pred.stx	(object-type-spec.type-predicate-stx (alist-type-spec.val-ots ots)))
-	      (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
-	      (P.sym		(make-syntactic-identifier-for-temporary-variable "P")))
+	      (obj.id		(make-syntactic-identifier-for-temporary-variable "obj"))
+	      (P.id		(make-syntactic-identifier-for-temporary-variable "P")))
 	  (bless
-	   `(lambda/typed ({_ <boolean>} ,obj.sym)
-	      (and (list? ,obj.sym)
-		   (for-all (lambda (,P.sym)
-			      (and (pair? ,P.sym)
-				   (,key-pred.stx   (car ,P.sym))
-				   (,value-pred.stx (cdr ,P.sym))
-				   #t))
-		     ,obj.sym)
+	   `(lambda/typed ({_ <boolean>} ,obj.id)
+	      (and (list? ,obj.id)
+		   (for-all (lambda (,P.id)
+			      (and (pair? ,P.id)
+				   (let/checked (({,P.id <pair>} (unsafe-cast-signature (<pair>) ,P.id)))
+				     (and (,key-pred.stx   (car ,P.id))
+					  (,value-pred.stx (cdr ,P.id))
+					  #t))))
+		     (unsafe-cast-signature (<list>) ,obj.id))
 		   #t)))))
 
       make-alist-type-spec))
@@ -4603,11 +4727,15 @@
 	  (bless
 	   `(let/checked ((,comp-pred*.id (vector ,@item-pred*.stx)))
 	      (lambda/typed ({_ <boolean>} ,obj.id)
-		(and (vector? ,obj.id)
-		     (vector-for-all (lambda/typed (,pred.id ,item.id)
-				       (,pred.id ,item.id))
-		       ,comp-pred*.id ,obj.id)
-		     #t))))))
+		(if (vector? ,obj.id)
+		    (if (fx=? (vector-length ,obj.id)
+			      (vector-length ,comp-pred*.id))
+			(and (vector-for-all (lambda/typed ({,pred.id <type-predicate>} ,item.id)
+					       (,pred.id ,item.id))
+			       ,comp-pred*.id (unsafe-cast-signature (<vector>) ,obj.id))
+			     #t)
+		      #f)
+		  #f))))))
 
       make-vector-type-spec))
 
@@ -4711,15 +4839,101 @@
 	      (obj.id		(make-syntactic-identifier-for-temporary-variable "obj")))
 	  (bless
 	   `(lambda/typed (,obj.id)
-	      (and (vector? ,obj.id)
-		   (vector-for-all ,item-pred.stx ,obj.id)
-		   #t)))))
+	      (if (vector? ,obj.id)
+		  (and (vector-for-all (unsafe-cast-signature (<type-predicate>) ,item-pred.stx)
+			 (unsafe-cast-signature (<vector>) ,obj.id))
+		       #t)
+		#f)))))
 
       make-vector-of-type-spec))
 
   (custom-printer
     (lambda (S port sub-printer)
       (display "#[vector-of-type-spec " port)
+      (display (object-type-spec.name S) port)
+      (display "]" port)))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+
+;;;; homogeneous non-empty vector object spec
+;;
+;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
+;;"<nevector>" representing vector objects holding items of a known type.
+;;
+(define-core-record-type <nevector-of-type-spec>
+  (nongenerative *0*vicare:expander:<nevector-of-type-spec>)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
+  (parent <object-type-spec>)
+  (sealed #t)
+  (fields
+    (immutable item-ots			nevector-of-type-spec.item-ots)
+		;An instance of "<object-type-spec>" describing the type of contained
+		;items.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-object-type-spec)
+      (case-define* make-nevector-of-type-spec
+	(({item-type.ots object-type-spec?})
+	 ($make-nevector-of-type-spec item-type.ots make-nevector-of-type-name))
+	(({item-type.ots object-type-spec?} {name nevector-of-name?})
+	 ($make-nevector-of-type-spec item-type.ots name)))
+
+      (define ($make-nevector-of-type-spec item-type.ots name)
+	(let* ((parent.ots		(<nevector>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		make-nevector-of-type-predicate)
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id #f)
+	       (hash-function.id	#f)
+	       (methods-table-public	(object-type-spec.methods-table-public    parent.ots))
+	       (methods-table-protected	(object-type-spec.methods-table-protected parent.ots))
+	       (methods-table-private	methods-table-protected)
+	       (implemented-interfaces	'()))
+	  ((make-object-type-spec name (object-type-spec.uids-list parent.ots)
+				  parent.ots nevector-of-type-spec.type-annotation-maker
+				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
+				  methods-table-public methods-table-protected methods-table-private
+				  implemented-interfaces)
+	   item-type.ots)))
+
+      (define (nevector-of-name? name.stx)
+	(syntax-match name.stx (nevector-of)
+	  ((nevector-of ?item-type)
+	   (syntax-object.type-annotation? ?item-type)
+	   #t)
+	  (?type-id
+	   (identifier? ?type-id)
+	   #t)
+	  (else #f)))
+
+      (define (make-nevector-of-type-name ots)
+	(list (nevector-of-id)
+	      (object-type-spec.name (nevector-of-type-spec.item-ots ots))))
+
+      (define (nevector-of-type-spec.type-annotation-maker ots)
+	(list (nevector-of-id)
+	      (object-type-spec.type-annotation (nevector-of-type-spec.item-ots ots))))
+
+      (define (make-nevector-of-type-predicate ots)
+	(let ((item-pred.stx	(object-type-spec.type-predicate-stx (nevector-of-type-spec.item-ots ots)))
+	      (obj.id		(make-syntactic-identifier-for-temporary-variable "obj")))
+	  (bless
+	   `(lambda/typed ({_ <boolean>} ,obj.id)
+	      (if (non-empty-vector? ,obj.id)
+		  (and (vector-for-all (unsafe-cast-signature (<type-predicate>) ,item-pred.stx)
+			 (unsafe-cast-signature (<vector>) ,obj.id))
+		       #t)
+		#f)))))
+
+      make-nevector-of-type-spec))
+
+  (custom-printer
+    (lambda (S port sub-printer)
+      (display "#[nevector-of-type-spec " port)
       (display (object-type-spec.name S) port)
       (display "]" port)))
 
@@ -5321,7 +5535,7 @@
     ;;implementation procedures.
     ;;
     (let ((method-name.id (make-syntactic-identifier-for-temporary-variable "method-name")))
-      `(lambda (,method-name.id)
+      `(lambda/typed ({_ (or <false> <procedure>)} {,method-name.id <symbol>})
 	 (case ,method-name.id
 	   ,@(map (lambda (entry)
 		    `((,(car entry)) ,(cdr entry)))
@@ -5526,8 +5740,8 @@
      ((vector-of ?item-type)
       (recur ?item-type))
 
-     ;; ((nevector-of ?item-type)
-     ;;  (recur ?item-type))
+     ((nevector-of ?item-type)
+      (recur ?item-type))
 
      ((hashtable ?key-type ?value-type)
       (and (recur ?key-type)
@@ -5675,9 +5889,9 @@
 	(make-vector-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
 				  name.stx))
 
-       ;; ((nevector-of ?item-type)
-       ;;  (let ((type.ots (type-annotation->object-type-spec ?item-type lexenv)))
-       ;; 	(make-vector-type-spec type.ots name.stx)))
+       ((nevector-of ?item-type)
+	(let ((type.ots (type-annotation->object-type-spec ?item-type lexenv)))
+	  (make-nevector-of-type-spec type.ots name.stx)))
 
        ((hashtable ?key-type ?value-type)
 	(make-hashtable-type-spec (type-annotation->object-type-spec ?key-type)

@@ -104,7 +104,8 @@
 		  expander-language
 		  typed-language-enabled?
 		  strict-r6rs-enabled?
-		  strict-type-checking?)
+		  strict-type-checking?
+		  predicate-type-propagation?)
 	    options::)
     (psyntax.setup)
     (psyntax.builders)
@@ -582,6 +583,8 @@
 		(cons sym (recur ?other*)))
 	       ((strict-type-checking)
 		(cons sym (recur ?other*)))
+	       ((predicate-type-propagation)
+		(cons sym (recur ?other*)))
 	       (else
 		(synner "invalid program option" ?opt)))))
 	  (() '())
@@ -887,6 +890,8 @@
 		(cons sym (recur ?other*)))
 	       ((strict-type-checking)
 		(cons sym (recur ?other*)))
+	       ((predicate-type-propagation)
+		(cons sym (recur ?other*)))
 	       (else
 		(synner "unknown identifier among library options" ?opt)))))
 	  (() '())
@@ -1078,16 +1083,16 @@
       (define (wrap-source-expression-with-top-rib expr)
 	(wrap-source-expression expr rib))
       (parametrise
-	  ((options::expander-language		(cond ((memq 'typed-language option*)
-						       'typed)
-						      ((memq 'strict-r6rs option*)
-						       'strict-r6rs)
-						      (else
-						       ;;No  options from  the source
-						       ;;code, so  select the default
-						       ;;language.
-						       'default)))
-	   (options::strict-type-checking?	(memq 'strict-type-checking option*)))
+	  ((options::expander-language	(cond ((memq 'typed-language option*)
+					       'typed)
+					      ((memq 'strict-r6rs option*)
+					       'strict-r6rs)
+					      (else
+					       ;;No options from  the source code, so
+					       ;;select the default language.
+					       'default)))
+	   (options::strict-type-checking?		(memq 'strict-type-checking option*))
+	   (options::predicate-type-propagation?	(memq 'predicate-type-propagation option*)))
 	(verbose-messages-thunk)
 	(let ((body-stx*	(map wrap-source-expression-with-top-rib body-sexp*))
 	      (rtc		(make-collector))
@@ -1518,7 +1523,7 @@
 		       typed-locs)))
 
 	      (($core-type-name $core-type-descriptor $core-rtd $core-rcd
-		$core-record-type-name $core-condition-object-type-name
+		$core-record-type-name $core-condition-object-type-name $core-label-type-name
 		$module $fluid $synonym)
 	       ;;We expect LEXENV entries of these types to have the format:
 	       ;;

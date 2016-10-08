@@ -39,6 +39,7 @@
     (list-type-descr?				<nelist>-ctd)
     (list-of-type-descr?			<list>-ctd)
     (vector-type-descr?				<nevector>-ctd)
+    (nevector-of-type-descr?			<nevector>-ctd)
     (vector-of-type-descr?			<vector>-ctd)
     (pair-type-descr?				<pair>-ctd)
     (pair-of-type-descr?			<pair>-ctd)
@@ -64,6 +65,7 @@
 	 (LIST-ANCESTORS		(cons <nelist>-ctd LIST-OF-ANCESTORS))
 	 (VECTOR-OF-ANCESTORS		(cons <vector>-ctd TOP*))
 	 (VECTOR-ANCESTORS		(cons <nevector>-ctd VECTOR-OF-ANCESTORS))
+	 (NEVECTOR-OF-ANCESTORS		VECTOR-ANCESTORS)
 	 (PAIR-ANCESTORS		(cons <pair>-ctd TOP*))
 	 (PAIR-OF-ANCESTORS		PAIR-ANCESTORS)
 	 (COMPOUND-CONDITION-ANCESTORS	(cons <compound-condition>-ctd SIMPLE-CONDITION-ANCESTORS))
@@ -93,6 +95,7 @@
 	(list-type-descr?			LIST-ANCESTORS)
 	(list-of-type-descr?			LIST-OF-ANCESTORS)
 	(vector-type-descr?			VECTOR-ANCESTORS)
+	(nevector-of-type-descr?		NEVECTOR-OF-ANCESTORS)
 	(vector-of-type-descr?			VECTOR-OF-ANCESTORS)
 	(pair-type-descr?			PAIR-ANCESTORS)
 	(pair-of-type-descr?			PAIR-OF-ANCESTORS)
@@ -187,6 +190,16 @@
 	   (vector-type-descr.item-des*   sub.des))))
 
    ((vector-type-descr? sub.des)
+    #f)
+
+;;; --------------------------------------------------------------------
+
+   ((nevector-of-type-descr? super.des)
+    (and (nevector-of-type-descr? sub.des)
+	 (object-type-descr=? (nevector-of-type-descr.item-des super.des)
+			      (nevector-of-type-descr.item-des   sub.des))))
+
+   ((nevector-of-type-descr? sub.des)
     #f)
 
 ;;; --------------------------------------------------------------------
@@ -321,6 +334,7 @@
 	(list-type-descr?			(%matching-super/list-type-descriptor	      super.des sub.des))
 	(list-of-type-descr?			(%matching-super/list-of-type-descriptor      super.des sub.des))
 	(vector-type-descr?			(%matching-super/vector-type-descriptor	      super.des sub.des))
+	(nevector-of-type-descr?		(%matching-super/nevector-of-type-descriptor  super.des sub.des))
 	(vector-of-type-descr?			(%matching-super/vector-of-type-descriptor    super.des sub.des))
 	(pair-type-descr?			(%matching-super/pair-type-descriptor	      super.des sub.des))
 	(pair-of-type-descr?			(%matching-super/pair-of-type-descriptor      super.des sub.des))
@@ -401,6 +415,11 @@
 	     (or (and (or-with-predicates sub.des <list>-ctd? <nelist>-ctd?)
 		      (<top>-ctd? (list-of-type-descr.item-des super.des)))
 		 (<null>-ctd? sub.des)))
+
+	    (nevector-of-type-descr?
+	     ;;(super-and-sub? (nevector-of <top>) <nevector>)
+	     (and (<nevector>-ctd? sub.des)
+		  (<top>-ctd? (nevector-of-type-descr.item-des super.des))))
 
 	    (vector-of-type-descr?
 	     ;;(super-and-sub? (vector-of <top>) <vector>)
@@ -503,10 +522,12 @@
 					  list-type-descr? pair-type-descr?/list pair-of-type-descr?/list))
       ;;(super-and-sub? <vector>	(vector <fixnum>))		=> #t
       ;;(super-and-sub? <vector>	(vector-of <fixnum>))		=> #t
-      (<vector>-ctd?			(or-with-predicates sub.des vector-type-descr? vector-of-type-descr?))
+      ;;(super-and-sub? <vector>	(nevector-of <fixnum>))		=> #t
+      (<vector>-ctd?			(or-with-predicates sub.des vector-type-descr? nevector-of-type-descr? vector-of-type-descr?))
       ;;(super-and-sub? <nevector>	(vector <fixnum>))		=> #t
       ;;(super-and-sub? <nevector>	(vector-of <fixnum>))		=> #f
-      (<nevector>-ctd?			(vector-type-descr? sub.des))
+      ;;(super-and-sub? <nevector>	(nevector-of <fixnum>))		=> #t
+      (<nevector>-ctd?			(or-with-predicates sub.des vector-type-descr? nevector-of-type-descr?))
       ;;(super-and-sub? <symbol>	(enumeration ciao))		=> #t
       (<symbol>-ctd?			(enumeration-type-descr? sub.des))
       ;;(super-and-sub? <hashtable>	(hashtable <string> <fixnum>))	=> #t
@@ -703,6 +724,12 @@
 
       ;;No VECTOR-OF because a VECTOR-OF may be empty.
 
+      (nevector-of-type-descr?
+       (let ((sub-item.des (nevector-of-type-descr.item-des sub.des)))
+	 (for-all (lambda (super-item.des)
+		    (super-and-sub? super-item.des sub-item.des))
+	   (vector-type-descr.item-des* super.des))))
+
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
 
@@ -717,10 +744,40 @@
 	   (lambda (sub-item.des)
 	     (super-and-sub? super-item.des sub-item.des)))))
 
+      (nevector-of-type-descr?
+       ;;(super-and-sub? (vector-of <number>) (nevector-of <fixnum>))	=> #t
+       (super-and-sub? (vector-of-type-descr.item-des   super.des)
+		       (nevector-of-type-descr.item-des   sub.des)))
+
       (vector-of-type-descr?
        ;;(super-and-sub? (vector-of <number>) (vector-of <fixnum>))	=> #t
        (super-and-sub? (vector-of-type-descr.item-des super.des)
 		       (vector-of-type-descr.item-des   sub.des)))
+
+      (else
+       (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%matching-super/nevector-of-type-descriptor super.des sub.des)
+    (cond-with-predicates sub.des
+      (vector-type-descr?
+       ;;(super-and-sub? (nevector-of <number>) (vector <fixnum>))	=> #t
+       (let ((super-item.des (nevector-of-type-descr.item-des super.des)))
+	 (vector-type-descr.for-all sub.des
+	   (lambda (sub-item.des)
+	     (super-and-sub? super-item.des sub-item.des)))))
+
+      (nevector-of-type-descr?
+       ;;(super-and-sub? (nevector-of <number>) (nevector-of <fixnum>))	=> #t
+       (super-and-sub? (nevector-of-type-descr.item-des super.des)
+		       (nevector-of-type-descr.item-des   sub.des)))
+
+      (vector-of-type-descr?
+       ;;A vector-of can be empty.
+       ;;
+       ;;(super-and-sub? (nevector-of <number>) (vector-of <fixnum>))	=> #f
+       #f)
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
@@ -975,6 +1032,7 @@
 	(list-type-descr?			(%compatible-super/list-type-descriptor	        super.des sub.des))
 	(list-of-type-descr?			(%compatible-super/list-of-type-descriptor      super.des sub.des))
 	(vector-type-descr?			(%compatible-super/vector-type-descriptor	super.des sub.des))
+	(nevector-of-type-descr?		(%compatible-super/nevector-of-type-descriptor  super.des sub.des))
 	(vector-of-type-descr?			(%compatible-super/vector-of-type-descriptor    super.des sub.des))
 	(pair-type-descr?			(%compatible-super/pair-type-descriptor		super.des sub.des))
 	(pair-of-type-descr?			(%compatible-super/pair-of-type-descriptor      super.des sub.des))
@@ -1064,18 +1122,21 @@
 	   (<vector>-ctd?
 	    ;;(matching (vector <fixnum>)     <vector>)		=> possible-match
 	    ;;(matching (vector-of <fixnum>)  <vector>)		=> possible-match
+	    ;;(matching (nevector-of <fixnum>)  <vector>)	=> possible-match
 	    (or-with-predicates super.des
-	      vector-type-descr? vector-of-type-descr?))
+	      vector-type-descr? vector-of-type-descr? nevector-of-type-descr?))
 
 	   (<nevector>-ctd?
 	    ;;(matching (vector <fixnum>)     <nevector>)	=> possible-match
 	    ;;(matching (vector-of <fixnum>)  <nevector>)	=> possible-match
+	    ;;(matching (nevector-of <fixnum>)  <nevector>)	=> possible-match
 	    (or-with-predicates super.des
-	      vector-type-descr? vector-of-type-descr?))
+	      vector-type-descr? vector-of-type-descr? nevector-of-type-descr?))
 
 	   (<empty-vector>-ctd?
 	    ;;(matching (vector <fixnum>)     <empty-vector>)	=> no-match
 	    ;;(matching (vector-of <fixnum>)  <empty-vector>)	=> possible-match
+	    ;;(matching (nevector-of <fixnum>)  <empty-vector>)	=> no-match
 	    (or-with-predicates super.des
 	      vector-of-type-descr?))
 
@@ -1170,15 +1231,17 @@
 	(<nevector>-ctd?
 	 ;;(matching <nevector> <vector>)		=> possible-match
 	 ;;(matching <nevector> (vector-of <fixnum>))	=> possible-match
+	 ;;(matching <nevector> (nevector-of <fixnum>))	=> possible-match
 	 (or (or-with-predicates sub.des
-	       vector-of-type-descr? <vector>-ctd?)
+	       nevector-of-type-descr? vector-of-type-descr? <vector>-ctd?)
 	     (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des)))
 
 	(<empty-vector>-ctd?
 	 ;;(matching <empty-vector> <vector>)		=> possible-match
 	 ;;(matching <empty-vector> (vector-of <fixnum>)) => possible-match
+	 ;;(matching <empty-vector> (nevector-of <fixnum>))	=> no-match
 	 (or (or-with-predicates sub.des
-	       vector-of-type-descr? <vector>-ctd?)
+	       vector-of-type-descr? vector-of-type-descr? <vector>-ctd?)
 	     (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des)))
 
 	(<pair>-ctd?
@@ -1447,6 +1510,13 @@
 	      (vector-type-descr.item-des* super.des)
 	      (vector-type-descr.item-des* sub.des))))
 
+      (nevector-of-type-descr?
+       ;;(matching (vector <fixnum>) (nevector-of <number>))	=> possible-match
+       (let ((sub-item.des (nevector-of-type-descr.item-des sub.des)))
+	 (vector-type-descr.for-all super.des
+	   (lambda (super-item.des)
+	     (super-and-sub? super-item.des sub-item.des)))))
+
       (vector-of-type-descr?
        ;;(matching (vector <fixnum>) (vector-of <number>))	=> possible-match
        (let ((sub-item.des (vector-of-type-descr.item-des sub.des)))
@@ -1468,10 +1538,39 @@
 	   (lambda (sub-item.des)
 	     (super-and-sub? super-item.des sub-item.des)))))
 
+      (nevector-of-type-descr?
+       ;;(matching (vector-of <fixnum>) (nevector-of <number>))	=> possible-match
+       (super-and-sub? (vector-of-type-descr.item-des   super.des)
+		       (nevector-of-type-descr.item-des   sub.des)))
+
       (vector-of-type-descr?
        ;;(matching (vector-of <fixnum>) (vector-of <number>))	=> possible-match
        (super-and-sub? (vector-of-type-descr.item-des super.des)
 		       (vector-of-type-descr.item-des   sub.des)))
+
+      (else
+       (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%compatible-super/nevector-of-type-descriptor super.des sub.des)
+    (cond-with-predicates sub.des
+      (vector-type-descr?
+       ;;(matching (nevector-of <fixnum>) (vector <number>))	=> possible-match
+       (let ((super-item.des (nevector-of-type-descr.item-des super.des)))
+	 (vector-type-descr.for-all sub.des
+	   (lambda (sub-item.des)
+	     (super-and-sub? super-item.des sub-item.des)))))
+
+      (nevector-of-type-descr?
+       ;;(matching (nevector-of <fixnum>) (nevector-of <number>))	=> possible-match
+       (super-and-sub? (nevector-of-type-descr.item-des super.des)
+		       (nevector-of-type-descr.item-des   sub.des)))
+
+      (vector-of-type-descr?
+       ;;(matching (nevector-of <fixnum>) (vector-of <number>))	=> possible-match
+       (super-and-sub? (nevector-of-type-descr.item-des super.des)
+		       (vector-of-type-descr.item-des     sub.des)))
 
       (else
        (%matching-sub/union/intersection/complement/ancestor-of super.des sub.des))))

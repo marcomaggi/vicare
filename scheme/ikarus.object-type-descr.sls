@@ -102,6 +102,10 @@
     make-vector-of-type-descr			vector-of-type-descr?
     vector-of-type-descr.item-des
 
+    <nevector-of-type-descr>-rtd		<nevector-of-type-descr>-rcd
+    make-nevector-of-type-descr			nevector-of-type-descr?
+    nevector-of-type-descr.item-des
+
 ;;; --------------------------------------------------------------------
 
     <ancestor-of-type-descr>-rtd		<ancestor-of-type-descr>-rcd
@@ -245,7 +249,8 @@
 (define-syntax case-descriptor
   (syntax-rules (else
 		 core-type-descriptor? record-type-descriptor? struct-type-descriptor?
-		 list-type-descr? list-of-type-descr? vector-type-descr? vector-of-type-descr?
+		 list-type-descr? list-of-type-descr?
+		 vector-type-descr? vector-of-type-descr? nevector-of-type-descr?
 		 pair-type-descr? pair-of-type-descr? compound-condition-type-descr? enumeration-type-descr?
 		 closure-type-descr?
 		 hashtable-type-descr? union-type-descr? intersection-type-descr? complement-type-descr?
@@ -257,6 +262,7 @@
 	(list-type-descr?		. ?body-list)
 	(list-of-type-descr?		. ?body-list-of)
 	(vector-type-descr?		. ?body-vector)
+	(nevector-of-type-descr?	. ?body-nevector-of)
 	(vector-of-type-descr?		. ?body-vector-of)
 	(pair-type-descr?		. ?body-pair)
 	(pair-of-type-descr?		. ?body-pair-of)
@@ -277,6 +283,7 @@
 	((list-type-descr? des)			. ?body-list)
 	((list-of-type-descr? des)		. ?body-list-of)
 	((vector-type-descr? des)		. ?body-vector)
+	((nevector-of-type-descr? des)		. ?body-nevector-of)
 	((vector-of-type-descr? des)		. ?body-vector-of)
 	((pair-type-descr? des)			. ?body-pair)
 	((pair-of-type-descr? des)		. ?body-pair-of)
@@ -670,6 +677,15 @@
   (strip-angular-parentheses)
   (fields
     (immutable item-des		vector-of-type-descr.item-des)
+    #| end of FIELDS |# ))
+
+(define-core-record-type <nevector-of-type-descr>
+  (nongenerative vicare:type-descriptors:<nevector-of-type-descr>)
+  (sealed #t)
+  (define-type-descriptors)
+  (strip-angular-parentheses)
+  (fields
+    (immutable item-des		nevector-of-type-descr.item-des)
     #| end of FIELDS |# ))
 
 

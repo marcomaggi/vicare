@@ -34,6 +34,7 @@
     make-syntactic-binding-descriptor
     syntactic-binding-descriptor.type		syntactic-binding-descriptor.type-set!
     syntactic-binding-descriptor.value		syntactic-binding-descriptor.value-set!
+    copy-syntactic-binding-descriptor/lexical-typed-var/from-data
 
     ;; module interfaces
     PSYNTAX-SYNTAX-MATCH
@@ -216,6 +217,11 @@
     <vector-of-type-spec>-rtd				<vector-of-type-spec>-rcd
     make-vector-of-type-spec				vector-of-type-spec?
     vector-of-type-spec.item-ots
+
+    <nevector-of-type-spec>
+    <nevector-of-type-spec>-rtd				<nevector-of-type-spec>-rcd
+    make-nevector-of-type-spec				nevector-of-type-spec?
+    nevector-of-type-spec.item-ots
 ;;;
     <hashtable-type-spec>
     <hashtable-type-spec>-rtd				<hashtable-type-spec>-rcd
@@ -369,6 +375,7 @@
     private-id
     procedure-pred-id
     list-of-id				vector-of-id
+    nevector-of-id
     hashtable-id			alist-id
     enumeration-id			void-object?-id?
     define/checked-id			case-define/checked-id
@@ -620,6 +627,38 @@
     returned-type-signature-condition?
     condition-returned-type-signature
 
+    &typed-variable-left-hand-side-rtd
+    &typed-variable-left-hand-side-rcd
+    &typed-variable-left-hand-side
+    make-typed-variable-left-hand-side-condition
+    typed-variable-left-hand-side-condition?
+    condition-typed-variable-left-hand-side.input-form
+    condition-typed-variable-left-hand-side.object-type-spec
+
+    &typed-variable-right-hand-side-rtd
+    &typed-variable-right-hand-side-rcd
+    &typed-variable-right-hand-side
+    make-typed-variable-right-hand-side-condition
+    typed-variable-right-hand-side-condition?
+    condition-typed-variable-right-hand-side.input-form
+    condition-typed-variable-right-hand-side.object-type-spec
+
+    &typed-formals-left-hand-side-rtd
+    &typed-formals-left-hand-side-rcd
+    &typed-formals-left-hand-side
+    make-typed-formals-left-hand-side-condition
+    typed-formals-left-hand-side-condition?
+    condition-typed-formals-left-hand-side.input-form
+    condition-typed-formals-left-hand-side.type-signature
+
+    &typed-formals-right-hand-side-rtd
+    &typed-formals-right-hand-side-rcd
+    &typed-formals-right-hand-side
+    make-typed-formals-right-hand-side-condition
+    typed-formals-right-hand-side-condition?
+    condition-typed-formals-right-hand-side.input-form
+    condition-typed-formals-right-hand-side.type-signature
+
     &macro-expansion-trace
     &macro-expansion-trace-rtd
     &macro-expansion-trace-rcd
@@ -649,6 +688,12 @@
     &expand-time-type-signature-warning-not-returning
     make-expand-time-type-signature-warning-not-returning
     expand-time-type-signature-warning-not-returning?
+
+    &expand-time-type-signature-warning-non-exact-matching-rtd
+    &expand-time-type-signature-warning-non-exact-matching-rcd
+    &expand-time-type-signature-warning-non-exact-matching
+    make-expand-time-type-signature-warning-non-exact-matching
+    expand-time-type-signature-warning-non-exact-matching?
 
     &warning-unused-lexical-variable
     &warning-unused-lexical-variable-rtd
@@ -1087,7 +1132,10 @@
 		       (hard-coded-core-record-type-name-binding-descriptor->core-record-type-name-binding-descriptor! descr))
 
 		      ((syntactic-binding-descriptor/hard-coded-type-annotation? descr)
-		       (hard-coded-core-type-annotation-symbolic-binding-descriptor->core-type-annotation-binding-descriptor! descr)))
+		       (hard-coded-core-type-annotation-symbolic-binding-descriptor->core-type-annotation-binding-descriptor! descr))
+
+		      ((syntactic-binding-descriptor/hard-coded-label-type-name? descr)
+		       (hard-coded-core-label-type-name-symbolic-binding-descriptor->core-label-type-name-binding-descriptor! descr)))
 		(when (eq? 'core-prim (car descr))
 		  (fprintf (current-error-port)
 			   "vicare: warning: using untyped core primitive ~s\n" descr))
@@ -2781,6 +2829,7 @@
   (define-core-prim-id-retriever brace-id		brace)
   (define-core-prim-id-retriever list-of-id		list-of)
   (define-core-prim-id-retriever vector-of-id		vector-of)
+  (define-core-prim-id-retriever nevector-of-id		nevector-of)
   (define-core-prim-id-retriever hashtable-id		hashtable)
   (define-core-prim-id-retriever alist-id		alist)
   (define-core-prim-id-retriever enumeration-id		enumeration)

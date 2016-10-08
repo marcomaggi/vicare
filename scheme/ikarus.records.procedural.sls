@@ -1437,7 +1437,10 @@
 
 (define ($record-and-rtd? record rtd)
   ;;We must  verify that  RECORD is  actually a record  instance of  RTD or  a record
-  ;;instance of a subtype of RTD.
+  ;;instance of  a subtype of  RTD.
+  ;;
+  ;;The argument  RECORD must  be a  struct instance.   The argument  RTD can  be any
+  ;;object, but it should be a record-type descriptor.
   ;;
   (let ((rtd^ ($struct-rtd record)))
     (or (eq? rtd rtd^)

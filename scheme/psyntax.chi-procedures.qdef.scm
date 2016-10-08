@@ -623,6 +623,10 @@
 	       ;;Types  do not  match,  but they  are compatible.   Since  this is  a
 	       ;;non-checked syntax: we  do not insert code to  perform run-time type
 	       ;;validation.
+	       (let ((input-form.stx (qdef.input-form qdef)))
+		 (%warn-about-non-exact-match-between-variable-type-and-value-type
+		  'define/typed input-form.stx
+		  (syntax-match input-form.stx () ((_ ?lhs ?rhs) ?lhs)) lhs.ots (psi.input-form rhs.psi) rhs.ots))
 	       rhs.psi)
 	      (else
 	       ;;Types do not match and are not compatible.  Bad.
@@ -728,6 +732,10 @@
 	       ;;Types  do not  match,  but they  are compatible.   Since  this is  a
 	       ;;checked  syntax:  we  do  insert   code  to  perform  run-time  type
 	       ;;validation.
+	       (let ((input-form.stx (qdef.input-form qdef)))
+		 (%warn-about-non-exact-match-between-variable-type-and-value-type
+		  'define/checked input-form.stx
+		  (syntax-match input-form.stx () ((_ ?lhs ?rhs) ?lhs)) lhs.ots (psi.input-form rhs.psi) rhs.ots))
 	       (%insert-single-value-validator qdef lexenv.run lexenv.expand rhs.psi lhs.ots))
 	      (else
 	       ;;Types do not match and are not compatible.  Bad.

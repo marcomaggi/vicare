@@ -25,7 +25,7 @@
 
 #!vicare
 (program (test-types-rhs-type-propagation)
-  (options typed-language)
+  (options typed-language predicate-type-propagation)
   (import (vicare)
     (prefix (vicare expander) expander::)
     (only (vicare expander)
@@ -4164,6 +4164,62 @@
   #| end of PARAMETRISE |# )
 
 
+(parametrise ((check-test-name	'if))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?expr => ?expected)
+       (check
+	   (.syntax-object (type-of ?expr))
+	 (=> expander::syntax=?)
+	 (syntax (?expected))))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; PAIR? in test
+
+  (doit (let (({var <list>} '(1 2 3)))
+	  (if (pair? var)
+	      var
+	    #f))
+	=> (or <nelist> <false>))
+
+  (doit (let ((var '(1 2 3)))
+	  (if (pair? var)
+	      var
+	    #f))
+	=> (list <positive-fixnum> <positive-fixnum> <positive-fixnum>))
+
+  (doit (let (({var (list-of <fixnum>)} '(1 2 3)))
+	  (if (pair? var)
+	      var
+	    #f))
+	=> (or (pair <fixnum> (list-of <fixnum>)) <false>))
+
+  (doit (let (({var <pair>} '(1 2 3)))
+	  (if (pair? var)
+	      var
+	    #f))
+	=> <pair>)
+
+  (doit (let (({var <top>} '(1 2 3)))
+	  (if (pair? var)
+	      var
+	    #f))
+	=> (or <pair> <false>))
+
+;;; --------------------------------------------------------------------
+;;; NULL? in test
+
+  (doit (let (({var <list>} '(1 2 3)))
+	  (if (null? var)
+	      var
+	    #f))
+	=> (or <null> <false>))
+
+  (void))
+
+
 (parametrise ((check-test-name	'cond))
 
   (doit (cond ((read)	1)
@@ -4180,6 +4236,21 @@
 	      ((read)	2.0)
 	      (else	#f))
 	=> ((or <positive-fixnum> <positive-flonum> <false>)))
+
+;;; --------------------------------------------------------------------
+;;; type specialisation
+
+  (doit (let (({var <list>} '(1 2 3)))
+	  (cond ((pair? var)
+		 var)
+		(else #f)))
+	=> ((or <nelist> <false>)))
+
+  (doit (let (({var <list>} '(1 2 3)))
+	  (cond ((null? var)
+		 var)
+		(else #f)))
+	=> ((or <null> <false>)))
 
   (void))
 
@@ -4258,6 +4329,24 @@
 
   (doit (and 1 2 (and 3.1 3.2))
 	=> (<positive-flonum>))
+
+;;; --------------------------------------------------------------------
+;;; type specialisation
+
+  (doit (let (({var <list>} '(1 2 3)))
+	  (and (null? var)
+	       var))
+	=> ((or <null> <false>)))
+
+  (doit (let (({var <list>} '(1 2 3)))
+	  (and (pair? var)
+	       var))
+	=> ((or <nelist> <false>)))
+
+  (doit (let (({var (list-of <fixnum>)} '(1 2 3)))
+	  (and (pair? var)
+	       var))
+	=> ((or (pair <fixnum> (list-of <fixnum>)) <false>)))
 
   (void))
 

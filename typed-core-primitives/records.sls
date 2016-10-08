@@ -274,6 +274,16 @@
 ;;; --------------------------------------------------------------------
 ;;; misc
 
+(declare-core-primitive rcd-rtd
+    (safe)
+  (signatures
+   ((<record-constructor-descriptor>)	=> (<record-type-descriptor>))))
+
+(declare-core-primitive rcd-parent-rcd
+    (safe)
+  (signatures
+   ((<record-constructor-descriptor>)	=> ((or <false> <record-constructor-descriptor>)))))
+
 (declare-core-primitive record-type-method-call-late-binding-private
     (safe)
   (signatures
@@ -399,7 +409,7 @@
      <boolean>				   ;opaque?
      (vector-of (list <symbol> <symbol>))  ;fields
      (vector-of (pair <boolean> <symbol>)) ;normalised-fields
-     (or <false> <type-destructor>)	   ;destructor
+     (or <false> (lambda (<bottom>) => <list>))	   ;destructor
      (or <false> <type-printer>)	   ;printer
      (or <false> <equality-predicate>)	   ;equality-predicate
      (or <false> <comparison-procedure>)   ;comparison-procedure
@@ -489,7 +499,7 @@
 (declare-core-primitive $record-and-rtd?
     (unsafe)
   (signatures
-   ((<record> <record-type-descriptor>)		=> (<boolean>)))
+   ((<struct> <record-type-descriptor>)		=> (<boolean>)))
   (attributes
    ((_)						effect-free)))
 

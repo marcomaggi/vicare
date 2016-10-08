@@ -41,7 +41,6 @@
 	  compar-fixnum)
     (only (vicare platform words)
 	  case-word-size)
-    (vicare language-extensions friend-functions)
     (vicare language-extensions mixins))
 
 
@@ -51,7 +50,7 @@
 
   (private
     (fields
-      (mutable the-uid)
+      (mutable {the-uid (or <false> <gensym>)})
 		;False or a gensym representing the UID of this bitvector.
       ))
 
@@ -109,33 +108,25 @@
 (define-type <booleans>
   (list-of <boolean>))
 
-(define ({%bit-ref <boolean>} {fx <fixnum>} {bit-offset <nnfx>})
+(define ({%bit-ref <boolean>} {fx <nnfx>} {bit-offset <nnfx>})
   ;;Return true if the bit at BIT-OFFSET in FX is set to 1, else return false.
   ;;
   (fxbit-set? fx bit-offset))
 
-(define ({%bit-set! <fixnum>} {fx <fixnum>} {bit-offset <nnfx>} {bit-boolean-value <boolean>})
+(define ({%bit-set! <nnfx>} {fx <fixnum>} {bit-offset <nnfx>} {bit-boolean-value <boolean>})
   ;;Set or unset a single bit in a fx and return the resulting fx.
   ;;
   (let ((mask (fxarithmetic-shift-left 1 bit-offset)))
-    (if bit-boolean-value
-	(fxior fx mask)
-      (fxand fx (fxnot mask)))))
+    (cast-signature (<nnfx>)
+		    (if bit-boolean-value
+			(fxior fx mask)
+		      (fxand fx (fxnot mask))))))
 
 (define ({%bit-mask <fixnum>} {number-of-bits <nnfx>})
   ;;Return a fixnum representing a  bitmask with the NUMBER-OF-BITS least significant
   ;;bits set to 1 and all the other bits set to 0.
   ;;
   (+ -1 (expt 2 number-of-bits)))
-
-(define ({bit-offset? <boolean>} {offset <top>} {number-of-bits <nnei>})
-  ;;Return  true  if   OFFSET  is  a  valid  bit  offset   for  a  bytevector  having
-  ;;NUMBER-OF-BITS.
-  ;;
-  (and (or (fixnum? offset)
-	   (bignum? offset))
-       (>= offset 0)
-       (<  offset number-of-bits)))
 
 (define ({offset->indexes <nnfx> <nnfx>} {offset <nnei>})
   ;;Given a bit offset into a bitvector, return two values: the index of the selected
@@ -154,12 +145,12 @@
 
   (private
     (fields
-      (immutable {pool (vector-of <fixnum>)})
+      (immutable {pool (nevector-of <fixnum>)})
 		;The vector of fixnums used as storage for bit values.  The fixnum in
 		;slot 0 represents the least significant bits in the vector.
       #| end of FIELDS |# ))
   (fields
-    (immutable {length <integer>})
+    (immutable {length <positive-exact-integer>})
 		;The number of bits in the bitvector.
     #| end of FIELDS |# )
   (private
@@ -174,39 +165,39 @@
   (mixins <common-compound-object>)
 
   (protocol
-    (lambda (make-record)
-      (define/overload ({make-<bitvector> <bitvector>} {number-of-bits <nnei>})
+    (lambda ({make-record (lambda ((nevector-of <nnfx>) <nnei> <nnfx> <nnfx> (or <false> <gensym>)) => (<bitvector>))})
+      (define/overload ({make-<bitvector> <bitvector>} {number-of-bits <positive-exact-integer>})
 	(receive (D M)
 	    (div-and-mod number-of-bits NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM)
 	  (unless (and (fixnum? D)
 		       (fixnum? M))
 	    (procedure-argument-violation __who__ "requested number of bits too big" number-of-bits))
-	  (let* ((number-of-words		(if (fxzero? M) D (add1 D)))
+	  (let* (({M <nnfx>}			(cast-signature (<nnfx>) M))
+		 ({D <nnfx>}			(cast-signature (<nnfx>) D))
+		 (number-of-words		(if (fxzero? M) D (fxadd1 D)))
 		 (number-of-full-words		(if (fxzero? M) number-of-words D))
 		 (number-of-bits-in-last-word	M))
 	    (unless (fixnum? number-of-words)
 	      (procedure-argument-violation __who__ "requested number of bits too big" number-of-bits))
-	    (make-record (make-vector number-of-words 0)
+	    (make-record (cast-signature ((nevector-of <nnfx>)) (make-vector number-of-words 0))
 			 number-of-bits number-of-full-words number-of-bits-in-last-word
 			 #f #;uid ))))
 
-      (define/overload ({make-<bitvector> <bitvector>} {fxs (list-of <nnfx>)})
-	(let* ((pool		(list->vector fxs))
-	       (pool.len	(vector-length pool)))
-	  (if (fxzero? pool.len)
-	      (assertion-violation __who__ "cannot build bitvector holding zero bits")
-	    (let* ((number-of-full-words	(fxsub1 pool.len))
-		   (number-of-bits-in-last-word	(fxlength (vector-ref pool number-of-full-words)))
-		   (number-of-bits		(+ number-of-bits-in-last-word
-						   (* NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM number-of-full-words))))
-	      (make-record pool number-of-bits number-of-full-words number-of-bits-in-last-word #f #;uid )))))
+      (define/overload ({make-<bitvector> <bitvector>} {fxs (nelist-of <nnfx>)})
+	(let* ((pool				(unsafe-cast-signature ((nevector-of <nnfx>)) (list->vector fxs)))
+	       (number-of-full-words		(cast-signature (<nnfx>) (fxsub1 (.length pool))))
+	       (number-of-bits-in-last-word	(fxlength (vector-ref pool number-of-full-words)))
+	       (number-of-bits			(cast-signature (<nnei>)
+								(+ number-of-bits-in-last-word
+								   (* NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM number-of-full-words)))))
+	  (make-record pool number-of-bits number-of-full-words number-of-bits-in-last-word #f #;uid )))
 
       make-<bitvector>))
 
   (constructor-signature
     (case-lambda
-      ((<nnei>) => (<bitvector>))
-      (((list-of <nnfx>)) => (<bitvector>))))
+      ((<positive-exact-integer>)	=> (<bitvector>))
+      (((nelist-of <nnfx>))		=> (<bitvector>))))
 
 
 ;;;; common object-type features
@@ -223,10 +214,10 @@
 		(else
 		 ;;The  pools have  the  same length.   We start  looping  from the  most
 		 ;;significant fixnum in the pools.
-		 (let next-fx ((idx		(sub1 len1))
-			       (pool1	(pool biv1))
-			       (pool2	(pool biv2)))
-		   (let ((cmp (compar-fixnum (vector-ref pool1 0) (vector-ref pool2 0))))
+		 (let next-fx (({idx <nnfx>}			(cast-signature (<nnfx>) (fxsub1 len1)))
+			       ({pool1 (nevector-of <nnfx>)}	(pool biv1))
+			       ({pool2 (nevector-of <nnfx>)}	(pool biv2)))
+		   (let ((cmp (compar-fixnum (vector-ref pool1 idx) (vector-ref pool2 idx))))
 		     (cond ((fxzero? idx)
 			    ;;We are  at the  least significant  bits of  the bitvectors.
 			    ;;All the fixnums down to this position are equal.
@@ -234,7 +225,7 @@
 			   ((fxzero? cmp)
 			    ;;These  bits  are equal,  but  there  are  more bits  to  be
 			    ;;compared.
-			    (next-fx (sub1 idx) pool1 pool2))
+			    (next-fx (cast-signature (<nnfx>) (sub1 idx)) pool1 pool2))
 			   (else
 			    ;;These bits are not equal.  There are more least significant
 			    ;;bits in the pools, but we do not need to examine then.
@@ -304,7 +295,7 @@
   (assert-bit-offset __who__ this offset)
   (receive ({word-index <nnfx>} {bit-index <nnfx>})
       (offset->indexes offset)
-    (.pool-set! this word-index (%bit-set! (.pool-ref this word-index) bit-index boolean-value))))
+    (.pool-set! this word-index (%bit-set! (.pool-ref this word-index) bit-index (and boolean-value #t)))))
 
 (method ({bit-ref <boolean>} {offset <nnei>})
   (assert-bit-offset __who__ this offset)
@@ -331,15 +322,15 @@
 (method ({not <bitvector>})
   (let ((imax	(.pool-length this))
 	(R	(new <bitvector> (.length this))))
-    (do ((i 0 (add1 i)))
-	((= i imax)
+    (do (({i <nnfx>} 0 (fxadd1 i)))
+	((fx=? i imax)
 	 R)
       (pool-set! R i (%fxclean (fxnot (.pool-ref this i)))))))
 
 (method ({not! <bitvector>})
   (let ((imax (.pool-length this)))
-    (do ((i 0 (add1 i)))
-	((= i imax)
+    (do (({i <nnfx>} 0 (fxadd1 i)))
+	((fx=? i imax)
 	 this)
       (pool-set! this i (%fxclean (fxnot (.pool-ref this i)))))))
 
@@ -348,97 +339,100 @@
 
 (method ({and <bitvector>} {that <bitvector>})
   (assert-bitvectors-of-equal-length __who__ this that)
-  (let* ((imax		(.pool-length this))
-	 (R		(new <bitvector> (.length this)))
-	 (this.pool	(.pool this))
-	 (that.pool	(pool that))
-	 (R.pool	(pool R)))
-    (do ((i 0 (add1 i)))
-	((= i imax)
+  (let* ((imax	(.pool-length this))
+	 (R	(new <bitvector> (.length this))))
+    (do (({i <nnfx>} 0 (fxadd1 i)))
+	((fx=? i imax)
 	 R)
-      (vector-set! R.pool i (fxand (vector-ref this.pool i)
-				   (vector-ref that.pool i))))))
+      (pool-set! R i (cast-signature (<nnfx>) (fxand (.pool-ref this i)
+						     (pool-ref that i)))))))
 
 (method ({and! <bitvector>} {that <bitvector>})
   (assert-bitvectors-of-equal-length __who__ this that)
   (let ((imax (.pool-length this)))
-    (do ((i 0 (add1 i)))
-	((= i imax)
+    (do (({i <nnfx>} 0 (fxadd1 i)))
+	((fx=? i imax)
 	 this)
-      (pool-set! this i (fxand (.pool-ref this i)
-			       (pool-ref that i))))))
+      (pool-set! this i (cast-signature (<nnfx>) (fxand (.pool-ref this i)
+							(pool-ref that i)))))))
 
 
 ;;;; bitwise inclusive OR
 
 (method ({ior <bitvector>} {that <bitvector>})
   (assert-bitvectors-of-equal-length __who__ this that)
-  (let* ((imax			(.pool-length this))
-	 ({R <bitvector>}	(new <bitvector> (.length this))))
-    (do ((i 0 (add1 i)))
-	((= i imax)
+  (let* ((imax	(.pool-length this))
+	 (R	(new <bitvector> (.length this))))
+    (do (({i <nnfx>} 0 (fxadd1 i)))
+	((fx=? i imax)
 	 R)
-      (pool-set! R i (fxior (.pool-ref this i)
-			    (pool-ref that i))))))
+      (pool-set! R i (cast-signature (<nnfx>) (fxior (.pool-ref this i)
+						     (pool-ref that i)))))))
 
 (method ({ior! <bitvector>} {that <bitvector>})
   (assert-bitvectors-of-equal-length __who__ this that)
   (let ((imax (.pool-length this)))
-    (do ((i 0 (add1 i)))
-	((= i imax)
+    (do (({i <nnfx>} 0 (fxadd1 i)))
+	((fx=? i imax)
 	 this)
-      (pool-set! this i (fxior (.pool-ref this i)
-			       (pool-ref that i))))))
+      (pool-set! this i (cast-signature (<nnfx>) (fxior (.pool-ref this i)
+							(pool-ref that i)))))))
 
 
 ;;;; bitwise exclusive OR
 
 (method ({xor <bitvector>} {that <bitvector>})
   (assert-bitvectors-of-equal-length __who__ this that)
-  (let* ((imax			(.pool-length this))
-	 ({R <bitvector>}	(new <bitvector> (.length this))))
-    (do ((i 0 (add1 i)))
-	((= i imax)
+  (let* ((imax	(.pool-length this))
+	 (R	(new <bitvector> (.length this))))
+    (do (({i <nnfx>} 0 (fxadd1 i)))
+	((fx=? i imax)
 	 R)
-      (pool-set! R i (fxxor (.pool-ref this i)
-			    (pool-ref that i))))))
+      (pool-set! R i (cast-signature (<nnfx>) (fxxor (.pool-ref this i)
+						     (pool-ref that i)))))))
 
 (method ({xor! <bitvector>} {that <bitvector>})
   (assert-bitvectors-of-equal-length __who__ this that)
   (let ((imax (.pool-length this)))
-    (do ((i 0 (add1 i)))
-	((= i imax)
+    (do (({i <nnfx>} 0 (fxadd1 i)))
+	((fx=? i imax)
 	 this)
-      (pool-set! this i (fxxor (.pool-ref this i)
-			       (pool-ref that i))))))
+      (pool-set! this i (cast-signature (<nnfx>) (fxxor (.pool-ref this i)
+							(pool-ref that i)))))))
 
 
 ;;;; counting and searching bits
 
 (method ({bit-count <nnei>})
-  (let (({count <nnei>} 0))
-    (do (({i <nnei>} 0 (add1 i)))
-	((= i (.index-of-last-word this))
-	 (+ count (fxbit-count (.most-significant-word this))))
-      (++ count (fxbit-count (.pool-ref this i))))))
+  (do (({count <nnei>} 0)
+       ({word-index <nnfx>} 0 (fxadd1 word-index)))
+      ((fx=? word-index (.index-of-last-word this))
+       (+ count (fxbit-count (.most-significant-word this))))
+    (++ count (fxbit-count (.pool-ref this word-index)))))
 
 (method ({first-bit-set <exact-integer>})
   ;;Return an exact integer representing the offset  of the first bit set to true; if
   ;;all the bits are set to false: return -1.
   ;;
-  (let next-word (({i		<nnei>} 0)
-		  ({offset	<nnei>} 0)
-		  ({word	<nnfx>} (.pool-ref this 0)))
+  (let next-word (({word-index		<nnfx>} 0)
+		  ({accum-offset	<nnei>} 0)
+		  ({word		<nnfx>} (.pool-ref this 0)))
     (let ((c (fxfirst-bit-set word)))
       (if (fx=? c -1)
-	  (if (= i (.index-of-last-word this))
+	  ;;No bits set in this word.
+	  (if (fx=? word-index (.index-of-last-word this))
+	      ;;Let's examine the next word, which is the last one.
 	      (let ((c (fxfirst-bit-set (.most-significant-word this))))
 		(if (fx=? c -1)
+		    ;;No bits set in the last word.  Return failure.
 		    -1
-		  (+ c offset)))
-	    (let ((i1 (add1 i)))
-	      (next-word i1 (+ offset NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM) (.pool-ref this i1))))
-	(+ c offset)))))
+		  ;;A bit is set in the last word.  Compute and return the result.
+		  (+ c accum-offset)))
+	    ;;Let's examine the next word.
+	    (let ((word-index (fxadd1 word-index)))
+	      (next-word word-index (+ accum-offset NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM) (.pool-ref this word-index))))
+	;;A bit is set in this word.  Compute and return the result.
+	(+ c accum-offset)))))
 
 
 ;;;; conversion
@@ -465,33 +459,37 @@
 					     (fxadd1 bit-index))))
 		    (fxadd1 full-word-index))))))
 
-(method ({vector (vector-of <boolean>)})
-  (let (({V (vector-of <boolean>)} (make-vector (.length this) #f)))
-    (do (({full-word-index <nnfx>} 0 (fxadd1 full-word-index))
-	 ({vector-index    <nnfx>} 0 vector-index)) ;we increment it below
-	((fx=? full-word-index (.number-of-full-words this))
-	 ;;Here we do the last word.
-	 (let (({word <nnfx>} (.pool-ref this full-word-index)))
-	   (do (({bit-index <nnfx>} 0 (fxadd1 bit-index)))
-	       ((fx=? bit-index (.number-of-bits-in-last-word this))
-		V)
-	     (vector-set! V vector-index (%bit-ref word bit-index))
-	     (++ vector-index))))
-      (let ((word (.pool-ref this full-word-index)))
-	(do (({bit-index <nnfx>} 0 (fxadd1 bit-index)))
-	    ((fx=? bit-index NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM))
-	  (vector-set! V vector-index (%bit-ref word bit-index))
-	  (++ vector-index))))))
+(method ({vector (nevector-of <boolean>)})
+  (let ((len (.length this)))
+    (when (bignum? len)
+      (assertion-violation __who__
+	"cannot build a vector from bitvector with length represented by a bignum" this len))
+    (let (({V (nevector-of <boolean>)} (cast-signature ((nevector-of <boolean>)) (make-vector (cast-signature (<nnfx>) len) #f))))
+      (do (({full-word-index <nnfx>} 0 (fxadd1 full-word-index))
+	   ({vector-index    <nnfx>} 0 vector-index)) ;we increment it below
+	  ((fx=? full-word-index (.number-of-full-words this))
+	   ;;Here we do the last word.
+	   (let (({word <nnfx>} (.pool-ref this full-word-index)))
+	     (do (({bit-index <nnfx>} 0 (fxadd1 bit-index)))
+		 ((fx=? bit-index (.number-of-bits-in-last-word this))
+		  V)
+	       (vector-set! V vector-index (%bit-ref word bit-index))
+	       (set! vector-index (fxadd1 vector-index)))))
+	(let ((word (.pool-ref this full-word-index)))
+	  (do (({bit-index <nnfx>} 0 (fxadd1 bit-index)))
+	      ((fx=? bit-index NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM))
+	    (vector-set! V vector-index (%bit-ref word bit-index))
+	    (set! vector-index (fxadd1 vector-index))))))))
 
 (method ({non-negative-exact-integer <non-negative-exact-integer>})
   (define istart (.number-of-full-words this))
-  (do ((i istart (fxsub1 i))
-       (N 0))
+  (do (({i <fixnum>} istart (fxsub1 i))
+       ({N <nnei>}   0))
       ((fxnegative? i)
        N)
-    (let* ((fx (.pool-ref this i))
+    (let* ((fx (.pool-ref this (cast-signature (<nnfx>) i)))
 	   (M  (bitwise-arithmetic-shift-left N NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM))
-	   (M  (bitwise-ior M fx)))
+	   (M  (cast-signature (<nnei>) (bitwise-ior M fx))))
       (set! N M))))
 
 #| end of DEFINE-RECORD-TYPE |# )
@@ -499,44 +497,41 @@
 
 ;;;; bitvector functions
 
-(define ({list->bitvector <bitvector>} {ell (list-of <boolean>)})
-  (let* ((len (length ell))
-	 (biv (new <bitvector> len)))
-    (if (zero? len)
-	biv
-      (let (({ell (nelist-of <boolean>)} ell))
-	(do ((i 0 (add1 i))
-	     (ell ell (cdr ell)))
-	    ((= i len)
-	     biv)
-	  (.bit-set! biv i (car ell)))))))
+(define ({list->bitvector <bitvector>} {ell (nelist-of <boolean>)})
+  (let* (({len <positive-fixnum>}	(length ell))
+	 (biv				(new <bitvector> len)))
+    (do (({i <nnfx>} 0 (fxadd1 i))
+	 ;;We iterate  the argument list ELL  until it is  empty, so the type  of ELL
+	 ;;here is LIST-OF, not NELIST-OF.
+	 ({ell (list-of <boolean>)} ell (cdr ell)))
+	((fx=? i len)
+	 biv)
+      (.bit-set! biv i (car ell)))))
 
-(define ({vector->bitvector <bitvector>} {V (vector-of <boolean>)})
+(define ({vector->bitvector <bitvector>} {V (nevector-of <boolean>)})
   (let* ((len (.length V))
 	 (biv (new <bitvector> len)))
-    (if (zero? len)
-	biv
-      (do ((i 0 (add1 i)))
-	  ((= i (.length V))
-	   biv)
-	(.bit-set! biv i (vector-ref V i))))))
+    (do (({i <nnfx>} 0 (fxadd1 i)))
+	((fx=? i len)
+	 biv)
+      (.bit-set! biv i (vector-ref V i)))))
 
-(define ({non-negative-exact-integer->bitvector <bitvector>} {N <non-negative-exact-integer>})
+(define ({non-negative-exact-integer->bitvector <bitvector>} {N <positive-exact-integer>})
   (new <bitvector> (exact-integer->fixnums N)))
 
 ;;; --------------------------------------------------------------------
 
-(define (exact-integer->fixnums {N <non-negative-exact-integer>})
-  (if (zero? N)
-      '()
-    (let ((fx (bitwise-and N BITS-IN-FIXNUM-MASK))
-	  (N  (bitwise-arithmetic-shift-right N NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM)))
-      (cons fx (exact-integer->fixnums N)))))
+(define ({exact-integer->fixnums (nelist-of <nnfx>)} {N <positive-exact-integer>})
+  (let ((fx (bitwise-and N BITS-IN-FIXNUM-MASK))
+	(N  (bitwise-arithmetic-shift-right N NUMBER-OF-PAYLOAD-BITS-IN-FIXNUM)))
+    (cons fx (if (positive? N)
+		 (exact-integer->fixnums (cast-signature (<positive-exact-integer>) N))
+	       '()))))
 
 
 ;;;; pool functions
 
-(define/friend ({pool (vector-of <nnfx>)} {this <bitvector>})
+(define/friend ({pool (nevector-of <nnfx>)} {this <bitvector>})
   (.pool this))
 
 (define/friend ({pool-length <nnfx>} {this <bitvector>})
@@ -551,12 +546,12 @@
 
 ;;;; helpers
 
-(define (assert-bit-offset who {bitvector <bitvector>} obj)
-  (unless (bit-offset? obj (.length bitvector))
+(define (assert-bit-offset {who <&who-value>} {bitvector <bitvector>} {obj <nnei>})
+  (unless (< obj (.length bitvector))
     (procedure-argument-violation who
       "expected valid bit offset for <bitvector> as argument" bitvector obj)))
 
-(define (assert-bitvectors-of-equal-length who {A <bitvector>} {B <bitvector>})
+(define (assert-bitvectors-of-equal-length {who <&who-value>} {A <bitvector>} {B <bitvector>})
   (unless (= (.length A) (.length B))
     (procedure-argument-violation who
       "expected <bitvector> arguments with equal length" A B)))

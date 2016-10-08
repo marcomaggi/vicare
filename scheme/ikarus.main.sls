@@ -239,13 +239,17 @@
 		;output file for compiled programs.
    ))
 
-(define-inline (run-time-config-load-libraries-register! cfg pathname)
+(define (run-time-config-load-libraries-register! cfg pathname)
   (set-run-time-config-load-libraries! cfg (cons pathname (run-time-config-load-libraries cfg))))
 
-(define-inline (run-time-config-library-source-search-path-register! cfg pathname)
+(define (run-time-config-library-source-search-path-prepend! cfg pathname)
   (set-run-time-config-library-source-search-path! cfg (cons pathname (run-time-config-library-source-search-path cfg))))
 
-(define-inline (run-time-config-library-binary-search-path-register! cfg pathname)
+(define (run-time-config-library-source-search-path-append! cfg pathname)
+  (set-run-time-config-library-source-search-path! cfg (append (run-time-config-library-source-search-path cfg)
+							       (list pathname))))
+
+(define (run-time-config-library-binary-search-path-register! cfg pathname)
   (set-run-time-config-library-binary-search-path! cfg (cons pathname (run-time-config-library-binary-search-path cfg))))
 
 (define (run-time-config-rcfiles-register! cfg new-rcfile)
@@ -607,11 +611,18 @@
 	       (run-time-config-load-libraries-register! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
-	  ((%option= "--source-path")
+	  ((%option= "-A" "--source-path")
 	   (if (null? (cdr args))
-	       (%error-and-exit "--source-path requires a directory name")
+	       (%error-and-exit "-A or --source-path requires a directory name")
 	     (begin
-	       (run-time-config-library-source-search-path-register! cfg (cadr args))
+	       (run-time-config-library-source-search-path-append! cfg (cadr args))
+	       (next-option (cddr args) k))))
+
+	  ((%option= "-I")
+	   (if (null? (cdr args))
+	       (%error-and-exit "-I requires a directory name")
+	     (begin
+	       (run-time-config-library-source-search-path-prepend! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
 	  ((%option= "-L" "--library-path")
@@ -961,10 +972,14 @@ Other options:
    --no-greetings
         Suppress greetings when entering the REPL.
 
-   -S DIRECTORY
+   -A DIRECTORY
    --source-path DIRECTORY
-        Add DIRECTORY  to the library  search path.  This option  can be
+        Append DIRECTORY to the library search path.  This option can be
         used multiple times.
+
+   -I DIRECTORY
+        Prepend DIRECTORY  to the library  search path.  This option can
+        be used multiple times.
 
    -L DIRECTORY
    --library-path DIRECTORY

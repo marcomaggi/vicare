@@ -129,7 +129,7 @@ single @clause{options} clause, before the @clause{export} one.
 
 
 @defvr {Library Option} typed-language
-Turn on the typed language extensions (@pxref{types, The typed
+Turn on the typed language extensions (@typedpxref{Top, The typed
 language}).
 @end defvr
 
@@ -140,8 +140,8 @@ Turn on strict support for @rnrs{6} language.
 
 
 @defvr {Library Option} strict-type-checking
-Turn on strict type checking when the typed language is enabled
-(@pxref{types, The typed language}).
+Turn on strict type checking warnings when the typed language is enabled
+(@typedpxref{Top, The typed language}).
 @end defvr
 
 @c page
@@ -275,7 +275,7 @@ The following options are supported.
 
 
 @defvr {Program Option} typed-language
-Turn on the typed language extensions (@pxref{types, The typed
+Turn on the typed language extensions (@typedpxref{Top, The typed
 language}).
 @end defvr
 
@@ -286,8 +286,8 @@ Turn on strict support for @rnrs{6} language.
 
 
 @defvr {Library Option} strict-type-checking
-Turn on strict type checking when the typed language is enabled
-(@pxref{types, The typed language}).
+Turn on strict type checking warnings when the typed language is enabled
+(@typedpxref{Top, The typed language}).
 @end defvr
 
 @c page
@@ -8957,7 +8957,7 @@ Adhere more strictly to the behaviour defined by @rnrs{6}.  For example:
 report errors at run--time, rather than at expand--time.
 
 @item typed-language
-Turn on the tagged language extensions (@pxref{types, The typed
+Turn on the tagged language extensions (@typedpxref{Top, The typed
 language}).
 
 @item default-language
@@ -9517,7 +9517,7 @@ comparison procedures.
 
 If the record--type has a parent: the protocol function is applied to
 the comparison procedure of the parent (or @false{} if the parent has no
-equality predicate) and the resulting value must be a function, which
+comparison procedure) and the resulting value must be a function, which
 becomes the comparison procedure of the record--type.
 
 If the record--type has no parent: the protocol function is called as a
@@ -9608,7 +9608,7 @@ used as clause keywords in @syntax{define-record-type} to define methods
 and virtual methods for a record--type; they can be used any number of
 times in the same @syntax{define-record-type} macro use.  These clauses
 are accepted by @syntax{define-record-type} only when the typed language
-is used, @ref{types methods, Methods and virtual methods}.
+is used, @typedref{methods, Methods and virtual methods}.
 
 @c page
 @node iklib records defs descriptors
@@ -9735,7 +9735,7 @@ clause:
 
 @noindent
 causes the listed mixins to be included in the record--type definition,
-@ref{types mixins, Sharing object--type definition clauses}.  The clause
+@typedref{mixins, Sharing object--type definition clauses}.  The clause
 @clause{implements} is accepted by @syntax{define-record-type} when the
 non--strict or typed languages are selected.
 
@@ -9756,7 +9756,7 @@ clause:
 
 @noindent
 causes the listed interface names to be included in the list of
-interfaces implemented by this record--type's, @ref{types interfaces,
+interfaces implemented by this record--type's, @typedref{interfaces,
 Interface types}.  The clause @clause{implements} is accepted by
 @syntax{define-record-type} when the typed language is selected.
 
@@ -10563,7 +10563,8 @@ otherwise return @false{}.
 
 @defun {boolean!=?} @varo{bool} @var{bool} @dots{}
 The arguments must be booleans.  Return @true{} if the arguments are all
-different; otherwise return @false{}.
+different: no two arguments are equal; otherwise return @false{}.  When
+applied to a single argument: return @false{}.
 @end defun
 
 
@@ -10640,7 +10641,8 @@ The following bindings are exported by the library @library{vicare}.
 
 @deffn Procedure {char!=?} @varo{char} @var{char} @dots{}
 The arguments must be characters.  Return @true{} if the arguments are
-all different; otherwise return @false{}.
+all different: no two arguments are equal; otherwise return @false{}.
+When applied to a single argument: return @false{}.
 @end deffn
 
 
@@ -11775,8 +11777,9 @@ return @false{}.
 
 
 @defun bytevector!=? @varo{bv} @var{bv} @dots{}
-Return @true{} if all the bytevector arguments are different; otherwise
-return @false{}.
+The arguments must be bytevectors.  Return @true{} if the arguments are
+all different: no two arguments are equal; otherwise return @false{}.
+When applied to a single argument: return @false{}.
 @end defun
 
 
@@ -12293,8 +12296,9 @@ not in the range of the maximum string length.
 
 
 @defun string!=? @varo{str} @var{str} @dots{}
-Return @true{} if all the string arguments are different; otherwise
-return @false{}.
+The arguments must be strings.  Return @true{} if the arguments are all
+different: no two arguments are equal; otherwise return @false{}.  When
+applied to a single argument: return @false{}.
 @end defun
 
 
@@ -12787,14 +12791,15 @@ orderings on strings.
 @end deffn
 
 
-@defun symbol!=? @varo{ptr} @var{ptr} @dots{}
-Return @true{} if all the symbol arguments are different; otherwise
-return @false{}.
+@defun symbol!=? @varo{sym} @var{sym} @dots{}
+The arguments must be symbols.  Return @true{} if the arguments are all
+different: no two arguments are equal; otherwise return @false{}.  When
+applied to a single argument: return @false{}.
 @end defun
 
 
-@defun symbol-max @varo{ptr} @var{ptr} @dots{}
-@defunx symbol-min @varo{ptr} @var{ptr} @dots{}
+@defun symbol-max @varo{sym} @var{sym} @dots{}
+@defunx symbol-min @varo{sym} @var{sym} @dots{}
 Return the maximal or minimal symbol argument according to
 @func{symbol<?}.
 @end defun
@@ -13119,8 +13124,9 @@ Aliases for @func{fx=?}, @func{fx<?}, @func{fx>?}, @func{fx<=?},
 
 @defun fx!=? @varo{fx} @var{fx} @dots{}
 @defunx fx!= @varo{fx} @var{fx} @dots{}
-Return @true{} if all the arguments are different; otherwise return
-@false{}.  The arguments must be fixnums.
+The arguments must be fixnums.  Return @true{} if the arguments are all
+different: no two arguments are equal; otherwise return @false{}.  When
+applied to a single argument: return @false{}.
 @end defun
 
 @c page
@@ -13305,10 +13311,9 @@ Notice the following behaviour with zero:
 @subsubheading Comparison
 
 @defun fl!=? @varo{fl} @var{fl} @dots{}
-Return @true{} if all the operands are equal, no two operands are equal;
-else return @false{}.  The operands must be flonums, otherwise an
-exception is raised.  When applied to a single argument: return
-@false{}.
+The arguments must be flonums.  Return @true{} if the arguments are all
+different: no two arguments are equal; otherwise return @false{}.  When
+applied to a single argument: return @false{}.
 @end defun
 
 @c ------------------------------------------------------------
@@ -13531,13 +13536,10 @@ multiplied by @math{3/4}.
 
 
 @defun != @vari{Z} @varii{Z} @variii{Z} @dots{}
-Return @true{} if all the arguments are equal, otherwise return
-@false{}; all the arguments must be numbers according to
-@func{number?}.  This function is equivalent to:
-
-@example
-(not (= @vari{Z} @varii{Z} @variii{Z} ...))
-@end example
+The arguments must be numbers according to @func{number?}.  Return
+@true{} if the arguments are all different: no two arguments are equal;
+otherwise return @false{}.  When applied to a single argument: return
+@false{}.
 @end defun
 
 @c page
@@ -16832,8 +16834,15 @@ The following bindings are exported by the @library{vicare} library.
 @defun binary-input-port? @var{obj}
 @defunx binary-output-port? @var{obj}
 @defunx binary-input/output-port? @var{obj}
+Return @true{} if @var{obj} is a binary port and, respectively, it is:
+input or input/output; output or input/output; input/output.
+@end defun
+
+
+@defun binary-input-only-port? @var{obj}
+@defunx binary-output-only-port? @var{obj}
 Return @true{} if @var{obj} is a binary port and, respectively, it is
-input, output or input/output.
+input--only or output--only.
 @end defun
 
 
@@ -16983,8 +16992,15 @@ textual output port.
 @defun textual-input-port? @var{obj}
 @defunx textual-output-port? @var{obj}
 @defunx textual-input/output-port? @var{obj}
+Return @true{} if @var{obj} is a textual port and, respectively, it is:
+input or input/output; output or input/output; input/output.
+@end defun
+
+
+@defun textual-input-only-port? @var{obj}
+@defunx textual-output-only-port? @var{obj}
 Return @true{} if @var{obj} is a textual port and, respectively, it is
-input, output or input/output.
+input--only or output--only.
 @end defun
 
 
@@ -17453,8 +17469,9 @@ Compare the pointer arguments as indicated by the name.
 
 
 @defun pointer!=? @varo{ptr} @var{ptr} @dots{}
-Return @true{} if all the pointer arguments are different; otherwise
-return @false{}.
+The arguments must be pointers.  Return @true{} if the arguments are all
+different: no two arguments are equal; otherwise return @false{}.  When
+applied to a single argument: return @false{}.
 @end defun
 
 
@@ -18802,106 +18819,206 @@ return value from the foreign function and the value of the C variable
 @section Basic time and date functions
 
 
+@menu
+* iklib time time::             Time spans object--type.
+* iklib time epoch::            Time spans since the Epoch.
+* iklib time date::             Date functions.
+@end menu
+
+@c page
+@node iklib time time
+@subsection Time spans object--type
+
+
+Time spans are represented by instances of @class{time} objects, which
+is a disjoint object--type.  A @class{time} object can represent both
+absolute times (typically elapsed times since the Epoch) and positive
+and negative time spans relative to an arbitrary origin.  The internal
+time representation has nanosecond resolution and it is immutable.
+
 The following bindings are exported by the library @library{vicare}.
 
 
-@deftypefun @aclass{time} current-time
-Return an instance of @class{time} representing the current time as
-determined by @cfunc{gettimeofday}: this is the elapsed time since the
-Epoch.
+@deftypefun @aclass{time} make-time @bracearg{seconds, exact-integer} @bracearg{nanoseconds, exact-integer}
+@deftypefunx @aclass{time} make-time @bracearg{megaseconds, exact-integer} @bracearg{seconds, exact-integer} @bracearg{nanoseconds, exact-integer}
+Build and return a new @class{time} object.  If @var{nanoseconds}
+exceeds @code{#e1e9} its value is normalised and the excess added to
+@var{seconds}.  If @var{seconds} exceeds @code{#e1e6} its value is
+normalised and the excess added to @var{megaseconds}.
 @end deftypefun
 
 
-@deftypefun @aclass{time} time-from-now @{@var{delta} @aclass{time}@}
-Return a @class{time} object representing the current time plus the
-@class{time} object @var{delta}.
+@deftypefun @aclass{boolean} time? @var{obj}
+Return @true{} if @var{obj} is a @class{time} object; otherwise return
+@false{}.
 @end deftypefun
 
 
-@defun make-time @var{seconds} @var{nanoseconds}
-Build and return a new @class{time} object with microseconds resolution.
-If @var{nanoseconds} exceeds @math{1000000} its value is normalised and
-the excess added to @var{seconds}.
-@end defun
+@deftypefun @aclass{boolean} list-of-times? @var{obj}
+Return @true{} if @var{obj} is a (possibly empty) proper list of
+@class{time} objects; otherwise return @false{}.
+@end deftypefun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Accessors
 
 
-@deftp {Object Time} @aclass{time}
-Type name identifier of disjoint time objects.
-@end deftp
+@deftypefun @aclass{exact-integer} time-seconds @bracearg{T, time}
+@deftypefunx @aclass{fixnum} time-nanoseconds @bracearg{T, time}
+The number of seconds and nanoseconds in the represented time span.
+@end deftypefun
 
 
-@defun time? @var{obj}
-Return @true{} if @var{obj} is a @class{time} object returned by
-@func{current-time}.
-@end defun
+@deftypefun @aclass{ratnum} time-ratnum @bracearg{T, time}
+@deftypefunx @aclass{flonum} time-flonum @bracearg{T, time}
+Return a real number representing the time in seconds.  This single
+number is built from seconds and nanoseconds.
+@end deftypefun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Arithmetics
 
 
-@defun time-second @var{time}
-@defunx time-nanosecond @var{time}
-Accessors, returning exact integers, for the seconds and nanoseconds
-components of the time objects returned by @func{current-time}.
-@end defun
+@deftypefun @aclass{time} time-addition @braceargi{T, time} @bracearg{T, time} @dots{}
+Compute the addition between time objects: @code{@vari{T} + @var{T} +
+...}  and return a time struct representing it.
+@end deftypefun
 
 
-@defun time-gmt-offset @var{time}
-Return the @acronym{GMT} offset in seconds of the @var{time} object
-returned by @func{current-time}, as determined ty @cfunc{gmtime_r}.
-@end defun
-
-
-@defun date-string
-Return a string representing the current date in the simple format:
-year, month, day.
-@end defun
-
-@c ------------------------------------------------------------
-
-@subsubheading Time operations
-
-
-@defun time-addition @vari{time} @varii{time}
-Compute the addition between two times: @code{@vari{time} +
-@varii{time}} and return a time struct representing it.
-@end defun
-
-
-@defun time-difference @vari{time} @varii{time}
-Compute the difference between two times: @code{@vari{time} -
-@varii{time}} and return a time struct representing it.
-@end defun
+@deftypefun @aclass{time} time-difference @braceargi{T, time} @bracearg{T, time} @dots{}
+When only one argument is given: return the negation of the time object.
+When multiple arguments are given, compute the difference between time
+objects: @code{@vari{T} - (@var{T} + ...)}  and return a time struct
+representing it.
+@end deftypefun
 
 @c ------------------------------------------------------------
 
 @subsubheading Time comparison
 
 
-@defun time=? @vari{time} @varii{time}
+@deftypefun @aclass{boolean} time=? @braceargo{T, time} @bracearg{T, time} @dots{}
 Return @true{} if the time objects are equal, else return @false{}.
-@end defun
+@end deftypefun
 
 
-@defun time<? @vari{time} @varii{time}
-Return @true{} if the @vari{time} is less than @varii{time}, else return
-@false{}.
-@end defun
-
-
-@defun time<=? @vari{time} @varii{time}
-Return @true{} if the @vari{time} is less than or equal to @varii{time},
-else return @false{}.
-@end defun
-
-
-@defun time>? @vari{time} @varii{time}
-Return @true{} if the @vari{time} is greater than @varii{time}, else
+@deftypefun @aclass{boolean} time!=? @braceargo{T, time} @bracearg{T, time} @dots{}
+Return @true{} if the arguments are all different: no two arguments are
+equal; otherwise return @false{}.  When applied to a single argument:
 return @false{}.
-@end defun
+@end deftypefun
 
 
-@defun time>=? @vari{time} @varii{time}
-Return @true{} if the @vari{time} is greater than or equal to
-@varii{time}, else return @false{}.
-@end defun
+@deftypefun @aclass{boolean} time<? @braceargo{T, time} @bracearg{T, time} @dots{}
+Return @true{} if the time objects are monotonically increasing; else
+return @false{}.
+@end deftypefun
+
+
+@deftypefun @aclass{boolean} time<=? @braceargo{T, time} @bracearg{T, time} @dots{}
+Return @true{} if the time objects are monotonically non--decreasing;
+else return @false{}.
+@end deftypefun
+
+
+@deftypefun @aclass{boolean} time>? @braceargo{T, time} @bracearg{T, time} @dots{}
+Return @true{} if the time objects are monotonically decreasing; else
+return @false{}.
+@end deftypefun
+
+
+@deftypefun @aclass{boolean} time>=? @braceargo{T, time} @bracearg{T, time} @dots{}
+Return @true{} if the time objects are monotonically non--decreasing;
+else return @false{}.
+@end deftypefun
+
+
+@deftypefun @aclass{boolean} time-max @braceargo{T, time} @bracearg{T, time} @dots{}
+@deftypefunx @aclass{boolean} time-min @braceargo{T, time} @bracearg{T, time} @dots{}
+Return the maximum or minimum between the arguments.
+@end deftypefun
+
+@c page
+@node iklib time epoch
+@subsection Time spans since the Epoch
+
+
+Time spans since the Epoch are represented by instances of
+@class{epoch-time} objects, which is a disjoint object--type; the
+object--type @class{epoch-time} is a subtype of @class{time}.  An
+@class{epoch-time} object represents the time elapsed since the Epoch as
+determined by the @posix{} function @cfunc{clock_gettime} with the
+argument @code{CLOCK_REALTIME}; @manpage{clock_gettime, Clock and time
+functions}.
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@deftypefun @aclass{epoch-time} make-epoch-time @bracearg{seconds, exact-integer} @bracearg{nanoseconds, fixnum}
+Build and return a new @class{epoch-time} object.  The arguments are
+normalised as explained for @func{make-time}.
+@end deftypefun
+
+
+@deftypefun @aclass{epoch-time} current-time
+Return an instance of @class{epoch-time} representing the current time
+elapsed since the Epoch as determined by the @posix{} function
+@cfunc{clock_gettime} (@manpage{clock_gettime, Clock and time
+functions}) with the argument @code{CLOCK_REALTIME}.
+@end deftypefun
+
+
+@deftypefun @aclass{epoch-time} faraway-time
+Return an instance of @class{epoch-time} representing a time since the
+Epoch with @code{(greatest-fixnum)} seconds and zero nanoseconds.  This
+@class{epoch-time} object is meant to represent a time in the not near
+future.
+@end deftypefun
+
+
+@deftypefun @aclass{boolean} epoch-time? @var{obj}
+Return @true{} if @var{obj} is a @class{epoch-time} object; otherwise
+return @false{}.
+@end deftypefun
+
+
+@deftypefun @aclass{boolean} list-of-epoch-times? @var{obj}
+Return @true{} if @var{obj} is a (possibly empty) proper list of
+@class{epoch-time} objects; otherwise return @false{}.
+@end deftypefun
+
+
+@deftypefun @aclass{fixnum} time-gmt-offset
+We can interpret the Epoch time as time as expressed in the
+@acronym{UTC} or @acronym{GMT}+00 time zone.  This function returns the
+offset in seconds from the local time zone to @acronym{UTC}; in Rome
+(@acronym{GMT}+01) this function returns @code{3600}.
+@end deftypefun
+
+
+@deftypefun @aclass{epoch-time} epoch-time-addition @bracearg{ET, epoch-time} @bracearg{T, time}
+Add @var{T} to @var{ET} and return the result.
+@end deftypefun
+
+
+@deftypefun @aclass{epoch-time} epoch-time-subtraction @bracearg{ET, epoch-time} @bracearg{T, time}
+Subtract @var{T} from @var{ET} and return the result.
+@end deftypefun
+
+@c page
+@node iklib time date
+@subsection Date functions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@deftypefun @aclass{string} date-string
+Return a string representing the current date in the simple format:
+year, month, day.
+@end deftypefun
 
 @c page
 @node iklib readline

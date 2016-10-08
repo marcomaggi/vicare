@@ -143,8 +143,8 @@
 
 (declare-core-type-descriptor <bignum>-ctd)
 (declare-core-type-descriptor <binary-input/output-port>-ctd)
-(declare-core-type-descriptor <binary-input-port>-ctd)
-(declare-core-type-descriptor <binary-output-port>-ctd)
+(declare-core-type-descriptor <binary-input-only-port>-ctd)
+(declare-core-type-descriptor <binary-output-only-port>-ctd)
 (declare-core-type-descriptor <binary-port>-ctd)
 (declare-core-type-descriptor <boolean>-ctd)
 (declare-core-type-descriptor <bytevector>-ctd)
@@ -217,8 +217,8 @@
 (declare-core-type-descriptor <symbol>-ctd)
 (declare-core-type-descriptor <gensym>-ctd)
 (declare-core-type-descriptor <textual-input/output-port>-ctd)
-(declare-core-type-descriptor <textual-input-port>-ctd)
-(declare-core-type-descriptor <textual-output-port>-ctd)
+(declare-core-type-descriptor <textual-input-only-port>-ctd)
+(declare-core-type-descriptor <textual-output-only-port>-ctd)
 (declare-core-type-descriptor <textual-port>-ctd)
 (declare-core-type-descriptor <top>-ctd)
 (declare-core-type-descriptor <transcoder>-ctd)
@@ -576,6 +576,23 @@
     (safe)
   (signatures
    ((<vector-of-type-descr>)	=> (<type-descriptor>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <nevector-of-type-descr>-rtd)
+(declare-core-rcd <nevector-of-type-descr>-rcd)
+
+(declare-core-primitive make-nevector-of-type-descr
+    (safe)
+  (signatures
+   ((<type-descriptor>)			=> (<nevector-of-type-descr>))))
+
+(declare-type-predicate nevector-of-type-descr?	<nevector-of-type-descr>)
+
+(declare-core-primitive nevector-of-type-descr.item-des
+    (safe)
+  (signatures
+   ((<nevector-of-type-descr>)		=> (<type-descriptor>))))
 
 ;;; --------------------------------------------------------------------
 

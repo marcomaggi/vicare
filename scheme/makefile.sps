@@ -829,6 +829,7 @@
 ;;;
 	 (define				(macro . define))
 	 (case-define				(macro . case-define))
+	 (define/friend				(macro . define/friend))
 ;;;
 	 (define-auxiliary-syntaxes		(macro . define-auxiliary-syntaxes))
 	 (define*				(macro . define*))
@@ -1042,12 +1043,16 @@
 (define VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   '())
 
+(define VICARE-CORE-BUILT-IN-LABEL-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+  '())
+
 ;;; --------------------------------------------------------------------
 
 (include "makefile.scheme-object-types.scm"		#t)
 (include "makefile.built-in-record-types.scm"		#t)
 (include "makefile.built-in-condition-object-types.scm"	#t)
 (include "makefile.built-in-type-annotations.scm"	#t)
+(include "makefile.built-in-label-types.scm"		#t)
 
 
 ;;;; core syntactic binding descriptors: all the bindings established by the boot image
@@ -1057,7 +1062,8 @@
 	  VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 	  VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 	  VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-	  VICARE-CORE-BUILT-IN-TYPE-ANNOTATIONS-SYNTACTIC-BINDING-DESCRIPTORS))
+	  VICARE-CORE-BUILT-IN-TYPE-ANNOTATIONS-SYNTACTIC-BINDING-DESCRIPTORS
+	  VICARE-CORE-BUILT-IN-LABEL-TYPES-SYNTACTIC-BINDING-DESCRIPTORS))
 
 
 ;;;; core syntactic binding descriptors: typed core primitives infrastructure
@@ -1349,21 +1355,44 @@
     (time-it					v $language)
     (verbose-timer				v $language)
 ;;;
-    (current-time				v $language)
-    (time-from-now				v $language)
-    (time?					v $language)
-    (time-second				v $language)
-    (time-nanosecond				v $language)
-    (time-gmt-offset				v $language)
-    (date-string				v $language)
+    (<time>-rtd)
+    (<time>-rcd)
+    (<time>-equality-predicate)
+    (<time>-comparison-procedure)
+    (<time>-hash-function)
+    (<time>					v $language)
     (make-time					v $language)
+    (time?					v $language)
+    (time-seconds				v $language)
+    (time-nanoseconds				v $language)
+    (time-ratnum				v $language)
+    (time-flonum				v $language)
     (time-addition				v $language)
     (time-difference				v $language)
     (time=?					v $language)
+    (time!=?					v $language)
     (time<?					v $language)
     (time<=?					v $language)
     (time>?					v $language)
     (time>=?					v $language)
+    (time-min					v $language)
+    (time-max					v $language)
+    ;;
+    (<epoch-time>-rtd)
+    (<epoch-time>-rcd)
+    (<epoch-time>-equality-predicate)
+    (<epoch-time>-comparison-procedure)
+    (<epoch-time>-hash-function)
+    (<epoch-time>				v $language)
+    (make-epoch-time				v $language)
+    (epoch-time?				v $language)
+    (epoch-time-addition			v $language)
+    (epoch-time-subtraction			v $language)
+    (current-time				v $language)
+    (faraway-time				v $language)
+    (time-gmt-offset				v $language)
+    ;;
+    (date-string				v $language)
 ;;;
     (command-line-arguments			v $language)
     (immediate?					v $language)
@@ -2047,6 +2076,7 @@
     (case-define/checked 			v $language)
     (define/overload				v $language)
     (define-type				v $language)
+    (define/friend				v $language)
 ;;;
     (lambda*					v $language)
     (case-lambda*				v $language)
@@ -3161,6 +3191,10 @@
     (textual-output-port?			v $language)
     (binary-input/output-port?			v $language)
     (textual-input/output-port?			v $language)
+    (binary-input-only-port?			v $language)
+    (binary-output-only-port?			v $language)
+    (textual-input-only-port?			v $language)
+    (textual-output-only-port?			v $language)
     (open-input-port?				v $language)
     (open-output-port?				v $language)
     (open-textual-port?				v $language)
@@ -3826,6 +3860,7 @@
     (<negative-fixnum>				v $language)
     (<non-negative-fixnum>			v $language)
     (<non-positive-fixnum>			v $language)
+    (<non-zero-fixnum>				v $language)
 
     (<positive-bignum>				v $language)
     (<negative-bignum>				v $language)
@@ -3840,10 +3875,22 @@
     (<non-positive-flonum>			v $language)
     (<non-negative-flonum>			v $language)
     (<zero-flonum>				v $language)
+    (<non-zero-flonum>				v $language)
 
     (<non-negative-exact-integer>		v $language)
     (<positive-exact-integer>			v $language)
     (<negative-exact-integer>			v $language)
+    (<non-zero-exact-integer>			v $language)
+
+    (<exact-rational>				v $language)
+    (<non-negative-exact-rational>		v $language)
+    (<non-zero-exact-rational>			v $language)
+
+    (<zero-real>				v $language)
+    (<positive-real>				v $language)
+    (<negative-real>				v $language)
+    (<non-zero-real>				v $language)
+    (<non-negative-real>			v $language)
 
     (<exact-compnum>				v $language)
     (<inexact-compnum>				v $language)
@@ -3856,7 +3903,6 @@
 
     (<zero>					v $language)
 
-    (<exact-rational>				v $language)
     (<exact>					v $language)
     (<inexact>					v $language)
 
@@ -3912,7 +3958,6 @@
     (<lexical-environment>			v $language)
     (<interaction-lexical-environment>		v $language)
     (<non-interaction-lexical-environment>	v $language)
-    (<time>					v $language)
     (<sentinel>					v $language)
 
     (<opaque-record>)
@@ -3924,12 +3969,22 @@
     (<input/output-port>			v $language)
     (<textual-port>				v $language)
     (<binary-port>				v $language)
-    (<textual-input-port>			v $language)
-    (<textual-output-port>			v $language)
+    (<binary-input-only-port>			v $language)
+    (<binary-output-only-port>			v $language)
+    (<binary-input/output-port>			v $language)
+    (<textual-input-only-port>			v $language)
+    (<textual-output-only-port>			v $language)
     (<textual-input/output-port>		v $language)
+
     (<binary-input-port>			v $language)
     (<binary-output-port>			v $language)
-    (<binary-input/output-port>			v $language)
+    (<textual-input-port>			v $language)
+    (<textual-output-port>			v $language)
+
+    (<binary-input-port>			v $language)
+    (<binary-output-port>			v $language)
+    (<textual-input-port>			v $language)
+    (<textual-output-port>			v $language)
 
     ;;built-in type annotations
     (<&who-value>				v $language)
@@ -3961,9 +4016,9 @@
 
     ;;scheme-type descriptors
     (<bignum>-ctd				system-type-descriptors)
-    (<binary-input-port>-ctd			system-type-descriptors)
+    (<binary-input-only-port>-ctd		system-type-descriptors)
+    (<binary-output-only-port>-ctd		system-type-descriptors)
     (<binary-input/output-port>-ctd		system-type-descriptors)
-    (<binary-output-port>-ctd			system-type-descriptors)
     (<boolean>-ctd				system-type-descriptors)
     (<bytevector>-ctd				system-type-descriptors)
     (<empty-bytevector>-ctd			system-type-descriptors)
@@ -4039,9 +4094,9 @@
     (<struct-type-descriptor>-ctd		system-type-descriptors)
     (<struct>-ctd				system-type-descriptors)
     (<symbol>-ctd				system-type-descriptors)
-    (<textual-input-port>-ctd			system-type-descriptors)
+    (<textual-input-only-port>-ctd		system-type-descriptors)
+    (<textual-output-only-port>-ctd		system-type-descriptors)
     (<textual-input/output-port>-ctd		system-type-descriptors)
-    (<textual-output-port>-ctd			system-type-descriptors)
     (<time>-ctd					system-type-descriptors)
     (<bottom>-ctd				system-type-descriptors)
     (<untyped>-ctd				system-type-descriptors)
@@ -4196,6 +4251,13 @@
     (vector-of-type-descr?			system-type-descriptors)
     (vector-of-type-descr.item-des		system-type-descriptors)
 
+    (<nevector-of-type-descr>-rtd)
+    (<nevector-of-type-descr>-rcd)
+    (<nevector-of-type-descr>			system-type-descriptors)
+    (make-nevector-of-type-descr		system-type-descriptors)
+    (nevector-of-type-descr?			system-type-descriptors)
+    (nevector-of-type-descr.item-des		system-type-descriptors)
+
     (<enumeration-type-descr>-rtd)
     (<enumeration-type-descr>-rcd)
     (<enumeration-type-descr>			system-type-descriptors)
@@ -4327,7 +4389,6 @@
     (writing-boot-image?				system-options)
     (compilation-wordsize				system-options)
     (strict-r6rs					system-options)
-    (strict-type-checking?				system-options)
     (vicare-built-with-arguments-validation-enabled	system-options)
     (vicare-built-with-descriptive-labels-generation	system-options)
     (vicare-built-with-srfi-enabled			system-options)
@@ -4687,7 +4748,13 @@
     (debug-call)
 
 ;;; --------------------------------------------------------------------
-;;; syntax utilities
+;;; expander: configuration
+
+    (strict-type-checking?			$expander)
+    (predicate-type-propagation?		$expander)
+
+;;; --------------------------------------------------------------------
+;;; expander: syntax utilities
 
     (identifier->string				$expander)
     (string->identifier				$expander)
@@ -5065,12 +5132,12 @@
     (vector-type-spec.item-ots*				$expander)
     (vector-type-spec.length				$expander)
 
-    (<vector-of-type-spec>-rtd)
-    (<vector-of-type-spec>-rcd)
-    (<vector-of-type-spec>				$expander)
-    (make-vector-of-type-spec				$expander)
-    (vector-of-type-spec?				$expander)
-    (vector-of-type-spec.item-ots			$expander)
+    (<nevector-of-type-spec>-rtd)
+    (<nevector-of-type-spec>-rcd)
+    (<nevector-of-type-spec>				$expander)
+    (make-nevector-of-type-spec				$expander)
+    (nevector-of-type-spec?				$expander)
+    (nevector-of-type-spec.item-ots			$expander)
 
     (<hashtable-type-spec>-rtd)
     (<hashtable-type-spec>-rcd)
@@ -5236,6 +5303,12 @@
     (&expand-time-type-signature-warning-not-returning		$expander)
     (make-expand-time-type-signature-warning-not-returning	$expander)
     (expand-time-type-signature-warning-not-returning?		$expander)
+
+    (&expand-time-type-signature-warning-non-exact-matching-rtd)
+    (&expand-time-type-signature-warning-non-exact-matching-rcd)
+    (&expand-time-type-signature-warning-non-exact-matching	$expander)
+    (make-expand-time-type-signature-warning-non-exact-matching	$expander)
+    (expand-time-type-signature-warning-non-exact-matching?	$expander)
 ;;;
     (&type-signature					$expander)
     (&type-signature-rtd)
@@ -5340,6 +5413,38 @@
     (make-returned-type-signature-condition		$expander)
     (returned-type-signature-condition?			$expander)
     (condition-returned-type-signature			$expander)
+;;;
+    (&typed-variable-left-hand-side-rtd)
+    (&typed-variable-left-hand-side-rcd)
+    (&typed-variable-left-hand-side				$expander)
+    (make-typed-variable-left-hand-side-condition		$expander)
+    (typed-variable-left-hand-side-condition?			$expander)
+    (condition-typed-variable-left-hand-side.input-form		$expander)
+    (condition-typed-variable-left-hand-side.object-type-spec	$expander)
+
+    (&typed-variable-right-hand-side-rtd)
+    (&typed-variable-right-hand-side-rcd)
+    (&typed-variable-right-hand-side				$expander)
+    (make-typed-variable-right-hand-side-condition		$expander)
+    (typed-variable-right-hand-side-condition?			$expander)
+    (condition-typed-variable-right-hand-side.input-form	$expander)
+    (condition-typed-variable-right-hand-side.object-type-spec	$expander)
+
+    (&typed-formals-left-hand-side-rtd)
+    (&typed-formals-left-hand-side-rcd)
+    (&typed-formals-left-hand-side				$expander)
+    (make-typed-formals-left-hand-side-condition		$expander)
+    (typed-formals-left-hand-side-condition?			$expander)
+    (condition-typed-formals-left-hand-side.input-form		$expander)
+    (condition-typed-formals-left-hand-side.type-signature	$expander)
+
+    (&typed-formals-right-hand-side-rtd)
+    (&typed-formals-right-hand-side-rcd)
+    (&typed-formals-right-hand-side				$expander)
+    (make-typed-formals-right-hand-side-condition		$expander)
+    (typed-formals-right-hand-side-condition?			$expander)
+    (condition-typed-formals-right-hand-side.input-form		$expander)
+    (condition-typed-formals-right-hand-side.type-signature	$expander)
 ;;;
     (&warning-unused-lexical-variable-rtd)
     (&warning-unused-lexical-variable-rcd)

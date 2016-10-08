@@ -35,7 +35,13 @@
 
 (section
 
-(declare-type-predicate time?	<time>)
+(declare-core-rtd <time>-rtd)
+(declare-core-rcd <time>-rcd)
+(declare-type-predicate time?		<time>)
+
+(declare-core-rtd <epoch-time>-rtd)
+(declare-core-rcd <epoch-time>-rcd)
+(declare-type-predicate epoch-time?	<epoch-time>)
 
 ;;; --------------------------------------------------------------------
 ;;; constructors
@@ -43,47 +49,103 @@
 (declare-core-primitive make-time
     (safe)
   (signatures
-   ((<exact-integer> <exact-integer>)	=> (<time>)))
+   ((<exact-integer> <fixnum>)				=> (<time>))
+   ((<exact-integer> <exact-integer> <fixnum>)		=> (<time>)))
+  (attributes
+   ((_ _)		effect-free result-true)
+   ((_ _ _)		effect-free result-true)))
+
+(declare-core-primitive make-epoch-time
+    (safe)
+  (signatures
+   ((<exact-integer> <fixnum>)				=> (<epoch-time>))
+   ((<exact-integer> <exact-integer> <fixnum>)		=> (<epoch-time>)))
   (attributes
    ((_ _)		effect-free result-true)))
 
 (declare-core-primitive current-time
     (safe)
   (signatures
-   (()			=> (<time>)))
+   (()			=> (<epoch-time>)))
   (attributes
    (()			effect-free result-true)))
 
-(declare-core-primitive time-from-now
+(declare-core-primitive faraway-time
     (safe)
   (signatures
-   ((<time>)		=> (<time>)))
+   (()			=> (<epoch-time>)))
   (attributes
-   ((_)			effect-free result-true)))
+   (()			effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; accessors
 
-(declare-core-primitive time-second
+(declare-core-primitive time-seconds
     (safe)
   (signatures
    ((<time>)		=> (<exact-integer>)))
   (attributes
    ((_)			effect-free result-true)))
 
-(declare-core-primitive time-nanosecond
+(declare-core-primitive time-nanoseconds
     (safe)
   (signatures
-   ((<time>)		=> (<exact-integer>)))
+   ((<time>)		=> (<fixnum>)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive time-ratnum
+    (safe)
+  (signatures
+   ((<time>)		=> (<ratnum>)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive time-flonumnum
+    (safe)
+  (signatures
+   ((<time>)		=> (<flonum>)))
   (attributes
    ((_)			effect-free result-true)))
 
 (declare-core-primitive time-gmt-offset
     (safe)
   (signatures
-   ((<time>)		=> (<exact-integer>)))
+   (()			=> (<fixnum>)))
   (attributes
    ((_)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive <time>-equality-predicate
+    (safe)
+  (signatures
+   ((<time> <time>)		=> (<boolean>))))
+
+(declare-core-primitive <time>-comparison-procedure
+    (safe)
+  (signatures
+   ((<time> <time>)		=> (<fixnum>))))
+
+(declare-core-primitive <time>-hash-function
+    (safe)
+  (signatures
+   ((<time>)			=> (<non-negative-fixnum>))))
+
+(declare-core-primitive <epoch-time>-equality-predicate
+    (safe)
+  (signatures
+   ((<epoch-time> <epoch-time>)		=> (<boolean>))))
+
+(declare-core-primitive <epoch-time>-comparison-procedure
+    (safe)
+  (signatures
+   ((<epoch-time> <epoch-time>)		=> (<fixnum>))))
+
+(declare-core-primitive <epoch-time>-hash-function
+    (safe)
+  (signatures
+   ((<epoch-time>)			=> (<non-negative-fixnum>))))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -94,11 +156,12 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((<time> <time>)	=> (<boolean>)))
+		    ((nelist-of <time>)		=> (<boolean>)))
 		   (attributes
-		    ((_ _)		effect-free))))
+		    (_				effect-free))))
 		)))
   (declare time=?)
+  (declare time!=?)
   (declare time<?)
   (declare time>?)
   (declare time<=?)
@@ -114,13 +177,23 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((<time> <time>)	=> (<time>)))
-		   (attributes
-		    ((_ _)		effect-free))))
+		    ((nelist-of <time>)	=> (<time>)))))
 		)))
   (declare time-addition)
   (declare time-difference)
+  (declare time-max)
+  (declare time-min)
   #| end of LET-SYNTAX |# )
+
+(declare-core-primitive epoch-time-addition
+    (safe)
+  (signatures
+   ((<epoch-time> <time>)	=> (<epoch-time>))))
+
+(declare-core-primitive epoch-time-subtraction
+    (safe)
+  (signatures
+   ((<epoch-time> <time>)	=> (<epoch-time>))))
 
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous

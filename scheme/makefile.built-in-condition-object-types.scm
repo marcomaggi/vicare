@@ -537,6 +537,11 @@
     &expand-time-type-signature-warning
   make-expand-time-type-signature-warning-not-returning expand-time-type-signature-warning-not-returning?)
 
+(define-built-in-condition-type &expand-time-type-signature-warning-non-exact-matching
+    &expand-time-type-signature-warning
+  make-expand-time-type-signature-warning-non-exact-matching
+  expand-time-type-signature-warning-non-exact-matching?)
+
 ;;; --------------------------------------------------------------------
 
 (define-built-in-condition-type &type-signature
@@ -638,6 +643,40 @@
   make-returned-type-signature-condition returned-type-signature-condition?
   (methods
    (returned-type-signature		condition-returned-type-signature)))
+
+;;; --------------------------------------------------------------------
+
+(define-built-in-condition-type &typed-variable-left-hand-side
+    &condition
+  make-typed-variable-left-hand-side-condition
+  typed-variable-left-hand-side-condition?
+  (methods
+   (input-form				condition-typed-variable-left-hand-side.input-form)
+   (object-type-spec			condition-typed-variable-left-hand-side.object-type-spec)))
+
+(define-built-in-condition-type &typed-variable-right-hand-side
+    &condition
+  make-typed-variable-right-hand-side-condition
+  typed-variable-right-hand-side-condition?
+  (methods
+   (input-form				condition-typed-variable-right-hand-side.input-form)
+   (object-type-spec			condition-typed-variable-right-hand-side.object-type-spec)))
+
+(define-built-in-condition-type &typed-formals-left-hand-side
+    &condition
+  make-typed-formals-left-hand-side-condition
+  typed-formals-left-hand-side-condition?
+  (methods
+   (input-form				condition-typed-formals-left-hand-side.input-form)
+   (type-signature			condition-typed-formals-left-hand-side.type-signature)))
+
+(define-built-in-condition-type &typed-formals-right-hand-side
+    &condition
+  make-typed-formals-right-hand-side-condition
+  typed-formals-right-hand-side-condition?
+  (methods
+   (input-form				condition-typed-formals-right-hand-side.input-form)
+   (type-signature			condition-typed-formals-right-hand-side.type-signature)))
 
 ;;; --------------------------------------------------------------------
 

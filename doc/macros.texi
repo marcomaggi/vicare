@@ -448,7 +448,7 @@ Revised^6 Report on the algorithmic language Scheme
 @ref{\NODE\,\TITLE\,\TITLE\,vicare-scheme}
 @end macro
 
-@macro vicarepref{NODE, TITLE}
+@macro vicarepxref{NODE, TITLE}
 @pxref{\NODE\,\TITLE\,\TITLE\,vicare-scheme}
 @end macro
 
@@ -456,12 +456,16 @@ Revised^6 Report on the algorithmic language Scheme
 @ref{\NODE\,\TITLE\,\TITLE\,vicare-libs}
 @end macro
 
-@macro nauref{NODE, TITLE}
-@ref{\NODE\,\TITLE\,\TITLE\,nausicaa}
+@macro libspxref{NODE, TITLE}
+@pxref{\NODE\,\TITLE\,\TITLE\,vicare-libs}
 @end macro
 
-@macro mehveref{NODE, TITLE}
-@ref{\NODE\,\TITLE\,\TITLE\,mehve}
+@macro typedref{NODE, TITLE}
+@ref{\NODE\,\TITLE\,\TITLE\,vicare-typed}
+@end macro
+
+@macro typedpxref{NODE, TITLE}
+@pxref{\NODE\,\TITLE\,\TITLE\,vicare-typed}
 @end macro
 
 @macro manpage{NODE, TITLE}
@@ -572,6 +576,22 @@ Revised^6 Report on the algorithmic language Scheme
 
 @macro bracearg {ONE, TWO}
 @{@var{\ONE\} @aclass{\TWO\}@}
+@end macro
+
+@macro braceargo {ONE, TWO}
+@{@varo{\ONE\} @aclass{\TWO\}@}
+@end macro
+
+@macro braceargi {ONE, TWO}
+@{@vari{\ONE\} @aclass{\TWO\}@}
+@end macro
+
+@macro braceargii {ONE, TWO}
+@{@varii{\ONE\} @aclass{\TWO\}@}
+@end macro
+
+@macro braceargiii {ONE, TWO}
+@{@variii{\ONE\} @aclass{\TWO\}@}
 @end macro
 
 @c ------------------------------------------------------------------------

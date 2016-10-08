@@ -50,7 +50,9 @@
    ((<real>)			=> (<true>))
    ((<compnum>)			=> (<false>))
    ((<cflonum>)			=> (<false>))
-   ((<number>)			=> (<boolean>)))
+   ((<number>)			=> (<boolean>))
+   (((not <number>))		=> (<false>))
+   ((<top>)			=> (<boolean>)))
   (attributes
    ((_)				foldable effect-free)))
 
@@ -65,7 +67,9 @@
    ;; ((<flonum-nan>)		=> (<false>))
    ((<compnum>)			=> (<false>))
    ((<cflonum>)			=> (<false>))
-   ((<number>)			=> (<boolean>)))
+   ((<number>)			=> (<boolean>))
+   (((not <number>))		=> (<false>))
+   ((<top>)			=> (<boolean>)))
   (attributes
    ((_)				foldable effect-free)))
 
@@ -441,13 +445,28 @@
 (declare-core-primitive +
     (safe)
   (signatures
-   ((list-of <flonum>)			=> (<flonum>))
-   ((list-of <exact-integer>)		=> (<exact-integer>))
-   ((list-of <exact-rational>)		=> (<exact-rational>))
-   ((list-of <integer>)			=> (<integer>))
-   ((list-of <real>)			=> (<real>))
-   ((list-of <cflonum>)			=> (<cflonum>))
-   ((list-of <number>)			=> (<number>)))
+   ((list-of <positive-fixnum>)			=> (<positive-fixnum>))
+   ((list-of <negative-fixnum>)			=> (<negative-fixnum>))
+   ((list-of <non-positive-fixnum>)		=> (<non-positive-fixnum>))
+   ((list-of <non-negative-fixnum>)		=> (<non-negative-fixnum>))
+   ((list-of <fixnum>)				=> (<fixnum>))
+
+   ((list-of <positive-flonum>)			=> (<positive-flonum>))
+   ((list-of <negative-flonum>)			=> (<negative-flonum>))
+   ((list-of <non-positive-flonum>)		=> (<non-positive-flonum>))
+   ((list-of <non-negative-flonum>)		=> (<non-negative-flonum>))
+   ((list-of <flonum>)				=> (<flonum>))
+
+   ((list-of <positive-exact-integer>)		=> (<positive-exact-integer>))
+   ((list-of <negative-exact-integer>)		=> (<negative-exact-integer>))
+   ((list-of <non-negative-exact-integer>)	=> (<non-negative-exact-integer>))
+   ((list-of <exact-integer>)			=> (<exact-integer>))
+
+   ((list-of <exact-rational>)			=> (<exact-rational>))
+   ((list-of <integer>)				=> (<integer>))
+   ((list-of <real>)				=> (<real>))
+   ((list-of <cflonum>)				=> (<cflonum>))
+   ((list-of <number>)				=> (<number>)))
   (attributes
    (_			foldable effect-free result-true))
   (replacements
@@ -724,20 +743,20 @@
 (declare-core-primitive div-and-mod
     (safe)
   (signatures
-   ((<fixnum> <fixnum>)			=> (<fixnum> <fixnum>))
-   ((<exact-integer> <exact-integer>)	=> (<exact-integer> <exact-integer>))
-   ((<exact-rational> <exact-rational>)	=> (<exact-rational> <exact-rational>))
-   ((<real> <real>)			=> (<real> <real>)))
+   ((<fixnum> <non-zero-fixnum>)		=> (<fixnum> <non-negative-fixnum>))
+   ((<exact-integer> <non-zero-exact-integer>)	=> (<exact-integer> <non-negative-exact-integer>))
+   ((<exact-rational> <exact-rational>)		=> (<exact-rational> <non-negative-exact-rational>))
+   ((<real> <non-zero-real>)			=> (<real> <non-negative-real>)))
   (attributes
    ((_ _)				effect-free)))
 
 (declare-core-primitive div0-and-mod0
     (safe)
   (signatures
-   ((<fixnum> <fixnum>)			=> (<fixnum> <fixnum>))
-   ((<exact-integer> <exact-integer>)	=> (<exact-integer> <exact-integer>))
-   ((<exact-rational> <exact-rational>)	=> (<exact-rational> <exact-rational>))
-   ((<real> <real>)			=> (<real> <real>)))
+   ((<fixnum> <non-zero-fixnum>)		=> (<fixnum> <non-negative-fixnum>))
+   ((<exact-integer> <non-zero-exact-integer>)	=> (<exact-integer> <non-negative-exact-integer>))
+   ((<exact-rational> <exact-rational>)		=> (<exact-rational> <non-negative-exact-rational>))
+   ((<real> <non-zero-real>)			=> (<real> <non-negative-real>)))
   (attributes
    ((_ _)				effect-free)))
 
@@ -1507,7 +1526,20 @@
 (declare-unsafe-binary-operation $add-compnum-number	<compnum>	<number>	<number>)
 (declare-unsafe-binary-operation $add-cflonum-number	<cflonum>	<number>	<number>)
 
-(declare-unsafe-binary-operation $add-number-fixnum	<number>	<fixnum>	<number>)
+(declare-core-primitive $add-number-fixnum
+    (unsafe)
+  (signatures
+   ((<positive-exact-integer> <positive-fixnum>)		=> (<positive-exact-integer>))
+   ((<negative-exact-integer> <negative-fixnum>)		=> (<negative-exact-integer>))
+   ((<non-negative-exact-integer> <non-negative-fixnum>)	=> (<non-negative-exact-integer>))
+   ((<exact-integer> <fixnum>)					=> (<exact-integer>))
+   ;;
+   ((<positive> <positive-fixnum>)				=> (<positive>))
+   ((<negative> <negative-fixnum>)				=> (<negative>))
+   ((<non-positive> <non-positive-fixnum>)			=> (<non-positive>))
+   ((<non-negative> <non-negative-fixnum>)			=> (<non-negative>))
+   ((<number> <fixnum>)						=> (<number>))))
+
 (declare-unsafe-binary-operation $add-number-bignum	<number>	<bignum>	<number>)
 (declare-unsafe-binary-operation $add-number-flonum	<number>	<flonum>	<number>)
 (declare-unsafe-binary-operation $add-number-ratnum	<number>	<ratnum>	<number>)

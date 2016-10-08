@@ -605,7 +605,7 @@
 			       $core-rtd $core-rcd
 			       $core-type-name $core-type-descriptor
 			       $core-record-type-name $core-condition-object-type-name
-			       $core-type-annotation)
+			       $core-type-annotation $core-label-type-name)
 			      (if system-library?
 				  type.value
 				(assertion-violation who

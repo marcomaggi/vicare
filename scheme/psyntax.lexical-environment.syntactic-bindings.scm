@@ -35,6 +35,7 @@
 ;;; local lexical variables, typed variant
    make-syntactic-binding-descriptor/lexical-typed-var
    make-syntactic-binding-descriptor/lexical-typed-var/from-data
+   copy-syntactic-binding-descriptor/lexical-typed-var/from-data
    syntactic-binding-descriptor/lexical-typed-var?
    syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec
 
@@ -148,6 +149,10 @@
 ;;; BEGIN-FOR-SYNTAX visit code
    make-syntactic-binding-descriptor/begin-for-syntax
    syntactic-binding-descriptor/begin-for-syntax?
+
+;;; label types
+   syntactic-binding-descriptor/hard-coded-label-type-name?
+   hard-coded-core-label-type-name-symbolic-binding-descriptor->core-label-type-name-binding-descriptor!
 
    #| end of exports |# )
 
@@ -354,6 +359,10 @@
 				  (list (build-data no-source (object-type-spec.name variable.ots))
 					(build-data no-source lex)))))
     (make-syntactic-binding-descriptor/lexical-typed-var lts lts-maker.core-expr)))
+
+(define* (copy-syntactic-binding-descriptor/lexical-typed-var/from-data descr {new-variable.ots object-type-spec?})
+  (make-syntactic-binding-descriptor/lexical-typed-var/from-data
+   new-variable.ots (lexical-typed-variable-spec.lex (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1010,6 +1019,7 @@
   ;;
   ;;   (?type-name ?uid ?rtd-name ?rcd-name ?parent-id
   ;;    ?constructor-id ?type-predicate-id
+  ;;    ?equality-predicate ?comparison-procedure ?hash-function
   ;;    ?methods-alist)
   ;;
   ;;Syntactic binding descriptors of  type "$core-record-type-name" are hard-coded in
@@ -1030,10 +1040,16 @@
 	 (constructor-sexp		(bless (list-ref hard-coded-sexp 5)))
 	 (destructor-sexp		#f)
 	 (type-predicate-sexp		(bless (list-ref hard-coded-sexp 6)))
-	 (equality-predicate.id		#f)
-	 (comparison-procedure.id	#f)
-	 (hash-function.id		#f)
-	 (methods-table			(%alist-ref-or-null hard-coded-sexp 7))
+	 (equality-predicate.id		(cond ((list-ref hard-coded-sexp 7)
+					       => core-prim-id)
+					      (else #f)))
+	 (comparison-procedure.id	(cond ((list-ref hard-coded-sexp 8)
+					       => core-prim-id)
+					      (else #f)))
+	 (hash-function.id		(cond ((list-ref hard-coded-sexp 9)
+					       => core-prim-id)
+					      (else #f)))
+	 (methods-table			(%alist-ref-or-null hard-coded-sexp 10))
 	 (virtual-method-signatures	'())
 	 (implemented-interfaces	'()))
     (let ((methods-table (if parent.id
@@ -1422,6 +1438,68 @@
 
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/begin-for-syntax?
   begin-for-syntax)
+
+
+;;;; syntactic binding descriptor: label types
+
+(define (hard-coded-core-label-type-name-symbolic-binding-descriptor->core-label-type-name-binding-descriptor! descriptor)
+  ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
+  ;;label-type  name  (established by  the  boot  image)  to  a representation  of  a
+  ;;label-type name in the format usable by the expander.  Return unspecified values.
+  ;;
+  ;;We expect the core descriptor to have the format:
+  ;;
+  ;;   ($core-label-type-name . ?hard-coded-sexp)
+  ;;
+  ;;and the usable descriptor to have the format:
+  ;;
+  ;;   (core-object-type-name . (#<label-type-spec> . ?hard-coded-sexp))
+  ;;
+  ;;where ?HARD-CODED-SEXP has the format:
+  ;;
+  ;;   (?type-name ?uid ?parent-annotation
+  ;;    ?constructor-id ?destructor-id ?type-predicate-id
+  ;;    ?equality-predicate-id ?comparison-procedure-id ?hash-function-id
+  ;;    ?methods-alist)
+  ;;
+  ;;Syntactic binding  descriptors of type "$core-label-type-name"  are hard-coded in
+  ;;the boot image  and generated directly by the makefile  at boot image build-time.
+  ;;Whenever the function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used to retrieve the
+  ;;descriptor from the label: this function is used to convert the descriptor.
+  ;;
+  (let ((hard-coded-sexp (syntactic-binding-descriptor.value descriptor)))
+    (define (%false-or-id idx)
+      (cond ((list-ref hard-coded-sexp idx)
+	     => core-prim-id)
+	    (else #f)))
+    (let ((type-name.id			(core-prim-id (car hard-coded-sexp)))
+	  (uid.sym			(list-ref hard-coded-sexp 1))
+	  (parent.stx			(cond ((list-ref hard-coded-sexp 2)
+					       => bless)
+					      (else #f)))
+	  (constructor.id		(%false-or-id 3))
+	  (destructor.id		(%false-or-id 4))
+	  (type-predicate.id		(%false-or-id 5))
+	  (equality-predicate.id	(%false-or-id 6))
+	  (comparison-procedure.id	(%false-or-id 7))
+	  (hash-function.id		(%false-or-id 8))
+	  (methods-table		(%alist-ref-or-null hard-coded-sexp 9)))
+      (let* ((methods-table	(if parent.stx
+				    (append methods-table (object-type-spec.methods-table-public
+							   (type-annotation->object-type-spec parent.stx)))
+				  methods-table))
+	     (ots		(make-label-type-spec type-name.id uid.sym parent.stx
+						      constructor.id destructor.id type-predicate.id
+						      equality-predicate.id comparison-procedure.id hash-function.id
+						      methods-table)))
+	(set-car! descriptor 'core-object-type-name)
+	(set-cdr! descriptor (cons ots hard-coded-sexp))))))
+
+;;Return true if the argument is a syntactic binding's descriptor representing a R6RS
+;;record-type descriptor established by the boot image; otherwise return false.
+;;
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/hard-coded-label-type-name?
+  $core-label-type-name)
 
 
 ;;;; done

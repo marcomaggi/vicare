@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -57,7 +57,8 @@
 (declare-core-primitive make-time
     (safe)
   (signatures
-   ((T:exact-integer T:exact-integer)	=> (T:time)))
+   ((T:exact-integer T:exact-integer)			=> (T:time))
+   ((T:exact-integer T:exact-integer T:exact-integer)	=> (T:time)))
   (attributes
    ((_ _)		effect-free result-true)))
 
@@ -68,24 +69,17 @@
   (attributes
    (()			effect-free result-true)))
 
-(declare-core-primitive time-from-now
-    (safe)
-  (signatures
-   ((T:time)		=> (T:time)))
-  (attributes
-   ((_)			effect-free result-true)))
-
 ;;; --------------------------------------------------------------------
 ;;; accessors
 
-(declare-core-primitive time-second
+(declare-core-primitive time-seconds
     (safe)
   (signatures
    ((T:time)		=> (T:exact-integer)))
   (attributes
    ((_)			effect-free result-true)))
 
-(declare-core-primitive time-nanosecond
+(declare-core-primitive time-nanoseconds
     (safe)
   (signatures
    ((T:time)		=> (T:exact-integer)))
@@ -95,7 +89,7 @@
 (declare-core-primitive time-gmt-offset
     (safe)
   (signatures
-   ((T:time)		=> (T:exact-integer)))
+   (()			=> (T:exact-integer)))
   (attributes
    ((_)			effect-free result-true)))
 
@@ -108,11 +102,14 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((T:time T:time)	=> (T:boolean)))
+		    ((T:time)				=> (T:boolean))
+		    ((T:time T:time)			=> (T:boolean))
+		    ((T:time T:time T:time . T:time)	=> (T:boolean)))
 		   (attributes
 		    ((_ _)		effect-free))))
 		)))
   (declare time=?)
+  (declare time!=?)
   (declare time<?)
   (declare time>?)
   (declare time<=?)
@@ -128,7 +125,9 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((T:time T:time)	=> (T:time)))
+		    ((T:time)				=> (T:time))
+		    ((T:time T:time)			=> (T:time))
+		    ((T:time T:time T:time . T:time)	=> (T:time)))
 		   (attributes
 		    ((_ _)		effect-free))))
 		)))

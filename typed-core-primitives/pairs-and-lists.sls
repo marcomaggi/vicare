@@ -178,7 +178,7 @@
   (signatures
    ((<null>)			=> (<zero-fixnum>))
    ((<nelist>)			=> (<positive-fixnum>))
-   ((<list>)			=> (<non-negative-exact-integer>)))
+   ((<list>)			=> (<non-negative-fixnum>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
@@ -497,7 +497,8 @@
     (safe)
   (signatures
    ((<null>)		=> (<empty-vector>))
-   ((<nelist>)		=> (<nevector>)))
+   ((<nelist>)		=> (<nevector>))
+   ((<list>)		=> (<vector>)))
   (attributes
    ;;Not foldable because it must return a new vector every time.
    ((_)				effect-free result-true)))
@@ -595,7 +596,7 @@
   (signatures
    ((<null>)			=> (<zero-fixnum>))
    ((<nelist>)			=> (<positive-fixnum>))
-   ((<list>)			=> (<non-negative-exact-integer>)))
+   ((<list>)			=> (<non-negative-fixnum>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 

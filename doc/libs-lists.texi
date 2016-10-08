@@ -733,7 +733,7 @@ is never altered; the result list shares structure with this parameter.
 @end example
 
 Notice that @func{append} is implemented by @rsixlibrary{base}.
-@nauref{baselib lists, Pairs and lists}
+@vicareref{baselib lists, Pairs and lists}.
 @end defun
 
 
@@ -765,7 +765,7 @@ produce the reversed list.
 @end example
 
 Notice that @func{reverse} is implemented by @rsixlibrary{base}.
-@nauref{baselib lists, Pairs and lists}
+@vicareref{baselib lists, Pairs and lists}.
 @end defun
 
 
@@ -1841,7 +1841,7 @@ specified.
 
 @func{filter!} may alter the cons cells in @var{ell} to construct the
 result lists.  Notice that @func{filter} is exported by
-@rsixlibrary{lists}.  @nauref{stdlib list, List utilities}
+@rsixlibrary{lists}.  @vicareref{stdlib list, List utilities}.
 @end defun
 
 
@@ -1861,7 +1861,7 @@ specified.  One of the returned lists may share a common tail with
 
 @func{partition!} may alter the cons cells in @var{ell} to construct the
 result lists.  Notice that @func{partition} is exported by
-@rsixlibrary{lists}.  @nauref{stdlib list, List utilities}
+@rsixlibrary{lists}.  @vicareref{stdlib list, List utilities}.
 @end defun
 
 
@@ -1890,7 +1890,8 @@ various applications of pred are made is not specified.
 construct the result lists.
 
 Notice that @rsixlibrary{lists} exports @func{remove}, which accepts a
-Scheme object as first argument.  @nauref{stdlib list, List utilities}
+Scheme object as first argument.  @vicareref{stdlib list, List
+utilities}.
 @end defun
 
 @c page
@@ -2337,7 +2338,7 @@ procedures find the first pair in @var{alist} whose car field is
 The functions use @func{equal?} to compare the keys and they allow the
 client to pass in an optional equality procedure @var{item=} used to
 compare keys.  Notice that @func{assq} and @func{assv} are exported by
-@rsixlibrary{lists}.  @nauref{stdlib list, List utilities}
+@rsixlibrary{lists}.  @vicareref{stdlib list, List utilities}.
 
 @example
 (assoc* (list 'a) '(((a)) ((b)) ((c))))

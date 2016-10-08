@@ -28,7 +28,6 @@
   (options typed-language)
   (import (vicare)
     (prefix (vicare expander) expander::)
-    (vicare language-extensions friend-functions)
     (only (vicare expander)
 	  type-annotation=?
 	  type-annotation-super-and-sub?

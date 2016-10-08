@@ -211,11 +211,20 @@ Load the source file @var{libfile} expecting it to contain one or more
 the internal collection, but do not add them to any environment.  This
 option can be used multiple times.
 
-@item --source-path @var{DIRECTORY}
+@item --A @var{DIRECTORY}
+@itemx --source-path @var{DIRECTORY}
+@cindex Command line option @option{-A}
+@cindex @option{-A}, command line option
 @cindex Command line option @option{--source-path}
 @cindex @option{--source-path}, command line option
-Add @var{DIRECTORY} to the source libraries search path.  This option
+Append @var{DIRECTORY} to the source libraries search path.  This option
 can be used multiple times.
+
+@item -I @var{DIRECTORY}
+@cindex Command line option @option{-I}
+@cindex @option{-I}, command line option
+Prepend @var{DIRECTORY} to the source libraries search path.  This
+option can be used multiple times.
 
 @item -L @var{DIRECTORY}
 @itemx --library-path @var{DIRECTORY}

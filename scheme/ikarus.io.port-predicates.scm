@@ -105,12 +105,34 @@
   (define-predicate textual-input/output-port? 	input/output-port?	$textual-port?)
   #| end of LET-SYNTAX |# )
 
-(define (open-binary-input-or-output-port? obj)
-  (and (open-binary-port? obj)
-       (not ($input/output-port? obj))))
+;;; --------------------------------------------------------------------
+
+(define (binary-input-only-port? x)
+  (and (port? x)
+       ($input-port?  x)
+       ($binary-port? x)))
+
+(define (binary-output-only-port? x)
+  (and (port? x)
+       ($output-port? x)
+       ($binary-port? x)))
+
+(define (textual-input-only-port? x)
+  (and (port? x)
+       ($input-port?  x)
+       ($textual-port? x)))
+
+(define (textual-output-only-port? x)
+  (and (port? x)
+       ($output-port? x)
+       ($textual-port? x)))
 
 
 ;;;; open and closed port predicates
+
+(define (open-binary-input-or-output-port? obj)
+  (and (open-binary-port? obj)
+       (not ($input/output-port? obj))))
 
 (define* (port-closed? {port port?})
   ;;Defined by Ikarus.  Return true if PORT has already been closed.

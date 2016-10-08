@@ -201,14 +201,14 @@
 (declare-core-primitive fxdiv-and-mod
     (safe)
   (signatures
-   ((<fixnum> <fixnum>)		=> (<fixnum> <fixnum>)))
+   ((<fixnum> <non-zero-fixnum>)	=> (<fixnum> <non-negative-fixnum>)))
   (attributes
    ((_ _)			effect-free)))
 
 (declare-core-primitive fxdiv0-and-mod0
     (safe)
   (signatures
-   ((<fixnum> <fixnum>)		=> (<fixnum> <fixnum>)))
+   ((<fixnum> <non-zero-fixnum>)	=> (<fixnum> <non-negative-fixnum>)))
   (attributes
    ((_ _)			effect-free)))
 
@@ -224,14 +224,25 @@
 (declare-fixnum-multi fxlogand		(replacements $fxlogand))
 (declare-fixnum-multi fxlogxor		(replacements $fxlogxor))
 
-(declare-fixnum-unary fxlength)
+(declare-core-primitive fxlength
+    (safe)
+  (signatures
+   ((<fixnum>)				=> (<non-negative-fixnum>))))
+
 (declare-fixnum-binary fxsll)
 (declare-fixnum-binary fxsra)
 (declare-fixnum-binary fxarithmetic-shift-left)
 (declare-fixnum-binary fxarithmetic-shift-right)
 (declare-fixnum-binary fxarithmetic-shift)
 
-(declare-fixnum-unary fxbit-count)
+(declare-core-primitive fxbit-count
+    (safe)
+  (signatures
+   ((<positive-fixnum>)		=> (<positive-fixnum>))
+   ((<zero-fixnum>)		=> (<zero-fixnum>))
+   ((<negative-fixnum>)		=> (<negative-fixnum>))
+   ((<non-negative-fixnum>)	=> (<non-negative-fixnum>))
+   ((<fixnum>)			=> (<fixnum>))))
 
 (declare-core-primitive fxbit-field
     (safe)
@@ -243,7 +254,7 @@
 (declare-core-primitive fxbit-set?
     (safe)
   (signatures
-   ((<fixnum> <fixnum>)			=> (<boolean>)))
+   ((<fixnum> <non-negative-fixnum>)	=> (<boolean>)))
   (attributes
    ((_ _)				foldable effect-free)))
 
