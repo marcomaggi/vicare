@@ -36,8 +36,10 @@
     <binary-input/output-channel>	<textual-input/output-channel>
     <input-channel>			<output-channel>
 
-    <binary-input-channel>		<binary-output-channel>
-    <textual-input-channel>		<textual-output-channel>
+    <<binary-channel>>
+    <<binary-input-channel>>		<<binary-output-channel>>
+    <<textual-channel>>
+    <<textual-input-channel>>		<<textual-output-channel>>
 
     ;; condition objects
     &channel
@@ -57,10 +59,10 @@
 ;;;; helpers
 
 (define-constant DEFAULT-BINARY-TERMINATORS
-  '(#ve(ascii "\r\n\r\n") #ve(ascii "\r\n")))
+  '#(#ve(ascii "\r\n\r\n") #ve(ascii "\r\n")))
 
 (define-constant DEFAULT-TEXTUAL-TERMINATORS
-  '("\r\n\r\n" "\r\n"))
+  '#("\r\n\r\n" "\r\n"))
 
 ;;This is the maximum  length (in bytes) of the bytevectors used  to hold portions of
 ;;messages; such bytevectors  are never empty.  We want each  bytevector, at most, to
@@ -107,14 +109,10 @@
 ;;; --------------------------------------------------------------------
 
 (define-type <binary-terminators>
-  (nelist-of <nebytevector>))
+  (nevector-of <nebytevector>))
 
 (define-type <textual-terminators>
-  (nelist-of <nestring>))
-
-(define-type <terminators>
-  (or <binary-terminators>
-      <textual-terminators>))
+  (nevector-of <nestring>))
 
 ;;Number of bytes or characters sent or received through a channel.
 ;;
@@ -124,8 +122,40 @@
 
 ;;;; interfaces
 
-(define-interface-type <binary-input-channel>
-  (method-prototype connect-in-port		(lambda () => (<binary-input-port>)))
+(define-interface-type <<channel>>
+  (method-prototype expiration-time		(case-lambda
+						  (()			=> (<epoch-time>))
+						  ((<epoch-time>)	=> (<void>))))
+  (method-prototype maximum-message-size	(case-lambda
+						  (()			=> (<positive-fixnum>))
+						  ((<positive-fixnum>)	=> (<void>))))
+  (method-prototype current-message-size	(lambda ()			=> (<non-negative-fixnum>)))
+  (method-prototype receiving?			(lambda ()			=> (<boolean>)))
+  (method-prototype sending?			(lambda ()			=> (<boolean>)))
+  (method-prototype inactive?			(lambda ()			=> (<boolean>)))
+  (method-prototype delivery-timeout-expired?	(lambda ()			=> (<boolean>)))
+  #| end of DEFINE-INTERFACE-TYPE |# )
+
+;;; --------------------------------------------------------------------
+
+(define-interface-type <<binary-channel>>
+  (parent <<channel>>)
+  (method-prototype message-terminators		(case-lambda
+						  (()				=> (<binary-terminators>))
+						  ((<binary-terminators>)	=> (<void>))))
+  #| end of DEFINE-INTERFACE-TYPE |# )
+
+(define-interface-type <<textual-channel>>
+  (parent <<channel>>)
+  (method-prototype message-terminators		(case-lambda
+						  (()				=> (<textual-terminators>))
+						  ((<textual-terminators>)	=> (<void>))))
+  #| end of DEFINE-INTERFACE-TYPE |# )
+
+;;; --------------------------------------------------------------------
+
+(define-interface-type <<binary-input-channel>>
+  (parent <<binary-channel>>)
   (method-prototype recv-begin!			(lambda () => (<void>)))
   (method-prototype recv-end!/rbl		(lambda () => (<positive-fixnum> (list-of <nebytevector>))))
   (method-prototype recv-end!			(lambda () => (<bytevector>)))
@@ -133,8 +163,8 @@
   (method-prototype recv-message-portion!	(lambda () => ((or <eof> <would-block> <boolean>))))
   #| end of DEFINE-INTERFACE-TYPE |# )
 
-(define-interface-type <textual-input-channel>
-  (method-prototype connect-in-port		(lambda () => (<textual-input-port>)))
+(define-interface-type <<textual-input-channel>>
+  (parent <<textual-channel>>)
   (method-prototype recv-begin!			(lambda () => (<void>)))
   (method-prototype recv-end!/rbl		(lambda () => (<positive-fixnum> (list-of <nestring>))))
   (method-prototype recv-end!			(lambda () => (<string>)))
@@ -144,16 +174,16 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-interface-type <binary-output-channel>
-  (method-prototype connect-ou-port		(lambda () => (<binary-output-port>)))
+(define-interface-type <<binary-output-channel>>
+  (parent <<binary-channel>>)
   (method-prototype send-begin!			(lambda () => (<void>)))
   (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
   (method-prototype send-message-portion!	(lambda (<bytevector>) => (<void>)))
   (method-prototype send-full-message		(lambda (list-of <bytevector>) => (<message-portion-length>)))
   #| end of DEFINE-INTERFACE-TYPE |# )
 
-(define-interface-type <textual-output-channel>
-  (method-prototype connect-ou-port		(lambda () => (<textual-output-port>)))
+(define-interface-type <<textual-output-channel>>
+  (parent <<textual-channel>>)
   (method-prototype send-begin!			(lambda () => (<void>)))
   (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
   (method-prototype send-message-portion!	(lambda (<string>) => (<void>)))
@@ -182,9 +212,12 @@
     (mutable {maximum-message-size <positive-fixnum>})
 		;The  inclusive maximum  message size;  if  the size  of the  message
 		;exceeds this value: message delivery will fail.
-    (mutable {message-size <non-negative-fixnum>})
-		;The current message size.
     #| end of FIELDS |# )
+  (protected
+    (fields
+      (mutable {message-size <non-negative-fixnum>})
+		;The current message size.
+      #| end of FIELDS |# ))
 
   (protocol
     (lambda (make-record)
@@ -221,11 +254,12 @@
 
 ;;;
 
-  (protected
-    (method ({delivery-timeout-expired? <boolean>})
-      ;;Return true if the delivery timeout has expired; otherwise return false.
-      ;;
-      (time<=? (.expiration-time this) (current-time))))
+  (method ({delivery-timeout-expired? <boolean>})
+    ;;Return true  if the delivery timeout  has expired; otherwise return  false.  We
+    ;;can  use  this  method  to  query   this  status  even  without  attempting  an
+    ;;input/output operation.
+    ;;
+    (time<=? (.expiration-time this) (current-time)))
 
   (protected
     (method ({maximum-size-exceeded? <boolean>})
@@ -238,12 +272,18 @@
 ;;; --------------------------------------------------------------------
 ;;; operation methods
 
+  (method ({current-message-size <non-negative-fixnum>})
+    ;;Return the current message size.   This method allows querying the MESSAGE-SIZE
+    ;;field without exposing its mutator.
+    ;;
+    (.message-size this))
+
   (protected
     (method ({message-increment-size! <void>} {delta-size <positive-fixnum>})
       ;;Increment the total message size by DELTA-SIZE.
       ;;
-      ;;FIXME A generic exceptio is raised if the sum of the numbers is not a fixnum.
-      ;;We should do better here.  (Marco Maggi; Thu Sep 29, 2016)
+      ;;FIXME  A generic  exception is  raised if  the sum  of the  numbers is  not a
+      ;;fixnum.  We should do better here.  (Marco Maggi; Thu Sep 29, 2016)
       ;;
       (.message-size this (+ delta-size (.message-size this)))))
 
@@ -253,6 +293,7 @@
 (define-record-type <binary-channel>
   (nongenerative vicare:net:channels:<binary-channel>)
   (parent <channel>)
+  (implements <<binary-channel>>)
   (protected
     (fields
       (mutable {message-buffer (list-of <nebytevector>)})
@@ -304,6 +345,7 @@
 (define-record-type <textual-channel>
   (nongenerative vicare:net:channels:<textual-channel>)
   (parent <channel>)
+  (implements <<textual-channel>>)
   (protected
     (fields
       (mutable {message-buffer (list-of <nestring>)})
@@ -704,6 +746,8 @@
 (define-record-type <binary-input-only-channel>
   (nongenerative vicare:net:channels:<binary-input-only-channel>)
   (parent <binary-channel>)
+  (implements <<binary-input-channel>>)
+
   (fields
     (immutable {connect-in-port <binary-input-port>})
 		;An input or input/output binary port used to receive messages from a
@@ -725,7 +769,6 @@
       (display "]" port)))
 
   (mixins <receiving-binary-channel-methods>)
-  (implements <binary-input-channel>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -733,6 +776,8 @@
 (define-record-type <textual-input-only-channel>
   (nongenerative vicare:net:channels:<textual-input-only-channel>)
   (parent <textual-channel>)
+  (implements <<textual-input-channel>>)
+
   (fields
     (immutable {connect-in-port <textual-input-port>})
 		;An input or input/output textual port used to receive messages from a
@@ -754,7 +799,6 @@
       (display "]" port)))
 
   (mixins <receiving-textual-channel-methods>)
-  (implements <textual-input-channel>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -762,6 +806,8 @@
 (define-record-type <binary-output-only-channel>
   (nongenerative vicare:net:channels:<binary-output-only-channel>)
   (parent <binary-channel>)
+  (implements <<binary-output-channel>>)
+
   (fields
     (immutable {connect-ou-port <binary-output-port>})
 		;An output  or input/output binary  port used  to send messages  to a
@@ -783,7 +829,6 @@
       (display "]" port)))
 
   (mixins <sending-binary-channel-methods>)
-  (implements <binary-output-channel>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -791,6 +836,8 @@
 (define-record-type <textual-output-only-channel>
   (nongenerative vicare:net:channels:<textual-output-only-channel>)
   (parent <textual-channel>)
+  (implements <<textual-output-channel>>)
+
   (fields
     (immutable {connect-ou-port <textual-output-port>})
 		;An output  or input/output textual  port used  to send messages  to a
@@ -812,7 +859,6 @@
       (display "]" port)))
 
   (mixins <sending-textual-channel-methods>)
-  (implements <textual-output-channel>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -820,6 +866,8 @@
 (define-record-type <binary-input/output-channel>
   (nongenerative vicare:net:channels:<binary-input/output-channel>)
   (parent <binary-channel>)
+  (implements <<binary-input-channel>> <<binary-output-channel>>)
+
   (fields
     (immutable {connect-in-port <binary-input-port>})
 		;An input or input/output binary  port used to receive messages from
@@ -847,9 +895,7 @@
       (display " ou-port=" port)	(display (.connect-ou-port this) port)
       (display "]" port)))
 
-  (mixins <sending-binary-channel-methods>
-	  <receiving-binary-channel-methods>)
-  (implements <binary-input-channel> <binary-output-channel>)
+  (mixins <sending-binary-channel-methods> <receiving-binary-channel-methods>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -857,6 +903,8 @@
 (define-record-type <textual-input/output-channel>
   (nongenerative vicare:net:channels:<textual-input/output-channel>)
   (parent <textual-channel>)
+  (implements <<textual-input-channel>> <<textual-output-channel>>)
+
   (fields
     (immutable {connect-in-port <textual-input-port>})
 		;An input or input/output textual  port used to receive messages from
@@ -884,9 +932,7 @@
       (display " ou-port=" port)	(display (.connect-ou-port this) port)
       (display "]" port)))
 
-  (mixins <sending-textual-channel-methods>
-	  <receiving-textual-channel-methods>)
-  (implements <textual-input-channel> <textual-output-channel>)
+  (mixins <sending-textual-channel-methods> <receiving-textual-channel-methods>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -969,8 +1015,8 @@
     ;;
     (let ((terminators (.message-terminators chan))
 	  (buffers     (.message-buffer      chan)))
-      (find (lambda (terminator)
-	      (%terminated-octets-stream? buffers terminator))
+      (vector-find (lambda (terminator)
+		     (%terminated-octets-stream? buffers terminator))
 	terminators)))
 
   (define (%terminated-octets-stream? {reverse-stream (list-of <nebytevector>)} {terminator <nebytevector>})
@@ -1060,8 +1106,8 @@
     ;;
     (let ((terminators (.message-terminators chan))
 	  (buffers     (.message-buffer      chan)))
-      (find (lambda (terminator)
-	      (%terminated-chars-stream? buffers terminator))
+      (vector-find (lambda (terminator)
+		     (%terminated-chars-stream? buffers terminator))
 	terminators)))
 
   (define (%terminated-chars-stream? {reverse-stream (list-of <nestring>)} {terminator <nestring>})

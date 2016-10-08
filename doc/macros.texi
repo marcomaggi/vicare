@@ -118,6 +118,18 @@ Revised^6 Report on the algorithmic language Scheme
 <\NAME\>
 @end macro
 
+@macro iface{NAME}
+@code{<<\NAME\>>}
+@end macro
+
+@macro aiface{NAME}
+<<\NAME\>>
+@end macro
+
+@macro ciface{NAME}
+<<\NAME\>>
+@end macro
+
 @macro objtype{NAME}
 @code{\NAME\}
 @end macro

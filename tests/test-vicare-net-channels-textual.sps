@@ -156,9 +156,9 @@
 
   (check
       (let ((chan (new <textual-input-only-channel> in-port)))
-	(.message-terminators chan '("123"))
+	(.message-terminators chan '#("123"))
 	(.message-terminators chan))
-    => '("123"))
+    => '#("123"))
 
   (void))
 
@@ -206,7 +206,7 @@
 	      (lambda ()
 		(let ((chan (new <textual-input/output-channel> master.port master.port))
 		      (log  master-log))
-		  (.message-terminators chan '("\r\n\r\n"))
+		  (.message-terminators chan '#("\r\n\r\n"))
 		  (send master.port chan
 			'("hel" "lo sla" "ve\r\n\r\n"))
 		  (log (recv chan))
@@ -221,7 +221,7 @@
 	      (lambda ()
 		(let ((chan (new <textual-input/output-channel> slave.port slave.port))
 		      (log  slave-log))
-		  (.message-terminators chan '("\r\n\r\n"))
+		  (.message-terminators chan '#("\r\n\r\n"))
 		  (log (recv chan))
 		  (send slave.port chan '("hel" "lo mas" "ter\r\n\r\n"))
 		  (log (recv chan))

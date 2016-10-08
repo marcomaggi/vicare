@@ -5,11 +5,22 @@
 @cindex Library @library{vicare net channels}
 @cindex @library{vicare net channels}, library
 
-The library @library{vicare net channels} implements utilities to
-transfer data through Scheme binary ports, typically between processes.
-The library is implemented with the typed language.
+The library @library{vicare net channels} implements facilities to let
+software entities exchange messages in a controlled environment, through
+Scheme ports; the library expects the entities to take turn in sending
+messages terminated with a known sequence of bytes.  A set of
+interface--types is defined to allow other software units to implement a
+compatible @api{}, possibly using other underlying devices.
+
+The reference use is to let processes exchange messages through network
+sockets.  The library is @strong{not} meant to be used in the wild,
+where rogue or malicious entities may attempt to corrupt the other side.
+
+The library is implemented with the typed language and it is meant to be
+used by programs and libraries using the typed language.
 
 @menu
+* net channels ifaces::         Interface-type definitions.
 * net channels types::          Data type definitions.
 * net channels init::           Constructors and destructors.
 * net channels config::         Configuration parameters.
@@ -19,6 +30,242 @@ The library is implemented with the typed language.
 * net channels send::           Sending a message.
 * net channels conditions::     Condition object types.
 @end menu
+
+@c page
+@node net channels ifaces
+@section Interface-type definitions
+
+
+The concrete object--types implemented by @library{vicare net channels}
+implement the interfaces documented in this section.
+
+@menu
+* net channels ifaces channel::     Interface @iface{channel}.
+* net channels ifaces bchannel::    Interface @iface{binary-channel}.
+* net channels ifaces bichannel::   Interface @iface{binary-input-channel}.
+* net channels ifaces bochannel::   Interface @iface{binary-output-channel}.
+* net channels ifaces biochannel::  Interface @iface{binary-input/output-channel}.
+* net channels ifaces tchannel::    Interface @iface{textual-channel}.
+* net channels ifaces tichannel::   Interface @iface{textual-input-channel}.
+* net channels ifaces tochannel::   Interface @iface{textual-output-channel}.
+* net channels ifaces tiochannel::  Interface @iface{textual-input/output-channel}.
+@end menu
+
+@c page
+@node net channels ifaces channel
+@subsection The @iface{channel} interface
+
+
+The following bindings are exported by the library @library{vicare net
+channels}.
+
+
+@deftp {Interface Type} @aiface{channel}
+Exposes the basic configuration and inspection methods for all the
+channels.
+@end deftp
+
+
+@deftypemethod @aiface{channel} @aclass{epoch-time} expiration-time @var{this}
+@deftypemethodx @aiface{channel} @aclass{void} expiration-time @var{this} @{@var{time} @aclass{epoch-time}@}
+Accessor and mutator for the message transfer expiration time.  The
+argument @var{time} must be an instance of @class{epoch-time} (as
+defined by @library{vicare}) representing the maximum time before which
+the message transfer must be completed.  If the time limit is violated:
+an exception is raised.
+@end deftypemethod
+
+
+@deftypemethod @aiface{channel} @aclass{positive-fixnum} maximum-message-size @var{this}
+@deftypemethodx @aiface{channel} @aclass{positive-fixnum} maximum-message-size @var{this} @{@var{len} @aclass{positive-fixnum}@}
+Accessor and mutator for the maximum message size.  The argument
+@var{len} must be the maximum allowed length for a whole message,
+measured in bytes for binary channels and in characters for textual
+channels.
+@end deftypemethod
+
+
+@deftypemethod @aiface{channel} @aclass{non-negative-fixnum} current-message-size @var{this}
+Accessor the current message size.  The returned value represents the
+current message length, measured in bytes for binary channels and in
+characters for textual channels.
+@end deftypemethod
+
+
+@deftypemethod @aiface{channel} @aclass{boolean} sending? @var{this}
+Return @true{} if @var{this} is in the course of sending a message;
+otherwise return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aiface{channel} @aclass{boolean} receiving? @var{this}
+Return @true{} if @var{this} is in the course of receiving a message;
+otherwise return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aiface{channel} @aclass{boolean} inactive? @var{this}
+Return @true{} if @var{this} is neither in the course of sending nor
+receiving a message; otherwise return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aiface{channel} @aclass{boolean} delivery-timeout-expired? @var{this}
+Return @true{} if the delivery timeout has expired; otherwise return
+@false{}.  We can use this method to query this status even without
+attempting an input/output operation.
+@end deftypemethod
+
+@c page
+@node net channels ifaces bchannel
+@subsection The @iface{binary-channel} interface
+
+
+The following bindings are exported by the library @library{vicare net
+channels}.
+
+
+@deftp Type @aclass{binary-terminators}
+Type of message terminators for binary channels.  It is defined as
+non--empty vector of non--empty bytevectors.
+@end deftp
+
+
+@deftp {Interface Type} @aiface{binary-channel}
+Exposes the basic configuration and inspection methods for all the
+binary channels.
+@end deftp
+
+
+@deftypemethod @aiface{channel} @aclass{binary-terminators} message-terminators @var{this}
+@deftypemethodx @aiface{channel} @aclass{void} message-terminators @var{this} @{@var{terminators} @aclass{binary-terminators}@}
+Accessor and mutator for the message termination markers.  The argument
+@var{terminators} must be a list of terminators.
+@end deftypemethod
+
+@c page
+@node net channels ifaces bichannel
+@subsection The @iface{binary-input-channel} interface
+
+
+The following bindings are exported by the library @library{vicare net
+channels}.
+
+
+@deftp {Interface Type} @aiface{binary-input-channel}
+@deftpx {Parent Type} @aiface{binary-channel}
+Exposes the methods for all the binary input channels.
+@end deftp
+
+
+@deftypemethod @aiface{binary-input-channel} @aclass{void} recv-begin! @var{this}
+Configure the channel to receive a new message.  If @var{this} is
+already in the course of receiving a message: an assertion is raised.
+@end deftypemethod
+
+
+@deftypemethod @aiface{binary-input-channel} {@aclass{positive-fixnum} (list-of @aclass{nebytevector})} recv-end!/rbl @var{this}
+Terminate the action of receiving a message.
+@end deftypemethod
+
+
+@deftypemethod @aiface{binary-input-channel} @aclass{bytevector} recv-end! @var{this}
+Terminate the action of receiving a message.  Return a bytevector
+holding the full message.
+@end deftypemethod
+
+
+@deftypemethod @aiface{binary-input-channel} {(or @aclass{eof} @aclass{would-block} @aclass{boolean})} recv-message-portion! @var{this}
+Receive a portion of message.  It is an error if the channel is not in
+the course of receiving a message.
+
+@itemize
+@item
+Return @false{} if a portion of message was read, and it does not
+terminate with a message terminator; in this case we need to call this
+function again to receive further message portions.
+
+@item
+Return @true{} if a configured message terminator is read from the
+underlying input device or if the channel already read a terminator in a
+previous operation.  If a message terminator is received: set @var{this}
+to ``message terminated'' status.
+
+@item
+Return the @eof{} object if @eof{} is read from the input device.
+
+@item
+Return the would--block object if a would--block object is read from the
+input device.
+
+@item
+If the message delivery timeout is expired or expires while receiving
+data: raise an exception.
+
+@item
+If the accumulated data exceeds the maximum message size: raise an
+exception.
+@end itemize
+@end deftypemethod
+
+
+@deftypemethod @aiface{binary-input-channel} {(or @aclass{eof} @aclass{bytevector})} recv-full-message @var{this}
+Receive a full message.  When successful return a bytevector
+representing the full message.  If the underlying device is closed
+before the message is completed: return the @eof{} object.  If
+@var{this} is already in the course of receiving a message: an assertion
+is raised.
+@end deftypemethod
+
+@c page
+@node net channels ifaces bochannel
+@subsection Interface @iface{binary-output-channel}
+
+
+@c page
+@node net channels ifaces biochannel
+@subsection Interface @iface{binary-input/output-channel}
+
+
+@c page
+@node net channels ifaces tchannel
+@subsection The @iface{textual-channel} interface
+
+
+The following bindings are exported by the library @library{vicare net
+channels}.
+
+
+@deftp Type @aclass{textual-terminators}
+Type of message terminators for textual channels.  It is defined as
+non--empty vector of non--empty strings.
+@end deftp
+
+
+@deftp {Interface Type} @aiface{textual-channel}
+Exposes the basic configuration and inspection methods for all the
+textual channels.
+@end deftp
+
+
+@deftypemethod @aiface{channel} @aclass{textual-terminators} message-terminators @var{this}
+@deftypemethodx @aiface{channel} @aclass{void} message-terminators @var{this} @{@var{terminators} @aclass{textual-terminators}@}
+Accessor and mutator for the message termination markers.  The argument
+@var{terminators} must be a list of terminators.
+@end deftypemethod
+
+@c page
+@node net channels ifaces tichannel
+@subsection Interface @iface{textual-input-channel}
+
+@c page
+@node net channels ifaces tochannel
+@subsection Interface @iface{textual-output-channel}
+
+@c page
+@node net channels ifaces tiochannel
+@subsection Interface @iface{textual-input/output-channel}
+
 
 @c page
 @node net channels types

@@ -156,9 +156,9 @@
 
   (check
       (let ((chan (new <binary-input-only-channel> in-port)))
-	(.message-terminators chan '(#vu8(1 2 3)))
+	(.message-terminators chan '#(#vu8(1 2 3)))
 	(.message-terminators chan))
-    => '(#vu8(1 2 3)))
+    => '#(#vu8(1 2 3)))
 
   (void))
 
@@ -210,7 +210,7 @@
 	      (lambda ()
 		(let ((chan (new <binary-input/output-channel> master.port master.port))
 		      (log  master-log))
-		  (.message-terminators chan '(#ve(ascii "\r\n\r\n")))
+		  (.message-terminators chan '#(#ve(ascii "\r\n\r\n")))
 		  (send master.port chan
 			(ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
 		  (log (recv chan))
@@ -225,7 +225,7 @@
 	      (lambda ()
 		(let ((chan (new <binary-input/output-channel> slave.port slave.port))
 		      (log  slave-log))
-		  (.message-terminators chan '(#ve(ascii "\r\n\r\n")))
+		  (.message-terminators chan '#(#ve(ascii "\r\n\r\n")))
 		  (log (recv chan))
 		  (send slave.port chan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
 		  (log (recv chan))
