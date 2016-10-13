@@ -717,6 +717,11 @@
   (signatures
    ((<interface-type-descr>)		=> ((or <false> <interface-type-descr>)))))
 
+(declare-core-primitive object-type-implements-interface?
+    (safe)
+  (signatures
+   ((<symbol> <type-descriptor>)	=> (<boolean>))))
+
 
 ;;;; object type descriptors: utilities
 

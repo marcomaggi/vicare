@@ -31,6 +31,7 @@
     hash-function-late-binding
     interface-method-call-late-binding
     internal-delete
+    object-type-implements-interface?
     ;; overloaded functions: late binding
     <overloaded-function-descriptor>-rtd
     <overloaded-function-descriptor>-rcd
@@ -42,6 +43,7 @@
     #| end of EXPORT |# )
   (import (except (vicare)
 		  method-call-late-binding
+		  object-type-implements-interface?
 
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Sat Oct 1, 2016)
@@ -366,6 +368,21 @@
 	(else
 	 (assertion-violation 'delete
 	   "unknown method to destroy object" obj))))
+
+
+;;;; interface-type predicates
+
+(define* (object-type-implements-interface? {interface-uid symbol?} descr)
+  ;;The argument DESCR must be an  object-type's run-time descriptor.  Return true if
+  ;;the  object-type  implements  the  interface-type  whose  UID  is  INTERFACE-UID;
+  ;;otherwise return false.
+  ;;
+  (cond ((record-type-descriptor? descr)
+	 (and (vector-find (lambda (P)
+			     (eq? interface-uid (car P)))
+		(record-type-implemented-interfaces descr))
+	      #t))
+	(else #f)))
 
 
 ;;;; overloaded functions: late binding

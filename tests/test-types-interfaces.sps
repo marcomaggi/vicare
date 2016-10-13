@@ -27,6 +27,7 @@
 (program (test-types-interfaces)
   (options typed-language)
   (import (vicare)
+    (prefix (vicare system type-descriptors) td::)
     (vicare language-extensions interfaces)
     (vicare language-extensions instantiable-bodies)
     (only (vicare expander)
@@ -586,6 +587,58 @@
 		))
     => #t #t #f #t #f #f)
 
+  ;;A record-type implements an interface-type.  Implementation checking.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <IOne>
+	  (nongenerative dummy:<IOne>)
+	  (method-prototype doit
+	    (lambda (<string>) => (<number>))))
+
+	(define-record-type <blue>
+	  (implements <IOne>)
+	  (method ({doit <number>} {S <string>})
+	    1))
+
+	(values (td::object-type-implements-interface? 'dummy:<IOne> (record-type-descriptor <blue>))
+		(td::object-type-implements-interface? (car (type-unique-identifiers <IOne>))
+						       (record-type-descriptor <blue>))
+		(is-a? (new <blue>) <IOne>)
+		(is-a? (cast-signature (<top>) (new <blue>)) <IOne>)))
+    => #t #t #t #t)
+
+  ;;A  record-type  implements  an  interface-type and  its  parent.   Implementation
+  ;;checking.
+  ;;
+  (check
+      (internal-body
+	(define-interface-type <IOne>
+	  (method-prototype one
+	    (lambda (<string>) => (<number>))))
+
+	(define-interface-type <ITwo>
+	  (parent <IOne>)
+	  (method-prototype two
+	    (lambda (<string>) => (<number>))))
+
+	(define-record-type <blue>
+	  (implements <ITwo>)
+	  (method ({one <number>} {S <string>})
+	    1)
+	  (method ({two <number>} {S <string>})
+	    1))
+
+	(values (td::object-type-implements-interface? (car (type-unique-identifiers <IOne>)) (record-type-descriptor <blue>))
+		(is-a? (new <blue>) <IOne>)
+		(is-a? (cast-signature (<top>) (new <blue>)) <IOne>)
+		;;
+		(td::object-type-implements-interface? (car (type-unique-identifiers <ITwo>)) (record-type-descriptor <blue>))
+		(is-a? (new <blue>) <ITwo>)
+		(is-a? (cast-signature (<top>) (new <blue>)) <ITwo>)
+		))
+    => #t #t #t #t #t #t)
+
 ;;; --------------------------------------------------------------------
 ;;; errors
 
@@ -1002,13 +1055,8 @@
 	(define (fun {O <Arith>})
 	  (.add O))
 
-	(try
-	    (apply fun (list (new <duo>  1 2)))
-	  (catch E
-	    ((&procedure-signature-argument-violation)
-	     (procedure-signature-argument-violation.failed-expression E))
-	    (else E))))
-    => '(is-a? _ <Arith>))
+	(apply fun (list (new <duo>  1 2))))
+    => 3)
 
   ;;The argument of IMPLEMENTS is not an identifier.
   ;;

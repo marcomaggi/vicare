@@ -3993,6 +3993,7 @@
 
     (hash-function-late-binding			system-type-descriptors)
     (interface-method-call-late-binding		system-type-descriptors)
+    (object-type-implements-interface?		system-type-descriptors)
 
     ;;Scheme-type descriptor record-type
     (<core-type-descriptor>-rtd)

@@ -5205,9 +5205,10 @@
 	;;
 	(let* ((parent.ots		(or parent-name.ots (<top>-ots)))
 	       (uid*			(cons uid (object-type-spec.uids-list parent.ots)))
-	       ;;By setting the  predicate to ALWAYS-FALSE we  make run-time matching
-	       ;;fail.
-	       (type-predicate.stx	(core-prim-id 'always-false)))
+	       (type-predicate.stx	(bless
+					 (let ((obj.id (make-syntactic-identifier-for-temporary-variable "obj")))
+					   `(lambda/typed ({_ <boolean>} ,obj.id)
+					      (object-type-implements-interface? (quote ,uid) (type-descriptor-of ,obj.id)))))))
 	  ((make-object-type-spec type-name.id uid*
 				  parent.ots interface-type-spec.type-annotation-maker
 				  #f			  ;constructor-stx

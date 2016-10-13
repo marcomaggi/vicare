@@ -2285,6 +2285,83 @@ Return @true{} if @var{obj} is an instance of
 Accessors for the fields of @class{interface-type-descr} instances.
 @end defun
 
+
+@defun object-type-implements-interface? @var{interface-uid} @var{descr}
+The argument @var{descr} must be an object--type's run--time descriptor.
+Return @true{} if the object--type implements the interface--type whose
+@uid{} is @var{interface-uid}; otherwise return @false{}.
+
+Usage example, a record--type implements an interface--type:
+
+@lisp
+(define-interface-type <IOne>
+  (nongenerative dummy:<IOne>)
+  (method-prototype doit
+    (lambda (<string>) => (<number>))))
+
+(define-record-type <blue>
+  (implements <IOne>)
+  (method (@{doit <number>@} @{S <string>@})
+    1))
+
+(object-type-implements-interface?
+  'dummy:<IOne>
+  (record-type-descriptor <blue>))
+@result{} #t
+
+(object-type-implements-interface?
+  (car (type-unique-identifiers <IOne>))
+  (record-type-descriptor <blue>))
+@result{} #t
+
+(define O
+  (new <blue>))
+
+(is-a? O <IOne>)                                @result{} #t
+(is-a? (cast-signature (<top>) O) <IOne>)       @result{} #t
+@end lisp
+
+Another usage example, a record--type implements an interface--type and
+its parent:
+
+@lisp
+(define-interface-type <IOne>
+  (method-prototype one
+    (lambda (<string>) => (<number>))))
+
+(define-interface-type <ITwo>
+  (parent <IOne>)
+  (method-prototype two
+    (lambda (<string>) => (<number>))))
+
+(define-record-type <blue>
+  (implements <ITwo>)
+  (method (@{one <number>@} @{S <string>@})
+    1)
+  (method (@{two <number>@} @{S <string>@})
+    1))
+
+(object-type-implements-interface?
+  (car (type-unique-identifiers <IOne>))
+  (record-type-descriptor <blue>))
+@result{} #t
+
+(object-type-implements-interface?
+  (car (type-unique-identifiers <ITwo>))
+  (record-type-descriptor <blue>))
+@result{} #t
+
+(define O
+  (new <blue>))
+
+(is-a? O <IOne>)        @result{} #t
+(is-a? O <ITwo>)        @result{} #t
+
+(is-a? (cast-signature (<top>) O) <IOne>)       @result{} #t
+(is-a? (cast-signature (<top>) O) <ITwo>)       @result{} #t
+@end lisp
+@end defun
+
 @c page
 @node descriptors signatures
 @section Type descriptor signatures
