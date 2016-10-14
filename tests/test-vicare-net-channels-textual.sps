@@ -163,73 +163,334 @@
   (void))
 
 
-(parametrise ((check-test-name	'messages))
+(parametrise ((check-test-name	'message-portions))
 
-  (define (send port chan chunks)
-    ;;For  debugging purposes  we want  to flush  the output  port after
-    ;;every portion is sent.
-    ;;
-    (.send-begin! chan)
-    (for-each-in-order
-	(lambda (portion)
-	  (.send-message-portion! chan portion)
-	  (flush-output-port port)
-	  (yield))
-      chunks)
-    (.send-end! chan))
+  ;;Exchange    messages   between    coroutines   using    a   two    instances   of
+  ;;"<textual-input/output-channel>".
+  ;;
+  (check
+      (with-result
+	(internal-body
+	  (define (send {chan <textual-input/output-channel>} chunks)
+	    ;;For debugging  purposes we want  to flush  the output port  after every
+	    ;;portion is sent.
+	    ;;
+	    (.send-begin! chan)
+	    (for-each-in-order
+		(lambda (portion)
+		  (.send-message-portion! chan portion)
+		  (.flush chan)
+		  (yield))
+	      chunks)
+	    (.send-end! chan))
 
-  (define (recv chan)
-    (.recv-begin! chan)
-    (let loop ()
-      (let ((rv (.recv-message-portion! chan)))
-	(cond ((not rv)
-	       (yield)
-	       (loop))
-	      ((eof-object? rv)
-	       (eof-object))
-	      (else
-	       (.recv-end! chan))))))
+	  (define (recv {chan <textual-input/output-channel>})
+	    (.recv-begin! chan)
+	    (let loop ()
+	      (let ((rv (.recv-message-portion! chan)))
+		(cond ((not rv)
+		       (yield)
+		       (loop))
+		      ((eof-object? rv)
+		       (eof-object))
+		      (else
+		       (.recv-end! chan))))))
 
-  (define (master-log obj)
-    (add-result (list 'master-recv obj)))
+	  (define (master-log obj)
+	    (add-result (list 'master-recv obj)))
 
-  (define (slave-log obj)
-    (add-result (list 'slave-recv obj)))
+	  (define (slave-log obj)
+	    (add-result (list 'slave-recv obj)))
+
+	  (receive (master.port slave.port)
+	      (open-textual-input/output-port-pair)
+	    (coroutine ;master
+		(lambda ()
+		  (let ((chan (new <textual-input/output-channel> master.port master.port))
+			(log  master-log))
+		    (.message-terminators chan '#("\r\n\r\n"))
+		    (send chan '("hel" "lo sla" "ve\r\n\r\n"))
+		    (log (recv chan))
+		    (send chan '("som" "e dat" "a\r" "\n"
+				 "som" "e other dat" "a\r" "\n" "\r" "\n"))
+		    (log (recv chan))
+		    (send chan '("quit\r\n\r\n"))
+		    (delete chan)
+		    (close-port master.port))))
+	    (coroutine ;slave
+		(lambda ()
+		  (let ((chan (new <textual-input/output-channel> slave.port slave.port))
+			(log  slave-log))
+		    (.message-terminators chan '#("\r\n\r\n"))
+		    (log (recv chan))
+		    (send chan '("hel" "lo mas" "ter\r\n\r\n"))
+		    (log (recv chan))
+		    (send chan '("OK" "\r\n" "\r\n"))
+		    (log (recv chan))
+		    (delete chan)
+		    (close-port slave.port))))
+	    (void-object? (finish-coroutines)))))
+    => `(#t
+	 ((slave-recv "hello slave\r\n\r\n")
+	  (master-recv "hello master\r\n\r\n")
+	  (slave-recv "some data\r\nsome other data\r\n\r\n")
+	  (master-recv "OK\r\n\r\n")
+	  (slave-recv "quit\r\n\r\n")
+	  )))
 
 ;;; --------------------------------------------------------------------
 
+  ;;Exchange    messages   between    coroutines   using    a   two    instances   of
+  ;;"<textual-input/output-channel>" accessed using interfaces.
+  ;;
   (check
       (with-result
-	(receive (master.port slave.port)
-	    (open-textual-input/output-port-pair)
-	  (coroutine ;master
-	      (lambda ()
-		(let ((chan (new <textual-input/output-channel> master.port master.port))
-		      (log  master-log))
-		  (.message-terminators chan '#("\r\n\r\n"))
-		  (send master.port chan
-			'("hel" "lo sla" "ve\r\n\r\n"))
-		  (log (recv chan))
-		  (send master.port chan
-			'("som" "e dat" "a\r" "\n"
-			  "som" "e other dat" "a\r" "\n" "\r" "\n"))
-		  (log (recv chan))
-		  (send master.port chan '("quit\r\n\r\n"))
-		  (delete chan)
-		  (close-port master.port))))
-	  (coroutine ;slave
-	      (lambda ()
-		(let ((chan (new <textual-input/output-channel> slave.port slave.port))
-		      (log  slave-log))
-		  (.message-terminators chan '#("\r\n\r\n"))
-		  (log (recv chan))
-		  (send slave.port chan '("hel" "lo mas" "ter\r\n\r\n"))
-		  (log (recv chan))
-		  (send slave.port chan '("OK" "\r\n" "\r\n"))
-		  (log (recv chan))
-		  (delete chan)
-		  (close-port slave.port))))
-	  (void-object? (finish-coroutines))))
+	(internal-body
+
+	  (define (send {chan <<textual-output-channel>>} chunks)
+	    ;;For debugging  purposes we want  to flush  the output port  after every
+	    ;;portion is sent.
+	    ;;
+	    (.send-begin! chan)
+	    (for-each-in-order
+		(lambda (portion)
+		  (.send-message-portion! chan portion)
+		  (.flush chan)
+		  (yield))
+	      chunks)
+	    (.send-end! chan))
+
+	  (define (recv {chan <<textual-input-channel>>})
+	    (.recv-begin! chan)
+	    (let loop ()
+	      (let ((rv (.recv-message-portion! chan)))
+		(cond ((not rv)
+		       (yield)
+		       (loop))
+		      ((eof-object? rv)
+		       (eof-object))
+		      (else
+		       (.recv-end! chan))))))
+
+	  (define (master-log obj)
+	    (add-result (list 'master-recv obj)))
+
+	  (define (slave-log obj)
+	    (add-result (list 'slave-recv obj)))
+
+	  (receive (master.port slave.port)
+	      (open-textual-input/output-port-pair)
+	    (coroutine ;master
+		(lambda ()
+		  (let ((chan (new <textual-input/output-channel> master.port master.port))
+			(log  master-log))
+		    (.message-terminators chan '#("\r\n\r\n"))
+		    (send chan '("hel" "lo sla" "ve\r\n\r\n"))
+		    (log (recv chan))
+		    (send chan '("som" "e dat" "a\r" "\n"
+				 "som" "e other dat" "a\r" "\n" "\r" "\n"))
+		    (log (recv chan))
+		    (send chan '("quit\r\n\r\n"))
+		    (delete chan)
+		    (close-port master.port))))
+	    (coroutine ;slave
+		(lambda ()
+		  (let ((chan (new <textual-input/output-channel> slave.port slave.port))
+			(log  slave-log))
+		    (.message-terminators chan '#("\r\n\r\n"))
+		    (log (recv chan))
+		    (send chan '("hel" "lo mas" "ter\r\n\r\n"))
+		    (log (recv chan))
+		    (send chan '("OK" "\r\n" "\r\n"))
+		    (log (recv chan))
+		    (delete chan)
+		    (close-port slave.port))))
+	    (void-object? (finish-coroutines)))))
+    => `(#t
+	 ((slave-recv "hello slave\r\n\r\n")
+	  (master-recv "hello master\r\n\r\n")
+	  (slave-recv "some data\r\nsome other data\r\n\r\n")
+	  (master-recv "OK\r\n\r\n")
+	  (slave-recv "quit\r\n\r\n")
+	  )))
+
+;;; --------------------------------------------------------------------
+
+  ;;Exchange     messages      between     coroutines     using      instances     of
+  ;;"<textual-input-only-channel>" and "<textual-output-only-channel>".
+  ;;
+  (check
+      (with-result
+	(internal-body
+	  (define (send {chan <textual-output-only-channel>} chunks)
+	    ;;For debugging  purposes we want  to flush  the output port  after every
+	    ;;portion is sent.
+	    ;;
+	    (.send-begin! chan)
+	    (for-each-in-order
+		(lambda (portion)
+		  (.send-message-portion! chan portion)
+		  (.flush chan)
+		  (yield))
+	      chunks)
+	    (.send-end! chan))
+
+	  (define (recv {chan <textual-input-only-channel>})
+	    (.recv-begin! chan)
+	    (let loop ()
+	      (let ((rv (.recv-message-portion! chan)))
+		(cond ((not rv)
+		       (yield)
+		       (loop))
+		      ((eof-object? rv)
+		       (eof-object))
+		      (else
+		       (.recv-end! chan))))))
+
+	  (with-compensations
+	    (let-values
+		(((master.iport slave.oport) (open-textual-input-port-pair))
+		 ((slave.iport  master.oport) (open-textual-input-port-pair)))
+	      (push-compensation
+	       (close-port master.iport)
+	       (close-port master.oport)
+	       (close-port slave.iport)
+	       (close-port slave.oport))
+	      (coroutine ;master
+		  (lambda ()
+		    (define (master-log obj)
+		      (add-result (list 'master-recv obj)))
+		    (with-compensations
+		      (letrec
+			  ((ichan (compensate
+				      (new <textual-input-only-channel>  master.iport)
+				    (with
+				     (delete ichan))))
+			   (ochan (compensate
+				      (new <textual-output-only-channel> master.oport)
+				    (with
+				     (delete ochan)))))
+			(send ochan '("hel" "lo sla" "ve\r\n\r\n"))
+			(master-log (recv ichan))
+			(send ochan '("som" "e dat" "a\r" "\n"
+				      "som" "e other dat" "a\r" "\n" "\r" "\n"))
+			(master-log (recv ichan))
+			(send ochan '("quit\r\n\r\n"))
+			))))
+	      (coroutine ;slave
+		  (lambda ()
+		    (define (slave-log obj)
+		      (add-result (list 'slave-recv obj)))
+		    (with-compensations
+		      (letrec
+			  ((ichan (compensate
+				      (new <textual-input-only-channel>  slave.iport)
+				    (with
+				     (delete ichan))))
+			   (ochan (compensate
+				      (new <textual-output-only-channel> slave.oport)
+				    (with
+				     (delete ochan)))))
+			(slave-log (recv ichan))
+			(send ochan '("hel" "lo mas" "ter\r\n\r\n"))
+			(slave-log (recv ichan))
+			(send ochan '("OK" "\r\n" "\r\n"))
+			(slave-log (recv ichan))
+			))))
+	      (void-object? (finish-coroutines))))))
+    => `(#t
+	 ((slave-recv "hello slave\r\n\r\n")
+	  (master-recv "hello master\r\n\r\n")
+	  (slave-recv "some data\r\nsome other data\r\n\r\n")
+	  (master-recv "OK\r\n\r\n")
+	  (slave-recv "quit\r\n\r\n")
+	  )))
+
+;;; --------------------------------------------------------------------
+
+  ;;Exchange     messages      between     coroutines     using      instances     of
+  ;;"<textual-input-only-channel>" and "<textual-output-only-channel>" accessed through
+  ;;the interface types.
+  ;;
+  (check
+      (with-result
+	(internal-body
+	  (define (send {chan <<textual-output-channel>>} chunks)
+	    ;;For debugging  purposes we want  to flush  the output port  after every
+	    ;;portion is sent.
+	    ;;
+	    (.send-begin! chan)
+	    (for-each-in-order
+		(lambda (portion)
+		  (.send-message-portion! chan portion)
+		  (.flush chan)
+		  (yield))
+	      chunks)
+	    (.send-end! chan))
+
+	  (define (recv {chan <<textual-input-channel>>})
+	    (.recv-begin! chan)
+	    (let loop ()
+	      (let ((rv (.recv-message-portion! chan)))
+		(cond ((not rv)
+		       (yield)
+		       (loop))
+		      ((eof-object? rv)
+		       (eof-object))
+		      (else
+		       (.recv-end! chan))))))
+
+	  (with-compensations
+	    (let-values
+		(((master.iport slave.oport) (open-textual-input-port-pair))
+		 ((slave.iport  master.oport) (open-textual-input-port-pair)))
+	      (push-compensation
+	       (close-port master.iport)
+	       (close-port master.oport)
+	       (close-port slave.iport)
+	       (close-port slave.oport))
+	      (coroutine ;master
+		  (lambda ()
+		    (define (master-log obj)
+		      (add-result (list 'master-recv obj)))
+		    (with-compensations
+		      (letrec
+			  ((ichan (compensate
+				      (new <textual-input-only-channel>  master.iport)
+				    (with
+				     (delete ichan))))
+			   (ochan (compensate
+				      (new <textual-output-only-channel> master.oport)
+				    (with
+				     (delete ochan)))))
+			(send ochan '("hel" "lo sla" "ve\r\n\r\n"))
+			(master-log (recv ichan))
+			(send ochan '("som" "e dat" "a\r" "\n"
+				      "som" "e other dat" "a\r" "\n" "\r" "\n"))
+			(master-log (recv ichan))
+			(send ochan '("quit\r\n\r\n"))
+			))))
+	      (coroutine ;slave
+		  (lambda ()
+		    (define (slave-log obj)
+		      (add-result (list 'slave-recv obj)))
+		    (with-compensations
+		      (letrec
+			  ((ichan (compensate
+				      (new <textual-input-only-channel>  slave.iport)
+				    (with
+				     (delete ichan))))
+			   (ochan (compensate
+				      (new <textual-output-only-channel> slave.oport)
+				    (with
+				     (delete ochan)))))
+			(slave-log (recv ichan))
+			(send ochan '("hel" "lo mas" "ter\r\n\r\n"))
+			(slave-log (recv ichan))
+			(send ochan '("OK" "\r\n" "\r\n"))
+			(slave-log (recv ichan))
+			))))
+	      (void-object? (finish-coroutines))))))
     => `(#t
 	 ((slave-recv "hello slave\r\n\r\n")
 	  (master-recv "hello master\r\n\r\n")

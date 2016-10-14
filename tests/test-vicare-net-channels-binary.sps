@@ -163,77 +163,349 @@
   (void))
 
 
-(parametrise ((check-test-name	'messages))
+(parametrise ((check-test-name	'message-portions))
 
-  (define (ascii-chunks str-chunks)
-    (map string->ascii str-chunks))
+  ;;Exchange    messages   between    coroutines   using    a   two    instances   of
+  ;;"<binary-input/output-channel>".
+  ;;
+  (check
+      (with-result
+	(internal-body
+	  (define (ascii-chunks str-chunks)
+	    (map string->ascii str-chunks))
 
-  (define (send port chan chunks)
-    ;;For  debugging purposes  we want  to flush  the output  port after
-    ;;every portion is sent.
-    ;;
-    (.send-begin! chan)
-    (for-each-in-order
-	(lambda (portion)
-	  (.send-message-portion! chan portion)
-	  (flush-output-port port)
-	  (yield))
-      chunks)
-    (.send-end! chan))
+	  (define (send {chan <binary-input/output-channel>} chunks)
+	    ;;For debugging  purposes we want  to flush  the output port  after every
+	    ;;portion is sent.
+	    ;;
+	    (.send-begin! chan)
+	    (for-each-in-order
+		(lambda (portion)
+		  (.send-message-portion! chan portion)
+		  (.flush chan)
+		  (yield))
+	      chunks)
+	    (.send-end! chan))
 
-  (define (recv chan)
-    (.recv-begin! chan)
-    (let loop ()
-      (let ((rv (.recv-message-portion! chan)))
-	(cond ((not rv)
-	       (yield)
-	       (loop))
-	      ((eof-object? rv)
-	       (eof-object))
-	      (else
-	       (let ((bv (.recv-end! chan)))
-		 (ascii->string bv)))))))
+	  (define (recv {chan <binary-input/output-channel>})
+	    (.recv-begin! chan)
+	    (let loop ()
+	      (let ((rv (.recv-message-portion! chan)))
+		(cond ((not rv)
+		       (yield)
+		       (loop))
+		      ((eof-object? rv)
+		       (eof-object))
+		      (else
+		       (let ((bv (.recv-end! chan)))
+			 (ascii->string bv)))))))
 
-  (define (master-log obj)
-    (add-result (list 'master-recv obj)))
+	  (define (master-log obj)
+	    (add-result (list 'master-recv obj)))
 
-  (define (slave-log obj)
-    (add-result (list 'slave-recv obj)))
+	  (define (slave-log obj)
+	    (add-result (list 'slave-recv obj)))
+
+	  (receive (master.port slave.port)
+	      (open-binary-input/output-port-pair)
+	    (coroutine ;master
+		(lambda ()
+		  (let ((chan (new <binary-input/output-channel> master.port master.port))
+			(log  master-log))
+		    (.message-terminators chan '#(#ve(ascii "\r\n\r\n")))
+		    (send chan (ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
+		    (log (recv chan))
+		    (send chan (ascii-chunks '("som" "e dat" "a\r" "\n"
+					       "som" "e other dat" "a\r" "\n" "\r" "\n")))
+		    (log (recv chan))
+		    (send chan (ascii-chunks '("quit\r\n\r\n")))
+		    (delete chan)
+		    (close-port master.port))))
+	    (coroutine ;slave
+		(lambda ()
+		  (let ((chan (new <binary-input/output-channel> slave.port slave.port))
+			(log  slave-log))
+		    (.message-terminators chan '#(#ve(ascii "\r\n\r\n")))
+		    (log (recv chan))
+		    (send chan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
+		    (log (recv chan))
+		    (send chan (ascii-chunks '("OK" "\r\n" "\r\n")))
+		    (log (recv chan))
+		    (delete chan)
+		    (close-port slave.port))))
+	    (void-object? (finish-coroutines)))))
+    => `(#t
+	 ((slave-recv "hello slave\r\n\r\n")
+	  (master-recv "hello master\r\n\r\n")
+	  (slave-recv "some data\r\nsome other data\r\n\r\n")
+	  (master-recv "OK\r\n\r\n")
+	  (slave-recv "quit\r\n\r\n")
+	  )))
 
 ;;; --------------------------------------------------------------------
 
+  ;;Exchange    messages   between    coroutines   using    a   two    instances   of
+  ;;"<binary-input/output-channel>" accessed using interfaces.
+  ;;
   (check
       (with-result
-	(receive (master.port slave.port)
-	    (open-binary-input/output-port-pair)
-	  (coroutine ;master
-	      (lambda ()
-		(let ((chan (new <binary-input/output-channel> master.port master.port))
-		      (log  master-log))
-		  (.message-terminators chan '#(#ve(ascii "\r\n\r\n")))
-		  (send master.port chan
-			(ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
-		  (log (recv chan))
-		  (send master.port chan
-			(ascii-chunks '("som" "e dat" "a\r" "\n"
-					"som" "e other dat" "a\r" "\n" "\r" "\n")))
-		  (log (recv chan))
-		  (send master.port chan (ascii-chunks '("quit\r\n\r\n")))
-		  (delete chan)
-		  (close-port master.port))))
-	  (coroutine ;slave
-	      (lambda ()
-		(let ((chan (new <binary-input/output-channel> slave.port slave.port))
-		      (log  slave-log))
-		  (.message-terminators chan '#(#ve(ascii "\r\n\r\n")))
-		  (log (recv chan))
-		  (send slave.port chan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
-		  (log (recv chan))
-		  (send slave.port chan (ascii-chunks '("OK" "\r\n" "\r\n")))
-		  (log (recv chan))
-		  (delete chan)
-		  (close-port slave.port))))
-	  (void-object? (finish-coroutines))))
+	(internal-body
+	  (define (ascii-chunks str-chunks)
+	    (map string->ascii str-chunks))
+
+	  (define (send {chan <<binary-output-channel>>} chunks)
+	    ;;For debugging  purposes we want  to flush  the output port  after every
+	    ;;portion is sent.
+	    ;;
+	    (.send-begin! chan)
+	    (for-each-in-order
+		(lambda (portion)
+		  (.send-message-portion! chan portion)
+		  (.flush chan)
+		  (yield))
+	      chunks)
+	    (.send-end! chan))
+
+	  (define (recv {chan <<binary-input-channel>>})
+	    (.recv-begin! chan)
+	    (let loop ()
+	      (let ((rv (.recv-message-portion! chan)))
+		(cond ((not rv)
+		       (yield)
+		       (loop))
+		      ((eof-object? rv)
+		       (eof-object))
+		      (else
+		       (let ((bv (.recv-end! chan)))
+			 (ascii->string bv)))))))
+
+	  (define (master-log obj)
+	    (add-result (list 'master-recv obj)))
+
+	  (define (slave-log obj)
+	    (add-result (list 'slave-recv obj)))
+
+	  (receive (master.port slave.port)
+	      (open-binary-input/output-port-pair)
+	    (coroutine ;master
+		(lambda ()
+		  (let ((chan (new <binary-input/output-channel> master.port master.port))
+			(log  master-log))
+		    (.message-terminators chan '#(#ve(ascii "\r\n\r\n")))
+		    (send chan (ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
+		    (log (recv chan))
+		    (send chan (ascii-chunks '("som" "e dat" "a\r" "\n"
+					       "som" "e other dat" "a\r" "\n" "\r" "\n")))
+		    (log (recv chan))
+		    (send chan (ascii-chunks '("quit\r\n\r\n")))
+		    (delete chan)
+		    (close-port master.port))))
+	    (coroutine ;slave
+		(lambda ()
+		  (let ((chan (new <binary-input/output-channel> slave.port slave.port))
+			(log  slave-log))
+		    (.message-terminators chan '#(#ve(ascii "\r\n\r\n")))
+		    (log (recv chan))
+		    (send chan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
+		    (log (recv chan))
+		    (send chan (ascii-chunks '("OK" "\r\n" "\r\n")))
+		    (log (recv chan))
+		    (delete chan)
+		    (close-port slave.port))))
+	    (void-object? (finish-coroutines)))))
+    => `(#t
+	 ((slave-recv "hello slave\r\n\r\n")
+	  (master-recv "hello master\r\n\r\n")
+	  (slave-recv "some data\r\nsome other data\r\n\r\n")
+	  (master-recv "OK\r\n\r\n")
+	  (slave-recv "quit\r\n\r\n")
+	  )))
+
+;;; --------------------------------------------------------------------
+
+  ;;Exchange     messages      between     coroutines     using      instances     of
+  ;;"<binary-input-only-channel>" and "<binary-output-only-channel>".
+  ;;
+  (check
+      (with-result
+	(internal-body
+	  (define (ascii-chunks str-chunks)
+	    (map string->ascii str-chunks))
+
+	  (define (send {chan <binary-output-only-channel>} chunks)
+	    ;;For debugging  purposes we want  to flush  the output port  after every
+	    ;;portion is sent.
+	    ;;
+	    (.send-begin! chan)
+	    (for-each-in-order
+		(lambda (portion)
+		  (.send-message-portion! chan portion)
+		  (.flush chan)
+		  (yield))
+	      chunks)
+	    (.send-end! chan))
+
+	  (define (recv {chan <binary-input-only-channel>})
+	    (.recv-begin! chan)
+	    (let loop ()
+	      (let ((rv (.recv-message-portion! chan)))
+		(cond ((not rv)
+		       (yield)
+		       (loop))
+		      ((eof-object? rv)
+		       (eof-object))
+		      (else
+		       (let ((bv (.recv-end! chan)))
+			 (ascii->string bv)))))))
+
+	  (with-compensations
+	    (let-values
+		(((master.iport slave.oport) (open-binary-input-port-pair))
+		 ((slave.iport  master.oport) (open-binary-input-port-pair)))
+	      (push-compensation
+	       (close-port master.iport)
+	       (close-port master.oport)
+	       (close-port slave.iport)
+	       (close-port slave.oport))
+	      (coroutine ;master
+		  (lambda ()
+		    (define (master-log obj)
+		      (add-result (list 'master-recv obj)))
+		    (with-compensations
+		      (letrec
+			  ((ichan (compensate
+				      (new <binary-input-only-channel>  master.iport)
+				    (with
+				     (delete ichan))))
+			   (ochan (compensate
+				      (new <binary-output-only-channel> master.oport)
+				    (with
+				     (delete ochan)))))
+			(send ochan (ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
+			(master-log (recv ichan))
+			(send ochan (ascii-chunks '("som" "e dat" "a\r" "\n"
+						    "som" "e other dat" "a\r" "\n" "\r" "\n")))
+			(master-log (recv ichan))
+			(send ochan (ascii-chunks '("quit\r\n\r\n")))
+			))))
+	      (coroutine ;slave
+		  (lambda ()
+		    (define (slave-log obj)
+		      (add-result (list 'slave-recv obj)))
+		    (with-compensations
+		      (letrec
+			  ((ichan (compensate
+				      (new <binary-input-only-channel>  slave.iport)
+				    (with
+				     (delete ichan))))
+			   (ochan (compensate
+				      (new <binary-output-only-channel> slave.oport)
+				    (with
+				     (delete ochan)))))
+			(slave-log (recv ichan))
+			(send ochan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
+			(slave-log (recv ichan))
+			(send ochan (ascii-chunks '("OK" "\r\n" "\r\n")))
+			(slave-log (recv ichan))
+			))))
+	      (void-object? (finish-coroutines))))))
+    => `(#t
+	 ((slave-recv "hello slave\r\n\r\n")
+	  (master-recv "hello master\r\n\r\n")
+	  (slave-recv "some data\r\nsome other data\r\n\r\n")
+	  (master-recv "OK\r\n\r\n")
+	  (slave-recv "quit\r\n\r\n")
+	  )))
+
+;;; --------------------------------------------------------------------
+
+  ;;Exchange     messages      between     coroutines     using      instances     of
+  ;;"<binary-input-only-channel>" and "<binary-output-only-channel>" accessed through
+  ;;the interface types.
+  ;;
+  (check
+      (with-result
+	(internal-body
+	  (define (ascii-chunks str-chunks)
+	    (map string->ascii str-chunks))
+
+	  (define (send {chan <<binary-output-channel>>} chunks)
+	    ;;For debugging  purposes we want  to flush  the output port  after every
+	    ;;portion is sent.
+	    ;;
+	    (.send-begin! chan)
+	    (for-each-in-order
+		(lambda (portion)
+		  (.send-message-portion! chan portion)
+		  (.flush chan)
+		  (yield))
+	      chunks)
+	    (.send-end! chan))
+
+	  (define (recv {chan <<binary-input-channel>>})
+	    (.recv-begin! chan)
+	    (let loop ()
+	      (let ((rv (.recv-message-portion! chan)))
+		(cond ((not rv)
+		       (yield)
+		       (loop))
+		      ((eof-object? rv)
+		       (eof-object))
+		      (else
+		       (let ((bv (.recv-end! chan)))
+			 (ascii->string bv)))))))
+
+	  (with-compensations
+	    (let-values
+		(((master.iport slave.oport) (open-binary-input-port-pair))
+		 ((slave.iport  master.oport) (open-binary-input-port-pair)))
+	      (push-compensation
+	       (close-port master.iport)
+	       (close-port master.oport)
+	       (close-port slave.iport)
+	       (close-port slave.oport))
+	      (coroutine ;master
+		  (lambda ()
+		    (define (master-log obj)
+		      (add-result (list 'master-recv obj)))
+		    (with-compensations
+		      (letrec
+			  ((ichan (compensate
+				      (new <binary-input-only-channel>  master.iport)
+				    (with
+				     (delete ichan))))
+			   (ochan (compensate
+				      (new <binary-output-only-channel> master.oport)
+				    (with
+				     (delete ochan)))))
+			(send ochan (ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
+			(master-log (recv ichan))
+			(send ochan (ascii-chunks '("som" "e dat" "a\r" "\n"
+						    "som" "e other dat" "a\r" "\n" "\r" "\n")))
+			(master-log (recv ichan))
+			(send ochan (ascii-chunks '("quit\r\n\r\n")))
+			))))
+	      (coroutine ;slave
+		  (lambda ()
+		    (define (slave-log obj)
+		      (add-result (list 'slave-recv obj)))
+		    (with-compensations
+		      (letrec
+			  ((ichan (compensate
+				      (new <binary-input-only-channel>  slave.iport)
+				    (with
+				     (delete ichan))))
+			   (ochan (compensate
+				      (new <binary-output-only-channel> slave.oport)
+				    (with
+				     (delete ochan)))))
+			(slave-log (recv ichan))
+			(send ochan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
+			(slave-log (recv ichan))
+			(send ochan (ascii-chunks '("OK" "\r\n" "\r\n")))
+			(slave-log (recv ichan))
+			))))
+	      (void-object? (finish-coroutines))))))
     => `(#t
 	 ((slave-recv "hello slave\r\n\r\n")
 	  (master-recv "hello master\r\n\r\n")
@@ -245,7 +517,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'sending))
+(parametrise ((check-test-name	'sending-errors))
 
   (check	;max message size error
       (let ((chan (new <binary-output-only-channel> ou-port)))
@@ -276,7 +548,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'receiving))
+(parametrise ((check-test-name	'receiving-errors))
 
   (check	;max message size error
       (let ((chan (new <binary-input-only-channel> (open-bytevector-input-port '#vu8(1 2 3)))))

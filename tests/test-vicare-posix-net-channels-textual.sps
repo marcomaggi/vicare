@@ -64,9 +64,9 @@
       (with-compensations
 	(receive (chan1 chan2)
 	    (make-socket-ports-and-channels)
-	  (.send-full-message chan2 "ciao\r\n")
+	  (.send-full-message chan2 "ciao\r\n\r\n")
 	  (.recv-full-message chan1)))
-    => "ciao\r\n")
+    => "ciao\r\n\r\n")
 
   (check	;transmit message portion, then close
       (with-compensations

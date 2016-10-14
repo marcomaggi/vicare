@@ -59,10 +59,10 @@
 ;;;; helpers
 
 (define-constant DEFAULT-BINARY-TERMINATORS
-  '#(#ve(ascii "\r\n\r\n") #ve(ascii "\r\n")))
+  '#(#ve(ascii "\r\n\r\n")))
 
 (define-constant DEFAULT-TEXTUAL-TERMINATORS
-  '#("\r\n\r\n" "\r\n"))
+  '#("\r\n\r\n"))
 
 ;;This is the maximum  length (in bytes) of the bytevectors used  to hold portions of
 ;;messages; such bytevectors  are never empty.  We want each  bytevector, at most, to
@@ -180,6 +180,7 @@
   (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
   (method-prototype send-message-portion!	(lambda (<bytevector>) => (<void>)))
   (method-prototype send-full-message		(lambda (list-of <bytevector>) => (<message-portion-length>)))
+  (method-prototype flush			(lambda () => (<void>)))
   #| end of DEFINE-INTERFACE-TYPE |# )
 
 (define-interface-type <<textual-output-channel>>
@@ -188,6 +189,7 @@
   (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
   (method-prototype send-message-portion!	(lambda (<string>) => (<void>)))
   (method-prototype send-full-message		(lambda (list-of <string>) => (<message-portion-length>)))
+  (method-prototype flush			(lambda () => (<void>)))
   #| end of DEFINE-INTERFACE-TYPE |# )
 
 
@@ -663,10 +665,15 @@
     ;;message.
     ;;
     (assert-sending-channel __who__ this)
+    (flush-output-port (.connect-ou-port this))
     (begin0
 	(.message-size this)
-      (flush-output-port (.connect-ou-port this))
       (.abort! this)))
+
+  (method ({flush <void>})
+    ;;Flush to the destination the data buffered in the underlying device.
+    ;;
+    (flush-output-port (.connect-ou-port this)))
 
   #| end of mixin |# )
 
