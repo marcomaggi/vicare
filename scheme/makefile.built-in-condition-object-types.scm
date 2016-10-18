@@ -51,8 +51,8 @@
 	 #'(set-cons! VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 		      (quote (?type-name
 			      ($core-condition-object-type-name
-			       . (?type-name UID TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate
-					     ((?field-name . ?accessor-name) ...)))))))))
+			       . #(?type-name UID TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate
+					      #((?field-name . ?accessor-name) ...)))))))))
     ))
 
 

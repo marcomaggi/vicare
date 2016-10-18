@@ -74,9 +74,9 @@
 	 #'(set-cons! VICARE-CORE-BUILT-IN-LABEL-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 		      (quote (?type-name
 			      ($core-label-type-name
-			       . (?type-name UID ?parent-annotation ?constructor ?destructor ?type-predicate
-					     ?equality-predicate ?comparison-procedure ?hash-function
-					     ((?method-name . ?method-procname) ...)))))))))
+			       . #(?type-name UID ?parent-annotation ?constructor ?destructor ?type-predicate
+					      ?equality-predicate ?comparison-procedure ?hash-function
+					      #((?method-name . ?method-procname) ...)))))))))
     ))
 
 

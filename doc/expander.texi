@@ -1844,12 +1844,12 @@ the boot image has descriptor with format:
 
 @example
 ($core-record-type-name
-  . (@meta{type-name} @meta{uid}
-     @meta{rtd-name} @meta{rcd-name}
-     @meta{parent-name}
-     @meta{constructor-name} @meta{type-predicate-name}
-     @meta{equality-predicate} @meta{comparison-procedure} @meta{hash-function}
-     @meta{methods-alist}))
+  . #(@meta{type-name} @meta{uid}
+      @meta{rtd-name} @meta{rcd-name}
+      @meta{parent-name}
+      @meta{constructor-name} @meta{type-predicate-name}
+      @meta{equality-predicate} @meta{comparison-procedure} @meta{hash-function}
+      @meta{methods-avector}))
 @end example
 
 @noindent
@@ -1894,10 +1894,10 @@ which the comparison procedure is bound.
 A symbol representing the public name of the syntactic identifier to
 which the hash function is bound.
 
-@item @meta{methods-alist}
-An alist having: as keys symbols representing method names; as values
-symbols representing the public name of the syntactic identifier to
-which the method is bound.
+@item @meta{methods-avector}
+An assocition vector having: as keys symbols representing method names;
+as values symbols representing the public name of the syntactic
+identifier to which the method is bound.
 @end table
 
 @c page
@@ -1915,11 +1915,11 @@ the formats:
 
 @example
 ($core-condition-object-type-name
-  . (@meta{type-name} @meta{uid}
-     @meta{rtd-name} @meta{rcd-name}
-     @meta{parent-name}
-     @meta{constructor-name} @meta{type-predicate-name}
-     @meta{accessors-alist}))
+  . #(@meta{type-name} @meta{uid}
+      @meta{rtd-name} @meta{rcd-name}
+      @meta{parent-name}
+      @meta{constructor-name} @meta{type-predicate-name}
+      @meta{accessors-avector}))
 @end example
 
 @noindent
@@ -1952,10 +1952,10 @@ which the default constructor is bound.
 A symbol representing the public name of the syntactic identifier to
 which the type predicate is bound.
 
-@item @meta{accessors-alist}
-An alist having: as keys symbols representing field names; as values
-symbols representing the public name of the syntactic identifier to
-which the safe field accessor is bound.
+@item @meta{accessors-avector}
+An association vector having: as keys symbols representing field names;
+as values symbols representing the public name of the syntactic
+identifier to which the safe field accessor is bound.
 @end table
 
 As example, for the definition:
@@ -1972,10 +1972,10 @@ the following descriptor is generated:
 
 @example
 ($core-condition-object-type-name
-  . (&who vicare:scheme-type:&who
-     &who-rtd &who-rcd &condition
-     make-who-condition who-condition?
-     ((who condition-who))))
+  . #(&who vicare:scheme-type:&who
+      &who-rtd &who-rcd &condition
+      make-who-condition who-condition?
+      #((who . condition-who))))
 @end example
 
 @c page
@@ -2056,11 +2056,11 @@ image has descriptor with format:
 
 @example
 ($core-label-type-name
-  . (@meta{type-name} @meta{uid}
-     @meta{parent-annotation}
-     @meta{constructor-name} @meta{destructor-name} @meta{type-predicate-name}
-     @meta{equality-predicate} @meta{comparison-procedure} @meta{hash-function}
-     @meta{methods-alist}))
+  . #(@meta{type-name} @meta{uid}
+      @meta{parent-annotation}
+      @meta{constructor-name} @meta{destructor-name} @meta{type-predicate-name}
+      @meta{equality-predicate} @meta{comparison-procedure} @meta{hash-function}
+      @meta{methods-avector}))
 @end example
 
 @noindent
@@ -2100,10 +2100,10 @@ identifier to which the comparison procedure is bound.
 @false{} or a symbol representing the public name of the syntactic
 identifier to which the hash function is bound.
 
-@item @meta{methods-alist}
-An alist having: as keys symbols representing method names; as values
-symbols representing the public name of the syntactic identifier to
-which the method procedure is bound.
+@item @meta{methods-avector}
+An association vector: as keys symbols representing method names; as
+values symbols representing the public name of the syntactic identifier
+to which the method procedure is bound.
 @end table
 
 @c page

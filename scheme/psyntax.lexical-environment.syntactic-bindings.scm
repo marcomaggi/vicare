@@ -1054,10 +1054,10 @@
   ;;
   ;;where ?HARD-CODED-SEXP has the format:
   ;;
-  ;;   (?type-name ?uid ?rtd-name ?rcd-name ?parent-id
-  ;;    ?constructor-id ?type-predicate-id
-  ;;    ?equality-predicate ?comparison-procedure ?hash-function
-  ;;    ?methods-alist)
+  ;;   #(?type-name ?uid ?rtd-name ?rcd-name ?parent-id
+  ;;     ?constructor-id ?type-predicate-id
+  ;;     ?equality-predicate ?comparison-procedure ?hash-function
+  ;;     ?methods-avector)
   ;;
   ;;Syntactic binding descriptors of  type "$core-record-type-name" are hard-coded in
   ;;the boot image  and generated directly by the makefile  at boot image build-time.
@@ -1066,27 +1066,27 @@
   ;;
   (let* ((descr.type			(syntactic-binding-descriptor.type  descriptor))
 	 (hard-coded-sexp		(syntactic-binding-descriptor.value descriptor))
-	 (type-name.id			(core-prim-id (car hard-coded-sexp)))
-	 (uid.sym			(list-ref hard-coded-sexp 1))
-	 (rtd.id			(core-prim-id (list-ref hard-coded-sexp 2)))
-	 (rcd.id			(core-prim-id (list-ref hard-coded-sexp 3)))
+	 (type-name.id			(core-prim-id (vector-ref hard-coded-sexp 0)))
+	 (uid.sym			(vector-ref hard-coded-sexp 1))
+	 (rtd.id			(core-prim-id (vector-ref hard-coded-sexp 2)))
+	 (rcd.id			(core-prim-id (vector-ref hard-coded-sexp 3)))
 	 (super-protocol.id		#f)
-	 (parent.id			(cond ((list-ref hard-coded-sexp 4)
+	 (parent.id			(cond ((vector-ref hard-coded-sexp 4)
 					       => core-prim-id)
 					      (else #f)))
-	 (constructor-sexp		(bless (list-ref hard-coded-sexp 5)))
+	 (constructor-sexp		(bless (vector-ref hard-coded-sexp 5)))
 	 (destructor-sexp		#f)
-	 (type-predicate-sexp		(bless (list-ref hard-coded-sexp 6)))
-	 (equality-predicate.id		(cond ((list-ref hard-coded-sexp 7)
+	 (type-predicate-sexp		(bless (vector-ref hard-coded-sexp 6)))
+	 (equality-predicate.id		(cond ((vector-ref hard-coded-sexp 7)
 					       => core-prim-id)
 					      (else #f)))
-	 (comparison-procedure.id	(cond ((list-ref hard-coded-sexp 8)
+	 (comparison-procedure.id	(cond ((vector-ref hard-coded-sexp 8)
 					       => core-prim-id)
 					      (else #f)))
-	 (hash-function.id		(cond ((list-ref hard-coded-sexp 9)
+	 (hash-function.id		(cond ((vector-ref hard-coded-sexp 9)
 					       => core-prim-id)
 					      (else #f)))
-	 (methods-table			(%alist-ref-or-null hard-coded-sexp 10))
+	 (methods-table			(%vector-ref-avector-to-alist hard-coded-sexp 10))
 	 (virtual-method-signatures	'())
 	 (implemented-interfaces	'()))
     (let ((methods-table (if parent.id
@@ -1126,8 +1126,8 @@
   ;;
   ;;where ?HARD-CODED-SEXP has the format:
   ;;
-  ;;   (?type-name ?uid ?rtd-name ?rcd-name
-  ;;    ?parent-name ?constructor-name ?type-predicate-name ?methods-alist)
+  ;;   #(?type-name ?uid ?rtd-name ?rcd-name
+  ;;     ?parent-name ?constructor-name ?type-predicate-name ?methods-avector)
   ;;
   ;;Syntactic  binding  descriptors  of type  "$core-condition-object-type-name"  are
   ;;hard-coded in the boot image and generated directly by the makefile at boot image
@@ -1137,21 +1137,21 @@
   ;;
   (let* ((descr.type			(syntactic-binding-descriptor.type  descriptor))
 	 (hard-coded-sexp		(syntactic-binding-descriptor.value descriptor))
-	 (type-name.id			(core-prim-id (car hard-coded-sexp)))
-	 (uid.sym			(list-ref hard-coded-sexp 1))
-	 (rtd.id			(core-prim-id (list-ref hard-coded-sexp 2)))
-	 (rcd.id			(core-prim-id (list-ref hard-coded-sexp 3)))
+	 (type-name.id			(core-prim-id (vector-ref hard-coded-sexp 0)))
+	 (uid.sym			(vector-ref hard-coded-sexp 1))
+	 (rtd.id			(core-prim-id (vector-ref hard-coded-sexp 2)))
+	 (rcd.id			(core-prim-id (vector-ref hard-coded-sexp 3)))
 	 (super-protocol.id		#f)
-	 (parent.id			(cond ((list-ref hard-coded-sexp 4)
+	 (parent.id			(cond ((vector-ref hard-coded-sexp 4)
 					       => core-prim-id)
 					      (else #f)))
-	 (constructor.id		(core-prim-id (list-ref hard-coded-sexp 5)))
+	 (constructor.id		(core-prim-id (vector-ref hard-coded-sexp 5)))
 	 (destructor.id			#f)
-	 (type-predicate.id		(core-prim-id (list-ref hard-coded-sexp 6)))
+	 (type-predicate.id		(core-prim-id (vector-ref hard-coded-sexp 6)))
 	 (equality-predicate.id		#f)
 	 (comparison-procedure.id	#f)
 	 (hash-function.id		(core-prim-id 'record-hash))
-	 (methods-table			(%alist-ref-or-null hard-coded-sexp 7))
+	 (methods-table			(%vector-ref-avector-to-alist hard-coded-sexp 7))
 	 (virtual-method-signatures	'())
 	 (implemented-interfaces	'()))
     (let ((methods-table (if parent.id
@@ -1506,12 +1506,12 @@
   ;;
   (let ((hard-coded-sexp (syntactic-binding-descriptor.value descriptor)))
     (define (%false-or-id idx)
-      (cond ((list-ref hard-coded-sexp idx)
+      (cond ((vector-ref hard-coded-sexp idx)
 	     => core-prim-id)
 	    (else #f)))
-    (let ((type-name.id			(core-prim-id (car hard-coded-sexp)))
-	  (uid.sym			(list-ref hard-coded-sexp 1))
-	  (parent.stx			(cond ((list-ref hard-coded-sexp 2)
+    (let ((type-name.id			(core-prim-id (vector-ref hard-coded-sexp 0)))
+	  (uid.sym			(vector-ref hard-coded-sexp 1))
+	  (parent.stx			(cond ((vector-ref hard-coded-sexp 2)
 					       => bless)
 					      (else #f)))
 	  (constructor.id		(%false-or-id 3))
@@ -1520,7 +1520,7 @@
 	  (equality-predicate.id	(%false-or-id 6))
 	  (comparison-procedure.id	(%false-or-id 7))
 	  (hash-function.id		(%false-or-id 8))
-	  (methods-table		(%alist-ref-or-null hard-coded-sexp 9)))
+	  (methods-table		(%vector-ref-avector-to-alist hard-coded-sexp 9)))
       (let* ((methods-table	(if parent.stx
 				    (append methods-table (object-type-spec.methods-table-public
 							   (type-annotation->object-type-spec parent.stx)))

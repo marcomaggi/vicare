@@ -62,9 +62,9 @@
 	 #'(set-cons! VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 		      (quote (?type-name
 			      ($core-record-type-name
-			       . (?type-name UID TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate
-					     ?equality-predicate ?comparison-procedure ?hash-function
-					     ((?field-name . ?accessor-name) ...)))))))))
+			       . #(?type-name UID TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate
+					      ?equality-predicate ?comparison-procedure ?hash-function
+					      #((?field-name . ?accessor-name) ...)))))))))
     ))
 
 
