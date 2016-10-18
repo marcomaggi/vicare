@@ -1670,8 +1670,8 @@ other syntaxes.  Some of these syntaxes are: @syntax{quote},
 @cindex Syntactic binding types, @code{macro}
 
 
-A binding representing a non--core syntax with transformer function
-implemented by the expander has descriptor with format:
+A syntactic binding representing a non--core syntax with transformer
+function implemented by the expander has descriptor with format:
 
 @example
 (macro . @meta{name})
