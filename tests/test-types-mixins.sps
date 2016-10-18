@@ -300,7 +300,8 @@
 	  (fields c))
 	(get-spec <stuff>))
     => '(define-mixin-type <stuff>
-	  (fields a b c)))
+	  (fields a b)
+	  (fields c)))
 
 ;;; --------------------------------------------------------------------
 
@@ -699,7 +700,10 @@
 
 	(get-spec <fields-2>))
     => '(define-mixin-type <fields-2>
-	  (fields a b c d)))
+	  (fields a)
+	  (fields b)
+	  (fields c)
+	  (fields d)))
 
   ;;Multiple mixins with fields.
   ;;
@@ -718,7 +722,9 @@
 
 	(get-spec <fields-3>))
     => '(define-mixin-type <fields-3>
-	  (fields a b c d e f)))
+	  (fields a b)
+	  (fields c d)
+	  (fields e f)))
 
   ;;Two mixins imported with one MIXINS clause.
   ;;
@@ -737,7 +743,8 @@
 
 	(get-spec <fluff>))
     => '(define-mixin-type <fluff>
-	  (fields a b c d)
+	  (fields a b)
+	  (fields c d)
 	  (method (one) 1)
 	  (method (two) 2)))
 
@@ -759,7 +766,8 @@
 
 	(get-spec <fluff>))
     => '(define-mixin-type <fluff>
-	  (fields a b c d)
+	  (fields a b)
+	  (fields c d)
 	  (method (one) 1)
 	  (method (two) 2)))
 
@@ -778,7 +786,8 @@
 
 	(get-spec <stuff-2>))
     => '(define-mixin-type <stuff-2>
-	  (fields a b c d)
+	  (fields a b)
+	  (fields c d)
 	  (method (one) 1)
 	  (method (two) 2)))
 
@@ -797,7 +806,8 @@
 
 	(get-spec <stuff-2>))
     => '(define-mixin-type <stuff-2>
-	  (fields a b c d)
+	  (fields a b)
+	  (fields c d)
 	  (method (one) 1)
 	  (method (two) 2)))
 
@@ -819,7 +829,8 @@
 
 	(get-spec <fluff>))
     => '(define-mixin-type <fluff>
-	  (fields a b c d)
+	  (fields a b)
+	  (fields c d)
 	  (method (one) 1)
 	  (method (two) 2)))
 
@@ -842,7 +853,8 @@
 
 	(get-spec <b>))
     => '(define-mixin-type <b>
-	  (fields a a)))
+	  (fields a)
+	  (fields a)))
 
   #| end of PARAMETRISE |# )
 

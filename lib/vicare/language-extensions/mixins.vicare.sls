@@ -54,35 +54,94 @@
     mixins
     implements)
   (import (vicare)
-    (for (vicare expander)
+    (for (prefix (vicare expander) xp::)
       expand))
 
 
-(define-syntax define-mixin-type
-  (internal-body
-    (define-constant __module_who__ 'define-mixin-type)
+(define-syntax (define-mixin-type input-form.stx)
+  (define-constant __module_who__ 'define-mixin-type)
+
+  (case-define synner
+    ((message)
+     (syntax-violation __module_who__ message input-form.stx #f))
+    ((message subform)
+     (syntax-violation __module_who__ message input-form.stx subform)))
 
 
-(define (main input-form.stx synner)
+(define-constant CLAUSE-SPEC*
+  (xp::syntax-clauses-validate-specs
+   (list
+    ;;KEYWORD MIN-OCCUR MAX-OCCUR MIN-ARGS MAX-ARGS MUTUALLY-INCLUSIVE MUTUALLY-EXCLUSIVE
+    (new xp::<syntax-clause-spec> #'nongenerative		0 1      0 1      '() '())
+    (new xp::<syntax-clause-spec> #'implements			0 +inf.0 0 +inf.0 '() '())
+    (new xp::<syntax-clause-spec> #'define-type-descriptors	0 1      0 0      '() '())
+    (new xp::<syntax-clause-spec> #'strip-angular-parentheses	0 1      0 0      '() '())
+    (new xp::<syntax-clause-spec> #'sealed			0 1      1 1      '() '())
+    (new xp::<syntax-clause-spec> #'opaque			0 1      1 1      '() '())
+    (new xp::<syntax-clause-spec> #'protocol			0 1      1 1      '() '())
+    (new xp::<syntax-clause-spec> #'super-protocol		0 1      1 1      '() '())
+    (new xp::<syntax-clause-spec> #'fields			0 +inf.0 1 +inf.0 '() '())
+    ;;
+    (new xp::<syntax-clause-spec> #'method			0 +inf.0 2 +inf.0 '() '())
+    (new xp::<syntax-clause-spec> #'virtual-method		0 +inf.0 2 +inf.0 '() '())
+    (new xp::<syntax-clause-spec> #'seal-method			0 +inf.0 2 +inf.0 '() '())
+    ;;
+    (new xp::<syntax-clause-spec> #'custom-printer		0 1      1 1      '() '())
+    (new xp::<syntax-clause-spec> #'type-predicate		0 1      1 1      '() '())
+    (new xp::<syntax-clause-spec> #'equality-predicate		0 1      1 1      '() '())
+    (new xp::<syntax-clause-spec> #'comparison-procedure	0 1      1 1      '() '())
+    (new xp::<syntax-clause-spec> #'hash-function		0 1      1 1      '() '())
+    #| end of LIST |# )))
+
+
+(define-record-type <parsing-results>
+  (fields
+    (immutable	type-name)
+		;A syntactic identifier representing the mixin type name.
+    (mutable	rev-parsed-clauses)
+		;A  list  of  syntax  objects representing  the  parsed  clauses,  in
+		;reversed order.
+    #| end of FIELDS |# )
+
+  (protocol
+    (lambda (make-record)
+      (named-lambda make-<parsing-results>
+	  ({type-name xp::<syntactic-identifier>})
+	(make-record type-name '()))))
+
+  (constructor-signature
+    (lambda (xp::<syntactic-identifier>) => (<parsing-results>)))
+
+  (method ({push-clause! <void>} clause.stx)
+    (.rev-parsed-clauses this (cons clause.stx (.rev-parsed-clauses this))))
+
+  (method (parsed-clauses)
+    (reverse (.rev-parsed-clauses this)))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+
+(define (main input-form.stx)
   (syntax-case input-form.stx ()
     ((_ ?type-name . ?clauses)
-     (%parse-clauses #'?type-name #'?clauses synner))
+     (begin
+       (unless (identifier? #'?type-name)
+	 (synner "expected identifier as mixin type name" #'?type-name))
+       (%parse-clauses #'?type-name #'?clauses synner)))
     (_
      (synner "invalid DEFINE-MIXIN-TYPE syntax use"))))
 
 (define (%parse-clauses type-name.id clauses.stx synner)
-  (unless (identifier? type-name.id)
-    (synner "expected identifier as mixin type name" type-name.id))
-  (let* ((clause*.stx (syntax-clauses-unwrap clauses.stx synner))
+  (let* ((clause*.stx (xp::syntax-clauses-unwrap clauses.stx synner))
 	 (clause*.stx (%merge-mixins-clauses type-name.id clause*.stx synner))
-	 (clause*.stx (%splice-protection-levels clause*.stx synner))
-	 (clause*.stx (reverse
-		       (syntax-clauses-fold-specs (lambda (rev-parsed-clause*.stx {spec <syntax-clause-spec>} args)
-						    (combine type-name.id rev-parsed-clause*.stx spec args synner))
-			 '() ;REV-PARSED-CLAUSE*.STX, list of parsed clauses
-			 CLAUSE-SPEC* clause*.stx synner))))
-    #`(define-syntax #,type-name.id
-	(make-expand-time-value (cons* (syntax define-mixin-type) (syntax #,type-name.id) (syntax #,clause*.stx))))))
+	 (clause*.stx (%splice-protection-levels clause*.stx synner)))
+    (%build-output (xp::syntax-clauses-fold-specs combine (new <parsing-results> type-name.id) CLAUSE-SPEC* clause*.stx synner))))
+
+(define (%build-output {results <parsing-results>})
+  #`(define-syntax #,(.type-name results)
+      (make-expand-time-value (cons* (syntax define-mixin-type)
+				     (syntax #,(.type-name results))
+				     (syntax #,(.parsed-clauses results))))))
 
 
 (module (%merge-mixins-clauses)
@@ -138,7 +197,7 @@
     (let ((obj (retrieve-expand-time-value mixin-name.id)))
       (syntax-case obj (define-mixin-type)
 	((define-mixin-type ?mixin-name . ?clauses)
-	 (syntax-replace-id #'?clauses mixin-name.id type-name.id))
+	 (xp::syntax-replace-id #'?clauses mixin-name.id type-name.id))
 	(_
 	 (synner "identifier in MIXINS clause is not a mixin name" mixin-name.id)))))
 
@@ -229,35 +288,11 @@
   #| end of module: %SPLICE-PROTECTION-LEVELS |# )
 
 
-;;;; parsing of clauses
+(define-type <parsed-args>
+  (vector-of (vector-of <top>)))
 
-(define-constant CLAUSE-SPEC*
-  (syntax-clauses-validate-specs
-   (list
-    ;;KEYWORD MIN-OCCUR MAX-OCCUR MIN-ARGS MAX-ARGS MUTUALLY-INCLUSIVE MUTUALLY-EXCLUSIVE
-    (new <syntax-clause-spec> #'nongenerative			0 1      0 1      '() '())
-    (new <syntax-clause-spec> #'implements			0 +inf.0 0 +inf.0 '() '())
-    (new <syntax-clause-spec> #'define-type-descriptors		0 1      0 0      '() '())
-    (new <syntax-clause-spec> #'strip-angular-parentheses	0 1      0 0      '() '())
-    (new <syntax-clause-spec> #'sealed				0 1      1 1      '() '())
-    (new <syntax-clause-spec> #'opaque				0 1      1 1      '() '())
-    (new <syntax-clause-spec> #'protocol			0 1      1 1      '() '())
-    (new <syntax-clause-spec> #'super-protocol			0 1      1 1      '() '())
-    (new <syntax-clause-spec> #'fields				0 +inf.0 1 +inf.0 '() '())
-    ;;
-    (new <syntax-clause-spec> #'method				0 +inf.0 2 +inf.0 '() '())
-    (new <syntax-clause-spec> #'virtual-method			0 +inf.0 2 +inf.0 '() '())
-    (new <syntax-clause-spec> #'seal-method			0 +inf.0 2 +inf.0 '() '())
-    ;;
-    (new <syntax-clause-spec> #'custom-printer			0 1      1 1      '() '())
-    (new <syntax-clause-spec> #'type-predicate			0 1      1 1      '() '())
-    (new <syntax-clause-spec> #'equality-predicate		0 1      1 1      '() '())
-    (new <syntax-clause-spec> #'comparison-procedure		0 1      1 1      '() '())
-    (new <syntax-clause-spec> #'hash-function			0 1      1 1      '() '())
-    #| end of LIST |# )))
-
-(define (combine type-name.id rev-parsed-clause*.stx {spec <syntax-clause-spec>} args synner)
-  ((case-identifiers (.keyword spec)
+(define ({combine <parsing-results>} {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ((case-identifiers (.keyword clause-spec)
      ((nongenerative)			%process-clause/nongenerative)
      ((implements)			%process-clause/implements)
      ((define-type-descriptors)		%process-clause/define-type-descriptors)
@@ -279,12 +314,14 @@
      ((hash-function)			%process-clause/hash-function)
      ;;
      (else
-      (assertion-violation __module_who__ "invalid clause spec" spec)))
-   type-name.id args spec rev-parsed-clause*.stx synner))
+      (assertion-violation __module_who__ "invalid clause spec" clause-spec)))
+   results clause-spec args)
+  results)
 
 
-(define (%process-clause/nongenerative type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-  ;;The input clause must have one of the formats:
+(define (%process-clause/nongenerative {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ;;This input clause is present at most once.  The input clause must have one of the
+  ;;formats:
   ;;
   ;;   (nongenerative)
   ;;   (nongenerative ?uid)
@@ -294,21 +331,21 @@
   ;;   #(#())
   ;;   #(#(?uid))
   ;;
+  ;;We validate the ?UID and register the clause as is but fully unwrapped.
+  ;;
   (let ((first-item (vector-ref args 0)))
     (if (vector-empty? first-item)
-	(cons (list (.keyword spec))
-	      rev-parsed-clause*.stx)
+	;;No UID specified.
+	(.push-clause! results (list (.keyword clause-spec)))
       (let ((uid (vector-ref first-item 0)))
 	(if (identifier? uid)
-	    (cons (list (.keyword spec) uid)
-		  rev-parsed-clause*.stx)
+	    (.push-clause! results (list (.keyword clause-spec) uid))
 	  (synner "expected empty clause or single identifier argument in NONGENERATIVE clause"
-		  (list (.keyword spec) uid)))))))
+		  (list (.keyword clause-spec) uid)))))))
 
 
-(define (%process-clause/implements type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-  ;;This  input clause  can appear  any  number of  times  and it  must have  the
-  ;;format:
+(define (%process-clause/implements {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ;;This input clause can appear any number of times and it must have the format:
   ;;
   ;;   (implements ?interface ...)
   ;;
@@ -316,33 +353,39 @@
   ;;
   ;;   #(#(?interface ...) ...)
   ;;
-  (cons (cons (.keyword spec)
-	      (vector-fold-right
-		  (lambda (arg knil)
-		    (vector-fold-right
-			(lambda (iface.id knil)
-			  (unless (identifier? iface.id)
-			    (synner "expected syntactic identifier as interface name" iface.id))
-			  (cons iface.id knil))
-		      knil arg))
-		'() args))
-	rev-parsed-clause*.stx))
+  ;;We collapse the  multiple clauses into a single IMPLEMENTS  clause, then register
+  ;;it fully unwrapped.
+  ;;
+  (.push-clause! results (cons (.keyword clause-spec)
+			       (vector-fold-right
+				   (lambda (arg knil)
+				     (vector-fold-right
+					 (lambda (iface.id knil)
+					   (if (identifier? iface.id)
+					       (cons iface.id knil)
+					     (synner "expected syntactic identifier as interface name" iface.id)))
+				       knil arg))
+				 '() args))))
 
 
-(define (%process-clause/define-type-descriptors type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-  ;;The input clause must have one of the formats:
+(define (%process-clause/define-type-descriptors {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ;;This input clause is present at most once.  The input clause must have one of the
+  ;;formats:
   ;;
   ;;   (define-type-descriptors)
   ;;
-  ;;and we expect ARGS to have one of the formats:
+  ;;and we expect ARGS to have one of the format:
   ;;
   ;;   #(#())
   ;;
-  (cons (list (.keyword spec)) rev-parsed-clause*.stx))
+  ;;We register the clause as is, fully unwrapped.
+  ;;
+  (.push-clause! results (list (.keyword clause-spec))))
 
 
-(define (%process-clause/strip-angular-parentheses type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-  ;;The input clause must have one of the formats:
+(define (%process-clause/strip-angular-parentheses {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ;;This input clause is present at most once.  The input clause must have one of the
+  ;;formats:
   ;;
   ;;   (strip-angular-parentheses)
   ;;
@@ -350,11 +393,14 @@
   ;;
   ;;   #(#())
   ;;
-  (cons (list (.keyword spec)) rev-parsed-clause*.stx))
+  ;;We register the clause as is, fully unwrapped.
+  ;;
+  (.push-clause! results (list (.keyword clause-spec))))
 
 
-(define (%process-clause/sealed type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-  ;;The input clause must have one of the formats:
+(define (%process-clause/sealed {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ;;This clause  is present  at most  once.  The input  clause must  have one  of the
+  ;;formats:
   ;;
   ;;   (sealed #t)
   ;;   (sealed #f)
@@ -364,14 +410,18 @@
   ;;   #(#(#t))
   ;;   #(#(#f))
   ;;
-  (let ((obj (vector-ref (vector-ref args 0) 0)))
+  ;;We validate the value then register the clause as is, fully unwrapped.
+  ;;
+  (let* ((obj		(vector-ref (vector-ref args 0) 0))
+	 (clause	(list (.keyword clause-spec) obj)))
     (if (boolean? (syntax->datum obj))
-	(cons (list (.keyword spec) obj) rev-parsed-clause*.stx)
-      (synner "expected boolean argument in SEALED clause" (list (.keyword spec) obj)))))
+	(.push-clause! results clause)
+      (synner "expected boolean argument in SEALED clause" clause))))
 
 
-(define (%process-clause/opaque type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-  ;;The input clause must have one of the formats:
+(define (%process-clause/opaque {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ;;This clause  is present  at most  once.  The input  clause must  have one  of the
+  ;;formats:
   ;;
   ;;   (opaque #t)
   ;;   (opaque #f)
@@ -381,14 +431,18 @@
   ;;   #(#(#t))
   ;;   #(#(#f))
   ;;
-  (let ((obj (vector-ref (vector-ref args 0) 0)))
+  ;;We validate the value then register the clause as is, fully unwrapped.
+  ;;
+  (let* ((obj		(vector-ref (vector-ref args 0) 0))
+	 (clause	(list (.keyword clause-spec) obj)))
     (if (boolean? (syntax->datum obj))
-	(cons (list (.keyword spec) obj) rev-parsed-clause*.stx)
-      (synner "expected boolean argument in OPAQUE clause" (list (.keyword spec) obj)))))
+	(.push-clause! results clause)
+      (synner "expected boolean argument in OPAQUE clause" clause))))
 
 
-(define (%process-clause/protocol type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-  ;;The input clause must have one of the formats:
+(define (%process-clause/protocol {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ;;This clause  is present  at most  once.  The input  clause must  have one  of the
+  ;;formats:
   ;;
   ;;   (protocol ?expr)
   ;;
@@ -396,12 +450,14 @@
   ;;
   ;;   #(#(?expr))
   ;;
-  (let ((obj (vector-ref (vector-ref args 0) 0)))
-    (cons (list (.keyword spec) obj) rev-parsed-clause*.stx)))
+  ;;We register the clause as is, fully unwrapped.
+  ;;
+  (.push-clause! results (list (.keyword clause-spec) (vector-ref (vector-ref args 0) 0))))
 
 
-(define (%process-clause/super-protocol type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-  ;;The input clause must have one of the formats:
+(define (%process-clause/super-protocol {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ;;This clause  is present  at most  once.  The input  clause must  have one  of the
+  ;;formats:
   ;;
   ;;   (super-protocol ?expr)
   ;;
@@ -409,13 +465,14 @@
   ;;
   ;;   #(#(?expr))
   ;;
-  (let ((obj (vector-ref (vector-ref args 0) 0)))
-    (cons (list (.keyword spec) obj) rev-parsed-clause*.stx)))
+  ;;We register the clause as is, fully unwrapped.
+  ;;
+  (.push-clause! results (list (.keyword clause-spec) (vector-ref (vector-ref args 0) 0))))
 
 
 (module (%process-clause/fields)
 
-  (define (%process-clause/fields type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
+  (define (%process-clause/fields {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
     ;;This clause can be present multiple times.   Each input clause must have one of
     ;;the formats:
     ;;
@@ -426,15 +483,21 @@
     ;;
     ;;   #(?meat ...)
     ;;
-    (cons (cons #'fields
-		(reverse
-		 (vector-fold-left (lambda (knil arg)
-				     (append (%process-fields-spec arg synner)
-					     knil))
-		   '() args)))
-	  rev-parsed-clause*.stx))
+    ;;where ?MEAT as one of the formats:
+    ;;
+    ;;   #(?protection-level ?field-spec ...)
+    ;;   #(?field-spec ...)
+    ;;
+    ;;We validate the  field specifications and register each FIELDS  clauses as they
+    ;;are, fully unwrapped.   To preserve the protection level: we  do *not* collapse
+    ;;multiple FIELDS clauses into a single clause.
+    ;;
+    (vector-fold-left
+	(lambda (unused arg)
+	  (.push-clause! results (cons #'fields (%process-fields-spec arg))))
+      #f args))
 
-  (define (%process-fields-spec arg synner)
+  (define (%process-fields-spec arg)
     ;;We expect ARG to have one of the formats:
     ;;
     ;;    #(?field-spec ...)
@@ -442,33 +505,21 @@
     ;;
     (syntax-case arg (public protected private)
       (#(public ?field-spec ...)
-       (fold-left (lambda (knil field-spec.stx)
-		    (%parse-field-spec knil field-spec.stx synner))
-	 (list #'public)
-	 (syntax->list #'(?field-spec ...))))
+       (cons #'public		(fold-right %parse-field-spec '() (xp::syntax->list #'(?field-spec ...)))))
 
       (#(protected ?field-spec ...)
-       (fold-left (lambda (knil field-spec.stx)
-		    (%parse-field-spec knil field-spec.stx synner))
-	 (list #'protected)
-	 (syntax->list #'(?field-spec ...))))
+       (cons #'protected	(fold-right %parse-field-spec '() (xp::syntax->list #'(?field-spec ...)))))
 
       (#(private ?field-spec ...)
-       (fold-left (lambda (knil field-spec.stx)
-		    (%parse-field-spec knil field-spec.stx synner))
-	 (list #'private)
-	 (syntax->list #'(?field-spec ...))))
+       (cons #'private		(fold-right %parse-field-spec '() (xp::syntax->list #'(?field-spec ...)))))
 
       (#(?field-spec ...)
-       (fold-left (lambda (knil field-spec.stx)
-		    (%parse-field-spec knil field-spec.stx synner))
-	 '()
-	 (syntax->list #'(?field-spec ...))))
+       (fold-right %parse-field-spec '() (xp::syntax->list #'(?field-spec ...))))
 
       (#(?stuff ...)
        (synner "invalid fields specification" #'(fields ?stuff ...)))))
 
-  (define (%parse-field-spec knil field-spec.stx synner)
+  (define (%parse-field-spec field-spec.stx knil)
     (syntax-case field-spec.stx (brace mutable immutable)
       ((immutable ?field-name)
        (%validate-field-name #'?field-name field-spec.stx synner))
@@ -503,7 +554,7 @@
 
 (module (%process-clause/method)
 
-  (define (%process-clause/method type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
+  (define (%process-clause/method {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
     ;;This clause can be present multiple times.   Each input clause must have one of
     ;;the formats:
     ;;
@@ -514,41 +565,44 @@
     ;;
     ;;   #(?meat ...)
     ;;
-    (vector-fold-left (lambda (rev-parsed-clause*.stx arg)
-			(cons (%process-method-spec arg synner)
-			      rev-parsed-clause*.stx))
-      rev-parsed-clause*.stx
-      args))
+    ;;with ?MEAT having one of the formats:
+    ;;
+    ;;   #((?who . ?formals) . ?body)
+    ;;   #(?protection-level (?who . ?formals) . ?body)
+    ;;
+    (vector-fold-left %process-method-spec results args))
 
-  (define (%process-method-spec arg synner)
+  (define (%process-method-spec {results <parsing-results>} {arg <vector>})
     ;;We expect ARG to have one of the formats:
     ;;
     ;;   #((?who . ?formals) . ?body)
     ;;   #(?protection-level (?who . ?formals) . ?body)
     ;;
-    (syntax-case arg (public protected private)
-      (#((?who . ?formals) ?body0 ?body ...)
-       (begin
-	 (%parse-who #'?who synner)
-	 #'(method (?who . ?formals) ?body0 ?body ...)))
+    (.push-clause! results
+		   (syntax-case arg (public protected private)
+		     (#((?who . ?formals) ?body0 ?body ...)
+		      (begin
+			(%parse-who #'?who synner)
+			#'(method (?who . ?formals) ?body0 ?body ...)))
 
-      (#(public (?who . ?formals) ?body0 ?body ...)
-       (begin
-	 (%parse-who #'?who synner)
-	 #'(method public (?who . ?formals) ?body0 ?body ...)))
+		     (#(public (?who . ?formals) ?body0 ?body ...)
+		      (begin
+			(%parse-who #'?who synner)
+			#'(method public (?who . ?formals) ?body0 ?body ...)))
 
-      (#(protected (?who . ?formals) ?body0 ?body ...)
-       (begin
-	 (%parse-who #'?who synner)
-	 #'(method protected (?who . ?formals) ?body0 ?body ...)))
+		     (#(protected (?who . ?formals) ?body0 ?body ...)
+		      (begin
+			(%parse-who #'?who synner)
+			#'(method protected (?who . ?formals) ?body0 ?body ...)))
 
-      (#(private (?who . ?formals) ?body0 ?body ...)
-       (begin
-	 (%parse-who #'?who synner)
-	 #'(method private (?who . ?formals) ?body0 ?body ...)))
+		     (#(private (?who . ?formals) ?body0 ?body ...)
+		      (begin
+			(%parse-who #'?who synner)
+			#'(method private (?who . ?formals) ?body0 ?body ...)))
 
-      (#(?stuff ...)
-       (synner "invalid method specification" #'(method ?stuff ...)))))
+		     (#(?stuff ...)
+		      (synner "invalid method specification" #'(method ?stuff ...)))))
+    results)
 
   (define (%parse-who who.stx synner)
     (syntax-case who.stx (brace)
@@ -566,7 +620,7 @@
 
 (module (%process-clause/virtual-method)
 
-  (define (%process-clause/virtual-method type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
+  (define (%process-clause/virtual-method {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
     ;;This clause can be present multiple times.   Each input clause must have one of
     ;;the formats:
     ;;
@@ -577,41 +631,44 @@
     ;;
     ;;   #(?meat ...)
     ;;
-    (vector-fold-left (lambda (rev-parsed-clause*.stx arg)
-			(cons (%process-virtual-method-spec arg synner)
-			      rev-parsed-clause*.stx))
-      rev-parsed-clause*.stx
-      args))
+    ;;with ?MEAT having one of the formats:
+    ;;
+    ;;   #((?who . ?formals) . ?body)
+    ;;   #(?protection-level (?who . ?formals) . ?body)
+    ;;
+    (vector-fold-left %process-method-spec results args))
 
-  (define (%process-virtual-method-spec arg synner)
+  (define (%process-method-spec {results <parsing-results>} {arg <vector>})
     ;;We expect ARG to have one of the formats:
     ;;
     ;;   #((?who . ?formals) . ?body)
     ;;   #(?protection-level (?who . ?formals) . ?body)
     ;;
-    (syntax-case arg (public protected private)
-      (#((?who . ?formals) ?body0 ?body ...)
-       (begin
-	 (%parse-who #'?who synner)
-	 #'(virtual-method (?who . ?formals) ?body0 ?body ...)))
+    (.push-clause! results
+		   (syntax-case arg (public protected private)
+		     (#((?who . ?formals) ?body0 ?body ...)
+		      (begin
+			(%parse-who #'?who synner)
+			#'(virtual-method (?who . ?formals) ?body0 ?body ...)))
 
-      (#(public (?who . ?formals) ?body0 ?body ...)
-       (begin
-	 (%parse-who #'?who synner)
-	 #'(virtual-method public (?who . ?formals) ?body0 ?body ...)))
+		     (#(public (?who . ?formals) ?body0 ?body ...)
+		      (begin
+			(%parse-who #'?who synner)
+			#'(virtual-method public (?who . ?formals) ?body0 ?body ...)))
 
-      (#(protected (?who . ?formals) ?body0 ?body ...)
-       (begin
-	 (%parse-who #'?who synner)
-	 #'(virtual-method protected (?who . ?formals) ?body0 ?body ...)))
+		     (#(protected (?who . ?formals) ?body0 ?body ...)
+		      (begin
+			(%parse-who #'?who synner)
+			#'(virtual-method protected (?who . ?formals) ?body0 ?body ...)))
 
-      (#(private (?who . ?formals) ?body0 ?body ...)
-       (begin
-	 (%parse-who #'?who synner)
-	 #'(virtual-method private (?who . ?formals) ?body0 ?body ...)))
+		     (#(private (?who . ?formals) ?body0 ?body ...)
+		      (begin
+			(%parse-who #'?who synner)
+			#'(virtual-method private (?who . ?formals) ?body0 ?body ...)))
 
-      (#(?stuff ...)
-       (synner "invalid method specification" #'(virtual-method ?stuff ...)))))
+		     (#(?stuff ...)
+		      (synner "invalid method specification" #'(virtual-method ?stuff ...)))))
+    results)
 
   (define (%parse-who who.stx synner)
     (syntax-case who.stx (brace)
@@ -629,7 +686,7 @@
 
 (module (%process-clause/seal-method)
 
-  (define (%process-clause/seal-method type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
+  (define (%process-clause/seal-method {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
     ;;This clause can be present multiple times.   Each input clause must have one of
     ;;the formats:
     ;;
@@ -640,41 +697,44 @@
     ;;
     ;;   #(?meat ...)
     ;;
-    (vector-fold-left (lambda (rev-parsed-clause*.stx arg)
-			(cons (%process-seal-method-spec arg synner)
-			      rev-parsed-clause*.stx))
-      rev-parsed-clause*.stx
-      args))
+    ;;with ?MEAT having one of the formats:
+    ;;
+    ;;   #((?who . ?formals) . ?body)
+    ;;   #(?protection-level (?who . ?formals) . ?body)
+    ;;
+    (vector-fold-left %process-method-spec results args))
 
-  (define (%process-seal-method-spec arg synner)
+  (define (%process-method-spec {results <parsing-results>} {arg <vector>})
     ;;We expect ARG to have one of the formats:
     ;;
     ;;   #((?who . ?formals) . ?body)
     ;;   #(?protection-level (?who . ?formals) . ?body)
     ;;
-    (syntax-case arg (public protected private)
-      (#((?who . ?formals) ?body0 ?body ...)
-       (begin
-	 (%parse-who #'?who synner)
-	 #'(seal-method (?who . ?formals) ?body0 ?body ...)))
+    (.push-clause! results
+		   (syntax-case arg (public protected private)
+		     (#((?who . ?formals) ?body0 ?body ...)
+		      (begin
+			(%parse-who #'?who synner)
+			#'(seal-method (?who . ?formals) ?body0 ?body ...)))
 
-      (#(public (?who . ?formals) ?body0 ?body ...)
-       (begin
-	 (%parse-who #'?who synner)
-	 #'(seal-method public (?who . ?formals) ?body0 ?body ...)))
+		     (#(public (?who . ?formals) ?body0 ?body ...)
+		      (begin
+			(%parse-who #'?who synner)
+			#'(seal-method public (?who . ?formals) ?body0 ?body ...)))
 
-      (#(protected (?who . ?formals) ?body0 ?body ...)
-       (begin
-	 (%parse-who #'?who synner)
-	 #'(seal-method protected (?who . ?formals) ?body0 ?body ...)))
+		     (#(protected (?who . ?formals) ?body0 ?body ...)
+		      (begin
+			(%parse-who #'?who synner)
+			#'(seal-method protected (?who . ?formals) ?body0 ?body ...)))
 
-      (#(private (?who . ?formals) ?body0 ?body ...)
-       (begin
-	 (%parse-who #'?who synner)
-	 #'(seal-method private (?who . ?formals) ?body0 ?body ...)))
+		     (#(private (?who . ?formals) ?body0 ?body ...)
+		      (begin
+			(%parse-who #'?who synner)
+			#'(seal-method private (?who . ?formals) ?body0 ?body ...)))
 
-      (#(?stuff ...)
-       (synner "invalid method specification" #'(seal-method ?stuff ...)))))
+		     (#(?stuff ...)
+		      (synner "invalid method specification" #'(seal-method ?stuff ...)))))
+    results)
 
   (define (%parse-who who.stx synner)
     (syntax-case who.stx (brace)
@@ -690,8 +750,9 @@
   #| end of module: %PROCESS-CLAUSE/SEAL-METHOD |# )
 
 
-(define (%process-clause/custom-printer type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-  ;;The input clause must have one of the formats:
+(define (%process-clause/custom-printer {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ;;This clause  is present  at most  once.  The input  clause must  have one  of the
+  ;;formats:
   ;;
   ;;   (custom-printer ?expr)
   ;;
@@ -699,12 +760,14 @@
   ;;
   ;;   #(#(?expr))
   ;;
-  (let ((obj (vector-ref (vector-ref args 0) 0)))
-    (cons (list (.keyword spec) obj) rev-parsed-clause*.stx)))
+  ;;We register this clause as is, fully unwrapped.
+  ;;
+  (.push-clause! results (list (.keyword clause-spec) (vector-ref (vector-ref args 0) 0))))
 
 
-(define (%process-clause/type-predicate type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-  ;;The input clause must have one of the formats:
+(define (%process-clause/type-predicate {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ;;This clause  is present  at most  once.  The input  clause must  have one  of the
+  ;;formats:
   ;;
   ;;   (type-predicate ?expr)
   ;;
@@ -712,12 +775,14 @@
   ;;
   ;;   #(#(?expr))
   ;;
-  (let ((obj (vector-ref (vector-ref args 0) 0)))
-    (cons (list (.keyword spec) obj) rev-parsed-clause*.stx)))
+  ;;We register this clause as is, fully unwrapped.
+  ;;
+  (.push-clause! results (list (.keyword clause-spec) (vector-ref (vector-ref args 0) 0))))
 
 
-(define (%process-clause/equality-predicate type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-  ;;The input clause must have one of the formats:
+(define (%process-clause/equality-predicate {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ;;This clause  is present  at most  once.  The input  clause must  have one  of the
+  ;;formats:
   ;;
   ;;   (equality-predicate ?expr)
   ;;
@@ -725,12 +790,14 @@
   ;;
   ;;   #(#(?expr))
   ;;
-  (let ((obj (vector-ref (vector-ref args 0) 0)))
-    (cons (list (.keyword spec) obj) rev-parsed-clause*.stx)))
+  ;;We register this clause as is, fully unwrapped.
+  ;;
+  (.push-clause! results (list (.keyword clause-spec) (vector-ref (vector-ref args 0) 0))))
 
 
-(define (%process-clause/comparison-procedure type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-  ;;The input clause must have one of the formats:
+(define (%process-clause/comparison-procedure {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ;;This clause  is present  at most  once.  The input  clause must  have one  of the
+  ;;formats:
   ;;
   ;;   (comparison-procedure ?expr)
   ;;
@@ -738,12 +805,14 @@
   ;;
   ;;   #(#(?expr))
   ;;
-  (let ((obj (vector-ref (vector-ref args 0) 0)))
-    (cons (list (.keyword spec) obj) rev-parsed-clause*.stx)))
+  ;;We register this clause as is, fully unwrapped.
+  ;;
+  (.push-clause! results (list (.keyword clause-spec) (vector-ref (vector-ref args 0) 0))))
 
 
-(define (%process-clause/hash-function type-name.id args {spec <syntax-clause-spec>} rev-parsed-clause*.stx synner)
-  ;;The input clause must have one of the formats:
+(define (%process-clause/hash-function {results <parsing-results>} {clause-spec xp::<syntax-clause-spec>} {args <parsed-args>})
+  ;;This clause  is present  at most  once.  The input  clause must  have one  of the
+  ;;formats:
   ;;
   ;;   (hash-function ?expr)
   ;;
@@ -751,17 +820,12 @@
   ;;
   ;;   #(#(?expr))
   ;;
-  (let ((obj (vector-ref (vector-ref args 0) 0)))
-    (cons (list (.keyword spec) obj) rev-parsed-clause*.stx)))
+  ;;We register this clause as is, fully unwrapped.
+  ;;
+  (.push-clause! results (list (.keyword clause-spec) (vector-ref (vector-ref args 0) 0))))
 
 
-(lambda (input-form.stx)
-  (case-define synner
-    ((message)
-     (syntax-violation __module_who__ message input-form.stx #f))
-    ((message subform)
-     (syntax-violation __module_who__ message input-form.stx subform)))
-  (main input-form.stx synner))))
+(main input-form.stx))
 
 
 ;;;; done
