@@ -799,7 +799,7 @@
     ;;
     ;;where ?HARD-CODED-SEXP has the format:
     ;;
-    ;;   #(?core-prim-name ?safety-boolean (?signature-spec0 ?signature-spec ...)
+    ;;   #(?core-prim-name ?safety-boolean #(?signature-spec0 ?signature-spec ...)
     ;;     ?replacements)
     ;;
     ;;?CORE-PRIM-NAME  is a  symbol  representing the  core  primitive's public  name
@@ -835,9 +835,9 @@
     (let ((hard-coded-sexp	(syntactic-binding-descriptor.value descriptor)))
       (let ((core-prim.sym	(vector-ref hard-coded-sexp 0))
 	    (safety.boolean	(vector-ref hard-coded-sexp 1))
-	    (signature*.sexp	(vector-ref hard-coded-sexp 2))
+	    (signatures.sexp	(vector-ref hard-coded-sexp 2))
 	    (replacements.sexp	(vector-ref hard-coded-sexp 3)))
-	(let* ((clambda.sig	(%signature-sexp->case-lambda-signature core-prim.sym signature*.sexp))
+	(let* ((clambda.sig	(%signature-sexp->case-lambda-signature core-prim.sym signatures.sexp))
 	       (closure.ots	(make-closure-type-spec clambda.sig))
 	       (replacements	(vector-map core-prim-id replacements.sexp)))
 	  (set-car! descriptor 'core-prim-typed)
@@ -845,10 +845,12 @@
 							       replacements)
 				     hard-coded-sexp))))))
 
-  (define* (%signature-sexp->case-lambda-signature core-prim.sym signature*.sexp)
-    (let ((clause*.sig (map (lambda (signature.sexp)
-			      (%signature-sexp->clause-signature core-prim.sym signature.sexp))
-			 signature*.sexp)))
+  (define* (%signature-sexp->case-lambda-signature core-prim.sym signatures.sexp)
+    (let ((clause*.sig (vector-fold-right
+			   (lambda (signature.sexp knil)
+			     (cons (%signature-sexp->clause-signature core-prim.sym signature.sexp)
+				   knil))
+			 '() signatures.sexp)))
       (make-case-lambda-signature clause*.sig)))
 
   (define* (%signature-sexp->clause-signature core-prim.sym sexp)

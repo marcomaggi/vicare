@@ -310,9 +310,9 @@
     (with-syntax
 	((PRIM-NAME		prim-name.id)
 	 (SAFETY		(%validate-safety safety.id))
-	 (SIGNATURES		(%validate-and-format-signatures signatures.stx))
+	 ((SIGNATURE ...)	(%validate-and-format-signatures signatures.stx))
 	 ((REPLACEMENT ...)	(%validate-replacements replacements.stx)))
-      #'(declare-primitive (quote PRIM-NAME) (quote #(PRIM-NAME SAFETY SIGNATURES #(REPLACEMENT ...))))))
+      #'(declare-primitive (quote PRIM-NAME) (quote #(PRIM-NAME SAFETY #(SIGNATURE ...) #(REPLACEMENT ...))))))
 
   (define (%validate-safety safety.stx)
     (syntax-case safety.stx (safe unsafe)
