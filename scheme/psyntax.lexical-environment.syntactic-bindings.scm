@@ -1494,10 +1494,10 @@
   ;;
   ;;where ?HARD-CODED-SEXP has the format:
   ;;
-  ;;   (?type-name ?uid ?parent-annotation
-  ;;    ?constructor-id ?destructor-id ?type-predicate-id
-  ;;    ?equality-predicate-id ?comparison-procedure-id ?hash-function-id
-  ;;    ?methods-alist)
+  ;;   #(?type-name ?uid ?parent-annotation
+  ;;     ?constructor-id ?destructor-id ?type-predicate-id
+  ;;     ?equality-predicate-id ?comparison-procedure-id ?hash-function-id
+  ;;     ?methods-alist)
   ;;
   ;;Syntactic binding  descriptors of type "$core-label-type-name"  are hard-coded in
   ;;the boot image  and generated directly by the makefile  at boot image build-time.
