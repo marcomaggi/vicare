@@ -30,15 +30,13 @@
   (export
     ;; record type
     <channel>
-    <binary-channel>			<textual-channel>
     <binary-input-only-channel>		<textual-input-only-channel>
     <binary-output-only-channel>	<textual-output-only-channel>
     <binary-input/output-channel>	<textual-input/output-channel>
     <input-channel>			<output-channel>
 
-    <<binary-channel>>
+    <<channel>>
     <<binary-input-channel>>		<<binary-output-channel>>
-    <<textual-channel>>
     <<textual-input-channel>>		<<textual-output-channel>>
 
     ;; condition objects
@@ -138,24 +136,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-interface-type <<binary-channel>>
+(define-interface-type <<binary-input-channel>>
   (parent <<channel>>)
   (method-prototype message-terminators		(case-lambda
 						  (()				=> (<binary-terminators>))
 						  ((<binary-terminators>)	=> (<void>))))
-  #| end of DEFINE-INTERFACE-TYPE |# )
-
-(define-interface-type <<textual-channel>>
-  (parent <<channel>>)
-  (method-prototype message-terminators		(case-lambda
-						  (()				=> (<textual-terminators>))
-						  ((<textual-terminators>)	=> (<void>))))
-  #| end of DEFINE-INTERFACE-TYPE |# )
-
-;;; --------------------------------------------------------------------
-
-(define-interface-type <<binary-input-channel>>
-  (parent <<binary-channel>>)
   (method-prototype recv-begin!			(lambda () => (<void>)))
   (method-prototype recv-end!/rbl		(lambda () => (<positive-fixnum> (list-of <nebytevector>))))
   (method-prototype recv-end!			(lambda () => (<bytevector>)))
@@ -164,7 +149,10 @@
   #| end of DEFINE-INTERFACE-TYPE |# )
 
 (define-interface-type <<textual-input-channel>>
-  (parent <<textual-channel>>)
+  (parent <<channel>>)
+  (method-prototype message-terminators		(case-lambda
+						  (()				=> (<textual-terminators>))
+						  ((<textual-terminators>)	=> (<void>))))
   (method-prototype recv-begin!			(lambda () => (<void>)))
   (method-prototype recv-end!/rbl		(lambda () => (<positive-fixnum> (list-of <nestring>))))
   (method-prototype recv-end!			(lambda () => (<string>)))
@@ -175,7 +163,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-interface-type <<binary-output-channel>>
-  (parent <<binary-channel>>)
+  (parent <<channel>>)
   (method-prototype send-begin!			(lambda () => (<void>)))
   (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
   (method-prototype send-message-portion!	(lambda (<bytevector>) => (<void>)))
@@ -184,7 +172,7 @@
   #| end of DEFINE-INTERFACE-TYPE |# )
 
 (define-interface-type <<textual-output-channel>>
-  (parent <<textual-channel>>)
+  (parent <<channel>>)
   (method-prototype send-begin!			(lambda () => (<void>)))
   (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
   (method-prototype send-message-portion!	(lambda (<string>) => (<void>)))
@@ -225,9 +213,9 @@
     (lambda (make-record)
       (named-lambda make-channel
 	  ({_ <channel>} {max-message-size <positive-fixnum>})
-	(make-record 'none	    ;action
-		     #f		    ;message-terminated?
-		     (faraway-time) ;expiration-time
+	(make-record 'none	      ;action
+		     #f		      ;message-terminated?
+		     (faraway-time)   ;expiration-time
 		     max-message-size ;maximum-message-size
 		     0		      ;message-size
 		     ))))
@@ -292,112 +280,6 @@
   #| end of DEFINE-RECORD-TYPE |# )
 
 
-(define-record-type <binary-channel>
-  (nongenerative vicare:net:channels:<binary-channel>)
-  (parent <channel>)
-  (implements <<binary-channel>>)
-  (protected
-    (fields
-      (mutable {message-buffer (list-of <nebytevector>)})
-		;Null or a  list of bytevectors representing the  data accumulated so
-		;far; last input first.
-      #| end of FIELDS |# ))
-  (fields
-    (mutable {message-terminators <binary-terminators>})
-		;A  non-empty list  of  non-empty  bytevectors representing  possible
-		;message terminators.
-    #| end of FIELDS |# )
-
-  (protocol
-    (lambda (make-channel)
-      (named-lambda make-binary-channel ({_ <binary-channel>})
-	((make-channel DEFAULT-BINARY-MESSAGE-MAXIMUM-SIZE)
-	 '() DEFAULT-BINARY-TERMINATORS))))
-
-  (constructor-signature
-    (lambda () => (<binary-channel>)))
-
-;;; --------------------------------------------------------------------
-
-  (protected
-    (method ({message-buffer-push! <void>} {data <nebytevector>})
-      (.message-buffer this (cons data (.message-buffer this)))
-      (.message-increment-size! this (.length data))))
-
-  (protected
-    (method ({reverse-and-concatenate-buffer <bytevector>})
-      ($bytevector-reverse-and-concatenate (.message-size this) (.message-buffer this))))
-
-;;; --------------------------------------------------------------------
-
-  (method ({abort! <void>})
-    ;;Abort  the  current  operation  and  reset  the  channel  to  inactive;  return
-    ;;unspecified values.  Send and receive nothing.
-    ;;
-    (.action              this 'none)
-    (.message-buffer      this '())
-    (.message-size        this 0)
-    (.message-terminated? this #f)
-    (.expiration-time     this (faraway-time))
-    (void))
-
-  #| end of DEFINE-RECORD-TYPE |# )
-
-
-(define-record-type <textual-channel>
-  (nongenerative vicare:net:channels:<textual-channel>)
-  (parent <channel>)
-  (implements <<textual-channel>>)
-  (protected
-    (fields
-      (mutable {message-buffer (list-of <nestring>)})
-		;Null or a list of strings  representing the data accumulated so far;
-		;last input first.
-      #| end of FIELDS |# ))
-  (fields
-    (mutable {message-terminators <textual-terminators>})
-		;A non-empty list of  non-empty strings representing possible message
-		;terminators.
-    #| end of FIELDS |# )
-
-  (protocol
-    (lambda (make-channel)
-      (named-lambda make-textual-channel ({_ <textual-channel>})
-	((make-channel DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-SIZE)
-	 '() DEFAULT-TEXTUAL-TERMINATORS))))
-
-  (constructor-signature
-    (lambda () => (<textual-channel>)))
-
-;;; --------------------------------------------------------------------
-
-  (protected
-    (method ({message-buffer-push! <void>} {data <nestring>})
-      (.message-buffer this (cons data (.message-buffer this)))
-      (.message-increment-size! this (.length data))))
-
-  (protected
-    (method ({reverse-and-concatenate-buffer <string>})
-      ($string-reverse-and-concatenate (.message-size this) (.message-buffer this))))
-
-;;; --------------------------------------------------------------------
-
-  (method ({abort! <void>})
-    ;;Abort  the  current  operation  and  reset  the  channel  to  inactive;  return
-    ;;unspecified values.  Send and receive nothing.
-    ;;
-    (.action              this 'none)
-    (.message-buffer      this '())
-    (.message-size        this 0)
-    (.message-terminated? this #f)
-    (.expiration-time     this (faraway-time))
-    (void))
-
-  #| end of DEFINE-RECORD-TYPE |# )
-
-
-;;;; common methods for input channels
-
 (define-mixin-type <receiving-channel-methods>
   (fields
     (mutable {maximum-message-portion-size <positive-fixnum>})
@@ -414,11 +296,57 @@
     (.action this 'recv)
     (void))
 
+  (method ({recv-abort! <void>})
+    ;;Abort  the  current  operation  and  reset  the  channel  to  inactive;  return
+    ;;unspecified values.  Send and receive nothing.
+    ;;
+    (assert-receiving-channel __who__ this)
+    (.action              this 'none)
+    (.message-buffer      this '())
+    (.message-size        this 0)
+    (.message-terminated? this #f)
+    (.expiration-time     this (faraway-time))
+    (void))
+
   #| end of DEFINE-MIXIN-TYPE |# )
 
 
 (define-mixin-type <receiving-binary-channel-methods>
+  (implements <<binary-input-channel>>)
+
+  (fields
+    (immutable {connect-in-port <binary-input-port>})
+		;An input or input/output binary port used to receive messages from a
+		;remote process.
+    #| end of FIELDS |# )
+
+  (protected
+    (fields
+      (mutable {message-buffer (list-of <nebytevector>)})
+		;Null or a  list of bytevectors representing the  data accumulated so
+		;far; last input first.
+      #| end of FIELDS |# ))
+
+  (fields
+    (mutable {message-terminators <binary-terminators>})
+		;A  non-empty list  of  non-empty  bytevectors representing  possible
+		;message terminators.
+    #| end of FIELDS |# )
+
   (mixins <receiving-channel-methods>)
+
+;;; --------------------------------------------------------------------
+
+  (protected
+    (method ({message-buffer-push! <void>} {data <nebytevector>})
+      (.message-buffer this (cons data (.message-buffer this)))
+      (.message-increment-size! this (.length data))))
+
+  (protected
+    (method ({reverse-and-concatenate-buffer <bytevector>})
+      ($bytevector-reverse-and-concatenate (.message-size this) (.message-buffer this))))
+
+;;; --------------------------------------------------------------------
 
   (method ({recv-end!/rbl <positive-fixnum> (list-of <nebytevector>)})
     ;;Finish receiving a message; it is an error  if the channel is not in the course
@@ -438,7 +366,7 @@
     (begin0
 	(values (.message-size   this)
 		(.message-buffer this))
-      (.abort! this)))
+      (.recv-abort! this)))
 
   (method ({recv-end! <bytevector>})
     ;;Finish receiving a message; it is an error  if the channel is not in the course
@@ -452,7 +380,7 @@
     (assert-receiving-channel __who__ this)
     (begin0
 	(.reverse-and-concatenate-buffer this)
-      (.abort! this)))
+      (.recv-abort! this)))
 
   (method ({recv-full-message (or <eof> <bytevector>)})
     (assert-inactive-channel __who__ this)
@@ -460,7 +388,7 @@
     (let next-portion ()
       (let ((rv (.recv-message-portion! this)))
 	(cond ((eof-object? rv)
-	       (.abort! this)
+	       (.recv-abort! this)
 	       rv)
 	      ((would-block-object? rv)
 	       (next-portion))
@@ -523,7 +451,7 @@
 		 (%error-maximum-message-size-exceeded __who__ this))
 		((.delivery-timeout-expired? this)
 		 (%error-message-delivery-timeout-expired __who__ this))
-		((%received-binary-message-terminator? this)
+		((%received-binary-message-terminator? (.message-terminators this) (.message-buffer this))
 		 (.message-terminated? this #t)
 		 #t)
 		(else #f))))))))
@@ -532,7 +460,43 @@
 
 
 (define-mixin-type <receiving-textual-channel-methods>
+  (implements <<textual-input-channel>>)
+
+  (public
+    (fields
+      (immutable {connect-in-port <textual-input-port>})
+		;An input or input/output textual port used to receive messages from a
+		;remote process.
+      #| end of FIELDS |# ))
+
+  (protected
+    (fields
+      (mutable {message-buffer (list-of <nestring>)})
+		;Null or a list of strings  representing the data accumulated so far;
+		;last input first.
+      #| end of FIELDS |# ))
+
+  (public
+    (fields
+      (mutable {message-terminators <textual-terminators>})
+		;A non-empty list of  non-empty strings representing possible message
+		;terminators.
+      #| end of FIELDS |# ))
+
   (mixins <receiving-channel-methods>)
+
+;;; --------------------------------------------------------------------
+
+  (protected
+    (method ({message-buffer-push! <void>} {data <nestring>})
+      (.message-buffer this (cons data (.message-buffer this)))
+      (.message-increment-size! this (.length data))))
+
+  (protected
+    (method ({reverse-and-concatenate-buffer <string>})
+      ($string-reverse-and-concatenate (.message-size this) (.message-buffer this))))
+
+;;; --------------------------------------------------------------------
 
   (method ({recv-end!/rbl <positive-fixnum> (list-of <nestring>)})
     ;;Finish receiving a message; it is an error  if the channel is not in the course
@@ -552,7 +516,7 @@
     (begin0
 	(values (.message-size   this)
 		(.message-buffer this))
-      (.abort! this)))
+      (.recv-abort! this)))
 
   (method ({recv-end! <string>})
     ;;Finish receiving a message; it is an error  if the channel is not in the course
@@ -566,7 +530,7 @@
     (assert-receiving-channel __who__ this)
     (begin0
 	(.reverse-and-concatenate-buffer this)
-      (.abort! this)))
+      (.recv-abort! this)))
 
   (method ({recv-full-message (or <eof> <string>)})
     (assert-inactive-channel __who__ this)
@@ -574,7 +538,7 @@
     (let next-portion ()
       (let ((rv (.recv-message-portion! this)))
 	(cond ((eof-object? rv)
-	       (.abort! this)
+	       (.recv-abort! this)
 	       rv)
 	      ((would-block-object? rv)
 	       (next-portion))
@@ -637,7 +601,7 @@
 		 (%error-maximum-message-size-exceeded __who__ this))
 		((.delivery-timeout-expired? this)
 		 (%error-message-delivery-timeout-expired __who__ this))
-		((%received-textual-message-terminator? this)
+		((%received-textual-message-terminator? (.message-terminators this) (.message-buffer this))
 		 (.message-terminated? this #t)
 		 #t)
 		(else #f))))))))
@@ -668,17 +632,36 @@
     (flush-output-port (.connect-ou-port this))
     (begin0
 	(.message-size this)
-      (.abort! this)))
+      (.send-abort! this)))
 
   (method ({flush <void>})
     ;;Flush to the destination the data buffered in the underlying device.
     ;;
     (flush-output-port (.connect-ou-port this)))
 
+  (method ({send-abort! <void>})
+    ;;Abort  the  current  operation  and  reset  the  channel  to  inactive;  return
+    ;;unspecified values.  Send and receive nothing.
+    ;;
+    (assert-sending-channel __who__ this)
+    (.action              this 'none)
+    (.message-size        this 0)
+    (.message-terminated? this #f)
+    (.expiration-time     this (faraway-time))
+    (void))
+
   #| end of mixin |# )
 
 
 (define-mixin-type <sending-binary-channel-methods>
+  (implements <<binary-output-channel>>)
+
+  (fields
+    (immutable {connect-ou-port <binary-output-port>})
+		;An output  or input/output binary  port used  to send messages  to a
+		;remote process.
+    #| end of FIELDS |# )
+
   (mixins <sending-channel-methods>)
 
   (method ({send-message-portion! <void>} {portion <bytevector>})
@@ -715,6 +698,14 @@
 
 
 (define-mixin-type <sending-textual-channel-methods>
+  (implements <<textual-output-channel>>)
+
+  (fields
+    (immutable {connect-ou-port <textual-output-port>})
+		;An output  or input/output binary  port used  to send messages  to a
+		;remote process.
+    #| end of FIELDS |# )
+
   (mixins <sending-channel-methods>)
 
   (method ({send-message-portion! <void>} {portion <string>})
@@ -752,19 +743,18 @@
 
 (define-record-type <binary-input-only-channel>
   (nongenerative vicare:net:channels:<binary-input-only-channel>)
-  (parent <binary-channel>)
-  (implements <<binary-input-channel>>)
-
-  (fields
-    (immutable {connect-in-port <binary-input-port>})
-		;An input or input/output binary port used to receive messages from a
-		;remote process.
-    #| end of FIELDS |# )
+  (parent <channel>)
 
   (protocol
-    (lambda (make-binary-channel)
-      (named-lambda make-binary-input-channel ({_ <binary-input-only-channel>} {port <binary-input-port>})
-	((make-binary-channel) port DEFAULT-BINARY-MESSAGE-MAXIMUM-PORTION-SIZE))))
+    (lambda (make-channel)
+      (named-lambda make-binary-input-channel
+	  ({_ <binary-input-only-channel>} {in-port <binary-input-port>})
+	((make-channel DEFAULT-BINARY-MESSAGE-MAXIMUM-SIZE)
+	 in-port				     ;connect-in-port
+	 '()					     ;message-buffer
+	 DEFAULT-BINARY-TERMINATORS		     ;message-terminators
+	 DEFAULT-BINARY-MESSAGE-MAXIMUM-PORTION-SIZE ;maximum-message-portion-size
+	 ))))
 
   (constructor-signature
     (lambda (<binary-input-port>) => (<binary-input-only-channel>)))
@@ -782,19 +772,18 @@
 
 (define-record-type <textual-input-only-channel>
   (nongenerative vicare:net:channels:<textual-input-only-channel>)
-  (parent <textual-channel>)
-  (implements <<textual-input-channel>>)
-
-  (fields
-    (immutable {connect-in-port <textual-input-port>})
-		;An input or input/output textual port used to receive messages from a
-		;remote process.
-    #| end of FIELDS |# )
+  (parent <channel>)
 
   (protocol
-    (lambda (make-textual-channel)
-      (named-lambda make-textual-input-channel ({_ <textual-input-only-channel>} {port <textual-input-port>})
-	((make-textual-channel) port DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-PORTION-SIZE))))
+    (lambda (make-channel)
+      (named-lambda make-textual-input-channel
+	  ({_ <textual-input-only-channel>} {in-port <textual-input-port>})
+	((make-channel DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-SIZE)
+	 in-port				      ;connect-in-port
+	 '()					      ;message-buffer
+	 DEFAULT-TEXTUAL-TERMINATORS		      ;message-terminators
+	 DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-PORTION-SIZE ;maximum-message-portion-size
+	 ))))
 
   (constructor-signature
     (lambda (<textual-input-port>) => (<textual-input-only-channel>)))
@@ -812,19 +801,13 @@
 
 (define-record-type <binary-output-only-channel>
   (nongenerative vicare:net:channels:<binary-output-only-channel>)
-  (parent <binary-channel>)
-  (implements <<binary-output-channel>>)
-
-  (fields
-    (immutable {connect-ou-port <binary-output-port>})
-		;An output  or input/output binary  port used  to send messages  to a
-		;remote process.
-    #| end of FIELDS |# )
+  (parent <channel>)
 
   (protocol
-    (lambda (make-binary-channel)
-      (named-lambda make-binary-output-channel ({_ <binary-output-only-channel>} {port <binary-output-port>})
-	((make-binary-channel) port))))
+    (lambda (make-channel)
+      (named-lambda make-binary-output-channel
+	  ({_ <binary-output-only-channel>} {ou-port <binary-output-port>})
+	((make-channel DEFAULT-BINARY-MESSAGE-MAXIMUM-SIZE) ou-port))))
 
   (constructor-signature
     (lambda (<binary-output-port>) => (<binary-output-only-channel>)))
@@ -842,19 +825,13 @@
 
 (define-record-type <textual-output-only-channel>
   (nongenerative vicare:net:channels:<textual-output-only-channel>)
-  (parent <textual-channel>)
-  (implements <<textual-output-channel>>)
-
-  (fields
-    (immutable {connect-ou-port <textual-output-port>})
-		;An output  or input/output textual  port used  to send messages  to a
-		;remote process.
-    #| end of FIELDS |# )
+  (parent <channel>)
 
   (protocol
-    (lambda (make-textual-channel)
-      (named-lambda make-textual-output-channel ({_ <textual-output-only-channel>} {port <textual-output-port>})
-	((make-textual-channel) port))))
+    (lambda (make-channel)
+      (named-lambda make-textual-output-channel
+	  ({_ <textual-output-only-channel>} {ou-port <textual-output-port>})
+	((make-channel DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-SIZE) ou-port))))
 
   (constructor-signature
     (lambda (<textual-output-port>) => (<textual-output-only-channel>)))
@@ -872,25 +849,22 @@
 
 (define-record-type <binary-input/output-channel>
   (nongenerative vicare:net:channels:<binary-input/output-channel>)
-  (parent <binary-channel>)
-  (implements <<binary-input-channel>> <<binary-output-channel>>)
-
-  (fields
-    (immutable {connect-in-port <binary-input-port>})
-		;An input or input/output binary  port used to receive messages from
-		;a remote process.
-    (immutable {connect-ou-port <binary-output-port>})
-		;An output  or input/output binary port  used to send messages  to a
-		;remote process.
-    #| end of FIELDS |# )
+  (parent <channel>)
 
   (protocol
-    (lambda (make-binary-channel)
+    (lambda (make-channel)
       (named-lambda make-binary-input/output-channel
 	  ({_ <binary-input/output-channel>}
 	   {in-port <binary-input-port>}
 	   {ou-port <binary-output-port>})
-	((make-binary-channel) in-port ou-port DEFAULT-BINARY-MESSAGE-MAXIMUM-PORTION-SIZE))))
+	((make-channel DEFAULT-BINARY-MESSAGE-MAXIMUM-SIZE)
+	 in-port				     ;connect-in-port
+	 '()					     ;message-buffer
+	 DEFAULT-BINARY-TERMINATORS		     ;message-terminators
+	 DEFAULT-BINARY-MESSAGE-MAXIMUM-PORTION-SIZE ;maximum-message-portion-size
+	 ;;
+	 ou-port ;connect-ou-port
+	 ))))
 
   (constructor-signature
     (lambda (<binary-input-port> <binary-output-port>) => (<binary-input/output-channel>)))
@@ -902,32 +876,29 @@
       (display " ou-port=" port)	(display (.connect-ou-port this) port)
       (display "]" port)))
 
-  (mixins <sending-binary-channel-methods> <receiving-binary-channel-methods>)
+  (mixins <receiving-binary-channel-methods> <sending-binary-channel-methods>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
 
 (define-record-type <textual-input/output-channel>
   (nongenerative vicare:net:channels:<textual-input/output-channel>)
-  (parent <textual-channel>)
-  (implements <<textual-input-channel>> <<textual-output-channel>>)
-
-  (fields
-    (immutable {connect-in-port <textual-input-port>})
-		;An input or input/output textual  port used to receive messages from
-		;a remote process.
-    (immutable {connect-ou-port <textual-output-port>})
-		;An output  or input/output textual port  used to send messages  to a
-		;remote process.
-    #| end of FIELDS |# )
+  (parent <channel>)
 
   (protocol
-    (lambda (make-textual-channel)
+    (lambda (make-channel)
       (named-lambda make-textual-input/output-channel
 	  ({_ <textual-input/output-channel>}
 	   {in-port <textual-input-port>}
 	   {ou-port <textual-output-port>})
-	((make-textual-channel) in-port ou-port DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-PORTION-SIZE))))
+	((make-channel DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-SIZE)
+	 in-port				      ;connect-in-port
+	 '()					      ;message-buffer
+	 DEFAULT-TEXTUAL-TERMINATORS		      ;message-terminators
+	 DEFAULT-TEXTUAL-MESSAGE-MAXIMUM-PORTION-SIZE ;maximum-message-portion-size
+	 ;;
+	 ou-port ;connect-ou-port
+	 ))))
 
   (constructor-signature
     (lambda (<textual-input-port> <textual-output-port>) => (<textual-input/output-channel>)))
@@ -939,7 +910,7 @@
       (display " ou-port=" port)	(display (.connect-ou-port this) port)
       (display "]" port)))
 
-  (mixins <sending-textual-channel-methods> <receiving-textual-channel-methods>)
+  (mixins <receiving-textual-channel-methods> <sending-textual-channel-methods>)
 
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -1015,16 +986,14 @@
 
 (module (%received-binary-message-terminator?)
 
-  (define/friend (%received-binary-message-terminator? {chan <binary-channel>})
-    ;;Compare all  the message  terminators with the  bytevectors accumulated  in the
-    ;;buffer of  CHAN.  If  the tail  of the  buffer equals  one of  the terminators:
-    ;;return true, else return false.
+  (define (%received-binary-message-terminator? {terminators <binary-terminators>} {buffers (list-of <nebytevector>)})
+    ;;Compare all  the message  TERMINATORS with the  bytevectors accumulated  in the
+    ;;BUFFERS.   If the  tail of  the buffer  equals one  of the  terminators: return
+    ;;non-false, else return false.
     ;;
-    (let ((terminators (.message-terminators chan))
-	  (buffers     (.message-buffer      chan)))
-      (vector-find (lambda (terminator)
-		     (%terminated-octets-stream? buffers terminator))
-	terminators)))
+    (vector-find (lambda (terminator)
+		   (%terminated-octets-stream? buffers terminator))
+      terminators))
 
   (define (%terminated-octets-stream? {reverse-stream (list-of <nebytevector>)} {terminator <nebytevector>})
     ;;Compare  a terminator  with the  tail of  an octets  stream; if  the stream  is
@@ -1106,16 +1075,14 @@
 
 (module (%received-textual-message-terminator?)
 
-  (define/friend (%received-textual-message-terminator? {chan <textual-channel>})
-    ;;Compare all the message terminators with  the strings accumulated in the buffer
-    ;;of CHAN.  If the tail of the buffer equals one of the terminators: return true,
-    ;;else return false.
+  (define (%received-textual-message-terminator? {terminators <textual-terminators>} {buffers (list-of <nestring>)})
+    ;;Compare  all  the message  TERMINATORS  with  the  strings accumulated  in  the
+    ;;BUFFERS.   If the  tail of  the buffer  equals one  of the  terminators: return
+    ;;non-false, else return false.
     ;;
-    (let ((terminators (.message-terminators chan))
-	  (buffers     (.message-buffer      chan)))
-      (vector-find (lambda (terminator)
-		     (%terminated-chars-stream? buffers terminator))
-	terminators)))
+    (vector-find (lambda (terminator)
+		   (%terminated-chars-stream? buffers terminator))
+      terminators))
 
   (define (%terminated-chars-stream? {reverse-stream (list-of <nestring>)} {terminator <nestring>})
     ;;Compare  a terminator  with the  tail  of an  chars  stream; if  the stream  is

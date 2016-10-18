@@ -7,8 +7,8 @@
 
 The library @library{vicare net channels} implements facilities to let
 software entities exchange messages in a controlled environment, through
-Scheme ports; the library expects the entities to take turn in sending
-messages terminated with a known sequence of bytes.  A set of
+Scheme input/output ports; the library expects the entities to take turn
+in sending messages terminated with a known sequence of bytes.  A set of
 interface--types is defined to allow other software units to implement a
 compatible @api{}, possibly using other underlying devices.
 
