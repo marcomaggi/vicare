@@ -229,13 +229,13 @@
 	 (cons (car P) (bless (cdr P))))
     (vector-ref vec idx)))
 
-(define (%vector-ref-avector vec idx)
+(define (%vector-ref-avector-to-alist vec idx)
   ;;Expect the  vector VEC  to have an  association vector object  at index  IDX with
   ;;format:
   ;;
   ;;   #((?name . ?applicable-sexp) ...)
   ;;
-  ;;Extract the alist and convert it into an alist with format:
+  ;;Extract the avector and convert it into an alist with format:
   ;;
   ;;   ((?name . ?applicable-stx) ...)
   ;;
@@ -950,7 +950,7 @@
   ;;     ?constructor-name ?type-predicate-name
   ;;     ?equality-predicate-name ?comparison-procedure-name ?hash-function-name
   ;;     ?type-descriptor-name
-  ;;     ((?method-name . ?method-implementation-procedure) ...))
+  ;;     #((?method-name . ?method-implementation-procedure) ...))
   ;;
   ;;and the usable descriptor has the format:
   ;;
@@ -975,7 +975,7 @@
 	 (comparison-procedure.sexp	(vector-ref descr.value 6))
 	 (hash-function.sexp		(vector-ref descr.value 7))
 	 (type-descriptor.id		(core-prim-id (vector-ref descr.value 8)))
-	 (methods-table			(%vector-ref-alist descr.value 9)))
+	 (methods-table			(%vector-ref-avector-to-alist descr.value 9)))
     (let ((type-name.id			(core-prim-id type-name.sym))
 	  (parent-name.id		(and parent-name.sexp		(core-prim-id parent-name.sexp)))
 	  (equality-predicate.stx	(and equality-predicate.sexp	(core-prim-id equality-predicate.sexp)))

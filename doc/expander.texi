@@ -1743,7 +1743,7 @@ defined by the boot image has descriptor with format:
       @meta{constructor-name} @meta{type-predicate-name}
       @meta{equality-predicate-name} @meta{comparison-procedure-name}
       @meta{hash-function-name}
-      @meta{type-descriptor-name} @meta{methods-alist}))
+      @meta{type-descriptor-name} @meta{methods-avector}))
 @end example
 
 @noindent
@@ -1793,11 +1793,11 @@ A symbol representing the public name of the object--type's run--time
 type descriptor; for example @class{fixnum} has @code{<fixnum>-ctd}
 (where @samp{ctd} stands for @emph{Core Type Descriptor}).
 
-@item @meta{methods-alist}
-An associative list having symbols as both keys and values:
+@item @meta{methods-avector}
+An association vector having symbols as both keys and values:
 
 @example
-((@meta{method-name} . @meta{method-implementation-procedure}) ...)
+#((@meta{method-name} . @meta{method-implementation-procedure}) ...)
 @end example
 
 @noindent

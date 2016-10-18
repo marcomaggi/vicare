@@ -975,12 +975,12 @@
 		;False or an identifier representing  the object hash function.  When
 		;#f: this object type has no hash function.
       (mutable methods)
-		;A possibly empty proper list of method specifications.
+		;A possibly empty association vector of method specifications.
       #| end of FIELDS |# )
     (protocol
       (lambda (make-record)
 	(lambda ()
-	  (make-record #f #f #f #f #f '()))))
+	  (make-record #f #f #f #f #f '#()))))
     #| end of DEFINE-RECORD-TYPE |# )
 
   (define (%parse-clauses clause*.stx)
@@ -1021,7 +1021,7 @@
 	   ((methods)
 	    (syntax-case arg ()
 	      (#((?method-name ?method-implementation-procedure) ...)
-	       (parsed-specs-methods-set! parsed-specs #'((?method-name . ?method-implementation-procedure) ...)))
+	       (parsed-specs-methods-set! parsed-specs #'#((?method-name . ?method-implementation-procedure) ...)))
 	      (_
 	       (synner "invalid syntax in METHODS clause" arg))))))
        parsed-specs)
