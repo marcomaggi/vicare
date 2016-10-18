@@ -212,6 +212,41 @@
 	(else
 	 (%alist-ref-or-null (cdr ell) (fxsub1 idx)))))
 
+(define (%vector-ref-alist vec idx)
+  ;;Expect  the vector  VEC to  have an  association list  object at  index IDX  with
+  ;;format:
+  ;;
+  ;;   ((?name . ?applicable-sexp) ...)
+  ;;
+  ;;Extract the alist and convert it into an alist with format:
+  ;;
+  ;;   ((?name . ?applicable-stx) ...)
+  ;;
+  ;;where  ?APPLICABLE-STX  is the  result  of  applying BLESS  to  ?APPLICABLE-SEXP.
+  ;;Return the resulting alist.
+  ;;
+  (map (lambda (P)
+	 (cons (car P) (bless (cdr P))))
+    (vector-ref vec idx)))
+
+(define (%vector-ref-avector vec idx)
+  ;;Expect the  vector VEC  to have an  association vector object  at index  IDX with
+  ;;format:
+  ;;
+  ;;   #((?name . ?applicable-sexp) ...)
+  ;;
+  ;;Extract the alist and convert it into an alist with format:
+  ;;
+  ;;   ((?name . ?applicable-stx) ...)
+  ;;
+  ;;where  ?APPLICABLE-STX  is the  result  of  applying BLESS  to  ?APPLICABLE-SEXP.
+  ;;Return the resulting alist.
+  ;;
+  (vector-fold-right (lambda (P knil)
+		       (cons (cons (car P) (bless (cdr P)))
+			     knil))
+    '() (vector-ref vec idx)))
+
 
 ;;;; syntactic binding descriptor: lexical variables
 
@@ -911,11 +946,11 @@
   ;;
   ;;and ?HARD-CODED-SEXP has the format:
   ;;
-  ;;   (?type-name ?uid-symbol ?parent-name
-  ;;    ?constructor-name ?type-predicate-name
-  ;;    ?equality-predicate-name ?comparison-procedure-name ?hash-function-name
-  ;;    ?type-descriptor-name
-  ;;    ((?method-name . ?method-implementation-procedure) ...))
+  ;;   #(?type-name ?uid-symbol ?parent-name
+  ;;     ?constructor-name ?type-predicate-name
+  ;;     ?equality-predicate-name ?comparison-procedure-name ?hash-function-name
+  ;;     ?type-descriptor-name
+  ;;     ((?method-name . ?method-implementation-procedure) ...))
   ;;
   ;;and the usable descriptor has the format:
   ;;
@@ -931,16 +966,16 @@
   ;;
   (let* ((descr.type			(syntactic-binding-descriptor.type  descriptor))
 	 (descr.value			(syntactic-binding-descriptor.value descriptor))
-	 (type-name.sym			(car descr.value))
-	 (uid.sym			(list-ref descr.value 1))
-	 (parent-name.sexp		(list-ref descr.value 2))
-	 (constructor.stx		(bless (list-ref descr.value 3)))
-	 (type-predicate.stx		(bless (list-ref descr.value 4)))
-	 (equality-predicate.sexp	(list-ref descr.value 5))
-	 (comparison-procedure.sexp	(list-ref descr.value 6))
-	 (hash-function.sexp		(list-ref descr.value 7))
-	 (type-descriptor.id		(core-prim-id (list-ref descr.value 8)))
-	 (methods-table			(%alist-ref-or-null descr.value 9)))
+	 (type-name.sym			(vector-ref descr.value 0))
+	 (uid.sym			(vector-ref descr.value 1))
+	 (parent-name.sexp		(vector-ref descr.value 2))
+	 (constructor.stx		(bless (vector-ref descr.value 3)))
+	 (type-predicate.stx		(bless (vector-ref descr.value 4)))
+	 (equality-predicate.sexp	(vector-ref descr.value 5))
+	 (comparison-procedure.sexp	(vector-ref descr.value 6))
+	 (hash-function.sexp		(vector-ref descr.value 7))
+	 (type-descriptor.id		(core-prim-id (vector-ref descr.value 8)))
+	 (methods-table			(%vector-ref-alist descr.value 9)))
     (let ((type-name.id			(core-prim-id type-name.sym))
 	  (parent-name.id		(and parent-name.sexp		(core-prim-id parent-name.sexp)))
 	  (equality-predicate.stx	(and equality-predicate.sexp	(core-prim-id equality-predicate.sexp)))

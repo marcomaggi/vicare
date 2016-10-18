@@ -932,9 +932,9 @@
 	   #'(set-cons! VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 			(quote (?type-name
 				($core-type-name
-				 . (?type-name UID ?parent-name CONSTRUCTOR PREDICATE
-					       EQUALITY-PREDICATE COMPARISON-PROCEDURE HASH-FUNCTION
-					       TYPE-DESCRIPTOR METHODS))))))))
+				 . #(?type-name UID ?parent-name CONSTRUCTOR PREDICATE
+						EQUALITY-PREDICATE COMPARISON-PROCEDURE HASH-FUNCTION
+						TYPE-DESCRIPTOR METHODS))))))))
       ))
 
   (define (%validate-parent parent.stx)

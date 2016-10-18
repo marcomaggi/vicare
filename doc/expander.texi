@@ -1734,16 +1734,16 @@ primitive.
 @cindex Syntactic binding types, @code{$core-type-name}
 
 
-A syntactic binding representing the built--in Scheme object types
+A syntactic binding representing the built--in Scheme object--types
 defined by the boot image has descriptor with format:
 
 @example
 ($core-type-name
-  . (@meta{type-name} @meta{uid-symbol} @meta{parent-name}
-     @meta{constructor-name} @meta{type-predicate-name}
-     @meta{equality-predicate-name} @meta{comparison-procedure-name}
-     @meta{hash-function-name}
-     @meta{type-descriptor-name} @meta{methods-alist}))
+  . #(@meta{type-name} @meta{uid-symbol} @meta{parent-name}
+      @meta{constructor-name} @meta{type-predicate-name}
+      @meta{equality-predicate-name} @meta{comparison-procedure-name}
+      @meta{hash-function-name}
+      @meta{type-descriptor-name} @meta{methods-alist}))
 @end example
 
 @noindent
