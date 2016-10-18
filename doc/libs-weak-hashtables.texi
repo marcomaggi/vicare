@@ -6,11 +6,11 @@
 @cindex @library{vicare containers weak-hashtables}, library
 
 
-Weak hashtables are associative containers whose keys are held by weak
+Weak hashtables are association containers whose keys are held by weak
 references: registering a key into a weak hashtable does not prevent its
 garbage collection.  A weak hashtable is a Scheme vector holding nulls
-or associative lists; each vector slot is called @dfn{bucket}; the
-associative lists have the spine composed of strong pairs, while the
+or association lists; each vector slot is called @dfn{bucket}; the
+association lists have the spine composed of strong pairs, while the
 entries are weak pairs:
 
 @example
