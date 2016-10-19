@@ -20,16 +20,558 @@ The library is implemented with the typed language and it is meant to be
 used by programs and libraries using the typed language.
 
 @menu
+* net channels ann::            Useful type annotations.
+* net channels channels::       Channels definitions.
 * net channels ifaces::         Interface-type definitions.
-* net channels types::          Data type definitions.
-* net channels init::           Constructors and destructors.
-* net channels config::         Configuration parameters.
-* net channels inspect::        Channels inspection.
-* net channels preds::          Predicates and arguments validation.
-* net channels recv::           Receiving a message.
-* net channels send::           Sending a message.
 * net channels conditions::     Condition object types.
 @end menu
+
+@c page
+@node net channels ann
+@section Useful type annotations
+
+
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
+
+
+@deftp Type @aclass{binary-terminators}
+Type of message terminators for binary channels.  It is defined as
+non--empty vector of non--empty bytevectors.
+@end deftp
+
+
+@deftp Type @aclass{textual-terminators}
+Type of message terminators for textual channels.  It is defined as
+non--empty vector of non--empty strings.
+@end deftp
+
+@c page
+@node net channels channels
+@section Interface-type definitions
+
+
+@menu
+* net channels channels channel::     Type @class{channel}.
+* net channels channels bichannel::   Type @class{binary-input-channel}.
+* net channels channels bochannel::   Type @class{binary-output-channel}.
+* net channels channels biochannel::  Type @class{binary-input/output-channel}.
+* net channels channels tichannel::   Type @class{textual-input-channel}.
+* net channels channels tochannel::   Type @class{textual-output-channel}.
+* net channels channels tiochannel::  Type @class{textual-input/output-channel}.
+@end menu
+
+@c page
+@node net channels channels channel
+@subsection The @class{channel} type
+
+
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
+
+
+@deftp {Record Type} @aclass{channel}
+Expose the basic configuration and inspection methods for all the
+channels.
+@end deftp
+
+
+@deftypemethod @aclass{channel} @aclass{epoch-time} expiration-time @var{this}
+@deftypemethodx @aclass{channel} @aclass{void} expiration-time @var{this} @{@var{time} @aclass{epoch-time}@}
+Accessor and mutator for the message transfer expiration time.  The
+argument @var{time} must be an instance of @class{epoch-time} (as
+defined by @library{vicare}) representing the maximum time before which
+the message transfer must be completed.
+
+If the time limit is violated: an exception is raised at the first
+attempted operation.
+@end deftypemethod
+
+
+@deftypemethod @aclass{channel} @aclass{positive-fixnum} maximum-message-size @var{this}
+@deftypemethodx @aclass{channel} @aclass{positive-fixnum} maximum-message-size @var{this} @{@var{len} @aclass{positive-fixnum}@}
+Accessor and mutator for the maximum message size.  The argument
+@var{len} must be the maximum allowed length for a whole message,
+measured in bytes for binary channels and in characters for textual
+channels.
+@end deftypemethod
+
+
+@deftypemethod @aclass{channel} @aclass{non-negative-fixnum} current-message-size @var{this}
+Accessor for the current message size: the number of bytes or characters
+sent so far or received so far.  The returned value represents the
+current message length, measured in bytes for binary channels and in
+characters for textual channels.
+@end deftypemethod
+
+
+@deftypemethod @aclass{channel} @aclass{boolean} sending? @var{this}
+Return @true{} if @var{this} is in the course of sending a message;
+otherwise return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{channel} @aclass{boolean} receiving? @var{this}
+Return @true{} if @var{this} is in the course of receiving a message;
+otherwise return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{channel} @aclass{boolean} inactive? @var{this}
+Return @true{} if @var{this} is neither in the course of sending nor
+receiving a message; otherwise return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{channel} @aclass{boolean} delivery-timeout-expired? @var{this}
+Return @true{} if the delivery timeout has expired; otherwise return
+@false{}.  We can use this method to query this status even without
+attempting an input/output operation.
+@end deftypemethod
+
+@c page
+@node net channels channels bichannel
+@subsection The @class{binary-input-only-channel} type
+
+
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
+
+
+@deftp {Record Type} @aclass{binary-input-only-channel}
+@deftpx {Parent Type} @aclass{channel}
+Expose the methods for all the binary input--only channels.
+@end deftp
+
+
+@deftypemethod @aclass{binary-input-only-channel} @aclass{binary-input-port} connect-in-port @var{this}
+The input or input/output binary port used to receive messages from a
+remote process.
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-input-only-channel} @aclass{positive-fixnum} maximum-message-portion-size @var{this}
+@deftypemethodx @aclass{binary-input-only-channel} @aclass{void} maximum-message-portion-size @var{this} @aclass{positive-fixnum}
+Accessor and mutator for the maximum number of bytes read at each
+``receive message portion'' operation.
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-input-only-channel} @aclass{binary-terminators} message-terminators @var{this}
+@deftypemethodx @aclass{binary-input-only-channel} @aclass{void} message-terminators @var{this} @{@var{terminators} @aclass{binary-terminators}@}
+Accessor and mutator for the message termination markers.  The argument
+@var{terminators} must represent the possible message terminators for
+this channel; when a terminator is received @strong{at the end} of a
+chunk of data, the message is considered terminated.
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-input-only-channel} @aclass{void} recv-begin! @var{this}
+Configure the channel to receive a new message.  If @var{this} is not
+inactive: an assertion is raised.
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-input-only-channel} {} recv-end!/rbl @var{this}
+Terminate the action of receiving a message.  If @var{this} is not in
+the course of receiving a message: an assertion is raised.
+
+Return two values:
+
+@enumerate
+@item
+A @class{positive-fixnum} representing the total length of the message
+as number of bytes.
+
+@item
+A @code{(list-of @aclass{nebytevector})} representing the received data
+as reverse buffer list (@acronym{RBL}), including the message
+terminator.
+@end enumerate
+
+After this function is applied to a channel: the channel itself is reset
+to inactive; so it is available to start receiving another message or to
+send a message.
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-input-only-channel} @aclass{nebytevector} recv-end! @var{this}
+Terminate the action of receiving a message.  If @var{this} is not in
+the course of receiving a message: an assertion is raised.  If
+@var{this} is not in ``message terminated'' status: an assertion is
+raised.  Return a bytevector holding the full message, including the
+message terminator.
+
+After this function is applied to a channel: the channel itself is reset
+to inactive; so it is available to start receiving another message or to
+send a message.
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-input-only-channel} @aclass{void} recv-abort! @var{this}
+Abort the current operation and reset the channel to inactive.  If
+@var{this} is not in the course of receiving a message: an assertion is
+raised.
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-input-only-channel} {(or @aclass{eof} @aclass{would-block} @aclass{boolean})} recv-message-portion! @var{this}
+Receive a portion of message.  If @var{this} is not in the course of
+receiving a message: an assertion is raised.
+
+@itemize
+@item
+Return @false{} if a portion of message was read, and it does not
+terminate with a message terminator; in this case we need to call this
+function again to receive further message portions.
+
+@item
+Return @true{} if a portion of message was read, terminating with a
+configured message terminator.  The channel is put in ``message
+terminated'' status.
+
+@item
+Return @true{} if the channel already read a terminator in a previous
+operation and is in ``message terminated'' status.
+
+@item
+Return the @eof{} object if @eof{} is read from the input device.
+
+@item
+Return the would--block object if a would--block object is read from the
+input device.
+
+@item
+If the message delivery timeout is expired or expires while receiving
+data: raise an exception.
+
+@item
+If the accumulated data exceeds the maximum message size: raise an
+exception.
+@end itemize
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-input-only-channel} {(or @aclass{eof} @aclass{bytevector})} recv-full-message @var{this}
+Receive a full message.  When successful return a bytevector
+representing the full message.  If @var{this} is not inactive: an
+assertion is raised.  If the underlying device is closed before the
+message is completed: return the @eof{} object.
+@end deftypemethod
+
+@c page
+@node net channels channels bochannel
+@subsection The @class{binary-output-only-channel} type
+
+
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
+
+
+@deftp {Record Type} @aclass{binary-output-only-channel}
+@deftpx {Parent Type} @aclass{channel}
+Expose the methods for all the binary output--only channels.
+@end deftp
+
+
+@deftypemethod @aclass{binary-output-only-channel} @aclass{binary-output-port} connect-ou-port @var{this}
+The output or input/output binary port used to send messages to a remote
+process.
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-output-only-channel} @aclass{void} send-begin! @var{this}
+Configure a channel to start sending a message.  If @var{this} is not
+inactive: an assertion is raised.
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-output-only-channel} @aclass{non-negative-fixnum} send-end! @var{this}
+Finish sending a message by flushing the underlying device and returning
+the total number of bytes sent.  If @var{this} is not in the course of
+sending a message: an assertion is raised.
+
+After this function is applied to a channel: the channel itself is
+configured as inactive; so it is available to start sending or receiving
+a message.
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-output-only-channel} @aclass{void} flush @var{this}
+Flush to the destination the data buffered in the underlying device.  If
+@var{this} is not in the course of sending a message: an assertion is
+raised.  If the maximum delivery time is exceeded: an exception is
+raised.
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-output-only-channel} @aclass{void} send-abort! @var{this}
+Abort the current operation and reset the channel to inactive.  If
+@var{this} is not in the course of sending a message: an assertion is
+raised.  If some data is in the output buffer of the underlying device:
+it is left untouched.
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-output-only-channel} @aclass{void} send-message-portion! @var{this} @bracearg{portion, bytevector}
+Send a portion of output message through the given channel.  If
+@var{this} is not in the course of sending a message: an assertion is
+raised.  The argument @var{portion} must be a bytevector representing
+the message portion.  This function does not flush the underlying
+device.
+
+If the current message size exceeds the maximum configured size: an
+exception is raised.  If the maximum delivery time is exceeded: an
+exception is raised.
+@end deftypemethod
+
+
+@deftypemethod @aclass{binary-output-port} @aclass{non-negative-fixnum} send-full-message @var{this} @bracearg{portion, bytevector} @dots{}
+Send a full message composed of the given @var{portion} arguments;
+return the total number of bytes sent.  If @var{this} is not inactive:
+an assertion is raised.
+
+If the message size exceeds the maximum configured size: an exception is
+raised.  If the maximum delivery time is exceeded: an exception is
+raised.
+@end deftypemethod
+
+@c page
+@node net channels channels biochannel
+@subsection The @class{binary-input/output-channel} type
+
+
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
+
+
+@deftp {Record Type} @aclass{binary-input/output-channel}
+@deftpx {Parent Type} @aclass{channel}
+Expose the methods for all the binary input/output channels.  These
+channels implement all the methods of @class{binary-input-only-channel}
+and all the methods of @class{binary-output-only-channel}.
+@end deftp
+
+@c page
+@node net channels channels tichannel
+@subsection The @class{textual-input-only-channel} type
+
+
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
+
+
+@deftp {Record Type} @aclass{textual-input-only-channel}
+@deftpx {Parent Type} @aclass{channel}
+Expose the methods for all the textual input--only channels.
+@end deftp
+
+
+@deftypemethod @aclass{textual-input-only-channel} @aclass{textual-input-port} connect-in-port @var{this}
+The input or input/output textual port used to receive messages from a
+remote process.
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-input-only-channel} @aclass{positive-fixnum} maximum-message-portion-size @var{this}
+@deftypemethodx @aclass{textual-input-only-channel} @aclass{void} maximum-message-portion-size @var{this} @aclass{positive-fixnum}
+Accessor and mutator for the maximum number of characters read at each
+``receive message portion'' operation.
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-input-only-channel} @aclass{textual-terminators} message-terminators @var{this}
+@deftypemethodx @aclass{textual-input-only-channel} @aclass{void} message-terminators @var{this} @{@var{terminators} @aclass{textual-terminators}@}
+Accessor and mutator for the message termination markers.  The argument
+@var{terminators} must represent the possible message terminators for
+this channel; when a terminator is received @strong{at the end} of a
+chunk of data, the message is considered terminated.
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-input-only-channel} @aclass{void} recv-begin! @var{this}
+Configure the channel to receive a new message.  If @var{this} is not
+inactive: an assertion is raised.
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-input-only-channel} {} recv-end!/rbl @var{this}
+Terminate the action of receiving a message.  If @var{this} is not in
+the course of receiving a message: an assertion is raised.
+
+Return two values:
+
+@enumerate
+@item
+A @class{positive-fixnum} representing the total length of the message
+as number of characters.
+
+@item
+A @code{(list-of @aclass{nestring})} representing the received data as
+reverse buffer list (@acronym{RBL}), including the message terminator.
+@end enumerate
+
+After this function is applied to a channel: the channel itself is reset
+to inactive; so it is available to start receiving another message or to
+send a message.
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-input-only-channel} @aclass{nestring} recv-end! @var{this}
+Terminate the action of receiving a message.  If @var{this} is not in
+the course of receiving a message: an assertion is raised.  If
+@var{this} is not in ``message terminated'' status: an assertion is
+raised.  Return a string holding the full message, including the message
+terminator.
+
+After this function is applied to a channel: the channel itself is reset
+to inactive; so it is available to start receiving another message or to
+send a message.
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-input-only-channel} @aclass{void} recv-abort! @var{this}
+Abort the current operation and reset the channel to inactive.  If
+@var{this} is not in the course of receiving a message: an assertion is
+raised.
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-input-only-channel} {(or @aclass{eof} @aclass{would-block} @aclass{boolean})} recv-message-portion! @var{this}
+Receive a portion of message.  If @var{this} is not in the course of
+receiving a message: an assertion is raised.
+
+@itemize
+@item
+Return @false{} if a portion of message was read, and it does not
+terminate with a message terminator; in this case we need to call this
+function again to receive further message portions.
+
+@item
+Return @true{} if a portion of message was read, terminating with a
+configured message terminator.  The channel is put in ``message
+terminated'' status.
+
+@item
+Return @true{} if the channel already read a terminator in a previous
+operation and is in ``message terminated'' status.
+
+@item
+Return the @eof{} object if @eof{} is read from the input device.
+
+@item
+Return the would--block object if a would--block object is read from the
+input device.
+
+@item
+If the message delivery timeout is expired or expires while receiving
+data: raise an exception.
+
+@item
+If the accumulated data exceeds the maximum message size: raise an
+exception.
+@end itemize
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-input-only-channel} {(or @aclass{eof} @aclass{string})} recv-full-message @var{this}
+Receive a full message.  When successful return a string representing
+the full message.  If @var{this} is not inactive: an assertion is
+raised.  If the underlying device is closed before the message is
+completed: return the @eof{} object.
+@end deftypemethod
+
+@c page
+@node net channels channels tochannel
+@subsection The @class{textual-output-only-channel} type
+
+
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
+
+
+@deftp {Record Type} @aclass{textual-output-only-channel}
+@deftpx {Parent Type} @aclass{channel}
+Expose the methods for all the textual output--only channels.
+@end deftp
+
+
+@deftypemethod @aclass{binary-output-only-channel} @aclass{binary-output-port} connect-ou-port @var{this}
+The output or input/output binary port used to send messages to a remote
+process.
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-output-only-channel} @aclass{void} send-begin! @var{this}
+Configure a channel to start sending a message.  If @var{this} is not
+inactive: an assertion is raised.
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-output-only-channel} @aclass{non-negative-fixnum} send-end! @var{this}
+Finish sending a message by flushing the underlying device and returning
+the total number of characters sent.  If @var{this} is not in the course
+of sending a message: an assertion is raised.
+
+After this function is applied to a channel: the channel itself is
+configured as inactive; so it is available to start sending or receiving
+a message.
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-output-only-channel} @aclass{void} flush @var{this}
+Flush to the destination the data buffered in the underlying device.  If
+@var{this} is not in the course of sending a message: an assertion is
+raised.  If the maximum delivery time is exceeded: an exception is
+raised.
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-output-only-channel} @aclass{void} send-abort! @var{this}
+Abort the current operation and reset the channel to inactive.  If
+@var{this} is not in the course of sending a message: an assertion is
+raised.  If some data is in the output buffer of the underlying device:
+it is left untouched.
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-output-only-channel} @aclass{void} send-message-portion! @var{this} @bracearg{portion, string}
+Send a portion of output message through the given channel.  If
+@var{this} is not in the course of sending a message: an assertion is
+raised.  The argument @var{portion} must be a string representing the
+message portion.  This function does not flush the underlying device.
+
+If the current message size exceeds the maximum configured size: an
+exception is raised.  If the maximum delivery time is exceeded: an
+exception is raised.
+@end deftypemethod
+
+
+@deftypemethod @aclass{textual-output-port} @aclass{non-negative-fixnum} send-full-message @var{this} @bracearg{portion, string} @dots{}
+Send a full message composed of the given @var{portion} arguments;
+return the total number of characters sent.  If @var{this} is not
+inactive: an assertion is raised.
+
+If the message size exceeds the maximum configured size: an exception is
+raised.  If the maximum delivery time is exceeded: an exception is
+raised.
+@end deftypemethod
+
+@c page
+@node net channels channels tiochannel
+@subsection The @class{textual-input/output-channel} type
+
+
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
+
+
+@deftp {Record Type} @aclass{textual-input/output-channel}
+@deftpx {Parent Type} @aclass{channel}
+Expose the methods for all the textual input/output channels.  These
+channels implement all the methods of @class{textual-input-only-channel}
+and all the methods of @class{textual-output-only-channel}.
+@end deftp
 
 @c page
 @node net channels ifaces
@@ -41,14 +583,10 @@ implement the interfaces documented in this section.
 
 @menu
 * net channels ifaces channel::     Interface @iface{channel}.
-* net channels ifaces bchannel::    Interface @iface{binary-channel}.
 * net channels ifaces bichannel::   Interface @iface{binary-input-channel}.
 * net channels ifaces bochannel::   Interface @iface{binary-output-channel}.
-* net channels ifaces biochannel::  Interface @iface{binary-input/output-channel}.
-* net channels ifaces tchannel::    Interface @iface{textual-channel}.
 * net channels ifaces tichannel::   Interface @iface{textual-input-channel}.
 * net channels ifaces tochannel::   Interface @iface{textual-output-channel}.
-* net channels ifaces tiochannel::  Interface @iface{textual-input/output-channel}.
 @end menu
 
 @c page
@@ -56,12 +594,12 @@ implement the interfaces documented in this section.
 @subsection The @iface{channel} interface
 
 
-The following bindings are exported by the library @library{vicare net
-channels}.
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
 
 
 @deftp {Interface Type} @aiface{channel}
-Exposes the basic configuration and inspection methods for all the
+Expose the basic configuration and inspection methods for all the
 channels.
 @end deftp
 
@@ -71,8 +609,10 @@ channels.
 Accessor and mutator for the message transfer expiration time.  The
 argument @var{time} must be an instance of @class{epoch-time} (as
 defined by @library{vicare}) representing the maximum time before which
-the message transfer must be completed.  If the time limit is violated:
-an exception is raised.
+the message transfer must be completed.
+
+If the time limit is violated: an exception is raised at the first
+attempted operation.
 @end deftypemethod
 
 
@@ -86,7 +626,8 @@ channels.
 
 
 @deftypemethod @aiface{channel} @aclass{non-negative-fixnum} current-message-size @var{this}
-Accessor the current message size.  The returned value represents the
+Accessor for the current message size: the number of bytes or characters
+sent so far or received so far.  The returned value represents the
 current message length, measured in bytes for binary channels and in
 characters for textual channels.
 @end deftypemethod
@@ -117,67 +658,81 @@ attempting an input/output operation.
 @end deftypemethod
 
 @c page
-@node net channels ifaces bchannel
-@subsection The @iface{binary-channel} interface
-
-
-The following bindings are exported by the library @library{vicare net
-channels}.
-
-
-@deftp Type @aclass{binary-terminators}
-Type of message terminators for binary channels.  It is defined as
-non--empty vector of non--empty bytevectors.
-@end deftp
-
-
-@deftp {Interface Type} @aiface{binary-channel}
-Exposes the basic configuration and inspection methods for all the
-binary channels.
-@end deftp
-
-
-@deftypemethod @aiface{channel} @aclass{binary-terminators} message-terminators @var{this}
-@deftypemethodx @aiface{channel} @aclass{void} message-terminators @var{this} @{@var{terminators} @aclass{binary-terminators}@}
-Accessor and mutator for the message termination markers.  The argument
-@var{terminators} must be a list of terminators.
-@end deftypemethod
-
-@c page
 @node net channels ifaces bichannel
 @subsection The @iface{binary-input-channel} interface
 
 
-The following bindings are exported by the library @library{vicare net
-channels}.
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
 
 
 @deftp {Interface Type} @aiface{binary-input-channel}
-@deftpx {Parent Type} @aiface{binary-channel}
-Exposes the methods for all the binary input channels.
+@deftpx {Parent Type} @aiface{channel}
+Expose the methods for all the binary input channels.
 @end deftp
 
 
+@deftypemethod @aiface{binary-input-channel} @aclass{binary-terminators} message-terminators @var{this}
+@deftypemethodx @aiface{binary-input-channel} @aclass{void} message-terminators @var{this} @{@var{terminators} @aclass{binary-terminators}@}
+Accessor and mutator for the message termination markers.  The argument
+@var{terminators} must represent the possible message terminators for
+this channel; when a terminator is received @strong{at the end} of a
+chunk of data, the message is considered terminated.
+@end deftypemethod
+
+
 @deftypemethod @aiface{binary-input-channel} @aclass{void} recv-begin! @var{this}
-Configure the channel to receive a new message.  If @var{this} is
-already in the course of receiving a message: an assertion is raised.
+Configure the channel to receive a new message.  If @var{this} is not
+inactive: an assertion is raised.
 @end deftypemethod
 
 
-@deftypemethod @aiface{binary-input-channel} {@aclass{positive-fixnum} (list-of @aclass{nebytevector})} recv-end!/rbl @var{this}
-Terminate the action of receiving a message.
+@deftypemethod @aiface{binary-input-channel} {} recv-end!/rbl @var{this}
+Terminate the action of receiving a message.  If @var{this} is not in
+the course of receiving a message: an assertion is raised.
+
+Return two values:
+
+@enumerate
+@item
+A @class{positive-fixnum} representing the total length of the message
+as number of bytes.
+
+@item
+A @code{(list-of @aclass{nebytevector})} representing the received data
+as reverse buffer list (@acronym{RBL}), including the message
+terminator.
+@end enumerate
+
+After this function is applied to a channel: the channel itself is reset
+to inactive; so it is available to start receiving another message or to
+send a message.
 @end deftypemethod
 
 
-@deftypemethod @aiface{binary-input-channel} @aclass{bytevector} recv-end! @var{this}
-Terminate the action of receiving a message.  Return a bytevector
-holding the full message.
+@deftypemethod @aiface{binary-input-channel} @aclass{nebytevector} recv-end! @var{this}
+Terminate the action of receiving a message.  If @var{this} is not in
+the course of receiving a message: an assertion is raised.  If
+@var{this} is not in ``message terminated'' status: an assertion is
+raised.  Return a bytevector holding the full message, including the
+message terminator.
+
+After this function is applied to a channel: the channel itself is reset
+to inactive; so it is available to start receiving another message or to
+send a message.
+@end deftypemethod
+
+
+@deftypemethod @aiface{binary-input-channel} @aclass{void} recv-abort! @var{this}
+Abort the current operation and reset the channel to inactive.  If
+@var{this} is not in the course of receiving a message: an assertion is
+raised.
 @end deftypemethod
 
 
 @deftypemethod @aiface{binary-input-channel} {(or @aclass{eof} @aclass{would-block} @aclass{boolean})} recv-message-portion! @var{this}
-Receive a portion of message.  It is an error if the channel is not in
-the course of receiving a message.
+Receive a portion of message.  If @var{this} is not in the course of
+receiving a message: an assertion is raised.
 
 @itemize
 @item
@@ -186,10 +741,13 @@ terminate with a message terminator; in this case we need to call this
 function again to receive further message portions.
 
 @item
-Return @true{} if a configured message terminator is read from the
-underlying input device or if the channel already read a terminator in a
-previous operation.  If a message terminator is received: set @var{this}
-to ``message terminated'' status.
+Return @true{} if a portion of message was read, terminating with a
+configured message terminator.  The channel is put in ``message
+terminated'' status.
+
+@item
+Return @true{} if the channel already read a terminator in a previous
+operation and is in ``message terminated'' status.
 
 @item
 Return the @eof{} object if @eof{} is read from the input device.
@@ -211,10 +769,9 @@ exception.
 
 @deftypemethod @aiface{binary-input-channel} {(or @aclass{eof} @aclass{bytevector})} recv-full-message @var{this}
 Receive a full message.  When successful return a bytevector
-representing the full message.  If the underlying device is closed
-before the message is completed: return the @eof{} object.  If
-@var{this} is already in the course of receiving a message: an assertion
-is raised.
+representing the full message.  If @var{this} is not inactive: an
+assertion is raised.  If the underlying device is closed before the
+message is completed: return the @eof{} object.
 @end deftypemethod
 
 @c page
@@ -222,544 +779,257 @@ is raised.
 @subsection Interface @iface{binary-output-channel}
 
 
-@c page
-@node net channels ifaces biochannel
-@subsection Interface @iface{binary-input/output-channel}
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
 
 
-@c page
-@node net channels ifaces tchannel
-@subsection The @iface{textual-channel} interface
-
-
-The following bindings are exported by the library @library{vicare net
-channels}.
-
-
-@deftp Type @aclass{textual-terminators}
-Type of message terminators for textual channels.  It is defined as
-non--empty vector of non--empty strings.
+@deftp {Interface Type} @aiface{binary-output-channel}
+@deftpx {Parent Type} @aiface{channel}
+Expose the methods for all the binary output channels.
 @end deftp
 
 
-@deftp {Interface Type} @aiface{textual-channel}
-Exposes the basic configuration and inspection methods for all the
-textual channels.
-@end deftp
+@deftypemethod @aiface{binary-output-channel} @aclass{void} send-begin! @var{this}
+Configure a channel to start sending a message.  If @var{this} is not
+inactive: an assertion is raised.
+@end deftypemethod
 
 
-@deftypemethod @aiface{channel} @aclass{textual-terminators} message-terminators @var{this}
-@deftypemethodx @aiface{channel} @aclass{void} message-terminators @var{this} @{@var{terminators} @aclass{textual-terminators}@}
-Accessor and mutator for the message termination markers.  The argument
-@var{terminators} must be a list of terminators.
+@deftypemethod @aiface{binary-output-channel} @aclass{non-negative-fixnum} send-end! @var{this}
+Finish sending a message by flushing the underlying device and returning
+the total number of bytes sent.  If @var{this} is not in the course of
+sending a message: an assertion is raised.
+
+After this function is applied to a channel: the channel itself is
+configured as inactive; so it is available to start sending or receiving
+a message.
+@end deftypemethod
+
+
+@deftypemethod @aiface{binary-output-channel} @aclass{void} flush @var{this}
+Flush to the destination the data buffered in the underlying device.  If
+@var{this} is not in the course of sending a message: an assertion is
+raised.  If the maximum delivery time is exceeded: an exception is
+raised.
+@end deftypemethod
+
+
+@deftypemethod @aiface{binary-output-channel} @aclass{void} send-abort! @var{this}
+Abort the current operation and reset the channel to inactive.  If
+@var{this} is not in the course of sending a message: an assertion is
+raised.  If some data is in the output buffer of the underlying device:
+it is left untouched.
+@end deftypemethod
+
+
+@deftypemethod @aiface{binary-output-channel} @aclass{void} send-message-portion! @var{this} @bracearg{portion, bytevector}
+Send a portion of output message through the given channel.  If
+@var{this} is not in the course of sending a message: an assertion is
+raised.  The argument @var{portion} must be a bytevector representing
+the message portion.  This function does not flush the underlying
+device.
+
+If the current message size exceeds the maximum configured size: an
+exception is raised.  If the maximum delivery time is exceeded: an
+exception is raised.
+@end deftypemethod
+
+
+@deftypemethod @aiface{binary-output-port} @aclass{non-negative-fixnum} send-full-message @var{this} @bracearg{portion, bytevector} @dots{}
+Send a full message composed of the given @var{portion} arguments;
+return the total number of bytes sent.  If @var{this} is not inactive:
+an assertion is raised.
+
+If the message size exceeds the maximum configured size: an exception is
+raised.  If the maximum delivery time is exceeded: an exception is
+raised.
 @end deftypemethod
 
 @c page
 @node net channels ifaces tichannel
 @subsection Interface @iface{textual-input-channel}
 
+
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
+
+
+@deftp {Interface Type} @aiface{textual-input-channel}
+@deftpx {Parent Type} @aiface{channel}
+Expose the methods for all the textual input channels.
+@end deftp
+
+
+@deftypemethod @aiface{textual-input-channel} @aclass{textual-terminators} message-terminators @var{this}
+@deftypemethodx @aiface{textual-input-channel} @aclass{void} message-terminators @var{this} @{@var{terminators} @aclass{textual-terminators}@}
+Accessor and mutator for the message termination markers.  The argument
+@var{terminators} must represent the possible message terminators for
+this channel; when a terminator is received @strong{at the end} of a
+chunk of data, the message is considered terminated.
+@end deftypemethod
+
+
+@deftypemethod @aiface{textual-input-channel} @aclass{void} recv-begin! @var{this}
+Configure the channel to receive a new message.  If @var{this} is not
+inactive: an assertion is raised.
+@end deftypemethod
+
+
+@deftypemethod @aiface{textual-input-channel} {} recv-end!/rbl @var{this}
+Terminate the action of receiving a message.  If @var{this} is not in
+the course of receiving a message: an assertion is raised.
+
+Return two values:
+
+@enumerate
+@item
+A @class{positive-fixnum} representing the total length of the message
+as number of characters.
+
+@item
+A @code{(list-of @aclass{nestring})} representing the received data as
+reverse buffer list (@acronym{RBL}), including the message terminator.
+@end enumerate
+
+After this function is applied to a channel: the channel itself is reset
+to inactive; so it is available to start receiving another message or to
+send a message.
+@end deftypemethod
+
+
+@deftypemethod @aiface{textual-input-channel} @aclass{nestring} recv-end! @var{this}
+Terminate the action of receiving a message.  If @var{this} is not in
+the course of receiving a message: an assertion is raised.  If
+@var{this} is not in ``message terminated'' status: an assertion is
+raised.  Return a string holding the full message, including the message
+terminator.
+
+After this function is applied to a channel: the channel itself is reset
+to inactive; so it is available to start receiving another message or to
+send a message.
+@end deftypemethod
+
+
+@deftypemethod @aiface{textual-input-channel} @aclass{void} recv-abort! @var{this}
+Abort the current operation and reset the channel to inactive.  If
+@var{this} is not in the course of receiving a message: an assertion is
+raised.
+@end deftypemethod
+
+
+@deftypemethod @aiface{textual-input-channel} {(or @aclass{eof} @aclass{would-block} @aclass{boolean})} recv-message-portion! @var{this}
+Receive a portion of message.  If @var{this} is not in the course of
+receiving a message: an assertion is raised.
+
+@itemize
+@item
+Return @false{} if a portion of message was read, and it does not
+terminate with a message terminator; in this case we need to call this
+function again to receive further message portions.
+
+@item
+Return @true{} if a portion of message was read, terminating with a
+configured message terminator.  The channel is put in ``message
+terminated'' status.
+
+@item
+Return @true{} if the channel already read a terminator in a previous
+operation and is in ``message terminated'' status.
+
+@item
+Return the @eof{} object if @eof{} is read from the input device.
+
+@item
+Return the would--block object if a would--block object is read from the
+input device.
+
+@item
+If the message delivery timeout is expired or expires while receiving
+data: raise an exception.
+
+@item
+If the accumulated data exceeds the maximum message size: raise an
+exception.
+@end itemize
+@end deftypemethod
+
+
+@deftypemethod @aiface{textual-input-channel} {(or @aclass{eof} @aclass{string})} recv-full-message @var{this}
+Receive a full message.  When successful return a string representing
+the full message.  If @var{this} is not inactive: an assertion is
+raised.  If the underlying device is closed before the message is
+completed: return the @eof{} object.
+@end deftypemethod
+
 @c page
 @node net channels ifaces tochannel
 @subsection Interface @iface{textual-output-channel}
 
-@c page
-@node net channels ifaces tiochannel
-@subsection Interface @iface{textual-input/output-channel}
+
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
 
 
-@c page
-@node net channels types
-@section Data type definitions
-
-
-The following bindings are exported by the library @library{vicare net
-channels}.
-
-@c ------------------------------------------------------------
-
-@subsubheading Base channel type
-
-
-@deftp {Record Type} @aclass{channel}
-Record type representing an interprocess connection channel.  Whenever
-this documentation refers to arguments being instances of this type: it
-uses the identifier @var{chan}.
+@deftp {Interface Type} @aiface{textual-output-channel}
+@deftpx {Parent Type} @aiface{channel}
+Expose the methods for all the textual output channels.
 @end deftp
 
 
-@defun channel? @var{obj}
-Return @true{} if @var{obj} is an instance of @code{channel}, else
-return @false{}.
-@end defun
-
-@c ------------------------------------------------------------
-
-@subsubheading Binary channel type
-
-
-@deftp {Record Type} @aclass{binary-channel}
-Record type representing an interprocess connection binary channel.
-@end deftp
-
-
-@defun binary-channel? @var{obj}
-Return @true{} if @var{obj} is an instance of @code{binary-channel},
-else return @false{}.
-@end defun
-
-@c ------------------------------------------------------------
-
-@subsubheading Textual channel type
-
-
-@deftp {@rnrs{6} Record Type} @aclass{textual-channel}
-Record type representing an interprocess connection textual channel.
-@end deftp
-
-
-@defun textual-channel? @var{obj}
-Return @true{} if @var{obj} is an instance of @code{textual-channel},
-else return @false{}.
-@end defun
-
-@c page
-@node net channels init
-@section Constructors and destructors
-
-
-The following bindings are exported by the library @library{vicare net
-channels}.
-
-
-@defun open-binary-input-channel @var{in-port}
-Build and return a new instance of @code{binary-channel} to be used to
-receive messages; the returned channel is inactive.  The channel wraps
-the binary input or input/output port @var{in-port}.
-@end defun
-
-
-@defun open-binary-output-channel @var{ou-port}
-Build and return a new instance of @code{binary-channel} to be used to
-send messages; the returned channel is inactive.  The channel wraps the
-binary output or input/output port @var{ou-port}.
-@end defun
-
-
-@defun open-binary-input/output-channel @var{port}
-@defunx open-binary-input/output-channel @var{in-port} @var{ou-port}
-Build and return a new instance of @code{binary-channel} to be used to
-both receive and send messages; the returned channel is inactive.
-
-The channel wraps the binary input or input/output port @var{in-port},
-used to receive messages, and the binary output or input/output port
-@var{ou-port}, used to send messages.  @var{in-port} and @var{ou-port}
-can be the same port.
-
-When a single argument is given: @var{port} is used for both input and
-output.
-@end defun
-
-@c ------------------------------------------------------------
-
-@defun open-textual-input-channel @var{in-port}
-Build and return a new instance of @code{textual-channel} to be used to
-receive messages; the returned channel is inactive.  The channel wraps
-the textual input or input/output port @var{in-port}.
-@end defun
-
-
-@defun open-textual-output-channel @var{ou-port}
-Build and return a new instance of @code{textual-channel} to be used to
-send messages; the returned channel is inactive.  The channel wraps the
-textual output or input/output port @var{ou-port}.
-@end defun
-
-
-@defun open-textual-input/output-channel @var{port}
-@defunx open-textual-input/output-channel @var{in-port} @var{ou-port}
-Build and return a new instance of @code{textual-channel} to be used to
-both receive and send messages; the returned channel is inactive.
-
-The channel wraps the textual input or input/output port @var{in-port},
-used to receive messages, and the textual output or input/output port
-@var{ou-port}, used to send messages.  @var{in-port} and @var{ou-port}
-can be the same port.
-
-When a single argument is given: @var{port} is used for both input and
-output.
-@end defun
-
-@c ------------------------------------------------------------
-
-@defun close-channel @var{chan}
-Finalise a channel closing its connection port; return unspecified
-values.  A pending message delivery, if any, is aborted.
-@end defun
-
-
-@defun channel-abort! @var{chan}
-Abort the current operation and reset the channel to inactive; return
-unspecified values.
-@end defun
-
-@c page
-@node net channels config
-@section Configuration parameters
-
-
-The following bindings are exported by the library @library{vicare net
-channels}.
-
-
-@defun channel-set-maximum-message-size! @var{chan} @var{maximum-message-size}
-Configure the maximum message size; return unspecified values.
-
-@var{maximum-message-size} must be a positive exact integer representing
-the inclusive maximum message size; if the size of the message exceeds
-this value: message delivery will fail.
-
-When not configured: the maximum message size defaults to @math{4096}.
-
-The maximum message size @strong{is not} reset when a message delivery
-is completed.
-@end defun
-
-
-@defun channel-set-expiration-time! @var{chan} @var{expiration-time}
-Configure the message delivery expiration time; return unspecified
-values.
-
-If @var{expiration-time} is a time object (as defined by the library
-@library{vicare}): it represents the limit of time since the Epoch to
-complete message delivery; if the allotted time expires: message
-delivery will fail.  Typically we build such time objects using
-@func{time-from-now}.
-
-If @var{expiration-time} is @false{}: there is not time limit.
-
-When not configured: the expiration time defaults to no time limit.
-
-The expiration time @strong{is not} reset when a message delivery is
-completed.
-@end defun
-
-
-@defun channel-set-message-terminators! @var{chan} @var{terminators}
-Configure the message terminators; return unspecified values.
-
-If @var{chan} is a binary channel: @var{terminators} must be a
-non--empty list of non--empty bytevectors representing possible message
-terminators.  When not configured: the list of terminators defaults to:
-
-@example
-(#ve(ascii "\r\n\r\n") #ve(ascii "\n\n"))
-@end example
-
-If @var{chan} is a textual channel: @var{terminators} must be a
-non--empty list of non--empty strings representing possible message
-terminators.  When not configured: the list of terminators defaults to:
-
-@example
-("\r\n\r\n" "\n\n")
-@end example
-
-The terminators @strong{are not} reset when a message delivery is
-completed.
-@end defun
-
-
-@defun channel-set-maximum-message-portion-size! @var{chan} @var{max-portion-size}
-Configure the maximum message portion size; return unspecified values.
-
-@var{max-portion-size} must be a positive fixnum representing the
-inclusive maximum message portion size in octets or characters; when
-receiving a message portion: this value is used as second argument to
-@func{get-bytevector-n} or @func{get-string-n}.
-
-When not configured: the maximum portion size defaults to @math{4096}
-for binary channels and to @math{1024} for textual channels.  This value
-can be reconfigured any number of times, even between message portion
-receptions.
-
-The maximum message portion size @strong{is not} reset when a message
-delivery is completed.
-@end defun
-
-@c page
-@node net channels inspect
-@section Channels inspection
-
-
-The following bindings are exported by the library @library{vicare net
-channels}.
-
-
-@defun channel-connect-in-port @var{chan}
-@defunx channel-connect-ou-port @var{chan}
-Return the input or output port of @var{chan}.
-@end defun
-
-@c page
-@node net channels preds
-@section Predicates and arguments validation
-
-
-The following bindings are exported by the library @library{vicare net
-channels}.
-
-
-@defun receiving-channel? @var{chan}
-Return @true{} if @var{chan} is in the course of receiving a message,
-else return @false{}.  It is an error if @var{chan} is not an instance
-of @code{channel}.
-@end defun
-
-
-@defun sending-channel? @var{chan}
-Return @true{} if @var{chan} is in the course of sending a message, else
-return @false{}.  It is an error if @var{chan} is not an instance of
-@code{channel}.
-@end defun
-
-
-@defun inactive-channel? @var{chan}
-Return @true{} if @var{chan} is @strong{neither} in the course of
-sending @strong{nor} receiving a message, else return @false{}.  It is
-an error if @var{chan} is not an instance of @code{channel}.
-@end defun
-
-
-@defun input-channel? @var{chan}
-Return @true{} if @var{chan} is an input or input/output channel, else
-return @false{}.  It is an error if @var{chan} is not an instance of
-@code{channel}.
-@end defun
-
-
-@defun output-channel? @var{chan}
-Return @true{} if @var{chan} is an output or input/output channel, else
-return @false{}.  It is an error if @var{chan} is not an instance of
-@code{channel}.
-@end defun
-
-
-@defun input/output-channel? @var{chan}
-Return @true{} if @var{chan} is an input/output channel, else return
-@false{}.  It is an error if @var{chan} is not an instance of
-@code{channel}.
-@end defun
-
-@c ------------------------------------------------------------
-
-The following bindings are validation clauses to be used with the
-facilities of the library @library{vicare arguments validation}.
-
-
-@deffn {Validation Clause} receiving-channel @var{obj}
-Succeed if @var{obj} is an instance of @code{channel} and it is in the
-course of receiving a message.
-@end deffn
-
-
-@deffn {Validation Clause} not-receiving-channel @var{obj}
-Succeed if @var{obj} is an instance of @code{channel} and it is
-@strong{not} in the course of receiving a message.
-@end deffn
-
-
-@deffn {Validation Clause} sending-channel @var{obj}
-Succeed if @var{obj} is an instance of @code{channel} and it is in the
-course of sending a message.
-@end deffn
-
-
-@deffn {Validation Clause} not-sending-channel @var{obj}
-Succeed if @var{obj} is an instance of @code{channel} and it is
-@strong{not} in the course of sending a message.
-@end deffn
-
-
-@deffn {Validation Clause} inactive-channel @var{obj}
-Succeed if @var{obj} is an instance of @code{channel} and it is
-@strong{neither} in the course of sending @strong{nor} receiving a
-message.
-@end deffn
-
-
-@deffn {Validation Clause} not-inactive-channel @var{obj}
-Succeed if @var{obj} is an instance of @code{channel} and it is
-@strong{either} in the course of sending @strong{or} receiving a
-message.
-@end deffn
-
-@c page
-@node net channels recv
-@section Receiving a message
-
-
-The following bindings are exported by the library @library{vicare net
-channels}.
-
-
-@defun channel-recv-begin! @var{chan}
-Configure a channel to start receiving a message; return unspecified
-values.  @var{chan} must be an input or input/output channel; it is an
-error if the channel is not inactive.
-@end defun
-
-
-@defun channel-recv-end! @var{chan}
-Finish receiving a message and: for binary channels return the
-accumulated octets in a bytevector, for textual channels return the
-accumulated characters in a string.  It is an error if the channel is
-not in the course of receiving a message.
+@deftypemethod @aiface{textual-output-channel} @aclass{void} send-begin! @var{this}
+Configure a channel to start sending a message.  If @var{this} is not
+inactive: an assertion is raised.
+@end deftypemethod
+
+
+@deftypemethod @aiface{textual-output-channel} @aclass{non-negative-fixnum} send-end! @var{this}
+Finish sending a message by flushing the underlying device and returning
+the total number of characters sent.  If @var{this} is not in the course
+of sending a message: an assertion is raised.
 
 After this function is applied to a channel: the channel itself is
-configured as inactive; so it is available to start receiving another
-message or to send a message.
-@end defun
+configured as inactive; so it is available to start sending or receiving
+a message.
+@end deftypemethod
 
 
-@defun channel-recv-end!/rbl @var{chan}
-Like @func{channel-recv-end!}, but return @math{2} values:
-
-@enumerate
-@item
-For binary channels: null or a list of non--empty bytevectors
-representing the accumulated message data in bytevector--reverse order.
-For textual channels: null or a list of non--empty strings representing
-the accumulated message data in bytevector--reverse order.
-
-@item
-An exact integer representing the total number of octets or characters
-in the bytevectors or strings.
-@end enumerate
-@end defun
+@deftypemethod @aiface{textual-output-channel} @aclass{void} flush @var{this}
+Flush to the destination the data buffered in the underlying device.  If
+@var{this} is not in the course of sending a message: an assertion is
+raised.  If the maximum delivery time is exceeded: an exception is
+raised.
+@end deftypemethod
 
 
-@defun channel-recv-message-portion! @var{chan}
-Receive a portion of input message from the given channel and accumulate
-it in the internal state; it is an error if the channel is not in the
-course of receiving a message.
-
-This function performs a @strong{single} read operation from the
-registered connection input port; for binary channels it uses
-@func{get-bytevector-n}, for textual channels it uses
-@func{get-string-n}.  When non--blocking mode is desired: the underlying
-input port must be configured in non--blocking mode.
-
-@itemize
-@item
-Return @true{} if a configured message terminator is read from the input
-port or if the channel already read a terminator in a previous
-operation.  If a message terminator is received: set @var{chan} to
-``message terminated'' status.
-
-@item
-Return the @eof{} object if @eof{} is read from the input port before a
-message terminator.
-
-@item
-Return the would--block object if a would--block condition is found in
-the input port before a message terminator.  In this case we need to
-call this function again later to receive further message portions; data
-is @strong{not} immediately available on the input port.
-
-@item
-Return @false{} if neither a message terminator, nor @eof{}, nor a
-would--block is read.  In this case we need to call this function again
-later to receive further message portions; data may be immediately
-available on the input port.
-
-@item
-If, upon entering this function, the message is not terminated and the
-delivery timeout is expired or expires while receiving data: raise a
-non--continuable exception with compound condition object of types:
-@condition{who}, @condition{message}, @condition{channel},
-@condition{delivery-timeout-expired}.
-
-@item
-If reading data causes the accumulated message to exceed the maximum
-size configured for this message: raise a non--continuable exception
-with compound condition object of types: @condition{who},
-@condition{message}, @condition{channel},
-@condition{maximum-message-size-exceeded}.
-@end itemize
-@end defun
-
-@c ------------------------------------------------------------
-
-@defun channel-recv-full-message @var{chan}
-Attempt to receive a full message through @var{chan}; the channel must
-be inactive.  Return a string or bytevector representing the channel or
-the @eof{} object if the channel connection is closed before a message
-terminator is read.
-
-If an error occurs while receiving a message portion: @var{chan} is left
-in the state it is left by @func{channel-recv-message-portion!}.
-@end defun
-
-@c page
-@node net channels send
-@section Sending a message
+@deftypemethod @aiface{textual-output-channel} @aclass{void} send-abort! @var{this}
+Abort the current operation and reset the channel to inactive.  If
+@var{this} is not in the course of sending a message: an assertion is
+raised.  If some data is in the output buffer of the underlying device:
+it is left untouched.
+@end deftypemethod
 
 
-The following bindings are exported by the library @library{vicare net
-channels}.
+@deftypemethod @aiface{textual-output-channel} @aclass{void} send-message-portion! @var{this} @bracearg{portion, string}
+Send a portion of output message through the given channel.  If
+@var{this} is not in the course of sending a message: an assertion is
+raised.  The argument @var{portion} must be a string representing the
+message portion.  This function does not flush the underlying device.
+
+If the current message size exceeds the maximum configured size: an
+exception is raised.  If the maximum delivery time is exceeded: an
+exception is raised.
+@end deftypemethod
 
 
-@defun channel-send-begin! @var{chan}
-Configure a channel to start sending a message; return unspecified
-values.  @var{chan} must be an output or input/output channel; it is an
-error if the channel is not inactive.
-@end defun
+@deftypemethod @aiface{textual-output-port} @aclass{non-negative-fixnum} send-full-message @var{this} @bracearg{portion, string} @dots{}
+Send a full message composed of the given @var{portion} arguments;
+return the total number of characters sent.  If @var{this} is not
+inactive: an assertion is raised.
 
-
-@defun channel-send-end! @var{chan}
-Finish sending a message by flushing the connect port and return the
-total number of octets or characters sent.  It is an error if the
-channel is not in the course of sending a message.
-
-After this function is applied to a channel: the channel itself is
-configured as inactive; so it is available to start receiving another
-message or to send a message.
-@end defun
-
-
-@defun channel-send-message-portion! @var{chan} @var{portion}
-Send a portion of output message through the given channel; return
-unspecified values.  It is an error if the channel is not in the course
-of sending a message.
-
-For binary channels: @var{portion} must be a bytevector representing the
-message portion.  For textual channels: @var{portion} must be a string
-representing the message portion.
-
-This function does not flush the connection port.
-
-If at the time of this function call the timeout configured for this
-message is expired: a non--continuable exception is raised with compound
-condition object of types: @condition{who}, @condition{message},
-@condition{channel}, @condition{delivery-timeout-expired}.
-
-If writing @var{portion} would cause the total message size to exceed
-the maximum size configured for this message: a non--continuable
-exception is raised with compound condition object of types:
-@condition{who}, @condition{message}, @condition{channel},
-@condition{maximum-message-size-exceeded}.
-@end defun
-
-@c ------------------------------------------------------------
-
-@defun channel-send-full-message @var{chan} @var{message-portion} @dots{}
-Attempt to send a full message through @var{chan}; the channel must be
-inactive.  Each @var{message-portion} is sent in the given order.
-
-Return the return value of the internal call to
-@func{channel-send-end!}.  If an error occurs while sending a message
-portion: @var{chan} is left in the state it is left by
-@func{channel-send-message-portion!}.
-@end defun
+If the message size exceeds the maximum configured size: an exception is
+raised.  If the maximum delivery time is exceeded: an exception is
+raised.
+@end deftypemethod
 
 @c page
 @node net channels conditions
@@ -770,81 +1040,30 @@ Whenever an error condition happens: the functions of the library
 @library{vicare net channels} react by raising non--continuable exceptions
 whose raised objects are compound conditions of the following types.
 
-The following bindings are exported by the library @library{vicare net
-channels}.
-
-@c ------------------------------------------------------------
-
-@subsubheading Channel condition type
+The following syntactic bindings are exported by the library
+@library{vicare net channels}.
 
 
-@deftp {Condition Type} &channel
-Condition object containing an instance of @code{channel}; it is derived
-from @condition{condition}.
+@deftp {Condition Type} @acondition{channel}
+Condition object containing an instance of @class{channel}; it is
+derived from @condition{condition}.  It has the following fields:
+
+@table @code
+@item channel
+The instance of @class{channel}.
+@end table
 @end deftp
 
 
-@defun make-channel-condition @var{chan}
-Build and return an instance of @condition{channel} wrapping the channel
-@var{chan}.
-@end defun
-
-
-@defun channel-condition? @var{obj}
-Return @true{} if @var{obj} is a condition object of type
-@condition{channel} or a compound condition object with a component of
-type @condition{channel}.
-@end defun
-
-
-@defun condition-channel @var{cond}
-Given an instance of @condition{channel}: return the @code{channel}
-instance it contains.
-@end defun
-
-@c ------------------------------------------------------------
-
-@subsubheading Delivery timeout error
-
-
-@deftp {Condition Type} &delivery-timeout-expired
+@deftp {Condition Type} @acondition{delivery-timeout-expired}
 Condition object used to tag exceptions as of type ``message delivery
 timeout expired''; it is derived from @condition{error}.
 @end deftp
 
 
-@defun make-delivery-timeout-expired-condition
-Build and return an instance of @condition{delivery-timeout-expired}.
-@end defun
-
-
-@defun delivery-timeout-expired-condition? @var{obj}
-Return @true{} if @var{obj} is a condition object of type
-@condition{delivery-timeout-expired} or a compound condition object with
-a component of type @condition{delivery-timeout-expired}.
-@end defun
-
-@c ------------------------------------------------------------
-
-@subsubheading Message size error
-
-
-@deftp {Condition Type} &maximum-message-size-exceeded
+@deftp {Condition Type} @acondition{maximum-message-size-exceeded}
 Condition object used to tag exceptions as of type ``maximum message
 size exceeded; it is derived from @condition{error}.
 @end deftp
-
-
-@defun make-maximum-message-size-exceeded-condition
-Build and return an instance of
-@condition{maximum-message-size-exceeded}.
-@end defun
-
-
-@defun maximum-message-size-exceeded-condition? @var{obj}
-Return @true{} if @var{obj} is a condition object of type
-@condition{maximum-message-size-exceeded} or a compound condition object
-with a component of type @condition{maximum-message-size-exceeded}.
-@end defun
 
 @c end of file

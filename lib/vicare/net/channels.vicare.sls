@@ -33,7 +33,6 @@
     <binary-input-only-channel>		<textual-input-only-channel>
     <binary-output-only-channel>	<textual-output-only-channel>
     <binary-input/output-channel>	<textual-input/output-channel>
-    <input-channel>			<output-channel>
 
     <<channel>>
     <<binary-input-channel>>		<<binary-output-channel>>
@@ -112,11 +111,6 @@
 (define-type <textual-terminators>
   (nevector-of <nestring>))
 
-;;Number of bytes or characters sent or received through a channel.
-;;
-(define-alias <message-portion-length>
-  <non-negative-fixnum>)
-
 
 ;;;; interfaces
 
@@ -143,7 +137,8 @@
 						  ((<binary-terminators>)	=> (<void>))))
   (method-prototype recv-begin!			(lambda () => (<void>)))
   (method-prototype recv-end!/rbl		(lambda () => (<positive-fixnum> (list-of <nebytevector>))))
-  (method-prototype recv-end!			(lambda () => (<bytevector>)))
+  (method-prototype recv-end!			(lambda () => (<nebytevector>)))
+  (method-prototype recv-abort!			(lambda () => (<void>)))
   (method-prototype recv-full-message		(lambda () => ((or <eof> <bytevector>))))
   (method-prototype recv-message-portion!	(lambda () => ((or <eof> <would-block> <boolean>))))
   #| end of DEFINE-INTERFACE-TYPE |# )
@@ -155,7 +150,8 @@
 						  ((<textual-terminators>)	=> (<void>))))
   (method-prototype recv-begin!			(lambda () => (<void>)))
   (method-prototype recv-end!/rbl		(lambda () => (<positive-fixnum> (list-of <nestring>))))
-  (method-prototype recv-end!			(lambda () => (<string>)))
+  (method-prototype recv-end!			(lambda () => (<nestring>)))
+  (method-prototype recv-abort!			(lambda () => (<void>)))
   (method-prototype recv-full-message		(lambda () => ((or <eof> <string>))))
   (method-prototype recv-message-portion!	(lambda () => ((or <eof> <would-block> <boolean>))))
   #| end of DEFINE-INTERFACE-TYPE |# )
@@ -166,8 +162,9 @@
   (parent <<channel>>)
   (method-prototype send-begin!			(lambda () => (<void>)))
   (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
+  (method-prototype send-abort!			(lambda () => (<void>)))
   (method-prototype send-message-portion!	(lambda (<bytevector>) => (<void>)))
-  (method-prototype send-full-message		(lambda (list-of <bytevector>) => (<message-portion-length>)))
+  (method-prototype send-full-message		(lambda (list-of <bytevector>) => (<non-negative-fixnum>)))
   (method-prototype flush			(lambda () => (<void>)))
   #| end of DEFINE-INTERFACE-TYPE |# )
 
@@ -175,8 +172,9 @@
   (parent <<channel>>)
   (method-prototype send-begin!			(lambda () => (<void>)))
   (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
+  (method-prototype send-abort!			(lambda () => (<void>)))
   (method-prototype send-message-portion!	(lambda (<string>) => (<void>)))
-  (method-prototype send-full-message		(lambda (list-of <string>) => (<message-portion-length>)))
+  (method-prototype send-full-message		(lambda (list-of <string>) => (<non-negative-fixnum>)))
   (method-prototype flush			(lambda () => (<void>)))
   #| end of DEFINE-INTERFACE-TYPE |# )
 
@@ -343,7 +341,7 @@
       (.message-increment-size! this (.length data))))
 
   (protected
-    (method ({reverse-and-concatenate-buffer <bytevector>})
+    (method ({reverse-and-concatenate-buffer <nebytevector>})
       ($bytevector-reverse-and-concatenate (.message-size this) (.message-buffer this))))
 
 ;;; --------------------------------------------------------------------
@@ -355,8 +353,8 @@
     ;;1. A positive fixnum representing the total data size.
     ;;
     ;;2.   Null or  a list  of non-empty  bytevectors representing  the data  buffers
-    ;;accumulated in reverse order (reverse bytevector list, RBL).  The data includes
-    ;;the terminator.
+    ;;accumulated in reverse order (reverse buffer list, RBL).  The data includes the
+    ;;terminator.
     ;;
     ;;After this  function is applied  to a channel: the  channel itself is  reset to
     ;;inactive; so it  is available to start  receiving another message or  to send a
@@ -368,7 +366,7 @@
 		(.message-buffer this))
       (.recv-abort! this)))
 
-  (method ({recv-end! <bytevector>})
+  (method ({recv-end! <nebytevector>})
     ;;Finish receiving a message; it is an error  if the channel is not in the course
     ;;of receiving  a message.  Return  the accumulated  octets in a  bytevector; the
     ;;data includes the terminator.
@@ -378,9 +376,12 @@
     ;;message.
     ;;
     (assert-receiving-channel __who__ this)
-    (begin0
-	(.reverse-and-concatenate-buffer this)
-      (.recv-abort! this)))
+    (if (.message-terminated? this)
+	(begin0
+	    (.reverse-and-concatenate-buffer this)
+	  (.recv-abort! this))
+      (assertion-violation __who__
+	"attempting to end reception of non-terminated message" this)))
 
   (method ({recv-full-message (or <eof> <bytevector>)})
     (assert-inactive-channel __who__ this)
@@ -493,7 +494,7 @@
       (.message-increment-size! this (.length data))))
 
   (protected
-    (method ({reverse-and-concatenate-buffer <string>})
+    (method ({reverse-and-concatenate-buffer <nestring>})
       ($string-reverse-and-concatenate (.message-size this) (.message-buffer this))))
 
 ;;; --------------------------------------------------------------------
@@ -505,8 +506,7 @@
     ;;1. A positive fixnum representing the total data size.
     ;;
     ;;2. A  list of non-empty  strings representing  the data buffers  accumulated in
-    ;;reverse  order  (reverse   bytevector  list,  RBL).   The   data  includes  the
-    ;;terminator.
+    ;;reverse order (reverse buffer list, RBL).  The data includes the terminator.
     ;;
     ;;After this  function is applied  to a channel: the  channel itself is  reset to
     ;;inactive; so it  is available to start  receiving another message or  to send a
@@ -518,7 +518,7 @@
 		(.message-buffer this))
       (.recv-abort! this)))
 
-  (method ({recv-end! <string>})
+  (method ({recv-end! <nestring>})
     ;;Finish receiving a message; it is an error  if the channel is not in the course
     ;;of receiving  a message.  Return  the accumulated  characters in a  string; the
     ;;data includes the terminator.
@@ -528,9 +528,12 @@
     ;;message.
     ;;
     (assert-receiving-channel __who__ this)
-    (begin0
-	(.reverse-and-concatenate-buffer this)
-      (.recv-abort! this)))
+    (if (.message-terminated? this)
+	(begin0
+	    (.reverse-and-concatenate-buffer this)
+	  (.recv-abort! this))
+      (assertion-violation __who__
+	"attempting to end reception of non-terminated message" this)))
 
   (method ({recv-full-message (or <eof> <string>)})
     (assert-inactive-channel __who__ this)
@@ -637,7 +640,10 @@
   (method ({flush <void>})
     ;;Flush to the destination the data buffered in the underlying device.
     ;;
-    (flush-output-port (.connect-ou-port this)))
+    (assert-sending-channel __who__ this)
+    (if (.delivery-timeout-expired? this)
+	(%error-message-delivery-timeout-expired __who__ this)
+      (flush-output-port (.connect-ou-port this))))
 
   (method ({send-abort! <void>})
     ;;Abort  the  current  operation  and  reset  the  channel  to  inactive;  return
@@ -682,7 +688,7 @@
 	  (else
 	   (put-bytevector (.connect-ou-port this) portion))))
 
-  (method ({send-full-message <message-portion-length>} . {message-portions (list-of <bytevector>)})
+  (method ({send-full-message <non-negative-fixnum>} . {message-portions (list-of <bytevector>)})
     ;;Send a  full message composed of  the given MESSAGE-PORTIONS; return  the total
     ;;number of  bytes or  characters sent.   It is an  error if  the channel  is not
     ;;inactive.
@@ -726,7 +732,7 @@
 	  (else
 	   (put-string (.connect-ou-port this) portion))))
 
-  (method ({send-full-message <message-portion-length>} . {message-portions (list-of <string>)})
+  (method ({send-full-message <non-negative-fixnum>} . {message-portions (list-of <string>)})
     ;;Send a  full message composed of  the given MESSAGE-PORTIONS; return  the total
     ;;number of  bytes or  characters sent.   It is an  error if  the channel  is not
     ;;inactive.
@@ -965,8 +971,8 @@
   ;;&channel, &timeout-expired.
   ;;
   (raise
-   (condition (make-channel-condition chan)
-	      (make-delivery-timeout-expired-condition)
+   (condition (new &channel chan)
+	      (new &delivery-timeout-expired)
 	      (make-who-condition who)
 	      (make-message-condition "message reception timeout expired"))))
 
@@ -976,8 +982,8 @@
   ;;&maximum-message-size-exceeded.
   ;;
   (raise
-   (condition (make-channel-condition chan)
-	      (make-maximum-message-size-exceeded-condition)
+   (condition (new &channel chan)
+	      (new &maximum-message-size-exceeded)
 	      (make-who-condition who)
 	      (make-message-condition "message reception timeout expired"))))
 
@@ -1158,15 +1164,6 @@
 				       B (fxsub1 B.idx))))))
 
   #| end of module: %received-message-terminator? |# )
-
-
-;;;; more type definitions
-
-(define-type <input-channel>
-  (or <binary-input-only-channel> <textual-input-only-channel>))
-
-(define-type <output-channel>
-  (or <binary-output-only-channel> <textual-output-only-channel>))
 
 
 ;;;; done

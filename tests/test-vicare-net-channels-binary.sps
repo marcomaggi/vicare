@@ -58,12 +58,10 @@
   (check
       (let ((chan (new <binary-input-only-channel> in-port)))
         (list (is-a? chan <channel>)
-	      (is-a? chan <input-channel>)
-	      (is-a? chan <output-channel>)
 	      (.inactive?  chan)
 	      (.sending?   chan)
 	      (.receiving? chan)))
-    => '(#t #t #f #t #f #f))
+    => '(#t #t #f #f))
 
   (check
        (let ((chan (new <binary-input-only-channel> in-port)))
@@ -81,7 +79,7 @@
    (check
        (let ((chan (new <binary-input-only-channel> in-port)))
 	 (.recv-begin! chan)
-	 (.recv-end! chan)
+	 (.recv-abort! chan)
 	 (list (.inactive? chan)
 	       (.sending? chan)
 	       (.receiving? chan)))
@@ -95,12 +93,10 @@
 	  (open-bytevector-output-port)
 	(let ((chan (new <binary-output-only-channel> port)))
 	  (list (is-a? chan <channel>)
-                (is-a? chan <input-channel>)
-		(is-a? chan <output-channel>)
 		(.inactive? chan)
 		(.sending? chan)
 		(.receiving? chan))))
-    => '(#t #f #t #t #f #f))
+    => '(#t #t #f #f))
 
   (check
       (receive (port extract)
