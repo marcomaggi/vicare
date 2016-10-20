@@ -25,7 +25,7 @@
 
 
 #!vicare
-(library (vicare net channels (0 4 2016 09 30))
+(library (vicare net channels (0 4 2016 10 20))
   (options typed-language predicate-type-propagation)
   (export
     ;; record type
