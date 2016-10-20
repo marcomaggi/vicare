@@ -4239,8 +4239,8 @@ The type @class{void} is the type of the void object returned by
 because the only legitimate use of the void object is as single return
 value of functions returning ``unspecified values'' (under
 @value{PRJNAME} returning a single value is faster than returning zero
-values).  If we need a unique value: we should use the sentinel value
-(@vicarepxref{iklib sentinel, The sentinel object}).
+values).  If we need a unique value: we should use the sentinel value,
+@vicarepxref{iklib sentinel, The sentinel object}.
 
 Expressions of type @class{void} are deprecated as operands in function
 applications and forbidden in logic predicates.  For example:
@@ -4253,7 +4253,8 @@ applications and forbidden in logic predicates.  For example:
 raises an exception because @func{vector-set!} returns the void value.
 The type @class{void} has no parent (it is @strong{not} a sub--type of
 @class{top}) and it should be like not--a--number for numeric
-computations.  Here are some consequences:
+computations.  Here are some consequences when the expander can
+determine the type of an operand:
 
 @itemize
 @item
@@ -4276,7 +4277,7 @@ and test of @syntax{if} will cause an expand--time syntax violation.
 
 @item
 A void expression as operand of @syntax{not} will cause an expand--time
-syntax violation if the expander can determine the type of the operand.
+syntax violation.
 
 @item
 Remembering that @syntax{cond} and @syntax{case} return void when no
@@ -4290,7 +4291,7 @@ body is not evaluated: @syntax{when} and @syntax{unless} cannot be used
 as operands.
 
 @item
-The syntax @syntax{set!} cannot be used as operand.
+Uses of the syntax @syntax{set!} cannot be operand expressions.
 @end itemize
 
 The only function that is allowed to have a void operand is the core
@@ -4304,15 +4305,15 @@ union and intersection between @class{void} and any other type is
 @end deftp
 
 
-@defop Constructor @class{void} new @aclass{void}
+@deftypeop Constructor @class{void} @aclass{void} type-constructor
 Return the void object.
-@end defop
+@end deftypeop
 
 
-@defop {Type predicate} @class{void} is-a? @var{obj} @aclass{void}
+@deftypeop {Type predicate} @class{void} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{void-object?}.  Return @true{} if @var{obj}
 is void; otherwise return @false{}.
-@end defop
+@end deftypeop
 
 @c page
 @node built-in top
