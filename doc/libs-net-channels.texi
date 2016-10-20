@@ -17,7 +17,8 @@ sockets.  The library is @strong{not} meant to be used in the wild,
 where rogue or malicious entities may attempt to corrupt the other side.
 
 The library is implemented with the typed language and it is meant to be
-used by programs and libraries using the typed language.
+used by programs and libraries using the typed language.  This
+documentation describes the library version @code{(0 4 2016 10 20)}.
 
 @menu
 * net channels ann::            Useful type annotations.
