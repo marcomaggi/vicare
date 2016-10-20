@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,17 +25,12 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (vicare containers bytevector-compounds)
   (export
     ;; data type
     bytevector-compound
     make-bytevector-compound		bytevector-compound?
-
-    ;; validation clauses
-    bytevector-compound.vicare-arguments-validation
-    false-or-bytevector-compound.vicare-arguments-validation
-    bytevector-compound/filled.vicare-arguments-validation
 
     ;; inspection
     bytevector-compound-empty?		bytevector-compound-filled?

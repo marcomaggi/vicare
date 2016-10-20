@@ -8,36 +8,31 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
-#!r6rs
-(library (vicare containers bytevector-compounds core)
+#!vicare
+(library (vicare containers bytevector-compounds core (0 4 2016 10 20))
+  (options typed-language)
   (export
 
     ;; data type
     bytevector-compound
     make-bytevector-compound
     bytevector-compound?
-
-    ;; validation clauses
-    bytevector-compound.vicare-arguments-validation
-    false-or-bytevector-compound.vicare-arguments-validation
-    bytevector-compound/filled.vicare-arguments-validation
 
     ;; inspection
     bytevector-compound-empty?		bytevector-compound-filled?
@@ -65,19 +60,40 @@
     $bytevector-compound-u8-set!	$bytevector-compound-u8-ref
     $bytevector-compound-s8-set!	$bytevector-compound-s8-ref
 
-    )
+    #| end of EXPORT |# )
   (import (vicare)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (vicare unsafe operations)
     (vicare system $bytevectors)
     (only (vicare system $numerics)
-	  $add-number-fixnum))
+	  $add-number-fixnum)
+    (vicare language-extensions labels)
+    (prefix (vicare platform words) words::))
+
+
+;;;; label types
+
+(define-label-type <word-u8>
+  (parent <non-negative-fixnum>)
+  (type-predicate
+    (lambda (parent-predicate)
+      (lambda (obj)
+	(and (parent-predicate obj)
+	     (words::word-u8? obj))))))
+
+(define-label-type <word-s8>
+  (parent <fixnum>)
+  (type-predicate
+    (lambda (parent-predicate)
+      (lambda (obj)
+	(and (parent-predicate obj)
+	     (words::word-s8? obj))))))
 
 
 ;;;; type definitions
 
-(define-record-type-extended bytevector-compound
+(define-record-type bytevector-compound
   (nongenerative vicare:bytevector-compounds:bytevector-compound)
   (fields (mutable first-pair)
 		;List  representing the  queue  of  bytevectors in  this
@@ -139,27 +155,18 @@
 
 ;;;; inspection
 
-(define (bytevector-compound-empty? bvcom)
-  (define who 'bytevector-compound-empty?)
-  (with-arguments-validation (who)
-      ((bytevector-compound	bvcom))
-    ($bytevector-compound-empty? bvcom)))
+(define (bytevector-compound-empty? {bvcom bytevector-compound})
+  ($bytevector-compound-empty? bvcom))
 
-(define (bytevector-compound-filled? bvcom)
-  (define who 'bytevector-compound-filled?)
-  (with-arguments-validation (who)
-      ((bytevector-compound	bvcom))
-    ($bytevector-compound-filled? bvcom)))
+(define (bytevector-compound-filled? {bvcom bytevector-compound})
+  ($bytevector-compound-filled? bvcom))
 
 ;;; --------------------------------------------------------------------
 
-(define (bytevector-compound-data bvcom)
+(define (bytevector-compound-data {bvcom bytevector-compound})
   ;;Return a list of bytevectors being the data in BVCOM.
   ;;
-  (define who 'bytevector-compound-data)
-  (with-arguments-validation (who)
-      ((bytevector-compound	bvcom))
-    ($bytevector-compound-data bvcom)))
+  ($bytevector-compound-data bvcom))
 
 (define ($bytevector-compound-data bvcom)
   (let recur ((P ($bytevector-compound-first-pair bvcom)))
@@ -178,14 +185,10 @@
 
 ;;;; bytevector queue
 
-(define (bytevector-compound-enqueue! bvcom item)
+(define (bytevector-compound-enqueue! {bvcom bytevector-compound} {item <bytevector>})
   ;;Enqueue the bytevector ITEM into BVCOM.  Return unspecified values.
   ;;
-  (define who 'bytevector-compound-enqueue!)
-  (with-arguments-validation (who)
-      ((bytevector-compound	bvcom)
-       (bytevector		item))
-    ($bytevector-compound-enqueue! bvcom item)))
+  ($bytevector-compound-enqueue! bvcom item))
 
 (define ($bytevector-compound-enqueue! bvcom item)
   (if ($bytevector-compound-filled? bvcom)
@@ -207,14 +210,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (bytevector-compound-dequeue! bvcom)
+(define (bytevector-compound-dequeue! {bvcom bytevector-compound})
   ;;Dequeue the next  bytevector from BVCOM and return  it; return false
   ;;if BVCOM is empty.
   ;;
-  (define who 'bytevector-compound-dequeue!)
-  (with-arguments-validation (who)
-      ((bytevector-compound	bvcom))
-    ($bytevector-compound-dequeue! bvcom)))
+  ($bytevector-compound-dequeue! bvcom))
 
 (define ($bytevector-compound-dequeue! bvcom)
   (cond (($bytevector-compound-empty? bvcom)
@@ -235,13 +235,8 @@
 
 ;;;; accessors and mutators, u8
 
-(define (bytevector-compound-u8-set! bvcom idx val)
-  (define who 'bytevector-compound-u8-set!)
-  (with-arguments-validation (who)
-      ((bytevector-compound		bvcom)
-       (non-negative-exact-integer	idx)
-       (word-u8				val))
-    ($bytevector-compound-u8-set! bvcom idx val)))
+(define (bytevector-compound-u8-set! {bvcom bytevector-compound} {idx <non-negative-exact-integer>} {val <word-u8>})
+  ($bytevector-compound-u8-set! bvcom idx val))
 
 (define ($bytevector-compound-u8-set! bvcom idx val)
   (define who 'bytevector-compound-u8-set!)
@@ -258,12 +253,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (bytevector-compound-u8-ref bvcom idx)
-  (define who 'bytevector-compound-u8-ref)
-  (with-arguments-validation (who)
-      ((bytevector-compound		bvcom)
-       (non-negative-exact-integer	idx))
-    ($bytevector-compound-u8-ref bvcom idx)))
+(define (bytevector-compound-u8-ref {bvcom bytevector-compound} {idx <non-negative-exact-integer>})
+  ($bytevector-compound-u8-ref bvcom idx))
 
 (define ($bytevector-compound-u8-ref bvcom idx)
   (define who 'bytevector-compound-u8-ref)
@@ -281,13 +272,8 @@
 
 ;;;; accessors and mutators, s8
 
-(define (bytevector-compound-s8-set! bvcom idx val)
-  (define who 'bytevector-compound-s8-set!)
-  (with-arguments-validation (who)
-      ((bytevector-compound		bvcom)
-       (non-negative-exact-integer	idx)
-       (word-s8				val))
-    ($bytevector-compound-s8-set! bvcom idx val)))
+(define (bytevector-compound-s8-set! {bvcom bytevector-compound} {idx <non-negative-exact-integer>} {val <word-s8>})
+  ($bytevector-compound-s8-set! bvcom idx val))
 
 (define ($bytevector-compound-s8-set! bvcom idx val)
   (define who 'bytevector-compound-s8-set!)
@@ -304,12 +290,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (bytevector-compound-s8-ref bvcom idx)
-  (define who 'bytevector-compound-s8-ref)
-  (with-arguments-validation (who)
-      ((bytevector-compound		bvcom)
-       (non-negative-exact-integer	idx))
-    ($bytevector-compound-s8-ref bvcom idx)))
+(define (bytevector-compound-s8-ref {bvcom bytevector-compound} {idx <non-negative-exact-integer>})
+  ($bytevector-compound-s8-ref bvcom idx))
 
 (define ($bytevector-compound-s8-ref bvcom idx)
   (define who 'bytevector-compound-s8-ref)
@@ -327,6 +309,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

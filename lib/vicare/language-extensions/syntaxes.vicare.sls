@@ -11,7 +11,7 @@
 ;;;	itself, syntaxes whose  expansion reference only bindings  imported by Vicare
 ;;;	itself.
 ;;;
-;;;Copyright (C) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -31,7 +31,6 @@
 (library (vicare language-extensions syntaxes)
   (export
     ;; miscellaneous extensions
-    define-struct-extended			define-record-type-extended
     let-inline					let*-inline
     debug-assert
     with-pathnames
@@ -64,8 +63,7 @@
 	  with-dangerous-arguments-validation
 	  arguments-validation-forms
 	  exact-integer.vicare-arguments-validation)
-    (vicare unsafe operations)
-    (vicare language-extensions define-record-extended))
+    (vicare unsafe operations))
 
 
 ;;;; some defining syntaxes

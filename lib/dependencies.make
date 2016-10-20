@@ -259,7 +259,6 @@ lib/vicare/language-extensions/syntaxes.fasl: \
 		lib/vicare/platform/configuration.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		lib/vicare/language-extensions/define-record-extended.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -271,21 +270,6 @@ dist_lib_vicare_language_extensions_syntaxes_vicare_sls_DATA = lib/vicare/langua
 endif
 EXTRA_DIST += lib/vicare/language-extensions/syntaxes.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/syntaxes.fasl
-
-lib/vicare/language-extensions/define-record-extended.fasl: \
-		lib/vicare/language-extensions/define-record-extended.vicare.sls \
-		lib/vicare/arguments/validation.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_language_extensions_define_record_extended_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_define_record_extended_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
-nodist_lib_vicare_language_extensions_define_record_extended_fasl_DATA = lib/vicare/language-extensions/define-record-extended.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_define_record_extended_vicare_sls_DATA = lib/vicare/language-extensions/define-record-extended.vicare.sls
-endif
-EXTRA_DIST += lib/vicare/language-extensions/define-record-extended.vicare.sls
-CLEANFILES += lib/vicare/language-extensions/define-record-extended.fasl
 
 lib/vicare/language-extensions/amb.fasl: \
 		lib/vicare/language-extensions/amb.vicare.sls \
@@ -1166,6 +1150,8 @@ lib/vicare/containers/bytevector-compounds/core.fasl: \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
+		lib/vicare/language-extensions/labels.fasl \
+		lib/vicare/platform/words.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -2190,6 +2176,7 @@ CLEANFILES += lib/vicare/parser-tools/unix-pathnames.fasl
 lib/vicare/net/channels.fasl: \
 		lib/vicare/net/channels.vicare.sls \
 		lib/vicare/language-extensions/mixins.fasl \
+		lib/vicare/language-extensions/interfaces.fasl \
 		lib/vicare/platform/words.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<

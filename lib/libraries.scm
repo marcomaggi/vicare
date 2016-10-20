@@ -78,7 +78,6 @@
      (vicare language-extensions comparisons)
      (vicare language-extensions hooks)
      (vicare language-extensions callables)
-     (vicare language-extensions define-record-extended)
      (vicare language-extensions c-enumerations)
      (vicare language-extensions identifier-substitutions)
      (vicare language-extensions makers)
