@@ -118,6 +118,16 @@
    (string		symbol->string)
    (bound?		symbol-bound?)
    (value		<symbol>-value)
+   ;;
+   (=			symbol=?)
+   (!=			symbol!=?)
+   (<			symbol<?)
+   (>			symbol>?)
+   (<=			symbol<=?)
+   (>=			symbol>=?)
+   (max			symbol-max)
+   (min			symbol-min)
+   ;;
    (putprop		putprop)
    (getprop		getprop)
    (remprop		remprop)
@@ -126,7 +136,7 @@
 (define-scheme-type <gensym>
     <symbol>
   (constructor gensym)
-  (type-predicate gensym?)
+  (type-predicate gensym)
   (equality-predicate eq?))
 
 (define-scheme-type <keyword>

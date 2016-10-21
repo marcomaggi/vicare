@@ -4651,7 +4651,6 @@ Apply @func{char<=?} to the arguments and return its return value.
 Apply @func{char>=?} to the arguments and return its return value.
 @end deftypemethod
 
-
 @c ------------------------------------------------------------------------
 
 @deftypemethod @class{char} @aclass{boolean} ci= @var{this} @braceargo{ch, char} @bracearg{ch, char} @dots{}
@@ -4766,53 +4765,115 @@ value.
 Type of symbol values (including gensyms).
 @end deftp
 
+@c ------------------------------------------------------------------------
 
-@defop Constructor @class{symbol} new @aclass{symbol} @var{string}
+@subsubheading Operations
+
+
+@deftypeop Constructor @class{symbol} @aclass{symbol} type-constructor @bracearg{S, string}
 The constructor is @func{string->symbol}.
-@end defop
+@end deftypeop
 
 
-@defop {Type predicate} @class{symbol} is-a? @var{obj} @aclass{symbol}
+@deftypeop {Type predicate} @class{symbol} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{symbol?}.  Return @true{} if @var{obj} is a
 symbol object; otherwise return @false{}.
-@end defop
+@end deftypeop
 
 
-@deftypemethod @class{symbol} @aclass{string} string @var{self}
+@deftypeop {Hash function} @class{char} @aclass{non-negative-fixnum} hash-function @var{sym}
+The hash function is @func{symbol-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{symbol} @aclass{string} string @var{this}
 Apply @func{symbol->string} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{symbol} @aclass{boolean} bound? @var{self}
+@deftypemethod @class{symbol} @aclass{boolean} bound? @var{this}
 Apply @func{symbol-bound?} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{symbol} @aclass{top} value @var{self}
-@deftypemethodx @class{symbol} @aclass{void} value @var{self} @var{new-value}
+@deftypemethod @class{symbol} @aclass{top} value @var{this}
+@deftypemethodx @class{symbol} @aclass{void} value @var{this} @var{new-value}
 When called with no arguments: apply @func{symbol-value} to the instance
 to retrieve the current value in the @code{value} slot.  When called
 with one argument: apply @func{set-symbol-value!} to the instance to
 store a new value @code{value} slot.
 @end deftypemethod
 
+@c ------------------------------------------------------------------------
 
-@deftypemethod @class{symbol} @aclass{void} putprop @var{self} (@var{key} @aclass{symbol}) @var{value}
+@subsubheading Methods: comparison
+
+
+@deftypemethod @class{symbol} @aclass{boolean} = @var{this} @braceargo{sym, symbol} @bracearg{sym, symbol} @dots{}
+Apply @func{symbol=?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{symbol} @aclass{boolean} != @var{this} @braceargo{sym, symbol} @bracearg{sym, symbol} @dots{}
+Apply @func{symbol!=?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{symbol} @aclass{boolean} < @var{this} @braceargo{sym, symbol} @bracearg{sym, symbol} @dots{}
+Apply @func{symbol<?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{symbol} @aclass{boolean} > @var{this} @braceargo{sym, symbol} @bracearg{sym, symbol} @dots{}
+Apply @func{symbol>?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{symbol} @aclass{boolean} <= @var{this} @braceargo{sym, symbol} @bracearg{sym, symbol} @dots{}
+Apply @func{symbol<=?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{symbol} @aclass{boolean} >= @var{this} @braceargo{sym, symbol} @bracearg{sym, symbol} @dots{}
+Apply @func{symbol>=?} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@deftypemethod @class{symbol} @aclass{symbol} min @var{this} @bracearg{sym, symbol} @dots{}
+Apply @func{symbol-min} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{symbol} @aclass{symbol} max @var{this} @bracearg{sym, symbol} @dots{}
+Apply @func{symbol-max} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: property lists
+
+
+@deftypemethod @class{symbol} @aclass{void} putprop @var{this} (@var{key} @aclass{symbol}) @var{value}
 Apply @func{putprop} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{symbol} @aclass{top} getprop @var{self} (@var{key} @aclass{symbol})
+@deftypemethod @class{symbol} @aclass{top} getprop @var{this} (@var{key} @aclass{symbol})
 Apply @func{getprop} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{symbol} @aclass{void} remprop @var{self} (@var{key} @aclass{symbol})
+@deftypemethod @class{symbol} @aclass{void} remprop @var{this} (@var{key} @aclass{symbol})
 Apply @func{remprop} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{symbol} @aclass{list} property-list @var{self}
+@deftypemethod @class{symbol} @aclass{list} property-list @var{this}
 Apply @func{property-list} to the instance.
 @end deftypemethod
 
