@@ -4326,14 +4326,14 @@ The conventional parent of all the types, with the exception of
 @end deftp
 
 
-@defop Constructor @class{top} new @aclass{top} @var{obj}
+@deftypeop Constructor @class{top} @aclass{top} type-constructor @var{obj}
 Return @var{obj} itself.
-@end defop
+@end deftypeop
 
 
-@defop {Type predicate} @class{top} is-a? @var{obj} @aclass{top}
+@deftypeop {Type predicate} @class{top} @aclass{true} type-predicate @var{obj}
 Always return @true{}.
-@end defop
+@end deftypeop
 
 @c page
 @node built-in bottom
@@ -4341,15 +4341,30 @@ Always return @true{}.
 
 
 @deftp {Core Type} @aclass{bottom}
-A conventional type that is the sub--type of all the other types.  We
-must never use this type annotation for variables.
+A conventional type that is the sub--type of all the other types.
 
-As usage example, the following type annotation defines a function
-signature in which the argument can be any value:
+We must never use @class{bottom} as type annotation for variables,
+because no value is of this type:
 
 @lisp
-(define-type <my-func>
-  (lambda (<bottom>) => (<string>)))
+(define @{O <bottom>@}
+  123)
+@error{} &expand-time-type-signature-violation
+
+(let ((@{O <bottom>@} 123))
+  O)
+@error{} &expand-time-type-signature-violation
+@end lisp
+
+@noindent
+casting to @class{bottom} also fails:
+
+@lisp
+(cast-signature (<bottom>) 123)
+@error{} &expand-time-type-signature-violation
+
+(unsafe-cast-signature (<bottom>) 123)
+@error{} &expand-time-type-signature-violation
 @end lisp
 
 The expressions that raise a non--continuable exception have type
@@ -4363,6 +4378,14 @@ The expressions that raise a non--continuable exception have type
 @noindent
 notice that the type signature is the improper list @code{<bottom>},
 @strong{not} the list @code{(<bottom>)}.
+
+As usage example, the following type annotation defines a function
+signature in which the argument can be any value:
+
+@lisp
+(define-type <my-func>
+  (lambda (<bottom>) => (<string>)))
+@end lisp
 
 @class{bottom} is removed from union and intersection type annotations:
 
@@ -4402,7 +4425,7 @@ Type of the boolean values @true{} and @false{}.
 @subsubheading Operations
 
 
-@deftypeop Constructor @class{boolean} @class{boolean} constructor @var{obj}
+@deftypeop Constructor @class{boolean} @aclass{boolean} type-constructor @var{obj}
 Return @true{} if @var{obj} is true; otherwise return @false{}.
 
 @lisp
@@ -4413,7 +4436,7 @@ Return @true{} if @var{obj} is true; otherwise return @false{}.
 @end deftypeop
 
 
-@deftypeop {Type predicate} @class{boolean} @class{boolean} predicate @var{obj}
+@deftypeop {Type predicate} @class{boolean} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{boolean?}.  Return @true{} if @var{obj} is
 @true{} or @false{}; otherwise return @false{}.
 
@@ -4425,7 +4448,7 @@ The type predicate is @func{boolean?}.  Return @true{} if @var{obj} is
 @end deftypeop
 
 
-@deftypeop {Hash function} @class{boolean} @class{non-negative-fixnum} hash @var{bool}
+@deftypeop {Hash function} @class{boolean} @aclass{non-negative-fixnum} hash-function @var{bool}
 The hash function is @func{boolean-hash}.
 
 @lisp
@@ -4449,7 +4472,7 @@ Type of the boolean value @true{}.
 @subsubheading Operations
 
 
-@deftypeop Constructor @class{true} @class{true} constructor @var{obj}
+@deftypeop Constructor @class{true} @aclass{true} type-constructor @var{obj}
 Return @true{} if @var{obj} is @true{}.
 
 @lisp
@@ -4459,7 +4482,7 @@ Return @true{} if @var{obj} is @true{}.
 @end deftypeop
 
 
-@deftypeop {Type predicate} @class{true} @class{boolean} predicate @var{obj}
+@deftypeop {Type predicate} @class{true} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{true?}.  Return @true{} if @var{obj} is
 @true{}.
 
@@ -4470,7 +4493,7 @@ The type predicate is @func{true?}.  Return @true{} if @var{obj} is
 @end deftypeop
 
 
-@deftypeop {Hash function} @class{true} @class{non-negative-fixnum} hash @var{true}
+@deftypeop {Hash function} @class{true} @aclass{non-negative-fixnum} hash-function @var{true}
 The hash function is @func{boolean-hash}.
 
 @lisp
@@ -4493,7 +4516,7 @@ Type of the boolean value @false{}.
 @subsubheading Operations
 
 
-@deftypeop Constructor @class{false} @class{false} constructor @var{obj}
+@deftypeop Constructor @class{false} @aclass{false} type-constructor @var{obj}
 Return @false{} if @var{obj} is @false{}.
 
 @lisp
@@ -4503,7 +4526,7 @@ Return @false{} if @var{obj} is @false{}.
 @end deftypeop
 
 
-@deftypeop {Type predicate} @class{false} @class{boolean} predicate @var{obj}
+@deftypeop {Type predicate} @class{false} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{false?}.  Return @false{} if @var{obj} is
 @false{}.
 
@@ -4514,7 +4537,7 @@ The type predicate is @func{false?}.  Return @false{} if @var{obj} is
 @end deftypeop
 
 
-@deftypeop {Hash function} @class{false} @class{non-negative-fixnum} hash @var{false}
+@deftypeop {Hash function} @class{false} @aclass{non-negative-fixnum} hash-function @var{false}
 The hash function is @func{boolean-hash}.
 
 @lisp
