@@ -4685,12 +4685,12 @@ Apply @func{char-ci>=?} to the arguments and return its return value.
 
 @c ------------------------------------------------------------------------
 
-@deftypemethod @class{char} @aclass{char} chmin @var{this} @bracearg{ch, char} @dots{}
+@deftypemethod @class{char} @aclass{char} min @var{this} @bracearg{ch, char} @dots{}
 Apply @func{chmin} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{char} @aclass{char} chmax @var{this} @bracearg{ch, char} @dots{}
+@deftypemethod @class{char} @aclass{char} max @var{this} @bracearg{ch, char} @dots{}
 Apply @func{chmax} to the arguments and return its return value.
 @end deftypemethod
 
