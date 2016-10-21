@@ -1381,7 +1381,8 @@
 	  ;;   (unsafe-cast-signature (<fixnum>) "ciao")
 	  ;;
 	  (raise
-	   (condition (make-who-condition __who__)
+	   (condition (make-expand-time-type-signature-violation)
+		      (make-who-condition __who__)
 		      (make-message-condition "source expression's signature is incompatible with the requested target signature")
 		      (make-syntax-violation input-form.stx ?expr)
 		      (make-irritants-condition (list target.sig expr.sig))))))))
