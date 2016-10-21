@@ -4561,7 +4561,7 @@ Type of character values.
 @subsubheading Operations
 
 
-@deftypeop Constructor @class{char} @class{char} constructor @{@var{fx} @class{non-negative-fixnum}@}
+@deftypeop Constructor @class{char} @aclass{char} type-constructor @bracearg{fx, non-negative-fixnum}
 The constructor is @func{integer->char}.
 
 @lisp
@@ -4570,7 +4570,7 @@ The constructor is @func{integer->char}.
 @end deftypeop
 
 
-@deftypeop {Type predicate} @class{char} @class{boolean} predicate @var{obj}
+@deftypeop {Type predicate} @class{char} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{char?}.  Return @true{} if @var{obj} is a
 character object; otherwise return @false{}.
 
@@ -4581,7 +4581,7 @@ character object; otherwise return @false{}.
 @end deftypeop
 
 
-@deftypeop {Hash function} @class{char} @class{non-negative-fixnum} hash @var{ch}
+@deftypeop {Hash function} @class{char} @aclass{non-negative-fixnum} hash-function @var{ch}
 The hash function is @func{char-hash}.
 
 @lisp
@@ -4594,7 +4594,7 @@ The hash function is @func{char-hash}.
 @subsubheading Methods
 
 
-@deftypemethod @class{char} @class{string} string
+@deftypemethod @class{char} @aclass{string} string @var{this}
 Apply @func{string} to the instance.
 
 @lisp
@@ -4603,7 +4603,7 @@ Apply @func{string} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{char} @class{fixnum} integer
+@deftypemethod @class{char} @aclass{non-negative-fixnum} integer @var{this}
 Apply @func{char->integer} to the instance.
 
 @lisp
@@ -4612,12 +4612,148 @@ Apply @func{char->integer} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{char} @class{fixnum} fixnum
+@deftypemethod @class{char} @aclass{non-negative-fixnum} fixnum @var{this}
 Apply @func{char->fixnum} to the instance.
 
 @lisp
 (.fixnum #\A)   @result{} 65
 @end lisp
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@deftypemethod @class{char} @aclass{boolean} = @var{this} @braceargo{ch, char} @bracearg{ch, char} @dots{}
+Apply @func{char=?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} != @var{this} @braceargo{ch, char} @bracearg{ch, char} @dots{}
+Apply @func{char!=?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} < @var{this} @braceargo{ch, char} @bracearg{ch, char} @dots{}
+Apply @func{char<?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} > @var{this} @braceargo{ch, char} @bracearg{ch, char} @dots{}
+Apply @func{char>?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} <= @var{this} @braceargo{ch, char} @bracearg{ch, char} @dots{}
+Apply @func{char<=?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} >= @var{this} @braceargo{ch, char} @bracearg{ch, char} @dots{}
+Apply @func{char>=?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@c ------------------------------------------------------------------------
+
+@deftypemethod @class{char} @aclass{boolean} ci= @var{this} @braceargo{ch, char} @bracearg{ch, char} @dots{}
+Apply @func{char-ci=?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} ci!= @var{this} @braceargo{ch, char} @bracearg{ch, char} @dots{}
+Apply @func{char-ci!=?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} ci< @var{this} @braceargo{ch, char} @bracearg{ch, char} @dots{}
+Apply @func{char-ci<?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} ci> @var{this} @braceargo{ch, char} @bracearg{ch, char} @dots{}
+Apply @func{char-ci>?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} ci<= @var{this} @braceargo{ch, char} @bracearg{ch, char} @dots{}
+Apply @func{char-ci<=?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} ci>= @var{this} @braceargo{ch, char} @bracearg{ch, char} @dots{}
+Apply @func{char-ci>=?} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@deftypemethod @class{char} @aclass{char} chmin @var{this} @bracearg{ch, char} @dots{}
+Apply @func{chmin} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{char} chmax @var{this} @bracearg{ch, char} @dots{}
+Apply @func{chmax} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@deftypemethod @class{char} @aclass{char} downcase @var{this}
+Apply @func{char-downcase} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{char} foldcase @var{this}
+Apply @func{char-foldcase} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{char} titlecase @var{this}
+Apply @func{char-titlecase} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{char} upcase @var{this}
+Apply @func{char-upcase} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{symbol} general-category @var{this}
+Apply @func{char-general-category} to the argument and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} alphabetic? @var{this}
+Apply @func{char-alphabetic?} to the argument and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} lower-case? @var{this}
+Apply @func{char-lower-case?} to the argument and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} numeric? @var{this}
+Apply @func{char-numeric?} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} title-case? @var{this}
+Apply @func{char-title-case?} to the argument and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} upper-case? @var{this}
+Apply @func{char-upper-case?} to the argument and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{char} @aclass{boolean} whitespace? @var{this}
+Apply @func{char-whitespace?} to the argument and return its return
+value.
 @end deftypemethod
 
 @c page

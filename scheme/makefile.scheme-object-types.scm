@@ -76,7 +76,36 @@
   (methods
    (string		string)
    (integer		char->integer)
-   (fixnum		char->fixnum)))
+   (fixnum		char->fixnum)
+   ;;
+   (<=			char<=?)
+   (<			char<?)
+   (=			char=?)
+   (!=			char!=?)
+   (>=			char>=?)
+   (>			char>?)
+   ;;
+   (ci<=		char-ci<=?)
+   (ci<			char-ci<?)
+   (ci=			char-ci=?)
+   (ci!=		char-ci!=?)
+   (ci>=		char-ci>=?)
+   (ci>			char-ci>?)
+   ;;
+   (min			chmin)
+   (max			chmax)
+   ;;
+   (downcase		char-downcase)
+   (foldcase		char-foldcase)
+   (titlecase		char-titlecase)
+   (upcase		char-upcase)
+   (general-category	char-general-category)
+   (alphabetic?		char-alphabetic?)
+   (lower-case?		char-lower-case?)
+   (numeric?		char-numeric?)
+   (title-case?		char-title-case?)
+   (upper-case?		char-upper-case?)
+   (whitespace?		char-whitespace?)))
 
 (define-scheme-type <symbol>
     <top>
