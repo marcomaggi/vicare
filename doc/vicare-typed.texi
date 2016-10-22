@@ -4899,23 +4899,37 @@ Type of keyword values.
 @end deftp
 
 
-@defop Constructor @class{keyword} new @aclass{keyword} @var{symbol}
+@deftypeop Constructor @class{keyword} @aclass{keyword} type-constructor @var{symbol}
 The constructor is @func{symbol->keyword}.
-@end defop
+@end deftypeop
 
 
-@defop {Type predicate} @class{keyword} is-a? @var{obj} @aclass{keyword}
+@deftypeop {Type predicate} @class{keyword} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{keyword?}.  Return @true{} if @var{obj} is a
 keyword object; otherwise return @false{}.
-@end defop
+@end deftypeop
 
 
-@deftypemethod @class{keyword} @aclass{symbol} symbol @var{self}
+@deftypeop {Hash function} @class{keyword} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{keyword-hash}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{keyword} @aclass{boolean} equality-predicate @var{this} @bracearg{K, keyword}
+The equality predicate is @func{keyword=?}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{keyword} @aclass{symbol} symbol @var{this}
 Apply @func{keyword->symbol} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{keyword} @aclass{string} string @var{self}
+@deftypemethod @class{keyword} @aclass{string} string @var{this}
 Apply @func{keyword->string} to the instance.
 @end deftypemethod
 
@@ -4930,74 +4944,96 @@ Type of pointer values.
 @end deftp
 
 
-@defop Constructor @class{pointer} new @aclass{pointer} @var{int}
+@deftypeop Constructor @class{pointer} @aclass{pointer} type-constructor @bracearg{addr, non-negative-exact-integer}
 The constructor is @func{integer->pointer}.
-@end defop
+@end deftypeop
 
 
-@defop {Type predicate} @class{pointer} is-a? @var{obj} @aclass{pointer}
+@deftypeop {Type predicate} @class{pointer} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{pointer?}.  Return @true{} if @var{obj} is a
 pointer object; otherwise return @false{}.
-@end defop
+@end deftypeop
 
 
-@deftypemethod @class{pointer} @aclass{boolean} null? @var{self}
+@deftypeop {Hash function} @class{pointer} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{pointer-hash}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{pointer} @aclass{boolean} equality-predicate @var{this} @bracearg{K, pointer}
+The equality predicate is @func{pointer=?}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{pointer} @aclass{boolean} null? @var{this}
 Apply @func{pointer-null?} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{pointer} @aclass{exact-integer} integer @var{self}
+@deftypemethod @class{pointer} @aclass{exact-integer} integer @var{this}
 Apply @func{pointer->integer} to the instance.
 @end deftypemethod
 
+@c ------------------------------------------------------------------------
 
-@deftypemethod @class{pointer} @aclass{boolean} = @var{self} @var{ptr} @dots{}
-Apply @func{pointer=?} to the instance and the arguments.
+@subsubheading Methods: comparison
+
+
+@deftypemethod @class{pointer} @aclass{boolean} = @var{this} @braceargo{ptr, pointer} @bracearg{ptr, pointer} @dots{}
+Apply @func{pointer=?} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{pointer} @aclass{boolean} != @var{self} @var{ptr} @dots{}
-Apply @func{pointer!=?} to the instance and the arguments.
+@deftypemethod @class{pointer} @aclass{boolean} != @var{this} @braceargo{ptr, pointer} @bracearg{ptr, pointer} @dots{}
+Apply @func{pointer!=?} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{pointer} @aclass{boolean} < @var{self} @var{ptr} @dots{}
-Apply @func{pointer<?} to the instance and the arguments.
+@deftypemethod @class{pointer} @aclass{boolean} < @var{this} @braceargo{ptr, pointer} @bracearg{ptr, pointer} @dots{}
+Apply @func{pointer<?} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{pointer} @aclass{boolean} > @var{self} @var{ptr} @dots{}
-Apply @func{pointer>?} to the instance and the arguments.
+@deftypemethod @class{pointer} @aclass{boolean} > @var{this} @braceargo{ptr, pointer} @bracearg{ptr, pointer} @dots{}
+Apply @func{pointer>?} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{pointer} @aclass{boolean} <= @var{self} @var{ptr} @dots{}
-Apply @func{pointer<=?} to the instance and the arguments.
+@deftypemethod @class{pointer} @aclass{boolean} <= @var{this} @braceargo{ptr, pointer} @bracearg{ptr, pointer} @dots{}
+Apply @func{pointer<=?} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{pointer} @aclass{boolean} >= @var{self} @var{ptr} @dots{}
-Apply @func{pointer>=?} to the instance and the arguments.
+@deftypemethod @class{pointer} @aclass{boolean} >= @var{this} @braceargo{ptr, pointer} @bracearg{ptr, pointer} @dots{}
+Apply @func{pointer>=?} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: arithmetics
+
+
+@deftypemethod @class{pointer} @aclass{pointer} add @var{this} @bracearg{diff, exact-integer}
+Apply @func{pointer-add} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{pointer} @aclass{pointer} add @var{diff}
-Apply @func{pointer-add} to the instance and the argument.
+@deftypemethod @class{pointer} @aclass{pointer} diff @var{this} @bracearg{P, pointer}
+Apply @func{pointer-diff} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{pointer} @aclass{pointer} diff @var{self} @var{pointer}
-Apply @func{pointer-diff} to the instance and the argument.
+@deftypemethod @class{pointer} @aclass{pointer} clone @var{this}
+Apply @func{pointer-clone} to the instance and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{pointer} @aclass{pointer} clone @var{self}
-Apply @func{pointer-clone} to the instance.
-@end deftypemethod
-
-
-@deftypemethod @class{pointer} @aclass{void} set-null! @var{self}
-Apply @func{set-pointer-null!)} to the instance.
+@deftypemethod @class{pointer} @aclass{void} set-null! @var{this}
+Apply @func{set-pointer-null!} to the instance.
 @end deftypemethod
 
 @c page
@@ -5024,17 +5060,17 @@ is a transcoder object; otherwise return @false{}.
 @end defop
 
 
-@deftypemethod @class{transcoder} @aclass{symbol} codec @var{self}
+@deftypemethod @class{transcoder} @aclass{symbol} codec @var{this}
 Apply @func{transcoder-codec} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{transcoder} @aclass{symbol} eol-style @var{self}
+@deftypemethod @class{transcoder} @aclass{symbol} eol-style @var{this}
 Apply @func{transcoder-eol-style} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{transcoder} @aclass{symbol} handling-mode @var{self}
+@deftypemethod @class{transcoder} @aclass{symbol} handling-mode @var{this}
 Apply @func{transcoder-error-handling-mode} to the instance.
 @end deftypemethod
 
@@ -5865,17 +5901,17 @@ string object; otherwise return @false{}.
 @subsubheading Inspection
 
 
-@deftypemethod @class{string} @aclass{boolean} empty? @var{self}
+@deftypemethod @class{string} @aclass{boolean} empty? @var{this}
 Apply @func{string-empty?} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} length @var{self}
+@deftypemethod @aclass{string} length @var{this}
 Apply @func{string-length} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} for-each @var{self} @var{func} @var{str} @dots{}
+@deftypemethod @aclass{string} for-each @var{this} @var{func} @var{str} @dots{}
 Apply @func{string-for-each} to the function @var{func}, the instance
 and the arguments.  Example:
 
@@ -5889,12 +5925,12 @@ and the arguments.  Example:
 @subsubheading Constructors
 
 
-@deftypemethod @aclass{string} copy @var{self}
+@deftypemethod @aclass{string} copy @var{this}
 Apply @func{string-copy} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} append @var{self}
+@deftypemethod @aclass{string} append @var{this}
 Apply @func{string-append} to the instance.
 @end deftypemethod
 
@@ -5903,7 +5939,7 @@ Apply @func{string-append} to the instance.
 @subsubheading Accessors and mutators
 
 
-@deftypemethod @aclass{string} fill! @var{self} @var{char}
+@deftypemethod @aclass{string} fill! @var{this} @var{char}
 Apply @func{string-fill!} to the instance.
 @end deftypemethod
 
@@ -5912,27 +5948,27 @@ Apply @func{string-fill!} to the instance.
 @subsubheading Encoding inspection
 
 
-@deftypemethod @aclass{string} ascii-encoded? @var{self}
+@deftypemethod @aclass{string} ascii-encoded? @var{this}
 Apply @func{ascii-encoded-string?} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} latin1-encoded? @var{self}
+@deftypemethod @aclass{string} latin1-encoded? @var{this}
 Apply @func{latin1-encoded-string?} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} octets-encoded? @var{self}
+@deftypemethod @aclass{string} octets-encoded? @var{this}
 Apply @func{octets-encoded-string?} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} uri-encoded @var{self}
+@deftypemethod @aclass{string} uri-encoded @var{this}
 Apply @func{uri-encoded-string?} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} pencent-encoded? @var{self}
+@deftypemethod @aclass{string} pencent-encoded? @var{this}
 Apply @func{percent-encoded-string?} to the instance.
 @end deftypemethod
 
@@ -5941,21 +5977,21 @@ Apply @func{percent-encoded-string?} to the instance.
 @subsubheading Comparison
 
 
-@deftypemethod @aclass{string} = @var{self} @var{str} @dots{}
-@deftypemethodx @aclass{string} < @var{self} @var{str} @dots{}
-@deftypemethodx @aclass{string} > @var{self} @var{str} @dots{}
-@deftypemethodx @aclass{string} <= @var{self} @var{str} @dots{}
-@deftypemethodx @aclass{string} >= @var{self} @var{str} @dots{}
+@deftypemethod @aclass{string} = @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} < @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} > @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} <= @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} >= @var{this} @var{str} @dots{}
 Apply @func{string=?}, @func{string<?}, @func{string>?},
 @func{string<=?}, @func{string>=?} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} ci= @var{self} @var{str} @dots{}
-@deftypemethodx @aclass{string} ci< @var{self} @var{str} @dots{}
-@deftypemethodx @aclass{string} ci> @var{self} @var{str} @dots{}
-@deftypemethodx @aclass{string} ci<= @var{self} @var{str} @dots{}
-@deftypemethodx @aclass{string} ci>= @var{self} @var{str} @dots{}
+@deftypemethod @aclass{string} ci= @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} ci< @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} ci> @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} ci<= @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} ci>= @var{this} @var{str} @dots{}
 Apply @func{string-ci=?}, @func{string-ci<?}, @func{string-ci>?},
 @func{string-ci<=?}, @func{string-ci>=?}, to the instance and the
 arguments.
@@ -5966,22 +6002,22 @@ arguments.
 @subsubheading Case handling
 
 
-@deftypemethod @aclass{string} titlecase @var{self}
+@deftypemethod @aclass{string} titlecase @var{this}
 Apply @func{string-titlecase} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} upcase @var{self}
+@deftypemethod @aclass{string} upcase @var{this}
 Apply @func{string-upcase} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} downcase @var{self}
+@deftypemethod @aclass{string} downcase @var{this}
 Apply @func{string-downcase} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} foldcase @var{self}
+@deftypemethod @aclass{string} foldcase @var{this}
 Apply @func{string-foldcase} to the instance.
 @end deftypemethod
 
@@ -5990,22 +6026,22 @@ Apply @func{string-foldcase} to the instance.
 @subsubheading Normalisation
 
 
-@deftypemethod @aclass{string} normalize-nfc @var{self}
+@deftypemethod @aclass{string} normalize-nfc @var{this}
 Apply @func{string-normalize-nfc} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} normalize-nfd @var{self}
+@deftypemethod @aclass{string} normalize-nfd @var{this}
 Apply @func{string-normalize-nfd} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} normalize-nfkc @var{self}
+@deftypemethod @aclass{string} normalize-nfkc @var{this}
 Apply @func{string-normalize-nfkc} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} normalize-nfkd @var{self}
+@deftypemethod @aclass{string} normalize-nfkd @var{this}
 Apply @func{string-normalize-nfkd} to the instance.
 @end deftypemethod
 
@@ -6014,101 +6050,101 @@ Apply @func{string-normalize-nfkd} to the instance.
 @subsubheading Conversion
 
 
-@deftypemethod @aclass{string} flonum @var{self}
+@deftypemethod @aclass{string} flonum @var{this}
 Apply @func{string->flonum} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} number @var{self}
-@deftypemethodx @aclass{string} number @var{self} @var{radix}
+@deftypemethod @aclass{string} number @var{this}
+@deftypemethodx @aclass{string} number @var{this} @var{radix}
 Apply @func{string->number} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} utf8 @var{self}
+@deftypemethod @aclass{string} utf8 @var{this}
 Apply @func{string->utf8} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} utf16 @var{self}
-@deftypemethodx @aclass{string} utf16 @var{self} @var{endianness}
+@deftypemethod @aclass{string} utf16 @var{this}
+@deftypemethodx @aclass{string} utf16 @var{this} @var{endianness}
 Apply @func{string->utf16} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} utf16be @var{self}
+@deftypemethod @aclass{string} utf16be @var{this}
 Apply @func{string->utf16be} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} utf16le @var{self}
+@deftypemethod @aclass{string} utf16le @var{this}
 Apply @func{string->utf16le} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} utf16n @var{self}
+@deftypemethod @aclass{string} utf16n @var{this}
 Apply @func{string->utf16n} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} utf32 @var{self}
-@deftypemethodx @aclass{string} utf32 @var{self} @var{endianness}
+@deftypemethod @aclass{string} utf32 @var{this}
+@deftypemethodx @aclass{string} utf32 @var{this} @var{endianness}
 Apply @func{string->utf32} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} bytevector @var{self}
-@deftypemethodx @aclass{string} bytevector @var{self} @var{transcoder}
+@deftypemethod @aclass{string} bytevector @var{this}
+@deftypemethodx @aclass{string} bytevector @var{this} @var{transcoder}
 Apply @func{string->bytevector} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} ascii @var{self}
+@deftypemethod @aclass{string} ascii @var{this}
 Apply @func{string->ascii} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} latin1 @var{self}
+@deftypemethod @aclass{string} latin1 @var{this}
 Apply @func{string->latin1} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} octets @var{self}
+@deftypemethod @aclass{string} octets @var{this}
 Apply @func{string->octets} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} percent-encoding @var{self}
+@deftypemethod @aclass{string} percent-encoding @var{this}
 Apply @func{string->percent-encoding} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} uri-encoding @var{self}
+@deftypemethod @aclass{string} uri-encoding @var{this}
 Apply @func{string->uri-encoding} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} base64->bytevector @var{self}
+@deftypemethod @aclass{string} base64->bytevector @var{this}
 Apply @func{string-base64->bytevector} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} hex->bytevector @var{self}
+@deftypemethod @aclass{string} hex->bytevector @var{this}
 Apply @func{string-hex->bytevector} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} symbol @var{self}
+@deftypemethod @aclass{string} symbol @var{this}
 Apply @func{string->symbol} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} keyword @var{self}
+@deftypemethod @aclass{string} keyword @var{this}
 Apply @func{string->keyword} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} list @var{self}
+@deftypemethod @aclass{string} list @var{this}
 Apply @func{string->list} to the instance.
 @end deftypemethod
 
@@ -6136,12 +6172,12 @@ Type of non--empty string values.
 
 @subsubheading Accessors and mutators
 
-@deftypemethod @class{nestring} @aclass{top} ref @var{self} @var{idx}
+@deftypemethod @class{nestring} @aclass{top} ref @var{this} @var{idx}
 Apply @func{string-ref} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @class{nestring} @aclass{void} set! @var{self} @var{idx} @var{obj}
+@deftypemethod @class{nestring} @aclass{void} set! @var{this} @var{idx} @var{obj}
 Apply @func{string-set!} to the instance and the arguments.
 @end deftypemethod
 
@@ -6182,7 +6218,7 @@ vector object; otherwise return @false{}.
 @subsubheading Inspection
 
 
-@deftypemethod @class{vector} @aclass{non-negative-fixnum} length @var{self}
+@deftypemethod @class{vector} @aclass{non-negative-fixnum} length @var{this}
 Apply @func{vector-length} to the instance.
 @end deftypemethod
 
@@ -6190,7 +6226,7 @@ Apply @func{vector-length} to the instance.
 
 @subsubheading Accessors and mutators
 
-@deftypemethod @class{vector} @aclass{void} fill! @var{self} @var{obj}
+@deftypemethod @class{vector} @aclass{void} fill! @var{this} @var{obj}
 Apply @func{vector-fill!} to the instance and the argument.
 @end deftypemethod
 
@@ -6199,18 +6235,18 @@ Apply @func{vector-fill!} to the instance and the argument.
 @subsubheading Other constructors
 
 
-@deftypemethod @class{vector} @aclass{vector} subvector @var{self} @var{begin} @var{end}
+@deftypemethod @class{vector} @aclass{vector} subvector @var{this} @var{begin} @var{end}
 Apply @func{subvector} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{vector} append @var{self} @var{vec} @dots{}
+@deftypemethod @class{vector} @aclass{vector} append @var{this} @var{vec} @dots{}
 Apply @func{vector-append} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{vector} resize @var{self} @var{new-length}
-@deftypemethodx @class{vector} @aclass{vector} resize @var{self} @var{new-length} @var{fill}
+@deftypemethod @class{vector} @aclass{vector} resize @var{this} @var{new-length}
+@deftypemethodx @class{vector} @aclass{vector} resize @var{this} @var{new-length} @var{fill}
 Apply @func{vector-resize} to the instance and the arguments.
 @end deftypemethod
 
@@ -6219,37 +6255,37 @@ Apply @func{vector-resize} to the instance and the arguments.
 @subsubheading Iteration and searching
 
 
-@deftypemethod @class{vector} @aclass{vector} map @var{self} @var{proc} @var{vec} @dots{}
+@deftypemethod @class{vector} @aclass{vector} map @var{this} @var{proc} @var{vec} @dots{}
 Apply @func{vector-map} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{void} for-each @var{self} @var{proc} @var{vec} @dots{}
+@deftypemethod @class{vector} @aclass{void} for-each @var{this} @var{proc} @var{vec} @dots{}
 Apply @func{vector-for-each} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{top} for-all @var{self} @var{proc} @var{vec} @dots{}
+@deftypemethod @class{vector} @aclass{top} for-all @var{this} @var{proc} @var{vec} @dots{}
 Apply @func{vector-for-all} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{top} exists @var{self} @var{proc} @var{vec} @dots{}
+@deftypemethod @class{vector} @aclass{top} exists @var{this} @var{proc} @var{vec} @dots{}
 Apply @func{vector-exists} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{top} find @var{self} @var{proc}
+@deftypemethod @class{vector} @aclass{top} find @var{this} @var{proc}
 Apply @func{vector-find} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{top} fold-left @var{self} @var{proc} @var{knil} @var{vec} @dots{}
+@deftypemethod @class{vector} @aclass{top} fold-left @var{this} @var{proc} @var{knil} @var{vec} @dots{}
 Apply @func{vector-fold-left} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{top} fold-right @var{self} @var{proc} @var{knil} @var{vec} @dots{}
+@deftypemethod @class{vector} @aclass{top} fold-right @var{this} @var{proc} @var{knil} @var{vec} @dots{}
 Apply @func{vector-fold-right} to the instance and the arguments.
 @end deftypemethod
 
@@ -6258,8 +6294,8 @@ Apply @func{vector-fold-right} to the instance and the arguments.
 @subsubheading Sorting
 
 
-@deftypemethod @class{vector} @aclass{vector} sort @var{self} @var{proc}
-@deftypemethodx @class{vector} @aclass{vector} sort! @var{self} @var{proc}
+@deftypemethod @class{vector} @aclass{vector} sort @var{this} @var{proc}
+@deftypemethodx @class{vector} @aclass{vector} sort! @var{this} @var{proc}
 Apply @func{vector-sort} or @func{vector-sort!} to the instance and the
 argument.
 @end deftypemethod
@@ -6269,7 +6305,7 @@ argument.
 @subsubheading Conversion
 
 
-@deftypemethod @class{vector} @aclass{list} list @var{self}
+@deftypemethod @class{vector} @aclass{list} list @var{this}
 Apply @func{vector->list} to the instance.
 @end deftypemethod
 
@@ -6297,12 +6333,12 @@ Type of non--empty vector values.
 
 @subsubheading Accessors and mutators
 
-@deftypemethod @class{nevector} @aclass{top} ref @var{self} @var{idx}
+@deftypemethod @class{nevector} @aclass{top} ref @var{this} @var{idx}
 Apply @func{vector-ref} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @class{nevector} @aclass{void} set! @var{self} @var{idx} @var{obj}
+@deftypemethod @class{nevector} @aclass{void} set! @var{this} @var{idx} @var{obj}
 Apply @func{vector-set!} to the instance and the arguments.
 @end deftypemethod
 

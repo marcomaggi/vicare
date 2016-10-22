@@ -154,21 +154,22 @@
   (constructor integer->pointer)
   (type-predicate pointer?)
   (equality-predicate pointer=?)
-  (comparison-procedure compar-transcoder)
+  (comparison-procedure compar-pointer)
   (hash-function pointer-hash)
   (methods
-   (null?		pointer-null?)
    (integer		pointer->integer)
+   (null?		pointer-null?)
+   (set-null!		set-pointer-null!)
+   (add			pointer-add)
+   (diff		pointer-diff)
+   (clone		pointer-clone)
+;;
    (=			pointer=?)
    (!=			pointer!=?)
    (<			pointer<?)
    (>			pointer>?)
    (<=			pointer<=?)
-   (>=			pointer>=?)
-   (add			pointer-add)
-   (diff		pointer-diff)
-   (clone		pointer-clone)
-   (set-null!		set-pointer-null!)))
+   (>=			pointer>=?)))
 
 (define-scheme-type <transcoder>
     <top>

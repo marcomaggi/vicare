@@ -106,7 +106,7 @@
 (declare-core-primitive pointer->integer
     (safe)
   (signatures
-   ((<pointer>)			=> (<exact-integer>)))
+   ((<pointer>)			=> (<non-negative-exact-integer>)))
   (attributes
    ((_)				effect-free result-true)))
 
@@ -115,7 +115,7 @@
 (declare-core-primitive integer->pointer
     (safe)
   (signatures
-   ((<exact-integer>)		=> (<pointer>)))
+   ((<non-negative-exact-integer>)	=> (<pointer>)))
   (attributes
    ((_)				effect-free result-true)))
 
