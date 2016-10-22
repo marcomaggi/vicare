@@ -63,6 +63,11 @@
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Sat Oct 1, 2016)
+		  bignum-hash
+		  ratnum-hash
+		  cflonum-hash
+		  compnum-hash
+		  ;;
 		  binary-input-only-port?
 		  binary-output-only-port?
 		  textual-input-only-port?
@@ -93,7 +98,14 @@
 	  binary-input-only-port?
 	  binary-output-only-port?
 	  textual-input-only-port?
-	  textual-output-only-port?))
+	  textual-output-only-port?)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Oct 22,
+    ;;2016)
+    (only (ikarus hash-tables)
+	  bignum-hash
+	  ratnum-hash
+	  cflonum-hash
+	  compnum-hash))
 
 
 ;;;; built-in object-types descriptor

@@ -45,8 +45,11 @@
     string-hash			string-ci-hash
     symbol-hash			bytevector-hash
     equal-hash			transcoder-hash
-    fixnum-hash			exact-integer-hash
-    flonum-hash			number-hash
+    fixnum-hash			bignum-hash
+    exact-integer-hash
+    ratnum-hash			flonum-hash
+    cflonum-hash		compnum-hash
+    number-hash
     char-hash			char-ci-hash
     boolean-hash		void-hash
     eof-object-hash		would-block-hash
@@ -77,9 +80,13 @@
     $bytevector-hash
     $char-ci-hash
     $char-hash
-    $exact-integer-hash
     $fixnum-hash
+    $bignum-hash
+    $exact-integer-hash
     $flonum-hash
+    $ratnum-hash
+    $cflonum-hash
+    $compnum-hash
     $record-hash
     $string-ci-hash
     $string-hash
@@ -124,8 +131,11 @@
 		  string-hash			string-ci-hash
 		  symbol-hash			bytevector-hash
 		  equal-hash			transcoder-hash
-		  fixnum-hash			exact-integer-hash
-		  flonum-hash			number-hash
+		  fixnum-hash			bignum-hash
+		  exact-integer-hash
+		  ratnum-hash			flonum-hash
+		  cflonum-hash			compnum-hash
+		  number-hash
 		  char-hash			char-ci-hash
 		  boolean-hash			void-hash
 		  eof-object-hash		would-block-hash
@@ -1003,6 +1013,15 @@
 
 ;;; --------------------------------------------------------------------
 
+(define* (ratnum-hash {rn ratnum?})
+  ($fixnum-hash rn))
+
+(define ($ratnum-hash rn)
+  (fxxor ($exact-integer-hash ($ratnum-n rn))
+	 ($exact-integer-hash ($ratnum-d rn))))
+
+;;; --------------------------------------------------------------------
+
 (define* (exact-integer-hash {N exact-integer?})
   ($exact-integer-hash N))
 
@@ -1010,6 +1029,11 @@
   (if (fixnum? N)
       ($fixnum-hash N)
     ($bignum-hash N)))
+
+;;; --------------------------------------------------------------------
+
+(define* (bignum-hash {bn bignum?})
+  ($bignum-hash bn))
 
 (define ($bignum-hash N)
   (foreign-call "ikrt_bignum_hash" N))
@@ -1024,6 +1048,24 @@
 
 ;;; --------------------------------------------------------------------
 
+(define* (cflonum-hash {Z cflonum?})
+  ($cflonum-hash Z))
+
+(define* ($cflonum-hash Z)
+  (fxxor ($flonum-hash ($cflonum-real Z))
+	 ($flonum-hash ($cflonum-imag Z))))
+
+;;; --------------------------------------------------------------------
+
+(define* (compnum-hash {Z compnum?})
+  ($compnum-hash Z))
+
+(define* ($compnum-hash Z)
+  (fxxor (number-hash ($compnum-real Z))
+	 (number-hash ($compnum-imag Z))))
+
+;;; --------------------------------------------------------------------
+
 (define* (number-hash Z)
   (cond ((fixnum? Z)
 	 ($fixnum-hash Z))
@@ -1032,14 +1074,11 @@
 	((bignum? Z)
 	 ($bignum-hash Z))
 	((ratnum? Z)
-	 (fxxor (number-hash ($ratnum-n Z))
-		(number-hash ($ratnum-d Z))))
+	 ($ratnum-hash Z))
 	((cflonum? Z)
-	 (fxxor ($flonum-hash ($cflonum-real Z))
-		($flonum-hash ($cflonum-imag Z))))
+	 ($cflonum-hash Z))
 	((compnum? Z)
-	 (fxxor (number-hash ($compnum-real Z))
-		(number-hash ($compnum-imag Z))))
+	 ($compnum-hash Z))
 	(else
 	 (procedure-argument-violation __who__ "expected number object" Z))))
 

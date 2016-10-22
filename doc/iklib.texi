@@ -14265,6 +14265,11 @@ Hash function for fixnums.
 @end defun
 
 
+@defun bignum-hash @var{bn}
+Hash function for bignums.
+@end defun
+
+
 @defun exact-integer-hash @var{N}
 Hash function for exact integers, fixnums and bignums.
 @end defun
@@ -14275,8 +14280,23 @@ Hash function for flonums.
 @end defun
 
 
-@defun number-hash @var{Z}
-Hash function for number objects.
+@defun ratnum-hash @var{rn}
+Hash function for ratnums.
+@end defun
+
+
+@defun cflonum-hash @var{cfl}
+Hash function for cflonums.
+@end defun
+
+
+@defun flonum-hash @var{fl}
+Hash function for flonums.
+@end defun
+
+
+@defun compnum-hash @var{Z}
+Hash function for compnum objects.
 @end defun
 
 

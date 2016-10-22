@@ -197,7 +197,7 @@
     <top>
   (type-predicate number?)
   (equality-predicate =)
-  (hash-function object-hash))
+  (hash-function number-hash))
 
 (define-scheme-type <complex>
     <number>
@@ -242,17 +242,17 @@
 (define-scheme-type <exact-integer>
     <integer>
   (type-predicate exact-integer?)
-  (hash-function exact-integer-hash)
   (equality-predicate =)
-  (comparison-procedure compar-exact-integer))
+  (comparison-procedure compar-exact-integer)
+  (hash-function exact-integer-hash))
 
 (define-scheme-type <fixnum>
     <exact-integer>
   (constructor #t)
   (type-predicate fixnum?)
-  (hash-function fixnum-hash)
   (comparison-procedure compar-fixnum)
-  (equality-predicate fx=?))
+  (equality-predicate fx=?)
+  (hash-function fixnum-hash))
 
 (define-scheme-type <flonum>
     <real>
@@ -268,26 +268,29 @@
   (type-predicate ratnum?)
   (equality-predicate =)
   (comparison-procedure compar-ratnum)
-  #;(hash-function ratnum-hash))
+  (hash-function ratnum-hash))
 
 (define-scheme-type <bignum>
     <exact-integer>
   (constructor #t)
   (type-predicate bignum?)
   (equality-predicate =)
-  (comparison-procedure compar-bignum))
+  (comparison-procedure compar-bignum)
+  (hash-function bignum-hash))
 
 (define-scheme-type <compnum>
     <complex>
   (constructor #t)
   (type-predicate compnum?)
-  (equality-predicate =))
+  (equality-predicate =)
+  (hash-function compnum-hash))
 
 (define-scheme-type <cflonum>
     <complex>
   (constructor #t)
   (type-predicate cflonum?)
-  (equality-predicate =))
+  (equality-predicate =)
+  (hash-function cflonum-hash))
 
 ;;; --------------------------------------------------------------------
 

@@ -7860,7 +7860,59 @@ have the same hash value.
 @end deffn
 
 
-@deffn {Unsafe Operation} $hashtable-type-desscriptor @var{table}
+@deffn {Unsafe Operation} $char-hash @var{ch}
+@deffnx {Unsafe Operation} $char-ci-hash @var{ch}
+Compute and return the hash value.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fixnum-hash @var{fx}
+Compute and return the hash value.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bignum-hash @var{bn}
+Compute and return the hash value.
+@end deffn
+
+
+@deffn {Unsafe Operation} $exact-integer-hash @var{ei}
+Compute and return the hash value.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ratnum-hash @var{rn}
+Compute and return the hash value.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flonum-hash @var{fl}
+Compute and return the hash value.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cflonum-hash @var{cfl}
+Compute and return the hash value.
+@end deffn
+
+
+@deffn {Unsafe Operation} $compnum-hash @var{cn}
+Compute and return the hash value.
+@end deffn
+
+
+@deffn {Unsafe Operation} $transcoder-hash @var{tran}
+Compute and return the hash value.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-hash @var{reco}
+@deffnx {Unsafe Operation} $struct-hash @var{stru}
+Compute and return the hash value.
+@end deffn
+
+
+@deffn {Unsafe Operation} $hashtable-type-descriptor @var{table}
 @deffnx {Unsafe Operation} $hashtable-type-descriptor-set! @var{table} @var{des}
 Setter and getter for the hashtable run--time type descriptor.
 @var{des} must be an instance of @class{hashtable-type-descr}.
