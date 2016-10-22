@@ -4749,7 +4749,7 @@ value.
 
 @c page
 @node built-in symbols symbols
-@subsection The @class{symbol} object-type
+@subsection The @class{symbol} object--type
 
 
 @deftp {Core Type} @aclass{symbol}
@@ -4867,7 +4867,7 @@ Apply @func{property-list} to the instance.
 
 @c page
 @node built-in symbols gensyms
-@subsection The @class{gensym} object-type
+@subsection The @class{gensym} object--type
 
 
 @deftp {Core Type} @aclass{gensym}
@@ -5047,36 +5047,65 @@ Type of transcoder values.
 @end deftp
 
 
-@defop Constructor @class{transcoder} new @aclass{transcoder} @var{codec}
-@defopx Constructor @class{transcoder} new @aclass{transcoder} @var{codec} @var{eol-style}
-@defopx Constructor @class{transcoder} new @aclass{transcoder} @var{codec} @var{eol-style} @var{handling-mode}
+@deftypeop Constructor @class{transcoder} @aclass{transcoder} type-constructor @var{codec}
+@deftypeopx Constructor @class{transcoder} @aclass{transcoder} type-constructor @var{codec} @var{eol-style}
+@deftypeopx Constructor @class{transcoder} @aclass{transcoder} type-constructor @var{codec} @var{eol-style} @var{handling-mode}
 The constructor is @func{make-transcoder}.
-@end defop
+@end deftypeop
 
 
-@defop {Type predicate} @class{transcoder} is-a? @var{obj} @aclass{transcoder}
+@deftypeop {Type predicate} @class{transcoder} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{transcoder?}.  Return @true{} if @var{obj}
 is a transcoder object; otherwise return @false{}.
-@end defop
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{transcoder} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{transcoder-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
 
 
 @deftypemethod @class{transcoder} @aclass{symbol} codec @var{this}
-Apply @func{transcoder-codec} to the instance.
+Apply @func{transcoder-codec} to the instance and return its return
+value.
 @end deftypemethod
 
 
 @deftypemethod @class{transcoder} @aclass{symbol} eol-style @var{this}
-Apply @func{transcoder-eol-style} to the instance.
+Apply @func{transcoder-eol-style} to the instance and return its return
+value.
 @end deftypemethod
 
 
 @deftypemethod @class{transcoder} @aclass{symbol} handling-mode @var{this}
-Apply @func{transcoder-error-handling-mode} to the instance.
+Apply @func{transcoder-error-handling-mode} to the instance and return
+its return value.
 @end deftypemethod
 
 @c page
 @node built-in procedures
 @section Type of procedures values
+
+
+@menu
+* built-in procedures procedures::       The @class{procedure} object-type.
+* built-in procedures thunk::            The @class{thunk} object-type.
+* built-in procedures type-predicate::   The @class{type-predicate} object-type.
+* built-in procedures type-destructor::  The @class{type-destructor} object-type.
+* built-in procedures type-printer::     The @class{type-printer} object-type.
+* built-in procedures equality-predicate:: The @class{equality-predicate} object-type.
+* built-in procedures comparison-procedure:: The @class{comparison-procedure} object-type.
+* built-in procedures hash-function::    The @class{hash-function} object-type.
+* built-in procedures type-method-retriever:: The @class{type-method-retriever} object-type.
+@end menu
+
+@c page
+@node built-in procedures procedures
+@subsection The @class{procedure} object--type
 
 
 @deftp {Core Type} @aclass{procedure}
@@ -5085,10 +5114,14 @@ Type of closure object values.  There is no constructor.
 @end deftp
 
 
-@defop {Type predicate} @aclass{procedure} is-a? @var{obj} @aclass{procedure}
+@deftypeop {Type predicate} @class{procedure} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{procedure?}.  Return @true{} if @var{obj} is
 a closure object; otherwise return @false{}.
-@end defop
+@end deftypeop
+
+@c page
+@node built-in procedures thunk
+@subsection The @class{thunk} object--type
 
 
 @deftp {Type Annotation} @aclass{thunk}
@@ -5101,9 +5134,10 @@ is equivalent to:
 @end lisp
 @end deftp
 
-@c ------------------------------------------------------------------------
+@c page
+@node built-in procedures type-predicate
+@subsection The @class{type-predicate} object--type
 
-@subsubheading Type procedures
 
 @deftp {Type Annotation} @aclass{type-predicate}
 Type of procedures acting as type predicates.  The definition of this
@@ -5114,6 +5148,10 @@ type is equivalent to:
   (lambda (<top>) => (<boolean>)))
 @end lisp
 @end deftp
+
+@c page
+@node built-in procedures type-destructor
+@subsection The @class{type-destructor} object--type
 
 
 @deftp {Type Annotation} @aclass{type-destructor}
@@ -5126,6 +5164,10 @@ The definition of this type is equivalent to:
 @end lisp
 @end deftp
 
+@c page
+@node built-in procedures type-printer
+@subsection The @class{type-printer} object--type
+
 
 @deftp {Type Annotation} @aclass{type-printer}
 Type of procedures acting as custom printers for object of a specified
@@ -5136,6 +5178,10 @@ type.  The definition of this type is equivalent to:
   (lambda (<bottom> <textual-output-port> <procedure>) => <list>))
 @end lisp
 @end deftp
+
+@c page
+@node built-in procedures equality-predicate
+@subsection The @class{equality-predicate} object--type
 
 
 @deftp {Type Annotation} @aclass{equality-predicate}
@@ -5148,6 +5194,10 @@ this type is equivalent to:
 @end lisp
 @end deftp
 
+@c page
+@node built-in procedures comparison-procedure
+@subsection The @class{comparison-procedure} object--type
+
 
 @deftp {Type Annotation} @aclass{comparison-procedure}
 Type of procedures acting as equality predicates.  The definition of
@@ -5159,6 +5209,10 @@ this type is equivalent to:
 @end lisp
 @end deftp
 
+@c page
+@node built-in procedures hash-function
+@subsection The @class{hash-function} object--type
+
 
 @deftp {Type Annotation} @aclass{hash-function}
 Type of procedures acting as equality predicates.  The definition of
@@ -5169,6 +5223,10 @@ this type is equivalent to:
   (lambda (<bottom>) => (<non-negative-fixnum>)))
 @end lisp
 @end deftp
+
+@c page
+@node built-in procedures type-method-retriever
+@subsection The @class{type-method-retriever} object-type
 
 
 @deftp {Type Annotation} @aclass{type-method-retriever}
