@@ -136,7 +136,7 @@
 (define-scheme-type <gensym>
     <symbol>
   (constructor gensym)
-  (type-predicate gensym)
+  (type-predicate gensym?)
   (equality-predicate eq?))
 
 (define-scheme-type <keyword>

@@ -4207,7 +4207,6 @@ et cetera.
 * built-in booleans::     Type of boolean objects.
 * built-in chars::        Type of character objects.
 * built-in symbols::      Type of symbol objects.
-* built-in gensyms::      Type of gensym values.
 * built-in keywords::     Type of keyword objects.
 * built-in pointers::     Type of pointer objects.
 * built-in transcoders::  Type of transcoder objects.
@@ -4420,11 +4419,6 @@ Type of the boolean values @true{} and @false{}.
 @end deftp
 
 
-@c ------------------------------------------------------------------------
-
-@subsubheading Operations
-
-
 @deftypeop Constructor @class{boolean} @aclass{boolean} type-constructor @var{obj}
 Return @true{} if @var{obj} is true; otherwise return @false{}.
 
@@ -4467,10 +4461,6 @@ The hash function is @func{boolean-hash}.
 Type of the boolean value @true{}.
 @end deftp
 
-@c ------------------------------------------------------------------------
-
-@subsubheading Operations
-
 
 @deftypeop Constructor @class{true} @aclass{true} type-constructor @var{obj}
 Return @true{} if @var{obj} is @true{}.
@@ -4510,10 +4500,6 @@ The hash function is @func{boolean-hash}.
 @deftpx {Parent Type} @aclass{boolean}
 Type of the boolean value @false{}.
 @end deftp
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Operations
 
 
 @deftypeop Constructor @class{false} @aclass{false} type-constructor @var{obj}
@@ -4555,10 +4541,6 @@ The hash function is @func{boolean-hash}.
 @deftpx {Parent Type} @aclass{top}
 Type of character values.
 @end deftp
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Operations
 
 
 @deftypeop Constructor @class{char} @aclass{char} type-constructor @bracearg{fx, non-negative-fixnum}
@@ -4760,14 +4742,20 @@ value.
 @section Type of symbol values
 
 
+@menu
+* built-in symbols symbols::    The @class{symbol} object-type.
+* built-in symbols gensyms::    The @class{gensym} object-type.
+@end menu
+
+@c page
+@node built-in symbols symbols
+@subsection The @class{symbol} object-type
+
+
 @deftp {Core Type} @aclass{symbol}
 @deftpx {Parent Type} @aclass{top}
 Type of symbol values (including gensyms).
 @end deftp
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Operations
 
 
 @deftypeop Constructor @class{symbol} @aclass{symbol} type-constructor @bracearg{S, string}
@@ -4878,8 +4866,8 @@ Apply @func{property-list} to the instance.
 @end deftypemethod
 
 @c page
-@node built-in gensyms
-@section Type of gensym values
+@node built-in symbols gensyms
+@subsection The @class{gensym} object-type
 
 
 @deftp {Core Type} @aclass{gensym}
@@ -4888,17 +4876,17 @@ Type of gensym values.
 @end deftp
 
 
-@defop Constructor @class{gensym} new @aclass{gensym}
-@defopx Constructor @class{gensym} new @aclass{gensym} @var{string}
-@defopx Constructor @class{gensym} new @aclass{gensym} @var{symbol}
+@deftypeop Constructor @class{gensym} @aclass{gensym} type-constructor
+@deftypeopx Constructor @class{gensym} @aclass{gensym} type-constructor @var{string}
+@deftypeopx Constructor @class{gensym} @aclass{gensym} type-constructor @var{symbol}
 The constructor is @func{gensym}.
-@end defop
+@end deftypeop
 
 
-@defop {Type predicate} @class{gensym} is-a? @var{obj} @aclass{gensym}
+@deftypeop {Type predicate} @class{gensym} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{gensym?}.  Return @true{} if @var{obj} is a
 gensym object; otherwise return @false{}.
-@end defop
+@end deftypeop
 
 @c page
 @node built-in keywords
