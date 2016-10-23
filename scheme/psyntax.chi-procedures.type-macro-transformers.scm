@@ -1400,7 +1400,7 @@
   (syntax-match input-form.stx ()
     ((_ ?type-annotation)
      (with-object-type-syntactic-binding (input-form.stx ?type-annotation lexenv.run ots)
-       (cond ((object-type-spec.equality-predicate ots)
+       (cond ((object-type-spec.applicable-equality-predicate ots)
 	      => (lambda (stx)
 		   (chi-expr stx lexenv.run lexenv.expand)))
 	     (else
@@ -1416,7 +1416,7 @@
   (syntax-match input-form.stx ()
     ((_ ?type-annotation)
      (with-object-type-syntactic-binding (input-form.stx ?type-annotation lexenv.run ots)
-       (cond ((object-type-spec.comparison-procedure ots)
+       (cond ((object-type-spec.applicable-comparison-procedure ots)
 	      => (lambda (stx)
 		   (chi-expr stx lexenv.run lexenv.expand)))
 	     (else
@@ -1432,7 +1432,7 @@
   (syntax-match input-form.stx ()
     ((_ ?type-annotation)
      (with-object-type-syntactic-binding (input-form.stx ?type-annotation lexenv.run ots)
-       (cond ((object-type-spec.hash-function ots)
+       (cond ((object-type-spec.applicable-hash-function ots)
 	      => (lambda (stx)
 		   (chi-expr stx lexenv.run lexenv.expand)))
 	     (else

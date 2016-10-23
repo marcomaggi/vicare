@@ -195,56 +195,139 @@
 
 (define-scheme-type <number>
     <top>
+  (constructor #t)
   (type-predicate number?)
+  ;;This equality predicate is inherited as default for all the numeric types.
   (equality-predicate =)
-  (hash-function number-hash))
+  ;;This hash function is inherited as default for all the numeric types.
+  (hash-function number-hash)
+  (methods
+   (=			=)
+   (!=			!=)
+   ;;
+   (+			+)
+   (-			-)
+   (*			*)
+   (/			/)
+   (add1		add1)
+   (sub1		sub1)
+   ;;
+   (zero?		zero?)
+   (nan?		nan?)
+   ;;
+   (exact		exact)
+   (inexact		inexact)
+   ;;
+   (magnitude		magnitude)
+   (angle		angle)
+   (real-part		real-part)
+   (imag-part		imag-part)
+   (complex-conjugate	complex-conjugate)
+   ;;
+   (exp			exp)
+   (log			log)
+   (expt		expt)
+   (square		square)
+   (cube		cube)
+   (sqrt		sqrt)
+   (cbrt		cbrt)
+   ;;
+   (sin			sin)
+   (cos			cos)
+   (tan			tan)
+   (asin		asin)
+   (acos		acos)
+   (atan		atan)
+   ;;
+   (sinh		sinh)
+   (cosh		cosh)
+   (tanh		tanh)
+   (asinh		asinh)
+   (acosh		acosh)
+   (atanh		atanh)
+   #| end of METHODS |# ))
 
 (define-scheme-type <complex>
     <number>
   (constructor make-rectangular)
-  (type-predicate complex?)
-  (equality-predicate =))
+  (type-predicate complex?))
 
 (define-scheme-type <real-valued>
     <complex>
-  (type-predicate real-valued?)
-  (equality-predicate =))
+  (constructor #t)
+  (type-predicate real-valued?))
 
 (define-scheme-type <real>
     <real-valued>
+  (constructor #t)
   (type-predicate real?)
-  (equality-predicate =)
-  (comparison-procedure compar-real))
+  ;;This comparison procedure is inherited as default for all the real numeric types.
+  (comparison-procedure compar-real)
+  (methods
+   (<			<)
+   (>			>)
+   (<=			<=)
+   (>=			>=)
+   ;;
+   (abs			abs)
+   (numerator		numerator)
+   (denominator		denominator)
+   (sign		sign)
+   ;;
+   (floor		floor)
+   (ceiling		ceiling)
+   (truncate		truncate)
+   (round		round)
+   (rationalize		rationalize)
+   #| end of METHODS |# ))
 
 (define-scheme-type <rational-valued>
     <real>
-  (type-predicate rational-valued?)
-  (equality-predicate =))
+  (constructor #t)
+  (type-predicate rational-valued?))
 
 (define-scheme-type <rational>
     <rational-valued>
-  (type-predicate  rational?)
-  (equality-predicate =))
+  (constructor #t)
+  (type-predicate  rational?))
 
 ;;This "<integer-valued>" is a bit orphan: it is excluded from the hierarchy.
 ;;
 (define-scheme-type <integer-valued>
     <rational-valued>
-  (type-predicate integer-valued?)
-  (equality-predicate =))
+  (constructor #t)
+  (type-predicate integer-valued?))
 
 ;;Notice that "<integer>" is a "<rational>", not an "<integer-valued>".
 ;;
 (define-scheme-type <integer>
     <rational>
-  (type-predicate integer?))
+  (constructor #t)
+  (type-predicate integer?)
+  (methods
+   (gcd			gcd)
+   (lcm			lcm)
+   (quotient		quotient)
+   (remainder		remainder)
+   (modulo		modulo)
+   (quotient+remainder	quotient+remainder)
+   (factorial		factorial)))
 
 (define-scheme-type <exact-integer>
     <integer>
+  (constructor #t)
   (type-predicate exact-integer?)
-  (equality-predicate =)
   (comparison-procedure compar-exact-integer)
-  (hash-function exact-integer-hash))
+  (hash-function exact-integer-hash)
+  (methods
+   (div				div)
+   (mod				mod)
+   (div-and-mod			div-and-mod)
+   (div0			div0)
+   (mod0			mod0)
+   (div0-and-mod0		div0-and-mod0)
+   ;;
+   (exact-integer-sqrt		exact-integer-sqrt)))
 
 (define-scheme-type <fixnum>
     <exact-integer>
@@ -282,14 +365,12 @@
     <complex>
   (constructor #t)
   (type-predicate compnum?)
-  (equality-predicate =)
   (hash-function compnum-hash))
 
 (define-scheme-type <cflonum>
     <complex>
   (constructor #t)
   (type-predicate cflonum?)
-  (equality-predicate =)
   (hash-function cflonum-hash))
 
 ;;; --------------------------------------------------------------------
@@ -297,122 +378,104 @@
 (define-scheme-type <zero-fixnum>
     <fixnum>
   (constructor #t)
-  (type-predicate zero-fixnum?)
-  (equality-predicate fx=?))
+  (type-predicate zero-fixnum?))
 
 (define-scheme-type <positive-fixnum>
     <fixnum>
   (constructor #t)
-  (type-predicate positive-fixnum?)
-  (equality-predicate fx=?))
+  (type-predicate positive-fixnum?))
 
 (define-scheme-type <negative-fixnum>
     <fixnum>
   (constructor #t)
-  (type-predicate negative-fixnum?)
-  (equality-predicate fx=?))
+  (type-predicate negative-fixnum?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <positive-bignum>
     <bignum>
   (constructor #t)
-  (type-predicate positive-bignum?)
-  (equality-predicate =))
+  (type-predicate positive-bignum?))
 
 (define-scheme-type <negative-bignum>
     <bignum>
   (constructor #t)
-  (type-predicate negative-bignum?)
-  (equality-predicate =))
+  (type-predicate negative-bignum?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <positive-ratnum>
     <ratnum>
   (constructor #t)
-  (type-predicate positive-ratnum?)
-  (equality-predicate =))
+  (type-predicate positive-ratnum?))
 
 (define-scheme-type <negative-ratnum>
     <ratnum>
   (constructor #t)
-  (type-predicate negative-ratnum?)
-  (equality-predicate =))
+  (type-predicate negative-ratnum?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <zero-flonum>
     <flonum>
   (constructor #t)
-  (type-predicate zero-flonum?)
-  (equality-predicate fl=?))
+  (type-predicate zero-flonum?))
 
 (define-scheme-type <positive-zero-flonum>
     <zero-flonum>
   (constructor #t)
-  (type-predicate positive-zero-flonum?)
-  (equality-predicate fl=?))
+  (type-predicate positive-zero-flonum?))
 
 (define-scheme-type <negative-zero-flonum>
     <zero-flonum>
   (constructor #t)
-  (type-predicate negative-zero-flonum?)
-  (equality-predicate fl=?))
+  (type-predicate negative-zero-flonum?))
 
 ;;;
 
 (define-scheme-type <positive-flonum>
     <flonum>
   (constructor #t)
-  (type-predicate positive-flonum?)
-  (equality-predicate fl=?))
+  (type-predicate positive-flonum?))
 
 (define-scheme-type <negative-flonum>
     <flonum>
   (constructor #t)
-  (type-predicate negative-flonum?)
-  (equality-predicate fl=?))
+  (type-predicate negative-flonum?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <exact-compnum>
     <compnum>
   (constructor #t)
-  (type-predicate exact-compnum?)
-  (equality-predicate =))
+  (type-predicate exact-compnum?))
 
 (define-scheme-type <inexact-compnum>
     <compnum>
   (constructor #t)
-  (type-predicate inexact-compnum?)
-  (equality-predicate =))
+  (type-predicate inexact-compnum?))
 
 (define-scheme-type <zero-compnum>
     <inexact-compnum>
   (constructor #t)
-  (type-predicate zero-compnum?)
-  (equality-predicate =))
+  (type-predicate zero-compnum?))
 
 (define-scheme-type <non-zero-inexact-compnum>
     <inexact-compnum>
   (constructor #t)
-  (type-predicate non-zero-inexact-compnum?)
-  (equality-predicate =))
+  (type-predicate non-zero-inexact-compnum?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <zero-cflonum>
     <cflonum>
   (constructor #t)
-  (type-predicate zero-cflonum?)
-  (equality-predicate =))
+  (type-predicate zero-cflonum?))
 
 (define-scheme-type <non-zero-cflonum>
     <cflonum>
   (constructor #t)
-  (type-predicate non-zero-cflonum?)
-  (equality-predicate =))
+  (type-predicate non-zero-cflonum?))
 
 
 ;;;; strings

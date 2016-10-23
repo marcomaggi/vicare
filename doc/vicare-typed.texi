@@ -4144,22 +4144,28 @@ The following syntactic bindings are exported by the library
 
 @defmac equality-predicate @meta{type}
 Return a function that can be used as equality predicate between
-instances of @meta{type}, which must be a type annotation.  If the type
-has no equality predicate: raise a syntax violation.
+instances of @meta{type}, which must be a type annotation.  If
+@meta{type} itself has no equality predicate: traverse the hierarchy of
+parents in search of a predicate.  If the hierarchy has no equality
+predicate: raise a syntax violation.
 @end defmac
 
 
 @defmac comparison-procedure @meta{type}
 Return a function that can be used as comparison procedure between
-instances of @meta{type}, which must be a type annotation.  If the type
-has no comparison procedure: raise a syntax violation.
+instances of @meta{type}, which must be a type annotation.  If
+@meta{type} itself has no comparison procedure: traverse the hierarchy
+of parents in search of a procedure.  If the hierarchy has no comparison
+procedure: raise a syntax violation.
 @end defmac
 
 
 @defmac hash-function @meta{type}
 Return @false{} or a function that can be used as hash function for
-instances of @meta{type}, which must be a type annotation.  If the type
-has no hash function: raise a syntax violation.
+instances of @meta{type}, which must be a type annotation.  If
+@meta{type} itself has no hash function: traverse the hierarchy of
+parents in search of a function.  If the hierarchy has no hash function:
+raise a syntax violation.
 @end defmac
 
 
@@ -4769,7 +4775,7 @@ symbol object; otherwise return @false{}.
 @end deftypeop
 
 
-@deftypeop {Hash function} @class{char} @aclass{non-negative-fixnum} hash-function @var{sym}
+@deftypeop {Hash function} @class{symbol} @aclass{non-negative-fixnum} hash-function @var{sym}
 The hash function is @func{symbol-hash}.
 @end deftypeop
 
@@ -5273,9 +5279,216 @@ specified type.  The definition of this type is equivalent to:
 
 @deftp {Core Type} @aclass{number}
 @deftpx {Parent Type} @aclass{top}
-Type of numeric values.  There is no constructor.  The type predicate is
-@func{number?}.
+Type of numeric values.
 @end deftp
+
+
+@deftypeop Constructor @class{number} @aclass{number} type-constructor @var{Z}
+Validate @var{Z} as number object and return @var{Z} itself.  If @var{Z}
+is not a @class{number}: raise and exception.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{number} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{number?}.  Return @true{} if @var{obj} is a
+@class{number} object, otherwise return @false{}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{number} @aclass{boolean} equality-predicate @var{this} @bracearg{Z, number}
+The equality predicate is @func{=}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{number} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{number-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: predicates
+
+
+@deftypemethod @class{number} @aclass{boolean} zero? @var{this}
+Apply @func{zero?} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{boolean} nan? @var{this}
+Apply @func{nan?} to the argument and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: exactness
+
+
+@deftypemethod @class{number} @aclass{number} exact @var{this}
+Apply @func{exact} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} inexact @var{this}
+Apply @func{inexact} to the argument and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: complex numbers
+
+
+@deftypemethod @class{number} @aclass{real} magnitude @var{this}
+Apply @func{magnitude} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{real} angle @var{this}
+Apply @func{angle} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{real} real-part @var{this}
+Apply @func{real-part} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{real} imag-part @var{this}
+Apply @func{imag-part} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} complex-conjugate @var{this}
+Apply @func{complex-conjugate} to the argument and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: comparison
+
+
+@deftypemethod @class{number} @aclass{boolean} = @var{this} @bracearg{Z, number} @dots{}
+Apply @func{=} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{boolean} != @var{this} @bracearg{Z, number} @dots{}
+Apply @func{!=} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: arithmetics
+
+
+@deftypemethod @class{number} @aclass{number} + @var{this} @bracearg{Z, number} @dots{}
+Apply @func{+} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} - @var{this} @bracearg{Z, number} @dots{}
+Apply @func{-} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} * @var{this} @bracearg{Z, number} @dots{}
+Apply @func{*} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} / @var{this} @bracearg{Z, number} @dots{}
+Apply @func{/} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} add1 @var{this}
+Apply @func{add1} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} sub1 @var{this}
+Apply @func{sub1} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: exponentiation and logarithms
+
+
+@deftypemethod @class{number} @aclass{number} exp @var{this}
+Apply @func{exp} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} log @var{this}
+@deftypemethodx @class{number} @aclass{number} log @var{this} @bracearg{Z, number}
+Apply @func{log} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} expt @var{this} @bracearg{Z, number}
+Apply @func{expt} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} square @var{this}
+Apply @func{square} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} cube @var{this}
+Apply @func{cube} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} sqrt @var{this}
+Apply @func{sqrt} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} cbrt @var{this}
+Apply @func{cbrt} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: trigonometric functions
+
+
+@deftypemethod @class{number} @aclass{number} sin @var{this}
+@deftypemethodx @class{number} @aclass{number} cos @var{this}
+@deftypemethodx @class{number} @aclass{number} tan @var{this}
+Apply @func{sin}, @func{cos}, @func{tan} to the argument and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} asin @var{this}
+@deftypemethodx @class{number} @aclass{number} acos @var{this}
+@deftypemethodx @class{number} @aclass{number} atan @var{this}
+@deftypemethodx @class{number} @aclass{number} atan @var{this} @bracearg{Z, number}
+Apply @func{asin}, @func{acos}, @func{atan} to the argument and return
+its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: hyperbolic functions
+
+
+@deftypemethod @class{number} @aclass{number} sinh @var{this}
+@deftypemethodx @class{number} @aclass{number} cosh @var{this}
+@deftypemethodx @class{number} @aclass{number} tanh @var{this}
+Apply @func{sinh}, @func{cosh}, @func{tanh} to the argument and return
+its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{number} asinh @var{this}
+@deftypemethodx @class{number} @aclass{number} acosh @var{this}
+@deftypemethodx @class{number} @aclass{number} atanh @var{this}
+Apply @func{asinh}, @func{acosh}, @func{atanh} to the argument and
+return its return value.
+@end deftypemethod
 
 @c page
 @node built-in numerics complex
@@ -5284,9 +5497,20 @@ Type of numeric values.  There is no constructor.  The type predicate is
 
 @deftp {Core Type} @aclass{complex}
 @deftpx {Parent Type} @aclass{number}
-Type of complex numbers.  The constructor is @func{make-rectangular}.
-The type predicate is @func{complex?}.
+Type of complex numbers.
 @end deftp
+
+
+@deftypeop Constructor @class{complex} @aclass{complex} type-constructor @var{re} @var{im}
+Apply @func{make-rectangular} to the arguments and return its return
+value.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{complex} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{complex?}.  Return @true{} if @var{obj} is a
+@class{complex} object, otherwise return @false{}.
+@end deftypeop
 
 @c page
 @node built-in numerics real-valued
@@ -5295,13 +5519,37 @@ The type predicate is @func{complex?}.
 
 @deftp {Core Type} @aclass{real-valued}
 @deftpx {Parent Type} @aclass{complex}
-Type of real--valued values.  There is no constructor.  The type
-predicate is @func{real-valued?}.
+Type of real--valued values.
 @end deftp
+
+
+@deftypeop Constructor @class{real-valued} @aclass{real-valued} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{real-valued} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{real-valued} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{real-valued?}.  Return @true{} if @var{obj}
+is a @class{real-valued} object, otherwise return @false{}.
+@end deftypeop
 
 @c page
 @node built-in numerics real
 @subsection Type of real values
+
+
+@menu
+* built-in numerics real real::         The @class{real} object-type.
+* built-in numerics real positive::     The @class{positive-real} object-type.
+* built-in numerics real negative::     The @class{negative-real} object-type.
+* built-in numerics real zero::         The @class{zero-real} object-type.
+* built-in numerics real non-zero::     The @class{non-zero-real} object-type.
+* built-in numerics real non-negative:: The @class{non-negative-real} object-type.
+@end menu
+
+@c page
+@node built-in numerics real real
+@subsubsection The @class{real} object--type
 
 
 @deftp {Core Type} @aclass{real}
@@ -5309,6 +5557,103 @@ predicate is @func{real-valued?}.
 Type of real values.  There is no constructor.  The type predicate is
 @func{real?}.
 @end deftp
+
+
+@deftypeop Constructor @class{real} @aclass{real} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{real} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{real} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{real?}.  Return @true{} if @var{obj} is a
+@class{real} object, otherwise return @false{}.
+@end deftypeop
+
+
+@deftypeop {Comparison procedure} @class{real} @aclass{fixnum} comparison-procedure @var{this} @bracearg{X, real}
+The comparison procedure is @func{compar-real}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: comparison
+
+
+@deftypemethod @class{real} @aclass{boolean} < @var{this} @braceargo{Z, real} @bracearg{Z, real} @dots{}
+Apply @func{<} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{real} @aclass{boolean} > @var{this} @braceargo{Z, real} @bracearg{Z, real} @dots{}
+Apply @func{>} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{real} @aclass{boolean} <= @var{this} @braceargo{Z, real} @bracearg{Z, real} @dots{}
+Apply @func{<=} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{real} @aclass{boolean} <= @var{this} @braceargo{Z, real} @bracearg{Z, real} @dots{}
+Apply @func{<=} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{real} @aclass{non-negative-real} abs @var{this}
+Apply @func{abs} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{real} @aclass{real} numerator @var{this}
+Apply @func{numerator} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{real} @aclass{real} denominator @var{this}
+Apply @func{denominator} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{real} @aclass{real} sign @var{this}
+Apply @func{sign} to the argument and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: rounding
+
+
+@deftypemethod @class{real} @aclass{real} floor @var{this}
+Apply @func{floor} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{real} @aclass{real} ceiling @var{this}
+Apply @func{ceiling} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{real} @aclass{real} truncate @var{this}
+Apply @func{truncate} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{real} @aclass{real} round @var{this}
+Apply @func{round} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{real} @aclass{real} rationalize @var{this} @bracearg{X, real}
+Apply @func{rationalize} to the arguments and return its return value.
+@end deftypemethod
+
+@c page
+@node built-in numerics real positive
+@subsubsection The @class{positive-real} object--type
 
 
 @deftp {Core Type} @aclass{positive-real}
@@ -5320,6 +5665,10 @@ Type of positive real values.  Its definition is equivalent to:
 @end lisp
 @end deftp
 
+@c page
+@node built-in numerics real negative
+@subsubsection The @class{negative-real} object--type
+
 
 @deftp {Core Type} @aclass{negative-real}
 Type of negative real values.  Its definition is equivalent to:
@@ -5329,6 +5678,10 @@ Type of negative real values.  Its definition is equivalent to:
   (or <negative-fixnum> <negative-bignum> <negative-flonum>))
 @end lisp
 @end deftp
+
+@c page
+@node built-in numerics real zero
+@subsubsection The @class{zero-real} object--type
 
 
 @deftp {Core Type} @aclass{zero-real}
@@ -5340,6 +5693,10 @@ Type of zero real values.  Its definition is equivalent to:
 @end lisp
 @end deftp
 
+@c page
+@node built-in numerics real non-zero
+@subsubsection The @class{non-zero-real} object--type
+
 
 @deftp {Core Type} @aclass{non-zero-real}
 Type of non--zero real values.  Its definition is equivalent to:
@@ -5349,6 +5706,10 @@ Type of non--zero real values.  Its definition is equivalent to:
   (or <non-zero-fixnum> <bignum> <non-zero-flonum>))
 @end lisp
 @end deftp
+
+@c page
+@node built-in numerics real non-negative
+@subsubsection The @class{non-negative-real} object--type
 
 
 @deftp {Core Type} @aclass{non-negative-real}
@@ -5367,20 +5728,57 @@ Type of non--negative real values.  Its definition is equivalent to:
 
 @deftp {Core Type} @aclass{rational-valued}
 @deftpx {Parent Type} @aclass{real}
-Type of rational--valued values.  There is no constructor.  The type
-predicate is @func{rational-valued?}.
+Type of rational--valued values.
 @end deftp
+
+
+@deftypeop Constructor @class{rational-valued} @aclass{rational-valued} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{rational-valued} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{rational-valued} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{rational-valued?}.  Return @true{} if
+@var{obj} is a @class{rational-valued} object, otherwise return
+@false{}.
+@end deftypeop
 
 @c page
 @node built-in numerics rational
 @subsection Type of rational values
 
 
+@menu
+* built-in numerics rational rational::      The @class{rational} object-type.
+* built-in numerics rational exact::         The @class{exact-rational} object-type.
+* built-in numerics rational non-negative::  The @class{non-negative-exact-rational} object-type.
+* built-in numerics rational non-zero::      The @class{non-zero-exact-rational} object-type.
+@end menu
+
+@c page
+@node built-in numerics rational rational
+@subsubsection The @class{rational} object--type
+
+
 @deftp {Core Type} @aclass{rational}
 @deftpx {Parent Type} @aclass{rational-valued}
-Type of rational values.  There is no constructor.  The type predicate
-is @func{rational?}.
+Type of rational values.
 @end deftp
+
+
+@deftypeop Constructor @class{rational} @aclass{rational} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{rational} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{rational} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{rational?}.  Return @true{} if @var{obj} is
+a @class{rational} object, otherwise return @false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics rational exact
+@subsubsection The @class{exact-rational} object-type
 
 
 @deftp {Core Type} @aclass{exact-rational}
@@ -5392,6 +5790,10 @@ Type of exact rational values.  Its definition is equivalent to:
 @end lisp
 @end deftp
 
+@c page
+@node built-in numerics rational non-negative
+@subsubsection The @class{non-negative-exact-rational} object-type
+
 
 @deftp {Core Type} @aclass{non-negative-exact-rational}
 Type of non--negative exact rational values.  Its definition is
@@ -5402,6 +5804,10 @@ equivalent to:
   (or <non-negative-exact-integer> <positive-ratnum>))
 @end lisp
 @end deftp
+
+@c page
+@node built-in numerics rational non-zero
+@subsubsection The @class{non-zero-exact-rational} object-type
 
 
 @deftp {Core Type} @aclass{non-zero-exact-rational}
@@ -5421,28 +5827,98 @@ to:
 
 @deftp {Core Type} @aclass{integer-valued}
 @deftpx {Parent Type} @aclass{rational-valued}
-Type of integer--valued values.  There is no constructor.  The type
-predicate is @func{integer-valued?}.
+Type of integer--valued values.
 @end deftp
+
+
+@deftypeop Constructor @class{integer-valued} @aclass{integer-valued} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{integer-valued} and return
+it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{integer-valued} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{integer-valued?}.  Return @true{} if
+@var{obj} is a @class{integer-valued} object, otherwise return @false{}.
+@end deftypeop
 
 @c page
 @node built-in numerics integer
 @subsection Type of integer values
 
 
-Notice that @class{integer} is a @class{rational}, not a
-@class{integer-valued}.
-
-
 @deftp {Core Type} @aclass{integer}
 @deftpx {Parent Type} @aclass{rational}
-Type of integer values.  There is no constructor.  The type predicate is
-@func{integer?}.
+Type of integer values.
 @end deftp
+
+
+@deftypeop Constructor @class{integer} @aclass{integer} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{integer} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{integer} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{integer?}.  Return @true{} if @var{obj} is a
+@class{integer} object, otherwise return @false{}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{integer} @aclass{integer} gcd @var{this} @bracearg{X, integer} @dots{}
+Apply @func{gcd} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{integer} @aclass{integer} lcm @var{this} @bracearg{X, integer} @dots{}
+Apply @func{lcm} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{integer} @aclass{integer} quotient @var{this} @bracearg{X, integer}
+Apply @func{quotient} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{integer} @aclass{integer} remainder @var{this} @bracearg{X, integer}
+Apply @func{remainder} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{integer} @aclass{integer} quotient+remainder @var{this} @bracearg{X, integer}
+Apply @func{quotient+remainder} to the arguments and return its return
+values.
+@end deftypemethod
+
+
+@deftypemethod @class{integer} @aclass{integer} modulo @var{this} @bracearg{X, integer}
+Apply @func{modulo} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{integer} @aclass{integer} factorial @var{this} @bracearg{X, integer}
+Apply @func{factorial} to the argument and return its return value.
+@end deftypemethod
 
 @c page
 @node built-in numerics exact-integer
 @subsection Type of exact--integer values
+
+
+@menu
+* built-in numerics exact-integer exact-integer:: The @class{exact-integer} type.
+* built-in numerics exact-integer non-negative::  The @class{non-negative-exact-integer} type.
+* built-in numerics exact-integer positive::      The @class{positive-exact-integer} type.
+* built-in numerics exact-integer negative::      The @class{negative-exact-integer} type.
+* built-in numerics exact-integer non-zero::      The @class{non-zero-exact-integer} type.
+@end menu
+
+@c page
+@node built-in numerics exact-integer exact-integer
+@subsubsection The @class{exact-integer} type
 
 
 @deftp {Core Type} @aclass{exact-integer}
@@ -5450,6 +5926,72 @@ Type of integer values.  There is no constructor.  The type predicate is
 Type of exact integers.  There is no constructor.  The type predicate is
 @func{exact-integer?}.
 @end deftp
+
+
+@deftypeop Constructor @class{exact-integer} @aclass{exact-integer} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{exact-integer} and return
+it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{exact-integer} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{exact-integer?}.  Return @true{} if
+@var{obj} is a @class{exact-integer} object, otherwise return @false{}.
+@end deftypeop
+
+
+@deftypeop {Comparison procedure} @class{exact-integer} @aclass{fixnum} comparison-procedure @var{this} @bracearg{N, exact-integer}
+The comparison procedure is @func{compar-exact-integer}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{exact-integer} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{exact-integer-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{exact-integer} @aclass{exact-integer} div @var{this} @bracearg{N, exact-integer}
+Apply @func{div} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{exact-integer} @aclass{exact-integer} mod @var{this} @bracearg{N, exact-integer}
+Apply @func{mod} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{exact-integer} @aclass{exact-integer} div-and-mod @var{this} @bracearg{N, exact-integer}
+Apply @func{div-and-mod} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{exact-integer} @aclass{exact-integer} div0 @var{this} @bracearg{N, exact-integer}
+Apply @func{div0} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{exact-integer} @aclass{exact-integer} mod0 @var{this} @bracearg{N, exact-integer}
+Apply @func{mod0} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{exact-integer} @aclass{exact-integer} div0-and-mod0 @var{this} @bracearg{N, exact-integer}
+Apply @func{div0-and-mod0} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{exact-integer} @aclass{exact-integer} exact-integer-sqrt @var{this} @bracearg{N, exact-integer}
+Apply @func{exact-integer-sqrt} to the arguments and return its return
+value.
+@end deftypemethod
+
+@c page
+@node built-in numerics exact-integer non-negative
+@subsubsection The @class{non-negative-exact-integer} type
 
 
 @deftp {Core Type} @aclass{non-negative-exact-integer}
@@ -5461,6 +6003,10 @@ Type of non--negative exact integers.  Its definition is equivalent to:
 @end lisp
 @end deftp
 
+@c page
+@node built-in numerics exact-integer positive
+@subsubsection The @class{positive-exact-integer} type
+
 
 @deftp {Core Type} @aclass{positive-exact-integer}
 Type of positive exact integers.  Its definition is equivalent to:
@@ -5471,6 +6017,10 @@ Type of positive exact integers.  Its definition is equivalent to:
 @end lisp
 @end deftp
 
+@c page
+@node built-in numerics exact-integer negative
+@subsubsection The @class{negative-exact-integer} type
+
 
 @deftp {Core Type} @aclass{negative-exact-integer}
 Type of negative exact integers.  Its definition is equivalent to:
@@ -5480,6 +6030,10 @@ Type of negative exact integers.  Its definition is equivalent to:
   (or <negative-fixnum> <negative-bignum>))
 @end lisp
 @end deftp
+
+@c page
+@node built-in numerics exact-integer non-zero
+@subsubsection The @class{non-zero-exact-integer} type
 
 
 @deftp {Core Type} @aclass{non-zero-exact-integer}
@@ -5496,32 +6050,121 @@ Type of non--zero exact integers.  Its definition is equivalent to:
 @subsection Type of fixnum values
 
 
+@menu
+* built-in numerics fixnums fixnums::       The @class{fixnum} type.
+* built-in numerics fixnums positive::      The @class{positive-fixnum} type.
+* built-in numerics fixnums negative::      The @class{negative-fixnum} type.
+* built-in numerics fixnums zero::          The @class{zero-fixnum} type.
+* built-in numerics fixnums non-positive::  The @class{non-positive-fixnum} type.
+* built-in numerics fixnums non-negative::  The @class{non-negative-fixnum} type.
+* built-in numerics fixnums non-zero::      The @class{non-zero-fixnum} type.
+@end menu
+
+@c page
+@node built-in numerics fixnums fixnums
+@subsubsection The @class{fixnum} type
+
+
 @deftp {Core Type} @aclass{fixnum}
 @deftpx {Parent Type} @aclass{exact-integer}
-Type of fixnum values.  There is no constructor.  The type predicate is
-@func{fixnum?}.
+Type of fixnum values.
 @end deftp
+
+
+@deftypeop Constructor @class{fixnum} @aclass{fixnum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{fixnum} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{fixnum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{fixnum?}.  Return @true{} if @var{obj} is a
+@class{fixnum} object, otherwise return @false{}.
+@end deftypeop
+
+
+@deftypeop {Comparison procedure} @class{fixnum} @aclass{fixnum} equality-predicate @var{this} @bracearg{N, fixnum}
+The equality predicate is @func{fx=?}.
+@end deftypeop
+
+
+@deftypeop {Comparison procedure} @class{fixnum} @aclass{fixnum} comparison-procedure @var{this} @bracearg{N, fixnum}
+The comparison procedure is @func{compar-fixnum}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{fixnum} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{fixnum-hash}.
+@end deftypeop
+
+@c page
+@node built-in numerics fixnums positive
+@subsubsection The @class{positive-fixnum} type
 
 
 @deftp {Core Type} @aclass{positive-fixnum}
 @deftpx {Parent Type} @aclass{fixnum}
-Type of positive fixnum values.  There is no constructor.  The type
-predicate is @func{positive-fixnum?}.
+Type of positive fixnum values.
 @end deftp
+
+
+@deftypeop Constructor @class{positive-fixnum} @aclass{positive-fixnum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{positive-fixnum} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{positive-fixnum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{positive-fixnum?}.  Return @true{} if
+@var{obj} is a @class{positive-fixnum} object, otherwise return
+@false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics fixnums negative
+@subsubsection The @class{negative-fixnum} type
 
 
 @deftp {Core Type} @aclass{negative-fixnum}
 @deftpx {Parent Type} @aclass{fixnum}
-Type of negative fixnum values.  There is no constructor.  The type
-predicate is @func{negative-fixnum?}.
+Type of negative fixnum values.
 @end deftp
+
+
+@deftypeop Constructor @class{negative-fixnum} @aclass{negative-fixnum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{negative-fixnum} and return
+it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{negative-fixnum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{negative-fixnum?}.  Return @true{} if
+@var{obj} is a @class{negative-fixnum} object, otherwise return
+@false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics fixnums zero
+@subsubsection The @class{zero-fixnum} type
 
 
 @deftp {Core Type} @aclass{zero-fixnum}
 @deftpx {Parent Type} @aclass{fixnum}
-Type of the zero fixnum value.  There is no constructor.  The type
-predicate is @func{zero-fixnum?}.
+Type of the zero fixnum value.
 @end deftp
+
+
+@deftypeop Constructor @class{zero-fixnum} @aclass{zero-fixnum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{zero-fixnum} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{zero-fixnum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{zero-fixnum?}.  Return @true{} if @var{obj}
+is a @class{zero-fixnum} object, otherwise return @false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics fixnums non-positive
+@subsubsection The @class{non-positive-fixnum} type
 
 
 @deftp {Core Type} @aclass{non-negative-fixnum}
@@ -5533,6 +6176,10 @@ Type of non--negative fixnum values.  Its definition is equivalent to:
 @end lisp
 @end deftp
 
+@c page
+@node built-in numerics fixnums non-negative
+@subsubsection The @class{non-negative-fixnum} type
+
 
 @deftp {Core Type} @aclass{non-positive-fixnum}
 Type of non--positive fixnum values.  Its definition is equivalent to:
@@ -5542,6 +6189,10 @@ Type of non--positive fixnum values.  Its definition is equivalent to:
   (or <zero-fixnum> <negative-fixnum>))
 @end lisp
 @end deftp
+
+@c page
+@node built-in numerics fixnums non-zero
+@subsubsection The @class{non-zero-fixnum} type
 
 
 @deftp {Core Type} @aclass{non-zero-fixnum}

@@ -118,13 +118,14 @@
     object-type-spec.name				object-type-spec.type-annotation
     object-type-spec.parent-ots				object-type-spec.uids-list
     object-type-spec.constructor-stx			object-type-spec.destructor-stx
-    object-type-spec.type-predicate-stx			object-type-spec.equality-predicate
-    object-type-spec.comparison-procedure		object-type-spec.hash-function
+    object-type-spec.type-predicate-stx
+    object-type-spec.equality-predicate			object-type-spec.applicable-equality-predicate
+    object-type-spec.comparison-procedure		object-type-spec.applicable-comparison-procedure
+    object-type-spec.hash-function			object-type-spec.applicable-hash-function
     object-type-spec.methods-table-public		object-type-spec.methods-table-public-set!
     object-type-spec.methods-table-protected		object-type-spec.methods-table-protected-set!
     object-type-spec.methods-table-private		object-type-spec.methods-table-private-set!
     object-type-spec.applicable-method-stx		object-type-spec.applicable-private-method-stx
-    object-type-spec.applicable-hash-function
     object-type-spec.single-value-validator-lambda-stx	object-type-spec.list-validator-lambda-stx
     object-type-spec.implemented-interfaces
     object-type-spec.type-descriptor-core-expr

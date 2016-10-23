@@ -31,7 +31,8 @@
 	 object-type-spec.uids-list
 	 object-type-spec.parent-ots			object-type-spec.type-predicate-stx
 	 object-type-spec.constructor-stx		object-type-spec.destructor-stx
-	 object-type-spec.equality-predicate		object-type-spec.comparison-procedure
+	 object-type-spec.equality-predicate		object-type-spec.applicable-equality-predicate
+	 object-type-spec.comparison-procedure		object-type-spec.applicable-comparison-procedure
 	 object-type-spec.hash-function			object-type-spec.applicable-hash-function
 	 object-type-spec.methods-table-public		object-type-spec.methods-table-public-set!
 	 object-type-spec.methods-table-protected	object-type-spec.methods-table-protected-set!
@@ -517,6 +518,28 @@
 	  (object-type-spec.type-predicate-set! ots pred.stx))
       ;;Here THING is either false or a syntax object.
       thing)))
+
+(define* (object-type-spec.applicable-equality-predicate {ots object-type-spec?})
+  ;;Return false or a syntax object  representing a Scheme expression which, expanded
+  ;;and evaluated, returns the equality predicate function for this type.  If OTS has
+  ;;no equality predicate: traverse the hierarchy of parents.
+  ;;
+  (let ((ots (%normalise-reference-type-spec ots)))
+    (cond ((object-type-spec.equality-predicate ots))
+	  ((object-type-spec.parent-ots ots)
+	   => object-type-spec.applicable-equality-predicate)
+	  (else #f))))
+
+(define* (object-type-spec.applicable-comparison-procedure {ots object-type-spec?})
+  ;;Return false or a syntax object  representing a Scheme expression which, expanded
+  ;;and evaluated,  returns the comparison  procedure for this  type.  If OTS  has no
+  ;;comparison procedure: traverse the hierarchy of parents.
+  ;;
+  (let ((ots (%normalise-reference-type-spec ots)))
+    (cond ((object-type-spec.comparison-procedure ots))
+	  ((object-type-spec.parent-ots ots)
+	   => object-type-spec.applicable-comparison-procedure)
+	  (else #f))))
 
 (define* (object-type-spec.applicable-hash-function {ots object-type-spec?})
   ;;Return false or a syntax object  representing a Scheme expression which, expanded
