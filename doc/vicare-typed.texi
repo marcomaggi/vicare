@@ -6680,6 +6680,21 @@ The hash function is @func{compnum-hash}.
 @deftp {Core Type} @aclass{exact-compnum}
 @deftpx {Parent Type} @aclass{compnum}
 Type of compnum values having exact real and imaginary parts.
+
+Remembering that a compnum with exact zero as imaginary part is
+converted to a real number by the Scheme reader and the function
+@func{make-rectangular}:
+
+@lisp
+1+0i                            @result{} 1
+1.0+0i                          @result{} 1.0
+(make-rectangular 1 0)          @result{} 1
+(make-rectangular 1.0 0)        @result{} 1.0
+@end lisp
+
+@noindent
+it follows that a value of type @class{exact-compnum} @strong{cannot} be
+zero.
 @end deftp
 
 
