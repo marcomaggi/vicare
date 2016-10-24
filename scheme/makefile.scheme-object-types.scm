@@ -214,6 +214,10 @@
    ;;
    (zero?		zero?)
    (nan?		nan?)
+   (odd?		odd?)
+   (even?		even?)
+   (finite?		finite?)
+   (infinite?		infinite?)
    ;;
    (exact		exact)
    (inexact		inexact)
@@ -269,6 +273,11 @@
    (<=			<=)
    (>=			>=)
    ;;
+   (positive?		positive?)
+   (negative?		negative?)
+   (non-positive?	non-positive?)
+   (non-negative?	non-negative?)
+   ;;
    (abs			abs)
    (numerator		numerator)
    (denominator		denominator)
@@ -317,7 +326,6 @@
     <integer>
   (constructor #t)
   (type-predicate exact-integer?)
-  (comparison-procedure compar-exact-integer)
   (hash-function exact-integer-hash)
   (methods
    (div				div)
@@ -333,33 +341,34 @@
     <exact-integer>
   (constructor #t)
   (type-predicate fixnum?)
-  (comparison-procedure compar-fixnum)
-  (equality-predicate fx=?)
+  ;;Here we want the equality predicate and comparison function of <exact-integer>.
   (hash-function fixnum-hash))
+
+(define-scheme-type <bignum>
+    <exact-integer>
+  (constructor #t)
+  (type-predicate bignum?)
+  ;;Here we want the equality predicate and comparison function of <exact-integer>.
+  (hash-function bignum-hash)
+  (methods
+   (bytevector			bignum->bytevector)
+   (odd?			bignum-odd?)
+   (even?			bignum-even?)
+   #| end of METHODS |# ))
 
 (define-scheme-type <flonum>
     <real>
   (constructor #t)
   (type-predicate flonum?)
-  (equality-predicate fl=?)
-  (comparison-procedure compar-flonum)
+  ;;Here we want the equality predicate and comparison function of <real>.
   (hash-function flonum-hash))
 
 (define-scheme-type <ratnum>
     <rational>
   (constructor #t)
   (type-predicate ratnum?)
-  (equality-predicate =)
-  (comparison-procedure compar-ratnum)
+  ;;Here we want the equality predicate and comparison function of <real>.
   (hash-function ratnum-hash))
-
-(define-scheme-type <bignum>
-    <exact-integer>
-  (constructor #t)
-  (type-predicate bignum?)
-  (equality-predicate =)
-  (comparison-procedure compar-bignum)
-  (hash-function bignum-hash))
 
 (define-scheme-type <compnum>
     <complex>

@@ -245,9 +245,15 @@
 			(?pred ($compnum-imag obj)))))
 		)))
   (declare exact-compnum?		exact?)
-  (declare inexact-compnum?		inexact?)
   (declare zero-compnum?		zero?)
   #| end of LET-SYNTAX |# )
+
+(define (inexact-compnum? obj)
+  (and (compnum? obj)
+       ;;Remember that if it is a compnum: only  one among the real and imag parts is
+       ;;inexact.  If both are inexact: it is not a compnum, it is a cflonum.
+       (or (inexact? ($compnum-real obj))
+	   (inexact? ($compnum-imag obj)))))
 
 (let-syntax
     ((declare (syntax-rules ()

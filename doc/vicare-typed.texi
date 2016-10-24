@@ -5318,6 +5318,21 @@ Apply @func{zero?} to the argument and return its return value.
 Apply @func{nan?} to the argument and return its return value.
 @end deftypemethod
 
+
+@deftypemethod @class{number} @aclass{boolean} finite? @var{this}
+@deftypemethodx @class{number} @aclass{boolean} infinite? @var{this}
+Apply @func{finite?}, @func{infinite?} to the argument and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{number} @aclass{boolean} odd? @var{this}
+@deftypemethodx @class{number} @aclass{boolean} even? @var{this}
+Apply @func{odd?}, @func{even?} to the argument and return its return
+value.
+@end deftypemethod
+
+
 @c ------------------------------------------------------------------------
 
 @subsubheading Methods: exactness
@@ -5539,17 +5554,17 @@ is a @class{real-valued} object, otherwise return @false{}.
 
 
 @menu
-* built-in numerics real real::         The @class{real} object-type.
-* built-in numerics real positive::     The @class{positive-real} object-type.
-* built-in numerics real negative::     The @class{negative-real} object-type.
-* built-in numerics real zero::         The @class{zero-real} object-type.
-* built-in numerics real non-zero::     The @class{non-zero-real} object-type.
-* built-in numerics real non-negative:: The @class{non-negative-real} object-type.
+* built-in numerics real base::         The @class{real} type.
+* built-in numerics real positive::     The @class{positive-real} type.
+* built-in numerics real negative::     The @class{negative-real} type.
+* built-in numerics real zero::         The @class{zero-real} type.
+* built-in numerics real non-zero::     The @class{non-zero-real} type.
+* built-in numerics real non-negative:: The @class{non-negative-real} type.
 @end menu
 
 @c page
-@node built-in numerics real real
-@subsubsection The @class{real} object--type
+@node built-in numerics real base
+@subsubsection The @class{real} type
 
 
 @deftp {Core Type} @aclass{real}
@@ -5573,6 +5588,24 @@ The type predicate is @func{real?}.  Return @true{} if @var{obj} is a
 @deftypeop {Comparison procedure} @class{real} @aclass{fixnum} comparison-procedure @var{this} @bracearg{X, real}
 The comparison procedure is @func{compar-real}.
 @end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: predicates
+
+
+@deftypemethod @class{real} @aclass{boolean} positive? @var{this}
+@deftypemethodx @class{real} @aclass{boolean} negative? @var{this}
+Apply @func{positive?}, @func{negative?} to the argument and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{real} @aclass{boolean} non-positive? @var{this}
+@deftypemethodx @class{real} @aclass{boolean} non-negative? @var{this}
+Apply @func{non-positive?}, @func{non-negative?} to the argument and
+return its return value.
+@end deftypemethod
 
 @c ------------------------------------------------------------------------
 
@@ -5653,7 +5686,7 @@ Apply @func{rationalize} to the arguments and return its return value.
 
 @c page
 @node built-in numerics real positive
-@subsubsection The @class{positive-real} object--type
+@subsubsection The @class{positive-real} type
 
 
 @deftp {Core Type} @aclass{positive-real}
@@ -5667,7 +5700,7 @@ Type of positive real values.  Its definition is equivalent to:
 
 @c page
 @node built-in numerics real negative
-@subsubsection The @class{negative-real} object--type
+@subsubsection The @class{negative-real} type
 
 
 @deftp {Core Type} @aclass{negative-real}
@@ -5681,7 +5714,7 @@ Type of negative real values.  Its definition is equivalent to:
 
 @c page
 @node built-in numerics real zero
-@subsubsection The @class{zero-real} object--type
+@subsubsection The @class{zero-real} type
 
 
 @deftp {Core Type} @aclass{zero-real}
@@ -5695,7 +5728,7 @@ Type of zero real values.  Its definition is equivalent to:
 
 @c page
 @node built-in numerics real non-zero
-@subsubsection The @class{non-zero-real} object--type
+@subsubsection The @class{non-zero-real} type
 
 
 @deftp {Core Type} @aclass{non-zero-real}
@@ -5709,7 +5742,7 @@ Type of non--zero real values.  Its definition is equivalent to:
 
 @c page
 @node built-in numerics real non-negative
-@subsubsection The @class{non-negative-real} object--type
+@subsubsection The @class{non-negative-real} type
 
 
 @deftp {Core Type} @aclass{non-negative-real}
@@ -5749,15 +5782,15 @@ The type predicate is @func{rational-valued?}.  Return @true{} if
 
 
 @menu
-* built-in numerics rational rational::      The @class{rational} object-type.
-* built-in numerics rational exact::         The @class{exact-rational} object-type.
-* built-in numerics rational non-negative::  The @class{non-negative-exact-rational} object-type.
-* built-in numerics rational non-zero::      The @class{non-zero-exact-rational} object-type.
+* built-in numerics rational base::          The @class{rational} type.
+* built-in numerics rational exact::         The @class{exact-rational} type.
+* built-in numerics rational non-negative::  The @class{non-negative-exact-rational} type.
+* built-in numerics rational non-zero::      The @class{non-zero-exact-rational} type.
 @end menu
 
 @c page
-@node built-in numerics rational rational
-@subsubsection The @class{rational} object--type
+@node built-in numerics rational base
+@subsubsection The @class{rational} type
 
 
 @deftp {Core Type} @aclass{rational}
@@ -5778,7 +5811,7 @@ a @class{rational} object, otherwise return @false{}.
 
 @c page
 @node built-in numerics rational exact
-@subsubsection The @class{exact-rational} object-type
+@subsubsection The @class{exact-rational} type
 
 
 @deftp {Core Type} @aclass{exact-rational}
@@ -5792,7 +5825,7 @@ Type of exact rational values.  Its definition is equivalent to:
 
 @c page
 @node built-in numerics rational non-negative
-@subsubsection The @class{non-negative-exact-rational} object-type
+@subsubsection The @class{non-negative-exact-rational} type
 
 
 @deftp {Core Type} @aclass{non-negative-exact-rational}
@@ -5807,7 +5840,7 @@ equivalent to:
 
 @c page
 @node built-in numerics rational non-zero
-@subsubsection The @class{non-zero-exact-rational} object-type
+@subsubsection The @class{non-zero-exact-rational} type
 
 
 @deftp {Core Type} @aclass{non-zero-exact-rational}
@@ -5909,7 +5942,7 @@ Apply @func{factorial} to the argument and return its return value.
 
 
 @menu
-* built-in numerics exact-integer exact-integer:: The @class{exact-integer} type.
+* built-in numerics exact-integer base::          The @class{exact-integer} type.
 * built-in numerics exact-integer non-negative::  The @class{non-negative-exact-integer} type.
 * built-in numerics exact-integer positive::      The @class{positive-exact-integer} type.
 * built-in numerics exact-integer negative::      The @class{negative-exact-integer} type.
@@ -5917,7 +5950,7 @@ Apply @func{factorial} to the argument and return its return value.
 @end menu
 
 @c page
-@node built-in numerics exact-integer exact-integer
+@node built-in numerics exact-integer base
 @subsubsection The @class{exact-integer} type
 
 
@@ -6051,7 +6084,7 @@ Type of non--zero exact integers.  Its definition is equivalent to:
 
 
 @menu
-* built-in numerics fixnums fixnums::       The @class{fixnum} type.
+* built-in numerics fixnums base::          The @class{fixnum} type.
 * built-in numerics fixnums positive::      The @class{positive-fixnum} type.
 * built-in numerics fixnums negative::      The @class{negative-fixnum} type.
 * built-in numerics fixnums zero::          The @class{zero-fixnum} type.
@@ -6061,7 +6094,7 @@ Type of non--zero exact integers.  Its definition is equivalent to:
 @end menu
 
 @c page
-@node built-in numerics fixnums fixnums
+@node built-in numerics fixnums base
 @subsubsection The @class{fixnum} type
 
 
@@ -6209,6 +6242,17 @@ Type of non--zero fixnum values.  Its definition is equivalent to:
 @subsection Type of bignum values
 
 
+@menu
+* built-in numerics bignums base::      The @class{bignum} type.
+* built-in numerics bignums positive::  The @class{positive-bignum} type.
+* built-in numerics bignums negative::  The @class{negative-bignum} type.
+@end menu
+
+@c page
+@node built-in numerics bignums base
+@subsubsection The @class{bignum} type
+
+
 @deftp {Core Type} @aclass{bignum}
 @deftpx {Parent Type} @aclass{exact-integer}
 Type of bignum values.  There is no constructor.  The type predicate is
@@ -6216,54 +6260,202 @@ Type of bignum values.  There is no constructor.  The type predicate is
 @end deftp
 
 
+@deftypeop Constructor @class{bignum} @aclass{bignum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{bignum} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{bignum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{bignum?}.  Return @true{} if @var{obj} is a
+@class{bignum} object, otherwise return @false{}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{bignum} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{bignum-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{bignum} @aclass{bytevector} bytevector @var{this}
+Apply @func{bignum->bytevector} to the instance and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{bignum} @aclass{bytevector} odd? @var{this}
+Apply @func{odd?} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{bignum} @aclass{bytevector} even? @var{this}
+Apply @func{even?} to the instance and return its return value.
+@end deftypemethod
+
+@c page
+@node built-in numerics bignums positive
+@subsubsection The @class{positive-bignum} type
+
+
 @deftp {Core Type} @aclass{positive-bignum}
 @deftpx {Parent Type} @aclass{bignum}
-Type of positive bignum values.  There is no constructor.  The type
-predicate is @func{positive-bignum?}.
+Type of positive bignum values.
 @end deftp
+
+
+@deftypeop Constructor @class{positive-bignum} @aclass{positive-bignum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{positive-bignum} and return
+it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{positive-bignum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{positive-bignum?}.  Return @true{} if
+@var{obj} is a @class{positive-bignum} object, otherwise return
+@false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics bignums negative
+@subsubsection The @class{negative-bignum} type
 
 
 @deftp {Core Type} @aclass{negative-bignum}
 @deftpx {Parent Type} @aclass{bignum}
-Type of negative bignum values.  There is no constructor.  The type
-predicate is @func{negative-bignum?}.
+Type of negative bignum values.
 @end deftp
+
+
+@deftypeop Constructor @class{negative-bignum} @aclass{negative-bignum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{negative-bignum} and return
+it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{negative-bignum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{negative-bignum?}.  Return @true{} if
+@var{obj} is a @class{negative-bignum} object, otherwise return
+@false{}.
+@end deftypeop
 
 @c page
 @node built-in numerics flonums
 @subsection Type of flonum values
 
 
+@menu
+* built-in numerics flonums base::          The @class{flonum} type.
+* built-in numerics flonums zero::          The @class{zero-flonum} type.
+* built-in numerics flonums positive-zero:: The @class{positive-zero-flonum} type.
+* built-in numerics flonums negative-zero:: The @class{negative-zero-flonum} type.
+* built-in numerics flonums non-zero::      The @class{non-zero-flonum} type.
+* built-in numerics flonums positive::      The @class{positive-flonum} type.
+* built-in numerics flonums negative::      The @class{negative-flonum} type.
+* built-in numerics flonums non-positive::  The @class{non-positive-flonum} type.
+* built-in numerics flonums non-negative::  The @class{non-negative-flonum} type.
+@end menu
+
+@c page
+@node built-in numerics flonums base
+@subsubsection The @class{flonum} type
+
+
 @deftp {Core Type} @aclass{flonum}
 @deftpx {Parent Type} @aclass{real}
-Type of flonum values.  There is no constructor.  The type predicate is
-@func{flonum?}.
+Type of flonum values.
 @end deftp
 
-@c ------------------------------------------------------------------------
 
-@subsubheading Zero flonums
+@deftypeop Constructor @class{flonum} @aclass{flonum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{flonum}.  Return @var{obj}
+itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{flonum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{flonum?}.  Return @true{} if @var{obj} is an
+object of type @class{flonum}; otherwise return @false{}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{flonum} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{flonum-hash}.
+@end deftypeop
+
+@c page
+@node built-in numerics flonums zero
+@subsubsection The @class{zero-flonum} type
 
 
 @deftp {Core Type} @aclass{zero-flonum}
 @deftpx {Parent Type} @aclass{flonum}
-Type of zero flonum values.  There is no constructor.  The type
-predicate is @func{zero-flonum?}.
+Type of zero flonum values: @samp{+0.0} and @samp{-0.0}.
 @end deftp
+
+
+@deftypeop Constructor @class{zero-flonum} @aclass{zero-flonum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{zero-flonum}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{zero-flonum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{zero-flonum?}.  Return @true{} if @var{obj}
+is an object of type @class{zero-flonum}; otherwise return @false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics flonums positive-zero
+@subsubsection The @class{positive-zero-flonum} type
 
 
 @deftp {Core Type} @aclass{positive-zero-flonum}
 @deftpx {Parent Type} @aclass{zero-flonum}
-Type of positive zero flonum values.  There is no constructor.  The type
-predicate is @func{positive-zero-flonum?}.
+Type of positive zero flonum values: @samp{+0.0}.
 @end deftp
+
+
+@deftypeop Constructor @class{positive-zero-flonum} @aclass{positive-zero-flonum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{positive-zero-flonum}.
+Return @var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{positive-zero-flonum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{positive-zero-flonum?}.  Return @true{} if
+@var{obj} is an object of type @class{positive-zero-flonum}; otherwise
+return @false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics flonums negative-zero
+@subsubsection The @class{negative-zero-flonum} type
 
 
 @deftp {Core Type} @aclass{negative-zero-flonum}
 @deftpx {Parent Type} @aclass{zero-flonum}
-Type of negative zero flonum values.  There is no constructor.  The type
-predicate is @func{negative-zero-flonum?}.
+Type of negative zero flonum values: @samp{-0.0}.
 @end deftp
+
+
+@deftypeop Constructor @class{negative-zero-flonum} @aclass{negative-zero-flonum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{negative-zero-flonum}.
+Return @var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{negative-zero-flonum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{negative-zero-flonum?}.  Return @true{} if
+@var{obj} is an object of type @class{negative-zero-flonum}; otherwise
+return @false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics flonums non-zero
+@subsubsection The @class{non-zero-flonum} type
 
 
 @deftp {Core Type} @aclass{non-zero-flonum}
@@ -6275,16 +6467,57 @@ Type of non--zero flonum values.  The definition is equivalent to:
 @end lisp
 @end deftp
 
+@c page
+@node built-in numerics flonums positive
+@subsubsection The @class{positive-flonum} type
 
-@c ------------------------------------------------------------------------
-
-@subsubheading Positive and non--positive flonums
 
 @deftp {Core Type} @aclass{positive-flonum}
 @deftpx {Parent Type} @aclass{flonum}
-Type of positive flonum values.  There is no constructor.  The type
-predicate is @func{positive-flonum?}.
+Type of positive flonum values, @strong{excluding} the positive zero
+@samp{+0.0}.
 @end deftp
+
+
+@deftypeop Constructor @class{positive-flonum} @aclass{positive-flonum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{positive-flonum}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{positive-flonum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{positive-flonum?}.  Return @true{} if
+@var{obj} is an object of type @class{positive-flonum}; otherwise return
+@false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics flonums negative
+@subsubsection The @class{negative-flonum} type
+
+
+@deftp {Core Type} @aclass{negative-flonum}
+@deftpx {Parent Type} @aclass{flonum}
+Type of negative flonum values, @strong{excluding} the negative zero
+@samp{-0.0}.
+@end deftp
+
+
+@deftypeop Constructor @class{negative-flonum} @aclass{negative-flonum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{negative-flonum}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{negative-flonum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{positive-flonum?}.  Return @true{} if
+@var{obj} is an object of type @class{negative-flonum}; otherwise return
+@false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics flonums non-positive
+@subsubsection The @class{non-positive-flonum} type
 
 
 @deftp {Core Type} @aclass{non-positive-flonum}
@@ -6298,15 +6531,9 @@ to:
 @end lisp
 @end deftp
 
-@c ------------------------------------------------------------------------
-
-@subsubheading Negative and non--negative flonums
-
-@deftp {Core Type} @aclass{negative-flonum}
-@deftpx {Parent Type} @aclass{flonum}
-Type of negative flonum values.  There is no constructor.  The type
-predicate is @func{negative-flonum?}.
-@end deftp
+@c page
+@node built-in numerics flonums non-negative
+@subsubsection The @class{non-negative-flonum} type
 
 
 @deftp {Core Type} @aclass{non-negative-flonum}
@@ -6325,86 +6552,249 @@ to:
 @subsection Type of ratnum values
 
 
+@menu
+* built-in numerics ratnums base::      The @class{ratnum} type.
+* built-in numerics ratnums positive::  The @class{positive-ratnum} type.
+* built-in numerics ratnums negative::  The @class{negative-ratnum} type.
+@end menu
+
+@c page
+@node built-in numerics ratnums base
+@subsubsection The @class{ratnum} type
+
+
 @deftp {Core Type} @aclass{ratnum}
 @deftpx {Parent Type} @aclass{rational}
-Type of ratnum values.  There is no constructor.  The type predicate is
-@func{ratnum?}.
+Type of ratnum values.
 @end deftp
+
+
+@deftypeop Constructor @class{ratnum} @aclass{ratnum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{ratnum}.  Return @var{obj}
+itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{ratnum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{ratnum?}.  Return @true{} if @var{obj} is an
+object of type @class{ratnum}; otherwise return @false{}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{ratnum} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{ratnum-hash}.
+@end deftypeop
+
+@c page
+@node built-in numerics ratnums positive
+@subsubsection The @class{positive-ratnum} type
 
 
 @deftp {Core Type} @aclass{positive-ratnum}
 @deftpx {Parent Type} @aclass{ratnum}
-Type of positive ratnum values.  There is no constructor.  The type
-predicate is @func{positive-ratnum?}.
+Type of positive ratnum values.
 @end deftp
+
+
+@deftypeop Constructor @class{positive-ratnum} @aclass{positive-ratnum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{positive-ratnum}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{positive-ratnum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{positive-ratnum?}.  Return @true{} if
+@var{obj} is an object of type @class{positive-ratnum}; otherwise return
+@false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics ratnums negative
+@subsubsection The @class{negative-ratnum} type
 
 
 @deftp {Core Type} @aclass{negative-ratnum}
 @deftpx {Parent Type} @aclass{ratnum}
-Type of negative ratnum values.  There is no constructor.  The type
-predicate is @func{negative-ratnum?}.
+Type of negative ratnum values.
 @end deftp
+
+
+@deftypeop Constructor @class{negative-ratnum} @aclass{negative-ratnum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{negative-ratnum}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{negative-ratnum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{negative-ratnum?}.  Return @true{} if
+@var{obj} is an object of type @class{negative-ratnum}; otherwise return
+@false{}.
+@end deftypeop
 
 @c page
 @node built-in numerics compnums
 @subsection Type of compnum values
 
 
+@menu
+* built-in numerics compnums base::     The @class{compnum} type.
+* built-in numerics compnums exact::    The @class{exact-compnum} type.
+* built-in numerics compnums inexact::  The @class{inexact-compnum} type.
+* built-in numerics compnums zero::     The @class{zero-compnum} type.
+* built-in numerics compnums non-zero-inexact::  The @class{non-zero-inexact-compnum} type.
+* built-in numerics compnums non-zero:: The @class{non-zero-compnum} type.
+@end menu
+
+@c page
+@node built-in numerics compnums base
+@subsubsection The @class{compnum} type
+
+
 @deftp {Core Type} @aclass{compnum}
 @deftpx {Parent Type} @aclass{complex}
-Type of compnum values.  There is no constructor.  The type predicate is
-@func{compnum?}.
+Type of compnum values.
 @end deftp
+
+
+@deftypeop Constructor @class{compnum} @aclass{compnum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{compnum}.  Return @var{obj}
+itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{compnum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{compnum?}.  Return @true{} if @var{obj} is
+an object of type @class{compnum}; otherwise return @false{}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{compnum} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{compnum-hash}.
+@end deftypeop
+
+@c page
+@node built-in numerics compnums exact
+@subsubsection The @class{exact-compnum} type
 
 
 @deftp {Core Type} @aclass{exact-compnum}
 @deftpx {Parent Type} @aclass{compnum}
-Type of compnum values having exact real and imaginary parts.  There is
-no constructor.  The type predicate is @func{exact-compnum?}.
+Type of compnum values having exact real and imaginary parts.
 @end deftp
+
+
+@deftypeop Constructor @class{exact-compnum} @aclass{exact-compnum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{exact-compnum}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{exact-compnum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{exact-compnum?}.  Return @true{} if
+@var{obj} is an object of type @class{exact-compnum}; otherwise return
+@false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics compnums inexact
+@subsubsection The @class{inexact-compnum} type
 
 
 @deftp {Core Type} @aclass{inexact-compnum}
 @deftpx {Parent Type} @aclass{compnum}
-Type of compnum values having inexact real and imaginary parts.  There
-is no constructor.  The type predicate is @func{inexact-compnum?}.
+Type of compnum values having inexact real or imaginary parts.
+
+@quotation
+@strong{NOTE} We need to remember that if a value is a compnum: only one
+among the real and imaginary parts is inexact.  If both are inexact: it
+is not a compnum, it is a cflonum.
+@end quotation
 @end deftp
+
+
+@deftypeop Constructor @class{inexact-compnum} @aclass{inexact-compnum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{inexact-compnum}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{inexact-compnum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{inexact-compnum?}.  Return @true{} if
+@var{obj} is an object of type @class{inexact-compnum}; otherwise return
+@false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics compnums zero
+@subsubsection The @class{zero-compnum} type
 
 
 @deftp {Core Type} @aclass{zero-compnum}
 @deftpx {Parent Type} @aclass{inexact-compnum}
 Type of compnum values having both the real part and imaginary part
-equal to zero.  There is no constructor.  The type predicate is
-@func{zero-compnum?}.
+equal to zero.
 
 Remembering that a compnum with exact zero as imaginary part is
-converted to a real number by @func{make-rectangular}:
+converted to a real number by the Scheme reader and the function
+@func{make-rectangular}:
 
 @lisp
-1+0i                    @result{} 1
-(make-rectangular 1 0)  @result{} 1
+1+0i                            @result{} 1
+1.0+0i                          @result{} 1.0
+(make-rectangular 1 0)          @result{} 1
+(make-rectangular 1.0 0)        @result{} 1.0
 @end lisp
 
 @noindent
-the compnums of type @class{zero-compnum} are the following:
+the compnums of type @class{zero-compnum} are @samp{0+0.0i} and
+@samp{0-0.0i} with the imaginary part always inexact.
 
-@example
-   0+0.0i    0-0.0i
-+0.0+0.0i -0.0+0.0i
-+0.0-0.0i -0.0-0.0i
-@end example
-
-@noindent
-with the imaginary part always inexact.
+@quotation
+@strong{NOTE} We need to remember that if a value is a compnum: only one
+among the real and imaginary parts is inexact.  If both are inexact: it
+is not a compnum, it is a cflonum.
+@end quotation
 @end deftp
+
+
+@deftypeop Constructor @class{zero-compnum} @aclass{zero-compnum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{zero-compnum}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{zero-compnum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{zero-compnum?}.  Return @true{} if @var{obj}
+is an object of type @class{zero-compnum}; otherwise return @false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics compnums non-zero-inexact
+@subsubsection The @class{non-zero-inexact-compnum} type
 
 
 @deftp {Core Type} @aclass{non-zero-inexact-compnum}
 @deftpx {Parent Type} @aclass{inexact-compnum}
 Type of inexact compnum values having either the real part or imaginary
-part different from zero.  There is no constructor.  The type predicate
-is @func{non-zero-inexact-cflonum?}.
+part different from zero.
 @end deftp
+
+
+@deftypeop Constructor @class{non-zero-inexact-compnum} @aclass{non-zero-inexact-compnum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{non-zero-inexact-compnum}.
+Return @var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{non-zero-inexact-compnum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{non-zero-inexact-compnum?}.  Return @true{}
+if @var{obj} is an object of type @class{non-zero-inexact-compnum};
+otherwise return @false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics compnums non-zero
+@subsubsection The @class{non-zero-compnum} type
 
 
 @deftp {Core Type} @aclass{non-zero-compnum}

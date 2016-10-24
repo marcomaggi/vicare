@@ -13582,9 +13582,14 @@ Return @true{} if @var{obj} is a fixnum or bignum; otherwise return
 
 
 @defun exact-compnum? @var{obj}
-@defunx inexact-compnum? @var{obj}
-Return @true{} if @var{obj} is a compnum having exact or inexact real
-and imaginary parts; otherwise return @false{}.
+Return @true{} if @var{obj} is a compnum having exact real @strong{and}
+imaginary parts; otherwise return @false{}.
+@end defun
+
+
+@defun inexact-compnum? @var{obj}
+Return @true{} if @var{obj} is a compnum having inexact real @strong{or}
+imaginary parts; otherwise return @false{}.
 @end defun
 
 
