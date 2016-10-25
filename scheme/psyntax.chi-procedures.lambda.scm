@@ -839,9 +839,9 @@
   (%expand-guts-with-proper-list-formals
    %expand-guts-with-improper-list-formals)
 
-  (define (%expand-guts-with-proper-list-formals input-form.stx lexenv.run lexenv.expand
-						 standard-bindings?
-						 standard-formals.stx clause-signature body*.stx)
+  (define* (%expand-guts-with-proper-list-formals input-form.stx lexenv.run lexenv.expand
+						  standard-bindings?
+						  standard-formals.stx clause-signature body*.stx)
     ;;Expand  the guts  of a  lambda  clause for  the  case of  formals without  rest
     ;;argument.  Here  we know that  STANDARD-FORMALS.STX and the  corresponding type
     ;;signature are proper lists with equal length.
@@ -1131,7 +1131,7 @@
 	     (cons (let ((type-pred.sexp	(object-type-spec.type-predicate-stx arg.ots))
 			 (arg.name		(object-type-spec.name arg.ots)))
 		     (bless
-		      `(unless (,type-pred.sexp ,arg.id)
+		      `(unless (,type-pred.sexp (unsafe-cast-signature (<top>) ,arg.id))
 			 (procedure-signature-argument-violation ,validation-who
 			   ,MISMATCH-ERROR-MESSAGE ,idx '(is-a? _ ,arg.name) ,arg.id))))
 		   following-validations))))
@@ -1147,7 +1147,7 @@
 		    (obj.sym	(gensym "obj"))
 		    (idx.sym	(gensym "idx")))
 	       (bless
-		`((fold-left (lambda (,idx.sym ,obj.sym)
+		`((fold-left (lambda/std (,idx.sym ,obj.sym)
 			       (unless (,item-pred ,obj.sym)
 				 (procedure-signature-argument-violation ,validation-who
 				   ,MISMATCH-ERROR-MESSAGE ,idx.sym '(is-a? _ ,item.name) ,obj.sym))

@@ -191,6 +191,19 @@
 
   (check
       (try
+	  (%eval (let (({O <byte>} "ciao"))
+		   O))
+	(catch E
+	  ((xp::&expand-time-type-signature-violation)
+	   #;(print-condition E)
+	   (values (syntax->datum (xp::type-signature.syntax-object (xp::condition-expected-type-signature E)))
+		   (syntax->datum (xp::type-signature.syntax-object (xp::condition-returned-type-signature E)))))
+	  (else
+	   (values #f E))))
+    => '(<byte>) '(<nestring>))
+
+  (check
+      (try
 	  (%eval (internal-body
 		   (define ({doit <byte>} {O <byte>})
 		     O)
@@ -226,9 +239,11 @@
 	    (doit 1000))
 	(catch E
 	  ((&procedure-signature-argument-violation)
-	   (condition-irritants E))
-	  (else E)))
-    => '((is-a? _ <byte>) 1000))
+	   (values (procedure-signature-argument-violation.failed-expression E)
+		   (condition-irritants E)))
+	  (else
+	   (values #f E))))
+    => '(is-a? _ <byte>) '(1000))
 
   (check
       (try
@@ -333,21 +348,35 @@
 
 ;;; --------------------------------------------------------------------
 
-  #;(check
-      (internal-body
-	(define ({doit <octet>} {O <octet>})
-	  O)
+  ;;The  value  1000  is  a  "<positive-fixnum>",  while  "<byte>"  is  derived  from
+  ;;"<fixnum>".
+  ;;
+  (check
+      (try
+	  (internal-body
+	    (define ({doit <octet>} {O <octet>})
+	      O)
+	    (doit 1000))
+	(catch E
+	  ((&procedure-signature-argument-violation)
+	   (values (procedure-signature-argument-violation.failed-expression E)
+		   (condition-irritants E)))
+	  (else
+	   (values #f E))))
+    => '(is-a? _ <octet>) '(1000))
 
-	(doit 1000))
-    => #f)
-
-  #;(check
-      (internal-body
-	(define ({doit <octet>} {O <octet>})
-	  (add1 O))
-
-	(doit 255))
-    => #f)
+  (check
+      (try
+	  (internal-body
+	    (define ({doit <octet>} {O <octet>})
+	      (add1 O))
+	    (doit 255))
+	(catch E
+	  ((&expression-return-value-violation)
+	   #;(print-condition E)
+	   (condition-irritants E))
+	  (else E)))
+    => '((is-a? _ <octet>) 256))
 
   (void))
 
