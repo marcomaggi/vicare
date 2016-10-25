@@ -53,8 +53,16 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-type-annotation <non-negative-exact-integer>
-  (or <non-negative-fixnum> <positive-bignum>))
+(define-type-annotation <non-positive-byte>
+  (or <zero-byte> <negative-byte>))
+
+(define-type-annotation <non-negative-byte>
+  (or <zero-byte> <positive-byte>))
+
+;;; --------------------------------------------------------------------
+
+(define-type-annotation <non-zero-exact-integer>
+  (or <non-zero-fixnum> <bignum>))
 
 (define-type-annotation <positive-exact-integer>
   (or <positive-fixnum> <positive-bignum>))
@@ -62,8 +70,11 @@
 (define-type-annotation <negative-exact-integer>
   (or <negative-fixnum> <negative-bignum>))
 
-(define-type-annotation <non-zero-exact-integer>
-  (or <non-zero-fixnum> <bignum>))
+(define-type-annotation <non-positive-exact-integer>
+  (or <non-positive-fixnum> <negative-bignum>))
+
+(define-type-annotation <non-negative-exact-integer>
+  (or <non-negative-fixnum> <positive-bignum>))
 
 ;;; --------------------------------------------------------------------
 

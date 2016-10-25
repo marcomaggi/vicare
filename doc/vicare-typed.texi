@@ -5266,8 +5266,8 @@ specified type.  The definition of this type is equivalent to:
 * built-in numerics ratnums::          Type of ratnum values.
 * built-in numerics compnums::         Type of compnum values.
 * built-in numerics cflonums::         Type of cflonum values.
-* built-in numerics bytes::            Type of byte values.
-* built-in numerics octets::           Type of octet values.
+* built-in numerics bytes::            The @class{byte} type.
+* built-in numerics octets::           The @class{octet} type.
 * built-in numerics exactness::        Exactness of numeric values.
 * built-in numerics sign::             Sign of numeric values.
 @end menu
@@ -5943,10 +5943,11 @@ Apply @func{factorial} to the argument and return its return value.
 
 @menu
 * built-in numerics exact-integer base::          The @class{exact-integer} type.
-* built-in numerics exact-integer non-negative::  The @class{non-negative-exact-integer} type.
 * built-in numerics exact-integer positive::      The @class{positive-exact-integer} type.
 * built-in numerics exact-integer negative::      The @class{negative-exact-integer} type.
 * built-in numerics exact-integer non-zero::      The @class{non-zero-exact-integer} type.
+* built-in numerics exact-integer non-positive::  The @class{non-positive-exact-integer} type.
+* built-in numerics exact-integer non-negative::  The @class{non-negative-exact-integer} type.
 @end menu
 
 @c page
@@ -6023,20 +6024,6 @@ value.
 @end deftypemethod
 
 @c page
-@node built-in numerics exact-integer non-negative
-@subsubsection The @class{non-negative-exact-integer} type
-
-
-@deftp {Core Type} @aclass{non-negative-exact-integer}
-Type of non--negative exact integers.  Its definition is equivalent to:
-
-@lisp
-(define-type <non-negative-exact-integer>
-  (or <non-negative-fixnum> <positive-bignum>))
-@end lisp
-@end deftp
-
-@c page
 @node built-in numerics exact-integer positive
 @subsubsection The @class{positive-exact-integer} type
 
@@ -6075,6 +6062,34 @@ Type of non--zero exact integers.  Its definition is equivalent to:
 @lisp
 (define-type <non-zero-exact-integer>
   (or <non-zero-fixnum> <bignum>))
+@end lisp
+@end deftp
+
+@c page
+@node built-in numerics exact-integer non-positive
+@subsubsection The @class{non-positive-exact-integer} type
+
+
+@deftp {Core Type} @aclass{non-positive-exact-integer}
+Type of non--positive exact integers.  Its definition is equivalent to:
+
+@lisp
+(define-type <non-positive-exact-integer>
+  (or <non-positive-fixnum> <negative-bignum>))
+@end lisp
+@end deftp
+
+@c page
+@node built-in numerics exact-integer non-negative
+@subsubsection The @class{non-negative-exact-integer} type
+
+
+@deftp {Core Type} @aclass{non-negative-exact-integer}
+Type of non--negative exact integers.  Its definition is equivalent to:
+
+@lisp
+(define-type <non-negative-exact-integer>
+  (or <non-negative-fixnum> <positive-bignum>))
 @end lisp
 @end deftp
 
@@ -6827,73 +6842,304 @@ different from zero.  Its definition is equivalent to:
 @subsection Type of cflonum values
 
 
+@menu
+* built-in numerics cflonums base::     The @class{cflonum} type.
+* built-in numerics cflonums zero::     The @class{zero-cflonum} type.
+* built-in numerics cflonums non-zero:: The @class{non-zero-cflonum} type.
+@end menu
+
+@c page
+@node built-in numerics cflonums base
+@subsubsection The @class{cflonum} type
+
+
 @deftp {Core Type} @aclass{cflonum}
 @deftpx {Parent Type} @aclass{complex}
-Type of cflonum values.  There is no constructor.  The type predicate is
-@func{cflonum?}.
+Type of cflonum values.
 @end deftp
+
+
+@deftypeop Constructor @class{cflonum} @aclass{cflonum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{cflonum}.  Return @var{obj}
+itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{cflonum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{cflonum?}.  Return @true{} if @var{obj} is
+an object of type @class{cflonum}; otherwise return @false{}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{cflonum} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{cflonum-hash}.
+@end deftypeop
+
+@c page
+@node built-in numerics cflonums zero
+@subsubsection The @class{zero-cflonum} type
 
 
 @deftp {Core Type} @aclass{zero-cflonum}
 @deftpx {Parent Type} @aclass{cflonum}
 Type of cflonum values having both the real part and imaginary part
-equal to zero.  There is no constructor.  The type predicate is
-@func{zero-cflonum?}.
+equal to zero.  Such values are the following:
+
+@example
++0.0+0.0i       +0.0-0.0i
+-0.0+0.0i       -0.0-0.0i
+@end example
 @end deftp
+
+
+@deftypeop Constructor @class{zero-cflonum} @aclass{zero-cflonum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{zero-cflonum}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{zero-cflonum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{zero-cflonum?}.  Return @true{} if @var{obj}
+is an object of type @class{zero-cflonum}; otherwise return @false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics cflonums non-zero
+@subsubsection The @class{non-zero-cflonum} type
 
 
 @deftp {Core Type} @aclass{non-zero-cflonum}
 @deftpx {Parent Type} @aclass{cflonum}
 Type of cflonum values having either the real part or imaginary part
-different from zero.  There is no constructor.  The type predicate is
-@func{non-zero-cflonum?}.
+different from zero.
 @end deftp
+
+
+@deftypeop Constructor @class{non-zero-cflonum} @aclass{non-zero-cflonum} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{non-zero-cflonum}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{non-zero-cflonum} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{non-zero-cflonum?}.  Return @true{} if
+@var{obj} is an object of type @class{non-zero-cflonum}; otherwise
+return @false{}.
+@end deftypeop
 
 @c page
 @node built-in numerics bytes
-@subsection Type of byte values
+@subsection The @class{byte} type
 
 
-@deftp {Core Type} @class{byte}
+@menu
+* built-in numerics bytes base::          The @class{byte} type.
+* built-in numerics bytes zero::          The @class{zero-byte} type.
+* built-in numerics bytes positive::      The @class{positive-byte} type.
+* built-in numerics bytes negative::      The @class{negative-byte} type.
+* built-in numerics bytes non-positive::  The @class{non-positive-byte} type.
+* built-in numerics bytes non-negative::  The @class{non-negative-byte} type.
+@end menu
+
+@c page
+@node built-in numerics bytes base
+@subsubsection The @class{byte} type
+
+
+@deftp {Label Type} @class{byte}
 @deftpx {Parent Type} @aclass{fixnum}
 Type of byte values.  A ``byte'' is a fixnum in the range @math{[-128,
 127]}.
 @end deftp
 
 
-@defop Constructor @class{byte} new @aclass{byte} @var{obj}
-There is no constructor.  Validate @var{obj} as byte value and return
-it.
-@end defop
+@deftypeop Constructor @class{byte} @aclass{byte} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{byte}.  Return @var{obj}
+itself.
+@end deftypeop
 
 
-@defop {Type predicate} @class{byte} is-a? @var{obj} @aclass{byte}
+@deftypeop {Type predicate} @class{byte} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{byte-fixnum?}.  Return @true{} if @var{obj}
-is a byte value; otherwise return @false{}.
-@end defop
+is an object of type @class{byte}; otherwise return @false{}.
+@end deftypeop
 
 @c page
-@node built-in numerics octets
-@subsection Type of octet values
+@node built-in numerics bytes zero
+@subsubsection The @class{zero-byte} type
 
 
-@deftp {Core Type} @class{octet}
-@deftpx {Parent Type} @aclass{non-negative-fixnum}
-Type of octet values.  An ``octet'' is a fixnum in the range @math{[0,
-255]}.  There is no constructor.
+@deftp {Label Type} @class{zero-byte}
+@deftpx {Parent Type} @aclass{byte}
+Type of zero byte values.
 @end deftp
 
 
-@defop Constructor @class{byte} new @aclass{octet} @var{obj}
-There is no constructor.  Validate @var{obj} as octet value and return
-it.
-@end defop
+@deftypeop Constructor @class{zero-byte} @aclass{zero-byte} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{zero-byte}.  Return
+@var{obj} itself.
+@end deftypeop
 
 
-@defop {Type predicate} @class{octet} is-a? @var{obj} @aclass{octet}
+@deftypeop {Type predicate} @class{zero-byte} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{zero-byte-fixnum?}.  Return @true{} if
+@var{obj} is an object of type @class{zero-byte}; otherwise return
+@false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics bytes positive
+@subsubsection The @class{positive-byte} type
+
+
+@deftp {Label Type} @class{positive-byte}
+@deftpx {Parent Type} @aclass{byte}
+Type of positive byte values.
+@end deftp
+
+
+@deftypeop Constructor @class{positive-byte} @aclass{positive-byte} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{positive-byte}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{positive-byte} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{positive-byte-fixnum?}.  Return @true{} if
+@var{obj} is an object of type @class{positive-byte}; otherwise return
+@false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics bytes negative
+@subsubsection The @class{negative-byte} type
+
+
+@deftp {Label Type} @class{negative-byte}
+@deftpx {Parent Type} @aclass{byte}
+Type of negative byte values.
+@end deftp
+
+
+@deftypeop Constructor @class{negative-byte} @aclass{negative-byte} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{negative-byte}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{negative-byte} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{zero-byte-fixnum?}.  Return @true{} if
+@var{obj} is an object of type @class{negative-byte}; otherwise return
+@false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics bytes non-positive
+@subsubsection The @class{non-positive-byte} type
+
+
+@deftp {Core Type} @class{non-positive-byte}
+Type of non--positive byte values.  Its definition is equivalent to:
+
+@lisp
+(define-type <non-positive-byte>
+  (or <zero-byte> <negative-byte>))
+@end lisp
+@end deftp
+
+@c page
+@node built-in numerics bytes non-negative
+@subsubsection The @class{non-negative-byte} type
+
+
+@deftp {Core Type} @class{non-negative-byte}
+Type of non--negative byte values.  Its definition is equivalent to:
+
+@lisp
+(define-type <non-negative-byte>
+  (or <zero-byte> <positive-byte>))
+@end lisp
+@end deftp
+
+@c page
+@node built-in numerics octets
+@subsection The @class{octet} type
+
+
+@menu
+* built-in numerics octets base::       The @class{octet} type.
+* built-in numerics octets zero::       The @class{zero-octet} type.
+* built-in numerics octets positive::   The @class{positive-octet} type.
+@end menu
+
+@c page
+@node built-in numerics octets base
+@subsubsection The @class{octet} type
+
+
+@deftp {Label Type} @class{octet}
+@deftpx {Parent Type} @aclass{non-negative-fixnum}
+Type of octet values.  An ``octet'' is a fixnum in the range @math{[0,
+255]}.
+@end deftp
+
+
+@deftypeop Constructor @class{octet} @aclass{octet} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{octet}.  Return @var{obj}
+itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{octet} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{octet-fixnum?}.  Return @true{} if @var{obj}
-is a octet value; otherwise return @false{}.
-@end defop
+is an object of type @class{octet}; otherwise return @false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics octets zero
+@subsubsection The @class{zero-octet} type
+
+
+@deftp {Label Type} @class{zero-octet}
+@deftpx {Parent Type} @aclass{octet}
+Type of zero octet values.
+@end deftp
+
+
+@deftypeop Constructor @class{zero-octet} @aclass{zero-octet} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{zero-octet}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{zero-octet} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{zero-octet-fixnum?}.  Return @true{} if
+@var{obj} is an object of type @class{zero-octet}; otherwise return
+@false{}.
+@end deftypeop
+
+@c page
+@node built-in numerics octets positive
+@subsubsection The @class{positive-octet} type
+
+
+@deftp {Label Type} @class{positive-octet}
+@deftpx {Parent Type} @aclass{non-negative-fixnum}
+Type of positive octet values.
+@end deftp
+
+
+@deftypeop Constructor @class{positive-octet} @aclass{positive-octet} type-constructor @var{obj}
+Validate @var{obj} as object of type @class{positive-octet}.  Return
+@var{obj} itself.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{positive-octet} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{positive-octet-fixnum?}.  Return @true{} if
+@var{obj} is an object of type @class{positive-octet}; otherwise return
+@false{}.
+@end deftypeop
 
 @c page
 @node built-in numerics exactness

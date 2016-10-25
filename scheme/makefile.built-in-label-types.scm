@@ -27,26 +27,28 @@
 ;;;; syntaxes
 
 (define-syntax (define-built-in-label-type stx)
+  (define (%boolean-or-id? obj)
+    (or (identifier? obj)
+	(boolean? (syntax->datum obj))))
   (define (%false-or-id? obj)
     (or (identifier? obj)
 	(not (syntax->datum obj))))
   (syntax-case stx (parent constructor destructor type-predicate equality-predicate comparison-procedure hash-function methods)
-    ((?kwd ?type-name (parent ?parent-annotation) (constructor ?constructor) (destructor ?destructor) (type-predicate ?type-predicate))
+    ((?kwd ?type-name
+	   (parent ?parent-annotation) (constructor ?constructor) (destructor ?destructor) (type-predicate ?type-predicate))
      (and (identifier? #'?type-name)
-	  (%false-or-id? #'?constructor)
+	  (%boolean-or-id? #'?constructor)
 	  (%false-or-id? #'?destructor)
 	  (%false-or-id? #'?type-predicate))
      #'(?kwd ?type-name
-	     (parent ?parent-annotation)
-	     (constructor ?constructor)
-	     (destructor ?destructor)
-	     (type-predicate ?type-predicate)
+	     (parent ?parent-annotation) (constructor ?constructor) (destructor ?destructor) (type-predicate ?type-predicate)
 	     (methods)))
 
-    ((?kwd ?type-name (parent ?parent-annotation) (constructor ?constructor) (destructor ?destructor) (type-predicate ?type-predicate)
+    ((?kwd ?type-name
+	   (parent ?parent-annotation) (constructor ?constructor) (destructor ?destructor) (type-predicate ?type-predicate)
 	   (methods (?method-name ?method-procname) ...))
      (and (identifier? #'?type-name)
-	  (%false-or-id? #'?constructor)
+	  (%boolean-or-id? #'?constructor)
 	  (%false-or-id? #'?destructor)
 	  (%false-or-id? #'?type-predicate))
      #'(?kwd ?type-name
@@ -59,7 +61,7 @@
 	   (equality-predicate ?equality-predicate) (comparison-procedure ?comparison-procedure) (hash-function ?hash-function)
 	   (methods (?method-name ?method-procname) ...))
      (and (identifier? #'?type-name)
-	  (%false-or-id? #'?constructor)
+	  (%boolean-or-id? #'?constructor)
 	  (%false-or-id? #'?destructor)
 	  (%false-or-id? #'?type-predicate)
 	  (%false-or-id? #'?equality-predicate)
@@ -78,6 +80,53 @@
 					      ?equality-predicate ?comparison-procedure ?hash-function
 					      #((?method-name . ?method-procname) ...)))))))))
     ))
+
+
+;;;; numerics
+
+(define-built-in-label-type <byte>
+  (parent <fixnum>)
+  (constructor #t)
+  (destructor #f)
+  (type-predicate byte-fixnum?))
+
+(define-built-in-label-type <zero-byte>
+  (parent <byte>)
+  (constructor #t)
+  (destructor #f)
+  (type-predicate zero-fixnum?))
+
+(define-built-in-label-type <positive-byte>
+  (parent <byte>)
+  (constructor #t)
+  (destructor #f)
+  (type-predicate positive-byte-fixnum?))
+
+(define-built-in-label-type <negative-byte>
+  (parent <byte>)
+  (constructor #t)
+  (destructor #f)
+  (type-predicate negative-byte-fixnum?))
+
+;;; --------------------------------------------------------------------
+
+(define-built-in-label-type <octet>
+  (parent <non-negative-fixnum>)
+  (constructor #t)
+  (destructor #f)
+  (type-predicate octet-fixnum?))
+
+(define-built-in-label-type <zero-octet>
+  (parent <octet>)
+  (constructor #t)
+  (destructor #f)
+  (type-predicate zero-fixnum?))
+
+(define-built-in-label-type <positive-octet>
+  (parent <octet>)
+  (constructor #t)
+  (destructor #f)
+  (type-predicate positive-octet-fixnum?))
 
 
 ;;;; input/output

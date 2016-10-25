@@ -13102,9 +13102,24 @@ the range @math{[-128, 127]}.
 @end defun
 
 
+@defun zero-byte-fixnum? @var{obj}
+@defunx positive-byte-fixnum? @var{obj}
+@defunx negative-byte-fixnum? @var{obj}
+Return @true{} if @var{obj} is a byte value, respectively: zero,
+positive, negative.
+@end defun
+
+
 @defun octet-fixnum? @var{obj}
 Return @true{} if @var{obj} is an octet value.  An ``octet'' is a fixnum
 in the range @math{[0, 255]}.
+@end defun
+
+
+@defun zero-octet-fixnum? @var{obj}
+@defunx positive-octet-fixnum? @var{obj}
+Return @true{} if @var{obj} is an octet value, respectively: zero,
+positive.
 @end defun
 
 @c page

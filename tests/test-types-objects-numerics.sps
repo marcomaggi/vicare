@@ -27,7 +27,7 @@
 (program (test-types-numerics-objects)
   (options typed-language)
   (import (vicare)
-    (prefix (vicare expander) expander::)
+    (prefix (vicare expander) xp::)
     (only (vicare expander)
 	  type-annotation=?
 	  type-annotation-super-and-sub?
@@ -43,6 +43,313 @@
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare typed language: tests for numerics types\n")
+
+
+;;;; helpers
+
+(define-constant EVAL-ENVIRONMENT
+  (environment '(vicare)))
+
+(define (%type-signature->sexp sig)
+  (syntax->datum (xp::type-signature.syntax-object sig)))
+
+(define-syntax-rule (%eval ?form)
+  (eval (quote ?form)
+	EVAL-ENVIRONMENT
+	(expander-options typed-language)
+	(compiler-options)))
+
+(define-syntax check-expand-time-signature-violation
+  (syntax-rules (=>)
+    ((_ ?input-form => ?expected-signature-sexp ?returned-signature-sexp)
+     (check
+	 (try
+	     (eval (quote ?input-form)
+		   EVAL-ENVIRONMENT
+		   (expander-options typed-language)
+		   (compiler-options))
+	   (catch E
+	     ((xp::&expand-time-type-signature-violation)
+	      #;(print-condition E)
+	      (values (syntax->datum (xp::type-signature.syntax-object (xp::condition-expected-type-signature E)))
+		      (syntax->datum (xp::type-signature.syntax-object (xp::condition-returned-type-signature E)))))
+	     (else
+	      (values E #f))))
+       => (quote ?expected-signature-sexp) (quote ?returned-signature-sexp)))
+    ))
+
+
+(parametrise ((check-test-name		'bytes))
+
+  (check-for-true	(xp::type-annotation-super-and-sub? <byte> <byte>))
+  (check-for-true	(xp::type-annotation-super-and-sub? <byte> <zero-byte>))
+  (check-for-true	(xp::type-annotation-super-and-sub? <byte> <positive-byte>))
+  (check-for-true	(xp::type-annotation-super-and-sub? <byte> <negative-byte>))
+  (check-for-true	(xp::type-annotation-super-and-sub? <byte> <non-positive-byte>))
+  (check-for-true	(xp::type-annotation-super-and-sub? <byte> <non-negative-byte>))
+
+  (check-for-true	(xp::type-annotation-super-and-sub? <fixnum>			<byte>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <zero-fixnum>		<byte>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <positive-fixnum>		<byte>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <negative-fixnum>		<byte>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <non-positive-fixnum>	<byte>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <non-negative-fixnum>	<byte>))
+
+  (check-for-false	(xp::type-annotation-super-and-sub? <byte>		<fixnum>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <byte>		<zero-fixnum>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <byte>		<positive-fixnum>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <byte>		<negative-fixnum>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <byte>		<non-positive-fixnum>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <byte>		<non-negative-fixnum>))
+
+;;; --------------------------------------------------------------------
+
+  (check (xp::type-annotation-matching <byte>			<byte>)			=> 'exact-match)
+  (check (xp::type-annotation-matching <byte>			<zero-byte>)		=> 'exact-match)
+  (check (xp::type-annotation-matching <byte>			<positive-byte>)	=> 'exact-match)
+  (check (xp::type-annotation-matching <byte>			<negative-byte>)	=> 'exact-match)
+  (check (xp::type-annotation-matching <byte>			<non-positive-byte>)	=> 'exact-match)
+  (check (xp::type-annotation-matching <byte>			<non-negative-byte>)	=> 'exact-match)
+
+  (check (xp::type-annotation-matching <zero-byte>		<byte>)			=> 'possible-match)
+  (check (xp::type-annotation-matching <positive-byte>		<byte>)			=> 'possible-match)
+  (check (xp::type-annotation-matching <negative-byte>		<byte>)			=> 'possible-match)
+  (check (xp::type-annotation-matching <non-positive-byte>	<byte>)			=> 'possible-match)
+  (check (xp::type-annotation-matching <non-negative-byte>	<byte>)			=> 'possible-match)
+
+  (check (xp::type-annotation-matching <byte>			<fixnum>)		=> 'possible-match)
+  (check (xp::type-annotation-matching <byte>			<zero-fixnum>)		=> 'possible-match)
+  (check (xp::type-annotation-matching <byte>			<positive-fixnum>)	=> 'possible-match)
+  (check (xp::type-annotation-matching <byte>			<negative-fixnum>)	=> 'possible-match)
+  (check (xp::type-annotation-matching <byte>			<non-positive-fixnum>)	=> 'possible-match)
+  (check (xp::type-annotation-matching <byte>			<non-negative-fixnum>)	=> 'possible-match)
+
+  (check (xp::type-annotation-matching <fixnum>			<byte>)			=> 'exact-match)
+  (check (xp::type-annotation-matching <zero-fixnum>		<byte>)			=> 'possible-match)
+  (check (xp::type-annotation-matching <positive-fixnum>	<byte>)			=> 'possible-match)
+  (check (xp::type-annotation-matching <negative-fixnum>	<byte>)			=> 'possible-match)
+  (check (xp::type-annotation-matching <non-positive-fixnum>	<byte>)			=> 'possible-match)
+  (check (xp::type-annotation-matching <non-negative-fixnum>	<byte>)			=> 'possible-match)
+
+  (check (xp::type-annotation-matching <exact-integer>			<byte>)		=> 'exact-match)
+  (check (xp::type-annotation-matching <positive-exact-integer>		<byte>)		=> 'possible-match)
+  (check (xp::type-annotation-matching <negative-exact-integer>		<byte>)		=> 'possible-match)
+  (check (xp::type-annotation-matching <non-positive-exact-integer>	<byte>)		=> 'possible-match)
+  (check (xp::type-annotation-matching <non-negative-exact-integer>	<byte>)		=> 'possible-match)
+
+  (check (xp::type-annotation-matching <byte>		<exact-integer>)		=> 'possible-match)
+  (check (xp::type-annotation-matching <byte>		<positive-exact-integer>)	=> 'possible-match)
+  (check (xp::type-annotation-matching <byte>		<negative-exact-integer>)	=> 'possible-match)
+  (check (xp::type-annotation-matching <byte>		<non-positive-exact-integer>)	=> 'possible-match)
+  (check (xp::type-annotation-matching <byte>		<non-negative-exact-integer>)	=> 'possible-match)
+
+  (check (xp::type-annotation-matching <string>		<byte>)			=> 'no-match)
+  (check (xp::type-annotation-matching <byte>		<string>)		=> 'no-match)
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(is-a? 0 <byte>))
+  (check-for-true	(is-a? +10 <byte>))
+  (check-for-true	(is-a? -10 <byte>))
+  (check-for-true	(is-a? +127 <byte>))
+  (check-for-true	(is-a? -128 <byte>))
+
+  (check-for-false	(is-a? +128 <byte>))
+  (check-for-false	(is-a? -129 <byte>))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(is-a? (cast-signature (<top>) 0) <byte>))
+  (check-for-true	(is-a? (cast-signature (<top>) +10) <byte>))
+  (check-for-true	(is-a? (cast-signature (<top>) -10) <byte>))
+  (check-for-true	(is-a? (cast-signature (<top>) +127) <byte>))
+  (check-for-true	(is-a? (cast-signature (<top>) -128) <byte>))
+
+  (check-for-false	(is-a? (cast-signature (<top>) +128) <byte>))
+  (check-for-false	(is-a? (cast-signature (<top>) -129) <byte>))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (internal-body
+	(define ({doit <byte>} {O <byte>})
+	  O)
+
+	(doit 123))
+    => 123)
+
+  (check
+      (internal-body
+	(define ({doit <byte>} {O <byte>})
+	  (add1 O))
+
+	(doit 123))
+    => 124)
+
+;;; --------------------------------------------------------------------
+;;; expand-time type violations
+
+  (check
+      (try
+	  (%eval (internal-body
+		   (define ({doit <byte>} {O <byte>})
+		     O)
+		   (doit "ciao")))
+	(catch E
+	  ((xp::&expand-time-type-signature-violation)
+	   #;(print-condition E)
+	   (syntax->datum (xp::type-signature.syntax-object (xp::condition-application-operands-signature E))))
+	  (else E)))
+    => '(<nestring>))
+
+;;; --------------------------------------------------------------------
+;;; run-time type violations
+
+  (check
+      (try
+	  (let (({O <byte>} 1000))
+	    O)
+	(catch E
+	  ((&expression-return-value-violation)
+	   (condition-irritants E))
+	  (else E)))
+    => '((is-a? _ <byte>) 1000))
+
+  ;;The  value  1000  is  a  "<positive-fixnum>",  while  "<byte>"  is  derived  from
+  ;;"<fixnum>".
+  ;;
+  (check
+      (try
+	  (internal-body
+	    (define ({doit <byte>} {O <byte>})
+	      O)
+	    (doit 1000))
+	(catch E
+	  ((&procedure-signature-argument-violation)
+	   (condition-irritants E))
+	  (else E)))
+    => '((is-a? _ <byte>) 1000))
+
+  (check
+      (try
+	  (internal-body
+	    (define ({doit <byte>} {O <byte>})
+	      (add1 O))
+	    (doit 127))
+	(catch E
+	  ((&expression-return-value-violation)
+	   #;(print-condition E)
+	   (condition-irritants E))
+	  (else E)))
+    => '((is-a? _ <byte>) 128))
+
+  (void))
+
+
+(parametrise ((check-test-name		'octets))
+
+  (check-for-true	(xp::type-annotation-super-and-sub? <octet> <octet>))
+  (check-for-true	(xp::type-annotation-super-and-sub? <octet> <zero-octet>))
+  (check-for-true	(xp::type-annotation-super-and-sub? <octet> <positive-octet>))
+
+  (check-for-true	(xp::type-annotation-super-and-sub? <fixnum>			<octet>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <zero-fixnum>		<octet>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <positive-fixnum>		<octet>))
+
+  (check-for-false	(xp::type-annotation-super-and-sub? <octet>		<fixnum>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <octet>		<zero-fixnum>))
+  (check-for-false	(xp::type-annotation-super-and-sub? <octet>		<positive-fixnum>))
+
+;;; --------------------------------------------------------------------
+
+  (check (xp::type-annotation-matching <octet>			<octet>)		=> 'exact-match)
+  (check (xp::type-annotation-matching <octet>			<zero-octet>)		=> 'exact-match)
+  (check (xp::type-annotation-matching <octet>			<positive-octet>)	=> 'exact-match)
+
+  (check (xp::type-annotation-matching <zero-octet>		<octet>)		=> 'possible-match)
+  (check (xp::type-annotation-matching <positive-octet>		<octet>)		=> 'possible-match)
+
+  (check (xp::type-annotation-matching <octet>			<fixnum>)		=> 'possible-match)
+  (check (xp::type-annotation-matching <octet>			<zero-fixnum>)		=> 'possible-match)
+  (check (xp::type-annotation-matching <octet>			<positive-fixnum>)	=> 'possible-match)
+
+  (check (xp::type-annotation-matching <fixnum>			<octet>)		=> 'exact-match)
+  (check (xp::type-annotation-matching <zero-fixnum>		<octet>)		=> 'possible-match)
+  (check (xp::type-annotation-matching <positive-fixnum>	<octet>)		=> 'possible-match)
+  (check (xp::type-annotation-matching <negative-fixnum>	<octet>)		=> 'no-match)
+  (check (xp::type-annotation-matching <non-positive-fixnum>	<octet>)		=> 'possible-match)
+  (check (xp::type-annotation-matching <non-negative-fixnum>	<octet>)		=> 'exact-match)
+
+  (check (xp::type-annotation-matching <exact-integer>			<octet>)	=> 'exact-match)
+  (check (xp::type-annotation-matching <positive-exact-integer>		<octet>)	=> 'possible-match)
+  (check (xp::type-annotation-matching <negative-exact-integer>		<octet>)	=> 'no-match)
+  (check (xp::type-annotation-matching <non-positive-exact-integer>	<octet>)	=> 'possible-match)
+  (check (xp::type-annotation-matching <non-negative-exact-integer>	<octet>)	=> 'exact-match)
+
+  (check (xp::type-annotation-matching <octet>		<exact-integer>)		=> 'possible-match)
+  (check (xp::type-annotation-matching <octet>		<positive-exact-integer>)	=> 'possible-match)
+  (check (xp::type-annotation-matching <octet>		<negative-exact-integer>)	=> 'no-match)
+  (check (xp::type-annotation-matching <octet>		<non-positive-exact-integer>)	=> 'possible-match)
+  (check (xp::type-annotation-matching <octet>		<non-negative-exact-integer>)	=> 'possible-match)
+
+  (check (xp::type-annotation-matching <string>		<octet>)			=> 'no-match)
+  (check (xp::type-annotation-matching <octet>		<string>)			=> 'no-match)
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(is-a? 0 <octet>))
+  (check-for-true	(is-a? +10 <octet>))
+  (check-for-true	(is-a? +255 <octet>))
+
+  (check-for-false	(is-a? +256 <octet>))
+  (check-for-false	(is-a? -1 <octet>))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(is-a? (cast-signature (<top>) 0) <octet>))
+  (check-for-true	(is-a? (cast-signature (<top>) +10) <octet>))
+  (check-for-true	(is-a? (cast-signature (<top>) +255) <octet>))
+
+  (check-for-false	(is-a? (cast-signature (<top>) +256) <octet>))
+  (check-for-false	(is-a? (cast-signature (<top>) -1) <octet>))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (internal-body
+	(define ({doit <octet>} {O <octet>})
+	  O)
+
+	(doit 123))
+    => 123)
+
+  (check
+      (internal-body
+	(define ({doit <octet>} {O <octet>})
+	  (add1 O))
+
+	(doit 123))
+    => 124)
+
+;;; --------------------------------------------------------------------
+
+  #;(check
+      (internal-body
+	(define ({doit <octet>} {O <octet>})
+	  O)
+
+	(doit 1000))
+    => #f)
+
+  #;(check
+      (internal-body
+	(define ({doit <octet>} {O <octet>})
+	  (add1 O))
+
+	(doit 255))
+    => #f)
+
+  (void))
 
 
 (parametrise ((check-test-name		'exactness))

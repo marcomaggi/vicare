@@ -2436,7 +2436,12 @@
     (fixnum?					v r fx)
     (list-of-fixnums?				v $language)
     (byte-fixnum?				v $language)
+    (zero-byte-fixnum?				v $language)
+    (positive-byte-fixnum?			v $language)
+    (negative-byte-fixnum?			v $language)
     (octet-fixnum?				v $language)
+    (zero-octet-fixnum?				v $language)
+    (positive-octet-fixnum?			v $language)
     (fixnum-width				v r fx)
     (least-fixnum				v r fx)
     (greatest-fixnum				v r fx)
@@ -3866,6 +3871,17 @@
     (<non-positive-fixnum>			v $language)
     (<non-zero-fixnum>				v $language)
 
+    (<byte>					v $language)
+    (<zero-byte>				v $language)
+    (<positive-byte>				v $language)
+    (<negative-byte>				v $language)
+    (<non-positive-byte>			v $language)
+    (<non-negative-byte>			v $language)
+
+    (<octet>					v $language)
+    (<zero-octet>				v $language)
+    (<positive-octet>				v $language)
+
     (<positive-bignum>				v $language)
     (<negative-bignum>				v $language)
 
@@ -3881,10 +3897,11 @@
     (<zero-flonum>				v $language)
     (<non-zero-flonum>				v $language)
 
-    (<non-negative-exact-integer>		v $language)
     (<positive-exact-integer>			v $language)
     (<negative-exact-integer>			v $language)
     (<non-zero-exact-integer>			v $language)
+    (<non-negative-exact-integer>		v $language)
+    (<non-positive-exact-integer>		v $language)
 
     (<exact-rational>				v $language)
     (<non-negative-exact-rational>		v $language)
@@ -3979,11 +3996,6 @@
     (<textual-input-only-port>			v $language)
     (<textual-output-only-port>			v $language)
     (<textual-input/output-port>		v $language)
-
-    (<binary-input-port>			v $language)
-    (<binary-output-port>			v $language)
-    (<textual-input-port>			v $language)
-    (<textual-output-port>			v $language)
 
     (<binary-input-port>			v $language)
     (<binary-output-port>			v $language)

@@ -1302,20 +1302,37 @@
   (define (%matching-super/label-type-spec super.ots sub.ots)
     ;;(define-label <my-fixnum> (parent <fixnum>))
     ;;
-    ;;(matching <my-fixnum>		<my-fixnum>)		=> exact-match
-    ;;(matching <my-fixnum>		<fixnum>)		=> possible-match
-    ;;(matching <my-fixnum>		<positive-fixnum>)	=> possible-match
-    ;;(matching <my-fixnum>		<exact-integer>)	=> possible-match
+    ;;(matching <my-fixnum>	<my-fixnum>)		=> exact-match
+    ;;(matching <my-fixnum>	<fixnum>)		=> possible-match
+    ;;(matching <my-fixnum>	<positive-fixnum>)	=> possible-match
+    ;;(matching <my-fixnum>	<exact-integer>)	=> possible-match
+    ;;
     (cond-with-predicates sub.ots
       (label-type-spec?
-       (super-and-sub? (object-type-spec.parent-ots super.ots)
-		       (object-type-spec.parent-ots   sub.ots)))
+       ;;Both SUPER.OTS and SUB.OTS are  label-types.  Return true if the super-label
+       ;;is an actual direct parent of the sub-label; for example:
+       ;;
+       ;;(matching <byte>	<positive-byte>)	=> exact-matching
+       ;;
+       (%compare-super-with-sub-and-its-parents super.ots sub.ots))
       (interface-type-spec?
        #f)
+      (union-type-spec?
+       (union-type-spec.for-all sub.ots
+	 (lambda (sub-item.ots)
+	   (super-and-sub? super.ots sub-item.ots))))
+      (intersection-type-spec?
+       (intersection-type-spec.for-all sub.ots
+	 (lambda (sub-item.ots)
+	   (super-and-sub? super.ots sub-item.ots))))
       (else
        (if (label-type-spec.with-type-predicate? super.ots)
+	   ;;The label-type, or one of its  label-type ancestors, has a predicate: it
+	   ;;means we *cannot* establish exact matching at expand-time.
 	   #f
-	 (super-and-sub? (object-type-spec.parent-ots super.ots) sub.ots)))))
+	 ;;The  label-type and  all its  label-type ancestors  have no  predicate: it
+	 ;;means the label-type is just an alias for another type annotation.
+	 (super-and-sub? (label-type-spec.non-label-ancestor super.ots) sub.ots)))))
 
   (define (%matching-sub/label-type-spec super.ots sub.ots)
     ;;(define-label <my-fixnum> (parent <fixnum>))
@@ -1323,14 +1340,15 @@
     ;;(matching <exact-integer>		<my-fixnum>)		=> exact-match
     ;;(matching <fixnum>		<my-fixnum>)		=> exact-match
     ;;(matching <positive-fixnum>	<my-fixnum>)		=> possible-match
-    (let ((sub-item.ots (object-type-spec.parent-ots sub.ots)))
-      (cond-with-predicates super.ots
-	(label-type-spec?
-	 (super-and-sub? (object-type-spec.parent-ots super.ots) sub-item.ots))
-	(interface-type-spec?
-	 #f)
-	(else
-	 (super-and-sub? super.ots sub-item.ots)))))
+    ;;
+    (cond-with-predicates super.ots
+      (label-type-spec?
+       ;;Both SUPER.OTS and SUB.OTS are label-types.
+       (%matching-super/label-type-spec super.ots sub.ots))
+      (interface-type-spec?
+       #f)
+      (else
+       (super-and-sub? super.ots (label-type-spec.non-label-ancestor sub.ots)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2097,36 +2115,34 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%compatible-super/label-type-spec super.ots sub.ots)
+  (define* (%compatible-super/label-type-spec super.ots sub.ots)
     ;;(define-label <my-fixnum> (parent <fixnum>))
     ;;
-    ;;(matching <my-fixnum>	<my-fixnum>)		=> exact-match
     ;;(matching <my-fixnum>	<fixnum>)		=> possible-match
     ;;(matching <my-fixnum>	<positive-fixnum>)	=> possible-match
     ;;(matching <my-fixnum>	<exact-integer>)	=> possible-match
     ;;
-    (cond-with-predicates sub.ots
-      (label-type-spec?
-       (%compatible-super-and-sub? (object-type-spec.parent-ots super.ots)
-				   (object-type-spec.parent-ots   sub.ots)))
-      (else
-       (let ((super-parent.ots (object-type-spec.parent-ots super.ots)))
-	 (super-and-sub? super-parent.ots sub.ots)))))
+    (let ((non-label-super-ancestor.ots (label-type-spec.non-label-ancestor super.ots)))
+      (cond-with-predicates sub.ots
+	(label-type-spec?
+	 ;;Both SUPER.OTS and SUB.OTS are label-types.
+	 (%compatible-super-and-sub? non-label-super-ancestor.ots (label-type-spec.non-label-ancestor sub.ots)))
+	(else
+	 #;(debug-print __who__ non-label-super-ancestor.ots sub.ots)
+	 (super-and-sub? non-label-super-ancestor.ots sub.ots)))))
 
   (define (%compatible-sub/label-type-spec super.ots sub.ots)
     ;;(define-label <my-fixnum> (parent <fixnum>))
     ;;
-    ;;(matching <exact-integer>		<my-fixnum>)		=> exact-match
     ;;(matching <fixnum>		<my-fixnum>)		=> possible-match
     ;;(matching <positive-fixnum>	<my-fixnum>)		=> possible-match
+    ;;
     (cond-with-predicates super.ots
       (label-type-spec?
-       (%compatible-super-and-sub? (object-type-spec.parent-ots super.ots)
-				   (object-type-spec.parent-ots   sub.ots)))
+       ;;Both SUPER.OTS and SUB.OTS are label-types.
+       (%compatible-super/label-type-spec super.ots sub.ots))
       (else
-       (let ((sub-parent.ots (object-type-spec.parent-ots sub.ots)))
-	 (or ($object-type-spec=? super.ots sub-parent.ots)
-	     (%compatible-super-and-sub? super.ots sub-parent.ots))))))
+       (super-and-sub? super.ots (label-type-spec.non-label-ancestor sub.ots)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2725,7 +2741,7 @@
   ;;when found, false otherwise.
   ;;
   ;;We need to remember that there may be multiple representations of the same object
-  ;;types.  For  example: there  may be  multiple instances  of "<scheme-obect-type>"
+  ;;types.  For example:  there may be multiple  instances of "<scheme-objaect-type>"
   ;;representing the same type; so we need to compare them by name.
   ;;
   (or (eq? super.ots sub.ots)
@@ -5140,8 +5156,10 @@
   (sealed #t)
   (fields
     (immutable with-type-predicate?	label-type-spec.with-type-predicate?)
-		;Boolean, true if this label has  a custom type predicate.  This flag
-		;is used when matching against other types.
+		;Boolean, true if this label-type  or one of the ancestor label-types
+		;has a  custom type  predicate.  When this  function field  is false:
+		;this label-type  is just an  alias for a non-label  type annotation.
+		;This flag is used when matching against other types.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
@@ -5154,7 +5172,11 @@
 					      (raise (condition E (make-who-condition __who__))))
 					  (lambda ()
 					    (type-annotation->object-type-spec parent.stx))))
-	       (with-type-predicate?	(and type-predicate.stx #t))
+	       (with-type-predicate?	(cond (type-predicate.stx
+					       #t)
+					      ((label-type-spec? parent.ots)
+					       (label-type-spec.with-type-predicate? parent.ots))
+					      (else #f)))
 	       (type-predicate.stx	(or type-predicate.stx (object-type-spec.type-predicate-stx parent.ots)))
 	       (implemented-interfaces	'()))
 	  (let* ((methods-table-public		(append methods-table (object-type-spec.methods-table-public    parent.ots)))
@@ -5173,6 +5195,15 @@
 
       make-label-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
+
+(define* (label-type-spec.non-label-ancestor {ots label-type-spec?})
+  ;;Find the lowest ancestor  parent that is not a label-type.  We  know that such an
+  ;;ancestor always exists.
+  ;;
+  (let loop ((ots (object-type-spec.parent-ots ots)))
+    (if (label-type-spec? ots)
+	(loop (object-type-spec.parent-ots ots))
+      ots)))
 
 
 ;;;; interface spec

@@ -68,15 +68,15 @@
      (sys::syntax
       (let ((?object-type-spec (let ((type.ann ?type-annotation))
 				 (try
-				     (type-annotation->object-type-spec type.ann ?lexenv ?type-annotation)
+				     (type-annotation->object-type-spec type.ann ?lexenv type.ann)
 				   (catch E
 				     (else
 				      #;(syntax-violation __who__ "invalid type annotation" ?input-form.stx type.ann)
 				      (raise
 				       (condition (make-who-condition __who__)
-						  (make-message-condition "invalid type annotation, damn")
-						  (make-syntax-violation ?input-form.stx type.ann)
-						  E))
+				      		  (make-message-condition "invalid type annotation, damn")
+				      		  (make-syntax-violation ?input-form.stx type.ann)
+				      		  E))
 				      ))))))
 	. ?body)))
     ))
