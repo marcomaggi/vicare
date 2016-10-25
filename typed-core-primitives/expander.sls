@@ -1314,6 +1314,12 @@
 (declare-condition-type-predicate application-operands-expressions-condition?	&application-operands-expressions)
 ;;condition-application-operands-expressions
 
+(declare-core-rtd &application-operands-signature-rtd)
+(declare-core-rcd &application-operands-signature-rcd)
+;;make-application-operands-signature-condition
+(declare-condition-type-predicate application-operands-signature-condition?	&application-operands-signature)
+;;condition-application-operands-signature
+
 (declare-core-rtd &application-operator-signature-rtd)
 (declare-core-rcd &application-operator-signature-rcd)
 ;;make-application-operator-signature-condition

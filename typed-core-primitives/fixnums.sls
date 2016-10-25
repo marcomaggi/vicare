@@ -62,6 +62,15 @@
 (declare-type-predicate fixnum? <fixnum>)
 (declare-list-of-type-predicate list-of-fixnums?	<fixnum>)
 
+(declare-type-predicate byte-fixnum?			<byte>)
+(declare-type-predicate zero-byte-fixnum?		<zero-byte>)
+(declare-type-predicate positive-byte-fixnum?		<positive-byte>)
+(declare-type-predicate negative-byte-fixnum?		<negative-byte>)
+
+(declare-type-predicate octet-fixnum?			<octet>)
+(declare-type-predicate zero-octet-fixnum?		<zero-octet>)
+(declare-type-predicate positive-octet-fixnum?		<positive-octet>)
+
 (declare-fixnum-predicate fxzero?		(replacements $fxzero?))
 (declare-fixnum-predicate fxpositive?		(replacements $fxpositive?))
 (declare-fixnum-predicate fxnegative?		(replacements $fxnegative?))
