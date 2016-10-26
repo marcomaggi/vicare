@@ -7588,15 +7588,25 @@ Type of vector values.
 @end deftp
 
 
-@defop Constructor @class{vector} new @aclass{vector} @var{obj} @dots{}
+@deftypeop Constructor @class{vector} @aclass{vector} type-constructor @var{obj} @dots{}
 The constructor is @func{vector}.
-@end defop
+@end deftypeop
 
 
-@defop {Type predicate} @class{vector} is-a? @var{obj} @aclass{vector}
+@deftypeop {Type predicate} @class{vector} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{vector?}.  Return @true{} if @var{obj} is a
 vector object; otherwise return @false{}.
-@end defop
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{vector} @aclass{boolean} equality-predicate @var{this} @bracearg{vec, vector}
+The equality predicate is @func{equal?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{vector} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{vector-hash}.
+@end deftypeop
 
 @c ------------------------------------------------------------------------
 
@@ -7704,6 +7714,17 @@ Apply @func{vector->list} to the instance.
 Type of empty vector values.
 @end deftp
 
+
+@deftypeop Constructor @class{empty-vector} @aclass{empty-vector} type-constructor
+Return an empty vector.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{empty-vector} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{empty-vector?}.  Return @true{} if @var{obj}
+is a @class{empty-vector} object; otherwise return @false{}.
+@end deftypeop
+
 @c page
 @node built-in vectors non-empty
 @subsection Non--empty vector type
@@ -7714,16 +7735,27 @@ Type of empty vector values.
 Type of non--empty vector values.
 @end deftp
 
+
+@deftypeop Constructor @class{nevector} @aclass{nevector} type-constructor @varo{obj} @var{obj} @dots{}
+Return a non--empty vector.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{nevector} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{nevector?}.  Return @true{} if @var{obj} is
+a @class{nevector} object; otherwise return @false{}.
+@end deftypeop
+
 @c ------------------------------------------------------------------------
 
 @subsubheading Accessors and mutators
 
-@deftypemethod @class{nevector} @aclass{top} ref @var{this} @var{idx}
+@deftypemethod @class{nevector} @aclass{top} ref @var{this} @bracearg{idx, non-negative-fixnum}
 Apply @func{vector-ref} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @class{nevector} @aclass{void} set! @var{this} @var{idx} @var{obj}
+@deftypemethod @class{nevector} @aclass{void} set! @var{this} @bracearg{idx, non-negative-fixnum} @var{obj}
 Apply @func{vector-set!} to the instance and the arguments.
 @end deftypemethod
 

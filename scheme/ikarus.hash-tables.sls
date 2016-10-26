@@ -44,6 +44,7 @@
     ;; hash functions
     string-hash			string-ci-hash
     symbol-hash			bytevector-hash
+    vector-hash
     equal-hash			transcoder-hash
     fixnum-hash			bignum-hash
     exact-integer-hash
@@ -78,6 +79,7 @@
     ;; unsafe operations
     $boolean-hash
     $bytevector-hash
+    $vector-hash
     $char-ci-hash
     $char-hash
     $fixnum-hash
@@ -130,6 +132,7 @@
 
 		  string-hash			string-ci-hash
 		  symbol-hash			bytevector-hash
+		  vector-hash
 		  equal-hash			transcoder-hash
 		  fixnum-hash			bignum-hash
 		  exact-integer-hash
@@ -1002,6 +1005,35 @@
    (foreign-call "ikrt_bytevector_hash" bv #f))
   ((bv max-len)
    (foreign-call "ikrt_bytevector_hash" bv max-len)))
+
+;;; --------------------------------------------------------------------
+
+(case-define* vector-hash
+  (({vec vector?})
+   ($vector-hash vec 3))
+  (({vec vector?} {max-len %boolean-or-non-negative-fixnum?})
+   ($vector-hash vec max-len)))
+
+(case-define/std $vector-hash
+  ((vec)
+   ($vector-hash vec 3))
+  ((vec max-len)
+   (if (or (fixnum? max-len)
+	   (not max-len))
+       ;;Compute a hash value using the first MAX-LEN items.
+       (let loop ((vec		vec)
+		  (idx		0)
+		  (max-len	(min (vector-length vec)
+				     (if (fixnum? max-len) max-len 3)))
+		  (H		(fixnum-hash (vector-length vec))))
+	 (if (fx=? idx max-len)
+	     H
+	   (loop vec (fxadd1 idx) max-len (fxxor H (object-hash (vector-ref vec idx))))))
+     ;;Compute a hash value using all the items.
+     (vector-fold-left
+	 (lambda (knil item)
+	   (fxxor knil (object-hash item)))
+       (vector-length vec) vec))))
 
 ;;; --------------------------------------------------------------------
 

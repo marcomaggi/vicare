@@ -326,6 +326,7 @@
   (declare-hash-function string-hash		<string>	(replacements $string-hash))
   (declare-hash-function string-ci-hash		<string>	(replacements $string-ci-hash))
   (declare-hash-function bytevector-hash	<bytevector>	(replacements $bytevector-hash))
+  (declare-hash-function vector-hash		<vector>	(replacements $vector-hash))
   #| end of LET-SYNTAX |# )
 
 (let-syntax
@@ -395,6 +396,7 @@
   (declare-hash-function $string-hash		<string>)
   (declare-hash-function $string-ci-hash	<string>)
   (declare-hash-function $bytevector-hash	<bytevector>)
+  (declare-hash-function $vector-hash		<vector>)
   #| end of LET-SYNTAX |# )
 
 (let-syntax

@@ -7860,6 +7860,40 @@ have the same hash value.
 @end deffn
 
 
+@deffn {Unsafe Operation} $vector-hash @var{vec}
+@deffnx {Unsafe Operation} $vector-hash @var{vec} @var{max-len}
+Return a non--negative fixnum representing the hash value for @var{vec},
+based on its current contents.  When creating hash tables using vectors
+as keys: this hash function is suitable for use with @func{vector=?}  as
+an equivalence function.
+
+About the @var{max-len} argument:
+
+@itemize
+@item
+When @var{max-len} is a non--negative fixnum: it is the maximum number
+of items to use to compute the hash value, starting from the beginning
+of @var{vec}.  If the length of @var{vec} is greater than @var{max-len}:
+only the first @var{max-len} items are used.  If the length of @var{vec}
+is less than or equal to @var{max-len}: all the items in @var{vec} are
+used.
+
+@item
+When @var{max-len} is @false{} or not present: if the length of
+@var{vec} is greater than @math{3} items, only the first @math{3} items
+are used to compute the hash.
+
+@item
+When @var{max-len} is @true{}: all the items in @var{vec} are used.
+@end itemize
+
+@strong{NOTE} When the hash value is computed using a number of items
+@math{N} less than the vector length: applications @strong{must not}
+assume that two vectors having the first @math{N} items equal will have
+the same hash value.
+@end deffn
+
+
 @deffn {Unsafe Operation} $char-hash @var{ch}
 @deffnx {Unsafe Operation} $char-ci-hash @var{ch}
 Compute and return the hash value.

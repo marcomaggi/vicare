@@ -12492,6 +12492,7 @@ occurs because of impossible generation: raise an error.
 @menu
 * iklib vectors constructors::  Vector constructors.
 * iklib vectors predicates::    Vector predicates.
+* iklib vectors comparison::    Vector comparison procedures.
 * iklib vectors copying::       Copying vectors.
 * iklib vectors iteration::     Iterating vectors.
 * iklib vectors misc::          Miscellaneous vector operations.
@@ -12530,11 +12531,18 @@ are filled with @var{fill}.  When not used: @var{fill} defaults to
 
 @defun vector-empty? @var{vec}
 Return @true{} if the vector @var{vec} has zero length, otherwise return
-@false{}.
+@false{}.  It is an error if @var{vec} is not a vector.
+@end defun
+
+
+@defun empty-vector? @var{obj}
+Return @true{} if @var{obj} is a vector and it has zero length,
+otherwise return @false{}.
 @end defun
 
 
 @defun non-empty-vector? @var{obj}
+@defunx nevector? @var{obj}
 Return @true{} if @var{obj} is a vector object with non--zero length;
 otherwise return @false{}.  This function does @strong{not} raise an
 exception if @var{obj} is not a vector object.
@@ -12557,6 +12565,23 @@ vector object.
 @defun list-of-vectors-of-same-length? @var{obj}
 Return @true{} if @var{obj} is null or a proper list of vector objects,
 all with the same length; otherwise return @false{}.
+@end defun
+
+@c page
+@node iklib vectors comparison
+@subsection Vector comparison procedures
+
+
+@defun vector=? @varo{vec} @var{vec} @dots{}
+Return @true{} if the vector arguments are equal according to
+@func{equal?}; otherwise return @false{}.
+@end defun
+
+
+@defun vector!=? @varo{vec} @var{vec} @dots{}
+The arguments must be vectors.  Return @true{} if the arguments are all
+different: no two arguments are equal; otherwise return @false{}.  When
+applied to a single argument: return @false{}.
 @end defun
 
 @c page
@@ -14271,6 +14296,40 @@ When @var{max-len} is @true{}: all the bytes in @var{bv} are used.
 @math{N} less than the bytevector length: applications @strong{must not}
 assume that two bytevectors having the first @math{N} bytes equal will
 have the same hash value.
+@end defun
+
+
+@defun vector-hash @var{vec}
+@defunx vector-hash @var{vec} @var{max-len}
+Return a non--negative fixnum representing the hash value for @var{vec},
+based on its current contents.  When creating hash tables using vectors
+as keys: this hash function is suitable for use with @func{vector=?}  as
+an equivalence function.
+
+About the @var{max-len} argument:
+
+@itemize
+@item
+When @var{max-len} is a non--negative fixnum: it is the maximum number
+of items to use to compute the hash value, starting from the beginning
+of @var{vec}.  If the length of @var{vec} is greater than @var{max-len}:
+only the first @var{max-len} items are used.  If the length of @var{vec}
+is less than or equal to @var{max-len}: all the items in @var{vec} are
+used.
+
+@item
+When @var{max-len} is @false{} or not present: if the length of
+@var{vec} is greater than @math{3} items, only the first @math{3} items
+are used to compute the hash.
+
+@item
+When @var{max-len} is @true{}: all the items in @var{vec} are used.
+@end itemize
+
+@strong{NOTE} When the hash value is computed using a number of items
+@math{N} less than the vector length: applications @strong{must not}
+assume that two vectors having the first @math{N} items equal will have
+the same hash value.
 @end defun
 
 

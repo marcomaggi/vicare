@@ -1191,6 +1191,60 @@
   (void))
 
 
+(parametrise ((check-test-name	'hash))
+
+  (check
+      (vector-hash '#(1 2 3))
+    => (fxxor 3 1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; hash with the selected first items
+
+  (check
+      (vector-hash '#(1 2 3) 0)
+    => (fxxor 3))
+
+  (check
+      (vector-hash '#(1 2 3) 1)
+    => (fxxor 3 1))
+
+  (check
+      (vector-hash '#(1 2 3) 2)
+    => (fxxor 3 1 2))
+
+  (check
+      (vector-hash '#(1 2 3) 3)
+    => (fxxor 3 1 2 3))
+
+  (check
+      (vector-hash '#(1 2 3) 5)
+    => (fxxor 3 1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; hash with the first 3 items
+
+  (check
+      (vector-hash '#(1 2 3) #f)
+    => (fxxor 3 1 2 3))
+
+  (check
+      (vector-hash '#(1 2) #f)
+    => (fxxor 2 1 2))
+
+  (check
+      (vector-hash '#(1 2 3 4 5) #f)
+    => (fxxor 5 1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; hash with all the items
+
+  (check
+      (vector-hash '#(1 2 3) #t)
+    => (fxxor 3 1 2 3))
+
+  (void))
+
+
 ;;;; done
 
 (check-report)

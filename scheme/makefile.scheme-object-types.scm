@@ -576,14 +576,18 @@
    (set!			string-set!)))
 
 
-;;;; compound types
+;;;; vectors
 
 (define-scheme-type <vector>
     <top>
   (constructor vector)
   (type-predicate vector?)
-  (equality-predicate equal?)
+  (equality-predicate vector=?)
+  (hash-function vector-hash)
   (methods
+   (=				vector=?)
+   (!=				vector!=?)
+   ;;
    (empty?			vector-empty?)
    (length			vector-length)
    (fill!			vector-fill!)
@@ -604,17 +608,18 @@
 (define-scheme-type <empty-vector>
     <vector>
   (constructor <empty-vector>-constructor)
-  (type-predicate <empty-vector>-type-predicate)
-  (equality-predicate equal?))
+  (type-predicate empty-vector?))
 
 (define-scheme-type <nevector>
     <vector>
   (constructor <nevector>-constructor)
-  (type-predicate <nevector>-type-predicate)
-  (equality-predicate equal?)
+  (type-predicate nevector?)
   (methods
    (ref				vector-ref)
    (set!			vector-set!)))
+
+
+;;;; bytevectors
 
 (define-scheme-type <bytevector>
     <top>
@@ -639,10 +644,12 @@
   (type-predicate <nebytevector>-type-predicate)
   (equality-predicate bytevector=?))
 
-;;; --------------------------------------------------------------------
+
+;;;; code objects
 
 (define-scheme-type <code>
     <top>
+  (constructor #t)
   (type-predicate code?))
 
 

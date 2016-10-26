@@ -48,8 +48,7 @@
 
     <nestring>-constructor		<empty-string>-constructor
 
-    <nevector>-constructor		<nevector>-type-predicate
-    <empty-vector>-constructor		<empty-vector>-type-predicate
+    <nevector>-constructor		<empty-vector>-constructor
     <vector>-map			<vector>-for-each
     <vector>-for-all			<vector>-exists
     <vector>-find
@@ -63,10 +62,16 @@
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Sat Oct 1, 2016)
+		  empty-vector?
+		  nevector?
+		  vector=?
+		  vector!=?
+		  ;;
 		  bignum-hash
 		  ratnum-hash
 		  cflonum-hash
 		  compnum-hash
+		  vector-hash
 		  ;;
 		  binary-input-only-port?
 		  binary-output-only-port?
@@ -92,6 +97,13 @@
 	  syntax-clause-spec-keyword
 	  syntax-clause-spec?
 	  make-syntax-clause-spec)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Wed Oct 26,
+    ;;2016)
+    (only (ikarus vectors)
+	  vector=?
+	  vector!=?
+	  empty-vector?
+	  nevector?)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Oct 1,
     ;;2016)
     (only (ikarus.io)
@@ -105,7 +117,8 @@
 	  bignum-hash
 	  ratnum-hash
 	  cflonum-hash
-	  compnum-hash))
+	  compnum-hash
+	  vector-hash))
 
 
 ;;;; built-in object-types descriptor
@@ -251,18 +264,10 @@
   ;;
   (vector))
 
-(define (<empty-vector>-type-predicate obj)
-  (and (vector? obj)
-       (vector-empty? obj)))
-
 ;;; --------------------------------------------------------------------
 
 (define (<nevector>-constructor obj . obj*)
   (apply vector obj obj*))
-
-(define (<nevector>-type-predicate obj)
-  (and (vector? obj)
-       (not (vector-empty? obj))))
 
 ;;; --------------------------------------------------------------------
 

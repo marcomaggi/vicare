@@ -38,7 +38,8 @@
 ;;; predicates
 
 (declare-type-predicate vector?				<vector>)
-(declare-type-predicate <nevector>-type-predicate	<nevector>)
+(declare-type-predicate nevector?			<nevector>)
+(declare-type-predicate empty-vector?			<empty-vector>)
 
 (declare-vector-predicate vector-empty?)
 
@@ -81,6 +82,11 @@
     (safe)
   (signatures
    ((<top> . <list>)		=> (<nevector>))))
+
+(declare-core-primitive <empty-vector>-constructor
+    (safe)
+  (signatures
+   (()				=> (<empty-vector>))))
 
 (declare-core-primitive subvector
     (safe)

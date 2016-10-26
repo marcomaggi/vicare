@@ -1,18 +1,17 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Modified by Marco Maggi 2010-2016 <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 ;;;copyright notices for the implementations of:
@@ -23,37 +22,33 @@
 ;;;Copyright (c) 2008-2010, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2008 Derick Eddington
 ;;;
-;;;Taylor Campbell wrote this code; he places it in the public domain.
-;;;Modified by Derick Eddington to be included into an R6RS library.
-;;;Modified by Marco Maggi to be included in Nausicaa.
+;;;Taylor Campbell wrote this  code; he places it in the  public domain.  Modified by
+;;;Derick Eddington to be included into an  R6RS library.  Modified by Marco Maggi to
+;;;be included in Nausicaa.
 ;;;
-;;;Permission is hereby granted, free of charge, to any person obtaining
-;;;a  copy of  this  software and  associated  documentation files  (the
-;;;"Software"), to  deal in the Software  without restriction, including
-;;;without limitation  the rights to use, copy,  modify, merge, publish,
-;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
-;;;permit persons to whom the Software is furnished to do so, subject to
-;;;the following conditions:
+;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
+;;;this software and associated documentation files  (the "Software"), to deal in the
+;;;Software  without restriction,  including without  limitation the  rights to  use,
+;;;copy, modify,  merge, publish, distribute,  sublicense, and/or sell copies  of the
+;;;Software,  and to  permit persons  to whom  the Software  is furnished  to do  so,
+;;;subject to the following conditions:
 ;;;
-;;;The  above  copyright notice  and  this  permission  notice shall  be
-;;;included in all copies or substantial portions of the Software.
+;;;The above  copyright notice and  this permission notice  shall be included  in all
+;;;copies or substantial portions of the Software.
 ;;;
-;;;Except  as  contained  in  this  notice, the  name(s)  of  the  above
-;;;copyright holders  shall not be  used in advertising or  otherwise to
-;;;promote  the sale,  use or  other dealings  in this  Software without
-;;;prior written authorization.
+;;;Except as  contained in this  notice, the name(s)  of the above  copyright holders
+;;;shall not be  used in advertising or  otherwise to promote the sale,  use or other
+;;;dealings in this Software without prior written authorization.
 ;;;
-;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
-;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
-;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
-;;;NONINFRINGEMENT.  IN NO EVENT  SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
-;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
-;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
-;;;SOFTWARE.
+;;;THE  SOFTWARE IS  PROVIDED  "AS IS",  WITHOUT  WARRANTY OF  ANY  KIND, EXPRESS  OR
+;;;IMPLIED, INCLUDING BUT  NOT LIMITED TO THE WARRANTIES  OF MERCHANTABILITY, FITNESS
+;;;FOR A  PARTICULAR PURPOSE AND NONINFRINGEMENT.   IN NO EVENT SHALL  THE AUTHORS OR
+;;;COPYRIGHT HOLDERS BE LIABLE FOR ANY  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
+;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-;;;Many  functions  are  derived  from  the SRFI  13  (strings  library)
-;;;reference implementation.  Its copyright notices are below.
+;;;Many  functions  are  derived  from   the  SRFI  13  (strings  library)  reference
+;;;implementation.  Its copyright notices are below.
 ;;;
 ;;;Olin Shivers 7/2000
 ;;;
@@ -63,87 +58,81 @@
 ;;;MIT Scheme copyright terms
 ;;;==========================
 ;;;
-;;;This   material  was  developed   by  the   Scheme  project   at  the
-;;;Massachusetts  Institute  of  Technology,  Department  of  Electrical
-;;;Engineering and Computer Science.  Permission to copy and modify this
-;;;software, to redistribute either  the original software or a modified
-;;;version, and to use this software for any purpose is granted, subject
-;;;to the following restrictions and understandings.
+;;;This material was  developed by the Scheme project at  the Massachusetts Institute
+;;;of  Technology,  Department  of   Electrical  Engineering  and  Computer  Science.
+;;;Permission to copy  and modify this software, to redistribute  either the original
+;;;software  or a  modified version,  and to  use this  software for  any purpose  is
+;;;granted, subject to the following restrictions and understandings.
 ;;;
-;;;1. Any copy made of  this software must include this copyright notice
-;;;   in full.
+;;;1. Any copy made of this software must include this copyright notice in full.
 ;;;
-;;;2. Users  of this software  agree to make  their best efforts  (a) to
-;;;   return to  the MIT Scheme  project any improvements  or extensions
-;;;   that they make, so that  these may be included in future releases;
-;;;   and (b) to inform MIT of noteworthy uses of this software.
+;;;2. Users of  this software agree to make  their best efforts (a) to  return to the
+;;;   MIT Scheme project any improvements or extensions that they make, so that these
+;;;   may be included in future releases; and (b) to inform MIT of noteworthy uses of
+;;;   this software.
 ;;;
-;;;3.  All materials  developed  as a  consequence  of the  use of  this
-;;;   software shall  duly acknowledge such use, in  accordance with the
-;;;   usual standards of acknowledging credit in academic research.
+;;;3.  All  materials developed as  a consequence of the  use of this  software shall
+;;;   duly  acknowledge  such  use,  in   accordance  with  the  usual  standards  of
+;;;   acknowledging credit in academic research.
 ;;;
-;;;4. MIT has made no  warrantee or representation that the operation of
-;;;   this software will  be error-free, and MIT is  under no obligation
-;;;   to  provide  any  services,  by  way of  maintenance,  update,  or
-;;;   otherwise.
+;;;4. MIT has made no warrantee or representation that the operation of this software
+;;;   will be error-free, and MIT is under  no obligation to provide any services, by
+;;;   way of maintenance, update, or otherwise.
 ;;;
-;;;5. In  conjunction  with  products  arising  from  the  use  of  this
-;;;   material, there shall  be no use of the  name of the Massachusetts
-;;;   Institute  of Technology  nor  of any  adaptation  thereof in  any
-;;;   advertising,  promotional,  or   sales  literature  without  prior
-;;;   written consent from MIT in each case.
+;;;5. In conjunction with products arising from the use of this material, there shall
+;;;   be no use of  the name of the Massachusetts Institute of  Technology nor of any
+;;;   adaptation thereof in any advertising, promotional, or sales literature without
+;;;   prior written consent from MIT in each case.
 ;;;
 ;;;Scsh copyright terms
 ;;;====================
 ;;;
 ;;;All rights reserved.
 ;;;
-;;;Redistribution and  use in source  and binary forms, with  or without
-;;;modification,  are permitted provided  that the  following conditions
-;;;are met:
+;;;Redistribution and use  in source and binary forms, with  or without modification,
+;;;are permitted provided that the following conditions are met:
 ;;;
-;;;1.  Redistributions of source  code must  retain the  above copyright
-;;;   notice, this list of conditions and the following disclaimer.
+;;;1.  Redistributions  of source code must  retain the above copyright  notice, this
+;;;   list of conditions and the following disclaimer.
 ;;;
-;;;2. Redistributions in binary  form must reproduce the above copyright
-;;;   notice, this  list of conditions  and the following  disclaimer in
-;;;   the  documentation  and/or   other  materials  provided  with  the
-;;;   distribution.
+;;;2. Redistributions in binary form must  reproduce the above copyright notice, this
+;;;   list of  conditions and  the following disclaimer  in the  documentation and/or
+;;;   other materials provided with the distribution.
 ;;;
-;;;3. The  name of  the authors may  not be  used to endorse  or promote
-;;;   products derived from this software without specific prior written
-;;;   permission.
+;;;3. The name of the authors may not  be used to endorse or promote products derived
+;;;   from this software without specific prior written permission.
 ;;;
-;;;THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS OR
-;;;IMPLIED  WARRANTIES,  INCLUDING,  BUT  NOT LIMITED  TO,  THE  IMPLIED
-;;;WARRANTIES OF  MERCHANTABILITY AND  FITNESS FOR A  PARTICULAR PURPOSE
-;;;ARE  DISCLAIMED.  IN NO  EVENT SHALL  THE AUTHORS  BE LIABLE  FOR ANY
-;;;DIRECT,  INDIRECT, INCIDENTAL,  SPECIAL, EXEMPLARY,  OR CONSEQUENTIAL
-;;;DAMAGES  (INCLUDING, BUT  NOT LIMITED  TO, PROCUREMENT  OF SUBSTITUTE
-;;;GOODS  OR  SERVICES; LOSS  OF  USE,  DATA,  OR PROFITS;  OR  BUSINESS
-;;;INTERRUPTION) HOWEVER CAUSED AND  ON ANY THEORY OF LIABILITY, WHETHER
-;;;IN  CONTRACT,  STRICT LIABILITY,  OR  TORT  (INCLUDING NEGLIGENCE  OR
-;;;OTHERWISE) ARISING IN  ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN
-;;;IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+;;;THIS SOFTWARE  IS PROVIDED  BY THE AUTHORS  ``AS IS'' AND  ANY EXPRESS  OR IMPLIED
+;;;WARRANTIES,   INCLUDING,  BUT   NOT  LIMITED   TO,  THE   IMPLIED  WARRANTIES   OF
+;;;MERCHANTABILITY AND FITNESS FOR A PARTICULAR  PURPOSE ARE DISCLAIMED.  IN NO EVENT
+;;;SHALL  THE  AUTHORS BE  LIABLE  FOR  ANY  DIRECT, INDIRECT,  INCIDENTAL,  SPECIAL,
+;;;EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+;;;SUBSTITUTE  GOODS  OR  SERVICES;  LOSS  OF USE,  DATA,  OR  PROFITS;  OR  BUSINESS
+;;;INTERRUPTION) HOWEVER CAUSED AND ON ANY  THEORY OF LIABILITY, WHETHER IN CONTRACT,
+;;;STRICT LIABILITY, OR  TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING  IN ANY WAY
+;;;OUT  OF THE  USE OF  THIS SOFTWARE,  EVEN IF  ADVISED OF  THE POSSIBILITY  OF SUCH
+;;;DAMAGE.
 
 
 (library (ikarus vectors)
   (export
     list-of-vectors?
-    make-vector		vector
-    subvector		vector-length
-    vector-empty?	non-empty-vector?
+    make-vector			vector
+    subvector			vector-length
+    vector-empty?		empty-vector?
+    non-empty-vector?		(rename (non-empty-vector? nevector?))
     vectors-of-same-length?
     list-of-vectors-of-same-length?
-    vector-ref		vector-set!
-    vector->list	list->vector
-    vector-map		vector-for-each
+    vector=?			vector!=?
+    vector-ref			vector-set!
+    vector->list		list->vector
+    vector-map			vector-for-each
     vector-find
-    vector-for-all	vector-exists
-    vector-fold-left	vector-fold-right
-    vector-fill!	vector-append
-    vector-copy		vector-copy!
-    vector-resize	vector-reset!
+    vector-for-all		vector-exists
+    vector-fold-left		vector-fold-right
+    vector-fill!		vector-append
+    vector-copy			vector-copy!
+    vector-resize		vector-reset!
     sorted-vector-binary-search
 
     ;; unsafe operations
@@ -165,9 +154,11 @@
 		  list-of-vectors?
 		  make-vector		vector
 		  subvector		vector-length
-		  vector-empty?		non-empty-vector?
+		  vector-empty?		empty-vector?
+		  non-empty-vector?	nevector?
 		  vectors-of-same-length?
 		  list-of-vectors-of-same-length?
+		  vector=?		vector!=?
 		  vector-ref		vector-set!
 		  vector->list		list->vector
 		  vector-map		vector-for-each
@@ -196,7 +187,11 @@
 	    $fill-vector-from-list!
 	    $vector-set-void!)
     (only (vicare language-extensions syntaxes)
-	  define-list-of-type-predicate))
+	  define-list-of-type-predicate
+	  define-min/max-comparison
+	  define-equality/sorting-predicate
+	  define-inequality-predicate)
+    #| end of IMPORT |# )
 
 
 ;;;; arguments validation
@@ -402,9 +397,7 @@
     v))
 
 
-;;;; predicates and vector length
-
-(define-list-of-type-predicate list-of-vectors? vector?)
+;;;; vector length
 
 (define* (vector-length {vec vector?})
   ;;Defined by R6RS.   Return the number of elements in  VEC as an exact
@@ -515,6 +508,8 @@
     vec))
 
 
+;;;; accessors and mutators
+
 (define* (vector-ref {vec vector?} {idx non-negative-fixnum?})
   ;;Defined by  R6RS.  IDX  must be  a valid index  of VEC.   Return the  contents of
   ;;element IDX of VEC.
@@ -538,6 +533,8 @@
   ($vector-set! vec idx (void)))
 
 
+;;;; list conversion
+
 (define* (vector->list {vec vector?})
   ;;Defined by R6RS.  Return  a newly allocated list of the  objects contained in the
   ;;elements of VEC.
@@ -578,6 +575,8 @@
     ($fill-vector-from-list! ($make-clean-vector len) 0 ls)))
 
 
+;;;; iterating
+
 (module (vector-map)
   ;;Defined  by R6RS.   The  vector  arguments must  all  have the  same
   ;;length.  The procedure should accept  as many arguments as there are
@@ -1103,6 +1102,10 @@
 	 ($vector-copy-source-count! src.vec src.start dst.vec dst.start count))))
 
 
+;;;; predicates
+
+(define-list-of-type-predicate list-of-vectors? vector?)
+
 (define* (vector-empty? {vec vector?})
   ;;Defined by Vicare.  Return true if VEC is empty, otherwise return false.
   ;;
@@ -1118,6 +1121,30 @@
   ;;
   (and (vector? obj)
        (not ($vector-empty? obj))))
+
+(define (empty-vector? obj)
+  ;;Does not raise an exception if OBJ is not a vector object.
+  ;;
+  (and (vector? obj)
+       ($vector-empty? obj)))
+
+;;; --------------------------------------------------------------------
+
+(define-equality/sorting-predicate vector=?	$vector=	vector?)
+(define-inequality-predicate       vector!=?	$vector!=	vector?)
+
+(define ($vector= vec1 vec2)
+  (or (eq? vec1 vec2)
+      (let ((len ($vector-length vec1)))
+	(and ($fx= len ($vector-length vec2))
+	     (let loop ((idx  0) (len  len))
+	       (or ($fx= idx len)
+		   (and (equal? ($vector-ref vec1 idx)
+				($vector-ref vec2 idx))
+			(loop ($fxadd1 idx) len))))))))
+
+(define ($vector!= vec1 vec2)
+  (not ($vector= vec1 vec2)))
 
 
 ;;;; sorted vectors

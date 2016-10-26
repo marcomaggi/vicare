@@ -1190,9 +1190,6 @@
 (define vector-comparison
   (comparator-comparison-procedure vector-comparator))
 
-(define vector-hash
-  (comparator-hash-function vector-comparator))
-
 ;;; --------------------------------------------------------------------
 
 (module (make-bytevector-comparator)
