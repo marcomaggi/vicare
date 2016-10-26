@@ -7795,6 +7795,11 @@ or a proper list object; otherwise return @false{}.
 @end deftypeop
 
 
+@deftypeop {Equality predicate} @class{list} @aclass{boolean} equality-predicate @var{this}
+The equality predicate is @func{equal?}.
+@end deftypeop
+
+
 @deftypeop {Hash function} @class{list} @aclass{non-negative-fixnum} hash-function @var{this}
 The hash function is @func{list-hash}.
 @end deftypeop

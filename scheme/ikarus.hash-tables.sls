@@ -45,6 +45,7 @@
     string-hash			string-ci-hash
     symbol-hash			bytevector-hash
     vector-hash			list-hash
+    pair-hash			ipair-hash
     equal-hash			transcoder-hash
     fixnum-hash			bignum-hash
     exact-integer-hash
@@ -81,6 +82,8 @@
     $bytevector-hash
     $vector-hash
     $list-hash
+    $pair-hash
+    $ipair-hash
     $char-ci-hash
     $char-hash
     $fixnum-hash
@@ -134,6 +137,7 @@
 		  string-hash			string-ci-hash
 		  symbol-hash			bytevector-hash
 		  vector-hash			list-hash
+		  pair-hash			ipair-hash
 		  equal-hash			transcoder-hash
 		  fixnum-hash			bignum-hash
 		  exact-integer-hash
@@ -1066,6 +1070,24 @@
 
 ;;; --------------------------------------------------------------------
 
+(define* (pair-hash {P pair?})
+  ($pair-hash P))
+
+(define ($pair-hash P)
+  (fxxor (object-hash (car P))
+	 (object-hash (cdr P))))
+
+;;; --------------------------------------------------------------------
+
+(define* (ipair-hash {P ipair?})
+  ($ipair-hash P))
+
+(define ($ipair-hash P)
+  (fxxor (object-hash (icar P))
+	 (object-hash (icdr P))))
+
+;;; --------------------------------------------------------------------
+
 (define* (fixnum-hash {fx fixnum?})
   ($fixnum-hash fx))
 
@@ -1239,6 +1261,10 @@
 	 ($vector-hash obj #f))
 	((list? obj)
 	 ($list-hash obj #f))
+	((pair? obj)
+	 ($pair-hash obj))
+	((ipair? obj)
+	 ($ipair-hash obj))
 	((struct? obj)
 	 ($struct-hash obj))
 	((void-object? obj)

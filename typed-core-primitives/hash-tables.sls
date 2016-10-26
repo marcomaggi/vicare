@@ -328,7 +328,6 @@
   (declare-hash-function bytevector-hash	<bytevector>	(replacements $bytevector-hash))
   (declare-hash-function vector-hash		<vector>	(replacements $vector-hash))
   (declare-hash-function list-hash		<list>		(replacements $list-hash))
-  (declare-hash-function pair-hash		<pair>		(replacements $pair-hash))
   #| end of LET-SYNTAX |# )
 
 (let-syntax
@@ -342,6 +341,8 @@
 				  ((_)			foldable effect-free result-true))
 				 . ?replacements))
 			      )))
+  (declare-hash-function pair-hash		<pair>		(replacements $pair-hash))
+  (declare-hash-function ipair-hash		<ipair>		(replacements $ipair-hash))
   (declare-hash-function equal-hash		<top>)
   (declare-hash-function symbol-hash		<symbol>	(replacements $symbol-hash))
   (declare-hash-function port-hash		<port>)
@@ -400,7 +401,6 @@
   (declare-hash-function $bytevector-hash	<bytevector>)
   (declare-hash-function $vector-hash		<vector>)
   (declare-hash-function $list-hash		<list>)
-  (declare-hash-function $pair-hash		<pair>)
   #| end of LET-SYNTAX |# )
 
 (let-syntax
@@ -413,6 +413,8 @@
 				 (attributes
 				  ((_)			foldable effect-free result-true))))
 			      )))
+  (declare-hash-function $pair-hash		<pair>)
+  (declare-hash-function $ipair-hash		<ipair>)
   (declare-hash-function $boolean-hash		<boolean>)
   (declare-hash-function $char-ci-hash		<char>)
   (declare-hash-function $char-hash		<char>)

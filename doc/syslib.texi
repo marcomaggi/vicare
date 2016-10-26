@@ -7928,6 +7928,12 @@ the same hash value.
 @end deffn
 
 
+@deffn {Unsafe Operation} $pair-hash @var{pair}
+@deffnx {Unsafe Operation} $ipair-hash @var{ipair}
+Hash function for pairs and immutable pairs.
+@end deffn
+
+
 @deffn {Unsafe Operation} $char-hash @var{ch}
 @deffnx {Unsafe Operation} $char-ci-hash @var{ch}
 Compute and return the hash value.

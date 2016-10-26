@@ -73,6 +73,8 @@
 		  compnum-hash
 		  vector-hash
 		  list-hash
+		  pair-hash
+		  ipair-hash
 		  ;;
 		  binary-input-only-port?
 		  binary-output-only-port?
@@ -120,7 +122,9 @@
 	  cflonum-hash
 	  compnum-hash
 	  vector-hash
-	  list-hash))
+	  list-hash
+	  pair-hash
+	  ipair-hash))
 
 
 ;;;; built-in object-types descriptor

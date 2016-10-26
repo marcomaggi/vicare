@@ -1295,8 +1295,10 @@
 (define-predefined-comparator pair-comparator
   (make-pair-comparator default-comparator default-comparator))
 
-(define pair-hash
-  (comparator-hash-function pair-comparator))
+;;We use the PAIR-HASH exported by "(vicare)".
+;;
+;; (define pair-hash
+;;   (comparator-hash-function pair-comparator))
 
 ;;; --------------------------------------------------------------------
 

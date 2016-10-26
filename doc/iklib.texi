@@ -14367,6 +14367,12 @@ the same hash value.
 @end defun
 
 
+@defun pair-hash @var{pair}
+@defunx ipair-hash @var{ipair}
+Hash functions for pairs and immutable pairs.
+@end defun
+
+
 @defun char-hash @var{ch}
 @defunx char-ci-hash @var{ch}
 Hash function for characters.  @func{char-ci-hash} first applies

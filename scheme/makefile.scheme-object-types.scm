@@ -909,7 +909,6 @@
     <list>
   (constructor <nelist>-constructor)
   (type-predicate <nelist>-type-predicate)
-  (equality-predicate equal?)
   (methods
    (car		car)
    (cdr		cdr)))
@@ -917,14 +916,14 @@
 (define-scheme-type <null>
     <list>
   (constructor #t)
-  (type-predicate null?)
-  (equality-predicate eq?))
+  (type-predicate null?))
 
 (define-scheme-type <pair>
     <top>
   (constructor cons)
   (type-predicate pair?)
   (equality-predicate equal?)
+  (hash-function pair-hash)
   (methods
    (car		car)
    (cdr		cdr)))
@@ -937,6 +936,7 @@
   (type-predicate ipair?)
   ;;EQUAL? has hard-coded special support for immutable pairs.
   (equality-predicate equal?)
+  (hash-function ipair-hash)
   (methods
    (car		icar)
    (cdr		icdr)))
