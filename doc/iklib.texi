@@ -12256,11 +12256,17 @@ strings; otherwise return @false{}.
 
 @defun string-empty? @var{str}
 Return @true{} if the string @var{str} is empty, otherwise return
-@false{}.
+@false{}.  It is an error if @var{str} is not a string.
 @end defun
 
 
 @defun empty-string? @var{obj}
+Return @true{} if the @var{obj} is a string and it is empty, otherwise
+return @false{}.
+@end defun
+
+
+@defun nestring? @var{obj}
 Return @true{} if the @var{obj} is a string and it is non--empty,
 otherwise return @false{}.
 @end defun

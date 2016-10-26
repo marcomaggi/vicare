@@ -263,16 +263,6 @@
   (define-compar $fxleq $fx<=))
 
 
-;;;; predicates
-
-(define-list-of-type-predicate list-of-strings?		string?)
-(define-list-of-type-predicate list-of-nestrings?	nestring?)
-
-(define (nestring? obj)
-  (and (string? obj)
-       (not ($string-empty? obj))))
-
-
 (define* (string-length {str string?})
   ;;Defined by R6RS.   Return the number of  characters in the given STR  as an exact
   ;;integer object.
@@ -938,6 +928,15 @@
       (error __who__ "cannot obtain unique id"))))
 
 
+;;;; predicates
+
+(define-list-of-type-predicate list-of-strings?		string?)
+(define-list-of-type-predicate list-of-nestrings?	nestring?)
+
+(define (nestring? obj)
+  (and (string? obj)
+       (not ($string-empty? obj))))
+
 (define (empty-string? obj)
   ;;Defined by  Vicare.  Return true if  OBJ is a  string and it is  empty, otherwise
   ;;return false.

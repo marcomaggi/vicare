@@ -5266,8 +5266,8 @@ specified type.  The definition of this type is equivalent to:
 * built-in numerics ratnums::          Type of ratnum values.
 * built-in numerics compnums::         Type of compnum values.
 * built-in numerics cflonums::         Type of cflonum values.
-* built-in numerics bytes::            The @class{byte} type.
-* built-in numerics octets::           The @class{octet} type.
+* built-in numerics bytes::            Type of byte values.
+* built-in numerics octets::           Type of octet values.
 * built-in numerics exactness::        Exactness of numeric values.
 * built-in numerics sign::             Sign of numeric values.
 @end menu
@@ -5974,11 +5974,6 @@ The type predicate is @func{exact-integer?}.  Return @true{} if
 @end deftypeop
 
 
-@deftypeop {Comparison procedure} @class{exact-integer} @aclass{fixnum} comparison-procedure @var{this} @bracearg{N, exact-integer}
-The comparison procedure is @func{compar-exact-integer}.
-@end deftypeop
-
-
 @deftypeop {Hash function} @class{exact-integer} @aclass{non-negative-fixnum} hash-function @var{this}
 The hash function is @func{exact-integer-hash}.
 @end deftypeop
@@ -6127,16 +6122,6 @@ Validate @var{obj} as object of type @class{fixnum} and return it.
 @deftypeop {Type predicate} @class{fixnum} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{fixnum?}.  Return @true{} if @var{obj} is a
 @class{fixnum} object, otherwise return @false{}.
-@end deftypeop
-
-
-@deftypeop {Comparison procedure} @class{fixnum} @aclass{fixnum} equality-predicate @var{this} @bracearg{N, fixnum}
-The equality predicate is @func{fx=?}.
-@end deftypeop
-
-
-@deftypeop {Comparison procedure} @class{fixnum} @aclass{fixnum} comparison-procedure @var{this} @bracearg{N, fixnum}
-The comparison procedure is @func{compar-fixnum}.
 @end deftypeop
 
 
@@ -7246,15 +7231,30 @@ Type of string values.
 @end deftp
 
 
-@defop Constructor @class{string} new @aclass{string} @var{char} @dots{}
+@deftypeop Constructor @class{string} @aclass{string} type-constructor @bracearg{ch, char} @dots{}
 The constructor is @func{string}.
-@end defop
+@end deftypeop
 
 
-@defop {Type predicate} @class{string} is-a? @var{obj} @aclass{string}
+@deftypeop {Type predicate} @class{string} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{string?}.  Return @true{} if @var{obj} is a
 string object; otherwise return @false{}.
-@end defop
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{string} @aclass{boolean} equality-predicate @var{this} @bracearg{str, string}
+The equality predicate is @func{string=?}.
+@end deftypeop
+
+
+@deftypeop {Comparison procedure} @class{string} @aclass{fixnum} comparison-procedure @var{this} @bracearg{str, string}
+The comparison procedure is @func{compar-string}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{string} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{string-hash}.
+@end deftypeop
 
 @c ------------------------------------------------------------------------
 
@@ -7286,12 +7286,12 @@ and the arguments.  Example:
 
 
 @deftypemethod @aclass{string} copy @var{this}
-Apply @func{string-copy} to the instance.
+Apply @func{string-copy} to the instance and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} append @var{this}
-Apply @func{string-append} to the instance.
+@deftypemethod @aclass{string} append @var{this} @bracearg{str, string} @dots{}
+Apply @func{string-append} to the arguments and return its return value.
 @end deftypemethod
 
 @c ------------------------------------------------------------------------
@@ -7338,12 +7338,14 @@ Apply @func{percent-encoded-string?} to the instance.
 
 
 @deftypemethod @aclass{string} = @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} != @var{this} @var{str} @dots{}
 @deftypemethodx @aclass{string} < @var{this} @var{str} @dots{}
 @deftypemethodx @aclass{string} > @var{this} @var{str} @dots{}
 @deftypemethodx @aclass{string} <= @var{this} @var{str} @dots{}
 @deftypemethodx @aclass{string} >= @var{this} @var{str} @dots{}
-Apply @func{string=?}, @func{string<?}, @func{string>?},
-@func{string<=?}, @func{string>=?} to the instance and the arguments.
+Apply @func{string=?}, @func{string!=?}, @func{string<?},
+@func{string>?}, @func{string<=?}, @func{string>=?} to the instance and
+the arguments and return its return value.
 @end deftypemethod
 
 
@@ -7354,7 +7356,7 @@ Apply @func{string=?}, @func{string<?}, @func{string>?},
 @deftypemethodx @aclass{string} ci>= @var{this} @var{str} @dots{}
 Apply @func{string-ci=?}, @func{string-ci<?}, @func{string-ci>?},
 @func{string-ci<=?}, @func{string-ci>=?}, to the instance and the
-arguments.
+arguments and return its return value.
 @end deftypemethod
 
 @c ------------------------------------------------------------------------
@@ -7518,6 +7520,17 @@ Apply @func{string->list} to the instance.
 Type of empty string values.
 @end deftp
 
+
+@deftypeop Constructor @class{empty-string} @aclass{empty-string} type-constructor
+Build and return an empty string.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{empty-string} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{empty-string?}.  Return @true{} if @var{obj}
+is a @class{empty-string} object; otherwise return @false{}.
+@end deftypeop
+
 @c page
 @node built-in strings non-empty
 @subsection Non--empty string type
@@ -7528,16 +7541,28 @@ Type of empty string values.
 Type of non--empty string values.
 @end deftp
 
+
+@deftypeop Constructor @class{nestring} @aclass{nestring} type-constructor @braceargo{ch, char} @bracearg{ch, char} @dots{}
+Build and return a non--empty string.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{nestring} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{empty-string?}.  Return @true{} if @var{obj}
+is a @class{nestring} object; otherwise return @false{}.
+@end deftypeop
+
 @c ------------------------------------------------------------------------
 
 @subsubheading Accessors and mutators
 
-@deftypemethod @class{nestring} @aclass{top} ref @var{this} @var{idx}
+
+@deftypemethod @class{nestring} @aclass{char} ref @var{this} @bracearg{idx, non-negative-fixnum}
 Apply @func{string-ref} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @class{nestring} @aclass{void} set! @var{this} @var{idx} @var{obj}
+@deftypemethod @class{nestring} @aclass{void} set! @var{this} @bracearg{idx, non-negative-fixnum} @bracearg{ch, char}
 Apply @func{string-set!} to the instance and the arguments.
 @end deftypemethod
 

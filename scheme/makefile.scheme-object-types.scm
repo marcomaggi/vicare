@@ -512,11 +512,12 @@
    (uri-encoded			uri-encoded-string?)
    (pencent-encoded?		percent-encoded-string?)
 
-   (<=				string<=?)
-   (<				string<?)
    (=				string=?)
-   (>=				string>=?)
+   (!=				string!=?)
+   (<				string<?)
    (>				string>?)
+   (<=				string<=?)
+   (>=				string>=?)
 
    (ci<=			string-ci<=?)
    (ci<				string-ci<?)

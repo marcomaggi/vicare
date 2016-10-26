@@ -81,11 +81,6 @@
    ((0 . _)		effect-free result-true)
    (_			effect-free result-true)))
 
-(declare-core-primitive <nestring>-constructor
-    (safe)
-  (signatures
-   ((<char> . (list-of <char>))		=> (<nestring>))))
-
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive substring
@@ -565,6 +560,16 @@
 ;;;; core syntactic binding descriptors, typed OOP safe core primitives: strings
 
 (section
+
+(declare-core-primitive <empty-string>-constructor
+    (safe)
+  (signatures
+   (()				=> (<empty-string>))))
+
+(declare-core-primitive <nestring>-constructor
+    (safe)
+  (signatures
+   ((<char> . (list-of <char>))		=> (<nestring>))))
 
 (declare-core-primitive <string>-for-each
     (safe)
