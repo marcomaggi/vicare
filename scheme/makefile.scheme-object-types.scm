@@ -901,6 +901,7 @@
   (constructor list)
   (type-predicate list?)
   (equality-predicate equal?)
+  (hash-function list-hash)
   (methods
    (length	length)))
 

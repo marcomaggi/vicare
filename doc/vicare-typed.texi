@@ -7783,16 +7783,21 @@ run--time.
 @end deftp
 
 
-@defop Constructor @class{list} new @aclass{list} @var{obj} @dots{}
+@deftypeop Constructor @class{list} @aclass{list} type-constructor @var{obj} @dots{}
 The constructor is @func{list}.  Return a new list having the given
 @var{obj} arguments as items.
-@end defop
+@end deftypeop
 
 
-@defop {Type predicate} @class{list} is-a? @var{obj} @aclass{list}
+@deftypeop {Type predicate} @class{list} @aclass{list} type-predicate @var{obj}
 The type predicate is @func{list?}.  Return @true{} if @var{obj} is null
 or a proper list object; otherwise return @false{}.
-@end defop
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{list} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{list-hash}.
+@end deftypeop
 
 @c page
 @node built-in lists null

@@ -7894,6 +7894,40 @@ the same hash value.
 @end deffn
 
 
+@deffn {Unsafe Operation} $list-hash @var{ell}
+@deffnx {Unsafe Operation} $list-hash @var{ell} @var{max-len}
+Return a non--negative fixnum representing the hash value for @var{ell},
+based on its current contents.  When creating hash tables using lists
+as keys: this hash function is suitable for use with @func{list=?}  as
+an equivalence function.
+
+About the @var{max-len} argument:
+
+@itemize
+@item
+When @var{max-len} is a non--negative fixnum: it is the maximum number
+of items to use to compute the hash value, starting from the beginning
+of @var{ell}.  If the length of @var{ell} is greater than @var{max-len}:
+only the first @var{max-len} items are used.  If the length of @var{ell}
+is less than or equal to @var{max-len}: all the items in @var{ell} are
+used.
+
+@item
+When @var{max-len} is @false{} or not present: if the length of
+@var{ell} is greater than @math{3} items, only the first @math{3} items
+are used to compute the hash.
+
+@item
+When @var{max-len} is @true{}: all the items in @var{ell} are used.
+@end itemize
+
+@strong{NOTE} When the hash value is computed using a number of items
+@math{N} less than the list length: applications @strong{must not}
+assume that two lists having the first @math{N} items equal will have
+the same hash value.
+@end deffn
+
+
 @deffn {Unsafe Operation} $char-hash @var{ch}
 @deffnx {Unsafe Operation} $char-ci-hash @var{ch}
 Compute and return the hash value.

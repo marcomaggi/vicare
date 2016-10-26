@@ -44,7 +44,7 @@
     ;; hash functions
     string-hash			string-ci-hash
     symbol-hash			bytevector-hash
-    vector-hash
+    vector-hash			list-hash
     equal-hash			transcoder-hash
     fixnum-hash			bignum-hash
     exact-integer-hash
@@ -80,6 +80,7 @@
     $boolean-hash
     $bytevector-hash
     $vector-hash
+    $list-hash
     $char-ci-hash
     $char-hash
     $fixnum-hash
@@ -132,7 +133,7 @@
 
 		  string-hash			string-ci-hash
 		  symbol-hash			bytevector-hash
-		  vector-hash
+		  vector-hash			list-hash
 		  equal-hash			transcoder-hash
 		  fixnum-hash			bignum-hash
 		  exact-integer-hash
@@ -1037,6 +1038,34 @@
 
 ;;; --------------------------------------------------------------------
 
+(case-define* list-hash
+  (({ell list?})
+   ($list-hash ell 3))
+  (({ell list?} {max-len %boolean-or-non-negative-fixnum?})
+   ($list-hash ell max-len)))
+
+(case-define/std $list-hash
+  ((ell)
+   ($list-hash ell 3))
+  ((ell max-len)
+   (if (or (fixnum? max-len)
+	   (not max-len))
+       ;;Compute a hash value using the first MAX-LEN items.
+       (let loop ((ell		ell)
+		  (idx		0)
+		  (max-len	(if (fixnum? max-len) max-len 3))
+		  (H		0))
+	 (if (or (fx=? idx max-len)
+		 (null? ell))
+	     H
+	   (loop (cdr ell) (fxadd1 idx) max-len (fxxor H (object-hash (car ell))))))
+     ;;Compute a hash value using all the items.
+     (fold-left (lambda (knil item)
+		  (fxxor knil (object-hash item)))
+       0 ell))))
+
+;;; --------------------------------------------------------------------
+
 (define* (fixnum-hash {fx fixnum?})
   ($fixnum-hash fx))
 
@@ -1206,6 +1235,10 @@
 		     (hash-func obj)))
 	       (else
 		($record-hash obj))))
+	((vector? obj)
+	 ($vector-hash obj #f))
+	((list? obj)
+	 ($list-hash obj #f))
 	((struct? obj)
 	 ($struct-hash obj))
 	((void-object? obj)

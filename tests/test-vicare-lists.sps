@@ -5093,6 +5093,60 @@ called with at least two arguments.
   #t)
 
 
+(parametrise ((check-test-name	'hash))
+
+  (check
+      (list-hash '(1 2 3))
+    => (fxxor 1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; hash with the selected first items
+
+  (check
+      (list-hash '(1 2 3) 0)
+    => 0)
+
+  (check
+      (list-hash '(1 2 3) 1)
+    => (fxxor 1))
+
+  (check
+      (list-hash '(1 2 3) 2)
+    => (fxxor 1 2))
+
+  (check
+      (list-hash '(1 2 3) 3)
+    => (fxxor 1 2 3))
+
+  (check
+      (list-hash '(1 2 3) 5)
+    => (fxxor 1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; hash with the first 3 items
+
+  (check
+      (list-hash '(1 2 3) #f)
+    => (fxxor 1 2 3))
+
+  (check
+      (list-hash '(1 2) #f)
+    => (fxxor 1 2))
+
+  (check
+      (list-hash '(1 2 3 4 5) #f)
+    => (fxxor 1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; hash with all the items
+
+  (check
+      (list-hash '(1 2 3) #t)
+    => (fxxor 1 2 3))
+
+  (void))
+
+
 ;;;; done
 
 (check-report)
