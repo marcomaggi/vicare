@@ -43,6 +43,7 @@
     <top>-constructor			<top>-type-predicate
     <untyped>-constructor		<untyped>-type-predicate
     <boolean>-constructor
+    <null>-constructor
     <nelist>-constructor		<nelist>-type-predicate
     <symbol>-value			<string>-for-each
 
@@ -232,7 +233,10 @@
    (set-symbol-value! sym val)))
 
 
-;;;; object type helpers: <nelist>
+;;;; object type helpers: <null>, <nelist>
+
+(define (<null>-constructor)
+  '())
 
 (define (<nelist>-constructor obj . obj*)
   (cons obj obj*))

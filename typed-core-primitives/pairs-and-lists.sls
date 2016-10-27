@@ -140,11 +140,6 @@
    ((_)				effect-free result-true)
    ((_ _)			effect-free result-true)))
 
-(declare-core-primitive <nelist>-constructor
-    (safe)
-  (signatures
-   ((<top> . <list>)		=> (<nelist>))))
-
 (declare-core-primitive reverse
     (safe)
   (signatures
@@ -251,7 +246,7 @@
     (safe)
   (signatures
    ;;If the index is out of range: an exception is raised.
-   ((<nelist> <exact-integer>)		=> (<list>)))
+   ((<nelist> <non-negative-exact-integer>)		=> (<list>)))
   (attributes
    ((_ _)				foldable effect-free result-true)))
 
@@ -259,7 +254,7 @@
     (safe)
   (signatures
    ;;If the index is out of range: an exception is raised.
-   ((<nelist> <exact-integer>)		=> (<top>)))
+   ((<nelist> <non-negative-exact-integer>)		=> (<top>)))
   (attributes
    ((_ _)				foldable effect-free)))
 
@@ -631,6 +626,11 @@
     (safe)
   (signatures
    (()				=> (<null>))))
+
+(declare-core-primitive <nelist>-constructor
+    (safe)
+  (signatures
+   ((<top> . <list>)		=> (<nelist>))))
 
 /section)
 

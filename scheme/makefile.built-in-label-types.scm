@@ -190,6 +190,15 @@
    (property-list		port-property-list)))
 
 
+;;;; weak pairs
+
+(define-built-in-label-type <weak-pair>
+  (parent <pair>)
+  (constructor weak-cons)
+  (destructor #f)
+  (type-predicate weak-pair?))
+
+
 ;;;; done
 
 ;;; end of file

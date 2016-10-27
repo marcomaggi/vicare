@@ -168,7 +168,8 @@
 	  <exact-compnum>-ctd			<zero-compnum>-ctd		<non-zero-inexact-compnum>-ctd
 	  <zero-cflonum>-ctd			<non-zero-cflonum>-ctd
 	  <empty-string>-ctd			<nestring>-ctd
-	  <null>-ctd				<nelist>-ctd			<list>-ctd	      <pair>-ctd
+	  <null>-ctd				<nelist>-ctd			<list>-ctd
+	  <pair>-ctd
 	  <empty-vector>-ctd			<nevector>-ctd			<vector>-ctd
 	  <empty-bytevector>-ctd		<nebytevector>-ctd
 	  <condition>-ctd			<compound-condition>-ctd

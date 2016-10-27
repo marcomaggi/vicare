@@ -903,20 +903,32 @@
   (equality-predicate equal?)
   (hash-function list-hash)
   (methods
-   (length	length)))
+   (circular?		circular-list?)
+   (single-item?	list-of-single-item?)
+   ;;
+   (length		length)
+   ;;
+   (append		append)
+   (reverse		reverse)
+   (tail		list-tail)
+   (ref			list-ref)
+   #| end of METHODS |# ))
 
 (define-scheme-type <nelist>
     <list>
   (constructor <nelist>-constructor)
   (type-predicate <nelist>-type-predicate)
   (methods
-   (car		car)
-   (cdr		cdr)))
+   (car			car)
+   (cdr			cdr)
+   (last-pair		last-pair)))
 
 (define-scheme-type <null>
     <list>
-  (constructor #t)
+  (constructor <null>-constructor)
   (type-predicate null?))
+
+;;; --------------------------------------------------------------------
 
 (define-scheme-type <pair>
     <top>

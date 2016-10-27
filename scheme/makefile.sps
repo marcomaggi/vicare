@@ -3958,6 +3958,8 @@
     (<nevector>					v $language)
     (<empty-vector>				v $language)
     (<pair>					v $language)
+    (<weak-pair>				v $language)
+    (<ipair>					v $language)
     (<list>					v $language)
     (<null>					v $language)
     (<nelist>					v $language)
@@ -3970,7 +3972,6 @@
     (<hashtable-equiv>				v $language)
     (<code>					v $language)
     (<memory-block>				v $language)
-    (<ipair>					v $language)
     (<tcbucket>					v $language)
 
     (<record>					v $language)
@@ -4143,6 +4144,7 @@
     (<boolean>-constructor)
     (<symbol>-value)
     ;; list helpers
+    (<null>-constructor)
     (<nelist>-constructor)
     (<nelist>-type-predicate)
     ;; vector helpers

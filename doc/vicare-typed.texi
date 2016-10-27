@@ -4222,7 +4222,6 @@ et cetera.
 * built-in vectors::      Type of vector objects.
 * built-in lists::        Type of list objects.
 * built-in pairs::        Type of pair objects.
-* built-in ipairs::       Type of immutable pair objects.
 * built-in bytevectors::  Type of bytevector objects.
 * built-in hashtables::   Type of hashtable objects.
 * built-in structs::      Type of struct objects.
@@ -7804,6 +7803,35 @@ The equality predicate is @func{equal?}.
 The hash function is @func{list-hash}.
 @end deftypeop
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: predicates
+
+
+@deftypemethod @class{list} @aclass{boolean} circular? @var{this}
+Apply @func{circular-list?} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{list} @aclass{boolean} single-item? @var{this}
+Apply @func{list-of-single-item?} to the argument and return its return
+value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: constructors
+
+
+@deftypemethod @class{list} @aclass{list} append @var{this} @bracearg{L, list} @dots{}
+Apply @func{append} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{list} @aclass{list} reverse @var{this}
+Apply @func{reverse} to the arguments and return its return value.
+@end deftypemethod
+
 @c page
 @node built-in lists null
 @subsection Type of empty lists
@@ -7822,10 +7850,15 @@ list one item.
 @end deftp
 
 
-@defop {Type predicate} @class{null} is-a? @var{obj} @aclass{null}
-The type predicate is @func{null?}.  Return @true{} if @var{obj} is
-null; otherwise return @false{}.
-@end defop
+@deftypeop Constructor @class{null} @aclass{null} type-constructor
+Return the null object.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{null} @aclass{null} type-predicate @var{obj}
+The type predicate is @func{null?}.  Return @true{} if @var{obj} is the
+null object; otherwise return @false{}.
+@end deftypeop
 
 @c page
 @node built-in lists non-empty
@@ -7840,89 +7873,170 @@ run--time.
 @end deftp
 
 
-@defop Constructor @class{nelist} new @aclass{nelist} @varo{obj} @var{obj} @dots{}
-Return a new list having the given @var{obj} arguments as items.
-@end defop
+@deftypeop Constructor @class{nelist} @aclass{nelist} type-constructor @var{obj} @dots{}
+Return a new non--empty list having the given @var{obj} arguments as
+items.
+@end deftypeop
 
 
-@defop {Type predicate} @class{nelist} is-a? @var{obj} @aclass{nelist}
-Return @true{} if @var{obj} is a non--empty proper list object;
-otherwise return @false{}.
-@end defop
+@deftypeop {Type predicate} @class{nelist} @aclass{nelist} type-predicate @var{obj}
+The type predicate is @func{nelist?}.  Return @true{} if @var{obj} is a
+proper non--empty list object; otherwise return @false{}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: accessors
 
 
-@defmethod @class{nelist} car
+@deftypemethod @class{nelist} @aclass{top} car @var{this}
 Apply @func{car} to the type instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{nelist} cdr
+@deftypemethod @class{nelist} @aclass{top} cdr @var{this}
 Apply @func{cdr} to the type instance.
-@end defmethod
+@end deftypemethod
+
+
+@deftypemethod @class{nelist} @aclass{pair} last-pair @var{this}
+Apply @func{last-pair} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{list} @aclass{list} list-tail @var{this} @bracearg{idx, non-negative-exact-integer}
+Apply @func{list-tail} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{list} @aclass{list} ref @var{this} @bracearg{idx, non-negative-exact-integer}
+Apply @func{list-ref} to the arguments and return its return value.
+@end deftypemethod
 
 @c page
 @node built-in pairs
 @section Type of pair objects
 
 
+@menu
+* built-in pairs base::         Type of pair objects.
+* built-in pairs weak::         Type of weak pair objects.
+* built-in pairs immutable::    Type of immutable pair objects.
+@end menu
+
+@c page
+@node built-in pairs base
+@subsection Type of pair objects
+
+
 @deftp {Core Type} @aclass{pair}
-@deftpx {Parent Type} @aclass{list}
+@deftpx {Parent Type} @aclass{top}
 Type of pair objects.
 @end deftp
 
 
-@defop Constructor @class{pair} new @aclass{pair} @var{A} @var{D}
+@deftypeop Constructor @class{pair} @aclass{pair} type-constructor @var{A} @var{D}
 The constructor is @func{cons}.  Return a new pair having @var{A} and
 @var{D} as car and cdr.
-@end defop
+@end deftypeop
 
 
-@defop {Type predicate} @class{pair} is-a? @var{obj} @aclass{pair}
+@deftypeop {Type predicate} @class{pair} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{pair?}.  Return @true{} if @var{obj} is a
 pair object; otherwise return @false{}.
-@end defop
+@end deftypeop
 
 
-@defmethod @class{pair} car
+@deftypeop {Equality predicate} @class{pair} @aclass{boolean} equality-predicate @var{this} @bracearg{P, pair}
+The equality predicate is @func{equal?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{pair} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{pair-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: accessors
+
+
+@deftypemethod @class{pair} @aclass{top} car @var{this}
 Apply @func{car} to the type instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{pair} cdr
+@deftypemethod @class{pair} @aclass{top} cdr @var{this}
 Apply @func{cdr} to the type instance.
-@end defmethod
+@end deftypemethod
 
 @c page
-@node built-in ipairs
-@section Type of immutable pair objects
+@node built-in pairs weak
+@subsection Type of weak pair objects
+
+
+@deftp {Label Type} @aclass{weak-pair}
+@deftpx {Parent Type} @aclass{pair}
+Type of weak pair objects.
+@end deftp
+
+
+@deftypeop Constructor @class{weak-pair} @aclass{weak-pair} type-constructor @var{A} @var{D}
+The constructor is @func{weak-cons}.  Return a new weak pair having
+@var{A} and @var{D} as car and cdr.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{weak-pair} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{weak-pair?}.  Return @true{} if @var{obj} is
+an immutable pair object; otherwise return @false{}.
+@end deftypeop
+
+@c page
+@node built-in pairs immutable
+@subsection Type of immutable pair objects
 
 
 @deftp {Core Type} @aclass{ipair}
-@deftpx {Parent Type} @aclass{record}
+@deftpx {Parent Type} @aclass{struct}
 Type of immutable pair objects.
 @end deftp
 
 
-@defop Constructor @class{ipair} new @aclass{ipair} @var{A} @var{D}
+@deftypeop Constructor @class{ipair} @aclass{ipair} type-constructor @var{A} @var{D}
 The constructor is @func{ipair}.  Return a new immutable pair having
 @var{A} and @var{D} as car and cdr.
-@end defop
+@end deftypeop
 
 
-@defop {Type predicate} @class{ipair} is-a? @var{obj} @aclass{ipair}
+@deftypeop {Type predicate} @class{ipair} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{ipair?}.  Return @true{} if @var{obj} is an
 immutable pair object; otherwise return @false{}.
-@end defop
+@end deftypeop
 
 
-@defmethod @class{ipair} car
+@deftypeop {Equality predicate} @class{ipair} @aclass{boolean} equality-predicate @var{this} @bracearg{P, ipair}
+The equality predicate is @func{equal?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{ipair} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{ipair-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: accessors
+
+
+@deftypemethod @class{ipair} @aclass{top} car @var{this}
 Apply @func{icar} to the type instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{ipair} cdr
+@deftypemethod @class{ipair} @aclass{top} cdr @var{this}
 Apply @func{icdr} to the type instance.
-@end defmethod
+@end deftypemethod
 
 @c page
 @node built-in bytevectors
