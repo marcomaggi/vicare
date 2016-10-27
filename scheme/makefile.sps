@@ -2734,6 +2734,8 @@
     (bytevector-s8-min				v $language)
     (bytevector-s8-max				v $language)
     (bytevector?				v r bv)
+    (empty-bytevector?				v $language)
+    (nebytevector?				v $language)
     (subbytevector-u8				v $language)
     (subbytevector-u8/count			v $language)
     (subbytevector-s8				v $language)

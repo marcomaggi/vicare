@@ -56,8 +56,8 @@
     <vector>-fold-right			<vector>-fold-left
     <vector>-sort			<vector>-sort!
 
-    <nebytevector>-constructor		<nebytevector>-type-predicate
-    <empty-bytevector>-constructor	<empty-bytevector>-type-predicate
+    <nebytevector>-constructor
+    <empty-bytevector>-constructor
 
     #| end of EXPORT |# )
   (import (except (vicare)
@@ -76,6 +76,9 @@
 		  list-hash
 		  pair-hash
 		  ipair-hash
+		  ;;
+		  empty-bytevector?
+		  nebytevector?
 		  ;;
 		  binary-input-only-port?
 		  binary-output-only-port?
@@ -125,7 +128,13 @@
 	  vector-hash
 	  list-hash
 	  pair-hash
-	  ipair-hash))
+	  ipair-hash)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Oct 27,
+    ;;2016)
+    (only (ikarus bytevectors)
+	  empty-bytevector?
+	  nebytevector?)
+    #| end of IMPORT |# )
 
 
 ;;;; built-in object-types descriptor
@@ -334,10 +343,6 @@
   ;;
   (make-bytevector 0))
 
-(define (<empty-bytevector>-type-predicate obj)
-  (and (bytevector? obj)
-       (bytevector-empty? obj)))
-
 ;;; --------------------------------------------------------------------
 
 (case-define* <nebytevector>-constructor
@@ -345,10 +350,6 @@
    (make-vector len))
   (({len positive-fixnum?} {fill bytevector-byte-filler?})
    (make-vector len fill)))
-
-(define (<nebytevector>-type-predicate obj)
-  (and (bytevector? obj)
-       (not (bytevector-empty? obj))))
 
 (define (bytevector-byte-filler? obj)
   ;;Return  #t if  OBJ  is valid  as byte  filler  for new  bytevectors;

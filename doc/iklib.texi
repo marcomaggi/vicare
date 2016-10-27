@@ -11771,6 +11771,18 @@ Return @true{} if OBJ is null or a proper list of bytevectors; otherwise
 return @false{}.
 @end defun
 
+
+@defun empty-bytevector? @var{obj}
+Return @true{} if @var{obj} is a bytevector and it is empty; otherwise
+return @false{}.
+@end defun
+
+
+@defun nebytevector? @var{obj}
+Return @true{} if @var{obj} is a bytevector and it is non--empty;
+otherwise return @false{}.
+@end defun
+
 @c page
 @node iklib bytevectors comparison
 @subsection Comparing bytevectors

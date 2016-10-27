@@ -8043,11 +8043,63 @@ Apply @func{icdr} to the type instance.
 @section Type of bytevector objects
 
 
+@menu
+* built-in bytevectors base::       The @class{bytevector} type.
+* built-in bytevectors empty::      The @class{empty-bytevector} type.
+* built-in bytevectors non-empty::  The @class{nebytevector} type.
+@end menu
+
+@c page
+@node built-in bytevectors base
+@subsection The @class{bytevector} type
+
+
 @deftp {Core Type} @aclass{bytevector}
 @deftpx {Parent Type} @aclass{top}
-Type of bytevector objects.  The constructor is @func{make-bytevector}.
-The type predicate is @func{bytevector?}.
+Type of bytevector objects.
 @end deftp
+
+
+@deftypeop Constructor @class{bytevector} @aclass{bytevector} type-constructor @bracearg{len, non-negative-fixnum}
+@deftypeopx Constructor @class{bytevector} @aclass{bytevector} type-constructor @bracearg{len, non-negative-fixnum} @bracearg{fill, fixnum}
+The constructor is @func{make-bytevector}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{bytevector} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{bytevector?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{bytevector} @aclass{boolean} equality-predicate @var{this} @bracearg{bv, bytevector}
+The equality predicate is @func{bytevector=?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{bytevector} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{bytevector-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{bytevector} @aclass{non-negative-fixnum} length @var{this}
+Apply @func{bytevector-length} to the instance and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @aclass{bytevector} = @var{this} @bracearg{bv, bytevector} @dots{}
+@deftypemethodx @aclass{bytevector} != @var{this} @bracearg{bv, bytevector} @dots{}
+Apply @func{bytevector=?}, @func{bytevector!=?} to the instance and the
+arguments and return its return value.
+@end deftypemethod
+
+@c page
+@node built-in bytevectors empty
+@subsection The @class{empty-bytevector} type
 
 
 @deftp {Core Type} @aclass{empty-bytevector}
@@ -8056,10 +8108,35 @@ Type of empty bytevector objects.
 @end deftp
 
 
+@deftypeop Constructor @class{empty-bytevector} @aclass{empty-bytevector} type-constructor
+Return an empty bytevector object.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{empty-bytevector} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{empty-bytevector?}.
+@end deftypeop
+
+@c page
+@node built-in bytevectors non-empty
+@subsection The @class{nebytevector} type
+
+
 @deftp {Core Type} @aclass{nebytevector}
 @deftpx {Parent Type} @aclass{bytevector}
 Type of non--empty bytevector objects.
 @end deftp
+
+
+@deftypeop Constructor @class{nebytevector} @aclass{nebytevector} type-constructor @bracearg{len, positive-fixnum}
+@deftypeopx Constructor @class{nebytevector} @aclass{nebytevector} type-constructor @bracearg{len, positive-fixnum} @bracearg{fill, fixnum}
+Return a non--empty bytevector object.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{nebytevector} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{nebytevector?}.
+@end deftypeop
 
 @c page
 @node built-in hashtables

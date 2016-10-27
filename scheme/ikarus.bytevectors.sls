@@ -28,6 +28,8 @@
     native-endianness
     bytevector-concatenate			bytevector-reverse-and-concatenate
 
+    empty-bytevector?				nebytevector?
+
     bytevector=?				bytevector!=?
     bytevector-u8<?				bytevector-u8>?
     bytevector-u8<=?				bytevector-u8>=?
@@ -184,6 +186,8 @@
 		  bytevector-copy			bytevector-append
 		  native-endianness
 		  bytevector-concatenate		bytevector-reverse-and-concatenate
+
+		  empty-bytevector?			nebytevector?
 
 		  bytevector=?				bytevector!=?
 		  bytevector-u8<?			bytevector-u8>?
@@ -888,6 +892,20 @@
 
 (define ($bytevector-empty? bv)
   ($fxzero? ($bytevector-length bv)))
+
+(define (empty-bytevector? obj)
+  ;;Defined by Vicare.  Return true if OBJ is a bytevector and it is empty, otherwise
+  ;;return false.
+  ;;
+  (and (bytevector? obj)
+       ($bytevector-empty? obj)))
+
+(define (nebytevector? obj)
+  ;;Defined by  Vicare.  Return  true if  OBJ is  a bytevector  and it  is non-empty,
+  ;;otherwise return false.
+  ;;
+  (and (bytevector? obj)
+       (not ($bytevector-empty? obj))))
 
 
 ;;;; copying

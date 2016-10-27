@@ -51,15 +51,6 @@
    ((0 _)			effect-free result-true)
    ((_ _)			effect-free result-true)))
 
-(declare-core-primitive <nebytevector>-constructor
-    (safe)
-  (signatures
-   ((<positive-fixnum>)			=> (<nebytevector>))
-   ((<positive-fixnum> <fixnum>)	=> (<nebytevector>)))
-  ;;Not foldable because it must return a newly allocated bytevector.
-  (attributes
-   ((_ _)			effect-free result-true)))
-
 (declare-core-primitive bytevector-copy
     (safe)
   (signatures
@@ -142,7 +133,8 @@
 ;;; predicates
 
 (declare-type-predicate bytevector?			<bytevector>)
-(declare-type-predicate <nebytevector>-type-predicate	<nebytevector>)
+(declare-type-predicate nebytevector?			<nebytevector>)
+(declare-type-predicate empty-bytevector?		<empty-bytevector>)
 
 (declare-bytevector-predicate bytevector-empty?			(replacements $bytevector-empty?))
 
@@ -917,6 +909,28 @@
   (signatures
    ((<bytevector> <non-negative-fixnum> <non-negative-fixnum> <fixnum>)
     => (<void>))))
+
+/section)
+
+
+;;;; objects utilities
+
+(section
+
+(declare-core-primitive <nebytevector>-constructor
+    (safe)
+  (signatures
+   ((<positive-fixnum>)			=> (<nebytevector>))
+   ((<positive-fixnum> <fixnum>)	=> (<nebytevector>)))
+  ;;Not foldable because it must return a newly allocated bytevector.
+  (attributes
+   ((_)				effect-free result-true)
+   ((_ _)			effect-free result-true)))
+
+(declare-core-primitive <empty-bytevector>-constructor
+    (safe)
+  (signatures
+   (()					=> (<empty-bytevector>))))
 
 /section)
 

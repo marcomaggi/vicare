@@ -625,8 +625,8 @@
     <top>
   (constructor make-bytevector)
   (type-predicate bytevector?)
-  (hash-function bytevector-hash)
   (equality-predicate bytevector=?)
+  (hash-function bytevector-hash)
   (methods
    (length		bytevector-length)
    (=			bytevector=?)
@@ -635,14 +635,12 @@
 (define-scheme-type <empty-bytevector>
     <bytevector>
   (constructor <empty-bytevector>-constructor)
-  (type-predicate <empty-bytevector>-type-predicate)
-  (equality-predicate bytevector=?))
+  (type-predicate empty-bytevector?))
 
 (define-scheme-type <nebytevector>
     <bytevector>
   (constructor <nebytevector>-constructor)
-  (type-predicate <nebytevector>-type-predicate)
-  (equality-predicate bytevector=?))
+  (type-predicate nebytevector?))
 
 
 ;;;; code objects
