@@ -4069,7 +4069,7 @@
     (<flonum>-ctd				system-type-descriptors)
     (<gensym>-ctd				system-type-descriptors)
     (<hashtable-eq>-ctd				system-type-descriptors)
-    (<hashtable-equal>-ctd			system-type-descriptors)
+    (<hashtable-equiv>-ctd			system-type-descriptors)
     (<hashtable-eqv>-ctd			system-type-descriptors)
     (<hashtable>-ctd				system-type-descriptors)
     (<inexact-compnum>-ctd			system-type-descriptors)

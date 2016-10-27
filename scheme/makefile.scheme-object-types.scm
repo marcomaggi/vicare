@@ -713,7 +713,7 @@
   (constructor make-eqv-hashtable)
   (type-predicate hashtable-eqv?))
 
-(define-scheme-type <hashtable-equal>
+(define-scheme-type <hashtable-equiv>
     <hashtable>
   (constructor make-hashtable)
   (type-predicate hashtable-equiv?))

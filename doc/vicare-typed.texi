@@ -8143,32 +8143,95 @@ The type predicate is @func{nebytevector?}.
 @section Type of hashtable objects
 
 
+@menu
+* built-in hashtables base::    The @class{hashtable} type.
+* built-in hashtables eq::      The @class{hashtable-eq} type.
+* built-in hashtables eqv::     The @class{hashtable-eqv} type.
+* built-in hashtables equiv::   The @class{hashtable-equiv} type.
+@end menu
+
+@c page
+@node built-in hashtables base
+@subsection The @class{hashtable} type
+
+
 @deftp {Core Type} @aclass{hashtable}
 @deftpx {Parent Type} @aclass{top}
-Base type for hashtable objects.  There is no constructor.  The type
-predicate is @func{hashtable?}.
+Base type for hashtable objects.
 @end deftp
+
+
+@deftypeop Constructor @class{hashtable} @aclass{hashtable} type-constructor @var{table}
+Validate @var{table} as hashtable object and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{hashtable} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{hashtable?}.
+@end deftypeop
+
+@c page
+@node built-in hashtables eq
+@subsection The @class{hashtable-eq} type
 
 
 @deftp {Core Type} @aclass{hashtable-eq}
 @deftpx {Parent Type} @aclass{hashtable}
-Type of @func{eq?} hashtables.  The constructor is
-@func{make-eq-hashtable}.  There type predicate is @func{hashtable-eq?}.
+Type of @func{eq?} hashtables.
 @end deftp
+
+
+@deftypeop Constructor @class{hashtable-eq} @aclass{hashtable-eq} type-constructor
+@deftypeopx Constructor @class{hashtable-eq} @aclass{hashtable-eq} type-constructor @var{k}
+The constructor if @func{make-eq-hashtable}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{hashtable-eq} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{hashtable-eq?}.
+@end deftypeop
+
+@c page
+@node built-in hashtables eqv
+@subsection The @class{hashtable-eqv} type
 
 
 @deftp {Core Type} @aclass{hashtable-eqv}
 @deftpx {Parent Type} @aclass{hashtable}
-Type of @func{eqv?} hashtables.  The constructor is
-@func{make-eqv-hashtable}.  There type predicate is @func{hashtable-eqv?}.
+Type of @func{eqv?} hashtables.
 @end deftp
 
 
-@deftp {Core Type} @aclass{hashtable-equal}
+@deftypeop Constructor @class{hashtable-eqv} @aclass{hashtable-eqv} type-constructor
+@deftypeopx Constructor @class{hashtable-eqv} @aclass{hashtable-eqv} type-constructor @var{k}
+The constructor if @func{make-eqv-hashtable}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{hashtable-eqv} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{hashtable-eqv?}.
+@end deftypeop
+
+@c page
+@node built-in hashtables equiv
+@subsection The @class{hashtable-equiv} type
+
+
+@deftp {Core Type} @aclass{hashtable-equiv}
 @deftpx {Parent Type} @aclass{hashtable}
-Type of @func{equal?} hashtables.  The constructor is
-@func{make-hashtable}.  There type predicate is @func{hashtable-equiv?}.
+Type of @func{equal?} hashtables.
 @end deftp
+
+
+@deftypeop Constructor @class{hashtable-equiv} @aclass{hashtable-equiv} type-constructor @var{hash-function} @var{equiv}
+@deftypeopx Constructor @class{hashtable-equiv} @aclass{hashtable-equiv} type-constructor @var{hash-function} @var{equiv} @var{k}
+The constructor if @func{make-hashtable}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{hashtable-equiv} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{hashtable-equiv?}.
+@end deftypeop
 
 @c page
 @node built-in structs
