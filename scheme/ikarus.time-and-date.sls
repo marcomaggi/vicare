@@ -82,12 +82,14 @@
 
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Mon Sep 19, 2016)
-		  compar-fixnum)
+		  compar-fixnum
+		  compar-exact-integer)
     (ikarus records syntactic)
     ;;FIXME To be fixed  at the next boot image rotation.  (Marco  Maggi; Mon Sep 19,
     ;;2016)
     (only (ikarus.comparison-procedures) #;(vicare system comparison-procedures)
-	  compar-fixnum)
+	  compar-fixnum
+	  compar-exact-integer)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate
 	  define-min/max-comparison

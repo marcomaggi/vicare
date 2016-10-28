@@ -102,7 +102,6 @@
      	  tcbucket?)
     (only (vicare system code-objects)
      	  code?)
-    (vicare system structs)
     (only (vicare expander)
 	  syntax-clauses-unwrap
 	  syntax-clauses-collapse
@@ -112,13 +111,36 @@
 	  syntax-clause-spec-keyword
 	  syntax-clause-spec?
 	  make-syntax-clause-spec)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Wed Oct 26,
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
     ;;2016)
-    (only (ikarus vectors)
-	  vector=?
-	  vector!=?
-	  empty-vector?
-	  nevector?)
+    #;(vicare system comparison-procedures)
+    (only (ikarus.comparison-procedures)
+	  compar-fixnum
+	  compar-bignum
+	  compar-exact-integer
+	  compar-ratnum
+	  compar-exact-real
+	  compar-flonum
+	  compar-real
+	  compar-char
+	  compar-string
+	  compar-string-ci
+	  compar-symbol
+	  compar-boolean
+	  compar-true
+	  compar-false
+	  compar-transcoder
+	  compar-pointer)
+    (except (vicare system structs)
+	    ;;FIXME These excepts are to be  removed at the next boot image rotation.
+	    ;;(Marco Maggi; Fri Oct 28, 2016)
+	    struct!=?
+	    struct-reset!
+	    struct-type-constructor
+	    struct-type-predicate
+	    struct-type-field-accessor
+	    struct-type-field-mutator
+	    struct-type-field-method)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
     ;;2016)
     (only (ikarus structs)
@@ -129,6 +151,13 @@
 	  struct-type-field-accessor
 	  struct-type-field-mutator
 	  struct-type-field-method)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Wed Oct 26,
+    ;;2016)
+    (only (ikarus vectors)
+	  vector=?
+	  vector!=?
+	  empty-vector?
+	  nevector?)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Oct 1,
     ;;2016)
     (only (ikarus.io)

@@ -74,7 +74,14 @@
     (only (vicare system $records)
 	  $record-type-method-retriever
 	  $record-type-hash-function)
-    (vicare system structs)
+    (except (vicare system structs)
+	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
+	    ;;(Marco Maggi; Fri Oct 28, 2016)
+	    struct-type-field-method)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
+    ;;2016)
+    (only (ikarus structs)
+	  struct-type-field-method)
     (prefix (only (ikarus records procedural)
 		  record-type-implemented-interfaces)
 	    td::)
@@ -94,10 +101,6 @@
 	  binary-output-only-port?
 	  textual-input-only-port?
 	  textual-output-only-port?)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
-    ;;2016)
-    (only (ikarus structs)
-	  struct-type-field-method)
     #| end of IMPORT |# )
 
 
