@@ -8343,9 +8343,7 @@ Apply @func{struct-reset!} to the arguments and return its return value.
 
 @deftp {Core Type} @aclass{struct-type-descriptor}
 @deftpx {Parent Type} @aclass{struct}
-Type of struct--type descriptor objects.  The constructor is
-@func{make-struct-type}.  The type descriptor is
-@func{struct-type-descriptor?}.
+Type of struct--type descriptor objects.
 @end deftp
 
 
