@@ -6243,14 +6243,22 @@ in the field at @var{index} in the data structure @var{stru}.
 @end defun
 
 
-@defun struct=? @vari{obj} @varii{obj}
-Return true if @vari{obj} and @varii{obj} are two structures having the
-same @rtd{} and equal field values according to @func{eqv?}.  Note that
-this function also works when applied to @rnrs{6} records.
+@defun struct=? @var{stru} @dots{}
+All the arguments must be structs.  Return @true{} if all the arguments
+have the same @rtd{} and equal field values according to @func{eqv?}.
+When applied to a single argument: return @true{}.  Note that this
+function also works when applied to @rnrs{6} records.
 @end defun
 
 
-@defun struct-reset @var{stru}
+@defun struct!=? @var{stru} @dots{}
+All the arguments must be structs.  Return @true{} if the arguments are
+all different: no two arguments are equal; otherwise return @false{}.
+When applied to a single argument: return @false{}.
+@end defun
+
+
+@defun struct-reset! @var{stru}
 Reset to void all the fields of a structure.
 @end defun
 

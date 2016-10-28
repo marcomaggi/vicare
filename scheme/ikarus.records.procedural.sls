@@ -47,7 +47,7 @@
     record=?
     record-and-rtd?				$record-and-rtd?
     record-object?
-    record-reset
+    record-reset!
     record-ref					$record-ref
     ;;
     record-destructor				$record-destructor
@@ -102,7 +102,7 @@
 
 		  ;; extension utility functions, non-R6RS
 		  rtd-subtype?				record-type-all-field-names
-		  record-reset				record=?
+		  record-reset!				record=?
 		  record-printer			record-destructor
 		  record
 		  record-equality-predicate		record-comparison-procedure
@@ -1495,7 +1495,7 @@
 			      ($struct-ref obj2 i))
 		      (loop ($fxadd1 i)))))))))
 
-(define* (record-reset {x non-opaque-record?})
+(define* (record-reset! {x non-opaque-record?})
   ;;Reset to #f all the fields of a structure.
   ;;
   ;;Remember that the  first 2 fields of an R6RS  record type descriptor

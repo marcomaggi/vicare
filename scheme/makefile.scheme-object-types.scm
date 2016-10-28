@@ -651,21 +651,36 @@
   (type-predicate code?))
 
 
-;;;; records and structs
+;;;; structs
 
 (define-scheme-type <struct>
     <top>
+  (constructor #t)
   (type-predicate struct?)
   (equality-predicate struct=?)
-  (hash-function struct-hash))
+  (hash-function struct-hash)
+  (methods
+   (std				struct-std)
+   (name			struct-name)
+   (length			struct-length)
+   (field-names			struct-field-names)
+   (printer			struct-printer)
+   (destructor			struct-destructor)
+   ;;
+   (=				struct=?)
+   ;;
+   (ref				struct-ref)
+   (set!			struct-set!)
+   (reset			struct-reset!)
+   #| end of METHODS |# ))
 
 (define-scheme-type <struct-type-descriptor>
     <struct>
   (constructor make-struct-type)
-  (type-predicate struct-type-descriptor?)
-  (equality-predicate struct=?))
+  (type-predicate struct-type-descriptor?))
 
-;;; --------------------------------------------------------------------
+
+;;;; records
 
 (define-scheme-type <record>
     <struct>
@@ -676,24 +691,22 @@
 (define-scheme-type <record-type-descriptor>
     <struct>
   (constructor make-record-type-descriptor)
-  (type-predicate record-type-descriptor?)
-  (equality-predicate struct=?))
+  (type-predicate record-type-descriptor?))
 
 (define-scheme-type <record-constructor-descriptor>
     <struct>
   (constructor make-record-constructor-descriptor)
-  (type-predicate record-constructor-descriptor?)
-  (equality-predicate struct=?))
+  (type-predicate record-constructor-descriptor?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <opaque-record>
     <top>
   (type-predicate always-false)
-  (equality-predicate record=?)
-  (hash-function record-hash))
+  (equality-predicate record=?))
 
-;;; --------------------------------------------------------------------
+
+;;;; hash tables
 
 (define-scheme-type <tcbucket>
     <top>
@@ -718,7 +731,8 @@
   (constructor make-hashtable)
   (type-predicate hashtable-equiv?))
 
-;;; --------------------------------------------------------------------
+
+;;;; condition objects
 
 ;;This is the root of all the  condition object types, both simple and compound.  All
 ;;the simple condition types are derived from "&condition".

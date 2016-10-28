@@ -8238,11 +8238,107 @@ The type predicate is @func{hashtable-equiv?}.
 @section Type of struct objects
 
 
+@menu
+* built-in structs base::       The @class{struct} type.
+* built-in structs std::        The @class{struct-type-descriptor} type.
+@end menu
+
+@c page
+@node built-in structs base
+@subsection The @class{struct} type
+
+
 @deftp {Core Type} @aclass{struct}
 @deftpx {Parent Type} @aclass{top}
 Type of struct objects.  There is no constructor.  The type predicate is
 @func{struct?}.
 @end deftp
+
+
+@deftypeop Constructor @class{struct} @aclass{struct} type-constructor @var{stru}
+Validate @var{stru} as struct object and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{struct} @class{boolean} type-predicate @var{obj}
+The type predicate is @func{struct?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{struct} @class{boolean} equality-predicate @var{this} @bracearg{stru, struct}
+The equality predicate is @func{struct=?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{struct} @class{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{struct-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: inspection
+
+
+@deftypemethod @class{struct} @class{struct-type-descriptor} std @var{this}
+Apply @func{struct-std} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct} @class{nestring} name @var{this}
+Apply @func{struct-name} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct} @class{non-negative-fixnum} length @var{this}
+Apply @func{struct-length} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct} {(list-of @aclass{symbol})} field-names @var{this}
+Apply @func{struct-field-names} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct} @aclass{type-printer} printer @var{this}
+Apply @func{struct-printer} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct} @aclass{type-destructor} destructor @var{this}
+Apply @func{struct-destructor} to the instance and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: comparison
+
+
+@deftypemethod @class{struct} @class{boolean} = @var{this} @bracearg{stru, struct}
+Apply @func{struct=?} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: accessors and mutators
+
+
+@deftypemethod @class{struct} @class{top} ref @var{this} @bracearg{idx, non-negative-fixnum}
+Apply @func{struct-ref} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct} @class{void} set! @var{this} @bracearg{idx, non-negative-fixnum} @var{obj}
+Apply @func{struct-set!} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct} @class{void} reset @var{this}
+Apply @func{struct-reset!} to the arguments and return its return value.
+@end deftypemethod
+
+@c page
+@node built-in structs std
+@subsection The @class{struct-type-descriptor} type
 
 
 @deftp {Core Type} @aclass{struct-type-descriptor}

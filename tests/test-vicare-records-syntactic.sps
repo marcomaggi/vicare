@@ -927,7 +927,7 @@
 
   (check
       (let ((R (make-<alpha> 1 2 3)))
-	(record-reset R)
+	(record-reset! R)
 	(list (void-object? (<alpha>-a R))
 	      (void-object? (<alpha>-b R))
 	      (void-object? (<alpha>-c R))))
@@ -935,7 +935,7 @@
 
   (check
       (try
-	  (eval '(record-reset 123)
+	  (eval '(record-reset! 123)
 		(environment '(vicare))
 		(expander-options typed-language)
 		(compiler-options))

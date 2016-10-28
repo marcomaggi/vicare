@@ -65,12 +65,8 @@
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-core-primitive struct=?
-    (safe)
-  (signatures
-   ((<struct> <struct>)			=> (<boolean>)))
-  (attributes
-   ((_ _)		foldable effect-free)))
+(declare-struct-binary/multi-comparison struct=?)
+(declare-struct-binary/multi-comparison struct!=?)
 
 ;;; --------------------------------------------------------------------
 ;;; struct type descriptor accessors and mutators
@@ -152,12 +148,13 @@
   (declare struct-rtd		<struct-type-descriptor>)
   (declare struct-name		<string>)
   (declare struct-length	<non-negative-fixnum>)
+  (declare struct-field-names	(list-of <symbol>))
   (declare struct-printer	<procedure>)
   #;(declare struct-destructor	(or <false> <procedure>))
   (declare struct-destructor	<top>)
   #| end of LET-SYNTAX |# )
 
-(declare-core-primitive struct-reset
+(declare-core-primitive struct-reset!
     (safe)
   (signatures
    ((<struct>)		=> (<void>)))

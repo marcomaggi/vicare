@@ -358,7 +358,7 @@
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous
 
-(declare-core-primitive record-reset
+(declare-core-primitive record-reset!
     (safe)
   (signatures
    ((<record>)		=> (<void>)))

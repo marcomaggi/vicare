@@ -76,6 +76,7 @@
     declare-keyword-binary-comparison
     declare-bytevector-binary-comparison
     declare-transcoder-binary-comparison
+    declare-struct-binary-comparison
 
     define-object-unary/multi-comparison-declarer
     declare-number-unary/multi-comparison
@@ -88,6 +89,7 @@
     declare-number-binary/multi-comparison
     declare-char-binary/multi-comparison
     declare-string-binary/multi-comparison
+    declare-struct-binary/multi-comparison
     declare-transcoder-binary/multi-comparison
 
     define-object-unary-operation-declarer
@@ -740,6 +742,7 @@
 (define-object-binary-comparison-declarer declare-string-binary-comparison <string>)
 (define-object-binary-comparison-declarer declare-keyword-binary-comparison <keyword>)
 (define-object-binary-comparison-declarer declare-bytevector-binary-comparison <bytevector>)
+(define-object-binary-comparison-declarer declare-struct-binary-comparison <struct>)
 
 ;;; --------------------------------------------------------------------
 
@@ -835,6 +838,7 @@
 (define-object-binary/multi-comparison-declarer declare-char-binary/multi-comparison <char>)
 (define-object-binary/multi-comparison-declarer declare-string-binary/multi-comparison <string>)
 (define-object-binary/multi-comparison-declarer declare-transcoder-binary/multi-comparison <transcoder>)
+(define-object-binary/multi-comparison-declarer declare-struct-binary/multi-comparison <struct>)
 
 
 ;;;; syntax helpers: math operations

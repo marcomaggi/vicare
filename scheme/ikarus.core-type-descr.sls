@@ -68,6 +68,9 @@
 		  vector=?
 		  vector!=?
 		  ;;
+		  struct!=?
+		  struct-reset!
+		  ;;
 		  bignum-hash
 		  ratnum-hash
 		  cflonum-hash
@@ -111,6 +114,11 @@
 	  vector!=?
 	  empty-vector?
 	  nevector?)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
+    ;;2016)
+    (only (ikarus structs)
+	  struct!=?
+	  struct-reset!)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Oct 1,
     ;;2016)
     (only (ikarus.io)

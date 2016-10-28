@@ -107,6 +107,14 @@
 		  real-pathname
 		  split-search-path-string)
 	    posix::)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
+    ;;2016)
+    (only (ikarus structs)
+	  struct-reset!)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
+    ;;2016)
+    (only (ikarus records procedural)
+	  record-reset!)
     (except (vicare system structs)
 	    struct-guardian-logger
 	    struct-guardian-log)
@@ -120,7 +128,8 @@
     (prefix (only (vicare system $runtime)
 		  scheme-heap-nursery-size
 		  scheme-stack-size)
-	    runtime::))
+	    runtime::)
+    #| end of IMPORT |# )
 
   (module (case-word-size)
     (include "ikarus.wordsize.scm" #t))
@@ -1327,7 +1336,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 			   (%call-logger logger S #f 'before-destruction)
 			   ((%extract-destructor S) S)
 			   (%call-logger logger S #f 'after-destruction)
-			   (struct-reset S))
+			   (struct-reset! S))
 		       (catch E
 			 (else
 			  (%call-logger logger S E 'exception))))))
@@ -1338,7 +1347,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 			   (%call-logger struct-guardian-log S #f 'before-destruction)
 			   ((%extract-destructor S) S)
 			   (%call-logger struct-guardian-log S #f 'after-destruction)
-			   (struct-reset S))
+			   (struct-reset! S))
 		       (catch E
 			 (else
 			  (%call-logger struct-guardian-log S E 'exception))))))
@@ -1347,7 +1356,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 		     (with-blocked-exceptions
 			 (lambda ()
 			   ((%extract-destructor S) S)
-			   (struct-reset S))))))))))
+			   (struct-reset! S))))))))))
 
   (post-gc-hooks (cons %struct-guardian-destructor (post-gc-hooks)))
 
@@ -1446,7 +1455,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 			   (%call-logger logger S #f 'before-destruction)
 			   ((%extract-destructor S) S)
 			   (%call-logger logger S #f 'after-destruction)
-			   (record-reset S))
+			   (record-reset! S))
 		       (catch E
 			 (else
 			  (%call-logger logger S E 'exception))))))
@@ -1457,7 +1466,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 			   (%call-logger record-guardian-log S #f 'before-destruction)
 			   ((%extract-destructor S) S)
 			   (%call-logger record-guardian-log S #f 'after-destruction)
-			   (record-reset S))
+			   (record-reset! S))
 		       (catch E
 			 (else
 			  (%call-logger record-guardian-log S E 'exception))))))
@@ -1466,7 +1475,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 		     (with-blocked-exceptions
 			 (lambda ()
 			   ((%extract-destructor S) S)
-			   (record-reset S))))))))))
+			   (record-reset! S))))))))))
 
   (post-gc-hooks (cons %record-guardian-destructor (post-gc-hooks)))
 

@@ -34,13 +34,13 @@
     ;; struct constructor and predicate
     struct?				struct-and-std?
     struct-constructor			struct-predicate
-    struct=?
+    struct=?				struct!=?
 
     ;; struct accessors and mutators
     struct-ref				struct-set!
     struct-and-std-ref			struct-and-std-set!
     struct-field-accessor		struct-field-mutator
-    struct-field-method			struct-reset
+    struct-field-method			struct-reset!
 
     ;; structure inspection
     struct-std
@@ -78,14 +78,14 @@
 		  ;; struct accessors and mutators
 		  struct?			struct-and-std?
 		  struct-constructor		struct-predicate
-		  struct=?
+		  struct=?			struct!=?
 
 		  ;; struct accessors and mutators
 		  struct-ref			struct-set!
 		  struct-and-std-ref			struct-and-std-set!
 		  struct-field-accessor		struct-field-mutator
 		  struct-field-method
-		  struct-reset
+		  struct-reset!
 
 		  ;; structure inspection
 		  struct-type-descriptor
@@ -111,7 +111,10 @@
 		  <ipair> icar icdr ipair?)
 	    ipair::)
     (only (vicare language-extensions syntaxes)
-	  define-list-of-type-predicate))
+	  define-list-of-type-predicate
+	  define-equality/sorting-predicate
+	  define-inequality-predicate)
+    #| end of IMPORT |# )
 
 
 ;;;; helpers
@@ -419,7 +422,7 @@
 
   #| end of module |# )
 
-(define* (struct-reset {x struct?})
+(define* (struct-reset! {x struct?})
   ;;Reset to void all the fields of a structure.
   ;;
   (let ((len ($struct-ref ($struct-rtd x) 1)))
@@ -501,18 +504,27 @@
   (assert-field-index-for-struct i stru)
   ($struct-set! stru i new-value))
 
-(define* (struct=? {obj1 struct?} {obj2 struct?})
-  ;;Return true if OBJ1 and OBJ2  are two structures having the same STD
-  ;;and equal field values according to EQV?.
+
+;;;; comparison
+
+(define-equality/sorting-predicate struct=?	$struct=	struct?)
+(define-inequality-predicate       struct!=?	$struct!=	struct?)
+
+(define ($struct= stru1 stru2)
+  ;;Return true if STRU1  and STRU2 are two structures having the  same STD and equal
+  ;;field values according to EQV?.
   ;;
-  (let ((std1 ($struct-rtd obj1)))
-    (and (eq? std1 ($struct-rtd obj2))
+  (let ((std1 ($struct-rtd stru1)))
+    (and (eq? std1 ($struct-rtd stru2))
 	 (let ((len ($std-length std1)))
 	   (let loop ((i 0))
 	     (or ($fx= i len)
-		 (and (eqv? ($struct-ref obj1 i)
-			    ($struct-ref obj2 i))
+		 (and (eqv? ($struct-ref stru1 i)
+			    ($struct-ref stru2 i))
 		      (loop ($fxadd1 i)))))))))
+
+(define ($struct!= stru1 stru2)
+  (not ($struct= stru1 stru2)))
 
 
 ;;;; done

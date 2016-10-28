@@ -813,7 +813,7 @@
 	     (get-a	(record-accessor rtd 0))
 	     (get-b	(record-accessor rtd 1)))
 	(let ((R (builder 1 2)))
-	  (record-reset R)
+	  (record-reset! R)
 	  (list (get-a R)
 		(get-b R))))
     => `(,(void) ,(void)))

@@ -432,7 +432,7 @@
 
   (check
       (let ((S ((struct-constructor color-rtd) 1 2 3)))
-	(struct-reset S)
+	(struct-reset! S)
 	(list (struct-ref S 0)
 	      (struct-ref S 1)
 	      (struct-ref S 2)))
