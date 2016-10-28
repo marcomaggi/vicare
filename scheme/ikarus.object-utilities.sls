@@ -50,7 +50,8 @@
 		  binary-input-only-port?
 		  binary-output-only-port?
 		  textual-input-only-port?
-		  textual-output-only-port?)
+		  textual-output-only-port?
+		  struct-type-field-method)
     (ikarus records syntactic)
     (only (ikarus.core-type-descr)
 	  core-type-descriptor?
@@ -95,7 +96,12 @@
 	  binary-input-only-port?
 	  binary-output-only-port?
 	  textual-input-only-port?
-	  textual-output-only-port?))
+	  textual-output-only-port?)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
+    ;;2016)
+    (only (ikarus structs)
+	  struct-type-field-method)
+    #| end of IMPORT |# )
 
 
 ;;;; helpers for object-type method calls
@@ -134,7 +140,7 @@
 	   (%error-scheme-type-has-no-matching-method))))
 
   (define (%struct-object-call std)
-    (apply (struct-field-method std method-name.sym) subject args))
+    (apply (struct-type-field-method std method-name.sym) subject args))
 
   (define (%record-object-call rtd)
     (cond ((($record-type-method-retriever rtd) method-name.sym)

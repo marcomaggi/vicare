@@ -219,7 +219,7 @@
     (make-struct-type "color" '(red green blue) 'non-color))
 
   (check
-      (let ((O ((struct-constructor color-std) 1 2 3)))
+      (let ((O ((struct-type-constructor color-std) 1 2 3)))
 	(values (color? O)
 		(color-red O)
 		(color-green O)
@@ -228,10 +228,10 @@
 
   (check
       (let ((O (make-color 1 2 3)))
-	(values ((struct-predicate color-std) O)
-		((struct-field-accessor color-std 'red) O)
-		((struct-field-accessor color-std 'green) O)
-		((struct-field-accessor color-std 'blue) O)))
+	(values ((struct-type-predicate color-std) O)
+		((struct-type-field-accessor color-std 'red) O)
+		((struct-type-field-accessor color-std 'green) O)
+		((struct-type-field-accessor color-std 'blue) O)))
     => #t 1 2 3)
 
   #t)
@@ -243,28 +243,28 @@
     (make-struct-type "color" '(red green blue)))
 
   (define make-color
-    (struct-constructor color-rtd))
+    (struct-type-constructor color-rtd))
 
   (define color?
-    (struct-predicate color-rtd))
+    (struct-type-predicate color-rtd))
 
   (define color-red
-    (struct-field-accessor color-rtd 0))
+    (struct-type-field-accessor color-rtd 0))
 
   (define color-green
-    (struct-field-accessor color-rtd 1))
+    (struct-type-field-accessor color-rtd 1))
 
   (define color-blue
-    (struct-field-accessor color-rtd 2))
+    (struct-type-field-accessor color-rtd 2))
 
   (define set-color-red!
-    (struct-field-mutator color-rtd 0))
+    (struct-type-field-mutator color-rtd 0))
 
   (define set-color-green!
-    (struct-field-mutator color-rtd 1))
+    (struct-type-field-mutator color-rtd 1))
 
   (define set-color-blue!
-    (struct-field-mutator color-rtd 2))
+    (struct-type-field-mutator color-rtd 2))
 
 ;;; --------------------------------------------------------------------
 
@@ -292,39 +292,39 @@
 
   (check
       (let ((S (make-color 1 2 3)))
-	((struct-field-accessor color-rtd 'red) S))
+	((struct-type-field-accessor color-rtd 'red) S))
     => 1)
 
   (check
       (let ((S (make-color 1 2 3)))
-	((struct-field-mutator  color-rtd 'red) S 10)
-	((struct-field-accessor color-rtd 'red) S))
+	((struct-type-field-mutator  color-rtd 'red) S 10)
+	((struct-type-field-accessor color-rtd 'red) S))
     => 10)
 
 ;;; --------------------------------------------------------------------
 
   (check-argument-violation
-      (struct-constructor 123)
+      (struct-type-constructor 123)
     => 123)
 
   (check-argument-violation
-      (struct-predicate 123)
+      (struct-type-predicate 123)
     => 123)
 
   (check-argument-violation
-      (struct-field-accessor 123 0)
+      (struct-type-field-accessor 123 0)
     => 123)
 
   (check-argument-violation
-      (struct-field-mutator 123 0)
+      (struct-type-field-mutator 123 0)
     => 123)
 
   (check-argument-violation
-      (struct-field-accessor color-rtd 3)
+      (struct-type-field-accessor color-rtd 3)
     => (list 3 color-rtd))
 
   (check-argument-violation
-      (struct-field-mutator color-rtd 3)
+      (struct-type-field-mutator color-rtd 3)
     => (list 3 color-rtd))
 
   #t)
@@ -336,7 +336,7 @@
     (make-struct-type "color" '(red green blue)))
 
   (define S
-    ((struct-constructor color-rtd) 1 2 3))
+    ((struct-type-constructor color-rtd) 1 2 3))
 
 ;;; --------------------------------------------------------------------
 
@@ -431,7 +431,7 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((S ((struct-constructor color-rtd) 1 2 3)))
+      (let ((S ((struct-type-constructor color-rtd) 1 2 3)))
 	(struct-reset! S)
 	(list (struct-ref S 0)
 	      (struct-ref S 1)

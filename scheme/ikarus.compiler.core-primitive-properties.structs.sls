@@ -103,18 +103,18 @@
   (declare struct-type-symbol		T:symbol)
   (declare struct-type-field-names	T:proper-list)
   (declare struct-type-destructor	(or T:false T:procedure))
-  (declare struct-constructor		T:procedure)
-  (declare struct-predicate		T:procedure)
+  (declare struct-type-constructor	T:procedure)
+  (declare struct-type-predicate	T:procedure)
   #| end of LET-SYNTAX |# )
 
-(declare-core-primitive struct-field-accessor
+(declare-core-primitive struct-type-field-accessor
     (safe)
   (signatures
    ((T:struct-type-descriptor (or T:non-negative-fixnum T:symbol))	=> (T:procedure)))
   (attributes
    ((_ _)		effect-free result-true)))
 
-(declare-core-primitive struct-field-mutator
+(declare-core-primitive struct-type-field-mutator
     (safe)
   (signatures
    ((T:struct-type-descriptor (or T:non-negative-fixnum T:symbol))	=> (T:procedure)))

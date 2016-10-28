@@ -8348,6 +8348,84 @@ Type of struct--type descriptor objects.  The constructor is
 @func{struct-type-descriptor?}.
 @end deftp
 
+
+@deftypeop Constructor @class{struct-type-descriptor} @aclass{struct-type-descriptor} type-constructor @var{name} @var{fields}
+@deftypeopx Constructor @class{struct-type-descriptor} @aclass{struct-type-descriptor} type-constructor @var{name} @var{fields} @var{uid}
+The constructor if @func{make-struct-type}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{struct-type-descriptor} @class{boolean} type-predicate @var{obj}
+The type predicate is @func{struct-type-descriptor?}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading methods
+
+
+@deftypemethod @class{struct-type-descriptor} @aclass{string} name @var{this}
+Apply @func{struct-type-name} to the instance and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct-type-descriptor} @aclass{symbol} uid @var{this}
+Apply @func{struct-type-symbol} to the instance and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct-type-descriptor} {(list-of @aclass{symbol})} field-names @var{this}
+Apply @func{struct-type-field-names} to the instance and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct-type-descriptor} @aclass{procedure} constructor @var{this}
+Apply @func{struct-type-constructor} to the instance and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct-type-descriptor} @aclass{type-predicate} predicate @var{this}
+Apply @func{struct-type-predicate} to the instance and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct-type-descriptor} @aclass{type-printer} printer @var{this}
+Apply @func{struct-type-printer} to the instance and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct-type-descriptor} @aclass{type-destructor} destructor @var{this}
+Apply @func{struct-type-destructor} to the instance and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct-type-descriptor} @aclass{procedure} field-accessor @var{this} @bracearg{idx, non-negative-fixnum}
+@deftypemethodx @class{struct-type-descriptor} @aclass{procedure} field-accessor @var{this} @bracearg{name, symbol}
+Apply @func{struct-type-field-accessor} to the instance and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct-type-descriptor} @aclass{procedure} field-mutator @var{this} @bracearg{idx, non-negative-fixnum}
+@deftypemethodx @class{struct-type-descriptor} @aclass{procedure} field-mutator @var{this} @bracearg{name, symbol}
+Apply @func{struct-type-field-mutator} to the instance and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct-type-descriptor} @aclass{procedure} field-method @var{this} @bracearg{idx, non-negative-fixnum}
+@deftypemethodx @class{struct-type-descriptor} @aclass{procedure} field-method @var{this} @bracearg{name, symbol}
+Apply @func{struct-type-field-method} to the instance and return its
+return value.
+@end deftypemethod
+
 @c page
 @node built-in records
 @section Type of record objects

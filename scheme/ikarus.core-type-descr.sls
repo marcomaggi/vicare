@@ -70,6 +70,11 @@
 		  ;;
 		  struct!=?
 		  struct-reset!
+		  struct-type-constructor
+		  struct-type-predicate
+		  struct-type-field-accessor
+		  struct-type-field-mutator
+		  struct-type-field-method
 		  ;;
 		  bignum-hash
 		  ratnum-hash
@@ -118,7 +123,12 @@
     ;;2016)
     (only (ikarus structs)
 	  struct!=?
-	  struct-reset!)
+	  struct-reset!
+	  struct-type-constructor
+	  struct-type-predicate
+	  struct-type-field-accessor
+	  struct-type-field-mutator
+	  struct-type-field-method)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Oct 1,
     ;;2016)
     (only (ikarus.io)

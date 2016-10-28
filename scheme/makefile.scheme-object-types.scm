@@ -677,7 +677,19 @@
 (define-scheme-type <struct-type-descriptor>
     <struct>
   (constructor make-struct-type)
-  (type-predicate struct-type-descriptor?))
+  (type-predicate struct-type-descriptor?)
+  (methods
+   (name			struct-type-name)
+   (uid				struct-type-symbol)
+   (field-names			struct-type-field-names)
+   (constructor			struct-type-constructor)
+   (predicate			struct-type-predicate)
+   (printer			struct-type-printer)
+   (destructor			struct-type-destructor)
+   (field-accessor		struct-type-field-accessor)
+   (field-mutator		struct-type-field-mutator)
+   (field-method		struct-type-field-method)
+   #| end of METHODS |# ))
 
 
 ;;;; records

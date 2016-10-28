@@ -33,14 +33,17 @@
 
     ;; struct constructor and predicate
     struct?				struct-and-std?
-    struct-constructor			struct-predicate
-    struct=?				struct!=?
+    struct-type-constructor		struct-type-predicate
+    struct-type-field-accessor		struct-type-field-mutator
+    struct-type-field-method
 
     ;; struct accessors and mutators
     struct-ref				struct-set!
     struct-and-std-ref			struct-and-std-set!
-    struct-field-accessor		struct-field-mutator
-    struct-field-method			struct-reset!
+    struct-reset!
+
+    ;; struct acomparison
+    struct=?				struct!=?
 
     ;; structure inspection
     struct-std
@@ -77,14 +80,14 @@
 
 		  ;; struct accessors and mutators
 		  struct?			struct-and-std?
-		  struct-constructor		struct-predicate
+		  struct-type-constructor	struct-type-predicate
 		  struct=?			struct!=?
 
 		  ;; struct accessors and mutators
 		  struct-ref			struct-set!
-		  struct-and-std-ref			struct-and-std-set!
-		  struct-field-accessor		struct-field-mutator
-		  struct-field-method
+		  struct-and-std-ref		struct-and-std-set!
+		  struct-type-field-accessor	struct-type-field-mutator
+		  struct-type-field-method
 		  struct-reset!
 
 		  ;; structure inspection
@@ -320,12 +323,12 @@
 (define ($make-clean-struct std)
   (foreign-call "ikrt_make_struct" std))
 
-(module (struct-constructor)
+(module (struct-type-constructor)
   ;;Return a constructor function for  data structures of type STD.  The
   ;;constructor accepts as  many arguments as fields defined  by STD and
   ;;returns a new structure instance.
   ;;
-  (define* (struct-constructor {std struct-type-descriptor?})
+  (define* (struct-type-constructor {std struct-type-descriptor?})
     (lambda args
       (let ((stru ($make-clean-struct std)))
 	(if (%set-fields stru args 0 ($std-length std))
@@ -350,19 +353,19 @@
 	       (%set-fields stru ($cdr field-val*) ($fxadd1 field-idx) field-num))))
 	  (else #f)))
 
-  #| end of module: STRUCT-CONSTRUCTOR |# )
+  #| end of module: STRUCT-TYPE-CONSTRUCTOR |# )
 
-(define* (struct-predicate {std struct-type-descriptor?})
+(define* (struct-type-predicate {std struct-type-descriptor?})
   ;;Return a predicate function for structures of type STD.
   ;;
   (lambda (obj)
     ($struct/rtd? obj std)))
 
-(module (struct-field-accessor
-	 struct-field-mutator
-	 struct-field-method)
+(module (struct-type-field-accessor
+	 struct-type-field-mutator
+	 struct-type-field-method)
 
-  (define* (struct-field-accessor {std struct-type-descriptor?} index/name)
+  (define* (struct-type-field-accessor {std struct-type-descriptor?} index/name)
     ;;Return an accessor  function for the field at  index INDEX/NAME of
     ;;data structures of type STD.
     ;;
@@ -373,7 +376,7 @@
 	  (assert-struct-of-type x std)
 	  ($struct-ref x field-idx)))))
 
-  (define* (struct-field-mutator {std struct-type-descriptor?} index/name)
+  (define* (struct-type-field-mutator {std struct-type-descriptor?} index/name)
     ;;Return a  mutator function  for the field  at index  INDEX/NAME of
     ;;data structures of type STD.
     ;;
@@ -384,7 +387,7 @@
 	  (assert-struct-of-type x std)
 	  ($struct-set! x field-idx v)))))
 
-  (define* (struct-field-method {std struct-type-descriptor?} index/name)
+  (define* (struct-type-field-method {std struct-type-descriptor?} index/name)
     ;;Return a method  function for the field at index  INDEX/NAME of data structures
     ;;of type STD.
     ;;

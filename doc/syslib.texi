@@ -5735,7 +5735,7 @@ return @false{}.  This predicate returns @false{} when applied to
 @end defun
 
 
-@defun struct-constructor @var{std}
+@defun struct-type-constructor @var{std}
 Return a constructor function for struct of type defined by the type
 descriptor @var{std}.  The returned constructor accepts as many
 arguments as there are fields specified by @var{std} and it returns a
@@ -5746,14 +5746,14 @@ new struct instance.
   (make-struct-type "duo" '(one two)))
 
 (define make-duo
-  (struct-constructor duo-std))
+  (struct-type-constructor duo-std))
 
 (make-duo 1 2)  @result{} #[struct duo one=1 two=2]
 @end lisp
 @end defun
 
 
-@defun struct-predicate @var{std}
+@defun struct-type-predicate @var{std}
 Return a predicate function for structs of type defined by the type
 descriptor @var{std}.
 
@@ -5762,18 +5762,18 @@ descriptor @var{std}.
   (make-struct-type "duo" '(one two)))
 
 (define make-duo
-  (struct-constructor duo-std))
+  (struct-type-constructor duo-std))
 
 (define duo?
-  (struct-predicate duo-std))
+  (struct-type-predicate duo-std))
 
 (duo? (make-duo 1 2))   @result{} #t
 @end lisp
 @end defun
 
 
-@defun struct-field-accessor @var{std} @var{index/name}
-@defunx struct-field-mutator @var{std} @var{index/name}
+@defun struct-type-field-accessor @var{std} @var{index/name}
+@defunx struct-type-field-mutator @var{std} @var{index/name}
 Return an accessor or mutator function for the field at @var{index/name}
 of structs of type defined by the type descriptor @var{std}.
 @var{index/name} can be a field index or a symbol representing a field
@@ -5786,18 +5786,18 @@ name.
 (define stru
   (make-color 1 2 3))
 
-((struct-field-accessor (struct-type-descriptor color) 'red)
+((struct-type-field-accessor (struct-type-descriptor color) 'red)
  stru)
 @result{} 1
 
-((struct-field-accessor (struct-type-descriptor color) 0)
+((struct-type-field-accessor (struct-type-descriptor color) 0)
  stru)
 @result{} 1
 @end example
 @end defun
 
 
-@defun struct-field-method @var{std} @var{index/name}
+@defun struct-type-field-method @var{std} @var{index/name}
 Return a ``method'' function for the field at @var{index/name} of
 structs of type defined by the type descriptor @var{std}.
 @var{index/name} can be a field index or a symbol representing a field
@@ -5813,7 +5813,7 @@ behaves like a field accessor.  When the method function is applied to
   (make-color 1 2 3))
 
 (define red-method
-  (struct-field-method (struct-type-descriptor color) 'red))
+  (struct-type-field-method (struct-type-descriptor color) 'red))
 
 (red-method stru)       @result{} 1
 (red-method stru 11)

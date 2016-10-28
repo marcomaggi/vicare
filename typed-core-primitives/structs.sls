@@ -84,27 +84,26 @@
   (declare struct-type-name		<string>)
   (declare struct-type-symbol		<symbol>)
   (declare struct-type-field-names	<list>)
-  #;(declare struct-type-destructor	(or <false> <procedure>))
-  (declare struct-type-destructor	<top>)
-  (declare struct-constructor		<procedure>)
-  (declare struct-predicate		<procedure>)
+  (declare struct-type-destructor	(or <false> <procedure>))
+  (declare struct-type-constructor	<procedure>)
+  (declare struct-type-predicate	<procedure>)
   #| end of LET-SYNTAX |# )
 
-(declare-core-primitive struct-field-accessor
+(declare-core-primitive struct-type-field-accessor
     (safe)
   (signatures
    ((<struct-type-descriptor> (or <non-negative-fixnum> <symbol>))	=> ((lambda (<struct>) => (<top>)))))
   (attributes
    ((_ _)		effect-free result-true)))
 
-(declare-core-primitive struct-field-mutator
+(declare-core-primitive struct-type-field-mutator
     (safe)
   (signatures
    ((<struct-type-descriptor> (or <non-negative-fixnum> <symbol>))	=> ((lambda (<struct> <top>) => (<void>)))))
   (attributes
    ((_ _)		effect-free result-true)))
 
-(declare-core-primitive struct-field-method
+(declare-core-primitive struct-type-field-method
     (safe)
   (signatures
    ((<struct-type-descriptor> (or <non-negative-fixnum> <symbol>))	=> ((case-lambda
