@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -68,7 +68,7 @@
   (sysname nodename release version machine))
 
 (module ()
-  (set-rtd-printer! (type-descriptor utsname)
+  (set-struct-type-printer! (type-descriptor utsname)
     (lambda (S port unused)
       (define-inline (%display thing)
 	(display thing port))
@@ -116,6 +116,6 @@
 
 ;;;; done
 
-)
+#| end of LIBRARY |# )
 
 ;;; end of file

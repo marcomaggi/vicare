@@ -508,7 +508,7 @@
     (display "alpha-destructor\n" stderr)
     (void))
 
-  (set-rtd-destructor! (type-descriptor alpha) alpha-destructor)
+  (set-struct-type-destructor! (type-descriptor alpha) alpha-destructor)
 
   #;(debug-print ($std-destructor (type-descriptor alpha)))
 
@@ -637,7 +637,7 @@
   (define (the-beta-destructor S)
     #t)
 
-  (set-rtd-destructor! beta-std the-beta-destructor)
+  (set-struct-type-destructor! beta-std the-beta-destructor)
 
 ;;; --------------------------------------------------------------------
 

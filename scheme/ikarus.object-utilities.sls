@@ -71,9 +71,6 @@
 	  <void>-ctd <would-block>-ctd <eof>-ctd)
     (only (vicare system $fx)
 	  $fxadd1)
-    (only (vicare system $structs)
-	  $struct-rtd
-	  $set-std-printer!)
     (only (vicare system $records)
 	  $record-type-method-retriever
 	  $record-type-hash-function)
@@ -160,7 +157,7 @@
 	((record-object? subject)
 	 ;;We use  $STRUCT-RTD because it does  not care about the  opaqueness of the
 	 ;;record object.
-	 (%record-object-call ($struct-rtd subject)))
+	 (%record-object-call (struct-std subject)))
 
 	((string?  subject)	(if (string-empty? subject)
 				    (%built-in-scheme-object-call <empty-string>-ctd)
@@ -233,7 +230,7 @@
   (cond ((record-object? subject)
 	 ;;We use  $STRUCT-RTD because it does  not care about the  opaqueness of the
 	 ;;record object.
-	 (cond (($record-type-hash-function ($struct-rtd subject))
+	 (cond (($record-type-hash-function (struct-std subject))
 		=> (lambda (fun)
 		     (fun subject)))
 	       (else

@@ -473,7 +473,7 @@
       (unless (pointer-null? P)
 	(capi.glibc-iconv-close P))))
 
-  (set-rtd-destructor! (type-descriptor iconv) $iconv-destructor))
+  (set-struct-type-destructor! (type-descriptor iconv) $iconv-destructor))
 
 (define (%struct-iconv-printer S port sub-printer)
   (define-inline (%display thing)

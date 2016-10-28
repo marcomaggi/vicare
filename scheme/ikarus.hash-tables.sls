@@ -1188,7 +1188,7 @@
 
 (define ($struct-hash stru)
   (if (zero? (struct-length stru))
-      (symbol-hash (struct-type-symbol (struct-rtd stru)))
+      (symbol-hash (struct-type-symbol (struct-std stru)))
     (object-hash (struct-ref stru 0))))
 
 ;;; --------------------------------------------------------------------

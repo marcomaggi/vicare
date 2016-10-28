@@ -31,8 +31,7 @@
 		  debug-print			debug-print*)
     (vicare system structs)
     (only (vicare system $structs)
-	  base-rtd
-	  $struct-rtd)
+	  base-rtd)
     (prefix (only (ikarus writer)
 		  the-printer-printing-style
 		  case-printing-style
@@ -497,7 +496,7 @@
       ;;   (define-struct duo
       ;;     (one two))
       ;;
-      ;;   (set-rtd-printer! (struct-type-descriptor duo)
+      ;;   (set-struct-type-printer! (struct-type-descriptor duo)
       ;;     (lambda (stru port sub-printer)
       ;;       (display "#{duo " port)
       ;;       (sub-printer (duo-one stru))
@@ -575,7 +574,7 @@
       ;;        (one 1)
       ;;        (two 2))
       ;;
-      (let* ((std          (struct-rtd stru))
+      (let* ((std          (struct-std stru))
 	     (field-name*  (struct-type-field-names std))
 	     (instance?    (or (not (eq? std (base-rtd)))
 			       (record-type-descriptor? std)
@@ -671,7 +670,7 @@
       ;;        (two 2))
       ;;
       ;;Here we want to extract the RTD from both opaque and non-opaque records.
-      (let* ((rtd		($struct-rtd reco))
+      (let* ((rtd		(struct-std reco))
 	     (field-name*	(vector->list (record-type-all-field-names rtd))))
 	(receive (field-box* field-sep*)
 	    (%boxify-record-fields reco 0 field-name*)

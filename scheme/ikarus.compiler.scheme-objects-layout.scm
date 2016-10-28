@@ -219,11 +219,9 @@
 ;;;; structs
 
 (define-constant record-tag			vector-tag)
-(define-constant disp-struct-rtd		0)
 (define-constant disp-struct-std		0)
 (define-constant disp-struct-data		wordsize)
 
-(define-constant off-struct-rtd			(fx- disp-struct-rtd  vector-tag))
 (define-constant off-struct-std			(fx- disp-struct-std  vector-tag))
 (define-constant off-struct-data		(fx- disp-struct-data vector-tag))
 

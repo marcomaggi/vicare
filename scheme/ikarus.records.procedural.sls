@@ -311,7 +311,7 @@
    ))
 
 #;(module ()
-  (set-rtd-printer! (type-descriptor <rtd>)
+  (set-struct-type-printer! (type-descriptor <rtd>)
     (lambda (S port sub-printer)
       (define-inline (%display thing)
 	(display thing port))
@@ -355,7 +355,7 @@
    ))
 
 #;(module ()
-  (set-rtd-printer! (type-descriptor <rcd>)
+  (set-struct-type-printer! (type-descriptor <rcd>)
     (lambda (S port sub-printer)
       (define-inline (%display thing)
 	(display thing port))

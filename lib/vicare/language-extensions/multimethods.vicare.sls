@@ -790,7 +790,7 @@
      ((hashtable?		obj)	(type-unique-identifiers <hashtable>))
 
      (else
-      (cons (struct-type-symbol (struct-rtd obj)) (type-unique-identifiers <struct>)))))
+      (cons (struct-type-symbol (struct-std obj)) (type-unique-identifiers <struct>)))))
 
 ;;; --------------------------------------------------------------------
 

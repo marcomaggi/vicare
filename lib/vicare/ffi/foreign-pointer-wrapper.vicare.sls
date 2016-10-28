@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -403,7 +403,7 @@
 			(#,unsafe-pointer-setter STRUCT #f)))
 		  #f))
 	      (module ()
-		(set-rtd-destructor! (type-descriptor #,type-id)
+		(set-struct-type-destructor! (type-descriptor #,type-id)
 		  #,unsafe-scheme-destructor))))))
 
     (define (%make-table-destruction struct-id type-id collected-type-id)
@@ -488,7 +488,7 @@
 	    (%display (UNSAFE-GETTER-UID S))
 	    (%display "]"))
 	  (module ()
-	    (set-rtd-printer! (type-descriptor #,type-id) the-printer)))))
+	    (set-struct-type-printer! (type-descriptor #,type-id) the-printer)))))
 
   (define (%make-collected-structs-definitions collector-type-id collected-type-id)
     ;;Return a syntax object representing the definition of 3 functions:

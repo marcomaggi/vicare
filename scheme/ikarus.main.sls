@@ -119,8 +119,7 @@
 	    struct-guardian-logger
 	    struct-guardian-log)
     (only (vicare system $structs)
-	  $struct-ref
-	  $struct-rtd)
+	  $struct-ref)
     (prefix (only (ikarus.readline)
 		  readline-enabled?
 		  make-readline-input-port)
@@ -1323,7 +1322,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 		((not ?S))
 	      ?body0 . ?body))
 	  (define-inline (%extract-destructor S)
-	    ($struct-ref ($struct-rtd S) FIELD-INDEX-OF-DESTRUCTOR-IN-STD))
+	    ($struct-ref (struct-std S) FIELD-INDEX-OF-DESTRUCTOR-IN-STD))
 	  (define-inline (%call-logger ?logger ?struct ?exception ?action)
 	    (with-blocked-exceptions
 		(lambda ()
@@ -1442,7 +1441,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 		((not ?S))
 	      ?body0 . ?body))
 	  (define-syntax-rule (%extract-destructor S)
-	    ($record-type-destructor ($struct-rtd S)))
+	    ($record-type-destructor (struct-std S)))
 	  (define (%call-logger logger record exception action)
 	    (with-blocked-exceptions
 		(lambda ()

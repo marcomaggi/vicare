@@ -1425,8 +1425,8 @@
 
 (define (initialise-pointers-stuff)
   (set! %memory-guardian (make-guardian))
-  (set-rtd-printer!	(type-descriptor memory-block)	%struct-memory-block-printer)
-  (set-rtd-destructor!	(type-descriptor memory-block)	%memory-block-destructor)
+  (set-struct-type-printer!	(type-descriptor memory-block)	%struct-memory-block-printer)
+  (set-struct-type-destructor!	(type-descriptor memory-block)	%memory-block-destructor)
   (post-gc-hooks (cons %free-allocated-memory (post-gc-hooks))))
 
 

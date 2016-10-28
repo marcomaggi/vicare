@@ -124,8 +124,6 @@
 		   (attributes
 		    ((_ _)		result-true))))
 		)))
-  (declare set-rtd-printer!	<procedure>)
-  (declare set-rtd-destructor!	<procedure>)
   (declare set-struct-type-printer!	<procedure>)
   (declare set-struct-type-destructor!	<procedure>)
   #| end of LET-SYNTAX |# )
@@ -144,7 +142,6 @@
 		    ((_)		effect-free))))
 		)))
   (declare struct-std		<struct-type-descriptor>)
-  (declare struct-rtd		<struct-type-descriptor>)
   (declare struct-name		<string>)
   (declare struct-length	<non-negative-fixnum>)
   (declare struct-field-names	(list-of <symbol>))

@@ -5991,7 +5991,6 @@ the parameter @func{printer-printing-style} to differentiate the style:
 
 
 @defun set-struct-type-printer! @var{std} @var{printer}
-@defunx set-rtd-printer! @var{std} @var{printer}
 Select the procedure @var{printer} as printer for structs of type
 @var{std}; if @var{printer} is @false{}, instances of type @var{std}
 make use of the built--in Scheme objects printer.  Return the old
@@ -6057,7 +6056,6 @@ the struct has already been finalised.
 
 
 @defun set-struct-type-destructor! @var{std} @var{destructor}
-@defunx set-rtd-destructor! @var{std} @var{destructor}
 Select the procedure @var{destructor} as destructor for data structs of
 type @var{std}; return the old destructor function or @false{} if no
 destructor was set for @var{std}.  The destructor accepts a single
@@ -6180,7 +6178,6 @@ equal to @var{std}; otherwise return @false{}.  Raise an error if
 
 
 @defun struct-std @var{stru}
-@defunx struct-rtd @var{stru}
 Return the struct--type descriptor of the data structure @var{stru}.
 Notice that this function works with both Vicare's structs and @rnrs{6}
 records.
@@ -6314,7 +6311,7 @@ to the fixnum zero.
 @end deffn
 
 
-@deffn {Unsafe Operation} $struct-rtd @var{stru}
+@deffn {Unsafe Operation} $struct-std @var{stru}
 Return a reference to the type descriptor of @var{stru}.
 @end deffn
 

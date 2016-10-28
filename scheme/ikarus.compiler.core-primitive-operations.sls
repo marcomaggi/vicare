@@ -4036,6 +4036,14 @@
    ((P stru)
     (K #t)))
 
+ (define-core-primitive-operation $struct-std unsafe
+   ((V stru)
+    (asm 'mref (V-simple-operand stru) (K off-struct-std)))
+   ((E stru)
+    (nop))
+   ((P stru)
+    (K #t)))
+
 ;;; --------------------------------------------------------------------
 ;;; struct type descriptor accessor
 

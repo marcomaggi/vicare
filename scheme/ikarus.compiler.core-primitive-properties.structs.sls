@@ -131,8 +131,6 @@
 		   (attributes
 		    ((_ _)		result-true))))
 		)))
-  (declare set-rtd-printer!	T:procedure)
-  (declare set-rtd-destructor!	T:procedure)
   (declare set-struct-type-printer!	T:procedure)
   (declare set-struct-type-destructor!	T:procedure)
   #| end of LET-SYNTAX |# )
@@ -150,7 +148,7 @@
 		   (attributes
 		    ((_)		effect-free))))
 		)))
-  (declare struct-rtd		T:struct-type-descriptor)
+  (declare struct-std		T:struct-type-descriptor)
   (declare struct-name		T:string)
   (declare struct-length	T:non-negative-fixnum)
   (declare struct-printer	T:procedure)
@@ -241,7 +239,7 @@
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators
 
-(declare-core-primitive $struct-rtd
+(declare-core-primitive $struct-std
     (unsafe)
   (signatures
    ((T:struct)			=> (T:struct-type-descriptor)))

@@ -403,7 +403,7 @@
   ;;   (define-struct duo
   ;;     (one two))
   ;;
-  ;;   (set-rtd-printer! (struct-type-descriptor duo)
+  ;;   (set-struct-type-printer! (struct-type-descriptor duo)
   ;;     (lambda (stru port sub-printer)
   ;;       (display "#{duo " port)
   ;;       (sub-printer (duo-one stru))
@@ -592,7 +592,7 @@
       ;;   (define-struct duo
       ;;     (one two))
       ;;
-      ;;   (set-rtd-printer! (struct-type-descriptor duo)
+      ;;   (set-struct-type-printer! (struct-type-descriptor duo)
       ;;     (lambda (stru port sub-printer)
       ;;       (display "#{duo " port)
       ;;       (sub-printer (duo-one stru))
@@ -1314,7 +1314,7 @@
 	     (%write-r6rs-record-constructor-descriptor stru p write-style? marks-table next-mark-idx))
 
 	    ;;We do not handle opaque records specially.
-	    ;; ((let ((rtd (struct-rtd x)))
+	    ;; ((let ((rtd (struct-std x)))
 	    ;;    (and (record-type-descriptor? rtd)
 	    ;; 	    (record-type-opaque? rtd)))
 	    ;;  (write-char* "#<unknown>" p)
@@ -1326,7 +1326,7 @@
     (define (%write-r6rs-record-type-descriptor rtd port write-style? marks-table next-mark-idx)
       ;;Remember that record-type descriptors are struct instances.
       ;;
-      (let ((std (struct-rtd rtd)))
+      (let ((std (struct-std rtd)))
 	(write-char* "#[rtd " port)
 	(write-char* (symbol->string (record-type-name rtd)) port)
 	(%write-struct-fields rtd 1 (cdr (struct-type-field-names std)) port write-style? marks-table next-mark-idx)))
@@ -1354,7 +1354,7 @@
       ;;
       ;;   #[struct-type ?type-name length=?len fields=?fields ...]
       ;;
-      (let* ((std       (struct-rtd stru))
+      (let* ((std       (struct-std stru))
 	     (instance? (not (eq? std (base-rtd)))))
 	(write-char* (if instance? "#[struct " "#[struct-type ") port)
 	(write-char* (if instance?

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -748,9 +748,9 @@
 
 ;;;; done
 
-(set-rtd-printer! (type-descriptor struct-signalfd-siginfo)	%struct-signalfd-siginfo-printer)
-(set-rtd-printer! (type-descriptor struct-inotify-event)	%struct-inotify-event-printer)
+(set-struct-type-printer! (type-descriptor struct-signalfd-siginfo)	%struct-signalfd-siginfo-printer)
+(set-struct-type-printer! (type-descriptor struct-inotify-event)	%struct-inotify-event-printer)
 
-)
+#| end of LIBRARY |# )
 
 ;;; end of file

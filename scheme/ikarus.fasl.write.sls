@@ -37,8 +37,7 @@
     (vicare system $bytevectors)
     (vicare system $codes)
     (only (vicare system $structs)
-	  base-rtd
-	  $struct-rtd)
+	  base-rtd)
     (prefix (vicare system code-objects)
     	    code-objects::)
     (vicare system structs)
@@ -269,7 +268,7 @@
 			 ;;MAKE-RECORD-TYPE-DESCRIPTOR for  a generative record-type,
 			 ;;we define  a new  record-type.  (Marco  Maggi; Mon  Jul 4,
 			 ;;2016)
-			 (let ((rtd ($struct-rtd x)))
+			 (let ((rtd (struct-std x)))
 			   (cond ((eq? rtd (base-rtd))
 				  ;;this is a struct RTD
 				  (make-graph (struct-type-name x) h)
@@ -545,10 +544,10 @@
 	       	(if (options::writing-boot-image?)
 	       	    (assertion-violation who
 	       	      "invalid R6RS record as boot image object" x)
-		  (let ((rtd ($struct-rtd x)))
+		  (let ((rtd (struct-std x)))
 		    (%write-struct-instance x rtd next-mark))))
 	       (else
-		(let ((rtd ($struct-rtd x)))
+		(let ((rtd (struct-std x)))
 		  (if (eq? rtd (base-rtd))
 		      (%write-struct-type-descriptor x next-mark)
 		    (%write-struct-instance x rtd next-mark))))))

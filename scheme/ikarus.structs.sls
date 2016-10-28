@@ -27,9 +27,6 @@
     struct-type-field-names
     struct-type-printer			set-struct-type-printer!
     struct-type-destructor		set-struct-type-destructor!
-    (rename
-     (set-struct-type-printer!		set-rtd-printer!)
-     (set-struct-type-destructor!	set-rtd-destructor!))
 
     ;; struct constructor and predicate
     struct?				struct-and-std?
@@ -47,7 +44,6 @@
 
     ;; structure inspection
     struct-std
-    (rename (struct-std	struct-rtd))
     struct-name				struct-length
     struct-field-names
     struct-printer			struct-destructor
@@ -91,8 +87,7 @@
 		  struct-reset!
 
 		  ;; structure inspection
-		  struct-type-descriptor
-		  struct-rtd			struct-std
+		  struct-type-descriptor	struct-std
 		  struct-name			struct-length
 		  struct-field-names
 		  struct-printer		struct-destructor)

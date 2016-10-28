@@ -9,7 +9,7 @@
 ;;;	The  code  in   this  library  is  derived  from   the  code  in
 ;;;	"ikarus.symbol-table.sls".
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -448,7 +448,7 @@
 
 ;;;; done
 
-(set-rtd-printer! (type-descriptor weak-table) %struct-weak-table-printer)
+(set-struct-type-printer! (type-descriptor weak-table) %struct-weak-table-printer)
 
 )
 
