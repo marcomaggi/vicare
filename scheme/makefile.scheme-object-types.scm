@@ -668,6 +668,7 @@
    (destructor			struct-destructor)
    ;;
    (=				struct=?)
+   (!=				struct!=?)
    ;;
    (ref				struct-ref)
    (set!			struct-set!)
@@ -696,19 +697,59 @@
 
 (define-scheme-type <record>
     <struct>
+  (constructor #t)
   (type-predicate record?)
   (equality-predicate record=?)
-  (hash-function record-hash))
+  (hash-function record-hash)
+  (methods
+   (=				record=?)
+   (!=				record!=?)
+   ;;
+   (ref				record-ref)
+   (reset			record-reset!)
+   #| end of METHODS |# ))
 
 (define-scheme-type <record-type-descriptor>
     <struct>
   (constructor make-record-type-descriptor)
-  (type-predicate record-type-descriptor?))
+  (type-predicate record-type-descriptor?)
+  (methods
+   ;;FIXME Do we want these as methods?  (Marco Maggi; Sat Oct 29, 2016)
+   ;;
+   ;; (predicate			record-predicate)
+   ;; (record-equality-predicate	record-type-equality-predicate)
+   ;; (record-comparison-procedure	record-type-comparison-procedure)
+   ;; (record-hash-function		record-type-hash-function)
+   ;; (destructor			record-type-destructor)
+   ;; (printer				record-type-printer)
+   ;; (accessor				record-accessor)
+   ;; (mutator				record-mutator)
+   ;; (field-mutable?			record-field-mutable?)
+   ;;
+   (name			record-type-name)
+   (parent			record-type-parent)
+   (uid				record-type-uid)
+   (generative?			record-type-generative?)
+   (sealed?			record-type-sealed?)
+   (opaque?			record-type-opaque?)
+   (field-names			record-type-field-names)
+   (all-field-names		record-type-all-field-names)
+   (uids-list			record-type-uids-list)
+   (implemented-interfaces	record-type-implemented-interfaces)
+   #| end of METHODS |# ))
 
 (define-scheme-type <record-constructor-descriptor>
     <struct>
   (constructor make-record-constructor-descriptor)
-  (type-predicate record-constructor-descriptor?))
+  (type-predicate record-constructor-descriptor?)
+  (methods
+   ;;FIXME Do we want these as methods?  (Marco Maggi; Sat Oct 29, 2016)
+   ;;
+   ;; (constructor			record-constructor)
+   ;;
+   (rtd				rcd-rtd)
+   (parent-rcd			rcd-parent-rcd)
+   #| end of METHODS |# ))
 
 ;;; --------------------------------------------------------------------
 

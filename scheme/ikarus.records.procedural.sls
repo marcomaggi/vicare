@@ -44,7 +44,7 @@
     rtd-subtype?				record-type-all-field-names
     (rename (<rcd>-rtd				rcd-rtd)
 	    (<rcd>-parent-rcd			rcd-parent-rcd))
-    record=?
+    record=?					record!=?
     record-and-rtd?				$record-and-rtd?
     record-object?
     record-reset!
@@ -102,7 +102,8 @@
 
 		  ;; extension utility functions, non-R6RS
 		  rtd-subtype?				record-type-all-field-names
-		  record-reset!				record=?
+		  record=?				record!=?
+		  record-reset!
 		  record-printer			record-destructor
 		  record
 		  record-equality-predicate		record-comparison-procedure
@@ -127,7 +128,8 @@
     (vicare system $symbols)
     (vicare system $vectors)
     (only (vicare language-extensions syntaxes)
-	  define-equality/sorting-predicate))
+	  define-equality/sorting-predicate
+	  define-inequality-predicate))
 
 
 ;;;; type definitions
@@ -1481,6 +1483,7 @@
 			   (list (record-type-field-names rtd))))))))
 
 (define-equality/sorting-predicate record=?	$record=	record-object?)
+(define-inequality-predicate       record!=?	$record!=	record-object?)
 
 (define ($record= obj1 obj2)
   ;;Return true if OBJ1  and OBJ2 are two R6RS records having the  same RTD and equal
@@ -1495,8 +1498,11 @@
 			      ($struct-ref obj2 i))
 		      (loop ($fxadd1 i)))))))))
 
+(define ($record!= reco1 reco2)
+  (not ($record= reco1 reco2)))
+
 (define* (record-reset! {x non-opaque-record?})
-  ;;Reset to #f all the fields of a structure.
+  ;;Reset to #f all the fields of a record.
   ;;
   ;;Remember that the  first 2 fields of an R6RS  record type descriptor
   ;;have the same meaning of the first  2 fields of a Vicare struct type

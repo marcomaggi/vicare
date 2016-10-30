@@ -8260,17 +8260,17 @@ Validate @var{stru} as struct object and return it.
 @end deftypeop
 
 
-@deftypeop {Type predicate} @class{struct} @class{boolean} type-predicate @var{obj}
+@deftypeop {Type predicate} @class{struct} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{struct?}.
 @end deftypeop
 
 
-@deftypeop {Equality predicate} @class{struct} @class{boolean} equality-predicate @var{this} @bracearg{stru, struct}
+@deftypeop {Equality predicate} @class{struct} @aclass{boolean} equality-predicate @var{this} @bracearg{stru, struct}
 The equality predicate is @func{struct=?}.
 @end deftypeop
 
 
-@deftypeop {Hash function} @class{struct} @class{non-negative-fixnum} hash-function @var{this}
+@deftypeop {Hash function} @class{struct} @aclass{non-negative-fixnum} hash-function @var{this}
 The hash function is @func{struct-hash}.
 @end deftypeop
 
@@ -8279,17 +8279,17 @@ The hash function is @func{struct-hash}.
 @subsubheading Methods: inspection
 
 
-@deftypemethod @class{struct} @class{struct-type-descriptor} std @var{this}
+@deftypemethod @class{struct} @aclass{struct-type-descriptor} std @var{this}
 Apply @func{struct-std} to the instance and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{struct} @class{nestring} name @var{this}
+@deftypemethod @class{struct} @aclass{nestring} name @var{this}
 Apply @func{struct-name} to the instance and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{struct} @class{non-negative-fixnum} length @var{this}
+@deftypemethod @class{struct} @aclass{non-negative-fixnum} length @var{this}
 Apply @func{struct-length} to the instance and return its return value.
 @end deftypemethod
 
@@ -8313,8 +8313,13 @@ Apply @func{struct-destructor} to the instance and return its return value.
 @subsubheading Methods: comparison
 
 
-@deftypemethod @class{struct} @class{boolean} = @var{this} @bracearg{stru, struct}
+@deftypemethod @class{struct} @aclass{boolean} = @var{this} @bracearg{stru, struct} @dots{}
 Apply @func{struct=?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{struct} @aclass{boolean} != @var{this} @bracearg{stru, struct} @dots{}
+Apply @func{struct!=?} to the arguments and return its return value.
 @end deftypemethod
 
 @c ------------------------------------------------------------------------
@@ -8322,17 +8327,17 @@ Apply @func{struct=?} to the arguments and return its return value.
 @subsubheading Methods: accessors and mutators
 
 
-@deftypemethod @class{struct} @class{top} ref @var{this} @bracearg{idx, non-negative-fixnum}
+@deftypemethod @class{struct} @aclass{top} ref @var{this} @bracearg{idx, non-negative-fixnum}
 Apply @func{struct-ref} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{struct} @class{void} set! @var{this} @bracearg{idx, non-negative-fixnum} @var{obj}
+@deftypemethod @class{struct} @aclass{void} set! @var{this} @bracearg{idx, non-negative-fixnum} @var{obj}
 Apply @func{struct-set!} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{struct} @class{void} reset @var{this}
+@deftypemethod @class{struct} @aclass{void} reset @var{this}
 Apply @func{struct-reset!} to the arguments and return its return value.
 @end deftypemethod
 
@@ -8429,27 +8434,194 @@ return value.
 @section Type of record objects
 
 
+@menu
+* built-in records base::       The @class{record} type.
+* built-in records rtd::        The @class{record-type-descriptor} type.
+* built-in records rcd::        The @class{record-constructor-descriptor} type.
+@end menu
+
+@c page
+@node built-in records base
+@subsection The @class{record} type
+
+
 @deftp {Core Type} @aclass{record}
 @deftpx {Parent Type} @aclass{struct}
-Type of record objects.  There is no constructor.  The type predicate is
-@func{record?}.
+Type of record objects.
 @end deftp
+
+
+@deftypeop Constructor @class{record} @aclass{record} type-constructor @var{reco}
+Validate @var{reco} as record object and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{record} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{record?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{record} @aclass{boolean} equality-predicate @var{this} @bracearg{reco, record}
+The equality predicate is @func{record=?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{record} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{record-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: comparison
+
+
+@deftypemethod @class{record} @aclass{boolean} = @var{this} @bracearg{reco, record} @dots{}
+Apply @func{record=?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{record} @aclass{boolean} != @var{this} @bracearg{reco, record} @dots{}
+Apply @func{record!=?} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: accessors and mutators
+
+
+@deftypemethod @class{record} @aclass{top} ref @var{this} @bracearg{idx, non-negative-fixnum}
+Apply @func{record-ref} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{record} @aclass{void} reset @var{this}
+Apply @func{record-reset!} to the arguments and return its return value.
+@end deftypemethod
+
+@c page
+@node built-in records rtd
+@subsection The @class{record-type-descriptor} type
 
 
 @deftp {Core Type} @aclass{record-type-descriptor}
 @deftpx {Parent Type} @aclass{struct}
-Type of record--type descriptor objects.  The constructor is
-@func{make-record-type-descriptor}.  The type predicate is
-@func{record-type-descriptor?}.
+Type of record--type descriptor objects.
 @end deftp
+
+
+@deftypeop Constructor @class{record-type-descriptor} @aclass{record-type-descriptor} type-constructor @var{name} @var{parent} @var{uid} @var{sealed?} @var{opaque?} @var{fields}
+The constructor is @func{make-record-type-descriptor}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{record-type-descriptor} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{record-type-descriptor?}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: inspection
+
+
+@deftypemethod @class{record-type-descriptor} @aclass{symbol} name @var{this}
+Apply @func{record-type-name} to the instance and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{record-type-descriptor} {(or @aclass{false} @aclass{record-type-descriptor})} parent @var{this}
+Apply @func{record-type-parent} to the instance and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{record-type-descriptor} @aclass{symbol} uid @var{this}
+Apply @func{record-type-uid} to the instance and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{record-type-descriptor} @aclass{boolean} generative? @var{this}
+Apply @func{record-type-generative?} to the instance and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{record-type-descriptor} @aclass{boolean} sealed? @var{this}
+Apply @func{record-type-sealed?} to the instance and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{record-type-descriptor} @aclass{boolean} opaque? @var{this}
+Apply @func{record-type-opaque?} to the instance and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{record-type-descriptor} @aclass{boolean} generative? @var{this}
+Apply @func{record-type-generative?} to the instance and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{record-type-descriptor} {(vector-of @aclass{symbol})} field-names @var{this}
+Apply @func{record-type-field-names} to the instance and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{record-type-descriptor} {(vector-of @aclass{symbol})} all-field-names @var{this}
+Apply @func{record-type-all-field-names} to the instance and return its
+return value.
+@end deftypemethod
+
+
+@deftypemethod @class{record-type-descriptor} {(nelist-of @aclass{symbol})} uids-list @var{this}
+Apply @func{record-type-uids-list} to the instance and return its return
+value.
+@end deftypemethod
+
+
+@deftypemethod @class{record-type-descriptor} {(or @aclass{false} (vector-of (pair @aclass{symbol} @aclass{type-method-retriever})))} implemented-interfaces @var{this}
+Apply @func{record-type-implemented-interfaces} to the instance and
+return its return value.
+@end deftypemethod
+
+
+@c page
+@node built-in records rcd
+@subsection The @class{record-constructor-descriptor} type
 
 
 @deftp {Core Type} @aclass{record-constructor-descriptor}
 @deftpx {Parent Type} @aclass{struct}
-Type of record--constructor descriptor objects.  The constructor is
-@func{make-record-constructor-descriptor}.  The type predicate is
-@func{record-constructor-descriptor?}.
+Type of record--constructor descriptor objects.
 @end deftp
+
+
+@deftypeop Constructor @class{record-constructor-descriptor} @aclass{record-constructor-descriptor} type-constructor @var{rtd} @var{parent-constructor-descriptor} @var{protocol}
+The constructor is @func{make-record-type-descriptor}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{record-constructor-descriptor} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{record-type-descriptor?}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: inspection
+
+
+@deftypemethod @class{record-constructor-descriptor} @aclass{record-type-descriptor} rtd @var{this}
+Apply @func{rcd-rtd} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{record-constructor-descriptor} {(or @aclass{false} @aclass{record-constructor-descriptor})} parent @var{this}
+Apply @func{rcd-parent-rcd} to the instance and return its return value.
+@end deftypemethod
 
 @c page
 @node built-in conditions

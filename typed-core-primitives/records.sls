@@ -170,7 +170,7 @@
 (declare-core-primitive record-type-field-names
     (safe)
   (signatures
-   ((<record-type-descriptor>)	=> (<vector>)))
+   ((<record-type-descriptor>)	=> ((vector-of <symbol>))))
   (attributes
    ((_)				effect-free result-true)))
 
@@ -184,24 +184,21 @@
 (declare-core-primitive record-type-parent
     (safe)
   (signatures
-   #;((<record-type-descriptor>)	=> ((or <false> <record-type-descriptor>)))
-   ((<record-type-descriptor>)		=> (<top>)))
+   ((<record-type-descriptor>)	=> ((or <false> <record-type-descriptor>))))
   (attributes
    ((_)				effect-free)))
 
 (declare-core-primitive record-type-uid
     (safe)
   (signatures
-   #;((<record-type-descriptor>)	=> ((or <false> <symbol>)))
-   ((<record-type-descriptor>)		=> (<top>)))
+   ((<record-type-descriptor>)	=> (<symbol>)))
   (attributes
    ((_)				effect-free)))
 
 (declare-core-primitive record-type-uids-list
     (safe)
   (signatures
-   #;((<record-type-descriptor>)	=> ((or <false> <symbol>)))
-   ((<record-type-descriptor>)		=> ((list-of <symbol>))))
+   ((<record-type-descriptor>)	=> ((nelist-of <symbol>))))
   (attributes
    ((_)				effect-free)))
 
@@ -355,6 +352,11 @@
   (signatures
    ((list-of <record>)			=> (<boolean>))))
 
+(declare-core-primitive record!=?
+    (safe)
+  (signatures
+   ((list-of <record>)			=> (<boolean>))))
+
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous
 
@@ -372,8 +374,7 @@
   (attributes
    ((_ _ _)			result-true)))
 
-#;(declare-parameter record-guardian-logger	(or <boolean> <procedure>))
-(declare-parameter record-guardian-logger	<top>)
+(declare-parameter record-guardian-logger	(or <boolean> <procedure>))
 
 (declare-core-primitive internal-applicable-record-destructor
     (safe)

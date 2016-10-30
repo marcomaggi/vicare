@@ -76,6 +76,9 @@
 		  struct-type-field-mutator
 		  struct-type-field-method
 		  ;;
+		  record!=?
+		  record-reset!
+		  ;;
 		  bignum-hash
 		  ratnum-hash
 		  cflonum-hash
@@ -91,7 +94,24 @@
 		  binary-input-only-port?
 		  binary-output-only-port?
 		  textual-input-only-port?
-		  textual-output-only-port?)
+		  textual-output-only-port?
+		  ;;
+		  compar-fixnum
+		  compar-bignum
+		  compar-exact-integer
+		  compar-ratnum
+		  compar-exact-real
+		  compar-flonum
+		  compar-real
+		  compar-char
+		  compar-string
+		  compar-string-ci
+		  compar-symbol
+		  compar-boolean
+		  compar-true
+		  compar-false
+		  compar-transcoder
+		  compar-pointer)
     (ikarus records syntactic)
     (only (vicare system $fx)
 	  $fxadd1)
@@ -151,6 +171,11 @@
 	  struct-type-field-accessor
 	  struct-type-field-mutator
 	  struct-type-field-method)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
+    ;;2016)
+    (only (ikarus records procedural)
+	  record!=?
+	  record-reset!)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Wed Oct 26,
     ;;2016)
     (only (ikarus vectors)

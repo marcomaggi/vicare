@@ -3380,6 +3380,7 @@
     (record-guardian-logger			v $language)
     (record-guardian-log			v $language)
     (record=?					v $language)
+    (record!=?					v $language)
     (record-reset!				v $language)
     (record-printer				v $language)
     (record-equality-predicate			v $language)

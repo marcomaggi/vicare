@@ -10444,10 +10444,19 @@ record--constructor descriptor or @false{} if @var{rcd} has no parent.
 The following bindings are exported by the library @library{vicare}.
 
 
-@defun record=? @vari{record} @varii{record}
-Return true if @vari{record} and @varii{record} are two @rnrs{6} records
-having the same @rtd{} and equal field values according to
-@func{equal?}.
+@defun record=? @var{stru} @dots{}
+All the arguments must be records.  Return @true{} if all the arguments
+have the same @rtd{} and equal field values according to @func{equal?}.
+When applied to a single argument: return @true{}.  Note that this
+function also works when applied to @rnrs{6} records.
+@end defun
+
+
+@defun record!=? @var{stru} @dots{}
+All the arguments must be records.  Return @true{} if the arguments are
+all different: no two arguments are equal according to @func{equal?};
+otherwise return @false{}.  When applied to a single argument: return
+@false{}.
 @end defun
 
 
