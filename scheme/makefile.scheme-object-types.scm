@@ -751,13 +751,6 @@
    (parent-rcd			rcd-parent-rcd)
    #| end of METHODS |# ))
 
-;;; --------------------------------------------------------------------
-
-(define-scheme-type <opaque-record>
-    <top>
-  (type-predicate always-false)
-  (equality-predicate record=?))
-
 
 ;;;; hash tables
 

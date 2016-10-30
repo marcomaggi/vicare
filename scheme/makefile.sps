@@ -3983,17 +3983,17 @@
     (<struct-type-descriptor>			v $language)
     (<condition>				v $language)
     (<compound-condition>			v $language)
+    (<&who-value>				v $language)
     (<reader-annotation>			v $language)
     (<promise>					v $language)
     (<enum-set>					v $language)
     (<utsname>					v $language)
+    (<sentinel>					v $language)
+    (<stats>					v $language)
+
     (<lexical-environment>			v $language)
     (<interaction-lexical-environment>		v $language)
     (<non-interaction-lexical-environment>	v $language)
-    (<sentinel>					v $language)
-
-    (<opaque-record>)
-    (<stats>					v $language)
 
     (<port>					v $language)
     (<input-port>				v $language)
@@ -4012,9 +4012,6 @@
     (<binary-output-port>			v $language)
     (<textual-input-port>			v $language)
     (<textual-output-port>			v $language)
-
-    ;;built-in type annotations
-    (<&who-value>				v $language)
 
 ;;; --------------------------------------------------------------------
 
@@ -4094,7 +4091,6 @@
     (<non-zero-inexact-compnum>-ctd		system-type-descriptors)
     (<null>-ctd					system-type-descriptors)
     (<number>-ctd				system-type-descriptors)
-    (<opaque-record>-ctd			system-type-descriptors)
     (<output-port>-ctd				system-type-descriptors)
     (<pair>-ctd					system-type-descriptors)
     (<pointer>-ctd				system-type-descriptors)
