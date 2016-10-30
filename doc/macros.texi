@@ -480,6 +480,10 @@ Revised^6 Report on the algorithmic language Scheme
 @pxref{\NODE\,\TITLE\,\TITLE\,vicare-typed}
 @end macro
 
+@macro primref{NODE,PRIMNAME,TITLE}
+@xref{\NODE\, \PRIMNAME\, \TITLE\, vicare-scheme}
+@end macro
+
 @macro manpage{NODE, TITLE}
 @ref{\NODE\,\TITLE\,\TITLE\,*manpages*}
 @end macro

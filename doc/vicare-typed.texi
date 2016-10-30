@@ -8601,12 +8601,14 @@ Type of record--constructor descriptor objects.
 
 
 @deftypeop Constructor @class{record-constructor-descriptor} @aclass{record-constructor-descriptor} type-constructor @var{rtd} @var{parent-constructor-descriptor} @var{protocol}
-The constructor is @func{make-record-type-descriptor}.
+The constructor is @func{make-record-type-descriptor}.  @primref{stdlib records procedural layer,
+make-record-type-descriptor, Procedural layer}.
 @end deftypeop
 
 
 @deftypeop {Type predicate} @class{record-constructor-descriptor} @aclass{boolean} type-predicate @var{obj}
-The type predicate is @func{record-type-descriptor?}.
+The type predicate is @func{record-constructor-descriptor?}.  @primref{iklib records rcd,
+record-constructor-descriptor?, Record--constructor descriptors}.
 @end deftypeop
 
 @c ------------------------------------------------------------------------
@@ -8615,12 +8617,14 @@ The type predicate is @func{record-type-descriptor?}.
 
 
 @deftypemethod @class{record-constructor-descriptor} @aclass{record-type-descriptor} rtd @var{this}
-Apply @func{rcd-rtd} to the instance and return its return value.
+Apply @func{rcd-rtd} to the instance and return its return value.  @primref{iklib records rcd,
+rcd-rtd, Record--constructor descriptors}.
 @end deftypemethod
 
 
 @deftypemethod @class{record-constructor-descriptor} {(or @aclass{false} @aclass{record-constructor-descriptor})} parent @var{this}
-Apply @func{rcd-parent-rcd} to the instance and return its return value.
+Apply @func{rcd-parent-rcd} to the instance and return its return value.  @primref{iklib records
+rcd, rcd-parent-rcd, Record--constructor descriptors}.
 @end deftypemethod
 
 @c page
