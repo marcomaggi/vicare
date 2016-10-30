@@ -785,6 +785,7 @@
 ;;
 (define-scheme-type <condition>
     <record>
+  (constructor #t)
   (type-predicate condition?)
   (methods
    (print	print-condition)))
@@ -794,7 +795,8 @@
   (constructor condition)
   (type-predicate compound-condition?))
 
-;;; --------------------------------------------------------------------
+
+;;;; misc structs and records
 
 (define-scheme-type <promise>
     <record>

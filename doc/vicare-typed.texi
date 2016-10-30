@@ -4227,7 +4227,7 @@ et cetera.
 * built-in structs::      Type of struct objects.
 * built-in records::      Type of record objects.
 * built-in conditions::   Type of condition objects.
-* built-in ports::        Types of input/output ports.
+* built-in ports::        Type of input/output ports.
 * built-in sentinel::     Type of sentinel object.
 * built-in time::         Type of time objects.
 * built-in misc::         Miscellaneous built-in types.
@@ -8632,28 +8632,66 @@ rcd, rcd-parent-rcd, Record--constructor descriptors}.
 @section Type of condition objects
 
 
+@menu
+* built-in conditions base::      The @class{condition} type.
+* built-in conditions compound::  The @class{compound-condition} type.
+@end menu
+
+@c page
+@node built-in conditions base
+@subsection The @class{condition} type
+
+
 @deftp {Core Type} @aclass{condition}
 @deftpx {Parent Type} @aclass{record}
-Type of condition objects.  There is no constructor.  The type predicate
-is @func{condition?}.
+Type of condition objects.  This is the root of all the condition object types, both simple and
+compound.  All the simple condition types are derived from @condition{condition}.
 @end deftp
+
+
+@deftypeop Constructor @class{condition} @aclass{condition} type-constructor @var{cnd}
+Validate @var{cnd} as object of type @class{condition} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{condition} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{condition?}.
+@end deftypeop
+
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{condition} @aclass{void} print @var{this}
+@deftypemethodx @class{condition} @aclass{void} print @var{this} @bracearg{P, textual-output-port}
+Apply @func{print-condition} to the instance.
+@end deftypemethod
+
+@c page
+@node built-in conditions compound
+@subsection The @class{compound-condition} type
 
 
 @deftp {Core Type} @aclass{compound-condition}
 @deftpx {Parent Type} @aclass{condition}
-Type of compound condition objects.  The constructor is
-@func{condition}.  The type predicate is @func{compound-condition?}.
+Type of compound condition objects.
 @end deftp
 
 
-@defmethod @class{condition} print
-@defmethodx @class{compound-condition} print
-Apply @func{print-condition} to the instance.
-@end defmethod
+@deftypeop Constructor @class{compound-condition} @aclass{compound-condition} type-constructor @var{cnd} @dots{}
+The constructor is @func{condition}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{compound-condition} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{compound-condition?}.
+@end deftypeop
 
 @c page
 @node built-in ports
-@section Types of input/output ports
+@section Type of input/output ports
 
 
 @menu

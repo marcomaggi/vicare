@@ -86,6 +86,7 @@
 (declare-core-primitive print-condition
     (safe)
   (signatures
+   ((T:condition)			=> (T:void))
    ((T:condition T:textual-output-port)	=> (T:void)))
   (attributes
    ((_ _)		result-true)))
