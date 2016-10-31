@@ -84,6 +84,8 @@
 		   (signatures
 		    ((<top>)		=> (<boolean>)))))
 		)))
+  (declare open-port?)
+  (declare closed-port?)
   (declare open-input-port?)
   (declare open-output-port?)
   (declare open-textual-port?)
@@ -513,7 +515,7 @@
 (declare-core-primitive output-port-buffer-mode
     (safe)
   (signatures
-   ((<output-port>)		=> (<symbol>)))
+   ((<output-port>)		=> ((enumeration none line block))))
   (attributes
    ((_)				effect-free result-true)))
 
@@ -538,14 +540,14 @@
 (declare-core-primitive port-mode
     (safe)
   (signatures
-   ((<port>)		=> (<symbol>)))
+   ((<port>)		=> ((enumeration r6rs vicare))))
   (attributes
    ((_)			effect-free result-true)))
 
 (declare-core-primitive set-port-mode!
     (safe)
   (signatures
-   ((<port> <symbol>)		=> (<void>)))
+   ((<port> (enumeration r6rs vicare))		=> (<void>)))
   (attributes
    ((_ _)			result-true)))
 
@@ -554,7 +556,7 @@
 (declare-core-primitive set-port-buffer-mode!
     (safe)
   (signatures
-   ((<port> <symbol>)		=> (<void>)))
+   ((<port> (enumeration none line block))		=> (<void>)))
   (attributes
    ((_ _)			result-true)))
 
@@ -577,14 +579,14 @@
 (declare-core-primitive port-textual-position
     (safe)
   (signatures
-   ((<textual-port>)		=> (<record>)))
+   ((<textual-port>)		=> (&source-position)))
   (attributes
    ((_)				effect-free result-true)))
 
 (declare-core-primitive set-port-position!
     (safe)
   (signatures
-   ((<port> <exact-integer>)	=> (<void>)))
+   ((<port> <non-negative-exact-integer>)	=> (<void>)))
   (attributes
    ((_ _)			result-true)))
 
@@ -614,7 +616,7 @@
 (declare-core-primitive port-property-list
     (safe)
   (signatures
-   ((<port>)				=> (<list>)))
+   ((<port>)				=> ((alist <symbol> <top>))))
   (attributes
    ((_)					effect-free result-true)))
 
@@ -1064,6 +1066,36 @@
   (declare-unsafe-port-mutator $set-port-size!		<non-negative-fixnum>)
   (declare-unsafe-port-mutator $set-port-attrs!		<non-negative-fixnum>)
   #| end of LET-SYNTAX |# )
+
+/section)
+
+
+;;;; input/output, object helpers
+
+(section
+
+(declare-core-primitive <port>-mode
+    (safe)
+  (signatures
+   ((<port>)					=> ((enumeration r6rs vicare)))
+   ((<port> (enumeration r6rs vicare))		=> (<void>))))
+
+(declare-core-primitive <port>-buffer-mode
+    (safe)
+  (signatures
+   ((<port>)					=> ((enumeration none line block)))
+   ((<port> (enumeration none line block))	=> (<void>))))
+
+(declare-core-primitive <port>-reset
+    (safe)
+  (signatures
+   ((<port>)					=> (<void>))))
+
+(declare-core-primitive <port>-position
+    (safe)
+  (signatures
+   ((<port>)					=> (<non-negative-exact-integer>))
+   ((<port> <non-negative-exact-integer>)	=> (<void>))))
 
 /section)
 

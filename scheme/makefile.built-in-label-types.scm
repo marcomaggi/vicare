@@ -140,10 +140,34 @@
   (comparison-procedure #f)
   (hash-function port-hash)
   (methods
+   (open?			open-port?)
+   (closed?			closed-port?)
+   (eof?			port-eof?)
+   ;;
+   (mode			<port>-mode)
+   (buffer-mode			<port>-buffer-mode)
+   (set-non-blocking-mode	port-set-non-blocking-mode!)
+   (unset-non-blocking-mode	port-unset-non-blocking-mode!)
+   (non-blocking-mode?		port-in-non-blocking-mode?)
+   (reset			<port>-reset)
+   ;;
+   (has-position?		port-has-port-position?)
+   (has-set-position?		port-has-set-port-position!?)
+   (position			<port>-position)
+   ;;
+   (id				port-id)
+   (fd				port-fd)
+   (uid				port-uid)
+   (transcoder			port-transcoder)
+   ;;
+   (close			close-port)
+   (dump-status			port-dump-status)
+   ;;
    (putprop			port-putprop)
    (getprop			port-getprop)
    (remprop			port-remprop)
-   (property-list		port-property-list)))
+   (property-list		port-property-list)
+   #| end of METHODS |# ))
 
 (define-built-in-label-type <binary-output-port>
   (parent (or <binary-output-only-port> <binary-input/output-port>))
@@ -154,10 +178,34 @@
   (comparison-procedure #f)
   (hash-function port-hash)
   (methods
+   (open?			open-port?)
+   (closed?			closed-port?)
+   (eof?			port-eof?)
+   ;;
+   (mode			<port>-mode)
+   (buffer-mode			<port>-buffer-mode)
+   (set-non-blocking-mode	port-set-non-blocking-mode!)
+   (unset-non-blocking-mode	port-unset-non-blocking-mode!)
+   (non-blocking-mode?		port-in-non-blocking-mode?)
+   (reset			<port>-reset)
+   ;;
+   (has-position?		port-has-port-position?)
+   (has-set-position?		port-has-set-port-position!?)
+   (position			<port>-position)
+   ;;
+   (id				port-id)
+   (fd				port-fd)
+   (uid				port-uid)
+   (transcoder			port-transcoder)
+   ;;
+   (close			close-port)
+   (dump-status			port-dump-status)
+   ;;
    (putprop			port-putprop)
    (getprop			port-getprop)
    (remprop			port-remprop)
-   (property-list		port-property-list)))
+   (property-list		port-property-list)
+   #| end of METHODS |# ))
 
 ;;; --------------------------------------------------------------------
 
@@ -170,10 +218,34 @@
   (comparison-procedure #f)
   (hash-function port-hash)
   (methods
+   (open?			open-port?)
+   (closed?			closed-port?)
+   (eof?			port-eof?)
+   ;;
+   (mode			<port>-mode)
+   (buffer-mode			<port>-buffer-mode)
+   (set-non-blocking-mode	port-set-non-blocking-mode!)
+   (unset-non-blocking-mode	port-unset-non-blocking-mode!)
+   (non-blocking-mode?		port-in-non-blocking-mode?)
+   (reset			<port>-reset)
+   ;;
+   (has-position?		port-has-port-position?)
+   (has-set-position?		port-has-set-port-position!?)
+   (position			<port>-position)
+   ;;
+   (id				port-id)
+   (fd				port-fd)
+   (uid				port-uid)
+   (transcoder			port-transcoder)
+   ;;
+   (close			close-port)
+   (dump-status			port-dump-status)
+   ;;
    (putprop			port-putprop)
    (getprop			port-getprop)
    (remprop			port-remprop)
-   (property-list		port-property-list)))
+   (property-list		port-property-list)
+   #| end of METHODS |# ))
 
 (define-built-in-label-type <textual-output-port>
   (parent (or <textual-output-only-port> <textual-input/output-port>))
@@ -184,10 +256,34 @@
   (comparison-procedure #f)
   (hash-function port-hash)
   (methods
+   (open?			open-port?)
+   (closed?			closed-port?)
+   (eof?			port-eof?)
+   ;;
+   (mode			<port>-mode)
+   (buffer-mode			<port>-buffer-mode)
+   (set-non-blocking-mode	port-set-non-blocking-mode!)
+   (unset-non-blocking-mode	port-unset-non-blocking-mode!)
+   (non-blocking-mode?		port-in-non-blocking-mode?)
+   (reset			<port>-reset)
+   ;;
+   (has-position?		port-has-port-position?)
+   (has-set-position?		port-has-set-port-position!?)
+   (position			<port>-position)
+   ;;
+   (id				port-id)
+   (fd				port-fd)
+   (uid				port-uid)
+   (transcoder			port-transcoder)
+   ;;
+   (close			close-port)
+   (dump-status			port-dump-status)
+   ;;
    (putprop			port-putprop)
    (getprop			port-getprop)
    (remprop			port-remprop)
-   (property-list		port-property-list)))
+   (property-list		port-property-list)
+   #| end of METHODS |# ))
 
 
 ;;;; weak pairs

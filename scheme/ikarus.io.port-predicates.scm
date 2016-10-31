@@ -143,6 +143,11 @@
   (with-port (port)
     ($fx= ($fxand port.attributes CLOSED-PORT-TAG) CLOSED-PORT-TAG)))
 
+(define (closed-port? obj)
+  ;;Defined by Vicare.  Return true if OBJ is a port and it is closed.
+  ;;
+  (and (port? obj)
+       ($port-closed? obj)))
 
 (let-syntax
     ((define-predicate (syntax-rules ()

@@ -8711,54 +8711,160 @@ The type predicate is @func{compound-condition?}.
 
 @deftp {Core Type} @aclass{port}
 @deftpx {Parent Type} @aclass{top}
-Base type for input, output and input/output ports.  There is no
-constructor.  The type predicate is @func{port?}.
+Base type for input, output and input/output ports.
 @end deftp
 
 
-@deftp {Core Type} @aclass{input-port}
-@deftpx {Parent Type} @aclass{port}
-Base type for input ports.  There is no constructor.  The type predicate
-is @func{input-port?}.
-@end deftp
+@deftypeop Constructor @class{port} @aclass{port} type-constructor @var{port}
+Validate @var{port} as port object and return it.
+@end deftypeop
 
 
-@deftp {Core Type} @aclass{output-port}
-@deftpx {Parent Type} @aclass{port}
-Base type for output ports.  There is no constructor.  The type
-predicate is @func{output-port?}.
-@end deftp
+@deftypeop {Type predicate} @class{port} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{port?}.
+@end deftypeop
 
 
-@deftp {Core Type} @aclass{input/output-port}
-@deftpx {Parent Type} @aclass{port}
-Base type for input/output ports.  There is no constructor.  The type
-predicate is @func{input/output-port?}.
-@end deftp
+@deftypeop {Equality predicate} @class{port} @aclass{boolean} equality-predicate @var{this} @bracearg{port, port}
+The equality predicate is @func{eq?}.
+@end deftypeop
 
 
-@deftp {Core Type} @aclass{textual-port}
-Type of textual ports.  Its definition is equivalent to:
+@deftypeop {Hash function} @class{port} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{port-hash}.
+@end deftypeop
 
-@lisp
-(define-type <textual-port>
-  (or <textual-input-port>
-      <textual-output-port>
-      <textual-input/output-port>))
-@end lisp
-@end deftp
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: predicates
 
 
-@deftp {Core Type} @aclass{binary-port}
-Type of binary ports.  Its definition is equivalent to:
+@deftypemethod @class{port} @aclass{boolean} open? @var{this}
+@deftypemethodx @class{port} @aclass{boolean} closed? @var{this}
+Return @true{} if @var{this} is, respectively, open or closed; otherwise return @false{}.
+@end deftypemethod
 
-@lisp
-(define-type <binary-port>
-  (or <textual-input-port>
-      <textual-output-port>
-      <textual-input/output-port>))
-@end lisp
-@end deftp
+
+@deftypemethod @class{port} @aclass{boolean} eof? @var{this}
+Apply @func{port-eof?} to the instance and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: configuration
+
+
+@deftypemethod @class{port} {(enumeration r6rs vicare)} mode @var{this}
+@deftypemethodx @class{port} @aclass{void} mode @var{this} @{@var{mode} (enumeration r6rs vicare)@}
+Accessor and mutator for the port reader mode.  The accessor applies @func{port-mode} to the
+argument; the mutator applies @func{set-port-mode!} to the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{port} {(enumeration none line block)} buffer-mode @var{this}
+@deftypemethodx @class{port} @aclass{void} buffer-mode @var{this} @{@var{buffer-mode} (enumeration none line block)@}
+Accessor and mutator for the port buffer mode.  The accessor applies @func{output-port-buffer-mode}
+to the argument; the mutator applies @func{set-port-buffer-mode!} to the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{port} @aclass{void} set-non-blocking-mode @var{this}
+@deftypemethodx @class{port} @aclass{void} unset-non-blocking-mode @var{this}
+Apply @func{port-set-non-blocking-mode!} or @func{port-unset-non-blocking-mode!} to the argument.
+@end deftypemethod
+
+
+@deftypemethod @class{port} @aclass{boolean} non-blocking-mode? @var{this}
+Apply @func{port-in-non-blocking-mode?} to the argument and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: position
+
+
+@deftypemethod @class{port} @aclass{boolean} has-position? @var{this}
+Apply @func{port-has-port-position?} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{port} @aclass{boolean} has-set-position? @var{this}
+Apply @func{port-has-set-port-position!?} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{port} @aclass{non-negative-exact-integer} position @var{this}
+@deftypemethodx @class{port} @aclass{void} position @var{this} @bracearg{pos, non-negative-exact-integer}
+Apply @func{port-position} or @func{set-port-position!} to the arguments and return its return
+value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: inspection
+
+
+@deftypemethod @class{port} @aclass{string} id @var{this}
+Apply @func{port-id!} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{port} {(or @aclass{false} @aclass{file-descriptor})} fd @var{this}
+Apply @func{port-fd} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{port} @aclass{gensym} uid @var{this}
+Apply @func{port-uid} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{port} @aclass{void} dump-status @var{this}
+Apply @func{port-dump-status} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{port} {(or @aclass{transcoder} @aclass{false})} transcoder @var{this}
+Apply @func{port-transcoder} to the argument and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: properties
+
+
+@deftypemethod @class{port} @aclass{void} putprop @var{this} @bracearg{key, symbol} @var{value}
+Apply @func{port-putprop} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{port} @aclass{top} getprop @var{this} @bracearg{key, symbol}
+Apply @func{port-getprop} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{port} @aclass{void} remprop @var{this} @bracearg{key, symbol}
+Apply @func{port-remprop} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{port} {(alist @aclass{symbol} @aclass{top})} property-list @var{this}
+Apply @func{port-property-list} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: miscellaneous
+
+
+@deftypemethod @class{port} @aclass{void} close @var{this}
+Apply @func{port-close} to the argument.
+@end deftypemethod
+
+
+@deftypemethod @class{port} @aclass{boolean} reset @var{this}
+Apply @func{reset-input-port!} or @func{reset-output-port!} to the argument.
+@end deftypemethod
 
 @c page
 @node built-in ports textual in
@@ -8783,6 +8889,11 @@ annotation as parent:
 @end lisp
 @end deftp
 
+
+@deftypemethod @class{port} @aclass{&source-position} textual-position @var{this}
+Apply @func{port-textual-position} to the argument and return its return value.
+@end deftypemethod
+
 @c page
 @node built-in ports textual out
 @subsection Textual output port types
@@ -8806,6 +8917,11 @@ annotation as parent:
 @end lisp
 @end deftp
 
+
+@deftypemethod @class{port} @aclass{&source-position} textual-position @var{this}
+Apply @func{port-textual-position} to the argument and return its return value.
+@end deftypemethod
+
 @c page
 @node built-in ports textual in/out
 @subsection Textual input/output port types
@@ -8816,6 +8932,11 @@ annotation as parent:
 Type of textual input/output ports.  There is no constructor.  The type
 predicate is @func{textual-input/output-port?}.
 @end deftp
+
+
+@deftypemethod @class{port} @aclass{&source-position} textual-position @var{this}
+Apply @func{port-textual-position} to the argument and return its return value.
+@end deftypemethod
 
 @c page
 @node built-in ports binary in

@@ -17462,6 +17462,13 @@ Return @true{} if @var{port} has already been closed, else return
 @end defun
 
 
+@defun open-port? @var{obj}
+@defunx closed-port? @var{obj}
+Return @true{} if @var{obj} is a port and it is, respectively, open or closed; otherwise return
+@false{}.
+@end defun
+
+
 @defun open-input-port? @var{obj}
 @defunx open-output-port? @var{obj}
 @defunx open-input/output-port? @var{obj}

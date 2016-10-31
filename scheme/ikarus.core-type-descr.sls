@@ -56,8 +56,10 @@
     <vector>-fold-right			<vector>-fold-left
     <vector>-sort			<vector>-sort!
 
-    <nebytevector>-constructor
-    <empty-bytevector>-constructor
+    <nebytevector>-constructor		<empty-bytevector>-constructor
+
+    <port>-mode				<port>-buffer-mode
+    <port>-reset			<port>-position
 
     #| end of EXPORT |# )
   (import (except (vicare)
@@ -91,6 +93,8 @@
 		  empty-bytevector?
 		  nebytevector?
 		  ;;
+		  open-port?
+		  closed-port?
 		  binary-input-only-port?
 		  binary-output-only-port?
 		  textual-input-only-port?
@@ -186,6 +190,8 @@
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Oct 1,
     ;;2016)
     (only (ikarus.io)
+	  open-port?
+	  closed-port?
 	  binary-input-only-port?
 	  binary-output-only-port?
 	  textual-input-only-port?
@@ -430,6 +436,32 @@
   (and (fixnum? obj)
        (fx>=? obj -128)
        (fx<=? obj +255)))
+
+
+;;;; input/output ports
+
+(case-define <port>-mode
+  ((port)
+   (port-mode port))
+  ((port mode)
+   (set-port-mode! port mode)))
+
+(case-define <port>-buffer-mode
+  ((port)
+   (output-port-buffer-mode port))
+  ((port mode)
+   (set-port-buffer-mode! port mode)))
+
+(define (<port>-reset port)
+  (if (input-port? port)
+      (reset-input-port! port)
+    (reset-output-port! port)))
+
+(case-define <port>-position
+  ((port)
+   (port-position port))
+  ((port pos)
+   (set-port-position! port pos)))
 
 
 ;;;; built-in object-types descriptors: syntax utilities

@@ -385,6 +385,7 @@
     textual-input-only-port?		textual-output-only-port?
     port-eof?
 
+    open-port?				closed-port?
     open-input-port?			open-output-port?
     open-textual-port?			open-binary-port?
     open-input/output-port?
@@ -529,6 +530,7 @@
 		  textual-input-only-port?		textual-output-only-port?
 		  port-eof?
 
+		  open-port?				closed-port?
 		  open-input-port?			open-output-port?
 		  open-textual-port?			open-binary-port?
 		  open-input/output-port?

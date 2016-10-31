@@ -898,60 +898,73 @@
 
 (define-scheme-type <port>
     <top>
+  (constructor #t)
   (type-predicate port?)
   (equality-predicate eq?)
-  (hash-function port-hash))
-
-;;; --------------------------------------------------------------------
-
-(define-scheme-type <input-port>
-    <port>
-  (type-predicate input-port?)
-  (equality-predicate eq?))
-
-(define-scheme-type <output-port>
-    <port>
-  (type-predicate output-port?)
-  (equality-predicate eq?))
-
-(define-scheme-type <input/output-port>
-    <port>
-  (type-predicate input/output-port?)
-  (equality-predicate eq?))
+  (hash-function port-hash)
+  (methods
+   (open?			open-port?)
+   (closed?			closed-port?)
+   (eof?			port-eof?)
+   ;;
+   (mode			<port>-mode)
+   (buffer-mode			<port>-buffer-mode)
+   (set-non-blocking-mode	port-set-non-blocking-mode!)
+   (unset-non-blocking-mode	port-unset-non-blocking-mode!)
+   (non-blocking-mode?		port-in-non-blocking-mode?)
+   (reset			<port>-reset)
+   ;;
+   (has-position?		port-has-port-position?)
+   (has-set-position?		port-has-set-port-position!?)
+   (position			<port>-position)
+   ;;
+   (id				port-id)
+   (fd				port-fd)
+   (uid				port-uid)
+   (transcoder			port-transcoder)
+   ;;
+   (close			close-port)
+   (dump-status			port-dump-status)
+   ;;
+   (putprop			port-putprop)
+   (getprop			port-getprop)
+   (remprop			port-remprop)
+   (property-list		port-property-list)
+   #| end of METHODS |# ))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <textual-input-only-port>
-    <input-port>
-  (type-predicate textual-input-only-port?)
-  (equality-predicate eq?))
+    <port>
+  (constructor #t)
+  (type-predicate textual-input-only-port?))
 
 (define-scheme-type <textual-output-only-port>
-    <output-port>
-  (type-predicate textual-output-only-port?)
-  (equality-predicate eq?))
+    <port>
+  (constructor #t)
+  (type-predicate textual-output-only-port?))
 
 (define-scheme-type <textual-input/output-port>
-    <input/output-port>
-  (type-predicate textual-input/output-port?)
-  (equality-predicate eq?))
+    <port>
+  (constructor #t)
+  (type-predicate textual-input/output-port?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <binary-input-only-port>
-    <input-port>
-  (type-predicate binary-input-only-port?)
-  (equality-predicate eq?))
+    <port>
+  (constructor #t)
+  (type-predicate binary-input-only-port?))
 
 (define-scheme-type <binary-output-only-port>
-    <output-port>
-  (type-predicate binary-output-only-port?)
-  (equality-predicate eq?))
+    <port>
+  (constructor #t)
+  (type-predicate binary-output-only-port?))
 
 (define-scheme-type <binary-input/output-port>
-    <input/output-port>
-  (type-predicate binary-input/output-port?)
-  (equality-predicate eq?))
+    <port>
+  (constructor #t)
+  (type-predicate binary-input/output-port?))
 
 
 ;;;; list types

@@ -1275,6 +1275,8 @@
 	 (would-block-hash obj))
 	((transcoder? obj)
 	 ($transcoder-hash obj))
+	((port? obj)
+	 (port-hash obj))
 	(else
 	 (equal-hash obj))))
 

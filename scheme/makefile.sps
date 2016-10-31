@@ -3205,6 +3205,8 @@
     (binary-output-only-port?			v $language)
     (textual-input-only-port?			v $language)
     (textual-output-only-port?			v $language)
+    (open-port?					v $language)
+    (closed-port?				v $language)
     (open-input-port?				v $language)
     (open-output-port?				v $language)
     (open-textual-port?				v $language)
@@ -3996,11 +3998,6 @@
     (<non-interaction-lexical-environment>	v $language)
 
     (<port>					v $language)
-    (<input-port>				v $language)
-    (<output-port>				v $language)
-    (<input/output-port>			v $language)
-    (<textual-port>				v $language)
-    (<binary-port>				v $language)
     (<binary-input-only-port>			v $language)
     (<binary-output-only-port>			v $language)
     (<binary-input/output-port>			v $language)
@@ -4008,10 +4005,18 @@
     (<textual-output-only-port>			v $language)
     (<textual-input/output-port>		v $language)
 
+    ;;These are interface-types.
     (<binary-input-port>			v $language)
     (<binary-output-port>			v $language)
     (<textual-input-port>			v $language)
     (<textual-output-port>			v $language)
+
+    ;;These are type annotations.
+    (<input-port>				v $language)
+    (<output-port>				v $language)
+    (<input/output-port>			v $language)
+    (<binary-port>				v $language)
+    (<textual-port>				v $language)
 
 ;;; --------------------------------------------------------------------
 
@@ -4070,8 +4075,6 @@
     (<hashtable-eqv>-ctd			system-type-descriptors)
     (<hashtable>-ctd				system-type-descriptors)
     (<inexact-compnum>-ctd			system-type-descriptors)
-    (<input-port>-ctd				system-type-descriptors)
-    (<input/output-port>-ctd			system-type-descriptors)
     (<integer-valued>-ctd			system-type-descriptors)
     (<integer>-ctd				system-type-descriptors)
     (<ipair>-ctd				system-type-descriptors)
@@ -4091,7 +4094,6 @@
     (<non-zero-inexact-compnum>-ctd		system-type-descriptors)
     (<null>-ctd					system-type-descriptors)
     (<number>-ctd				system-type-descriptors)
-    (<output-port>-ctd				system-type-descriptors)
     (<pair>-ctd					system-type-descriptors)
     (<pointer>-ctd				system-type-descriptors)
     (<port>-ctd					system-type-descriptors)
@@ -4172,6 +4174,11 @@
     (<string>-for-each)
     (<untyped>-constructor)
     (<untyped>-type-predicate)
+    ;; port helpers
+    (<port>-mode)
+    (<port>-buffer-mode)
+    (<port>-reset)
+    (<port>-position)
 
 ;;; --------------------------------------------------------------------
 ;;; object type descriptors
