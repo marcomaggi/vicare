@@ -17427,8 +17427,17 @@ Return a new association list representing the property list of
 The following bindings are exported by the @library{vicare} library.
 
 
-@defun input/output-port? @var{port}
-Return a boolean, @true{} if @var{port} is an input and output port.
+@defun input-only-port? @var{obj}
+@defunx input-only-port? @var{obj}
+Return a boolean, @true{} if @var{obj} is a port and it is, respectively, an input--only or an
+output--only port; otherwise return @false{}.  If @var{obj} is an input/output port: return
+@false{}.
+@end defun
+
+
+@defun input/output-port? @var{obj}
+Return a boolean, @true{} if @var{obj} is a port and it is an input and output port; otherwise
+return @false{}.  If @var{obj} is an input--only or output--only port: return @false{}.
 @end defun
 
 

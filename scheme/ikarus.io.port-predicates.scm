@@ -73,6 +73,8 @@
 			 )))
   (define-predicate binary-port?	$binary-port?)
   (define-predicate textual-port?	$textual-port?)
+  (define-predicate input-only-port?	$input-only-port?)
+  (define-predicate output-only-port?	$output-only-port?)
   (define-predicate input/output-port?	$input/output-port?)
   #| end of LET-SYNTAX |# )
 

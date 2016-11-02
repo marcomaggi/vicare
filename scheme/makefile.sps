@@ -3194,7 +3194,9 @@
     (would-block-object?			v $language)
     (input-port?				v r is ip se)
     (output-port?				v r is ip se)
-    (input/output-port?				v)
+    (input/output-port?				v $language)
+    (input-only-port?				v $language)
+    (output-only-port?				v $language)
     (binary-input-port?				v $language)
     (textual-input-port?			v $language)
     (binary-output-port?			v $language)
@@ -4010,8 +4012,6 @@
     (<binary-output-port>			v $language)
     (<textual-input-port>			v $language)
     (<textual-output-port>			v $language)
-
-    ;;These are type annotations.
     (<input-port>				v $language)
     (<output-port>				v $language)
     (<input/output-port>			v $language)

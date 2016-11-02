@@ -905,10 +905,7 @@
   (methods
    (open?			open-port?)
    (closed?			closed-port?)
-   (eof?			port-eof?)
    ;;
-   (mode			<port>-mode)
-   (buffer-mode			<port>-buffer-mode)
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
@@ -937,34 +934,62 @@
 (define-scheme-type <textual-input-only-port>
     <port>
   (constructor #t)
-  (type-predicate textual-input-only-port?))
+  (type-predicate textual-input-only-port?)
+  (methods
+   (mode			<port>-mode)
+   (textual-position		port-textual-position)
+   ;;
+   (eof?			port-eof?)
+   #| end of METHODS |# ))
 
 (define-scheme-type <textual-output-only-port>
     <port>
   (constructor #t)
-  (type-predicate textual-output-only-port?))
+  (type-predicate textual-output-only-port?)
+  (methods
+   (buffer-mode			<port>-buffer-mode)
+   (flush			flush-output-port)
+   #| end of METHODS |# ))
 
 (define-scheme-type <textual-input/output-port>
     <port>
   (constructor #t)
-  (type-predicate textual-input/output-port?))
+  (type-predicate textual-input/output-port?)
+  (methods
+   (mode			<port>-mode)
+   (buffer-mode			<port>-buffer-mode)
+   (textual-position		port-textual-position)
+   ;;
+   (eof?			port-eof?)
+   (flush			flush-output-port)
+   #| end of METHODS |# ))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <binary-input-only-port>
     <port>
   (constructor #t)
-  (type-predicate binary-input-only-port?))
+  (type-predicate binary-input-only-port?)
+  (methods
+   (eof?			port-eof?)
+   #| end of METHODS |# ))
 
 (define-scheme-type <binary-output-only-port>
     <port>
   (constructor #t)
-  (type-predicate binary-output-only-port?))
+  (type-predicate binary-output-only-port?)
+  (methods
+   (flush			flush-output-port)
+   #| end of METHODS |# ))
 
 (define-scheme-type <binary-input/output-port>
     <port>
   (constructor #t)
-  (type-predicate binary-input/output-port?))
+  (type-predicate binary-input/output-port?)
+  (methods
+   (eof?			port-eof?)
+   (flush			flush-output-port)
+   #| end of METHODS |# ))
 
 
 ;;;; list types

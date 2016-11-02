@@ -8695,18 +8695,19 @@ The type predicate is @func{compound-condition?}.
 
 
 @menu
-* built-in ports base::            Base port types.
-* built-in ports textual in::      Textual input port types.
-* built-in ports textual out::     Textual output port types.
-* built-in ports textual in/out::  Textual input/output port types.
-* built-in ports binary in::       Binary input port types.
-* built-in ports binary out::      Binary output port types.
-* built-in ports binary in/out::   Binary input/output port types.
+* built-in ports base::         Base ports type.
+* built-in ports texin::        Textual input-only ports.
+* built-in ports texou::        Textual output-only ports.
+* built-in ports texio::        Textual input/output ports.
+* built-in ports binin::        Binary input-only ports.
+* built-in ports binou::        Binary output-only port.
+* built-in ports binio::        Binary input/output port.
+* built-in ports labels::       Input/output port labels.
 @end menu
 
 @c page
 @node built-in ports base
-@subsection Base port types
+@subsection Base ports type
 
 
 @deftp {Core Type} @aclass{port}
@@ -8744,28 +8745,9 @@ The hash function is @func{port-hash}.
 Return @true{} if @var{this} is, respectively, open or closed; otherwise return @false{}.
 @end deftypemethod
 
-
-@deftypemethod @class{port} @aclass{boolean} eof? @var{this}
-Apply @func{port-eof?} to the instance and return its return value.
-@end deftypemethod
-
 @c ------------------------------------------------------------------------
 
 @subsubheading Methods: configuration
-
-
-@deftypemethod @class{port} {(enumeration r6rs vicare)} mode @var{this}
-@deftypemethodx @class{port} @aclass{void} mode @var{this} @{@var{mode} (enumeration r6rs vicare)@}
-Accessor and mutator for the port reader mode.  The accessor applies @func{port-mode} to the
-argument; the mutator applies @func{set-port-mode!} to the arguments.
-@end deftypemethod
-
-
-@deftypemethod @class{port} {(enumeration none line block)} buffer-mode @var{this}
-@deftypemethodx @class{port} @aclass{void} buffer-mode @var{this} @{@var{buffer-mode} (enumeration none line block)@}
-Accessor and mutator for the port buffer mode.  The accessor applies @func{output-port-buffer-mode}
-to the argument; the mutator applies @func{set-port-buffer-mode!} to the arguments.
-@end deftypemethod
 
 
 @deftypemethod @class{port} @aclass{void} set-non-blocking-mode @var{this}
@@ -8867,8 +8849,8 @@ Apply @func{reset-input-port!} or @func{reset-output-port!} to the argument.
 @end deftypemethod
 
 @c page
-@node built-in ports textual in
-@subsection Textual input port types
+@node built-in ports texin
+@subsection Textual input--only ports
 
 
 @deftp {Core Type} @aclass{textual-input-only-port}
@@ -8889,14 +8871,30 @@ annotation as parent:
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------------------
 
-@deftypemethod @class{port} @aclass{&source-position} textual-position @var{this}
+@subsubheading Methods
+
+
+@deftypemethod @class{textual-input-only-port} {(enumeration r6rs vicare)} mode @var{this}
+@deftypemethodx @class{textual-input-only-port} @aclass{void} mode @var{this} @{@var{mode} (enumeration r6rs vicare)@}
+Accessor and mutator for the port reader mode.  The accessor applies @func{port-mode} to the
+argument; the mutator applies @func{set-port-mode!} to the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{textual-input-only-port} @aclass{&source-position} textual-position @var{this}
 Apply @func{port-textual-position} to the argument and return its return value.
 @end deftypemethod
 
+
+@deftypemethod @class{textual-input-only-port} @aclass{boolean} eof? @var{this}
+Apply @func{port-eof?} to the instance and return its return value.
+@end deftypemethod
+
 @c page
-@node built-in ports textual out
-@subsection Textual output port types
+@node built-in ports texou
+@subsection Textual output--only ports
 
 
 @deftp {Core Type} @aclass{textual-output-only-port}
@@ -8922,9 +8920,25 @@ annotation as parent:
 Apply @func{port-textual-position} to the argument and return its return value.
 @end deftypemethod
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{textual-output-only-port} {(enumeration none line block)} buffer-mode @var{this}
+@deftypemethodx @class{textual-output-only-port} @aclass{void} buffer-mode @var{this} @{@var{buffer-mode} (enumeration none line block)@}
+Accessor and mutator for the port buffer mode.  The accessor applies @func{output-port-buffer-mode}
+to the argument; the mutator applies @func{set-port-buffer-mode!} to the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{textual-output-only-port} @class{void} flush @var{this}
+Apply @func{flush-output-port} to the instance.
+@end deftypemethod
+
 @c page
-@node built-in ports textual in/out
-@subsection Textual input/output port types
+@node built-in ports texio
+@subsection Textual input/output ports
 
 
 @deftp {Core Type} @aclass{textual-input/output-port}
@@ -8938,9 +8952,42 @@ predicate is @func{textual-input/output-port?}.
 Apply @func{port-textual-position} to the argument and return its return value.
 @end deftypemethod
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{textual-input/output-port} {(enumeration r6rs vicare)} mode @var{this}
+@deftypemethodx @class{textual-input/output-port} @aclass{void} mode @var{this} @{@var{mode} (enumeration r6rs vicare)@}
+Accessor and mutator for the port reader mode.  The accessor applies @func{port-mode} to the
+argument; the mutator applies @func{set-port-mode!} to the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{textual-input/output-port} {(enumeration none line block)} buffer-mode @var{this}
+@deftypemethodx @class{textual-input/output-port} @aclass{void} buffer-mode @var{this} @{@var{buffer-mode} (enumeration none line block)@}
+Accessor and mutator for the port buffer mode.  The accessor applies @func{output-port-buffer-mode}
+to the argument; the mutator applies @func{set-port-buffer-mode!} to the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{textual-input/output-port} @aclass{&source-position} textual-position @var{this}
+Apply @func{port-textual-position} to the argument and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{textual-input/output-port} @aclass{boolean} eof? @var{this}
+Apply @func{port-eof?} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{textual-input/output-port} @class{void} flush @var{this}
+Apply @func{flush-output-port} to the instance.
+@end deftypemethod
+
 @c page
-@node built-in ports binary in
-@subsection Binary input port types
+@node built-in ports binin
+@subsection Binary input--only ports
 
 
 @deftp {Core Type} @aclass{binary-input-only-port}
@@ -8949,21 +8996,18 @@ Type of binary input ports.  There is no constructor.  The type
 predicate is @func{binary-input-port?}.
 @end deftp
 
+@c ------------------------------------------------------------------------
 
-@deftp {Label Type} @aclass{binary-input-port}
-Type of binary input ports.  The type predicate is
-@func{binary-input-port?}.  This label--type has the following type
-annotation as parent:
+@subsubheading Methods
 
-@lisp
-(or <binary-input-only-port>
-    <binary-input/output-port>)
-@end lisp
-@end deftp
+
+@deftypemethod @class{binary-input-only-port} @aclass{boolean} eof? @var{this}
+Apply @func{port-eof?} to the instance and return its return value.
+@end deftypemethod
 
 @c page
-@node built-in ports binary out
-@subsection Binary output port types
+@node built-in ports binou
+@subsection Binary output--only ports
 
 
 @deftp {Core Type} @aclass{binary-output-only-port}
@@ -8972,21 +9016,18 @@ Type of binary output ports.  There is no constructor.  The type
 predicate is @func{binary-output-port?}.
 @end deftp
 
+@c ------------------------------------------------------------------------
 
-@deftp {Label Type} @aclass{binary-output-port}
-Type of binary output ports.  The type predicate is
-@func{binary-output-port?}.  This label--type has the following type
-annotation as parent:
+@subsubheading Methods
 
-@lisp
-(or <binary-output-only-port>
-    <binary-input/output-port>)
-@end lisp
-@end deftp
+
+@deftypemethod @class{binary-output-only-port} @class{void} flush @var{this}
+Apply @func{flush-output-port} to the instance.
+@end deftypemethod
 
 @c page
-@node built-in ports binary in/out
-@subsection Binary input/output port types
+@node built-in ports binio
+@subsection Binary input/output ports
 
 
 @deftp {Core Type} @aclass{binary-input/output-port}
@@ -8994,6 +9035,325 @@ annotation as parent:
 Type of binary input/output ports.  There is no constructor.  The type
 predicate is @func{binary-input/output-port?}.
 @end deftp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{binary-input/output-port} @aclass{boolean} eof? @var{this}
+Apply @func{port-eof?} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{binary-input/output-port} @class{void} flush @var{this}
+Apply @func{flush-output-port} to the instance.
+@end deftypemethod
+
+@c page
+@node built-in ports labels
+@subsection Input/output port labels
+
+
+@menu
+* built-in ports labels input::         Input port labels.
+* built-in ports labels output::        Output port labels.
+* built-in ports labels input/output::  Input/output port labels.
+* built-in ports labels binary::        Binary port labels.
+* built-in ports labels textual::       Textual port labels.
+* built-in ports labels binin::         Binary input port labels.
+* built-in ports labels binou::         Binary output port labels.
+* built-in ports labels texin::         Textual input port labels.
+* built-in ports labels texou::         Textual output port labels.
+@end menu
+
+@c page
+@node built-in ports labels input
+@subsubsection Input port labels
+
+
+@deftp {Label Type} @aclass{input-port}
+Label--type for all the input ports.  Its parent is the type annotation:
+
+@lisp
+(or <binary-input-only-port> <binary-input/output-port>
+    <textual-input-only-port> <textual-input/output-port>)
+@end lisp
+@end deftp
+
+
+@deftypeop Constructor @class{input-port} @aclass{input-port} type-constructor @var{port}
+Validate @var{port} as instance of @class{input-port} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{input-port} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{input-only-port?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{input-port} @aclass{boolean} equality-predicate @var{this} @bracearg{port, input-port}
+The equality predicate is @func{eq?}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{input-port} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{port-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+The label--type @class{input-port} implements all the methods of the base type @class{port}.
+
+@c page
+@node built-in ports labels output
+@subsubsection Output port labels
+
+
+@deftp {Label Type} @aclass{output-port}
+Label--type for all the output ports.  Its parent is the type annotation:
+
+@lisp
+(or <binary-output-only-port> <binary-input/output-port>
+    <textual-output-only-port> <textual-input/output-port>)
+@end lisp
+@end deftp
+
+
+@deftypeop Constructor @class{output-port} @aclass{output-port} type-constructor @var{port}
+Validate @var{port} as instance of @class{output-port} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{output-port} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{output-only-port?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{output-port} @aclass{boolean} equality-predicate @var{this} @bracearg{port, output-port}
+The equality predicate is @func{eq?}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{output-port} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{port-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+The label--type @class{output-port} implements all the methods of the base type @class{port}.
+
+@c page
+@node built-in ports labels input/output
+@subsubsection Input/output port labels
+
+
+@deftp {Label Type} @aclass{input/output-port}
+Label--type for all the input/output ports.  Its parent is the type annotation:
+
+@lisp
+(or <binary-input/output-port> <textual-input/output-port>)
+@end lisp
+@end deftp
+
+
+@deftypeop Constructor @class{input/output-port} @aclass{input/output-port} type-constructor @var{port}
+Validate @var{port} as instance of @class{input/output-port} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{input/output-port} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{input/output-port?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{input/output-port} @aclass{boolean} equality-predicate @var{this} @bracearg{port, input/output-port}
+The equality predicate is @func{eq?}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{input/output-port} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{port-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+The label--type @class{input/output-port} implements all the methods of the base type @class{port}.
+
+@c page
+@node built-in ports labels binary
+@subsubsection Binary port labels
+
+
+@deftp {Label Type} @aclass{binary-port}
+Label--type for all the binary ports.  Its parent is the type annotation:
+
+@lisp
+(or <binary-input-only-port> <binary-output-only-port>
+    <binary-input/output-port>)
+@end lisp
+@end deftp
+
+
+@deftypeop Constructor @class{binary-port} @aclass{binary-port} type-constructor @var{port}
+Validate @var{port} as instance of @class{binary-port} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{binary-port} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{binary-port?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{binary-port} @aclass{boolean} equality-predicate @var{this} @bracearg{port, binary-port}
+The equality predicate is @func{eq?}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{binary-port} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{port-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+The label--type @class{binary-port} implements all the methods of the base type @class{port}.
+
+@c page
+@node built-in ports labels textual
+@subsubsection Textual port labels
+
+
+@deftp {Label Type} @aclass{textual-port}
+Label--type for all the textual ports.  Its parent is the type annotation:
+
+@lisp
+(or <textual-input-only-port> <textual-output-only-port>
+    <textual-input/output-port>)
+@end lisp
+@end deftp
+
+
+@deftypeop Constructor @class{textual-port} @aclass{textual-port} type-constructor @var{port}
+Validate @var{port} as instance of @class{textual-port} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{textual-port} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{textual-port?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{textual-port} @aclass{boolean} equality-predicate @var{this} @bracearg{port, textual-port}
+The equality predicate is @func{eq?}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{textual-port} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{port-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+The label--type @class{textual-port} implements all the methods of the base type @class{port}.
+
+@c page
+@node built-in ports labels binin
+@subsubsection Binary input port labels
+
+
+@deftp {Label Type} @aclass{binary-input-port}
+Label--type for all the binary ports.  Its parent is the type annotation:
+
+@lisp
+(or <binary-input-only-port> <binary-input/output-port>)
+@end lisp
+@end deftp
+
+
+@deftypeop Constructor @class{binary-input-port} @aclass{binary-input-port} type-constructor @var{port}
+Validate @var{port} as instance of @class{binary-input-port} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{binary-input-port} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{binary-input-port?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{binary-input-port} @aclass{boolean} equality-predicate @var{this} @bracearg{port, binary-input-port}
+The equality predicate is @func{eq?}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{binary-input-port} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{port-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+The label--type @class{binary-input-port} implements all the methods of the base type @class{port}.
+
+@c page
+@node built-in ports labels binou
+@subsubsection Textual output port labels
+
+
+@deftp {Label Type} @aclass{textual-input-port}
+Label--type for all the textual ports.  Its parent is the type annotation:
+
+@lisp
+(or <textual-input-only-port> <textual-input/output-port>)
+@end lisp
+@end deftp
+
+
+@deftypeop Constructor @class{textual-input-port} @aclass{textual-input-port} type-constructor @var{port}
+Validate @var{port} as instance of @class{textual-input-port} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{textual-input-port} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{textual-input-port?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{textual-input-port} @aclass{boolean} equality-predicate @var{this} @bracearg{port, textual-input-port}
+The equality predicate is @func{eq?}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{textual-input-port} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{port-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+The label--type @class{textual-input-port} implements all the methods of the base type @class{port}.
+
+@c page
+@node built-in ports labels texin
+@subsubsection Textual input port labels
+
+
+@c page
+@node built-in ports labels texou
+@subsubsection Textual output port labels
+
+
 
 @c page
 @node built-in sentinel

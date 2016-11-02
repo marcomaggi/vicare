@@ -189,28 +189,6 @@
   (lambda (<bottom>) => (<non-negative-fixnum>)))
 
 
-;;;; input/output ports
-
-(define-type-annotation <input-port>
-  (or <binary-input-only-port> <binary-input/output-port>
-      <textual-input-only-port> <textual-input/output-port>))
-
-(define-type-annotation <output-port>
-  (or <binary-output-only-port> <binary-input/output-port>
-      <textual-output-only-port> <textual-input/output-port>))
-
-(define-type-annotation <input/output-port>
-  (or <binary-input/output-port> <textual-input/output-port>))
-
-;;; --------------------------------------------------------------------
-
-(define-type-annotation <textual-port>
-  (or <textual-input-only-port> <textual-output-only-port> <textual-input/output-port>))
-
-(define-type-annotation <binary-port>
-  (or <binary-input-only-port> <binary-output-only-port> <binary-input/output-port>))
-
-
 ;;;; miscellaneous
 
 (define-type-annotation <&who-value>

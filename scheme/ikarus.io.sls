@@ -376,6 +376,7 @@
     ;; predicates
     port?
     input-port?				output-port?
+    input-only-port?			output-only-port?
     input/output-port?
     textual-port?			binary-port?
     binary-input-port?			textual-input-port?
@@ -521,6 +522,7 @@
 		  ;; predicates
 		  port?
 		  input-port?				output-port?
+		  input-only-port?			output-only-port?
 		  input/output-port?
 		  textual-port?				binary-port?
 		  binary-input-port?			textual-input-port?
