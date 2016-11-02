@@ -260,12 +260,10 @@
    (closed?			closed-port?)
    (eof?			port-eof?)
    ;;
-   (mode			<port>-mode)
-   (buffer-mode			<port>-buffer-mode)
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
-   (reset			<port>-reset)
+   (reset			reset-input-port!)
    ;;
    (has-position?		port-has-port-position?)
    (has-set-position?		port-has-set-port-position!?)
@@ -297,14 +295,12 @@
   (methods
    (open?			open-port?)
    (closed?			closed-port?)
-   (eof?			port-eof?)
    ;;
-   (mode			<port>-mode)
    (buffer-mode			<port>-buffer-mode)
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
-   (reset			<port>-reset)
+   (reset			reset-output-port!)
    ;;
    (has-position?		port-has-port-position?)
    (has-set-position?		port-has-set-port-position!?)
@@ -375,10 +371,7 @@
   (methods
    (open?			open-port?)
    (closed?			closed-port?)
-   (eof?			port-eof?)
    ;;
-   (mode			<port>-mode)
-   (buffer-mode			<port>-buffer-mode)
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
@@ -413,10 +406,7 @@
   (methods
    (open?			open-port?)
    (closed?			closed-port?)
-   (eof?			port-eof?)
    ;;
-   (mode			<port>-mode)
-   (buffer-mode			<port>-buffer-mode)
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
@@ -455,12 +445,10 @@
    (closed?			closed-port?)
    (eof?			port-eof?)
    ;;
-   (mode			<port>-mode)
-   (buffer-mode			<port>-buffer-mode)
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
-   (reset			<port>-reset)
+   (reset			reset-input-port!)
    ;;
    (has-position?		port-has-port-position?)
    (has-set-position?		port-has-set-port-position!?)
@@ -491,14 +479,12 @@
   (methods
    (open?			open-port?)
    (closed?			closed-port?)
-   (eof?			port-eof?)
    ;;
-   (mode			<port>-mode)
    (buffer-mode			<port>-buffer-mode)
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
-   (reset			<port>-reset)
+   (reset			reset-output-port!)
    ;;
    (has-position?		port-has-port-position?)
    (has-set-position?		port-has-set-port-position!?)
@@ -534,11 +520,10 @@
    (eof?			port-eof?)
    ;;
    (mode			<port>-mode)
-   (buffer-mode			<port>-buffer-mode)
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
-   (reset			<port>-reset)
+   (reset			reset-input-port!)
    ;;
    (has-position?		port-has-port-position?)
    (has-set-position?		port-has-set-port-position!?)
@@ -569,14 +554,12 @@
   (methods
    (open?			open-port?)
    (closed?			closed-port?)
-   (eof?			port-eof?)
    ;;
-   (mode			<port>-mode)
    (buffer-mode			<port>-buffer-mode)
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
-   (reset			<port>-reset)
+   (reset			reset-output-port!)
    ;;
    (has-position?		port-has-port-position?)
    (has-set-position?		port-has-set-port-position!?)
