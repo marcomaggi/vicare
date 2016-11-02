@@ -494,11 +494,7 @@ EXTRA_DIST		+= scheme/ikarus.config.scm.in
 VICARE_NEW_BOOT		= vicare.boot
 VICARE_BOOT_MAKEFILES	= \
 	scheme/makefile.sps					\
-	scheme/makefile.scheme-object-types.scm			\
-	scheme/makefile.built-in-record-types.scm		\
-	scheme/makefile.built-in-condition-object-types.scm	\
-	scheme/makefile.built-in-type-annotations.scm		\
-	scheme/makefile.built-in-label-types.scm
+	scheme/makefile.scheme-object-types.scm
 
 VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS = \
 	typed-core-primitives/build-specs.sps			\
@@ -579,6 +575,10 @@ VICARE_BOOT_PREREQUISITES	= \
 	scheme/ikarus.config.scm			\
 	$(VICARE_BOOT_MAKEFILES)			\
 	typed-core-primitives-specs.scm			\
+	built-in-type-annotation-specs.scm		\
+	built-in-record-type-specs.scm			\
+	built-in-condition-object-type-specs.scm	\
+	built-in-label-type-specs.scm			\
 	\
 	lib/vicare/platform/words.vicare.sls		\
 	lib/vicare/platform/constants.vicare.sls	\
@@ -623,6 +623,28 @@ typed-core-primitives-specs.scm: $(VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS) vicar
 	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)	\
 		--option print-loaded-libraries						\
 		--r6rs-script $(srcdir)/typed-core-primitives/build-specs.sps >$@
+
+built-in-type-annotation-specs.scm: $(srcdir)/type-definitions/type-annotations.sps vicare
+	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)	\
+		--option print-loaded-libraries						\
+		--r6rs-script $(srcdir)/type-definitions/type-annotations.sps >$@
+
+built-in-record-type-specs.scm: $(srcdir)/type-definitions/record-types.sps vicare
+	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)	\
+		--option print-loaded-libraries						\
+		--r6rs-script $(srcdir)/type-definitions/record-types.sps >$@
+
+built-in-condition-object-type-specs.scm: $(srcdir)/type-definitions/condition-object-types.sps vicare
+	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)	\
+		--option print-loaded-libraries						\
+		--r6rs-script $(srcdir)/type-definitions/condition-object-types.sps >$@
+
+built-in-label-type-specs.scm: $(srcdir)/type-definitions/label-types.sps vicare
+	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)	\
+		--option print-loaded-libraries						\
+		--r6rs-script $(srcdir)/type-definitions/label-types.sps >$@
+
+## --------------------------------------------------------------------
 
 # To  create the  new boot  image we  use a  prebuilt boot  image; the
 # environment variable names are  hardcoded in the prebuilt boot image

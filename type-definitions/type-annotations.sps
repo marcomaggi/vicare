@@ -23,6 +23,12 @@
 ;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
+#!vicare
+#!vicare
+(program (makefile.built-in-type-annotations)
+  (import (vicare)
+    (prefix (vicare expander) xp::))
+
 
 ;;;; syntaxes
 
@@ -33,10 +39,13 @@
   ;;
   (syntax-case stx ()
     ((?kwd ?type-name ?type-annotation)
-     #'(set-cons! VICARE-CORE-BUILT-IN-TYPE-ANNOTATIONS-SYNTACTIC-BINDING-DESCRIPTORS
-		  (quote (?type-name
-			  ($core-type-annotation
-			   . (?type-name ?type-annotation))))))
+     #'(begin
+	 (pretty-print '(set-cons! VICARE-CORE-BUILT-IN-TYPE-ANNOTATIONS-SYNTACTIC-BINDING-DESCRIPTORS
+				   (quote (?type-name
+					   ($core-type-annotation
+					    . (?type-name ?type-annotation)))))
+		       (stdout))
+	 (flush-output-port (stdout))))
     ))
 
 
@@ -221,6 +230,8 @@
 
 
 ;;;; done
+
+#| end of program |# )
 
 ;;; end of file
 ;; Local Variables:

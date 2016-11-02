@@ -22,6 +22,11 @@
 ;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;
 
+#!vicare
+(program (makefile.built-in-condition-object-types)
+  (import (vicare)
+    (prefix (vicare expander) xp::))
+
 
 ;;;; syntaxes
 
@@ -34,6 +39,7 @@
 	  (identifier? #'?constructor)
 	  (identifier? #'?predicate))
      #'(?kwd ?type-name ?parent-name ?constructor ?predicate (methods)))
+
     ((_    ?type-name ?parent-name ?constructor ?predicate (methods (?field-name ?accessor-name) ...))
      (and (identifier? #'?type-name)
 	  (or (identifier? #'?parent-name)
@@ -48,11 +54,14 @@
 					       (string-append "vicare:core-type:" type-name.str))))
 	    (TYPE-RTD	(mkid type-name.str "-rtd"))
 	    (TYPE-RCD	(mkid type-name.str "-rcd")))
-	 #'(set-cons! VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-		      (quote (?type-name
-			      ($core-condition-object-type-name
-			       . #(?type-name UID TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate
-					      #((?field-name . ?accessor-name) ...)))))))))
+	 #'(begin
+	     (pretty-print '(set-cons! VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+				       (quote (?type-name
+					       ($core-condition-object-type-name
+						. #(?type-name UID TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate
+							       #((?field-name . ?accessor-name) ...))))))
+			   (stdout))
+	     (flush-output-port (stdout))))))
     ))
 
 
@@ -741,6 +750,11 @@
 (define-built-in-condition-type &compiler-internal-error
     &compile-time-error
   make-compiler-internal-error compiler-internal-error?)
+
+
+;;;; done
+
+#| end of program |# )
 
 ;;; end of file
 ;; Local Variables:

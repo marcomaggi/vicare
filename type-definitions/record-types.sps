@@ -22,6 +22,11 @@
 ;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;
 
+#!vicare
+(program (makefile.built-in-record-types)
+  (import (vicare)
+    (prefix (vicare expander) xp::))
+
 
 ;;;; syntaxes
 
@@ -30,11 +35,11 @@
     (syntax-case stx ()
       ((?kwd ?type-name . ?clauses)
        (let* ((type-name.str	(symbol->string (syntax->datum #'?type-name)))
-	      (clause*.stx	(expander::syntax-clauses-unwrap #'?clauses synner))
-	      (clause*.stx	(expander::syntax-clauses-collapse clause*.stx))
+	      (clause*.stx	(xp::syntax-clauses-unwrap #'?clauses synner))
+	      (clause*.stx	(xp::syntax-clauses-collapse clause*.stx))
 	      (parsed-specs	(%parse-clauses clause*.stx)))
 	 (with-syntax
-	     ((UID			(expander::identifier-append #'?kwd "vicare:core-type:" type-name.str))
+	     ((UID			(xp::identifier-append #'?kwd "vicare:core-type:" type-name.str))
 	      (PARENT			(parsed-specs-parent			parsed-specs))
 	      (CONSTRUCTOR		(parsed-specs-constructor		parsed-specs))
 	      (DESTRUCTOR		(parsed-specs-destructor		parsed-specs))
@@ -43,31 +48,34 @@
 	      (COMPARISON-PROCEDURE	(parsed-specs-comparison-procedure	parsed-specs))
 	      (HASH-FUNCTION		(parsed-specs-hash-function		parsed-specs))
 	      (METHODS			(parsed-specs-methods			parsed-specs))
-	      (TYPE-RTD			(expander::identifier-append #'?kwd type-name.str "-rtd"))
-	      (TYPE-RCD			(expander::identifier-append #'?kwd type-name.str "-rcd")))
-	 #'(set-cons! VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-		      (quote (?type-name
-			      ($core-record-type-name
-			       . #(?type-name UID TYPE-RTD TYPE-RCD PARENT CONSTRUCTOR TYPE-PREDICATE
-					      EQUALITY-PREDICATE COMPARISON-PROCEDURE HASH-FUNCTION
-					      METHODS))))))))
+	      (TYPE-RTD			(xp::identifier-append #'?kwd type-name.str "-rtd"))
+	      (TYPE-RCD			(xp::identifier-append #'?kwd type-name.str "-rcd")))
+	   #'(begin
+	       (pretty-print '(set-cons! VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+					 (quote (?type-name
+						 ($core-record-type-name
+						  . #(?type-name UID TYPE-RTD TYPE-RCD PARENT CONSTRUCTOR TYPE-PREDICATE
+								 EQUALITY-PREDICATE COMPARISON-PROCEDURE HASH-FUNCTION
+								 METHODS)))))
+			     (stdout))
+	       (flush-output-port (stdout))))))
       (_
        (synner "invalid syntax use"))))
 
 ;;; --------------------------------------------------------------------
 
   (define-constant LIST-OF-CLAUSES
-    (expander::syntax-clauses-validate-specs
+    (xp::syntax-clauses-validate-specs
      (list
       ;; NAME MIN-OCCUR MAX-OCCUR MIN-ARGS MAX-ARGS MUTUALLY-INCLUSIVE MUTUALLY-EXCLUSIVE
-      (expander::make-syntax-clause-spec #'parent			1 1 1 1      '() '())
-      (expander::make-syntax-clause-spec #'constructor			0 1 0 1      '() '())
-      (expander::make-syntax-clause-spec #'destructor			0 1 0 1      '() '())
-      (expander::make-syntax-clause-spec #'type-predicate		0 1 1 1      '() '())
-      (expander::make-syntax-clause-spec #'equality-predicate		0 1 1 1      '() '())
-      (expander::make-syntax-clause-spec #'comparison-procedure		0 1 1 1      '() '())
-      (expander::make-syntax-clause-spec #'hash-function		0 1 1 1      '() '())
-      (expander::make-syntax-clause-spec #'methods			0 1 1 +inf.0 '() '()))))
+      (xp::make-syntax-clause-spec #'parent			1 1 1 1      '() '())
+      (xp::make-syntax-clause-spec #'constructor			0 1 0 1      '() '())
+      (xp::make-syntax-clause-spec #'destructor			0 1 0 1      '() '())
+      (xp::make-syntax-clause-spec #'type-predicate		0 1 1 1      '() '())
+      (xp::make-syntax-clause-spec #'equality-predicate		0 1 1 1      '() '())
+      (xp::make-syntax-clause-spec #'comparison-procedure		0 1 1 1      '() '())
+      (xp::make-syntax-clause-spec #'hash-function		0 1 1 1      '() '())
+      (xp::make-syntax-clause-spec #'methods			0 1 1 +inf.0 '() '()))))
 
   (define-record-type parsed-specs
     (fields
@@ -100,26 +108,26 @@
     (protocol
       (lambda (make-record)
 	(lambda ()
-	  (make-record #f	;parent
-		       #f	;constructor
-		       #f	;destructor
-		       #f	;type-predicate
-		       #f	;equality-predicate
-		       #f	;comparison-procedure
-		       #f	;hash-function
-		       '#()	;methods
+	  (make-record #f   ;parent
+		       #f   ;constructor
+		       #f   ;destructor
+		       #f   ;type-predicate
+		       #f   ;equality-predicate
+		       #f   ;comparison-procedure
+		       #f   ;hash-function
+		       '#() ;methods
 		       ))))
     #| end of DEFINE-RECORD-TYPE |# )
 
   (define (%parse-clauses clause*.stx)
-    (expander::syntax-clauses-fold-specs combine (make-parsed-specs) LIST-OF-CLAUSES clause*.stx))
+    (xp::syntax-clauses-fold-specs combine (make-parsed-specs) LIST-OF-CLAUSES clause*.stx))
 
-  (define* (combine {parsed-specs parsed-specs?} {clause-spec expander::syntax-clause-spec?} args)
+  (define* (combine {parsed-specs parsed-specs?} {clause-spec xp::syntax-clause-spec?} args)
     ;;ARGS  is a  vector of  vectors  holding the  values from  the clauses  matching
     ;;CLAUSE-SPEC.
     ;;
     (define arg (vector-ref args 0))
-    (case-identifiers (expander::syntax-clause-spec-keyword clause-spec)
+    (case-identifiers (xp::syntax-clause-spec-keyword clause-spec)
       ((parent)
        (parsed-specs-parent-set! parsed-specs (vector-ref arg 0)))
 
@@ -166,15 +174,15 @@
       ((methods)
        (syntax-case arg ()
 	 (#((?method-name ?method-implementation-procedure) ...)
-	  (if (and (expander::all-identifiers? #'(?method-name ...))
-		   (expander::all-identifiers? #'(?method-implementation-procedure ...)))
+	  (if (and (xp::all-identifiers? #'(?method-name ...))
+		   (xp::all-identifiers? #'(?method-implementation-procedure ...)))
 	      (parsed-specs-methods-set! parsed-specs #'#((?method-name . ?method-implementation-procedure) ...))
 	    (synner "expected identifiers as method names and implementation procedure names")))
 	 (_
 	  (synner "invalid syntax in METHODS clause" arg))))
 
       (else
-       (synner "invalid syntax clause" (expander::syntax-clause-spec-keyword clause-spec))))
+       (synner "invalid syntax clause" (xp::syntax-clause-spec-keyword clause-spec))))
     parsed-specs)
 
 ;;; --------------------------------------------------------------------
@@ -733,6 +741,7 @@
 
 ;;;; done
 
+#| end of program |# )
 
 ;;; end of file
 ;; Local Variables:

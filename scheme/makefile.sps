@@ -1049,10 +1049,10 @@
 ;;; --------------------------------------------------------------------
 
 (include "makefile.scheme-object-types.scm"		#t)
-(include "makefile.built-in-record-types.scm"		#t)
-(include "makefile.built-in-condition-object-types.scm"	#t)
-(include "makefile.built-in-type-annotations.scm"	#t)
-(include "makefile.built-in-label-types.scm"		#t)
+(include "built-in-record-type-specs.scm"		#t)
+(include "built-in-condition-object-type-specs.scm"	#t)
+(include "built-in-type-annotation-specs.scm"		#t)
+(include "built-in-label-type-specs.scm"		#t)
 
 
 ;;;; core syntactic binding descriptors: all the bindings established by the boot image
