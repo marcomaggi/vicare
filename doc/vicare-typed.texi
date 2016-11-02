@@ -154,7 +154,6 @@ Trademarks used herein are the property of their respective owners.
 Appendices
 
 * Package License::             GNU General Public License.
-* Documentation License::       GNU Free Documentation License.
 * references::                  Bibliography and references.
 
 Indexes
@@ -11711,7 +11710,6 @@ Usage example:
 @c ------------------------------------------------------------
 
 @include gpl-3.0.texi
-@include fdl-1.3.texi
 
 @c page
 @node references

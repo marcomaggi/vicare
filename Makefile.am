@@ -541,7 +541,14 @@ VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS = \
 
 EXTRA_DIST		+= \
 	$(VICARE_BOOT_MAKEFILES)				\
-	$(VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS)
+	$(VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS)		\
+	\
+	scheme/scheme-object-types.scm				\
+	type-definitions/scheme-types.sps			\
+	type-definitions/type-annotations.sps			\
+	type-definitions/record-types.sps			\
+	type-definitions/condition-object-types.sps		\
+	type-definitions/label-types.sps
 
 # The  "exec" portion  of the  Makefile variable  names will  instruct
 # Automake to  generate installation rules  to install the  boot image
@@ -565,6 +572,11 @@ VICARE_BOOT_FLAGS	= $(AX_BOOT_VFLAGS) $(BOOT_VFLAGS)				\
 CLEANFILES		+= $(VICARE_NEW_BOOT) \
 	$(builddir)/scheme/ikarus.config.scm		\
 	typed-core-primitives-specs.scm			\
+	built-in-scheme-type-specs.scm			\
+	built-in-type-annotation-specs.scm		\
+	built-in-record-type-specs.scm			\
+	built-in-condition-object-type-specs.scm	\
+	built-in-label-type-specs.scm			\
 	core-macros-table.scm				\
 	non-core-macros-table.scm
 

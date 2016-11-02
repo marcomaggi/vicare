@@ -586,9 +586,9 @@ Revised^6 Report on the algorithmic language Scheme
 
 @c ------------------------------------------------------------------------
 
-@macro brace{THING}
-@{\THING\@}
-@end macro
+@c @macro brace{THING}
+@c @{\THING\@}
+@c @end macro
 
 @macro bracearg {ONE, TWO}
 @{@var{\ONE\} @aclass{\TWO\}@}
