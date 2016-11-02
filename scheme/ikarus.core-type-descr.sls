@@ -633,7 +633,7 @@
 
 ;;;; built-in object-types descriptors: definitions
 
-(include "makefile.scheme-object-types.scm" #t)
+(include "scheme-object-types.scm" #t)
 
 
 ;;;; done

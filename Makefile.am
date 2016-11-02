@@ -492,9 +492,7 @@ EXTRA_DIST += \
 EXTRA_DIST		+= scheme/ikarus.config.scm.in
 
 VICARE_NEW_BOOT		= vicare.boot
-VICARE_BOOT_MAKEFILES	= \
-	scheme/makefile.sps					\
-	scheme/makefile.scheme-object-types.scm
+VICARE_BOOT_MAKEFILES	= scheme/makefile.sps
 
 VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS = \
 	typed-core-primitives/build-specs.sps			\
@@ -575,6 +573,7 @@ VICARE_BOOT_PREREQUISITES	= \
 	scheme/ikarus.config.scm			\
 	$(VICARE_BOOT_MAKEFILES)			\
 	typed-core-primitives-specs.scm			\
+	built-in-scheme-type-specs.scm			\
 	built-in-type-annotation-specs.scm		\
 	built-in-record-type-specs.scm			\
 	built-in-condition-object-type-specs.scm	\
@@ -623,6 +622,11 @@ typed-core-primitives-specs.scm: $(VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS) vicar
 	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)	\
 		--option print-loaded-libraries						\
 		--r6rs-script $(srcdir)/typed-core-primitives/build-specs.sps >$@
+
+built-in-scheme-type-specs.scm: $(srcdir)/type-definitions/scheme-types.sps vicare
+	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)/scheme	\
+		--option print-loaded-libraries						\
+		--r6rs-script $(srcdir)/type-definitions/scheme-types.sps >$@
 
 built-in-type-annotation-specs.scm: $(srcdir)/type-definitions/type-annotations.sps vicare
 	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)	\
