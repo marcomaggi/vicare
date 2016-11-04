@@ -544,11 +544,11 @@ EXTRA_DIST		+= \
 	$(VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS)		\
 	\
 	scheme/scheme-object-types.scm				\
-	type-definitions/scheme-types.sps			\
-	type-definitions/type-annotations.sps			\
-	type-definitions/record-types.sps			\
-	type-definitions/condition-object-types.sps		\
-	type-definitions/label-types.sps
+	core-type-definitions/scheme-types.sps			\
+	core-type-definitions/type-annotations.sps		\
+	core-type-definitions/record-types.sps			\
+	core-type-definitions/condition-object-types.sps	\
+	core-type-definitions/label-types.sps
 
 # The  "exec" portion  of the  Makefile variable  names will  instruct
 # Automake to  generate installation rules  to install the  boot image
@@ -635,30 +635,30 @@ typed-core-primitives-specs.scm: $(VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS) vicar
 		--option print-loaded-libraries						\
 		--r6rs-script $(srcdir)/typed-core-primitives/build-specs.sps >$@
 
-built-in-scheme-type-specs.scm: $(srcdir)/type-definitions/scheme-types.sps vicare
+built-in-scheme-type-specs.scm: $(srcdir)/core-type-definitions/scheme-types.sps vicare
 	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)/scheme	\
 		--option print-loaded-libraries						\
-		--r6rs-script $(srcdir)/type-definitions/scheme-types.sps >$@
+		--r6rs-script $(srcdir)/core-type-definitions/scheme-types.sps >$@
 
-built-in-type-annotation-specs.scm: $(srcdir)/type-definitions/type-annotations.sps vicare
+built-in-type-annotation-specs.scm: $(srcdir)/core-type-definitions/type-annotations.sps vicare
 	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)	\
 		--option print-loaded-libraries						\
-		--r6rs-script $(srcdir)/type-definitions/type-annotations.sps >$@
+		--r6rs-script $(srcdir)/core-type-definitions/type-annotations.sps >$@
 
-built-in-record-type-specs.scm: $(srcdir)/type-definitions/record-types.sps vicare
+built-in-record-type-specs.scm: $(srcdir)/core-type-definitions/record-types.sps vicare
 	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)	\
 		--option print-loaded-libraries						\
-		--r6rs-script $(srcdir)/type-definitions/record-types.sps >$@
+		--r6rs-script $(srcdir)/core-type-definitions/record-types.sps >$@
 
-built-in-condition-object-type-specs.scm: $(srcdir)/type-definitions/condition-object-types.sps vicare
+built-in-condition-object-type-specs.scm: $(srcdir)/core-type-definitions/condition-object-types.sps vicare
 	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)	\
 		--option print-loaded-libraries						\
-		--r6rs-script $(srcdir)/type-definitions/condition-object-types.sps >$@
+		--r6rs-script $(srcdir)/core-type-definitions/condition-object-types.sps >$@
 
-built-in-label-type-specs.scm: $(srcdir)/type-definitions/label-types.sps vicare
+built-in-label-type-specs.scm: $(srcdir)/core-type-definitions/label-types.sps vicare
 	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)	\
 		--option print-loaded-libraries						\
-		--r6rs-script $(srcdir)/type-definitions/label-types.sps >$@
+		--r6rs-script $(srcdir)/core-type-definitions/label-types.sps >$@
 
 ## --------------------------------------------------------------------
 

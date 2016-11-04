@@ -200,6 +200,12 @@
 
 ;;;; miscellaneous
 
+(define-type-annotation <reader-input-port-mode>
+  (enumeration vicare r6rs))
+
+(define-type-annotation <output-port-buffer-mode>
+  (enumeration none line block))
+
 (define-type-annotation <&who-value>
   (or <false> <symbol> <string>))
 

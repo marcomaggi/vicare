@@ -258,91 +258,13 @@
   (parent (or <binary-input-only-port> <binary-input/output-port>
 	      <textual-input-only-port> <textual-input/output-port>))
   (constructor #t)
-  (destructor #f)
-  (type-predicate #f)
   (equality-predicate eq?)
-  (comparison-procedure #f)
   (hash-function port-hash)
   (methods
-   (open?			open-port?)
-   (closed?			closed-port?)
-   (eof?			port-eof?)
-   ;;
-   (set-non-blocking-mode	port-set-non-blocking-mode!)
-   (unset-non-blocking-mode	port-unset-non-blocking-mode!)
-   (non-blocking-mode?		port-in-non-blocking-mode?)
-   (reset			reset-input-port!)
-   ;;
-   (has-position?		port-has-port-position?)
-   (has-set-position?		port-has-set-port-position!?)
-   (position			<port>-position)
-   ;;
-   (id				port-id)
-   (fd				port-fd)
-   (uid				port-uid)
-   (transcoder			port-transcoder)
-   ;;
-   (close			close-port)
-   (dump-status			port-dump-status)
-   ;;
-   (putprop			port-putprop)
-   (getprop			port-getprop)
-   (remprop			port-remprop)
-   (property-list		port-property-list)
-   #| end of METHODS |# ))
-
-(define-built-in-label-type <output-port>
-  (parent (or <binary-output-only-port> <binary-input/output-port>
-	      <textual-output-only-port> <textual-input/output-port>))
-  (constructor #t)
-  (destructor #f)
-  (type-predicate #f)
-  (equality-predicate #f)
-  (comparison-procedure #f)
-  (hash-function port-hash)
-  (methods
+   ;;methods of "<port>"
    (open?			open-port?)
    (closed?			closed-port?)
    ;;
-   (buffer-mode			<port>-buffer-mode)
-   (set-non-blocking-mode	port-set-non-blocking-mode!)
-   (unset-non-blocking-mode	port-unset-non-blocking-mode!)
-   (non-blocking-mode?		port-in-non-blocking-mode?)
-   (reset			reset-output-port!)
-   ;;
-   (has-position?		port-has-port-position?)
-   (has-set-position?		port-has-set-port-position!?)
-   (position			<port>-position)
-   ;;
-   (id				port-id)
-   (fd				port-fd)
-   (uid				port-uid)
-   (transcoder			port-transcoder)
-   ;;
-   (close			close-port)
-   (dump-status			port-dump-status)
-   ;;
-   (putprop			port-putprop)
-   (getprop			port-getprop)
-   (remprop			port-remprop)
-   (property-list		port-property-list)
-   #| end of METHODS |# ))
-
-(define-built-in-label-type <input/output-port>
-  (parent (or <binary-input/output-port> <textual-input/output-port>))
-  (constructor #t)
-  (destructor #f)
-  (type-predicate #f)
-  (equality-predicate #f)
-  (comparison-procedure #f)
-  (hash-function port-hash)
-  (methods
-   (open?			open-port?)
-   (closed?			closed-port?)
-   (eof?			port-eof?)
-   ;;
-   (mode			<port>-mode)
-   (buffer-mode			<port>-buffer-mode)
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
@@ -364,6 +286,81 @@
    (getprop			port-getprop)
    (remprop			port-remprop)
    (property-list		port-property-list)
+   ;;methods of input ports, independent from textual/binary specialisation
+   (eof?			port-eof?)
+   #| end of METHODS |# ))
+
+(define-built-in-label-type <output-port>
+  (parent (or <binary-output-only-port> <binary-input/output-port>
+	      <textual-output-only-port> <textual-input/output-port>))
+  (constructor #t)
+  (equality-predicate eq?)
+  (hash-function port-hash)
+  (methods
+   ;;methods of "<port>"
+   (open?			open-port?)
+   (closed?			closed-port?)
+   ;;
+   (set-non-blocking-mode	port-set-non-blocking-mode!)
+   (unset-non-blocking-mode	port-unset-non-blocking-mode!)
+   (non-blocking-mode?		port-in-non-blocking-mode?)
+   (reset			<port>-reset)
+   ;;
+   (has-position?		port-has-port-position?)
+   (has-set-position?		port-has-set-port-position!?)
+   (position			<port>-position)
+   ;;
+   (id				port-id)
+   (fd				port-fd)
+   (uid				port-uid)
+   (transcoder			port-transcoder)
+   ;;
+   (close			close-port)
+   (dump-status			port-dump-status)
+   ;;
+   (putprop			port-putprop)
+   (getprop			port-getprop)
+   (remprop			port-remprop)
+   (property-list		port-property-list)
+   ;;methods of output ports, independent from textual/binary specialisation
+   (flush			flush-output-port)
+   #| end of METHODS |# ))
+
+(define-built-in-label-type <input/output-port>
+  (parent (or <binary-input/output-port> <textual-input/output-port>))
+  (constructor #t)
+  (equality-predicate eq?)
+  (hash-function port-hash)
+  (methods
+   ;;methods of "<port>"
+   (open?			open-port?)
+   (closed?			closed-port?)
+   ;;
+   (set-non-blocking-mode	port-set-non-blocking-mode!)
+   (unset-non-blocking-mode	port-unset-non-blocking-mode!)
+   (non-blocking-mode?		port-in-non-blocking-mode?)
+   (reset			<port>-reset)
+   ;;
+   (has-position?		port-has-port-position?)
+   (has-set-position?		port-has-set-port-position!?)
+   (position			<port>-position)
+   ;;
+   (id				port-id)
+   (fd				port-fd)
+   (uid				port-uid)
+   (transcoder			port-transcoder)
+   ;;
+   (close			close-port)
+   (dump-status			port-dump-status)
+   ;;
+   (putprop			port-putprop)
+   (getprop			port-getprop)
+   (remprop			port-remprop)
+   (property-list		port-property-list)
+   ;;methods of input ports, independent from textual/binary specialisation
+   (eof?			port-eof?)
+   ;;methods of output ports, independent from textual/binary specialisation
+   (flush			flush-output-port)
    #| end of METHODS |# ))
 
 ;;; --------------------------------------------------------------------
@@ -371,12 +368,10 @@
 (define-built-in-label-type <textual-port>
   (parent (or <textual-input-only-port> <textual-output-only-port> <textual-input/output-port>))
   (constructor #t)
-  (destructor #f)
-  (type-predicate #f)
-  (equality-predicate #f)
-  (comparison-procedure #f)
+  (equality-predicate eq?)
   (hash-function port-hash)
   (methods
+   ;;methods of "<port>"
    (open?			open-port?)
    (closed?			closed-port?)
    ;;
@@ -406,12 +401,10 @@
 (define-built-in-label-type <binary-port>
   (parent (or <binary-input-only-port> <binary-output-only-port> <binary-input/output-port>))
   (constructor #t)
-  (destructor #f)
-  (type-predicate #f)
-  (equality-predicate #f)
-  (comparison-procedure #f)
+  (equality-predicate eq?)
   (hash-function port-hash)
   (methods
+   ;;methods of "<port>"
    (open?			open-port?)
    (closed?			closed-port?)
    ;;
@@ -443,20 +436,17 @@
 (define-built-in-label-type <binary-input-port>
   (parent (or <binary-input-only-port> <binary-input/output-port>))
   (constructor #t)
-  (destructor #f)
-  (type-predicate #f)
-  (equality-predicate #f)
-  (comparison-procedure #f)
+  (equality-predicate eq?)
   (hash-function port-hash)
   (methods
+   ;;methods of "<port>"
    (open?			open-port?)
    (closed?			closed-port?)
-   (eof?			port-eof?)
    ;;
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
-   (reset			reset-input-port!)
+   (reset			<port>-reset)
    ;;
    (has-position?		port-has-port-position?)
    (has-set-position?		port-has-set-port-position!?)
@@ -474,25 +464,24 @@
    (getprop			port-getprop)
    (remprop			port-remprop)
    (property-list		port-property-list)
+   ;;methods of input ports, independent from textual/binary specialisation
+   (eof?			port-eof?)
    #| end of METHODS |# ))
 
 (define-built-in-label-type <binary-output-port>
   (parent (or <binary-output-only-port> <binary-input/output-port>))
   (constructor #t)
-  (destructor #f)
-  (type-predicate #f)
-  (equality-predicate #f)
-  (comparison-procedure #f)
+  (equality-predicate eq?)
   (hash-function port-hash)
   (methods
+   ;;methods of "<port>"
    (open?			open-port?)
    (closed?			closed-port?)
    ;;
-   (buffer-mode			<port>-buffer-mode)
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
-   (reset			reset-output-port!)
+   (reset			<port>-reset)
    ;;
    (has-position?		port-has-port-position?)
    (has-set-position?		port-has-set-port-position!?)
@@ -510,6 +499,8 @@
    (getprop			port-getprop)
    (remprop			port-remprop)
    (property-list		port-property-list)
+   ;;methods of output ports, independent from textual/binary specialisation
+   (flush			flush-output-port)
    #| end of METHODS |# ))
 
 ;;; --------------------------------------------------------------------
@@ -517,21 +508,17 @@
 (define-built-in-label-type <textual-input-port>
   (parent (or <textual-input-only-port> <textual-input/output-port>))
   (constructor #t)
-  (destructor #f)
-  (type-predicate #f)
-  (equality-predicate #f)
-  (comparison-procedure #f)
+  (equality-predicate eq?)
   (hash-function port-hash)
   (methods
+   ;;methods of "<port>"
    (open?			open-port?)
    (closed?			closed-port?)
-   (eof?			port-eof?)
    ;;
-   (mode			<port>-mode)
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
-   (reset			reset-input-port!)
+   (reset			<port>-reset)
    ;;
    (has-position?		port-has-port-position?)
    (has-set-position?		port-has-set-port-position!?)
@@ -549,25 +536,24 @@
    (getprop			port-getprop)
    (remprop			port-remprop)
    (property-list		port-property-list)
+   ;;methods of input ports, independent from textual/binary specialisation
+   (eof?			port-eof?)
    #| end of METHODS |# ))
 
 (define-built-in-label-type <textual-output-port>
   (parent (or <textual-output-only-port> <textual-input/output-port>))
   (constructor #t)
-  (destructor #f)
-  (type-predicate #f)
-  (equality-predicate #f)
-  (comparison-procedure #f)
+  (equality-predicate eq?)
   (hash-function port-hash)
   (methods
+   ;;methods of "<port>"
    (open?			open-port?)
    (closed?			closed-port?)
    ;;
-   (buffer-mode			<port>-buffer-mode)
    (set-non-blocking-mode	port-set-non-blocking-mode!)
    (unset-non-blocking-mode	port-unset-non-blocking-mode!)
    (non-blocking-mode?		port-in-non-blocking-mode?)
-   (reset			reset-output-port!)
+   (reset			<port>-reset)
    ;;
    (has-position?		port-has-port-position?)
    (has-set-position?		port-has-set-port-position!?)
@@ -585,6 +571,8 @@
    (getprop			port-getprop)
    (remprop			port-remprop)
    (property-list		port-property-list)
+   ;;methods of output ports, independent from textual/binary specialisation
+   (flush			flush-output-port)
    #| end of METHODS |# ))
 
 
