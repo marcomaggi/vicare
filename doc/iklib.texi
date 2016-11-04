@@ -14462,9 +14462,10 @@ of @var{reco} (if any).
 @defun void-hash @var{obj}
 @defunx eof-object-hash @var{obj}
 @defunx would-block-hash @var{obj}
+@defunx sentinel-hash @var{obj}
 Ignore @var{obj} and return a non--negative exact integer representing
-the hash value for @code{(void)}, @code{(eof-object)} and
-@code{(would-block-object)}.
+the hash value for @code{(void)}, @code{(eof-object)},
+@code{(would-block-object)} and @code{(sentinel)}.
 @end defun
 
 

@@ -33,18 +33,6 @@
 
 ;;;; standalone object types
 
-(define-scheme-type <eof>
-    <top>
-  (constructor eof-object)
-  (type-predicate eof-object?)
-  (hash-function eof-object-hash))
-
-(define-scheme-type <would-block>
-    <top>
-  (constructor would-block-object)
-  (type-predicate would-block-object?)
-  (hash-function would-block-hash))
-
 (define-scheme-type <boolean>
     <top>
   (constructor <boolean>-constructor)
@@ -796,6 +784,30 @@
   (type-predicate compound-condition?))
 
 
+;;;; unique objects
+
+(define-scheme-type <eof>
+    <top>
+  (constructor eof-object)
+  (type-predicate eof-object?)
+  (equality-predicate eq?)
+  (hash-function eof-object-hash))
+
+(define-scheme-type <would-block>
+    <top>
+  (constructor would-block-object)
+  (type-predicate would-block-object?)
+  (equality-predicate eq?)
+  (hash-function would-block-hash))
+
+(define-scheme-type <sentinel>
+    <struct>
+  (constructor sentinel)
+  (type-predicate sentinel?)
+  (equality-predicate eq?)
+  (hash-function sentinel-hash))
+
+
 ;;;; misc structs and records
 
 (define-scheme-type <promise>
@@ -883,15 +895,6 @@
    (stripped			reader-annotation-stripped)
    (source			reader-annotation-source)
    (textual-position		reader-annotation-textual-position)))
-
-;;; --------------------------------------------------------------------
-;;; unique objects
-
-(define-scheme-type <sentinel>
-    <struct>
-  (constructor sentinel)
-  (type-predicate sentinel?)
-  (equality-predicate eq?))
 
 
 ;;;; input/output ports

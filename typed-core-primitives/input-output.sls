@@ -933,10 +933,18 @@
 ;;; --------------------------------------------------------------------
 ;;; special values
 
-(declare-object-retriever eof-object)
+(declare-core-primitive eof-object
+    (safe)
+  (signatures
+   (()				=> (<eof>))))
+
 (declare-object-predicate eof-object?)
 
-(declare-object-retriever would-block-object)
+(declare-core-primitive would-block-object
+    (safe)
+  (signatures
+   (()				=> (<would-block>))))
+
 (declare-object-predicate would-block-object?)
 
 (declare-core-primitive buffer-mode?

@@ -3169,6 +3169,7 @@
     (eof-object-hash				v $language)
     (would-block-hash				v $language)
     (transcoder-hash				v $language)
+    (sentinel-hash				v $language)
     (record-hash				v $language)
     (object-hash				v $language)
     (list-sort					v r sr)

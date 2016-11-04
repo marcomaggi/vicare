@@ -363,6 +363,7 @@
   (declare-hash-function void-hash		<top>)
   (declare-hash-function eof-object-hash	<eof>)
   (declare-hash-function would-block-hash	<would-block>)
+  (declare-hash-function sentinel-hash		<sentinel>)
   (declare-hash-function transcoder-hash	<transcoder>)
   (declare-hash-function object-hash		<top>)
   #| end of LET-SYNTAX |# )

@@ -55,6 +55,7 @@
     char-hash			char-ci-hash
     boolean-hash		void-hash
     eof-object-hash		would-block-hash
+    sentinel-hash
     struct-hash			record-hash
     object-hash
 
@@ -147,6 +148,7 @@
 		  char-hash			char-ci-hash
 		  boolean-hash			void-hash
 		  eof-object-hash		would-block-hash
+		  sentinel-hash
 		  struct-hash			record-hash
 		  object-hash)
     (vicare system $fx)
@@ -855,6 +857,7 @@
 	    (eq? f void-hash)
 	    (eq? f eof-object-hash)
 	    (eq? f would-block-hash)
+	    (eq? f sentinel-hash)
 	    (eq? f equal-hash))
 	f
       (lambda (k)
@@ -1216,6 +1219,9 @@
 (define (would-block-hash obj)
   2)
 
+(define (sentinel-hash obj)
+  3)
+
 (define* (transcoder-hash {obj transcoder?})
   ($transcoder-hash obj))
 
@@ -1273,6 +1279,8 @@
 	 (eof-object-hash obj))
 	((would-block-object? obj)
 	 (would-block-hash obj))
+	((sentinel? obj)
+	 (sentinel-hash obj))
 	((transcoder? obj)
 	 ($transcoder-hash obj))
 	((port? obj)

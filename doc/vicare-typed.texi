@@ -4209,6 +4209,7 @@ et cetera.
 * built-in void::         Type of the void object.
 * built-in top::          The universal super-type.
 * built-in bottom::       The universal sub-type.
+* built-in unique::       Types of unique objects.
 * built-in booleans::     Type of boolean objects.
 * built-in chars::        Type of character objects.
 * built-in symbols::      Type of symbol objects.
@@ -4227,7 +4228,6 @@ et cetera.
 * built-in records::      Type of record objects.
 * built-in conditions::   Type of condition objects.
 * built-in ports::        Type of input/output ports.
-* built-in sentinel::     Type of sentinel object.
 * built-in time::         Type of time objects.
 * built-in misc::         Miscellaneous built-in types.
 @end menu
@@ -4400,6 +4400,107 @@ signature in which the argument can be any value:
 @result{} #[core-type-spec #[type (<fixnum>)]]
 @end lisp
 @end deftp
+
+@c page
+@node built-in unique
+@section Unique objects
+
+
+@menu
+* built-in unique sentinel::    The @class{sentinel} type.
+* built-in unique eof::         The @class{eof} type.
+* built-in unique would-block:: The @class{would-block} type.
+@end menu
+
+@c page
+@node built-in unique sentinel
+@subsection The @class{sentinel} type
+
+
+@deftp {Built-in Type} @aclass{sentinel}
+@deftpx {Parent Type} @aclass{struct}
+Type of the sentinel object.  @vicareref{iklib sentinel, The sentinel object}.
+@end deftp
+
+
+@deftypeop {Type constructor} @class{sentinel} @aclass{sentinel} type-constructor
+The constructor is @func{sentinel}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{sentinel} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{sentinel?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{sentinel} @aclass{boolean} equality-predicate @var{this} @bracearg{obj, sentinel}
+The equality predicate is @func{eq?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{sentinel} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{sentinel-hash}.
+@end deftypeop
+
+@c page
+@node built-in unique eof
+@subsection The @class{eof} type
+
+
+@deftp {Built-in Type} @aclass{eof}
+@deftpx {Parent Type} @aclass{struct}
+Type of the end--of--file object.  @vicareref{stdlib io port eof object, End-of-file object}.
+@end deftp
+
+
+@deftypeop {Type constructor} @class{eof} @aclass{eof} type-constructor
+The constructor is @func{eof-object}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{eof} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{eof-object?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{eof} @aclass{boolean} equality-predicate @var{this} @bracearg{obj, eof}
+The equality predicate is @func{eq?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{eof} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{eof-object-hash}.
+@end deftypeop
+
+@c page
+@node built-in unique would-block
+@subsection The @class{would-block} type
+
+
+@deftp {Built-in Type} @aclass{would-block}
+@deftpx {Parent Type} @aclass{struct}
+Type of the would--block object.  @vicareref{iklib io non-blocking object, The would-block object}.
+@end deftp
+
+
+@deftypeop {Type constructor} @class{would-block} @aclass{would-block} type-constructor
+The constructor is @func{would-block-object}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{would-block} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{would-block?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{would-block} @aclass{boolean} equality-predicate @var{this} @bracearg{obj, would-block}
+The equality predicate is @func{eq?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{would-block} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{would-block-hash}.
+@end deftypeop
 
 @c page
 @node built-in booleans
@@ -10528,28 +10629,6 @@ Buffer mode for output ports.  Its definition is equivalent to:
   (enumeration none line block))
 @end lisp
 @end deftp
-
-@c page
-@node built-in sentinel
-@section Type of sentinel object
-
-
-@deftp {Built-in Type} @aclass{sentinel}
-@deftpx {Parent Type} @aclass{struct}
-Type of the sentinel object (@vicarepxref{iklib sentinel, The sentinel
-object}).
-@end deftp
-
-
-@defop Constructor @class{sentinel} new @aclass{sentinel}
-The constructor is @func{sentinel}.  Return the sentinel object.
-@end defop
-
-
-@defop {Type predicate} @class{sentinel} is-a? @var{obj} @aclass{sentinel}
-The type predicate is @func{sentinel?}.  Return @true{} if @var{obj} is
-the sentinel object; otherwise return @false{}.
-@end defop
 
 @c page
 @node built-in time
