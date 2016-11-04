@@ -515,7 +515,7 @@
 (declare-core-primitive output-port-buffer-mode
     (safe)
   (signatures
-   ((<output-port>)		=> ((enumeration none line block))))
+   ((<output-port>)		=> (<output-port-buffer-mode>)))
   (attributes
    ((_)				effect-free result-true)))
 
@@ -540,14 +540,14 @@
 (declare-core-primitive port-mode
     (safe)
   (signatures
-   ((<port>)		=> ((enumeration r6rs vicare))))
+   ((<port>)		=> (<reader-input-port-mode>)))
   (attributes
    ((_)			effect-free result-true)))
 
 (declare-core-primitive set-port-mode!
     (safe)
   (signatures
-   ((<port> (enumeration r6rs vicare))		=> (<void>)))
+   ((<port> <reader-input-port-mode>)		=> (<void>)))
   (attributes
    ((_ _)			result-true)))
 
@@ -556,7 +556,7 @@
 (declare-core-primitive set-port-buffer-mode!
     (safe)
   (signatures
-   ((<port> (enumeration none line block))		=> (<void>)))
+   ((<port> <output-port-buffer-mode>)		=> (<void>)))
   (attributes
    ((_ _)			result-true)))
 
@@ -1077,14 +1077,14 @@
 (declare-core-primitive <port>-mode
     (safe)
   (signatures
-   ((<port>)					=> ((enumeration r6rs vicare)))
-   ((<port> (enumeration r6rs vicare))		=> (<void>))))
+   ((<port>)					=> (<reader-input-port-mode>))
+   ((<port> <reader-input-port-mode>)		=> (<void>))))
 
 (declare-core-primitive <port>-buffer-mode
     (safe)
   (signatures
-   ((<port>)					=> ((enumeration none line block)))
-   ((<port> (enumeration none line block))	=> (<void>))))
+   ((<port>)					=> (<output-port-buffer-mode>))
+   ((<port> <output-port-buffer-mode>)		=> (<void>))))
 
 (declare-core-primitive <port>-reset
     (safe)

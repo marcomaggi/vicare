@@ -3887,6 +3887,9 @@
     (<binary-port>				v $language)
     (<textual-port>				v $language)
 
+    (<reader-input-port-mode>			v $language)
+    (<output-port-buffer-mode>			v $language)
+
 ;;; --------------------------------------------------------------------
 
     (hash-function-late-binding			system-type-descriptors)
