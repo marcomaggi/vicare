@@ -106,6 +106,7 @@
    (string		symbol->string)
    (bound?		symbol-bound?)
    (value		<symbol>-value)
+   (member?		enum-set-member?)
    ;;
    (=			symbol=?)
    (!=			symbol!=?)
@@ -822,6 +823,7 @@
   (constructor make-enumeration)
   (type-predicate enum-set?)
   (equality-predicate enum-set=?)
+  (hash-function enum-set-hash)
   (methods
    (list		enum-set->list)
    (complement		enum-set-complement)
@@ -829,12 +831,11 @@
    (difference		enum-set-difference)
    (indexer		enum-set-indexer)
    (intersection	enum-set-intersection)
-   (member?		enum-set-member?)
    (projection		enum-set-projection)
    (subset?		enum-set-subset?)
    (union		enum-set-union)
    (universe		enum-set-universe)
-   (=?			enum-set=?)))
+   (=			enum-set=?)))
 
 ;;; --------------------------------------------------------------------
 

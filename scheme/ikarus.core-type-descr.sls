@@ -90,6 +90,7 @@
 		  pair-hash
 		  ipair-hash
 		  sentinel-hash
+		  enum-set-hash
 		  ;;
 		  empty-bytevector?
 		  nebytevector?
@@ -208,7 +209,8 @@
 	  list-hash
 	  pair-hash
 	  ipair-hash
-	  sentinel-hash)
+	  sentinel-hash
+	  enum-set-hash)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Oct 27,
     ;;2016)
     (only (ikarus bytevectors)

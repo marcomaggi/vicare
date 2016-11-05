@@ -14459,6 +14459,11 @@ of @var{reco} (if any).
 @end defun
 
 
+@defun enum-set-hash @var{es}
+Hash function for enumeration sets.
+@end defun
+
+
 @defun void-hash @var{obj}
 @defunx eof-object-hash @var{obj}
 @defunx would-block-hash @var{obj}

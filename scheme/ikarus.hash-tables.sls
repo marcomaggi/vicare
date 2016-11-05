@@ -55,7 +55,7 @@
     char-hash			char-ci-hash
     boolean-hash		void-hash
     eof-object-hash		would-block-hash
-    sentinel-hash
+    sentinel-hash		enum-set-hash
     struct-hash			record-hash
     object-hash
 
@@ -95,6 +95,7 @@
     $cflonum-hash
     $compnum-hash
     $record-hash
+    $enum-set-hash
     $string-ci-hash
     $string-hash
     $struct-hash
@@ -148,7 +149,7 @@
 		  char-hash			char-ci-hash
 		  boolean-hash			void-hash
 		  eof-object-hash		would-block-hash
-		  sentinel-hash
+		  sentinel-hash			enum-set-hash
 		  struct-hash			record-hash
 		  object-hash)
     (vicare system $fx)
@@ -1210,6 +1211,16 @@
 
 ;;; --------------------------------------------------------------------
 
+(define* (enum-set-hash {es enum-set?})
+  ($enum-set-hash es))
+
+(define ($enum-set-hash es)
+  (fold-left (lambda (knil sym)
+	       (fxxor knil ($symbol-hash sym)))
+    0 (enum-set->list es)))
+
+;;; --------------------------------------------------------------------
+
 (define (void-hash obj)
   0)
 
@@ -1271,6 +1282,8 @@
 	 ($pair-hash obj))
 	((ipair? obj)
 	 ($ipair-hash obj))
+	((enum-set? obj)
+	 (enum-set-hash obj))
 	((struct? obj)
 	 ($struct-hash obj))
 	((void-object? obj)

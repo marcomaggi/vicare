@@ -209,6 +209,12 @@
 (define-type-annotation <&who-value>
   (or <false> <symbol> <string>))
 
+(define-type-annotation <enum-set-indexer>
+  (lambda (<symbol>) => ((or <false> <non-negative-fixnum>))))
+
+(define-type-annotation <enum-set-constructor>
+  (lambda ((list-of <symbol>)) => (<enum-set>)))
+
 (define-type-annotation <file-descriptor>
   <non-negative-fixnum>)
 

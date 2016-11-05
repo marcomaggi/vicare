@@ -4228,6 +4228,7 @@ et cetera.
 * built-in records::      Type of record objects.
 * built-in conditions::   Type of condition objects.
 * built-in ports::        Type of input/output ports.
+* built-in enum-set::     Type of enumeration sets.
 * built-in time::         Type of time objects.
 * built-in misc::         Miscellaneous built-in types.
 @end menu
@@ -4901,6 +4902,11 @@ with one argument: apply @func{set-symbol-value!} to the instance to
 store a new value @code{value} slot.
 @end deftypemethod
 
+
+@deftypemethod @class{symbol} @aclass{boolean} member? @var{this} @bracearg{es, enum-set}
+Apply @func{enum-set-member?} to the arguments and return its return value.
+@end deftypemethod
+
 @c ------------------------------------------------------------------------
 
 @subsubheading Methods: comparison
@@ -5229,7 +5235,7 @@ a closure object; otherwise return @false{}.
 @subsection The @class{thunk} object--type
 
 
-@deftp {Type Annotation} @aclass{thunk}
+@deftp {Core Type} @aclass{thunk}
 Type of procedures accepting no arguments.  The definition of this type
 is equivalent to:
 
@@ -5244,7 +5250,7 @@ is equivalent to:
 @subsection The @class{type-predicate} object--type
 
 
-@deftp {Type Annotation} @aclass{type-predicate}
+@deftp {Core Type} @aclass{type-predicate}
 Type of procedures acting as type predicates.  The definition of this
 type is equivalent to:
 
@@ -5259,7 +5265,7 @@ type is equivalent to:
 @subsection The @class{type-destructor} object--type
 
 
-@deftp {Type Annotation} @aclass{type-destructor}
+@deftp {Core Type} @aclass{type-destructor}
 Type of procedures acting as destructors for object of a specified type.
 The definition of this type is equivalent to:
 
@@ -5274,7 +5280,7 @@ The definition of this type is equivalent to:
 @subsection The @class{type-printer} object--type
 
 
-@deftp {Type Annotation} @aclass{type-printer}
+@deftp {Core Type} @aclass{type-printer}
 Type of procedures acting as custom printers for object of a specified
 type.  The definition of this type is equivalent to:
 
@@ -5289,7 +5295,7 @@ type.  The definition of this type is equivalent to:
 @subsection The @class{equality-predicate} object--type
 
 
-@deftp {Type Annotation} @aclass{equality-predicate}
+@deftp {Core Type} @aclass{equality-predicate}
 Type of procedures acting as equality predicates.  The definition of
 this type is equivalent to:
 
@@ -5304,7 +5310,7 @@ this type is equivalent to:
 @subsection The @class{comparison-procedure} object--type
 
 
-@deftp {Type Annotation} @aclass{comparison-procedure}
+@deftp {Core Type} @aclass{comparison-procedure}
 Type of procedures acting as equality predicates.  The definition of
 this type is equivalent to:
 
@@ -5319,7 +5325,7 @@ this type is equivalent to:
 @subsection The @class{hash-function} object--type
 
 
-@deftp {Type Annotation} @aclass{hash-function}
+@deftp {Core Type} @aclass{hash-function}
 Type of procedures acting as equality predicates.  The definition of
 this type is equivalent to:
 
@@ -5334,7 +5340,7 @@ this type is equivalent to:
 @subsection The @class{type-method-retriever} object-type
 
 
-@deftp {Type Annotation} @aclass{type-method-retriever}
+@deftp {Core Type} @aclass{type-method-retriever}
 Type of procedures acting as run--time method retriever for object of a
 specified type.  The definition of this type is equivalent to:
 
@@ -10611,7 +10617,7 @@ Apply @func{flush-output-port} to the instance.
 @subsection Miscellaneous types
 
 
-@deftp {Type Annotation} @aclass{reader-input-port-mode}
+@deftp {Core Type} @aclass{reader-input-port-mode}
 Scheme reader mode for textual input ports.  Its definition is equivalent to:
 
 @lisp
@@ -10629,6 +10635,127 @@ Buffer mode for output ports.  Its definition is equivalent to:
   (enumeration none line block))
 @end lisp
 @end deftp
+
+@c page
+@node built-in enum-set
+@section Type of enumeration sets
+
+
+@deftp {Core Type} @aclass{enum-set}
+Type of enumeration sets as defined by @rnrs{6}.
+@end deftp
+
+
+@deftypeop {Type constructor} @class{enum-set} @aclass{enum-set} type-constructor @var{symbol-list}
+The constructor is @func{make-enumeration}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{enum-set} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{enum-set?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{enum-set} @aclass{boolean} equality-predicate @var{this} @bracearg{es, enum-set}
+The equality predicate is @func{enum-set=?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{enum-set} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{enum-set-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Auxiliary types
+
+
+@deftp {Core Type} @aclass{enum-set-indexer}
+A type annotation with the following definition:
+
+@lisp
+(lambda (<symbol>) => ((or <false> <non-negative-fixnum>)))
+@end lisp
+@end deftp
+
+
+@deftp {Core Type} @aclass{enum-set-constructor}
+A type annotation with the following definition:
+
+@lisp
+(lambda ((list-of <symbol>)) => (<enum-set>))
+@end lisp
+@end deftp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: constructors
+
+
+@deftypemethod @class{enum-set} @aclass{enum-set} universe @var{this}
+Apply @func{enum-set-universe} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{enum-set} @aclass{enum-set-indexer} indexer @var{this}
+Apply @func{enum-set-indexer} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{enum-set} @aclass{enum-set-constructor} constructor @var{this}
+Apply @func{enum-set-constructor} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{enum-set} {(list-of @aclass{symbol})} list @var{this}
+Apply @func{enum-set->list} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: comparison
+
+
+Notice that @class{symbol} has a method @code{member?} that applies @func{enum-set-member?} to its
+arguments.
+
+
+@deftypemethod @class{enum-set} @aclass{boolean} subset? @var{this} @bracearg{es, enum-set}
+Apply @func{enum-set-subset?} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{enum-set} @aclass{boolean} = @var{this} @bracearg{es, enum-set}
+Apply @func{enum-set=?} to the arguments and return its return value.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods: set operations
+
+
+@deftypemethod @class{enum-set} @aclass{enum-set} union @var{this} @bracearg{es, enum-set}
+Apply @func{enum-set-union} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{enum-set} @aclass{enum-set} intersection @var{this} @bracearg{es, enum-set}
+Apply @func{enum-set-intersection} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{enum-set} @aclass{enum-set} difference @var{this} @bracearg{es, enum-set}
+Apply @func{enum-set-difference} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{enum-set} @aclass{enum-set} complement @var{this}
+Apply @func{enum-set-complement} to the arguments and return its return value.
+@end deftypemethod
+
+@deftypemethod @class{enum-set} @aclass{enum-set} projection @var{this} @bracearg{es, enum-set}
+Apply @func{enum-set-projection} to the arguments and return its return value.
+@end deftypemethod
 
 @c page
 @node built-in time
@@ -10819,7 +10946,7 @@ Subtract @var{T} from @var{this} and return the result.
 @section Miscellaneous built-in types
 
 
-@deftp {Built--In Type} @class{&who-value}
+@deftp {Type annotation} @class{&who-value}
 The type of the field in the built--in condition object type
 @condition{who}.  Its definition is equivalent to:
 
@@ -10830,7 +10957,7 @@ The type of the field in the built--in condition object type
 @end deftp
 
 
-@deftp {Built--In Type} @class{file-descriptor}
+@deftp {Type annotation} @class{file-descriptor}
 The type of file descriptor values.  Its definition is equivalent to:
 
 @lisp

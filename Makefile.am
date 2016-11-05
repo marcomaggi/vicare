@@ -583,6 +583,7 @@ CLEANFILES		+= $(VICARE_NEW_BOOT) \
 VICARE_BOOT_PREREQUISITES	= \
 	vicare						\
 	scheme/ikarus.config.scm			\
+	scheme/scheme-object-types.scm			\
 	$(VICARE_BOOT_MAKEFILES)			\
 	typed-core-primitives-specs.scm			\
 	built-in-scheme-type-specs.scm			\
@@ -635,7 +636,7 @@ typed-core-primitives-specs.scm: $(VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS) vicar
 		--option print-loaded-libraries						\
 		--r6rs-script $(srcdir)/typed-core-primitives/build-specs.sps >$@
 
-built-in-scheme-type-specs.scm: $(srcdir)/core-type-definitions/scheme-types.sps vicare
+built-in-scheme-type-specs.scm: $(srcdir)/core-type-definitions/scheme-types.sps $(srcdir)/scheme/scheme-object-types.scm vicare
 	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)/scheme	\
 		--option print-loaded-libraries						\
 		--r6rs-script $(srcdir)/core-type-definitions/scheme-types.sps >$@

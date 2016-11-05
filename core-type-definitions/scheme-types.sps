@@ -79,11 +79,11 @@
   (define-constant LIST-OF-CLAUSES
     (xp::syntax-clauses-validate-specs
      (list (xp::make-syntax-clause-spec #'constructor		0 1 0 1      '() '())
-	   (xp::make-syntax-clause-spec #'type-predicate		0 1 1 1      '() '())
+	   (xp::make-syntax-clause-spec #'type-predicate	0 1 1 1      '() '())
 	   (xp::make-syntax-clause-spec #'hash-function		0 1 1 1      '() '())
 	   (xp::make-syntax-clause-spec #'equality-predicate	0 1 1 1      '() '())
 	   (xp::make-syntax-clause-spec #'comparison-procedure	0 1 1 1      '() '())
-	   (xp::make-syntax-clause-spec #'methods			0 1 1 +inf.0 '() '()))))
+	   (xp::make-syntax-clause-spec #'methods		0 1 1 +inf.0 '() '()))))
 
   (define-record-type parsed-specs
     (fields
