@@ -4230,6 +4230,7 @@ et cetera.
 * built-in ports::        Type of input/output ports.
 * built-in enum-set::     Type of enumeration sets.
 * built-in time::         Type of time objects.
+* built-in promises::     Type of promise objects.
 * built-in misc::         Miscellaneous built-in types.
 @end menu
 
@@ -10939,6 +10940,55 @@ Add @var{T} to @var{this} and return the result.
 
 @deftypemethod @aclass{epoch-time} @aclass{epoch-time} - @var{this} @bracearg{T, time}
 Subtract @var{T} from @var{this} and return the result.
+@end deftypemethod
+
+@c page
+@node built-in promises
+@section Type of promise objects
+
+
+@deftp {Core Type} @aclass{promise}
+Type of promises.
+@end deftp
+
+
+@deftypeop {Type constructor} @class{promise} @aclass{promise} type-constructor @var{thunk}
+Build and return a new @class{promise} object using @var{thunk} to generate the value.  The code:
+
+@lisp
+(delay 3)
+@end lisp
+
+@noindent
+is equivalent to:
+
+@lisp
+(new <promise> (lambda () 3))
+@end lisp
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{promise} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{promise?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{promise} @aclass{boolean} equality-predicate @var{this} @bracearg{prom, promise}
+The equality predicate is @func{eq?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{promise} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{promise-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{promise} @aclass{top} force @var{this}
+Apply @func{force} to the instance and return its return value.
 @end deftypemethod
 
 @c page

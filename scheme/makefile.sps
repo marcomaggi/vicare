@@ -3171,6 +3171,7 @@
     (transcoder-hash				v $language)
     (sentinel-hash				v $language)
     (enum-set-hash				v $language)
+    (promise-hash				v $language)
     (record-hash				v $language)
     (object-hash				v $language)
     (list-sort					v r sr)
@@ -6196,6 +6197,7 @@
     ($symbol-hash				$hashtables)
     ($transcoder-hash				$hashtables)
     ($enum-set-hash				$hashtables)
+    ($promise-hash				$hashtables)
 
     ($hashtable-type-descriptor			$hashtables)
     ($hashtable-type-descriptor-set!		$hashtables)

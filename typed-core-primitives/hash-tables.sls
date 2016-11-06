@@ -365,6 +365,7 @@
   (declare-hash-function would-block-hash	<would-block>)
   (declare-hash-function sentinel-hash		<sentinel>)
   (declare-hash-function enum-set-hash		<enum-set>	(replacements $enum-set-hash))
+  (declare-hash-function promise-hash		<promise>	(replacements $promise-hash))
   (declare-hash-function transcoder-hash	<transcoder>	(replacements $transcoder-hash))
   (declare-hash-function object-hash		<top>)
   #| end of LET-SYNTAX |# )
@@ -431,6 +432,7 @@
   (declare-hash-function $struct-hash		<struct>)
   (declare-hash-function $symbol-hash		<symbol>)
   (declare-hash-function $enum-set-hash		<enum-set>)
+  (declare-hash-function $promise-hash		<promise>)
   (declare-hash-function $transcoder-hash	<transcoder>)
   #| end of LET-SYNTAX |# )
 

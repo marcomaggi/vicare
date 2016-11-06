@@ -815,6 +815,8 @@
     <record>
   (constructor make-promise)
   (type-predicate promise?)
+  (equality-predicate eq?)
+  (hash-function promise-hash)
   (methods
    (force	force)))
 

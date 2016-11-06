@@ -7985,9 +7985,24 @@ Compute and return the hash value.
 @end deffn
 
 
+@deffn {Unsafe Operation} $enum-set-hash @var{es}
+Hash function for enumeration sets.
+@end deffn
+
+
+@deffn {Unsafe Operation} $promise-hash @var{prom}
+Hash function for promise objects.
+@end deffn
+
+
 @deffn {Unsafe Operation} $record-hash @var{reco}
 @deffnx {Unsafe Operation} $struct-hash @var{stru}
 Compute and return the hash value.
+
+@quotation
+@strong{NOTE} The result returned by these hash functions depends on the values in the fields, so:
+it will change if the fields are mutated.
+@end quotation
 @end deffn
 
 

@@ -14449,6 +14449,11 @@ Hash function for compnum objects.
 @defun struct-hash @var{stru}
 Hash function for @value{PRJNAME} structs.  This is a very low quality
 hash function.
+
+@quotation
+@strong{NOTE} The result returned by this hash function depends on the values in the struct fields,
+so: it will change if the struct is mutated.
+@end quotation
 @end defun
 
 
@@ -14456,11 +14461,21 @@ hash function.
 Hash function for @rnrs{6} records.  This is a very low quality hash
 function.  Notice that it does @strong{not} use the custom hash function
 of @var{reco} (if any).
+
+@quotation
+@strong{NOTE} The result returned by this hash function depends on the values in the record fields,
+so: it will change if the record is mutated.
+@end quotation
 @end defun
 
 
 @defun enum-set-hash @var{es}
 Hash function for enumeration sets.
+@end defun
+
+
+@defun promise-hash @var{prom}
+Hash function for promise objects.
 @end defun
 
 

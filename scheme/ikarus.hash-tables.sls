@@ -56,6 +56,7 @@
     boolean-hash		void-hash
     eof-object-hash		would-block-hash
     sentinel-hash		enum-set-hash
+    promise-hash
     struct-hash			record-hash
     object-hash
 
@@ -96,6 +97,7 @@
     $compnum-hash
     $record-hash
     $enum-set-hash
+    $promise-hash
     $string-ci-hash
     $string-hash
     $struct-hash
@@ -150,6 +152,7 @@
 		  boolean-hash			void-hash
 		  eof-object-hash		would-block-hash
 		  sentinel-hash			enum-set-hash
+		  promise-hash
 		  struct-hash			record-hash
 		  object-hash)
     (vicare system $fx)
@@ -1221,6 +1224,13 @@
 
 ;;; --------------------------------------------------------------------
 
+(define* (promise-hash {prom promise?})
+  ($promise-hash prom))
+
+(define $promise-hash $struct-hash)
+
+;;; --------------------------------------------------------------------
+
 (define (void-hash obj)
   0)
 
@@ -1284,6 +1294,8 @@
 	 ($ipair-hash obj))
 	((enum-set? obj)
 	 (enum-set-hash obj))
+	((promise? obj)
+	 (promise-hash obj))
 	((struct? obj)
 	 ($struct-hash obj))
 	((void-object? obj)
