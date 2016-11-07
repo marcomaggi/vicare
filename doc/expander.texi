@@ -1178,7 +1178,7 @@ A symbolic expression representing source code, possibly annotated;
 these expressions are the ones produced by the Scheme source code
 reader.  They can be raw source code expressions or nested hierarchies
 of @objtype{annotation} objects returned by @func{get-annotated-datum}
-(@pxref{iklib reader fun}).
+(@pxref{iklib reader annotations}).
 
 @item mark*
 Null or a proper list of @func{eq?}--unique objects, including the

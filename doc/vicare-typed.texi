@@ -4206,34 +4206,35 @@ representing the types of built--in objects: fixnum, strings, vectors,
 et cetera.
 
 @menu
-* built-in void::         Type of the void object.
-* built-in top::          The universal super-type.
-* built-in bottom::       The universal sub-type.
-* built-in unique::       Types of unique objects.
-* built-in booleans::     Type of boolean objects.
-* built-in chars::        Type of character objects.
-* built-in symbols::      Type of symbol objects.
-* built-in keywords::     Type of keyword objects.
-* built-in pointers::     Type of pointer objects.
-* built-in transcoders::  Type of transcoder objects.
-* built-in procedures::   Type of procedures objects.
-* built-in numerics::     Type of numeric objects.
-* built-in strings::      Type of string objects.
-* built-in vectors::      Type of vector objects.
-* built-in lists::        Type of list objects.
-* built-in pairs::        Type of pair objects.
-* built-in bytevectors::  Type of bytevector objects.
-* built-in hashtables::   Type of hashtable objects.
-* built-in structs::      Type of struct objects.
-* built-in records::      Type of record objects.
-* built-in conditions::   Type of condition objects.
-* built-in ports::        Type of input/output ports.
-* built-in enum-set::     Type of enumeration sets.
-* built-in time::         Type of time objects.
-* built-in promises::     Type of promise objects.
-* built-in utsname::      Type of utsname objects.
-* built-in memory-block:: Type of memory block objects.
-* built-in misc::         Miscellaneous built-in types.
+* built-in void::               Type of the void object.
+* built-in top::                The universal super-type.
+* built-in bottom::             The universal sub-type.
+* built-in unique::             Types of unique objects.
+* built-in booleans::           Type of boolean objects.
+* built-in chars::              Type of character objects.
+* built-in symbols::            Type of symbol objects.
+* built-in keywords::           Type of keyword objects.
+* built-in pointers::           Type of pointer objects.
+* built-in transcoders::        Type of transcoder objects.
+* built-in procedures::         Type of procedures objects.
+* built-in numerics::           Type of numeric objects.
+* built-in strings::            Type of string objects.
+* built-in vectors::            Type of vector objects.
+* built-in lists::              Type of list objects.
+* built-in pairs::              Type of pair objects.
+* built-in bytevectors::        Type of bytevector objects.
+* built-in hashtables::         Type of hashtable objects.
+* built-in structs::            Type of struct objects.
+* built-in records::            Type of record objects.
+* built-in conditions::         Type of condition objects.
+* built-in ports::              Type of input/output ports.
+* built-in enum-set::           Type of enumeration sets.
+* built-in time::               Type of time objects.
+* built-in promises::           Type of promise objects.
+* built-in utsname::            Type of utsname objects.
+* built-in memory-block::       Type of memory block objects.
+* built-in reader-annotation::  Type of reader annotation objects.
+* built-in misc::               Miscellaneous built-in types.
 @end menu
 
 @c page
@@ -11097,6 +11098,60 @@ Apply @func{memory-block-size} to the instance and return its return value.
 
 @deftypemethod @class{memory-block} @aclass{void} reset @var{this}
 Apply @func{memory-block-reset} to the instance.
+@end deftypemethod
+
+@c page
+@node built-in reader-annotation
+@section Type of reader annotation objects
+
+
+@deftp {Core type} @class{reader-annotation}
+Type representing source code read from a textual input port, with annotations about the position in
+the source file.
+@end deftp
+
+
+@deftypeop {Type constructor} @class{reader-annotation} @aclass{reader-annotation} type-constructor @bracearg{port, textual-input-port}
+The type constructor is @func{get-annotated-datum}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{reader-annotation} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{reader-annotation?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{reader-annotation} @aclass{boolean} equality-predicate @var{this} @bracearg{ann, reader-annotation}
+The equality predicate is @func{struct=?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{reader-annotation} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{struct-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{reader-annotation} @aclass{top} expression @var{this}
+Apply @func{reader-annotation-expression} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{reader-annotation} @class{top} stripped @var{this}
+Apply @func{reader-annotation-stripped} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{reader-annotation} @acondition{source-position} textual-position @var{this}
+Apply @func{reader-annotation-textual-position} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{reader-annotation} @class{reader-annotation} source @var{this}
+Apply @func{reader-annotation-source} to the instance and return its return value.
 @end deftypemethod
 
 @c page

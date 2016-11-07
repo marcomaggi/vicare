@@ -895,6 +895,7 @@
   (constructor get-annotated-datum)
   (type-predicate reader-annotation?)
   (equality-predicate struct=?)
+  (hash-function struct-hash)
   (methods
    (expression			reader-annotation-expression)
    (stripped			reader-annotation-stripped)
