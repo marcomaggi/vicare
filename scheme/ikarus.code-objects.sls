@@ -46,15 +46,8 @@
 
 ;;;; helpers
 
-(define ($fx-non-negative? X)
-  (and (fixnum? X)
-       ($fx>= X 0)))
-
-(define (code-size? obj)
-  ($fx-non-negative? obj))
-
-(define (number-of-freevars? obj)
-  ($fx-non-negative? obj))
+(define code-size?		non-negative-fixnum?)
+(define number-of-freevars?	non-negative-fixnum?)
 
 (define (code-with-no-freevars? code)
   (and (code? code)

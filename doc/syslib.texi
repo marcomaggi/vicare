@@ -8067,6 +8067,94 @@ Accessor and mutator for the @code{next} field.
 @section Low level code objects operations
 
 
+@menu
+* syslib codes safe::           Safe code objects operations.
+* syslib codes unsafe::         Unsafe code objects operations.
+@end menu
+
+@c page
+@node syslib codes safe
+@subsection Safe code objects operations
+
+
+@cindex @library{vicare system code-objects}, library
+@cindex Library @library{vicare system code-objects}
+
+
+Code objects contain compiled binary code ready to be executed by the host's processor.
+@ref{objects codes, Code objects} for details on the code object's internals.  In the following
+definitions: the @var{code} arguments must be code objects.  The following bindings are exported by
+the library @library{vicare system code-objects}.
+
+
+@defun make-code @var{code-size} @var{freevars-num}
+Build and return a new ``empty'' code object.  The argument @var{code-size} is the number of bytes
+allocated in the data area of the object, to be filled later with machine code; it is a
+non--negative fixnum.  The argument @var{freevars-num} is the number of free variables referenced by
+the machine code; it is a non--negative fixnum.
+@end defun
+
+
+@defun code? @var{obj}
+Return @true{} if @var{obj} is a code object.
+@end defun
+
+
+@defun code-size @var{code}
+Return a non--negative fixnum representing the number of bytes allocated in the data area of the
+object.
+@end defun
+
+
+@defun code-freevars @var{code}
+Return a non--negative fixnum representing the number of free variables referenced by the machine
+code.
+@end defun
+
+
+@defun set-code-reloc-vector! @var{code} @var{reloc-vec}
+@defunx code-reloc-vector @var{code}
+Setter and getter for the relocation vector.
+@end defun
+
+
+@defun code-set! @var{code} @var{idx} @var{octet}
+Store the @var{octet} at index @var{idx} in the data area of the @var{code} object.  @var{idx} must
+be a non--negative fixnum.  @var{octet} must be part of the machine code.
+@end defun
+
+
+@defun code-ref @var{code} @var{idx}
+Return the octet at index @var{idx} in the data area of the @var{code} object.
+@end defun
+
+
+@defun set-code-annotation! @var{code} @var{ann}
+Set the code annotation.  Return unspecified values.
+@end defun
+
+
+@defun code->thunk @var{code}
+Return a closure object associated to the @var{code} object.
+@end defun
+
+
+@defun procedure-annotation @var{proc}
+Return the procedure annotation of the closure object @var{proc}.
+@end defun
+
+
+@defun code-reloc-vector->sexp @var{code}
+Extract the relocation vector from @var{code} and compose a symbolic
+expression representing its fields; return the symbolic expression.
+@var{code} must be a code object or a closure object or a vector object.
+@end defun
+
+@c page
+@node syslib codes unsafe
+@subsection Unsafe code objects operations
+
+
 @cindex @library{vicare system $codes}, library
 @cindex Library @library{vicare system $codes}
 
@@ -8074,11 +8162,6 @@ Accessor and mutator for the @code{next} field.
 In the following definitions: the @var{code} arguments must be code
 objects.  The following bindings are exported by the library
 @library{vicare system $codes}.
-
-
-@defun code? @var{obj}
-Return @true{} if @var{obj} is a code object.
-@end defun
 
 
 @deffn {Primitive Operation} $code-freevars @var{code}
@@ -8125,13 +8208,6 @@ range @math{[0, 255]}.
 @deffn {Primitive Operation} $set-code-annotation @var{code} @var{obj}
 Store @var{obj} in the annotation field of @var{code}.
 @end deffn
-
-
-@defun code-reloc-vector->sexp @var{code}
-Extract the relocation vector from @var{code} and compose a symbolic
-expression representing its fields; return the symbolic expression.
-@var{code} must be a code object or a closure object or a vector object.
-@end defun
 
 @c page
 @node syslib closures
