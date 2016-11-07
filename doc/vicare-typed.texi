@@ -11104,7 +11104,7 @@ Apply @func{memory-block-reset} to the instance.
 @section Miscellaneous built-in types
 
 
-@deftp {Type annotation} @class{&who-value}
+@deftp {Type annotation} @aclass{&who-value}
 The type of the field in the built--in condition object type
 @condition{who}.  Its definition is equivalent to:
 
@@ -11115,12 +11115,37 @@ The type of the field in the built--in condition object type
 @end deftp
 
 
-@deftp {Type annotation} @class{file-descriptor}
+@deftp {Type annotation} @aclass{file-descriptor}
 The type of file descriptor values.  Its definition is equivalent to:
 
 @lisp
 (define-type <file-descriptor>
   <non-negative-fixnum>)
+@end lisp
+@end deftp
+
+
+@deftp {Type annotation} @aclass{type-descriptor}
+Type annotation of type descriptors.  Its definition is equivalent to:
+
+@lisp
+(define-type <type-descriptor>
+  (or <core-type-descriptor> <struct-type-descriptor>
+      <record-type-descriptor> <record-constructor-descriptor>
+      <pair-type-descr> <pair-of-type-descr>
+      <list-type-descr> <list-of-type-descr>
+      <vector-type-descr>
+      <vector-of-type-descr>
+      <nevector-of-type-descr>
+      <enumeration-type-descr>
+      <closure-type-descr>
+      <ancestor-of-type-descr>
+      <hashtable-type-descr>
+      <alist-type-descr>
+      <union-type-descr>
+      <intersection-type-descr>
+      <complement-type-descr>
+      <interface-type-descr>))
 @end lisp
 @end deftp
 
