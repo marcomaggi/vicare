@@ -33,6 +33,7 @@ public interface exported by @library{vicare} and @library{rnrs}.
 * syslib transcoders::          Low level transcoder operations.
 * syslib pointers::             Low level pointer operations.
 * syslib hashtables::           Low level hashtable objects operations.
+* syslib tcbuckets::            Low level tcbucket objects operations.
 * syslib codes::                Low level code objects operations.
 * syslib closures::             Low level closures operations.
 * syslib compar::               Comparison procedures.
@@ -8015,6 +8016,50 @@ it will change if the fields are mutated.
 @deffnx {Unsafe Operation} $hashtable-type-descriptor-set! @var{table} @var{des}
 Setter and getter for the hashtable run--time type descriptor.
 @var{des} must be an instance of @class{hashtable-type-descr}.
+@end deffn
+
+@c page
+@node syslib tcbuckets
+@section Low level tcbucket objects operations
+
+
+@cindex @library{vicare system $tcbuckets}, library
+@cindex Library @library{vicare system $tcbuckets}
+
+
+@class{tcbuckets} are objects used in the implementation of hash tables.  @ref{objects tcbuckets,
+Components for hashtables}.  In the following definitions: the @var{bucket} arguments must be
+tcbucket objects.  The following bindings are exported by the library @library{vicare system
+$tcbucket}.
+
+
+@deffn {Unsafe Operation} $make-tcbucket @var{tconc} @var{key} @var{val} @var{next}
+Build and return a new @class{tcbucket} object.  See the documentation of the object for the meaning
+of the arguments.
+@end deffn
+
+
+@deffn {Unsafe Operation} $tcbucket-tconc @var{bucket}
+@deffnx {Unsafe Operation} $set-tcbucket-tconc! @var{bucket} @var{tconc}
+Accessor and mutator for the @code{tconc} field.
+@end deffn
+
+
+@deffn {Unsafe Operation} $tcbucket-key @var{bucket}
+@deffnx {Unsafe Operation} $set-tcbucket-key! @var{bucket} @var{key}
+Accessor and mutator for the @code{key} field.
+@end deffn
+
+
+@deffn {Unsafe Operation} $tcbucket-val @var{bucket}
+@deffnx {Unsafe Operation} $set-tcbucket-val! @var{bucket} @var{val}
+Accessor and mutator for the @code{val} field.
+@end deffn
+
+
+@deffn {Unsafe Operation} $tcbucket-next @var{bucket}
+@deffnx {Unsafe Operation} $set-tcbucket-next! @var{bucket} @var{next}
+Accessor and mutator for the @code{next} field.
 @end deffn
 
 @c page
