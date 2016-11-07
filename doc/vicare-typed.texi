@@ -4234,6 +4234,7 @@ et cetera.
 * built-in utsname::            Type of utsname objects.
 * built-in memory-block::       Type of memory block objects.
 * built-in reader-annotation::  Type of reader annotation objects.
+* built-in stats::              Type of stats objects.
 * built-in misc::               Miscellaneous built-in types.
 @end menu
 
@@ -11152,6 +11153,113 @@ Apply @func{reader-annotation-textual-position} to the instance and return its r
 
 @deftypemethod @class{reader-annotation} @class{reader-annotation} source @var{this}
 Apply @func{reader-annotation-source} to the instance and return its return value.
+@end deftypemethod
+
+@c page
+@node built-in stats
+@section Type of stats objects
+
+
+@deftp {Core Type} @aclass{stats}
+Type of objects representing expression evaluation statistics.
+@end deftp
+
+
+@deftypeop {Type constructor} @class{stats} @aclass{stats} type-constructor @var{obj}
+Validate @var{obj} as instance of @class{stats} and return it.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{stats} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{stats?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{stats} @aclass{boolean} equality-predicate @var{this} @bracearg{stats, stats}
+The equality predicate is @func{struct=?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{stats} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{struct-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} user-secs @var{this}
+Apply @func{stats-user-secs} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} user-usecs @var{this}
+Apply @func{stats-user-usecs} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} sys-secs @var{this}
+Apply @func{stats-sys-secs} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} sys-usecs @var{this}
+Apply @func{stats-sys-usecs} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} real-secs @var{this}
+Apply @func{stats-real-secs} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} real-usecs @var{this}
+Apply @func{stats-real-usecs} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{stats} @aclass{top} collection-id @var{this}
+Apply @func{stats-collection-id} to the instance and return its return value.
+@end deftypemethod
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} gc-user-secs @var{this}
+Apply @func{stats-gc-user-secs} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} gc-user-usecs @var{this}
+Apply @func{stats-gc-user-usecs} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} gc-sys-secs @var{this}
+Apply @func{stats-gc-sys-secs} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} gc-sys-usecs @var{this}
+Apply @func{stats-gc-sys-usecs} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} gc-real-secs @var{this}
+Apply @func{stats-gc-real-secs} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} gc-real-usecs @var{this}
+Apply @func{stats-gc-real-usecs} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} bytes-minor @var{this}
+Apply @func{stats-bytes-minor} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{stats} @aclass{non-negative-exact-integer} bytes-major @var{this}
+Apply @func{stats-bytes-major} to the instance and return its return value.
 @end deftypemethod
 
 @c page

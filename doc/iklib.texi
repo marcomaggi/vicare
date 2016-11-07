@@ -15699,7 +15699,7 @@ When set to non--false: print more informations as result of
 @end deffn
 
 
-@deftp {Object Type} @class{stats}
+@deftp {Object Type} @aclass{stats}
 Type name identifier for disjoint objects representing evaluation
 statistics.  It has the following fields:
 

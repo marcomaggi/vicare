@@ -871,8 +871,10 @@
 
 (define-scheme-type <stats>
     <struct>
+  (constructor #t)
   (type-predicate stats?)
   (equality-predicate struct=?)
+  (hash-function struct-hash)
   (methods
    (user-secs		stats-user-secs)
    (user-usecs		stats-user-usecs)
