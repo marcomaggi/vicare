@@ -846,6 +846,7 @@
   (constructor uname)
   (type-predicate utsname?)
   (equality-predicate struct=?)
+  (hash-function struct-hash)
   (methods
    (sysname		utsname-sysname)
    (nodename		utsname-nodename)

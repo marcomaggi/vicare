@@ -34,6 +34,9 @@
     utsname-version
     utsname-machine
 
+    utsname=?
+    utsname!=?
+
     implementation-name
     implementation-version
     cpu-architecture
@@ -49,6 +52,9 @@
 		  utsname-version
 		  utsname-machine
 
+		  utsname=?
+		  utsname!=?
+
 		  implementation-name
 		  implementation-version
 		  cpu-architecture
@@ -57,7 +63,11 @@
 		  os-version
 
 		  host-info)
-    (vicare system structs))
+    (vicare system structs)
+    (vicare system $strings)
+    (only (vicare language-extensions syntaxes)
+	  define-equality/sorting-predicate
+	  define-inequality-predicate))
 
   (include "ikarus.config.scm")
 
@@ -92,6 +102,21 @@
 		(make-who-condition 'uname)
 		(make-message-condition (strerror errno))))
       stru)))
+
+;;; --------------------------------------------------------------------
+
+(define-equality/sorting-predicate utsname=?	$utsname=	utsname?)
+(define-inequality-predicate       utsname!=?	$utsname!=	utsname?)
+
+(define ($utsname= A B)
+  (and ($string= ($utsname-sysname  A) ($utsname-sysname  B))
+       ($string= ($utsname-nodename A) ($utsname-nodename B))
+       ($string= ($utsname-release  A) ($utsname-release  B))
+       ($string= ($utsname-version  A) ($utsname-version  B))
+       ($string= ($utsname-machine  A) ($utsname-machine  B))))
+
+(define ($utsname!= A B)
+  (not ($utsname= A B)))
 
 ;;; --------------------------------------------------------------------
 

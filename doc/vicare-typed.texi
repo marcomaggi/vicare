@@ -4231,6 +4231,7 @@ et cetera.
 * built-in enum-set::     Type of enumeration sets.
 * built-in time::         Type of time objects.
 * built-in promises::     Type of promise objects.
+* built-in utsname::      Type of utsname objects.
 * built-in misc::         Miscellaneous built-in types.
 @end menu
 
@@ -10989,6 +10990,64 @@ The hash function is @func{promise-hash}.
 
 @deftypemethod @class{promise} @aclass{top} force @var{this}
 Apply @func{force} to the instance and return its return value.
+@end deftypemethod
+
+@c page
+@node built-in utsname
+@section Type of utsname objects
+
+
+@deftp {Core Type} @aclass{utsname}
+Type of object used to represent the informations returned by the @posix{} function @cfunc{uname}.
+@end deftp
+
+
+@deftypeop {Type constructor} @class{utsname} @aclass{utsname} type-constructor
+The type constructor is @func{uname}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{utsname} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{utsname?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{utsname} @aclass{boolean} equality-predicate @var{this} @bracearg{prom, utsname}
+The equality predicate is @func{utsname=?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{utsname} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{struct-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{utsname} @aclass{string} sysname @var{this}
+Apply @func{utsname-sysname} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{utsname} @aclass{string} nodename @var{this}
+Apply @func{utsname-nodename} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{utsname} @aclass{string} release @var{this}
+Apply @func{utsname-release} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{utsname} @aclass{string} version @var{this}
+Apply @func{utsname-version} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{utsname} @aclass{string} machine @var{this}
+Apply @func{utsname-machine} to the instance and return its return value.
 @end deftypemethod
 
 @c page

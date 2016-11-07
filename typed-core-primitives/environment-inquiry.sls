@@ -30,6 +30,8 @@
 
 (define (typed-core-primitives.environment-inquiry)
 
+(define-object-binary/multi-comparison-declarer declare-utsname-binary/multi-comparison <utsname>)
+
 
 ;;;; environment inquiry, safe primitives
 
@@ -69,6 +71,11 @@
   (declare utsname-version)
   (declare utsname-machine)
   #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+
+(declare-utsname-binary/multi-comparison utsname=?)
+(declare-utsname-binary/multi-comparison utsname!=?)
 
 ;;; --------------------------------------------------------------------
 

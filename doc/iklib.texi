@@ -499,21 +499,33 @@ Return a string being the value @gnu{} Autoconf assigned to the
 The @posix{} function @cfunc{uname} fills a data structure of type
 @code{struct utsname} with strings representing a description of the
 underlying platform.  @value{PRJNAME} defines objects of type
-@code{utsname} to provide at the Scheme level such informations;
-@code{utsname} objects are disjoint from all the other types.
+@class{utsname} to provide at the Scheme level such informations;
+@class{utsname} objects are disjoint from all the other types.
 
 
 @defun uname
 Interface to the C function @cfunc{uname}, @manpage{uname, Get name and
 information about current kernel}.  Build and return a new object of
-type @code{utsname}.  If successful return the object, otherwise raise
+type @class{utsname}.  If successful return the object, otherwise raise
 an exception.
 @end defun
 
 
 @defun utsname? @var{obj}
-Return @true{} if @var{obj} is an object of type @code{utsname},
-otherwise return @false{}.
+Return @true{} if @var{obj} is an object of type @class{utsname}, otherwise return @false{}.
+@end defun
+
+
+@defun utsname=? @varo{utsname} @vari{utsname} @dots{}
+All the arguments must be @class{utsname} objects.  Return @true{} if all the arguments are equal.
+When applied to a single argument: return @true{}.
+@end defun
+
+
+@defun utsname!=? @varo{utsname} @vari{utsname} @dots{}
+The arguments must be @class{utsname} objects.  Return @true{} if the arguments are all different:
+no two arguments are equal; otherwise return @false{}.  When applied to a single argument: return
+@false{}.
 @end defun
 
 

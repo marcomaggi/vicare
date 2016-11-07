@@ -4412,6 +4412,8 @@
     (utsname-release				v $language)
     (utsname-version				v $language)
     (utsname-machine				v $language)
+    (utsname=?					v $language)
+    (utsname!=?					v $language)
 
     (implementation-name			v $language)
     (implementation-version			v $language)
