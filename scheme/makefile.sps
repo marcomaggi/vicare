@@ -1850,7 +1850,7 @@
     ($annotated-procedure-annotation		$codes)
     ($cpref					$codes)
 ;;;
-    (tcbucket?					$tcbuckets)
+    (tcbucket?					v $language $tcbuckets)
     ($make-tcbucket				$tcbuckets)
     ($tcbucket-tconc				$tcbuckets)
     ($tcbucket-key				$tcbuckets)

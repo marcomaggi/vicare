@@ -8259,6 +8259,7 @@ The type predicate is @func{nebytevector?}.
 * built-in hashtables eq::      The @class{hashtable-eq} type.
 * built-in hashtables eqv::     The @class{hashtable-eqv} type.
 * built-in hashtables equiv::   The @class{hashtable-equiv} type.
+* built-in hashtables tcbucket::  The @class{tcbucket} type.
 @end menu
 
 @c page
@@ -8342,6 +8343,26 @@ The constructor if @func{make-hashtable}.
 
 @deftypeop {Type predicate} @class{hashtable-equiv} @aclass{boolean} type-predicate @var{obj}
 The type predicate is @func{hashtable-equiv?}.
+@end deftypeop
+
+@c page
+@node built-in hashtables tcbucket
+@subsection The @class{tcbucket} type
+
+
+@deftp {Core Type} @aclass{tcbucket}
+@deftpx {Parent Type} @aclass{top}
+Type of tail--conc objects used in the implementation of hash tables.
+@end deftp
+
+
+@deftypeop {Type predicate} @class{tcbucket} @aclass{boolean} type-predicate @var{obj}
+Return @true{} if @var{obj} is a @class{tcbucket} instance; otherwise return @false{}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{tcbucket} @aclass{boolean} equality-predicate @var{this} @bracearg{tcb, tcbucket}
+The equality predicate is @func{eq?}.
 @end deftypeop
 
 @c page
@@ -10647,6 +10668,7 @@ Buffer mode for output ports.  Its definition is equivalent to:
 
 
 @deftp {Core Type} @aclass{enum-set}
+@deftpx {Parent Type} @aclass{struct}
 Type of enumeration sets as defined by @rnrs{6}.
 @end deftp
 
@@ -10952,6 +10974,7 @@ Subtract @var{T} from @var{this} and return the result.
 
 
 @deftp {Core Type} @aclass{promise}
+@deftpx {Parent Type} @aclass{struct}
 Type of promises.
 @end deftp
 
@@ -11001,6 +11024,7 @@ Apply @func{force} to the instance and return its return value.
 
 
 @deftp {Core Type} @aclass{utsname}
+@deftpx {Parent Type} @aclass{struct}
 Type of object used to represent the informations returned by the @posix{} function @cfunc{uname}.
 @end deftp
 
@@ -11059,6 +11083,7 @@ Apply @func{utsname-machine} to the instance and return its return value.
 
 
 @deftp {Core Type} @aclass{memory-block}
+@deftpx {Parent Type} @aclass{struct}
 Type of objects representing memory blocks.
 @end deftp
 
@@ -11107,6 +11132,7 @@ Apply @func{memory-block-reset} to the instance.
 
 
 @deftp {Core type} @class{reader-annotation}
+@deftpx {Parent Type} @aclass{struct}
 Type representing source code read from a textual input port, with annotations about the position in
 the source file.
 @end deftp
@@ -11161,6 +11187,7 @@ Apply @func{reader-annotation-source} to the instance and return its return valu
 
 
 @deftp {Core Type} @aclass{stats}
+@deftpx {Parent Type} @aclass{struct}
 Type of objects representing expression evaluation statistics.
 @end deftp
 

@@ -745,7 +745,8 @@
 
 (define-scheme-type <tcbucket>
     <top>
-  (type-predicate tcbucket?))
+  (type-predicate tcbucket?)
+  (equality-predicate eq?))
 
 (define-scheme-type <hashtable>
     <struct>

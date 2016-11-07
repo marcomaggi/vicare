@@ -13984,6 +13984,7 @@ Return @true{} if @var{obj} is an enumeration set object, else return
 * iklib hashtables pred::       Predicates on hash tables.
 * iklib hashtables iterators::  Hash table iterators.
 * iklib hashtables hashfun::    Additional hash functions.
+* iklib hashtables tcbuckets::  Tail-conc objects.
 @end menu
 
 @c page
@@ -14503,6 +14504,20 @@ otherwise @func{record-hash} is used.
 @defun pointer-value @var{obj}
 This is used by @func{eq?} hashtables to obtain a fixnum from references
 to objects that are meant to be compared with @func{eq?}.
+@end defun
+
+@c page
+@node iklib hashtables tcbuckets
+@subsection Tail-conc objects
+
+
+Objects of type @class{tcbucket} are used in the implementation of hashtables; when performing
+common hashtable operations: we do not have access to such objects.  @ref{objects tcbuckets,
+Components or hashtables}.
+
+
+@defun tcbucket? @var{obj}
+Return @true{} if @var{obj} is an object of type @class{tcbucket}; otherwise return @false{}.
 @end defun
 
 @c page
