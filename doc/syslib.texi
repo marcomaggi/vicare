@@ -7990,6 +7990,11 @@ Hash function for enumeration sets.
 @end deffn
 
 
+@deffn {Unsafe Operation} $pointer-hash @var{ptr}
+Return a fixnum representing the hash value of @var{ptr}.
+@end deffn
+
+
 @deffn {Unsafe Operation} $promise-hash @var{prom}
 Hash function for promise objects.
 @end deffn

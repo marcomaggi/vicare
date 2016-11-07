@@ -4468,6 +4468,8 @@
     (memory-block-pointer			v $language $for)
     (memory-block-size				v $language $for)
     (memory-block-reset				v $language $for)
+    (memory-block=?				v $language $for)
+    (memory-block!=?				v $language $for)
 ;;;
     (&out-of-memory-error			v $language $for)
     (&out-of-memory-error-rtd)
@@ -6200,6 +6202,7 @@
     ($transcoder-hash				$hashtables)
     ($enum-set-hash				$hashtables)
     ($promise-hash				$hashtables)
+    ($pointer-hash				$hashtables)
 
     ($hashtable-type-descriptor			$hashtables)
     ($hashtable-type-descriptor-set!		$hashtables)

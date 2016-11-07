@@ -860,7 +860,8 @@
     <struct>
   (constructor make-memory-block)
   (type-predicate memory-block?)
-  (equality-predicate struct=?)
+  (equality-predicate memory-block=?)
+  (hash-function struct-hash)
   (methods
    (pointer		memory-block-pointer)
    (size		memory-block-size)

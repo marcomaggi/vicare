@@ -367,6 +367,7 @@
   (declare-hash-function enum-set-hash		<enum-set>	(replacements $enum-set-hash))
   (declare-hash-function promise-hash		<promise>	(replacements $promise-hash))
   (declare-hash-function transcoder-hash	<transcoder>	(replacements $transcoder-hash))
+  (declare-hash-function pointer-hash		<pointer>	(replacements $pointer-hash))
   (declare-hash-function object-hash		<top>)
   #| end of LET-SYNTAX |# )
 
@@ -434,6 +435,7 @@
   (declare-hash-function $enum-set-hash		<enum-set>)
   (declare-hash-function $promise-hash		<promise>)
   (declare-hash-function $transcoder-hash	<transcoder>)
+  (declare-hash-function $pointer-hash		<pointer>)
   #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------

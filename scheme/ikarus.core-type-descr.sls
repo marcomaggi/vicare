@@ -103,6 +103,8 @@
 		  textual-input-only-port?
 		  textual-output-only-port?
 		  ;;
+		  memory-block=?
+		  ;;
 		  compar-fixnum
 		  compar-bignum
 		  compar-exact-integer
@@ -168,6 +170,10 @@
 	    struct-type-field-accessor
 	    struct-type-field-mutator
 	    struct-type-field-method)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Mon Nov 7,
+    ;;2016)
+    (only (ikarus.pointers)
+	  memory-block=?)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
     ;;2016)
     (only (ikarus structs)

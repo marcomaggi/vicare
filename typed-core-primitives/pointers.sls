@@ -119,8 +119,6 @@
   (attributes
    ((_)				effect-free result-true)))
 
-(declare-hash-function pointer-hash <pointer> safe)
-
 /section)
 
 

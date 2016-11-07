@@ -4232,6 +4232,7 @@ et cetera.
 * built-in time::         Type of time objects.
 * built-in promises::     Type of promise objects.
 * built-in utsname::      Type of utsname objects.
+* built-in memory-block:: Type of memory block objects.
 * built-in misc::         Miscellaneous built-in types.
 @end menu
 
@@ -5068,13 +5069,13 @@ pointer object; otherwise return @false{}.
 @end deftypeop
 
 
-@deftypeop {Hash function} @class{pointer} @aclass{non-negative-fixnum} hash-function @var{this}
-The hash function is @func{pointer-hash}.
+@deftypeop {Equality predicate} @class{pointer} @aclass{boolean} equality-predicate @var{this} @bracearg{K, pointer}
+The equality predicate is @func{pointer=?}.
 @end deftypeop
 
 
-@deftypeop {Equality predicate} @class{pointer} @aclass{boolean} equality-predicate @var{this} @bracearg{K, pointer}
-The equality predicate is @func{pointer=?}.
+@deftypeop {Hash function} @class{pointer} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{pointer-hash}.
 @end deftypeop
 
 @c ------------------------------------------------------------------------
@@ -11012,7 +11013,7 @@ The type predicate is @func{utsname?}.
 @end deftypeop
 
 
-@deftypeop {Equality predicate} @class{utsname} @aclass{boolean} equality-predicate @var{this} @bracearg{prom, utsname}
+@deftypeop {Equality predicate} @class{utsname} @aclass{boolean} equality-predicate @var{this} @bracearg{name, utsname}
 The equality predicate is @func{utsname=?}.
 @end deftypeop
 
@@ -11048,6 +11049,54 @@ Apply @func{utsname-version} to the instance and return its return value.
 
 @deftypemethod @class{utsname} @aclass{string} machine @var{this}
 Apply @func{utsname-machine} to the instance and return its return value.
+@end deftypemethod
+
+@c page
+@node built-in memory-block
+@section Type of memory block objects
+
+
+@deftp {Core Type} @aclass{memory-block}
+Type of objects representing memory blocks.
+@end deftp
+
+
+@deftypeop {Type constructor} @class{memory-block} @aclass{memory-block} type-constructor @var{pointer} @var{size}
+The type constructor is @func{make-memory-block}.
+@end deftypeop
+
+
+@deftypeop {Type predicate} @class{memory-block} @aclass{boolean} type-predicate @var{obj}
+The type predicate is @func{memory-block?}.
+@end deftypeop
+
+
+@deftypeop {Equality predicate} @class{memory-block} @aclass{boolean} equality-predicate @var{this} @bracearg{mb, memory-block}
+The equality predicate is @func{memory-block=?}.
+@end deftypeop
+
+
+@deftypeop {Hash function} @class{memory-block} @aclass{non-negative-fixnum} hash-function @var{this}
+The hash function is @func{struct-hash}.
+@end deftypeop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @class{memory-block} @aclass{pointer} pointer @var{this}
+Apply @func{memory-block-pointer} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{memory-block} @aclass{non-negative-exact-integer} size @var{this}
+Apply @func{memory-block-size} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{memory-block} @aclass{void} reset @var{this}
+Apply @func{memory-block-reset} to the instance.
 @end deftypemethod
 
 @c page

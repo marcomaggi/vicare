@@ -30,7 +30,6 @@
     pointer<?				pointer>?
     pointer<=?				pointer>=?
     pointer-min				pointer-max
-    pointer-hash
 
     ;; memory blocks
     memory-block?			memory-block?/non-null
@@ -39,6 +38,7 @@
     (rename (%make-memory-block		make-memory-block)
 	    (%memory-block-pointer	memory-block-pointer)
 	    (memory-block?/non-null	memory-block?/not-null))
+    memory-block=?			memory-block!=?
 
     ;; shared libraries inteface
     dlopen				dlclose
@@ -171,7 +171,6 @@
 		  pointer<?				pointer>?
 		  pointer<=?				pointer>=?
 		  pointer-min				pointer-max
-		  pointer-hash
 
 		  ;; memory blocks
 		  make-memory-block			make-memory-block/guarded
@@ -179,6 +178,7 @@
 		  memory-block?/non-null		memory-block?/not-null
 		  memory-block-pointer			memory-block-size
 		  memory-block-reset			null-memory-block
+		  memory-block=?			memory-block!=?
 
 		  ;; shared libraries inteface
 		  dlopen				dlclose
@@ -453,6 +453,20 @@
   ($set-memory-block-owner?!  B #f)
   (void))
 
+;;; --------------------------------------------------------------------
+
+(define-equality/sorting-predicate memory-block=?	$memory-block=	memory-block?)
+(define-inequality-predicate       memory-block!=?	$memory-block!=	memory-block?)
+
+(define ($memory-block= A B)
+  (and ($pointer= ($memory-block-pointer  A)
+		  ($memory-block-pointer  B))
+       (= ($memory-block-size A)
+	  ($memory-block-size B))))
+
+(define ($memory-block!= A B)
+  (not ($memory-block= A B)))
+
 
 ;;; shared libraries interface
 
@@ -562,9 +576,6 @@
 
 (define (pointer+ ptr off)
   (integer->pointer (+ (pointer->integer ptr) off)))
-
-(define* (pointer-hash {P pointer?})
-  ($exact-integer-hash (capi.ffi-pointer->integer P)))
 
 
 ;;;; comparison

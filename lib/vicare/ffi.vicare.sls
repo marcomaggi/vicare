@@ -77,6 +77,7 @@
     memory-block?/non-null		memory-block?/not-null
     memory-block-pointer		memory-block-size
     memory-block-reset
+    memory-block=?			memory-block!=?
 
     ;; raw memory allocation
     malloc				guarded-malloc

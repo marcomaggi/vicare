@@ -30,6 +30,8 @@
 
 (define (typed-core-primitives.ffi)
 
+(define-object-binary/multi-comparison-declarer declare-memory-block-binary/multi-comparison <memory-block>)
+
 
 ;;;; system interface and foreign functions interface
 
@@ -162,6 +164,9 @@
    ((<memory-block>)			=> (<non-negative-exact-integer>)))
   (attributes
    ((_)					effect-free result-true)))
+
+(declare-memory-block-binary/multi-comparison memory-block=?)
+(declare-memory-block-binary/multi-comparison memory-block!=?)
 
 ;;; --------------------------------------------------------------------
 

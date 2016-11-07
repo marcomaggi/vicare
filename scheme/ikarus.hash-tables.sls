@@ -56,7 +56,7 @@
     boolean-hash		void-hash
     eof-object-hash		would-block-hash
     sentinel-hash		enum-set-hash
-    promise-hash
+    promise-hash		pointer-hash
     struct-hash			record-hash
     object-hash
 
@@ -103,6 +103,7 @@
     $struct-hash
     $symbol-hash
     $transcoder-hash
+    $pointer-hash
 
     $hashtable-type-descriptor		$hashtable-type-descriptor-set!)
   (import (except (vicare)
@@ -152,7 +153,7 @@
 		  boolean-hash			void-hash
 		  eof-object-hash		would-block-hash
 		  sentinel-hash			enum-set-hash
-		  promise-hash
+		  promise-hash			pointer-hash
 		  struct-hash			record-hash
 		  object-hash)
     (vicare system $fx)
@@ -179,7 +180,11 @@
     (except (vicare system structs)
 	    struct-hash)
     (only (ikarus unique-objects)
-	  SENTINEL))
+	  SENTINEL)
+    (prefix (only (vicare unsafe capi)
+		  ffi-pointer->integer)
+	    capi.)
+    #| end of IMPORT |# )
 
 
 ;;;; helpers
@@ -1231,6 +1236,14 @@
 
 ;;; --------------------------------------------------------------------
 
+(define* (pointer-hash {P pointer?})
+  ($pointer-hash P))
+
+(define ($pointer-hash P)
+  ($exact-integer-hash (capi.ffi-pointer->integer P)))
+
+;;; --------------------------------------------------------------------
+
 (define (void-hash obj)
   0)
 
@@ -1292,10 +1305,12 @@
 	 ($pair-hash obj))
 	((ipair? obj)
 	 ($ipair-hash obj))
+	((pointer? obj)
+	 ($pointer-hash obj))
 	((enum-set? obj)
-	 (enum-set-hash obj))
+	 ($enum-set-hash obj))
 	((promise? obj)
-	 (promise-hash obj))
+	 ($promise-hash obj))
 	((struct? obj)
 	 ($struct-hash obj))
 	((void-object? obj)
