@@ -127,8 +127,6 @@
     (only (vicare system $structs)
 	  $struct-rtd
 	  $set-std-printer!)
-    (only (vicare system $tcbuckets)
-     	  tcbucket?)
     (only (vicare system code-objects)
      	  code?)
     (only (vicare expander)
@@ -140,6 +138,10 @@
 	  syntax-clause-spec-keyword
 	  syntax-clause-spec?
 	  make-syntax-clause-spec)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Tue Nov 8,
+    ;;2016)
+    (only (psyntax system $all)
+     	  tcbucket?)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
     ;;2016)
     #;(vicare system comparison-procedures)

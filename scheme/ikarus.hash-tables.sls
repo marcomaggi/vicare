@@ -139,6 +139,8 @@
 		  hashtable->alist
 		  alist->hashtable!
 
+		  tcbucket?
+
 		  string-hash			string-ci-hash
 		  symbol-hash			bytevector-hash
 		  vector-hash			list-hash
@@ -171,8 +173,14 @@
     (only (vicare system $transcoders)
 	  $transcoder->data)
     (except (vicare system $tcbuckets)
+	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
+	    ;;(Marco Maggi; Tue Nov 8, 2016)
 	    tcbucket?)
-    (prefix (only (vicare system $tcbuckets)
+    ;;Let's import the primitive operation.
+    ;;
+    ;;FIXME  After  the next  boot  image  rotation:  we  can import  TCBUCKET?  from
+    ;;(vicare).  (Marco Maggi; Tue Nov 8, 2016)
+    (prefix (only (psyntax system $all)
 		  tcbucket?)
 	    sys::)
     (only (vicare system $structs)
