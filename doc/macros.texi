@@ -186,31 +186,31 @@ Revised^6 Report on the algorithmic language Scheme
 @c To be used inside argument lists.
 
 @macro ameta{THING}
-<\THING\>
+@var{?\THING\}
 @end macro
 
 @macro ametao{THING}
-<\THING\0>
+@var{?\THING\0}
 @end macro
 
 @macro ametai{THING}
-<\THING\1>
+@var{?\THING\1}
 @end macro
 
 @macro ametaii{THING}
-<\THING\2>
+@var{?\THING\2}
 @end macro
 
 @macro ametaiii{THING}
-<\THING\3>
+@var{?\THING\3}
 @end macro
 
 @macro ametan{THING}
-<\THING\N>
+@var{?\THING\N}
 @end macro
 
 @macro ametani{THING}
-<\THING\N+1>
+@var{?\THING\N+1}
 @end macro
 
 @c page

@@ -675,6 +675,7 @@ syntaxes like the following:
 (or    <false> <symbol> <string>)
 (and   <exact> <positive>)
 (not   <exact>)
+(maybe <string>)
 (lambda (<fixnum>) => (<string>))
 (case-lambda
   ((<fixnum>) => (<string>))
@@ -950,15 +951,27 @@ matches at least one of the union's types.
 
 @c ------------------------------------------------------------
 
-@deftp {Type Annotation} and @metao{type} @meta{type} @dots{}
+@deftp {Type Annotation} or @metao{type} @meta{type} @dots{}
 @deftpx {Parent Type} @aclass{top}
-Describe the intersection between the specified types.  Every
-@meta{type} is a nested type annotation.  A value matches an
-intersection of types if its type matches all the intersection's types.
+Describe the union between the specified types.  Every @meta{type} is a
+nested type annotation.  A value matches a union of types if its type
+matches at least one of the union's types.
 
 @lisp
-(is-a? 1   (and <fixnum> <positive>))   @result{} #t
-(is-a? 1.0 (and <exact>  <positive>))   @result{} #f
+(is-a? 1      (or <fixnum> <string>))   @result{} #t
+(is-a? "ciao" (or <fixnum> <string>))   @result{} #t
+(is-a? 1.23   (or <fixnum> <string>))   @result{} #f
+@end lisp
+@end deftp
+
+@c ------------------------------------------------------------
+
+@deftp {Type Annotation} maybe @meta{type}
+@deftpx {Parent Type} @aclass{top}
+It is a shortcut for:
+
+@lisp
+(or <false> @ameta{type})
 @end lisp
 @end deftp
 

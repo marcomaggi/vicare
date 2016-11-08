@@ -5763,7 +5763,7 @@
        (make-type-signature (syntax-object->type-signature-specs type.ann lexenv synner))))
    (syntax-match stx (pair list vector pair-of list-of nelist-of vector-of nevector-of
 			   hashtable alist condition enumeration
-			   or and not lambda case-lambda => parent-of ancestor-of
+			   maybe or and not lambda case-lambda => parent-of ancestor-of
 			   type-predicate equality-predicate comparison-procedure hash-function
 			   type-of)
      (?type-id
@@ -5826,6 +5826,9 @@
 
      ((condition ?component-type* ...)
       (for-all recur ?component-type*))
+
+     ((maybe ?type)
+      (recur ?type))
 
      ((or ?component-type ?component-type* ...)
       (for-all recur (cons ?component-type ?component-type*)))
@@ -5896,7 +5899,7 @@
    (parametrise ((current-run-lexenv (lambda () lexenv)))
      (syntax-match annotation.stx (pair list vector pair-of list-of nelist-of vector-of nevector-of
 					hashtable alist condition enumeration
-					or and not lambda case-lambda => parent-of ancestor-of
+					maybe or and not lambda case-lambda => parent-of ancestor-of
 					type-predicate equality-predicate comparison-procedure hash-function
 					type-of)
        (?type-id
@@ -6012,6 +6015,9 @@
 					       (%mk-type-signature argtypes.stx)))
 					 ?argtypes* ?rettypes*)))
 				name.stx))
+
+       ((maybe ?type)
+	(type-annotation->object-type-spec (bless `(or <false> ,?type)) lexenv))
 
        ((or ?single-component-type)
 	(type-annotation->object-type-spec ?single-component-type lexenv))

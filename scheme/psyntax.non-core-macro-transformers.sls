@@ -212,6 +212,7 @@
   (declare parent-of)
   (declare ancestor-of)
   (declare enumeration)
+  (declare maybe)
   #| end of LET-SYNTAX |# )
 
 

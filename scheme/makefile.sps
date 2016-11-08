@@ -826,6 +826,7 @@
 	 (parent-of				(macro . parent-of))
 	 (ancestor-of				(macro . ancestor-of))
 	 (enumeration				(macro . enumeration))
+	 (maybe					(macro . maybe))
 ;;;
 	 (define				(macro . define))
 	 (case-define				(macro . case-define))
@@ -3595,6 +3596,7 @@
     (parent-of					v $language)
     (ancestor-of				v $language)
     (enumeration				v $language)
+    (maybe					v $language)
 ;;;
     (with-compensations				v $language)
     (with-compensations/on-error		v $language)
