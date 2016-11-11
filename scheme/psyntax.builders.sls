@@ -32,6 +32,7 @@
 
 (library (psyntax.builders)
   (export
+    no-source
     build-lexical-assignment		build-global-reference
     build-application			build-conditional
     build-lexical-reference		build-global-assignment
@@ -43,6 +44,7 @@
     build-void				build-letrec
     build-letrec*			#;build-global-define
     build-library-letrec*
+    build-no-values
 
     build-with-compilation-options
     void-core-expression?		core-expr.primref
@@ -64,17 +66,14 @@
       `(with-compilation-options ,compilation-option* ,body))))
 
 
-(define (build-void)
-  THE-VOID)
-;; (define (build-void)
-;;   '((primitive void)))
+;;This syntax can be used as standalone identifier  and it expands to #f.  It is used
+;;as "annotated expression"  argument in calls to the BUILD-  functions when there is
+;;no annotated expression to be given.
+;;
+(define-syntax no-source
+  (lambda (x) #f))
 
-(define-constant THE-VOID	(build-data #f (void)))
-(define-constant THE-VOID2	'(funcall (primitive void)))
-
-(define (void-core-expression? expr.core)
-  (or (equal? expr.core THE-VOID)
-      (equal? expr.core THE-VOID2)))
+;;; --------------------------------------------------------------------
 
 (define (build-global-define x)
   (if-wants-global-defines
@@ -90,6 +89,26 @@
   (syntax-rules ()
     ((_ ae test-exp then-exp else-exp)
      `(if ,test-exp ,then-exp ,else-exp))))
+
+;;; --------------------------------------------------------------------
+
+(define (build-void)
+  THE-VOID)
+;; (define (build-void)
+;;   '((primitive void)))
+
+(define-constant THE-VOID	(build-data no-source (void)))
+(define-constant THE-VOID2	(build-application no-source (build-primref no-source 'void) '()))
+
+(define-constant THE-NO-VALUES
+  (build-application no-source (build-primref no-source 'values) '()))
+
+(define (build-no-values)
+  THE-NO-VALUES)
+
+(define (void-core-expression? expr.core)
+  (or (equal? expr.core THE-VOID)
+      (equal? expr.core THE-VOID2)))
 
 
 (define-syntax build-lexical-reference
@@ -132,7 +151,7 @@
     (lambda (ae vars* exp*)
       (define (build-error ae)
 	(build-application ae
-	  (build-primref ae 'error)
+	    (build-primref ae 'error)
 	  (list (build-data ae 'apply)
 		(build-data ae "invalid arg count"))))
       (define (build-pred ae n vars)
@@ -143,18 +162,18 @@
 			 ((null? vars) (values count '=))
 			 (else (values count '>=))))))
 	  (build-application ae (build-primref ae pred)
-			     (list (build-lexical-reference ae n)
-				   (build-data ae count)))))
+	    (list (build-lexical-reference ae n)
+		  (build-data ae count)))))
       (define (build-apply ae g vars exp)
 	(build-application ae (build-primref ae 'apply)
-			   (list (build-lambda ae vars exp)
-				 (build-lexical-reference ae g))))
+	  (list (build-lambda ae vars exp)
+		(build-lexical-reference ae g))))
       (define (expand-case-lambda ae vars exp*)
 	(let ((g (gensym)) (n (gensym)))
 	  `(lambda ,g
 	     ,(build-let ae
 		  (list n) (list (build-application ae
-				   (build-primref ae 'length)
+				     (build-primref ae 'length)
 				   (list (build-lexical-reference ae g))))
 		(let f ((vars* vars*) (exp* exp*))
 		  (if (null? vars*)

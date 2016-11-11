@@ -995,54 +995,258 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
+  ;;Usage examples:
+  ;;
+  ;;   (case-type '(1 2)
+  ;;     ((<null>)
+  ;;      ---)
+  ;;     ((<nelist>)
+  ;;      ---)
+  ;;     (else
+  ;;      (assertion-violation ---)))
+  ;;
+  ;;   (case-type ?expr
+  ;;     ((<string>)
+  ;;      ---)
+  ;;     ((<false>)
+  ;;      ---))
+  ;;
+  ;;Let's see some cases:
+  ;;
+  ;;* The  expression's type  signature is a  single value of  type "<top>":  all the
+  ;;brances have to be expanded and  included in the output, with run-time predicates
+  ;;to dispatch.
+  ;;
+  ;;*  The  expression's type  signature  is  a single  value  of  type "<void>":  an
+  ;;exception must be raised at expand-time.
+  ;;
+  ;;*  The expression's  type signature  is  a single  value of  type "<bottom>":  an
+  ;;exception must be raised at expand-time, because no predicate will match.
+  ;;
+  ;;* The expression's  type signature is the standalone  type annotation "<bottom>":
+  ;;an exception must be raised at expand-time, because no predicate will match.
+  ;;
+  ;;* The expression's type signature represents multiple return values: an exception
+  ;;must be raised at expand-time.
+  ;;
+  ;;* The  expression's type  signature represents zero  return values:  an exception
+  ;;must be raised at expand-time.
+  ;;
   (define (main)
     (syntax-match input-form.stx ()
-      ((_ ?expr ?case-clause0 ?case-clause* ...)
-       (%build-output-form input-form.stx lexenv.run lexenv.expand
-			   ?expr (cons ?case-clause0 ?case-clause*)))
+      ((_ ?expr ?clause0 ?clause* ...)
+       (%build-output-form ?expr (cons ?clause0 ?clause*)))
       (_
        (__synner__ "invalid syntax in macro use"))))
 
-  (define-synner synner (quote case-type) input-form.stx)
+  (define (%build-output-form expr.stx clause*.stx)
+    (receive (expr.psi single-value.ots no-clauses-will-match?)
+	(%process-key-expression expr.stx)
+      (if no-clauses-will-match?
+	  ;;We  expand the  clause  forms for  these reasons:  to  generate the  side
+	  ;;effects of the expansion; to catch expand-time errors in the source code.
+	  ;;We throw away the result because we do not need it.
+	  ;;
+	  ;;NOTE Is this what we desire?  Yes, we want to catch expand-time errors in
+	  ;;this code even if we discard it.  (Marco Maggi; Thu Nov 10, 2016)
+	  (begin
+	    (%expand-clauses-throw-away-result clause*.stx)
+	    (make-psi input-form.stx
+	      (build-sequence no-source
+		(list (psi.core-expr expr.psi)
+		      (build-no-values)))
+	      (make-type-signature/no-values)))
+	;;Here we build the actual syntax output.
+	(let* ((matcher.sexp	(let ((arg.id (make-syntactic-identifier-for-temporary-variable "arg")))
+				  `(lambda/std (,arg.id)
+				     (cond ,@(%build-branches input-form.stx arg.id clause*.stx)))))
+	       (matcher.psi	(chi-expr (bless matcher.sexp) lexenv.run lexenv.expand)))
+	  (make-psi input-form.stx
+	    (build-application no-source
+		(psi.core-expr matcher.psi)
+	      (list (psi.core-expr expr.psi)))
+	    (make-type-signature/fully-unspecified))))))
 
-  (define (%build-output-form input-form.stx lexenv.run lexenv.expand
-			      expr.stx case-clause*.stx)
-    (let* ((expr.psi     (chi-expr expr.stx lexenv.run lexenv.expand))
-	   (expr.sig     (psi.retvals-signature expr.psi)))
-      (let* ((matcher.sexp	(let ((arg.sym (gensym "arg")))
-				  `(lambda/std (,arg.sym)
-				     (cond ,@(%build-branches input-form.stx arg.sym case-clause*.stx)))))
-	     (matcher.psi	(chi-expr (bless matcher.sexp) lexenv.run lexenv.expand)))
-	(make-psi input-form.stx
-	  (build-application no-source
-	      (psi.core-expr matcher.psi)
-	    (list (psi.core-expr expr.psi)))
-	  (make-type-signature/fully-unspecified)))))
+;;; --------------------------------------------------------------------
 
-  (define (%build-branches input-form.stx arg.sym case-clause*.stx)
+  (define (%process-key-expression expr.stx)
+    ;;Expand the  key expression and validate  the type signature of  the result.  If
+    ;;the  type signature  is invalid:  raise the  appropriate exception.   Otherwise
+    ;;return the following values:
+    ;;
+    ;;1. The psi object representing the fully expanded key expression.
+    ;;
+    ;;2. An instance of "<object-type-spec>" representing  the type of the single key
+    ;;expression's return value.
+    ;;
+    ;;3. A boolean, true  we have determined that none of the  clauses will match the
+    ;;type signature of the key expression; otherwise false.
+    ;;
+    (define expr.psi	(chi-expr expr.stx lexenv.run lexenv.expand))
+    (define expr.sig	(psi.retvals-signature expr.psi))
+    (case-type-signature-full-structure expr.sig
+      (<bottom>
+       ;;The key expression is typed as not-returning.
+       (when (options::warn-about-not-returning-expressions)
+	 (raise-continuable
+	  (condition (make-expand-time-type-signature-warning-not-returning)
+		     (make-who-condition 'case-type)
+		     (make-message-condition "the key expression is typed as not returning")
+		     (make-syntax-violation input-form.stx expr.stx))))
+       (let ((single-value.ots		(<bottom>-ots))
+	     (no-clauses-will-match?	#t))
+	 (values expr.psi single-value.ots no-clauses-will-match?)))
+
+      ((<void>)
+       (raise
+	(condition (make-expand-time-type-signature-warning-void-operand)
+		   (make-who-condition 'case-type)
+		   (make-message-condition "the key expression is typed as returning void")
+		   (make-syntax-violation input-form.stx expr.stx))))
+
+      ((single-value)
+       ;;The key expression returns a single value.  Good.
+       => (lambda (expr.ots)
+	    (let ((no-clauses-will-match?	#f))
+	      (values expr.psi expr.ots no-clauses-will-match?))))
+
+      (<list-spec>
+       ;;The  key expression  returns  specified  number of  values,  of known  type;
+       ;;EXPR.SIG holds a standalone "<list-type-spec>".
+       => (lambda (expr.ots)
+	    (if (list-type-spec.list-of-single-item? expr.ots)
+		(let ((single-value.ots		(car (list-type-spec.item-ots* expr.ots)))
+		      (no-clauses-will-match?	#f))
+		  (values expr.psi single-value.ots no-clauses-will-match?))
+	      (%type-signature-violation "the key expression is typed as returning multiple values"
+					 expr.stx expr.sig))))
+
+      (<list-of-spec>
+       ;;The key expression  returns an unspecified number of values,  of known type.
+       ;;EXPR.SIG holds  a standalone  "<list-of-type-spec>", the type  annotation is
+       ;;"(list-of ?type)".  We rely on run-time checks to validate the actual number
+       ;;of returned values.
+       => (lambda (expr.ots)
+	    (let ((single-value.ots		(list-of-type-spec.item-ots expr.ots))
+		  (no-clauses-will-match?	#f))
+	      (values expr.psi single-value.ots no-clauses-will-match?))))
+
+      (<nelist>
+       ;;The  key  expression  returns  one  or more  values,  of  unspecified  type.
+       ;;EXPR.SIG  holds a  standalone "<nelist>".   We  rely on  run-time checks  to
+       ;;validate the number of arguments.
+       (let ((single-value.ots		(<top>-ots))
+	     (no-clauses-will-match?	#f))
+	 (values expr.psi single-value.ots no-clauses-will-match?)))
+
+      (<list>
+       ;;The key expression  returns an unspecified number of  values, of unspecified
+       ;;type.  EXPR.SIG holds a standalone "<list>".   We rely on run-time checks to
+       ;;validate the number of arguments.
+       (let ((single-value.ots		(<top>-ots))
+	     (no-clauses-will-match?	#f))
+	 (values expr.psi single-value.ots no-clauses-will-match?)))
+
+      (else
+       ;;The key expression returns zero, two or more values.  This is the case:
+       ;;
+       ;;   (case-type (values 1 2 3)
+       ;;     ---)
+       ;;
+       ;;   (case-type (values)
+       ;;     ---)
+       ;;
+       (%type-signature-violation "the key expression is typed as returning zero or multiple values"
+				  expr.stx expr.sig))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%build-branches input-form.stx arg.id clause*.stx)
     ;;This loop is like MAP, but we want  to detect if the ELSE clause (when present)
     ;;is used only as last clause.
-    (let recur ((case-clause*.stx case-clause*.stx))
-      (if (pair? case-clause*.stx)
-	  (let ((case-clause.stx (car case-clause*.stx)))
-	    (cons (syntax-match case-clause.stx (=> else)
-		    (((?type) => ?receiver-expr)
-		     `((is-a? ,arg.sym ,?type)
-		       (,?receiver-expr ,arg.sym)))
+    (let recur ((clause*.stx clause*.stx))
+      (if (pair? clause*.stx)
+	  (let ((clause.stx	(car clause*.stx))
+		(rest*.stx	(cdr clause*.stx)))
+	    (syntax-match clause.stx (=> else)
+	      (((?type) => ?receiver-expr)
+	       (cons `((is-a? ,arg.id ,?type)
+		       (,?receiver-expr ,arg.id))
+		     (recur rest*.stx)))
 
-		    (((?type) ?body0 ?body* ...)
-		     `((is-a? ,arg.sym ,?type)
-		       ,?body0 . ,?body*))
+	      (((?type) ?body0 ?body* ...)
+	       (cons `((is-a? ,arg.id ,?type)
+		       ,?body0 . ,?body*)
+		     (recur rest*.stx)))
 
-		    ((else ?body0 ?body* ...)
-		     (if (null? (cdr case-clause*.stx))
-			 `(else ,?body0 . ,?body*)
-		       (synner "the ELSE clause is not the last clause" case-clause.stx)))
+	      ((else ?body0 ?body* ...)
+	       (if (null? rest*.stx)
+		   `((else ,?body0 . ,?body*))
+		 (synner "the ELSE clause is not the last clause" clause.stx)))
 
-		    (else
-		     (synner "invalid clause syntax" case-clause.stx)))
-		  (recur (cdr case-clause*.stx))))
-	'())))
+	      (else
+	       (synner "invalid clause syntax" clause.stx))))
+	;;If we are here: there is no ELSE clause.
+	'((else (cast-signature <list> (values)))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%expand-clauses-throw-away-result clause*.stx)
+    ;;We would  happily code  this loop  as a  FOR-EACH application,  but we  need to
+    ;;detect if the ELSE clause is the last one or not.
+    (define-syntax-rule (recur)
+      (%expand-clauses-throw-away-result (cdr clause*.stx)))
+    (when (pair? clause*.stx)
+      (let ((clause.stx (car clause*.stx)))
+	(syntax-match clause.stx (=> else)
+	  (((?type) => ?receiver-expr)
+	   (begin
+	     (unless (syntax-object.type-annotation? ?type lexenv.run)
+	       (%invalid-type-annotation-in-clause ?type))
+	     ;;We  expect ?RECEIVER-EXPR  to  be an  expression  which, expanded  and
+	     ;;evaluated at run-time,  returns a procedure object  accepting a single
+	     ;;argument.  So it is fine to expand it by itself.
+	     (chi-expr ?receiver-expr lexenv.run lexenv.expand)
+	     (recur)))
+
+	  (((?type) ?body0 ?body* ...)
+	   (begin
+	     (unless (syntax-object.type-annotation? ?type lexenv.run)
+	       (%invalid-type-annotation-in-clause ?type))
+	     (chi-expr (bless `(begin ,?body0 . ,?body*)) lexenv.run lexenv.expand)
+	     (recur)))
+
+	  ((else ?body0 ?body* ...)
+	   (if (null? (cdr clause*.stx))
+	       (begin
+		 (chi-expr (bless `(begin ,?body0 . ,?body*)) lexenv.run lexenv.expand)
+		 (recur))
+	     (synner "the ELSE clause is not the last clause" clause.stx)))
+
+	  (else
+	   (synner "invalid clause syntax" clause.stx))))))
+
+;;; --------------------------------------------------------------------
+;;; error subroutines
+
+  (define-synner synner (quote case-type) input-form.stx)
+
+  (define (%type-signature-violation message subform.stx subform.sig)
+    (raise-continuable
+     (condition (make-expand-time-type-signature-violation)
+		(make-who-condition 'case-type)
+		(make-message-condition message)
+		(make-syntax-violation input-form.stx subform.stx)
+		(make-returned-type-signature-condition subform.sig))))
+
+  (define (%invalid-type-annotation-in-clause type-ann.stx)
+    (raise
+     (condition (make-expand-time-type-signature-violation)
+		(make-who-condition 'case-type)
+		(make-message-condition "invalid type annotation in CASE-TYPE branch")
+		(make-syntax-violation input-form.stx type-ann.stx))))
+
+;;; --------------------------------------------------------------------
 
   (main))
 

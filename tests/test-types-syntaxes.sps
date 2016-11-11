@@ -3502,11 +3502,13 @@
 	((<string>)		'string))
     => 'fixnum)
 
-  (check
-      (void-object? (case-type #t
-		      ((<vector>)		'vector)
-		      ((<fixnum>)		'fixnum)
-		      ((<string>)		'string)))
+  #;(check
+      (receive ()
+	  (case-type #t
+	    ((<vector>)		'vector)
+	    ((<fixnum>)		'fixnum)
+	    ((<string>)		'string))
+	#t)
     => #t)
 
 ;;; --------------------------------------------------------------------

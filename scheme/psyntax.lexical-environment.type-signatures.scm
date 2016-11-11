@@ -34,6 +34,7 @@
    syntax-object.type-signature?
 
 ;;; special constructors
+   make-type-signature/no-values
    make-type-signature/single-void			make-type-signature/single-untyped
    make-type-signature/single-top
    make-type-signature/single-null			make-type-signature/single-list
@@ -819,6 +820,9 @@
   (define-cached-signature-maker make-type-signature/standalone-list			(<list>-ots))
   (define-cached-signature-maker make-type-signature/no-return				(<bottom>-ots))
   #| end of LET-SYNTAX |# )
+
+(define-syntax-rule (make-type-signature/no-values)
+  (make-type-signature '()))
 
 (define-syntax-rule (make-type-signature/fully-unspecified)
   (make-type-signature/standalone-list))

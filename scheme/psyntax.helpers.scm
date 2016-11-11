@@ -43,13 +43,6 @@
      (module ()))
     ))
 
-;;This syntax can be used as standalone identifier  and it expands to #f.  It is used
-;;as "annotated expression"  argument in calls to the BUILD-  functions when there is
-;;no annotated expression to be given.
-;;
-(define-syntax no-source
-  (lambda (x) #f))
-
 (define-syntax define-synner
   (syntax-rules ()
     ((_ ?synner ?who ?input-form.stx)

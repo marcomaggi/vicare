@@ -3492,9 +3492,11 @@ The following syntactic bindings are exported by the library
 @deffn Syntax case-type @meta{expr} @metao{clause} @meta{clause} @dots{}
 @deffnx {Auxiliary Syntax} =>
 @deffnx {Auxiliary Syntax} else
-Similar to @syntax{case} but branches based on the type of the single
-value returned by @meta{expr}.  Each @meta{clause} must have one of the
-formats:
+Similar to @syntax{case} but branches based on the type of the single value returned by @meta{expr}.
+This syntax is meant to be used with the typed language only, its behaviour is unspecified when
+using the standard language.
+
+Each @meta{clause} must have one of the formats:
 
 @lisp
 ((@meta{type-id}) . @meta{body})

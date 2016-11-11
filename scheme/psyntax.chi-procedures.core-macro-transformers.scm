@@ -2194,7 +2194,7 @@
 
 	(<list-spec>
 	 ;;The  producer   returns  a  known   number  of  values,  of   known  type.
-	 ;;PRODUCER.SIG holds either a standalone  "(list ...)".  We will validate at
+	 ;;PRODUCER.SIG  holds  a  standalone  "(list ...)".   We  will  validate  at
 	 ;;run-time the actual number of arguments.
 	 => (lambda (producer.ots)
 	      (if (<= (type-signature.min-count formals.sig)
@@ -2550,9 +2550,9 @@
 					 producer.psi consumer*.stx)))
 
 	  (<list-spec>
-	   ;;The  producer expression  returns an  unspecified number  of values,  of
-	   ;;known type.  PRODUCER.SIG holds  a standalone "<list-of-type-spec>".  We
-	   ;;rely on run-time checks to validate the number of arguments.
+	   ;;The producer expression returns a known number of values, of known type.
+	   ;;PRODUCER.SIG holds a standalone "<list-type-spec>".  We rely on run-time
+	   ;;checks to validate the number of arguments.
 	   => (lambda (producer.ots)
 		(if (list-type-spec.list-of-single-item? producer.ots)
 		    (let ((producer-item.ots (car (list-type-spec.item-ots* producer.ots))))
@@ -2733,7 +2733,8 @@
 	  (<list-spec>
 	   => (lambda (producer.ots)
 		;;The producer expression returns a  known number of values, of known
-		;;type.  PRODUCER.SIG holds a standalone "(list ...)".  Good.
+		;;type.  PRODUCER.SIG holds a standalone "<list-type-spec>", the type
+		;;annotation is "(list ...)".  Good.
 		(let ((producer.sig (make-type-signature (list-type-spec.item-ots* producer.ots))))
 		  (%process-fixed-number-of-operands input-form.stx lexenv.run lexenv.expand
 						     caller-who return-values?
@@ -2866,8 +2867,9 @@
 
 	  (<list-spec>
 	   ;;The  producer  returns  a  known   number  of  values,  of  known  type.
-	   ;;PRODUCER.SIG holds  a standalone "(list ...)".   We convert PRODUCER.SIG
-	   ;;to a signature holding the items in PRODUCER.OTS, we flatten it.
+	   ;;PRODUCER.SIG holds a standalone  "<list-type-spec>", the type annotation
+	   ;;is "(list  ...)".  We  convert PRODUCER.SIG to  a signature  holding the
+	   ;;items in PRODUCER.OTS, we flatten it.
 	   => (lambda (producer.ots)
 		(if (<= (type-signature.min-count formals.sig)
 			(list-type-spec.length producer.ots))
