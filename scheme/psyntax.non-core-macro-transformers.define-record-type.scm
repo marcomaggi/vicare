@@ -1127,11 +1127,11 @@
 	;;unsafe record fields accessors
 	,@(map (lambda (unsafe-foo-x x field-type.ann)
 		 (let ((the-index	(%make-field-index-varname x))
-		       (record.sym	(make-syntactic-identifier-for-temporary-variable "record")))
+		       (record.id	(make-syntactic-identifier-for-temporary-variable "record")))
 		   `(define-syntax ,unsafe-foo-x
 		      (identifier-syntax
-		       (lambda/typed ((brace _ ,field-type.ann) (brace ,record.sym ,foo))
-			 ($struct-ref ,record.sym ,the-index))))))
+		       (lambda/typed ((brace _ ,field-type.ann) (brace ,record.id ,foo))
+			 ($struct-ref ,record.id ,the-index))))))
 	    unsafe-field-accessor* field-name*.sym field-type*.ann)
 
 	;;unsafe record fields mutators
@@ -1139,12 +1139,12 @@
 	      (lambda (unsafe-field-mutator field-name.sym field-type.ann knil)
 		(if unsafe-field-mutator
 		    (cons (let ((the-index	(%make-field-index-varname field-name.sym))
-				(record.sym	(make-syntactic-identifier-for-temporary-variable "record"))
-				(value.sym	(make-syntactic-identifier-for-temporary-variable "new-value")))
+				(record.id	(make-syntactic-identifier-for-temporary-variable "record"))
+				(value.id	(make-syntactic-identifier-for-temporary-variable "new-value")))
 			    `(define-syntax ,unsafe-field-mutator
 			       (identifier-syntax
-				(lambda/typed ((brace _ <void>) (brace ,record.sym ,foo) (brace ,value.sym ,field-type.ann))
-				  ($struct-set! ,record.sym ,the-index ,value.sym)))))
+				(lambda/typed ((brace _ <void>) (brace ,record.id ,foo) (brace ,value.id ,field-type.ann))
+				  ($struct-set! ,record.id ,the-index ,value.id)))))
 			  knil)
 		  knil))
 	    '() unsafe-field-mutator* field-name*.sym field-type*.ann)
@@ -1196,19 +1196,19 @@
   ;;
   (define safe-field-accessor-form*
     (map (lambda (safe-field-accessor unsafe-field-accessor field-type.ann)
-	   (let ((record.sym	(make-syntactic-identifier-for-temporary-variable "record")))
-	     `(define/checked ((brace ,safe-field-accessor ,field-type.ann) (brace ,record.sym ,foo))
-		(unsafe-cast-signature (,field-type.ann) (,unsafe-field-accessor ,record.sym)))))
+	   (let ((record.id	(make-syntactic-identifier-for-temporary-variable "record")))
+	     `(define/checked ((brace ,safe-field-accessor ,field-type.ann) (brace ,record.id ,foo))
+		(unsafe-cast-signature (,field-type.ann) (,unsafe-field-accessor ,record.id)))))
       safe-field-accessor* unsafe-field-accessor* field-type*.ann))
 
   (define safe-field-mutator-form*
     (fold-right
 	(lambda (safe-field-mutator unsafe-field-mutator field-type.ann knil)
 	  (if safe-field-mutator
-	      (cons (let ((record.sym	(make-syntactic-identifier-for-temporary-variable "record"))
-			  (val.sym	(make-syntactic-identifier-for-temporary-variable "new-value")))
-		      `(define/checked ((brace ,safe-field-mutator <void>) (brace ,record.sym ,foo) (brace ,val.sym ,field-type.ann))
-			 (,unsafe-field-mutator ,record.sym ,val.sym)))
+	      (cons (let ((record.id	(make-syntactic-identifier-for-temporary-variable "record"))
+			  (val.id	(make-syntactic-identifier-for-temporary-variable "new-value")))
+		      `(define/checked ((brace ,safe-field-mutator <void>) (brace ,record.id ,foo) (brace ,val.id ,field-type.ann))
+			 (,unsafe-field-mutator ,record.id ,val.id)))
 		    knil)
 	    knil))
       '() safe-field-mutator* unsafe-field-mutator* field-type*.ann))
@@ -1469,7 +1469,7 @@
      (synner "invalid syntax in TYPE-PREDICATE clause" ?invalid-clause))))
 
 
-(define (%make-super-rcd-code clause* foo foo-rtd foo-parent.id parent-rcd.sym synner)
+(define (%make-super-rcd-code clause* foo foo-rtd foo-parent.id parent-rcd.id synner)
   ;;Return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
   ;;expression   which,   expanded   and   evaluated   at   run-time,   returns   the
   ;;record-constructor descriptor  to be  used when  this type  is the  super-type of
@@ -1484,9 +1484,9 @@
   ;;specified through  the procedural interface;  otherwise it must be  the syntactic
   ;;identifier representing the parent's type.
   ;;
-  ;;PARENT-RCD.SYM must be false if this record-type has no parent; otherwise it must
-  ;;be  a symbol  representing the  name  of the  syntactic identifier  bound to  the
-  ;;parent's record-constructor descriptor.
+  ;;PARENT-RCD.ID must be false if this  record-type has no parent; otherwise it must
+  ;;be a syntactic  identifier representing bound to  the parent's record-constructor
+  ;;descriptor.
   ;;
   (syntax-match (%get-clause 'super-protocol clause*) ()
     ((_ ?super-protocol-expr)
@@ -1499,7 +1499,7 @@
 	       `($make-record-constructor-descriptor ,foo-rtd ,proto ,?super-protocol-expr)
 	     ;;The parent record-type specification has no super-protocol: let's use
 	     ;;the parent's default RCD.
-	     `($make-record-constructor-descriptor ,foo-rtd ,parent-rcd.sym ,?super-protocol-expr)))
+	     `($make-record-constructor-descriptor ,foo-rtd ,parent-rcd.id ,?super-protocol-expr)))
        ;;This record type has no parent.
        `($make-record-constructor-descriptor ,foo-rtd #f ,?super-protocol-expr)))
 
@@ -1596,27 +1596,27 @@
   (let ((clause (%get-clause 'equality-predicate clause*)))
     (syntax-match clause ()
       ((_ ?proto-expr)
-       (let ((proto-func.sym	(make-syntactic-identifier-for-temporary-variable "proto-func"))
-	     (pred-func.sym	(make-syntactic-identifier-for-temporary-variable "pred-func")))
+       (let ((proto-func.id	(make-syntactic-identifier-for-temporary-variable "proto-func"))
+	     (pred-func.id	(make-syntactic-identifier-for-temporary-variable "pred-func")))
 	 (if parent-rtd
 	     ;;The new  record-type has a parent:  we apply the protocol  function to
 	     ;;the parent's equality predicate function.
-	     `(let/checked ((,proto-func.sym ,?proto-expr))
-		(receive-and-return/checked ({,pred-func.sym (equality-predicate ,foo)})
-		    (,proto-func.sym ($record-type-equality-predicate ,parent-rtd))
-		  (unless (procedure? ,pred-func.sym)
+	     `(let/checked ((,proto-func.id ,?proto-expr))
+		(receive-and-return/checked ({,pred-func.id (equality-predicate ,foo)})
+		    (,proto-func.id ($record-type-equality-predicate ,parent-rtd))
+		  (unless (procedure? ,pred-func.id)
 		    (assertion-violation (quote ,foo)
 		      "expected closure object from evaluation of equality predicate's protocol function"
-		      ,pred-func.sym))))
+		      ,pred-func.id))))
 	   ;;The  new  record-type has  no  parent:  we  just evaluate  the  protocol
 	   ;;function with no arguments.
-	   `(let/checked ((,proto-func.sym ,?proto-expr))
-	      (receive-and-return/checked ({,pred-func.sym (equality-predicate ,foo)})
-		  (,proto-func.sym)
-		(unless (procedure? ,pred-func.sym)
+	   `(let/checked ((,proto-func.id ,?proto-expr))
+	      (receive-and-return/checked ({,pred-func.id (equality-predicate ,foo)})
+		  (,proto-func.id)
+		(unless (procedure? ,pred-func.id)
 		  (assertion-violation (quote ,foo)
 		    "expected closure object from evaluation of equality predicate's protocol function"
-		    ,pred-func.sym)))))))
+		    ,pred-func.id)))))))
 
       ;;No matching clause found.
       (#f	#f)
@@ -1635,27 +1635,27 @@
   (let ((clause (%get-clause 'comparison-procedure clause*)))
     (syntax-match clause ()
       ((_ ?proto-expr)
-       (let ((proto-func.sym	(make-syntactic-identifier-for-temporary-variable "proto-func"))
-	     (compar-func.sym	(make-syntactic-identifier-for-temporary-variable "compar-func")))
+       (let ((proto-func.id	(make-syntactic-identifier-for-temporary-variable "proto-func"))
+	     (compar-func.id	(make-syntactic-identifier-for-temporary-variable "compar-func")))
 	 (if parent-rtd
 	     ;;The new  record-type has a parent:  we apply the protocol  function to
 	     ;;the parent's comparison procedure.
-	     `(let/checked ((,proto-func.sym ,?proto-expr))
-		(receive-and-return/checked ({,compar-func.sym (comparison-procedure ,foo)})
-		    (,proto-func.sym ($record-type-comparison-procedure ,parent-rtd))
-		  (unless (procedure? ,compar-func.sym)
+	     `(let/checked ((,proto-func.id ,?proto-expr))
+		(receive-and-return/checked ({,compar-func.id (comparison-procedure ,foo)})
+		    (,proto-func.id ($record-type-comparison-procedure ,parent-rtd))
+		  (unless (procedure? ,compar-func.id)
 		    (assertion-violation (quote ,foo)
 		      "expected closure object from evaluation of comparison procedure's protocol function"
-		      ,compar-func.sym))))
+		      ,compar-func.id))))
 	   ;;The  new  record-type has  no  parent:  we  just evaluate  the  protocol
 	   ;;function with no arguments.
-	   `(let/checked ((,proto-func.sym ,?proto-expr))
-	      (receive-and-return/checked ({,compar-func.sym (comparison-procedure ,foo)})
-		  (,proto-func.sym)
-		(unless (procedure? ,compar-func.sym)
+	   `(let/checked ((,proto-func.id ,?proto-expr))
+	      (receive-and-return/checked ({,compar-func.id (comparison-procedure ,foo)})
+		  (,proto-func.id)
+		(unless (procedure? ,compar-func.id)
 		  (assertion-violation (quote ,foo)
 		    "expected closure object from evaluation of comparison procedure's protocol function"
-		    ,compar-func.sym)))))))
+		    ,compar-func.id)))))))
 
       ;;No matching clause found.
       (#f	#f)
@@ -1673,27 +1673,27 @@
   (let ((clause (%get-clause 'hash-function clause*)))
     (syntax-match clause ()
       ((_ ?proto-expr)
-       (let ((proto-func.sym	(make-syntactic-identifier-for-temporary-variable "proto-func"))
-	     (hash-func.sym	(make-syntactic-identifier-for-temporary-variable "hash-func")))
+       (let ((proto-func.id	(make-syntactic-identifier-for-temporary-variable "proto-func"))
+	     (hash-func.id	(make-syntactic-identifier-for-temporary-variable "hash-func")))
 	 (if parent-rtd
 	     ;;The new  record-type has a parent:  we apply the protocol  function to
 	     ;;the parent's comparison procedure.
-	     `(let/checked ((,proto-func.sym ,?proto-expr))
-		(receive-and-return/checked ({,hash-func.sym (hash-function ,foo)})
-		    (,proto-func.sym ($record-type-hash-function ,parent-rtd))
-		  (unless (procedure? ,hash-func.sym)
+	     `(let/checked ((,proto-func.id ,?proto-expr))
+		(receive-and-return/checked ({,hash-func.id (hash-function ,foo)})
+		    (,proto-func.id ($record-type-hash-function ,parent-rtd))
+		  (unless (procedure? ,hash-func.id)
 		    (assertion-violation (quote ,foo)
 		      "expected closure object from evaluation of hash function's protocol function"
-		      ,hash-func.sym))))
+		      ,hash-func.id))))
 	   ;;The  new  record-type has  no  parent:  we  just evaluate  the  protocol
 	   ;;function with no arguments.
-	   `(let/checked ((,proto-func.sym ,?proto-expr))
-	      (receive-and-return/checked ({,hash-func.sym (hash-function ,foo)})
-		  (,proto-func.sym)
-		(unless (procedure? ,hash-func.sym)
+	   `(let/checked ((,proto-func.id ,?proto-expr))
+	      (receive-and-return/checked ({,hash-func.id (hash-function ,foo)})
+		  (,proto-func.id)
+		(unless (procedure? ,hash-func.id)
 		  (assertion-violation (quote ,foo)
 		    "expected closure object from evaluation of hash function's protocol function"
-		    ,hash-func.sym)))))))
+		    ,hash-func.id)))))))
 
       ;;No matching clause found.
       (#f	#f)
@@ -2687,8 +2687,8 @@
 
 
 (define* (%make-type-name-syntactic-binding-form foo.id foo-uid make-foo.id foo?.id
-						 foo-super-rcd.sym foo-destructor.sym
-						 foo-parent.id foo-rtd.sym foo-rcd.sym
+						 foo-super-rcd.id foo-destructor.id
+						 foo-parent.id foo-rtd.id foo-rcd.id
 						 foo-equality-predicate.id
 						 foo-comparison-procedure.id
 						 foo-hash-function.id
@@ -2703,23 +2703,23 @@
   ;;
   ;;MAKE-FOO.ID must be the identifier bound to the default constructor function.
   ;;
-  ;;FOO-SUPER-RCD.SYM must be false if this record-type has no super-type constructor
-  ;;descriptor; otherwise it must be a  symbol representing the name of the syntactic
-  ;;identifier to which the super-RCD is bound.
+  ;;FOO-SUPER-RCD.ID must be false if  this record-type has no super-type constructor
+  ;;descriptor; otherwise it must be a syntactic identifier to which the super-RCD is
+  ;;bound.
   ;;
-  ;;FOO-DESTRUCTOR.SYM must be  false if this record-type has  no default destructor;
-  ;;otherwise it must  be a symbol representing the name  of the syntactic identifier
-  ;;to which the destructor function is bound.
+  ;;FOO-DESTRUCTOR.ID must  be false if  this record-type has no  default destructor;
+  ;;otherwise it must  be a syntactic identifier to which  the destructor function is
+  ;;bound.
   ;;
-  ;;FOO?.ID must be the identifier bound to the type predicate.
+  ;;FOO?.ID must be the syntactic identifier bound to the type predicate.
   ;;
-  ;;FOO-PARENT.ID must be false or the identifier bound to the parent's type name.
+  ;;FOO-PARENT.ID must  be false or  the syntactic  identifier bound to  the parent's
+  ;;type name.
   ;;
-  ;;FOO-RTD.SYM must be a  gensym: it will become the name  of the identifier bound
-  ;;to the record-type descriptor.
+  ;;FOO-RTD.ID must be the syntactic identifier bound to the record-type descriptor.
   ;;
-  ;;FOO-RTD.SYM must be a  gensym: it will become the name  of the identifier bound
-  ;;to the record-constructor descriptor.
+  ;;FOO-RTD.ID  must be  the  syntactic identifier  bound  to the  record-constructor
+  ;;descriptor.
   ;;
   ;;IMPLEMENTED-INTERFACE*.OTS  null  or  a proper  list  of  "<interface-type-spec>"
   ;;instances representing the interfaces that this record-type implements.
@@ -2728,24 +2728,6 @@
   (define hash-func.id
     (or foo-hash-function.id
 	(core-prim-id 'record-hash)))
-
-  ;; (define foo-methods-table-public
-  ;;   `(list . ,(map (lambda (entry)
-  ;; 		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
-  ;; 		early-binding-methods-alist-public)))
-
-  ;; (define foo-methods-table-protected
-  ;;   `(list . ,(map (lambda (entry)
-  ;; 		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
-  ;; 		early-binding-methods-alist-protected)))
-
-  ;; (define foo-methods-table-private
-  ;;   `(list . ,(map (lambda (entry)
-  ;; 		     `(cons (quote ,(car entry)) (syntax ,(cdr entry))))
-  ;; 		early-binding-methods-alist-private)))
-
-  ;; (define foo-virtual-method-signatures.table
-  ;;   `(quote ,virtual-method-signatures-alist))
 
   (define implemented-interfaces
     (if (null? implemented-interface*.ots)
@@ -2756,14 +2738,14 @@
 
   `(make-record-type-spec (syntax ,foo.id)
 			  (quote ,foo-uid)
-			  (syntax ,foo-rtd.sym)
-			  (syntax ,foo-rcd.sym)
-			  ,(and foo-super-rcd.sym `(syntax ,foo-super-rcd.sym))
+			  (syntax ,foo-rtd.id)
+			  (syntax ,foo-rcd.id)
+			  ,(and foo-super-rcd.id `(syntax ,foo-super-rcd.id))
 			  ,(if foo-parent.id
 			       `(syntax ,foo-parent.id)
 			     `(syntax <record>))
 			  (syntax ,make-foo.id)
-			  ,(and foo-destructor.sym `(syntax ,foo-destructor.sym))
+			  ,(and foo-destructor.id `(syntax ,foo-destructor.id))
 			  (syntax ,foo?.id)
 			  (syntax ,foo-equality-predicate.id)
 			  (syntax ,foo-comparison-procedure.id)
