@@ -2662,7 +2662,8 @@
                 (m (vector-ref all-mappings t)))
            (cond ((not (memv s m))
                   (set! hash-value (+ hash-value t))
-                  (vector-set! all-mappings t (cons s m))))))
+                  (vector-set! all-mappings t (cons s m))
+		  (values)))))
        mappings))
     (mst-hash-set! mst (modulo hash-value (nfa-num-states nfa)))))
 
@@ -2695,7 +2696,8 @@
     (mst-state-mappings-set! mst state new-mappings)
     (cond ((not (memv slot summary-tag-slots)) ; Update tag/slot summary
            (set! hash-value (+ hash-value tag))
-           (vector-set! mappings-summary tag (cons slot summary-tag-slots))))
+           (vector-set! mappings-summary tag (cons slot summary-tag-slots))
+	   (values)))
     (mst-hash-set! mst (modulo hash-value (nfa-num-states nfa)))
     new-mappings))
 

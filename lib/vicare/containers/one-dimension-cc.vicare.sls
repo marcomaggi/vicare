@@ -329,7 +329,8 @@
   (let loop ((next (type-descriptor-item-next type))
 	     (i    (car range)))
     (and i (proc i)
-	 (loop next (next i range)))))
+	 (loop next (next i range))))
+  (values))
 
 (define (%range-every type proc range)
   (let loop ((next   (type-descriptor-item-next type))

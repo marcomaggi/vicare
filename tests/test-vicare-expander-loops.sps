@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: tests for the expander
@@ -284,7 +285,7 @@
 	      (add-result i)
 	      (set! i (+ -1 i)))
 	    (while (positive? i))))
-    => `(,(void) (5 4 3 2 1)))
+    => '((5 4 3 2 1)))
 
   (check 	;continue
       (with-result
@@ -296,7 +297,7 @@
 		(continue))
 	      (add-result i))
 	    (while (positive? i))))
-    => `(,(void) (4 2 1 0)))
+    => '((4 2 1 0)))
 
   (check	;break
       (with-result
@@ -321,7 +322,7 @@
 	      (add-result i)
 	      (set! i (+ -1 i)))
 	    (until (zero? i))))
-    => `(,(void) (5 4 3 2 1)))
+    => '((5 4 3 2 1)))
 
   (check	;continue
       (with-result
@@ -333,7 +334,7 @@
 		(continue))
 	      (add-result i))
 	    (until (zero? i))))
-    => `(,(void) (4 2 1 0)))
+    => '((4 2 1 0)))
 
   (check	;break
       (with-result
@@ -419,7 +420,7 @@
       (with-result
 	(dolist (A '(1 2 3))
 	  (add-result A)))
-    => `(,(void) (1 2 3)))
+    => `((1 2 3)))
 
   (check
       (with-result
@@ -451,7 +452,7 @@
       (with-result
 	(dotimes (i 3)
 	  (add-result i)))
-    => `(,(void) (0 1 2)))
+    => '((0 1 2)))
 
   (check
       (with-result
@@ -466,12 +467,12 @@
 
   (check
       (with-result
-       (let loop ((i 0))
-	 (if (= i 5)
-	     i
-	   (begin
-	     (add-result i)
-	     (loop (+ 1 i))))))
+	(let loop ((i 0))
+	  (if (= i 5)
+	      i
+	    (begin
+	      (add-result i)
+	      (loop (+ 1 i))))))
     => '(5 (0 1 2 3 4)))
 
   #t)
@@ -484,9 +485,3 @@
 #| end of program |# )
 
 ;;; end of file
-;; Local Variables:
-;; coding: utf-8-unix
-;; eval: (put 'typ.set-identifier-tag-type-spec!	'scheme-indent-function 1)
-;; eval: (put 'catch-syntax-violation			'scheme-indent-function 1)
-;; eval: (put 'case-identifiers				'scheme-indent-function 1)
-;; End:

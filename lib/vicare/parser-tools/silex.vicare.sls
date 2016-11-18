@@ -727,7 +727,9 @@
 			    "the <<EOF>> anchor must be used alone and only after %%"))
 		((= tok-type <<ERROR>>-tok)
 		 (lex-error 'lex:de-anchor-tokens (get-tok-line tok) (get-tok-column tok)
-			    "the <<ERROR>> anchor must be used alone and only after %%"))))))))
+			    "the <<ERROR>> anchor must be used alone and only after %%"))
+		(else
+		 (assertion-violation 'de-anchor-tokens "internal error, invalid token type"))))))))
 
 (define (strip-end l)
   (if (null? (cdr l))
@@ -870,7 +872,9 @@
 		   (loop (make-<regexp> star-re re) (cdr tok-list3)))
 		  ((= tok-type power-tok)
 		   (loop (power->star-plus re (check-power-tok tok))
-			 (cdr tok-list3))))))))))
+			 (cdr tok-list3)))
+		  (else
+		   (assertion-violation 'parse-tokens-fact "internal error, invalid token type")))))))))
 
 (define (parse-tokens-conc tok-list macros)
   (let* ((result1 (parse-tokens-fact tok-list macros))
@@ -1092,7 +1096,9 @@
 	    ((= tok-type eof-tok)
 	     (if parsing-full-table?
 		 (%error "end of file found before %%")
-	       #f)))))
+	       #f))
+	    (else
+	     (assertion-violation '%parse-next-macro "internal error, invalid token type")))))
 
   (define (%parse-white-space-one-regexp)
     ;;After a  macro identifier  has been  successfully parsed,  parse a
@@ -1378,7 +1384,9 @@
 				      "bad range specification in character class; a specification "
 				      "like \"-x\", \"x--\" or \"x-]\" has been used"))
 			     ((= tok3-type eof-tok)
-			      (%error tok3 "eof of file found while parsing a character class")))))))
+			      (%error tok3 "eof of file found while parsing a character class"))
+			     (else
+			      (assertion-violation '%parse-class-range "internal error, invalid token type")))))))
 		((= tok-type minus-tok)
 		 (%error tok
 			 "bad range specification in character class; a specification "
@@ -2558,8 +2566,7 @@
 		      (text (list "#(" formatted-text ")")))
 		 (vector #f (+ width-all 3) (+ width-all 3) text)))))
 	  (else
-	   (display "Internal error: out-pp")
-	   (newline))))
+	   (assertion-violation #f "internal error: out-pp"))))
 
 		; Retourne la chaine a afficher
   (define (out-pp obj col)
@@ -2648,7 +2655,9 @@
 		      ((or (null? obj) (pair? obj))
 		       (p-list obj col objw texts hole cont))
 		      ((vector? obj)
-		       (p-vector obj col objw texts hole cont))))))
+		       (p-vector obj col objw texts hole cont))
+		      (else
+		       (assertion-violation #f "internal error, invalid object type"))))))
       (p-obj obj start 0 '() (cons #f #f)
 	     (lambda (col objw texts hole)
 	       (if (> col out-max-col)

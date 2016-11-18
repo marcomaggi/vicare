@@ -840,7 +840,8 @@
   (let* ((bvs  (cons bv0 bvs))
 	 (len      (bvs-list-min-length bvs)))
     (do ((i 0 (+ 1 i)))
-	((= len i))
+	((= len i)
+	 (values))
       (apply proc i (map (lambda (bv) (sequence-ref bv i))
 		      bvs)))))
 
@@ -864,13 +865,15 @@
   (let loop ((i start))
     (when (< i past)
       (proc (sequence-ref bv i))
-      (loop (+ i 1)))))
+      (loop (+ i 1))))
+  (values))
 
 (define (%subsequence-for-each-index proc bv start past)
   (let loop ((i start))
     (when (< i past)
       (proc i)
-      (loop (+ i 1)))))
+      (loop (+ i 1))))
+  (values))
 
 
 ;;;; case hacking

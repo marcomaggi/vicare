@@ -242,7 +242,7 @@
       #'(begin
 	  (define/typed number-of-arguments
 	    (let ((N NUMBER-OF-ARGUMENTS))
-	      (for-all
+	      (for-each
 		  (lambda (M)
 		    (unless (= N M)
 		      (assertion-violation 'NAME
@@ -252,12 +252,13 @@
 		(list (GENERIC :number-of-arguments) ...))
 	      N))
 	  (mt::define-methods-table NAME NUMBER-OF-ARGUMENTS
-				   the-methods-alist-func the-method-add
-				   the-cache the-cache-store the-cache-ref
-				   (mt::merge-methods-alists (GENERIC :primary-methods-alist-func) ...))
-	  (define/typed (implementation . arguments)
-	    (generic-function-implementation 'NAME the-methods-alist-func the-cache-store the-cache-ref
-					     UID-LIST-OF number-of-arguments arguments))
+				    the-methods-alist-func the-method-add
+				    the-cache the-cache-store the-cache-ref
+				    (mt::merge-methods-alists (GENERIC :primary-methods-alist-func) ...))
+	  (define/typed {implementation <procedure>}
+	    (lambda/std arguments
+	      (generic-function-implementation 'NAME the-methods-alist-func the-cache-store the-cache-ref
+					       UID-LIST-OF number-of-arguments arguments)))
 	  (define-syntax NAME
 	    (lambda (stx)
 	      (define-syntax synner
@@ -458,7 +459,7 @@
       #'(begin
 	  (define/typed number-of-arguments
 	    (let ((N NUMBER-OF-ARGUMENTS))
-	      (for-all
+	      (for-each
 		  (lambda (M)
 		    (unless (= N M)
 		      (assertion-violation 'NAME
@@ -484,14 +485,15 @@
 				   around-cache around-cache-store around-cache-ref
 				   (mt::merge-methods-alists (GENERIC :around-methods-alist-func) ...))
 	  (define/typed reverse-before-methods REVERSE-BEFORE-METHODS)
-	  (define/typed (implementation . arguments)
-	    (generic*-function-implementation
-	     'NAME
-	     primary-methods-alist-func primary-cache-ref primary-cache-store
-	     before-methods-alist-func  before-cache-ref  before-cache-store
-	     after-methods-alist-func   after-cache-ref   after-cache-store
-	     around-methods-alist-func  around-cache-ref  around-cache-store
-	     UID-LIST-OF number-of-arguments reverse-before-methods arguments))
+	  (define/typed {implementation <procedure>}
+	    (lambda arguments
+	      (generic*-function-implementation
+	       'NAME
+	       primary-methods-alist-func primary-cache-ref primary-cache-store
+	       before-methods-alist-func  before-cache-ref  before-cache-store
+	       after-methods-alist-func   after-cache-ref   after-cache-store
+	       around-methods-alist-func  around-cache-ref  around-cache-store
+	       UID-LIST-OF number-of-arguments reverse-before-methods arguments)))
 	  (define-syntax NAME
 	    (lambda (stx)
 	      (syntax-case stx ( ;;
@@ -678,8 +680,10 @@
 			  ((TYPE ...)	(reverse type-ids))
 			  (BODY		body-stx))
 	      #'(define/typed dummy ;to make it a definition
-		  (add-method ?generic-function-id TABLE-KEY (TYPE ...)
-			      (type::method-lambda ?generic-function-id ((brace ARG TYPE) ...) . BODY)))))
+		  (begin
+		    (add-method ?generic-function-id TABLE-KEY (TYPE ...)
+				(type::method-lambda ?generic-function-id ((brace ARG TYPE) ...) . BODY))
+		    #f))))
 
 	   ;;Tagged return values.
 	   ((brace ?generic-function-id ?rv-tag0 ?rv-tag ...)
@@ -689,8 +693,10 @@
 			  ((TYPE ...)	(reverse type-ids))
 			  (BODY		body-stx))
 	      #'(define/typed dummy ;to make it a definition
-		  (add-method ?generic-function-id TABLE-KEY (TYPE ...)
-			      (type::method-lambda  ?generic-function-id ((brace _ ?rv-tag0 ?rv-tag ...) (brace ARG TYPE) ...) . BODY)))))
+		  (begin
+		    (add-method ?generic-function-id TABLE-KEY (TYPE ...)
+				(type::method-lambda  ?generic-function-id ((brace _ ?rv-tag0 ?rv-tag ...) (brace ARG TYPE) ...) . BODY))
+		    #f))))
 	   ))
 	(((brace ?arg ?type) . ?formals)
 	 (loop #'?formals (cons #'?arg arg-ids) (cons #'?type    type-ids)))

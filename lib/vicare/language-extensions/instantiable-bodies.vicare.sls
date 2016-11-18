@@ -24,10 +24,11 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (vicare language-extensions instantiable-bodies)
+  (options typed-language)
   (export define-instantiable-body)
-  (import (rnrs (6)))
+  (import (vicare))
 
 
 (define-syntax (define-instantiable-body stx)
@@ -52,7 +53,7 @@
 		      (cons (%subst (car body) from to)
 			    (%subst (cdr body) from to)))
 		     ((vector? body)
-		      (list->vector (map (lambda (item)
+		      (list->vector (map (lambda/typed ({_ <top>} item)
 					   (%subst item from to))
 				      (vector->list body))))
 		     (else

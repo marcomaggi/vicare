@@ -3420,7 +3420,7 @@
 	  (bless
 	   `(lambda/typed ({_ <boolean>} ,obj.id)
 	      (and (compound-condition? ,obj.id)
-		   (for-all (lambda (,pred.id)
+		   (for-all (lambda/typed ({,pred.id <type-predicate>})
 			      (,pred.id ,obj.id))
 		     (list ,@component-pred*.stx))
 		   #t)))))
@@ -3508,7 +3508,7 @@
 	    (bless
 	     `(let/checked ((,comp-pred*.id (list ,@component-pred*.stx)))
 		(lambda/typed ({_ <boolean>} ,obj.id)
-		  (and (exists (lambda/typed (,pred.id)
+		  (and (exists (lambda/typed ({,pred.id <type-predicate>})
 				 (,pred.id ,obj.id))
 			 ,comp-pred*.id)
 		       #t)))))))
@@ -3782,7 +3782,7 @@
 	    (bless
 	     `(let/checked ((,comp-pred*.id (list ,@component-pred*.stx)))
 		(lambda/typed ({_ <boolean>} ,obj.id)
-		  (and (for-all (lambda/typed (,pred.id)
+		  (and (for-all (lambda/typed ({,pred.id <type-predicate>})
 				  (,pred.id ,obj.id))
 			 ,comp-pred*.id)
 		       #t)))))))
@@ -4027,7 +4027,7 @@
 	    (bless
 	     `(let/checked ((,comp-pred*.id (list ,@pred*.stx)))
 		(lambda/typed ({_ <boolean>} ,obj.id)
-		  (and (exists (lambda/typed (,pred.id)
+		  (and (exists (lambda/typed ({,pred.id <type-predicate>})
 				 (,pred.id ,obj.id))
 			 ,comp-pred*.id)
 		       #t)))))))
@@ -4466,7 +4466,7 @@
 	      (lambda/typed ({_ <boolean>} ,obj.id)
 		(and (list? ,obj.id)
 		     (let/checked (({,obj.id <list>} (unsafe-cast-signature (<list>) ,obj.id)))
-		       (and (for-all (lambda (,pred.id ,item.id)
+		       (and (for-all (lambda/typed ({,pred.id <type-predicate>} ,item.id)
 				       (,pred.id ,item.id))
 			      ,comp-pred*.id ,obj.id)
 			    #t))))))))

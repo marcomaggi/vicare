@@ -1,5 +1,5 @@
 ;;;
-;;;Copyright (c) 2008-2010, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2008-2010, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2008 Derick Eddington
 ;;;
 ;;;Taylor Campbell wrote this code; he places it in the public domain.
@@ -483,7 +483,8 @@
     (assert-vectors-of-equal-length 'vector-for-each/with-index vectors)
     (do ((len (vector-length vec0))
 	 (i 0 (add1 i)))
-	((= len i))
+	((= len i)
+	 (values))
       (apply proc (map (lambda (vec) (vector-ref vec i)) vectors)))))
 
 ;;; --------------------------------------------------------------------
@@ -492,14 +493,16 @@
   (let* ((vectors  (cons vec0 vectors))
 	 (len      (vectors-list-min-length vectors)))
     (do ((i 0 (add1 i)))
-	((= len i))
+	((= len i)
+	 (values))
       (apply proc (map (lambda (vec) (vector-ref vec i)) vectors)))))
 
 (define (vector-for-each*/with-index proc vec0 . vectors)
   (let* ((vectors  (cons vec0 vectors))
 	 (len      (vectors-list-min-length vectors)))
     (do ((i 0 (add1 i)))
-	((= len i))
+	((= len i)
+	 (values))
       (apply proc i (map (lambda (vec) (vector-ref vec i)) vectors)))))
 
 ;;; --------------------------------------------------------------------
@@ -540,13 +543,15 @@
   (let loop ((i start))
     (when (< i past)
       (proc (vector-ref vec i))
-      (loop (add1 i)))))
+      (loop (add1 i))))
+  (values))
 
 (define (%subvector-for-each/with-index proc vec start past)
   (let loop ((i start))
     (when (< i past)
       (proc i (vector-ref vec i))
-      (loop (add1 i)))))
+      (loop (add1 i))))
+  (values))
 
 ;;; --------------------------------------------------------------------
 
@@ -554,7 +559,8 @@
   (let loop ((i start))
     (when (< i past)
       (proc i)
-      (loop (add1 i)))))
+      (loop (add1 i))))
+  (values))
 
 
 ;;;; mapping macros
@@ -641,7 +647,8 @@
 		   (assert-vectors-of-equal-length 'vector-for-each/stx (list vec0 V ...))
 		   (do* ((len (vector-length vec0))
 			 (i 0 (add1 i)))
-		       ((= i len))
+		       ((= i len)
+			(values))
 		     (proc (vector-ref vec0 i) (vector-ref V i) ...)
 		     #f))))))))
 
@@ -656,7 +663,8 @@
 		       ...)
 		   (do* ((len (apply min (map vector-length (list vec0 V ...))))
 			 (i 0 (add1 i)))
-		       ((= i len))
+		       ((= i len)
+			(values))
 		     (proc (vector-ref vec0 i) (vector-ref V i) ...)))))))))
 
 

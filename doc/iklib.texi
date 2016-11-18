@@ -1581,16 +1581,18 @@ For @code{do ... (while ...)}:
 @itemize
 @item
 Evaluate @meta{body} at least once, then: if the expression @meta{test}
-evaluates to non--false loop; else return unspecified values.
+evaluates to non--false loop.
 
 @item
 Using @syntax{continue} in the body cause a direct jump to the end of
 the current iteration, evaluating the @meta{test}.
 
 @item
-Using the syntax @syntax{break} in the body causes immediate escaping
-out of the loop; if arguments are given to @syntax{break}: they become
-the return values of the syntax.
+Using the syntax @syntax{break} in the body causes immediate escaping out of the loop.  A syntax use
+of @syntax{break} accepts no arguments.
+
+@item
+A use of this syntax returns no values.
 @end itemize
 
 For @code{do ... (until ...)}:
@@ -1598,16 +1600,18 @@ For @code{do ... (until ...)}:
 @itemize
 @item
 Evaluate @meta{body} at least once, then if the expression @meta{test}
-evaluates to false loop; else return unspecified values.
+evaluates to false loop.
 
 @item
 Using @syntax{continue} in the body cause a direct jump to the end of
 the current iteration, evaluating the @meta{test}.
 
 @item
-Using the syntax @syntax{break} in the body causes immediate escaping
-out of the loop; if arguments are given to @syntax{break}: they become
-the return values of the syntax.
+Using the syntax @syntax{break} in the body causes immediate escaping out of the loop.  A syntax use
+of @syntax{break} accepts no arguments.
+
+@item
+A use of this syntax returns no values.
 @end itemize
 
 For the standard syntax:
@@ -1618,9 +1622,8 @@ Using @syntax{continue} in the body cause a direct jump to the end of
 the current iteration, evaluating the @meta{test}.
 
 @item
-Using the syntax @syntax{break} in the body causes immediate escaping
-out of the loop; if arguments are given to @syntax{break}: they become
-the return values of the syntax.
+Using the syntax @syntax{break} in the body causes immediate escaping out of the loop.  A syntax use
+of @syntax{break} accepts no arguments.
 @end itemize
 @end deffn
 
@@ -1647,9 +1650,8 @@ Iterate of the list returned by @meta{list-expr} binding, at each
 iteration, the next item from the list to @meta{var}; evaluate the
 @meta{body} forms in the region of the binding.
 
-If @meta{result-expr} is present: it is evaluated, in the region of
-@meta{var}, to produce the return values.  If @meta{result-expr} is not
-present: the return values are unspecified.
+If @meta{result-expr} is present: it is evaluated, in the region of @meta{var}, to produce the
+return values.  If @meta{result-expr} is not present: the syntax use returns no values.
 
 If @meta{list-expr} returns null and @meta{result-expr} is present: when
 @meta{result-expr} is evaluated, @meta{var} is bound to null.
@@ -1697,9 +1699,8 @@ Iterate over exact integers from zero to the return value of
 each iteration: the next integer is bound to @meta{var}; evaluate the
 @meta{body} forms in the region of the binding.
 
-If @meta{result-expr} is present: it is evaluated, in the region of
-@meta{var}, to produce the return values.  If @meta{result-expr} is not
-present: the return values are unspecified.
+If @meta{result-expr} is present: it is evaluated, in the region of @meta{var}, to produce the
+return values.  If @meta{result-expr} is not present: the syntax use returns no values.
 
 This syntax meant to be similar to the Common Lisp syntax of the same
 name.
@@ -1717,13 +1718,10 @@ fluid syntax: it is possible to use this keyword in custom syntaxes.
 @end deffn
 
 
-@deffn {Fluid Syntax} break @meta{expr} ...
-Causes the innermost @syntax{do}, @syntax{while}, @syntax{until} or
-@syntax{for} loop to exit immediately to the continuation of the whole
-loop syntax.  When arguments are given: they are returned to the
-continuation; when no arguments are given: zero values are returned.
-Being a fluid syntax: it is possible to use this keyword in custom
-syntaxes.
+@deffn {Fluid Syntax} break
+Causes the innermost @syntax{do}, @syntax{while}, @syntax{until} or @syntax{for} loop to exit
+immediately to the continuation of the whole loop syntax.  Being a fluid syntax: it is possible to
+use this keyword in custom syntaxes.
 @end deffn
 
 

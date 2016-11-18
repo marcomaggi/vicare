@@ -435,10 +435,10 @@
 
   (check
       (internal-body
-	(define/overload (doit {O <string>})
+	(define/overload ({doit <top>} {O <string>})
 	  (list 'string O))
 
-	(define/overload (doit {O <fixnum>})
+	(define/overload ({doit <top>} {O <fixnum>})
 	  (list 'fixnum O))
 
 	(map doit '("ciao" 123)))

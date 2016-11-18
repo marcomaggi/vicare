@@ -241,12 +241,14 @@
 
 (define (check:proc expression thunk equal expected-result)
   (case (check:mode)
-    ((0) #f)
+    ((0)
+     (values))
     ((1)
      (let ((actual-result (thunk)))
        (if (equal actual-result expected-result)
 	   (check:add-correct!)
-	 (check:add-failed! expression actual-result expected-result))))
+	 (check:add-failed! expression actual-result expected-result)))
+     (values))
     ((10)
      (let ((actual-result (thunk)))
        (if (equal actual-result expected-result)
@@ -255,7 +257,8 @@
 	   (check:report-expression expression)
 	   (check:report-actual-result actual-result)
 	   (check:report-failed expected-result)
-	   (check:add-failed! expression actual-result expected-result)))))
+	   (check:add-failed! expression actual-result expected-result))))
+     (values))
     ((100)
      (check:report-expression expression)
      (let ((actual-result (thunk)))
@@ -266,10 +269,8 @@
 	 (begin (check:report-failed expected-result)
 		(check:add-failed! expression
 				   actual-result
-				   expected-result)))))
-    (else (error 'check:proc
-	    "unrecognized check:mode" (check:mode))))
-  (void))
+				   expected-result))))
+     (values))))
 
 (define-syntax srfi:check
   (syntax-rules (=>)

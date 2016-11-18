@@ -81,7 +81,7 @@
 
   (define* (vector-sort! {proc procedure?} {src vector?})
     (%do-sort! proc src (vector-copy src) 0 ($fxsub1 ($vector-length src)))
-    src)
+    (values))
 
   (define (%do-sort! proc src skr i k)
     ;; sort src(i .. k) inclusive in place

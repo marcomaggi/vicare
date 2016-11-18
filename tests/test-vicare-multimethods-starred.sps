@@ -58,10 +58,6 @@
   (newline (current-error-port))
   (flush-output-port (current-error-port)))
 
-(define (debug-newline thing)
-  (newline (current-error-port))
-  (flush-output-port (current-error-port)))
-
 (define-syntax catch-syntax-violation
   (syntax-rules ()
     ((_ ?verbose . ?body)
@@ -242,7 +238,7 @@
   #t)
 
 
-(parameterise ((check-test-name 'generic-next-method))
+(parametrise ((check-test-name 'generic-next-method))
 
   (define-record-type <one>
     (fields (mutable a)
@@ -285,7 +281,7 @@
   #t)
 
 
-(parameterise ((check-test-name 'generic-specificity))
+(parametrise ((check-test-name 'generic-specificity))
 
   (define-record-type <a>
     (fields (mutable a)))
@@ -364,7 +360,7 @@
   #t)
 
 
-(parameterise ((check-test-name 'generic-merge))
+(parametrise ((check-test-name 'generic-merge))
 
   (let ()
     (define-record-type <one>
@@ -404,12 +400,13 @@
 	(check (gamma a) => 'alpha-one)
 	(check (gamma b) => 'alpha-two)
 	(check (gamma c) => 'beta-three)
-	#t))
+	#t)
+      (void))
     #t)
   #t)
 
 
-(parameterise ((check-test-name 'protocol-errors))
+(parametrise ((check-test-name 'protocol-errors))
 
   (define-record-type <a>
     (fields a))
@@ -477,7 +474,7 @@
   #t)
 
 
-(parameterise ((check-test-name 'protocol-around))
+(parametrise ((check-test-name 'protocol-around))
 
   (define-record-type <A>
     (fields a))
@@ -546,7 +543,7 @@
   #t)
 
 
-(parameterise ((check-test-name 'protocol-before))
+(parametrise ((check-test-name 'protocol-before))
 
   (define-record-type <A>
     (fields a))
@@ -598,7 +595,7 @@
   #t)
 
 
-(parameterise ((check-test-name 'protocol-after))
+(parametrise ((check-test-name 'protocol-after))
 
   (define-record-type <A>
     (fields a))
@@ -650,7 +647,7 @@
   #t)
 
 
-(parameterise ((check-test-name 'protocol-full))
+(parametrise ((check-test-name 'protocol-full))
 
   (define-record-type <A>
     (fields a))

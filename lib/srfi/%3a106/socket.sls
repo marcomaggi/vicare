@@ -117,7 +117,7 @@
 	    (map (lambda (name) (lookup 'message-type %message-types name))
 	      '(names ...))))))
 
-(define (%proper-method methods)
+(define* (%proper-method methods)
   (define allowed-methods '(read write))
   (define (check-methods methods)
     (let loop ((methods methods) (seen '()))
@@ -134,7 +134,9 @@
   (if (null? (cdr methods))
       (case (car methods)
 	((read) *shut-rd*)
-	((write) *shut-wr*))
+	((write) *shut-wr*)
+	(else
+	 (assertion-violation __who__ "internal error, invalid method" (car methods))))
     *shut-rdwr*))
 
 (define-syntax shutdown-method

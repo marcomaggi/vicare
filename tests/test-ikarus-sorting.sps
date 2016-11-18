@@ -28,12 +28,11 @@
 
 #!vicare
 (program (test-ikarus-sorting)
-  (options typed-language)
   (import (vicare)
     (vicare checks))
 
-(define (permutations {ls <list>})
-  (define (rem* {ls <list>})
+(define (permutations ls)
+  (define (rem* ls)
     (cond
      [(null? ls) '()]
      [else

@@ -210,11 +210,11 @@
 	(define-inline (get-arg)
 	  (vector-ref (vector-ref args 0) 0))
 	(case-identifiers (syntax-clause-spec-keyword spec)
-	  ((brief)		(set-options-brief!		opt (get-arg)))
-	  ((long)		(set-options-long!		opt (get-arg)))
-	  ((require-argument)	(set-options-require-argument?!	opt (get-arg)))
-	  ((description)	(set-options-description!	opt (get-arg)))
-	  ((action)		(set-options-semantic-action!	opt (get-arg))))
+	  ((brief)		(set-options-brief!		opt (get-arg)) (values))
+	  ((long)		(set-options-long!		opt (get-arg)) (values))
+	  ((require-argument)	(set-options-require-argument?!	opt (get-arg)) (values))
+	  ((description)	(set-options-description!	opt (get-arg)) (values))
+	  ((action)		(set-options-semantic-action!	opt (get-arg)) (values)))
 	opt)
 
       (define synner

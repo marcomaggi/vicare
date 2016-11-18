@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009, 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2011, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -595,12 +595,12 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (vector-for-each* add-result '#(#\a #\b #\c #\d))))
     => '(#\a #\b #\c #\d))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (vector-for-each* (lambda (item-a item-b) (add-result (list item-a item-b)))
 			       '#(#\a #\b #\c #\d)
 			       '#(#\0 #\1 #\2 #\3))))
@@ -610,13 +610,13 @@
 	 (#\d #\3)))
 
   (check
-      (cadr (with-result (vector-for-each* add-result '#())))
+      (car (with-result (vector-for-each* add-result '#())))
     => '())
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (vector-for-each*/with-index (lambda (i item) (add-result (list i item)))
 					  '#(#\a #\b #\c #\d))))
     => '((0 #\a)
@@ -625,7 +625,7 @@
 	 (3 #\d)))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (vector-for-each*/with-index
 	      (lambda (i item-a item-b) (add-result (list i item-a item-b)))
 	      '#(#\a #\b #\c #\d)
@@ -636,7 +636,7 @@
 	 (3 #\d #\3)))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (vector-for-each*/with-index (lambda (i item) (add-result (list i item)))
 					  '#())))
     => '())
@@ -725,26 +725,26 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (subvector-for-each add-result
 				 '#(#\a #\b #\c #\d))))
     => '(#\a #\b #\c #\d))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (subvector-for-each add-result
 				 (view '#(#\a #\b #\c #\d) (start 1) (past 3)))))
     => '(#\b #\c))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (subvector-for-each add-result '#())))
     => '())
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (subvector-for-each/with-index (lambda (i c) (add-result (list i c)))
 					    '#(#\a #\b #\c #\d))))
     => '((0 #\a)
@@ -753,32 +753,32 @@
 	 (3 #\d)))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (subvector-for-each/with-index (lambda (i c) (add-result (list i c)))
 					    (view '#(#\a #\b #\c #\d) (start 1) (past 3)))))
     => '((1 #\b) (2 #\c)))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (subvector-for-each/with-index (lambda (i c) (add-result (list i c))) '#())))
     => '())
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (subvector-for-each-index add-result
 				       '#(#\a #\b #\c #\d))))
     => '(0 1 2 3))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (subvector-for-each-index add-result
 				       (view '#(#\a #\b #\c #\d) (start 1) (past 3)))))
     => '(1 2))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (subvector-for-each-index add-result '#())))
     => '())
 
@@ -904,52 +904,46 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (cadr (with-result
-	     (vector-for-each/stx add-result '#(#\a #\b #\c #\d))
-	     #t)) ;this is required because for-each returns nothing
+      (car (with-result
+	     (vector-for-each/stx add-result '#(#\a #\b #\c #\d))))
     => '(#\a #\b #\c #\d))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (vector-for-each/stx (lambda (item-a item-b)
 				    (add-result (list item-a item-b)))
 				  '#(#\a #\b #\c #\d)
-				  '#(#\0 #\1 #\2 #\3))
-	     #t)) ;this is required because for-each returns nothing
+				  '#(#\0 #\1 #\2 #\3))))
     => '((#\a #\0)
 	 (#\b #\1)
 	 (#\c #\2)
 	 (#\d #\3)))
 
   (check
-      (cadr (with-result
-	     (vector-for-each* add-result '#())
-	     #t)) ;this is required because for-each returns nothing
+      (car (with-result
+	     (vector-for-each* add-result '#())))
     => '())
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (cadr (with-result
-	     (vector-for-each*/stx add-result '#(#\a #\b #\c #\d))
-	     #t)) ;this is required because for-each returns nothing
+      (car (with-result
+	     (vector-for-each*/stx add-result '#(#\a #\b #\c #\d))))
     => '(#\a #\b #\c #\d))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (vector-for-each*/stx (lambda (item-a item-b) (add-result (list item-a item-b)))
 				   '#(#\a #\b #\c #\d #\e #\f)
-				   '#(#\0 #\1 #\2 #\3))
-	     #t)) ;this is required because for-each returns nothing
+				   '#(#\0 #\1 #\2 #\3))))
     => '((#\a #\0)
 	 (#\b #\1)
 	 (#\c #\2)
 	 (#\d #\3)))
 
   (check
-      (cadr (with-result
-	     (vector-for-each*/stx add-result '#())
-	     #t))  ;this is required because for-each returns nothing
+      (car (with-result
+	     (vector-for-each*/stx add-result '#())))
     => '())
 
   )

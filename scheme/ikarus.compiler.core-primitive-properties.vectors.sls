@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -150,26 +150,26 @@
 (declare-core-primitive vector-set!
     (safe)
   (signatures
-   ((T:vector T:non-negative-fixnum _)	=> (T:void)))
-  (attributes
-   ((_ _ _)			result-true)))
+   ((T:vector T:non-negative-fixnum _)	=> ())))
 
 (declare-core-primitive vector-copy!
     (safe)
   (signatures
-   ((T:vector T:non-negative-fixnum T:vector T:non-negative-fixnum T:non-negative-fixnum)	=> (T:void)))
-  ;;Not foldable  because it must return  a newly allocated vector.   Not effect free
-  ;;because it mutates the operand.
-  (attributes
-   ((_ _ _ _ _)			result-true)))
+   ((T:vector T:non-negative-fixnum T:vector T:non-negative-fixnum T:non-negative-fixnum)	=> ())))
 
 (declare-core-primitive vector-fill!
     (safe)
   (signatures
-   ((T:vector T:object)		=> (T:void)))
+   ((T:vector T:object)		=> ()))
   ;;Not effect free because it mutates the operand.
   (attributes
-   ((_ _)			foldable result-true)))
+   ((_ _)			foldable)))
+
+(declare-core-primitive vector-reset!
+    (safe)
+  (signatures
+   ((T:vector)							=> ())
+   ((T:vector T:non-negative-fixnum T:non-negative-fixnum)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; sorting
@@ -186,11 +186,7 @@
 (declare-core-primitive vector-sort!
     (safe)
   (signatures
-   ((T:procedure T:vector)	=> (T:void)))
-  (attributes
-   ;;Not foldable and not effect-free because  it invokes an unknown procedure and it
-   ;;mutates the operand.
-   ((_ _)			result-true)))
+   ((T:procedure T:vector)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; iterations
@@ -198,11 +194,7 @@
 (declare-core-primitive vector-for-each
     (safe)
   (signatures
-   ((T:procedure T:vector . T:vector)		=> (T:void)))
-  (attributes
-   ;;Not  foldable because  it must  return  a new  vector at  every application.   Not
-   ;;effect-free becuse it invokes an unknown procedure.
-   ((_ _ . _)			result-true)))
+   ((T:procedure T:vector . T:vector)		=> ())))
 
 (declare-core-primitive vector-map
     (safe)
@@ -294,9 +286,7 @@
 (declare-core-primitive $vector-for-each1
     (unsafe)
   (signatures
-   ((T:procedure T:vector)	=> (T:void)))
-  (attributes
-   ((_ _)			result-true)))
+   ((T:procedure T:vector)	=> ())))
 
 (declare-core-primitive $vector-for-all1
     (unsafe)

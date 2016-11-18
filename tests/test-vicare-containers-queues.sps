@@ -219,24 +219,24 @@
 
   (check
       (let ((D (make-queue)))
-	(map (lambda (obj)
-	       (queue-push! D obj))
+	(for-each (lambda (obj)
+		    (queue-push! D obj))
 	  LIST-5)
 	(queue-size D))
     => 5)
 
   (check
       (let ((D (make-queue)))
-	(map (lambda (obj)
-	       (queue-push! D obj))
+	(for-each (lambda (obj)
+		    (queue-push! D obj))
 	  LIST-20)
 	(queue-size D))
     => 20)
 
   (check
       (let ((D (make-queue)))
-	(map (lambda (obj)
-	       (queue-push! D obj))
+	(for-each (lambda (obj)
+		    (queue-push! D obj))
 	  LIST-100)
 	(queue-size D))
     => 100)
@@ -344,8 +344,8 @@
   ;;
   (check
       (let ((D (make-queue)))
-	(map (lambda (obj)
-	       (queue-push! D obj))
+	(for-each (lambda (obj)
+		    (queue-push! D obj))
 	  LIST-5)
 	(map (lambda (dummy)
 	       (queue-pop! D))
@@ -356,8 +356,8 @@
   ;;
   (check
       (let ((D (make-queue)))
-	(map (lambda (obj)
-	       (queue-push! D obj))
+	(for-each (lambda (obj)
+		    (queue-push! D obj))
 	  LIST-20)
 	(map (lambda (dummy)
 	       (queue-pop! D))
@@ -368,8 +368,8 @@
   ;;
   (check
       (let ((D (make-queue)))
-	(map (lambda (obj)
-	       (queue-push! D obj))
+	(for-each (lambda (obj)
+		    (queue-push! D obj))
 	  LIST-100)
 	(map (lambda (dummy)
 	       (queue-pop! D))
@@ -608,8 +608,8 @@
   (check
       (let ((D (list->queue LIST-100)))
 	(queue-purge! D)
-	(map (lambda (obj)
-	       (queue-push! D obj))
+	(for-each (lambda (obj)
+		    (queue-push! D obj))
 	  LIST-20)
 	(queue-size D))
     => 20)
@@ -617,8 +617,8 @@
   (check
       (let ((D (list->queue LIST-100)))
 	(queue-purge! D)
-	(map (lambda (obj)
-	       (queue-push! D obj))
+	(for-each (lambda (obj)
+		    (queue-push! D obj))
 	  LIST-20)
 	(queue->list D))
     => LIST-20)

@@ -447,7 +447,7 @@
 	 ?expected))
       ))
 
-  (define (result=? A B)
+  (define ({result=? <boolean>} A B)
     (cond ((list? A)
 	   (and (list? B)
 		(= (length A) (length B))

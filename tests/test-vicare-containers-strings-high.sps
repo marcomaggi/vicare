@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009-2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2011, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -1925,7 +1925,7 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (string-for-each* (lambda (i ch) (add-result (list i ch)))
 			       "abcd")))
     => '((0 #\a)
@@ -1934,7 +1934,7 @@
 	 (3 #\d)))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (string-for-each* (lambda (i ch-a ch-b) (add-result (list i ch-a ch-b)))
 			       "abcd" "01234")))
     => '((0 #\a #\0)
@@ -1943,7 +1943,7 @@
 	 (3 #\d #\3)))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (string-for-each* (lambda (i ch) (add-result (list i ch)))
 			       "")))
     => '())
@@ -1992,19 +1992,19 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (substring-for-each add-result
 				 "abcd")))
     => '(#\a #\b #\c #\d))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (substring-for-each add-result
 				 (view "abcd" (start 1) (past 3)))))
     => '(#\b #\c))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (substring-for-each add-result "")))
     => '())
 

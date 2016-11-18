@@ -146,7 +146,7 @@
 
 (module (%merge-mixins-clauses)
 
-  (define (%merge-mixins-clauses type-name.id input-clause*.stx synner)
+  (define ({%merge-mixins-clauses <top>} type-name.id input-clause*.stx synner)
     ;;The MIXINS clause can be present multiple  times.  Each clause must have one of
     ;;the formats:
     ;;
@@ -157,7 +157,7 @@
     ;;instead, the MIXINS clauses need to be spliced without changing the order.
     ;;
     (fold-right
-	(lambda (input-clause.stx parsed-clause*.stx)
+	(lambda ({_ <top>} input-clause.stx parsed-clause*.stx)
 	  (syntax-case input-clause.stx (mixins public protected private)
 	    ((mixins . ?mixins)
 	     (%splice-mixins type-name.id input-clause.stx
@@ -209,7 +209,7 @@
   (define (%splice-protection-levels input-clause*.stx synner)
     (receive-and-return (spliced-clause*.stx)
 	(fold-right
-	    (lambda (input-clause.stx parsed-clause*.stx)
+	    (lambda ({_ <top>} input-clause.stx parsed-clause*.stx)
 	      (syntax-case input-clause.stx (public protected private)
 		((public . ?clauses)
 		 (%splice-protection #'public    #'?clauses parsed-clause*.stx synner))
@@ -227,7 +227,7 @@
 
   (define (%splice-protection protection.id nested-clause*.stx parsed-clause*.stx synner)
     (fold-right
-	(lambda (nested-clause.stx parsed-clause*.stx)
+	(lambda ({_ <top>} nested-clause.stx parsed-clause*.stx)
 	  (syntax-case nested-clause.stx (fields method virtual-method seal-method)
 	    ((fields . ?stuff)
 	     (cons #`(fields #,protection.id . ?stuff)
@@ -358,9 +358,9 @@
   ;;
   (.push-clause! results (cons (.keyword clause-spec)
 			       (vector-fold-right
-				   (lambda (arg knil)
+				   (lambda ({_ <top>} arg knil)
 				     (vector-fold-right
-					 (lambda (iface.id knil)
+					 (lambda ({_ <top>} iface.id knil)
 					   (if (identifier? iface.id)
 					       (cons iface.id knil)
 					     (synner "expected syntactic identifier as interface name" iface.id)))
@@ -493,8 +493,9 @@
     ;;multiple FIELDS clauses into a single clause.
     ;;
     (vector-fold-left
-	(lambda (unused arg)
-	  (.push-clause! results (cons #'fields (%process-fields-spec arg))))
+	(lambda ({_ <top>} unused arg)
+	  (.push-clause! results (cons #'fields (%process-fields-spec arg)))
+	  unused)
       #f args))
 
   (define (%process-fields-spec arg)
@@ -519,7 +520,7 @@
       (#(?stuff ...)
        (synner "invalid fields specification" #'(fields ?stuff ...)))))
 
-  (define (%parse-field-spec field-spec.stx knil)
+  (define ({%parse-field-spec <top>} field-spec.stx knil)
     (syntax-case field-spec.stx (brace mutable immutable)
       ((immutable ?field-name)
        (%validate-field-name #'?field-name field-spec.stx synner))
@@ -572,7 +573,7 @@
     ;;
     (vector-fold-left %process-method-spec results args))
 
-  (define (%process-method-spec {results <parsing-results>} {arg <vector>})
+  (define ({%process-method-spec <top>} {results <parsing-results>} {arg <vector>})
     ;;We expect ARG to have one of the formats:
     ;;
     ;;   #((?who . ?formals) . ?body)
@@ -638,7 +639,7 @@
     ;;
     (vector-fold-left %process-method-spec results args))
 
-  (define (%process-method-spec {results <parsing-results>} {arg <vector>})
+  (define ({%process-method-spec <top>} {results <parsing-results>} {arg <vector>})
     ;;We expect ARG to have one of the formats:
     ;;
     ;;   #((?who . ?formals) . ?body)
@@ -704,7 +705,7 @@
     ;;
     (vector-fold-left %process-method-spec results args))
 
-  (define (%process-method-spec {results <parsing-results>} {arg <vector>})
+  (define ({%process-method-spec <top>} {results <parsing-results>} {arg <vector>})
     ;;We expect ARG to have one of the formats:
     ;;
     ;;   #((?who . ?formals) . ?body)

@@ -1846,12 +1846,9 @@
       ;;
       (syntax-match input-form.stx (brace)
 	((_ ((brace ?lhs . ?rv-types) . ?formals) ?body0 ?body* ...)
-	 (begin
-	   (when (null? (syntax->datum ?rv-types))
-	     (synner "invalid syntax for function return values" `(,(brace-id) ,?lhs . ,?rv-types)))
-	   (%process-function-definition input-form.stx lexenv.run
-					 ?lhs `((,(brace-id) ,(underscore-id) . ,?rv-types) . ,?formals)
-					 `(,?body0 . ,?body*) synner)))
+	 (%process-function-definition input-form.stx lexenv.run
+				       ?lhs `((,(brace-id) ,(underscore-id) . ,?rv-types) . ,?formals)
+				       `(,?body0 . ,?body*) synner))
 
 	((_ (brace ?lhs ?type) ?rhs)
 	 (%process-variable-definition input-form.stx lexenv.run ?lhs ?type #t ?rhs synner))
@@ -1978,19 +1975,16 @@
 				     ?lhs ?type #f #f %synner))
 
       ((_ ((brace ?lhs . ?rv-types) . ?formals) ?body0 ?body* ...)
-       (begin
-	 (when (null? (syntax->datum ?rv-types))
-	   (%synner "invalid syntax for function return values" `(,(brace-id) ,?lhs . ,?rv-types)))
-	 (receive (standard-formals.stx argvals.sig)
-	     ;;This call will use "<top>" for untyped arguments.
-	     (syntax-object.parse-typed-formals ?formals)
-	   (let* ((retvals.sig		(let ((synner (lambda (message subform)
+       (receive (standard-formals.stx argvals.sig)
+	   ;;This call will use "<top>" for untyped arguments.
+	   (syntax-object.parse-typed-formals ?formals)
+	 (let* ((retvals.sig		(let ((synner (lambda (message subform)
 							(syntax-violation __module_who__ message input-form.stx subform))))
 					  (make-type-signature (syntax-object->type-signature-specs ?rv-types lexenv.run synner))))
-		  (clause-signature	(make-lambda-signature retvals.sig argvals.sig)))
-	     (%process-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-					   ?lhs `(,(brace-id) ,?lhs . ,?rv-types) standard-formals.stx clause-signature
-					   `(,?body0 . ,?body*) %synner)))))
+		(clause-signature	(make-lambda-signature retvals.sig argvals.sig)))
+	   (%process-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+					 ?lhs `(,(brace-id) ,?lhs . ,?rv-types) standard-formals.stx clause-signature
+					 `(,?body0 . ,?body*) %synner))))
 
       ((_ (?lhs . ?formals) ?body0 ?body* ...)
        (receive (standard-formals.stx argvals.sig)
@@ -2337,8 +2331,6 @@
        (begin
 	 (unless (identifier? ?lhs)
 	   (synner "expected identifiers as overloaded function name" ?lhs))
-	 (when (null? (syntax->datum ?rv-types))
-	   (synner "invalid syntax for function return values" `(,(brace-id) ,?lhs . ,?rv-types)))
 	 (values ?lhs
 		 `((,(brace-id) ,(underscore-id) . ,?rv-types) . ,?formals) ;input-formals.stx
 		 `(,?body0 . ,?body*))))

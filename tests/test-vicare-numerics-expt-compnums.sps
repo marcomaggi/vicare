@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -62,9 +62,9 @@
      (syntax-rules ()
        ((_ ?op1 ?op2 ?expected-result)
 	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
+	  (check (?safe-fun   ?op1 ?op2)	(=> flonum-quasi=?) ?expected-result)
+	  (check (?middle-fun ?op1 ?op2)	(=> flonum-quasi=?) ?expected-result)
+	  (check (?unsafe-fun ?op1 ?op2)	(=> flonum-quasi=?) ?expected-result)
 	  ))))))
 
 (define-syntax make-cflonum-test
@@ -73,9 +73,9 @@
      (syntax-rules ()
        ((_ ?op1 ?op2 ?expected-result)
 	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum=?) ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> cflonum=?) ?expected-result)
+	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum-quasi=?) ?expected-result)
+	  (check (?middle-fun ?op1 ?op2)	(=> flonum-quasi=?) ?expected-result)
+	  (check (?unsafe-fun ?op1 ?op2)	(=> cflonum-quasi=?) ?expected-result)
 	  ))))))
 
 (define-syntax make-compnum-test
@@ -131,7 +131,8 @@
 	 (flzero?/positive y))
 	((flzero?/negative x)
 	 (flzero?/negative y))
-	((fl=? x y))))
+	(else
+	 (fl=? x y))))
 
 (define (cflonum=? x y)
   (and (flonum=? (real-part x) (real-part y))

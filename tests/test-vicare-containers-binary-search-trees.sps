@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -518,12 +518,12 @@
   ;; |
   ;; 0
   ;;
-  (for-all (lambda (target)
-	     (check
-		 (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
-			(node (binary-tree-find root (make-comparison-proc target))))
-		   (<fixnum-node>-sort-key (binary-tree-root node)))
-	       => 5))
+  (for-each (lambda (target)
+	      (check
+		  (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
+			 (node (binary-tree-find root (make-comparison-proc target))))
+		    (<fixnum-node>-sort-key (binary-tree-root node)))
+		=> 5))
     '(0 1 2 3 4 5 6 7 8 9 10))
 
 ;;; --------------------------------------------------------------------

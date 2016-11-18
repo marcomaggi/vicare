@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,6 +27,7 @@
 
 #!r6rs
 (import (vicare)
+  (libtest numerics-helpers)
   (vicare system $numerics)
   (vicare checks)
   (only (vicare platform words)
@@ -34,207 +35,6 @@
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare numerics functions: trigonometric arc cosine\n")
-
-
-;;;; helpers
-
-(define C make-rectangular)
-(define R real-part)
-(define I imag-part)
-
-(define-syntax make-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?middle-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	=> ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	=> ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	=> ?expected-result)
-	  ))))))
-
-(define-syntax make-flonum-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?middle-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  ))))))
-
-(define-syntax make-cflonum-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?middle-func ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum=?) ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> cflonum=?) ?expected-result)
-	  ))))))
-
-(define-syntax make-compnum-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?middle-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> compnum=?) ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	(=> compnum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> compnum=?) ?expected-result)
-	  ))))))
-
-(define-syntax make-inexact-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?middle-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> inexact=?) ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	(=> inexact=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> inexact=?) ?expected-result)
-	  ))))))
-
-;;; --------------------------------------------------------------------
-
-(define-syntax catch-implementation-restriction
-  (syntax-rules ()
-    ((_ ?message . ?body)
-     (check
-	 (guard (E ((implementation-restriction-violation? E)
-		    (condition-message E))
-		   (else E))
-	   (begin . ?body))
-       => ?message))))
-
-;;; --------------------------------------------------------------------
-
-(define (flonum=? x y)
-  (cond ((flnan? x)
-	 (flnan? y))
-	((flzero?/positive x)
-	 (flzero?/positive y))
-	((flzero?/negative x)
-	 (flzero?/negative y))
-	((fl=? x y))))
-
-(define (cflonum=? x y)
-  (and (flonum=? (real-part x) (real-part y))
-       (flonum=? (imag-part x) (imag-part y))))
-
-(define (compnum=? x y)
-  (cond ((and (cflonum? x)
-	      (cflonum? y))
-	 (cflonum=? x y))
-	((and (flonum? x)
-	      (flonum? y))
-	 (flonum=? x y))
-	(else
-	 (= x y))))
-
-;;; --------------------------------------------------------------------
-
-(define (inexact=? x y)
-  (cond ((and (cflonum? x)
-	      (cflonum? y))
-	 (cflonum-quasi=? x y))
-	((and (flonum? x)
-	      (flonum? y))
-	 (flonum-quasi=? x y))
-	((or (compnum? x)
-	     (cflonum? x)
-	     (compnum? y)
-	     (cflonum? y))
-	 (complex-quasi=? x y))
-	(else
-	 (= x y))))
-
-(define (flonum-quasi=? x y)
-  (cond ((flnan? x)
-	 (flnan? y))
-	((infinite? x)
-	 (fl=? x y))
-	;;Here we cannot consider +0.0 different fro -0.0.
-	((flzero? x)
-	 (flzero? y))
-	(else
-	 (fl<? (flabs (fl- x y))
-	       1e-5)
-	 #;(fl<? (fl/ (flabs (fl- x y))
-		    (flabs x))
-	       1e-5))))
-
-(define (cflonum-quasi=? x y)
-  (and (flonum-quasi=? (real-part x) (real-part y))
-       (flonum-quasi=? (imag-part x) (imag-part y))))
-
-(define (complex-quasi=? x y)
-  (let ((x.rep (real-part x))
-	(x.imp (imag-part x))
-	(y.rep (real-part y))
-	(y.imp (imag-part y)))
-    (and (inexact=? x.rep y.rep)
-	 (inexact=? x.imp y.imp))))
-
-
-;;;; constants
-
-(define SMALLEST-POSITIVE-BIGNUM	(-    (least-fixnum)))
-(define SMALLEST-NEGATIVE-BIGNUM	(+ -1 (least-fixnum)))
-
-(define BN1	(+ +1  SMALLEST-POSITIVE-BIGNUM))
-(define BN2	(+ +10 SMALLEST-POSITIVE-BIGNUM))
-(define BN3	(+ -1  SMALLEST-NEGATIVE-BIGNUM))
-(define BN4	(+ -10 SMALLEST-NEGATIVE-BIGNUM))
-
-;;; --------------------------------------------------------------------
-
-(define RN01		1/123			#;(/ FX1 123))
-(define RN02		-1/123			#;(/ FX2 123))
-(define RN03		-1/123			#;(/ FX2 123))
-(define RN04		-536870912/123		#;(/ FX4 123))
-
-(define RN05		1/536870912		#;(/ FX1 BN1))
-(define RN06		-1/536870912		#;(/ FX2 BN1))
-(define RN07		536870911/536870912	#;(/ FX3 BN1))
-;;(define RN08		-1			#;(/ FX4 BN1)) ;not a ratnum
-
-(define RN09		1/536871011		#;(/ FX1 BN2))
-(define RN10		-1/536871011		#;(/ FX2 BN2))
-(define RN11		536870911/536871011	#;(/ FX3 BN2))
-(define RN12		-536870912/536871011	#;(/ FX4 BN2))
-
-(define RN13		-1/536870913		#;(/ FX1 BN3))
-(define RN14		1/536870913		#;(/ FX2 BN3))
-(define RN15		-536870911/536870913	#;(/ FX3 BN3))
-(define RN16		536870912/536870913	#;(/ FX4 BN3))
-
-(define RN17		-1/536871012		#;(/ FX1 BN4))
-(define RN18		1/536871012		#;(/ FX2 BN4))
-(define RN19		-536870911/536871012	#;(/ FX3 BN4))
-(define RN20		134217728/134217753	#;(/ FX4 BN4))
-
-;;(define RN21		536870912		#;(/ BN1 FX1)) ;not a ratnum
-;;(define RN22		536871011		#;(/ BN2 FX1)) ;not a ratnum
-;;(define RN23		-536870913		#;(/ BN3 FX1)) ;not a ratnum
-;;(define RN24		-536871012		#;(/ BN4 FX1)) ;not a ratnum
-
-;;(define RN25		-536870912		#;(/ BN1 FX2)) ;not a ratnum
-;;(define RN26		-536871011		#;(/ BN2 FX2)) ;not a ratnum
-;;(define RN27		536870913		#;(/ BN3 FX2)) ;not a ratnum
-;;(define RN28		536871012		#;(/ BN4 FX2)) ;not a ratnum
-
-(define RN29		536870912/536870911	#;(/ BN1 FX3))
-(define RN30		536871011/536870911	#;(/ BN2 FX3))
-(define RN31		-536870913/536870911	#;(/ BN3 FX3))
-(define RN32		-536871012/536870911	#;(/ BN4 FX3))
-
-;;(define RN33		-1			#;(/ BN1 FX4)) ;not a ratnum
-(define RN34		-536871011/536870912	#;(/ BN2 FX4))
-(define RN35		536870913/536870912	#;(/ BN3 FX4))
-(define RN36		134217753/134217728	#;(/ BN4 FX4))
 
 
 (parametrise ((check-test-name	'fixnums))
@@ -376,8 +176,8 @@
 
   (test +1+0.0i		0.0-0.0i)
   (test -1+0.0i		3.141592653589793-0.0i)
-  (test +1-0.0i		0.0+0.0i)
-  (test -1-0.0i		3.141592653589793+0.0i)
+  (test +1-0.0i		0.0-0.0i)
+  (test -1-0.0i		3.141592653589793-0.0i)
 
   (test +0.0+1i		1.5707963267948966-0.881373587019543i)
   (test +0.0-1i		1.5707963267948966+0.881373587019543i)

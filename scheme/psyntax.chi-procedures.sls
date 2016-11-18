@@ -1298,10 +1298,12 @@
 	 (syntactic-binding-descriptor/lexical-var/value.assigned?   descr.value #t)
 	 (let ((rhs.psi (chi-expr rhs.stx lexenv.run lexenv.expand)))
 	   (make-psi input-form.stx
-		     (build-lexical-assignment no-source
-		       (syntactic-binding-descriptor/lexical-var/value.lex-name descr.value)
-		       (psi.core-expr rhs.psi))
-		     (make-type-signature/single-void)))))
+		     (build-sequence no-source
+		       (list (build-lexical-assignment no-source
+				 (syntactic-binding-descriptor/lexical-var/value.lex-name descr.value)
+			       (psi.core-expr rhs.psi))
+			     (build-no-values)))
+		     (make-type-signature/no-values)))))
 
       ((lexical-typed)
        ;;The syntactic binding's descriptor has format:
@@ -1332,10 +1334,12 @@
 	       (%generate-rhs-core-expr input-form.stx lexenv.run lexenv.expand
 					caller-who lts.ots rhs.ots lhs.id rhs.psi))))
 	 (make-psi input-form.stx
-	   (build-lexical-assignment no-source
-	       variable.lex
-	     rhs.code)
-	   (make-type-signature/single-void))))
+	   (build-sequence no-source
+	     (list (build-lexical-assignment no-source
+		       variable.lex
+		     rhs.code)
+		   (build-no-values)))
+	   (make-type-signature/no-values))))
 
       ((core-prim core-prim-typed)
        (syntax-violation caller-who "cannot modify imported core primitive" input-form.stx lhs.id))

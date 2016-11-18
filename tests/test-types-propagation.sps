@@ -4269,12 +4269,12 @@
 	  (else		#f))
 	=> ((or <positive-fixnum> <false> (enumeration ciao))))
 
-  ;;Without ELSE clause: if no datum matches, CASE returns void.
+  ;;Without ELSE clause.
   ;;
   (doit (case (read)
-	  ((1)	1)
-	  ((2)	"ciao"))
-	=> (<void>))
+	  ((1)	1 (values))
+	  ((2)	"ciao" (values)))
+	=> ())
 
   ;;Special case of type propagation from the datum to the lambda.
   ;;

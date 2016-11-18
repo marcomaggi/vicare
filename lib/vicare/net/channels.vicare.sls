@@ -997,11 +997,11 @@
     ;;BUFFERS.   If the  tail of  the buffer  equals one  of the  terminators: return
     ;;non-false, else return false.
     ;;
-    (vector-find (lambda (terminator)
+    (vector-find (lambda ({_ <top>} terminator)
 		   (%terminated-octets-stream? buffers terminator))
       terminators))
 
-  (define (%terminated-octets-stream? {reverse-stream (list-of <nebytevector>)} {terminator <nebytevector>})
+  (define ({%terminated-octets-stream? <top>} {reverse-stream (list-of <nebytevector>)} {terminator <nebytevector>})
     ;;Compare  a terminator  with the  tail of  an octets  stream; if  the stream  is
     ;;terminated return #t, else return #f.
     ;;
@@ -1086,11 +1086,11 @@
     ;;BUFFERS.   If the  tail of  the buffer  equals one  of the  terminators: return
     ;;non-false, else return false.
     ;;
-    (vector-find (lambda (terminator)
+    (vector-find (lambda ({_ <top>} terminator)
 		   (%terminated-chars-stream? buffers terminator))
       terminators))
 
-  (define (%terminated-chars-stream? {reverse-stream (list-of <nestring>)} {terminator <nestring>})
+  (define ({%terminated-chars-stream? <top>} {reverse-stream (list-of <nestring>)} {terminator <nestring>})
     ;;Compare  a terminator  with the  tail  of an  chars  stream; if  the stream  is
     ;;terminated return #t, else return #f.
     ;;

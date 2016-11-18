@@ -255,13 +255,12 @@
 (declare-core-primitive for-each
     (safe)
   (signatures
-   ((T:procedure T:null . T:null)					=> (T:void))
-   ((T:procedure T:non-empty-proper-list . T:non-empty-proper-list)	=> (T:void)))
+   ((T:procedure T:null . T:null)					=> ())
+   ((T:procedure T:non-empty-proper-list . T:non-empty-proper-list)	=> ()))
   (attributes
    ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
    ;;unknown function.
-   ((_ ())				foldable effect-free result-true)
-   ((_ _ . _)				result-true)))
+   ((_ ())				foldable effect-free)))
 
 ;;;
 

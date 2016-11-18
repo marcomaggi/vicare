@@ -104,7 +104,8 @@
     bag-increment! bag-decrement! bag->set set->bag set->bag!
     bag->alist alist->bag)
   (import (vicare)
-    (vicare containers comparators))
+    (vicare containers comparators)
+    (vicare language-extensions labels))
 
 
 ;;;; helpers
@@ -184,13 +185,25 @@
        (make-record hash-table comparator (and multi? #t)))))
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define (set? obj)
+(define ({set? <boolean>} obj)
   (and (sob? obj)
        (not (sob-multi? obj))))
 
-(define (bag? obj)
+(define ({bag? <boolean>} obj)
   (and (sob? obj)
        (sob-multi? obj)))
+
+(define-label-type <set>
+  (parent <sob>)
+  (type-predicate
+    (lambda (unused-parent-pred)
+      set?)))
+
+(define-label-type <bag>
+  (parent <sob>)
+  (type-predicate
+    (lambda (unused-parent-pred)
+      bag?)))
 
 
 ;;;; procedure arguments validation
@@ -349,7 +362,7 @@
   ;;
   (define-constant COMPAR
     (sob-comparator sob))
-  (or (vector-find (lambda (key)
+  (or (vector-find (lambda ({_ <top>} key)
 		     (=? COMPAR key element))
 	(hashtable-keys (sob-hash-table sob)))
       default))
@@ -828,12 +841,12 @@
   ;;
   ((who sob)
    (sob-fold cons '() sob))
-  ((who sob compar)
+  ((who sob {compar (or <boolean> (lambda (<bottom> <bottom>) => (<boolean>)))})
    (cond ((not compar)
 	  (sob-fold cons '() sob))
 	 ((eq? #t compar)
 	  (let ((compar (comparator-comparison-procedure (sob-comparator sob))))
-	    (list-sort (lambda (x y)
+	    (list-sort (lambda ({_ <top>} x y)
 			 (= -1 (compar x y)))
 		       (sob-fold cons '() sob))))
 	 ((procedure? compar)
@@ -844,16 +857,16 @@
 	    compar)))))
 
 
-(case-define* set->list
-  (({set set?})
+(case-define set->list
+  (({set <set>})
    (sob->list __who__ set))
-  (({set set?} compar)
+  (({set <set>} {compar (or <boolean> (lambda (<bottom> <bottom>) => (<boolean>)))})
    (sob->list __who__ set compar)))
 
-(case-define* bag->list
-  (({bag bag?})
+(case-define bag->list
+  (({bag <bag>})
    (sob->list __who__ bag))
-  (({bag bag?} compar)
+  (({bag <bag>} {compar (or <boolean> (lambda (<bottom> <bottom>) => (<boolean>)))})
    (sob->list __who__ bag compar)))
 
 ;;;
@@ -1423,14 +1436,14 @@
 
 ;;; --------------------------------------------------------------------
 
-(case-define* bag->alist
-  (({bag bag?})
+(case-define bag->alist
+  (({bag <bag>})
    (bag-fold-unique
        (lambda (elem count list)
 	 (cons (cons elem count) list))
      '()
      bag))
-  (({bag bag?} compar)
+  (({bag <bag>} {compar (or <boolean> <procedure>)})
    (let ((al (bag-fold-unique
 		 (lambda (elem count list)
 		   (cons (cons elem count) list))
@@ -1444,8 +1457,8 @@
 			   (= -1 (compar (car x) (car y))))
 			 al)))
 	   ((procedure? compar)
-	    (list-sort (lambda (x y)
-			 (compar (car x) (car y)))
+	    (list-sort (lambda ({_ <boolean>} x y)
+			 ((cast-signature (<procedure>) compar) (car x) (car y)))
 		       al))
 	   (else
 	    (procedure-argument-violation __who__

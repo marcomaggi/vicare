@@ -858,9 +858,7 @@
 (declare-core-primitive put-datum
     (safe)
   (signatures
-   ((<textual-output-port> <top>)		=> (<void>)))
-  (attributes
-   ((_ _)		result-true)))
+   ((<textual-output-port> <top>)		=> ())))
 
 (declare-core-primitive write-char
     (safe)
@@ -874,29 +872,20 @@
 (declare-core-primitive write
     (safe)
   (signatures
-   ((<top>)				=> (<void>))
-   ((<top> <textual-output-port>)	=> (<void>)))
-  (attributes
-   ((_)			result-true)
-   ((_ _)		result-true)))
+   ((<top>)				=> ())
+   ((<top> <textual-output-port>)	=> ())))
 
 (declare-core-primitive display
     (safe)
   (signatures
-   ((<top>)				=> (<void>))
-   ((<top> <textual-output-port>)	=> (<void>)))
-  (attributes
-   ((_)			result-true)
-   ((_ _)		result-true)))
+   ((<top>)				=> ())
+   ((<top> <textual-output-port>)	=> ())))
 
 (declare-core-primitive newline
     (safe)
   (signatures
-   (()				=> (<void>))
-   (( <textual-output-port>)	=> (<void>)))
-  (attributes
-   (()			result-true)
-   ((_)			result-true)))
+   (()				=> ())
+   ((<textual-output-port>)	=> ())))
 
 ;;;
 

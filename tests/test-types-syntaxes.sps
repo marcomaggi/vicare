@@ -3502,7 +3502,7 @@
 	((<string>)		'string))
     => 'fixnum)
 
-  #;(check
+  (check
       (receive ()
 	  (case-type #t
 	    ((<vector>)		'vector)

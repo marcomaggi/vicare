@@ -59,10 +59,6 @@
   (newline (current-error-port))
   (flush-output-port (current-error-port)))
 
-(define (debug-newline thing)
-  (newline (current-error-port))
-  (flush-output-port (current-error-port)))
-
 (define-syntax catch-syntax-violation
   (syntax-rules ()
     ((_ ?verbose . ?body)

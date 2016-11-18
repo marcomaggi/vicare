@@ -41,6 +41,8 @@
       ((tagged-chars-lists)
        (make-char-lexer tables IS))
       ((code)
-       (make-code-lexer tables IS)))))
+       (make-code-lexer tables IS))
+      (else
+       (assertion-violation 'make-lexer "invalid automaton type" (vector-ref tables 4))))))
 
 ;;; end of file

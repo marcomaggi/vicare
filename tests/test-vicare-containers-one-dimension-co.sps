@@ -6,7 +6,7 @@
 ;;;Abstract
 ;;;
 ;;;
-;;;Copyright (c) 2009, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -430,8 +430,8 @@
 
 (parameterise ((check-test-name	'range-list-operation))
 
-  (check (cadr (with-result (range-for-each add-result (make-range 10 15)))) => '(10 11 12 13 14))
-  (check (cadr (with-result (range-for-each add-result (make-range 10 11)))) => '(10))
+  (check (car (with-result (range-for-each add-result (make-range 10 15)))) => '(10 11 12 13 14))
+  (check (car (with-result (range-for-each add-result (make-range 10 11)))) => '(10))
 
   (check (range-every (lambda (x) (and (<= 10 x) (< x 20))) (make-range 10 20)) => #t)
   (check (range-every (lambda (x) (and (<= 10 x) (< x 20))) (make-range 10 15)) => #t)
@@ -1634,7 +1634,7 @@
 (parameterise ((check-test-name	'domain-list-operations))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (domain-for-each (lambda (ch)
 				(add-result ch))
 			      (make-domain 65 66 67))))

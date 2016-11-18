@@ -263,8 +263,8 @@
 (declare-core-primitive map
     (safe)
   (signatures
-   ((<procedure> <null> . (list-of <null>))	=> (<null>))
-   ((<procedure> <list> . <list>)		=> (<list>)))
+   (((lambda <bottom> => (<top>)) <null> . (list-of <null>))	=> (<null>))
+   (((lambda <bottom> => (<top>)) <list> . <list>)		=> (<list>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -274,21 +274,20 @@
 (declare-core-primitive for-each
     (safe)
   (signatures
-   ((<procedure> <null> . (list-of <null>))	=> (<void>))
-   ((<procedure> <list> . <list>)		=> (<void>)))
+   ((<procedure> <null> . (list-of <null>))	=> ())
+   ((<procedure> <list> . <list>)		=> ()))
   (attributes
    ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
    ;;unknown function.
-   ((_ ())				foldable effect-free result-true)
-   ((_ _ . _)				result-true)))
+   ((_ ())				foldable effect-free)))
 
 ;;;
 
 (declare-core-primitive find
     (safe)
   (signatures
-   ((<procedure> <null>)		=> (<false>))
-   ((<procedure> <list>)		=> (<top>)))
+   (((lambda (<bottom>) => (<top>)) <null>)		=> (<false>))
+   (((lambda (<bottom>) => (<top>)) <list>)		=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -297,8 +296,8 @@
 (declare-core-primitive exists
     (safe)
   (signatures
-   ((<procedure> <null> . (list-of <null>))	=> (<false>))
-   ((<procedure> <list> . <list>)		=> (<top>)))
+   (((lambda <bottom> => (<top>)) <null> . (list-of <null>))	=> (<false>))
+   (((lambda <bottom> => (<top>)) <list> . <list>)		=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -307,8 +306,8 @@
 (declare-core-primitive for-all
     (safe)
   (signatures
-   ((<procedure> <null> . (list-of <null>))	=> (<true>))
-   ((<procedure> <list> . <list>)		=> (<top>)))
+   (((lambda <bottom> => (<top>)) <null> . (list-of <null>))	=> (<true>))
+   (((lambda <bottom> => (<top>)) <list> . <list>)		=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -317,8 +316,8 @@
 (declare-core-primitive filter
     (safe)
   (signatures
-   ((<procedure> <null>)		=> (<null>))
-   ((<procedure> <list>)		=> (<list>)))
+   (((lambda (<bottom>) => (<top>)) <null>)		=> (<null>))
+   (((lambda (<bottom>) => (<top>)) <list>)		=> (<list>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -327,8 +326,8 @@
 (declare-core-primitive partition
     (safe)
   (signatures
-   ((<procedure> <null>)		=> (<null> <null>))
-   ((<procedure> <list>)		=> (<list> <list>)))
+   (((lambda (<bottom>) => (<top>)) <null>)		=> (<null> <null>))
+   (((lambda (<bottom>) => (<top>)) <list>)		=> (<list> <list>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -337,7 +336,7 @@
 (declare-core-primitive fold-left
     (safe)
   (signatures
-   ((<procedure> <top> <list> . <list>)	=> (<top>)))
+   (((lambda <bottom> => (<top>)) <top> <list> . <list>)	=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -346,7 +345,7 @@
 (declare-core-primitive fold-right
     (safe)
   (signatures
-   ((<procedure> <top> <list> . <list>)	=> (<top>)))
+   (((lambda <bottom> => (<top>)) <top> <list> . <list>)	=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -355,10 +354,10 @@
 (declare-core-primitive andmap
     (safe)
   (signatures
-   ((<procedure> <null>)		=> (<true>))
-   ((<procedure> <list>)		=> (<top>))
-   ((<procedure> <null> <null>)		=> (<true>))
-   ((<procedure> <list> <list>)		=> (<top>)))
+   (((lambda <bottom> => (<top>)) <null>)		=> (<true>))
+   (((lambda <bottom> => (<top>)) <list>)		=> (<top>))
+   (((lambda <bottom> => (<top>)) <null> <null>)		=> (<true>))
+   (((lambda <bottom> => (<top>)) <list> <list>)		=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -368,8 +367,8 @@
 (declare-core-primitive ormap
     (safe)
   (signatures
-   ((<procedure> <null>)		=> (<false>))
-   ((<procedure> <list>)		=> (<top>)))
+   (((lambda <bottom> => (<top>)) <null>)		=> (<false>))
+   (((lambda <bottom> => (<top>)) <list>)		=> (<top>)))
   (attributes
    ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
    ;;unknown function.
@@ -378,7 +377,7 @@
 (declare-core-primitive list-sort
     (safe)
   (signatures
-   ((<procedure> <list>)		=> (<list>)))
+   (((lambda (<bottom> <bottom>) => (<top>)) <list>)		=> (<list>)))
   (attributes
    ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
    ;;unknown function.
@@ -449,8 +448,8 @@
 (declare-core-primitive assp
     (safe)
   (signatures
-   ((<procedure> <null>)		=> (<false>))
-   ((<procedure> <list>)		=> (_)))
+   (((lambda (<bottom>) => (<top>)) <null>)		=> (<false>))
+   (((lambda (<bottom>) => (<top>)) <list>)		=> (_)))
   (attributes
    ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
    ;;unknown function.

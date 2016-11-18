@@ -495,9 +495,11 @@
     ;;If PORT is omitted, it defaults to the value returned by CURRENT-OUTPUT-PORT.
     ;;
     (()
-     (%do-put-char (current-output-port) #\newline __who__))
+     (%do-put-char (current-output-port) #\newline __who__)
+     (values))
     (({port textual-output-port?})
-     (%do-put-char port #\newline __who__)))
+     (%do-put-char port #\newline __who__)
+     (values)))
 
   (define (%do-put-char port ch who)
     (let* ((code-point	($char->fixnum ch))

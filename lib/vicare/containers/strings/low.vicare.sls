@@ -1,6 +1,6 @@
 ;;; low level strings library --
 ;;;
-;;;Copyright (c) 2009, 2010, 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2010, 2011, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2009 Derick Eddington
 ;;;
 ;;;Derived from the SRFI 13 reference implementation.
@@ -804,7 +804,8 @@
   (let* ((strings  (cons str0 strings))
 	 (len      (strings-list-min-length strings)))
     (do ((i 0 (+ 1 i)))
-	((= len i))
+	((= len i)
+	 (values))
       (string-set! str0 i
 		   (apply proc i (map (lambda (str) (string-ref str i))
 				   strings))))))
@@ -813,7 +814,8 @@
   (let* ((strings  (cons str0 strings))
 	 (len      (strings-list-min-length strings)))
     (do ((i 0 (+ 1 i)))
-	((= len i))
+	((= len i)
+	 (values))
       (apply proc i (map (lambda (str) (string-ref str i))
 		      strings)))))
 
@@ -837,13 +839,15 @@
   (let loop ((i start))
     (when (< i past)
       (proc (string-ref str i))
-      (loop (+ i 1)))))
+      (loop (+ i 1))))
+  (values))
 
 (define (%substring-for-each-index proc str start past)
   (let loop ((i start))
     (when (< i past)
       (proc i)
-      (loop (+ i 1)))))
+      (loop (+ i 1))))
+  (values))
 
 
 ;;;; case hacking

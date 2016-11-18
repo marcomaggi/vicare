@@ -198,7 +198,13 @@
                     (apply error
                            "compare error: not transitive"
                            c
-                           (map (lambda (i) (case i ((x) x) ((y) y) ((z) z)))
+                           (map (lambda (i)
+				  (case i
+				    ((x) x)
+				    ((y) y)
+				    ((z) z)
+				    (else
+				     (assertion-violation 'debug-compare "internal error" i))))
 			     ijk)))))
 	  (set! z? #t))
         (set! z (if (random-boolean) x y)) ; randomized testing

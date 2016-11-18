@@ -1596,6 +1596,7 @@ CLEANFILES += lib/vicare/containers/binary-search-trees.fasl
 lib/vicare/containers/sets-and-bags.fasl: \
 		lib/vicare/containers/sets-and-bags.vicare.sls \
 		lib/vicare/containers/comparators.fasl \
+		lib/vicare/language-extensions/labels.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 

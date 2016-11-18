@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009, 2010, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2010, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -520,7 +520,7 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (bytevector-u8-for-each* (lambda (i ch) (add-result (list i ch)))
 				      (S "abcd"))))
     => `((0 ,(char->integer #\a))
@@ -529,7 +529,7 @@
 	 (3 ,(char->integer #\d))))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (bytevector-u8-for-each* (lambda (i ch-a ch-b) (add-result (list i ch-a ch-b)))
 				      (S "abcd") (S "01234"))))
     => `((0 ,(char->integer #\a) ,(char->integer #\0))
@@ -538,7 +538,7 @@
 	 (3 ,(char->integer #\d) ,(char->integer #\3))))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (bytevector-u8-for-each* (lambda (i ch) (add-result (list i ch)))
 				      '#vu8())))
     => '())
@@ -586,19 +586,19 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (subbytevector-u8-for-each add-result
 					(S "abcd"))))
     => (map char->integer '(#\a #\b #\c #\d)))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (subbytevector-u8-for-each add-result
 					(view (S "abcd") (start 1) (past 3)))))
     => (map char->integer '(#\b #\c)))
 
   (check
-      (cadr (with-result
+      (car (with-result
 	     (subbytevector-u8-for-each add-result '#vu8())))
     => '())
 

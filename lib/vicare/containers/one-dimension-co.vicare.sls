@@ -7,7 +7,7 @@
 ;;;
 ;;;	This is the half-open ranges version of the library.
 ;;;
-;;;Copyright (c) 2009, 2010, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2010, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -303,7 +303,8 @@
 	     (i    (car range)))
     (and i (begin
 	     (proc i)
-	     (loop next (next i range))))))
+	     (loop next (next i range)))))
+  (values))
 
 (define (%range-every type proc range)
   (let loop ((next (type-descriptor-item-next type))

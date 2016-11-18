@@ -2265,11 +2265,11 @@
 				     #f ?formals `(,?body0 . ,?body*)
 				     synner))
 
-	  ((?keyword ((brace ?who ?rv-tag0 . ?rv-tag*) . ?formals) ?body0 . ?body*)
+	  ((?keyword ((brace ?who . ?rv-tag*) . ?formals) ?body0 . ?body*)
 	   (identifier? ?who)
 	   (%process-clause-contents foo foo-for-id-generation ?keyword protection
 				     (identifier->symbol ?who) ?who
-				     `(,?rv-tag0 . ,?rv-tag*) ?formals `(,?body0 . ,?body*)
+				     ?rv-tag* ?formals `(,?body0 . ,?body*)
 				     synner))
 
 	  (_

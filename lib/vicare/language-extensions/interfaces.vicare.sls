@@ -183,7 +183,7 @@
       ;;
       (if (null? (.implemented-interfaces this))
 	  #'(quote ())
-	#`(list #,@(map (lambda (ots)
+	#`(list #,@(map (lambda ({_ <top>} ots)
 			  #`(quote #,ots))
 		     (.implemented-interfaces this)))))
 
@@ -218,7 +218,7 @@
       ;;evaluated, returns a  proper list of symbols representing the  list of UIDs
       ;;associated to the implemented interfaces.
       ;;
-      #`(quote #,(map (lambda (iface.ots)
+      #`(quote #,(map (lambda ({_ <top>} iface.ots)
 			(datum->syntax (.type-name this) (car (xp::object-type-spec.uids-list iface.ots))))
 		   (.implemented-interfaces this))))
 
@@ -237,7 +237,7 @@
       ;;
       (if (null? (.method-prototypes-table this))
 	  #'(quote ())
-	#`(list . #,(map (lambda ({entry (pair <symbol> (pair <closure-type-spec> <boolean>))})
+	#`(list . #,(map (lambda ({_ <top>} {entry (pair <symbol> (pair <closure-type-spec> <boolean>))})
 			   (with-syntax
 			       ((METHOD-NAME	(datum->syntax (.type-name this) (car entry)))
 				(CLOSURE-OTS	(cadr entry))
@@ -258,7 +258,7 @@
       ;;
       (if (null? (.methods-table this))
 	  #'(quote ())
-	#`(list . #,(map (lambda (entry)
+	#`(list . #,(map (lambda ({_ <top>} entry)
 			   (with-syntax
 			       ((METHOD-NAME		(datum->syntax (.type-name this) (car entry)))
 				(METHOD-PROCNAME	(cdr entry)))
@@ -272,7 +272,7 @@
       ;;
       (if (null? (.methods-table this))
 	  #'(quote ())
-	#`(quote #,(map (lambda (entry)
+	#`(quote #,(map (lambda ({_ <top>} entry)
 			  (datum->syntax (.type-name this) (car entry)))
 		     (.methods-table this)))))
 
@@ -288,7 +288,7 @@
       ;;
       #`(lambda (method-name)
 	  (case method-name
-	    #,@(map (lambda (entry)
+	    #,@(map (lambda ({_ <top>} entry)
 		      (with-syntax
 			  ((METHOD-NAME	(datum->syntax (.type-name this) (car entry)))
 			   (PROCNAME	(cdr entry)))
@@ -315,7 +315,7 @@
 			   (.method-prototypes-table parent.ots))
 		       '()))
 		    (this-method-prototypes-table
-		     (fold-left (lambda (table {proto <method-prototype>})
+		     (fold-left (lambda ({_ <top>} table {proto <method-prototype>})
 				  ;; ((method-name . (closure-ots . default-procname-id)) ...)
 				  (acons (.name-sym proto) (cons (.signature proto) (.default-procname-id proto))
 					 table))
@@ -342,12 +342,12 @@
 	  ;;
 	  ;;It is forbidden to method prototypes with the same name to have a default
 	  ;;implementation.
-	  (map (lambda (group)
+	  (map (lambda ({_ <top>} group)
 		 (if (list-of-single-item? group)
 		     (let ((entry (car group)))
 		       ;; (method-name . (closure-ots . has-default?))
 		       (cons (car entry) (cons (cadr entry) (if (cddr entry) #t #f))))
-		   (fold-left (lambda (entry1 entry2)
+		   (fold-left (lambda ({_ <top>} entry1 entry2)
 				(when (or (cddr entry1) (cddr entry2))
 				  (synner "cannot extend method with default implementation" (car entry2)))
 				;; (method-name . (closure-ots . has-default?))
@@ -362,7 +362,7 @@
 	;;method  names;  as  values,  syntactic  identifiers  bound  to  the  method
 	;;implementation functions.
 	(.methods-table this
-	  (map (lambda (entry)
+	  (map (lambda ({_ <top>} entry)
 		 (let ((method-name.sym (car entry)))
 		   (cons method-name.sym (xp::identifier-method-procname (.type-name this) method-name.sym))))
 	    (.method-prototypes-table this)))
@@ -515,9 +515,9 @@
     ;;   #(#(?interface ...) ...)
     ;;
     (let ((iface*.id (vector-fold-right
-			 (lambda (arg knil)
+			 (lambda ({_ <top>} arg knil)
 			   (vector-fold-right
-			       (lambda (iface.id knil)
+			       (lambda ({_ <top>} iface.id knil)
 				 (unless (identifier? iface.id)
 				   (synner "expected identifier as argument of IMPLEMENTS clause" iface.id))
 				 (cons iface.id knil))
@@ -527,7 +527,7 @@
 	     => (lambda (id)
 		  (synner "implemented interface declared multiple times" id)))
 	    (else
-	     (let ((iface*.ots (map (lambda (iface.id)
+	     (let ((iface*.ots (map (lambda ({_ <top>} iface.id)
 				      (let (({iface.ots xp::<object-type-spec>}
 					     (with-exception-handler
 						 (lambda (E)
@@ -559,11 +559,11 @@
       ;;
       ;;   #(#(?name ?signature) ...)
       ;;
-      (vector-fold-left (lambda (results arg)
+      (vector-fold-left (lambda ({_ <top>} results arg)
 			  (%process-method-prototype-spec results arg synner))
 	results args))
 
-    (define (%process-method-prototype-spec {results <parsing-results>} arg synner)
+    (define ({%process-method-prototype-spec <top>} {results <parsing-results>} arg synner)
       ;;We expect ARG to have the format:
       ;;
       ;;   #((?name ?signature))
@@ -591,7 +591,7 @@
 
 	((case-lambda ?clause-signature0 ?clause-signature ...)
 	 #`(case-lambda
-	     #,@(map (lambda (clause.stx)
+	     #,@(map (lambda ({_ <top>} clause.stx)
 		       (syntax-case clause.stx (=>)
 			 ((?formals => ?retvals)
 			  #'((<bottom> . ?formals) => ?retvals))
@@ -618,11 +618,11 @@
       ;;
       ;;   #((?who . ?formals) . ?body)
       ;;
-      (vector-fold-left (lambda (results arg)
+      (vector-fold-left (lambda ({_ <top>} results arg)
 			  (%process-method-spec results arg synner))
 	results args))
 
-    (define (%process-method-spec {results <parsing-results>} arg synner)
+    (define ({%process-method-spec <top>} {results <parsing-results>} arg synner)
       ;;The METHOD clause can be present multiple times.  Each input clause must have
       ;;the format:
       ;;

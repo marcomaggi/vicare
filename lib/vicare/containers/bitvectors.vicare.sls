@@ -64,14 +64,16 @@
 	((<gensym>)
 	 obj))))
 
-  (method ({putprop <void>} {key <symbol>} value)
-    (putprop (.uid this) key value))
+  (method ({putprop} {key <symbol>} value)
+    (putprop (.uid this) key value)
+    (values))
 
   (method ({getprop <top>} {key <symbol>})
     (getprop (.uid this) key))
 
-  (method ({remprop <void>} {key <symbol>})
-    (remprop (.uid this) key))
+  (method ({remprop} {key <symbol>})
+    (remprop (.uid this) key)
+    (values))
 
   (method ({property-list (alist <symbol> <top>)})
     (property-list (.uid this)))
@@ -278,24 +280,25 @@
   (method ({pool-ref <nnfx>} {i <nnfx>})
     (unsafe-cast-signature (<nnfx>) (vector-ref (.pool this) i)))
 
-  (method ({pool-set! <void>} {i <nnfx>} {word <nnfx>})
+  (method ({pool-set!} {i <nnfx>} {word <nnfx>})
     (vector-set! (.pool this) i word))
 
   (method ({pool-length <nnfx>})
     (vector-length (.pool this)))
 
-  (method ({pool-fill! <void>} {filler <nnfx>})
+  (method ({pool-fill!} {filler <nnfx>})
     (vector-fill! (.pool this) filler))
 
   #| end of PRIVATE |# )
 
 ;;; --------------------------------------------------------------------
 
-(method ({bit-set! <void>} {offset <nnei>} boolean-value)
+(method ({bit-set!} {offset <nnei>} boolean-value)
   (assert-bit-offset __who__ this offset)
   (receive ({word-index <nnfx>} {bit-index <nnfx>})
       (offset->indexes offset)
-    (.pool-set! this word-index (%bit-set! (.pool-ref this word-index) bit-index (and boolean-value #t)))))
+    (.pool-set! this word-index (%bit-set! (.pool-ref this word-index) bit-index (and boolean-value #t))))
+  (values))
 
 (method ({bit-ref <boolean>} {offset <nnei>})
   (assert-bit-offset __who__ this offset)
@@ -303,18 +306,21 @@
       (offset->indexes offset)
     (%bit-ref (.pool-ref this word-index) bit-index)))
 
-(method ({set-all! <void>})
-  (.pool-fill! this (greatest-fixnum)))
+(method ({set-all!})
+  (.pool-fill! this (greatest-fixnum))
+  (values))
 
-(method ({clear-all! <void>})
-  (.pool-fill! this 0))
+(method ({clear-all!})
+  (.pool-fill! this 0)
+  (values))
 
-(method ({toggle! <void>} {offset <nnei>})
+(method ({toggle!} {offset <nnei>})
   (assert-bit-offset __who__ this offset)
   (receive ({word-index <nnfx>} {bit-index <nnfx>})
       (offset->indexes offset)
     (let ((word (.pool-ref this word-index)))
-      (pool-set! this word-index (%bit-set! word bit-index (not (%bit-ref word bit-index)))))))
+      (pool-set! this word-index (%bit-set! word bit-index (not (%bit-ref word bit-index))))))
+  (values))
 
 
 ;;;; bitwise negation
@@ -540,7 +546,7 @@
 (define/friend ({pool-ref <nnfx>} {this <bitvector>} {i <nnfx>})
   (unsafe-cast-signature (<nnfx>) (vector-ref (.pool this) i)))
 
-(define/friend ({pool-set! <void>} {this <bitvector>} {i <nnfx>} {word <nnfx>})
+(define/friend ({pool-set!} {this <bitvector>} {i <nnfx>} {word <nnfx>})
   (vector-set! (.pool this) i word))
 
 

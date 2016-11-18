@@ -520,7 +520,8 @@
       (when (eq? fir-lnk las-lnk)
 	(let ((las-idx ($<slots>-las-link-next-idx slots)))
 	  (when ($fx= fir-idx las-idx)
-	    ($<slots>-las-link-next-idx-set! slots ($fxadd1 las-idx))))))))
+	    ($<slots>-las-link-next-idx-set! slots ($fxadd1 las-idx)))))))
+  (values))
 
 ;;; --------------------------------------------------------------------
 
@@ -539,7 +540,8 @@
       (when (eq? fir-lnk las-lnk)
 	(let ((fir-idx ($<slots>-fir-link-next-idx slots)))
 	  (when ($fx= fir-idx las-idx)
-	    ($<slots>-fir-link-next-idx-set! slots ($fxsub1 fir-idx))))))))
+	    ($<slots>-fir-link-next-idx-set! slots ($fxsub1 fir-idx)))))))
+  (values))
 
 ;;; --------------------------------------------------------------------
 
@@ -659,7 +661,8 @@
     ($<slots>-las-link-next-idx-set! slots middle-idx)
     ($<slots>-front-cache-set!       slots #f)
     ($<slots>-rear-cache-set!        slots #f)
-    ($<slots>-size-set!              slots 0)))
+    ($<slots>-size-set!              slots 0))
+  (values))
 
 
 ;;;; folding from front

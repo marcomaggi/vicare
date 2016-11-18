@@ -315,11 +315,13 @@
 		($binary-node-right-set! dad new-child))
 	      (when new-child
 		($<binary-node>-parent-set! new-child dad))
-	      ($<binary-node>-parent-set! old-child #f)))
+	      ($<binary-node>-parent-set! old-child #f)
+	      (values)))
 	(else
 	 ;;OLD-CHILD has no parent.
 	 (when new-child
-	   ($<binary-node>-parent-set! new-child #f)))))
+	   ($<binary-node>-parent-set! new-child #f))
+	 (values))))
 
 
 ;;;; plain binary trees: searching operations

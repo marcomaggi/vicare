@@ -62,7 +62,9 @@
 		     (begin (set-car! content (car (stream-promise promise*)))
 			    (set-cdr! content (cdr (stream-promise promise*)))
 			    (stream-promise! promise* content)))
-		 (stream-force promise))))))
+		 (stream-force promise)))
+      (else
+       (assertion-violation 'stream-force "internal error, invalid promise" promise)))))
 
 (define stream-null
   (stream-delay (cons 'stream 'null)))

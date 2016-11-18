@@ -914,15 +914,15 @@
      (syntax-rules ()
        ((_ ?op1 ?op2 ?expected-result)
 	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> flonum=?) (?unsafe-fun ?op1 ?op2))
+	  (check (?safe-fun   ?op1 ?op2)	(=> flonum-quasi=?) ?expected-result)
+	  (check (?unsafe-fun ?op1 ?op2)	(=> flonum-quasi=?) ?expected-result)
+	  (check (?safe-fun   ?op1 ?op2)	(=> flonum-quasi=?) (?unsafe-fun ?op1 ?op2))
 	  ))))
     ((_ ?safe-fun)
      (syntax-rules ()
        ((_ ?op1 ?op2 ?expected-result)
 	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> flonum=?) ?expected-result)
+	  (check (?safe-fun   ?op1 ?op2)	(=> flonum-quasi=?) ?expected-result)
 	  ))))
     ))
 
@@ -932,15 +932,15 @@
      (syntax-rules ()
        ((_ ?op1 ?expected-result)
 	(begin
-	  (check (?safe-fun   ?op1)	(=> flonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1)	(=> flonum=?) ?expected-result)
-	  (check (?safe-fun   ?op1)	(=> flonum=?) (?unsafe-fun ?op1))
+	  (check (?safe-fun   ?op1)	(=> flonum-quasi=?) ?expected-result)
+	  (check (?unsafe-fun ?op1)	(=> flonum-quasi=?) ?expected-result)
+	  (check (?safe-fun   ?op1)	(=> flonum-quasi=?) (?unsafe-fun ?op1))
 	  ))))
     ((_ ?safe-fun)
      (syntax-rules ()
        ((_ ?op1 ?expected-result)
 	(begin
-	  (check (?safe-fun   ?op1)	(=> flonum=?) ?expected-result)
+	  (check (?safe-fun   ?op1)	(=> flonum-quasi=?) ?expected-result)
 	  ))))
     ))
 
@@ -952,15 +952,15 @@
      (syntax-rules ()
        ((_ ?op1 ?op2 ?expected-result)
 	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> cflonum=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum=?) (?unsafe-fun ?op1 ?op2))
+	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum-quasi=?) ?expected-result)
+	  (check (?unsafe-fun ?op1 ?op2)	(=> cflonum-quasi=?) ?expected-result)
+	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum-quasi=?) (?unsafe-fun ?op1 ?op2))
 	  ))))
     ((_ ?safe-fun)
      (syntax-rules ()
        ((_ ?op1 ?op2 ?expected-result)
 	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum=?) ?expected-result)
+	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum-quasi=?) ?expected-result)
 	  ))))
     ))
 
@@ -970,15 +970,15 @@
      (syntax-rules ()
        ((_ ?op1 ?expected-result)
 	(begin
-	  (check (?safe-fun   ?op1)	(=> cflonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1)	(=> cflonum=?) ?expected-result)
-	  (check (?safe-fun   ?op1)	(=> cflonum=?) (?unsafe-fun ?op1))
+	  (check (?safe-fun   ?op1)	(=> cflonum-quasi=?) ?expected-result)
+	  (check (?unsafe-fun ?op1)	(=> cflonum-quasi=?) ?expected-result)
+	  (check (?safe-fun   ?op1)	(=> cflonum-quasi=?) (?unsafe-fun ?op1))
 	  ))))
     ((_ ?safe-fun)
      (syntax-rules ()
        ((_ ?op1 ?expected-result)
 	(begin
-	  (check (?safe-fun   ?op1)	(=> cflonum=?) ?expected-result)
+	  (check (?safe-fun   ?op1)	(=> cflonum-quasi=?) ?expected-result)
 	  ))))
     ))
 
@@ -1067,7 +1067,8 @@
 	 (flzero?/positive y))
 	((flzero?/negative x)
 	 (flzero?/negative y))
-	((fl=? x y))))
+	(else
+	 (fl=? x y))))
 
 (define (cflonum=? x y)
   (and (flonum=? (real-part x) (real-part y))
@@ -1076,10 +1077,10 @@
 (define (compnum=? x y)
   (cond ((and (cflonum? x)
 	      (cflonum? y))
-	 (cflonum=? x y))
+	 (cflonum-quasi=? x y))
 	((and (flonum? x)
 	      (flonum? y))
-	 (flonum=? x y))
+	 (flonum-quasi=? x y))
 	(else
 	 (= x y))))
 

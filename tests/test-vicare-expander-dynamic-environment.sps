@@ -317,7 +317,7 @@
 	    (raise (make-warning))
 	  (catch E
 	    ((&error)	E)
-	    ((&warning)	(set! a (+ a 10)))
+	    ((&warning)	(set! a (+ a 10)) E)
 	    (else	E))
 	  (finally
 	   (set! a (+ a 100))))

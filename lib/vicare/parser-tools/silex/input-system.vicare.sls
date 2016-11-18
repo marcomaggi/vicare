@@ -429,12 +429,16 @@
        (case counters
 	 ((none) start-go-to-end-none)
 	 ((line) start-go-to-end-line)
-	 ((all)  start-go-to-end-all))
+	 ((all)  start-go-to-end-all)
+	 (else
+	  (assertion-violation #f "internal error, invalid counters" counters)))
        end-go-to-point
        (case counters
 	 ((none) init-lexeme-none)
 	 ((line) init-lexeme-line)
-	 ((all)  init-lexeme-all))
+	 ((all)  init-lexeme-all)
+	 (else
+	  (assertion-violation #f "internal error, invalid counters" counters)))
        get-start-line
        get-start-column
        get-start-offset
@@ -445,23 +449,33 @@
        (case counters
 	 ((none) #f)
 	 ((line) get-user-line-line)
-	 ((all)  get-user-line-all))
+	 ((all)  get-user-line-all)
+	 (else
+	  (assertion-violation #f "internal error, invalid counters" counters)))
        (case counters
 	 ((none) #f)
 	 ((line) #f)
-	 ((all)  get-user-column-all))
+	 ((all)  get-user-column-all)
+	 (else
+	  (assertion-violation #f "internal error, invalid counters" counters)))
        (case counters
 	 ((none) #f)
 	 ((line) #f)
-	 ((all)  get-user-offset-all))
+	 ((all)  get-user-offset-all)
+	 (else
+	  (assertion-violation #f "internal error, invalid counters" counters)))
        (case counters
 	 ((none) user-getc-none)
 	 ((line) user-getc-line)
-	 ((all)  user-getc-all))
+	 ((all)  user-getc-all)
+	 (else
+	  (assertion-violation #f "internal error, invalid counters" counters)))
        (case counters
 	 ((none) user-ungetc-none)
 	 ((line) user-ungetc-line)
-	 ((all)  user-ungetc-all))))))
+	 ((all)  user-ungetc-all)
+	 (else
+	  (assertion-violation #f "internal error, invalid counters" counters)))))))
 
 
 ;;;; done

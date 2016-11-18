@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -59,9 +59,9 @@
      (syntax-rules ()
        ((_ ?op1 ?op2 ?expected-result)
 	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
+	  (check (?safe-fun   ?op1 ?op2)	(=> flonum-quasi=?) ?expected-result)
+	  (check (?middle-fun ?op1 ?op2)	(=> flonum-quasi=?) ?expected-result)
+	  (check (?unsafe-fun ?op1 ?op2)	(=> flonum-quasi=?) ?expected-result)
 	  ))))))
 
 (define-syntax make-cflonum-test
@@ -70,9 +70,9 @@
      (syntax-rules ()
        ((_ ?op1 ?op2 ?expected-result)
 	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum=?) ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> cflonum=?) ?expected-result)
+	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum-quasi=?) ?expected-result)
+	  (check (?middle-fun ?op1 ?op2)	(=> flonum-quasi=?) ?expected-result)
+	  (check (?unsafe-fun ?op1 ?op2)	(=> cflonum-quasi=?) ?expected-result)
 	  ))))))
 
 (define-syntax make-compnum-test
@@ -118,7 +118,8 @@
 	 (flzero?/positive y))
 	((flzero?/negative x)
 	 (flzero?/negative y))
-	((fl=? x y))))
+	(else
+	 (fl=? x y))))
 
 (define (cflonum=? x y)
   (and (flonum=? (real-part x) (real-part y))
@@ -127,10 +128,10 @@
 (define (compnum=? x y)
   (cond ((and (cflonum? x)
 	      (cflonum? y))
-	 (cflonum=? x y))
+	 (cflonum-quasi=? x y))
 	((and (flonum? x)
 	      (flonum? y))
-	 (flonum=? x y))
+	 (flonum-quasi=? x y))
 	(else
 	 (= x y))))
 
@@ -140,43 +141,37 @@
   (cond ((and (cflonum? x)
 	      (cflonum? y))
 	 (cflonum-quasi=? x y))
-	((and (flonum? x)
-	      (flonum? y))
-	 (flonum-quasi=? x y))
-	((or (compnum? x)
-	     (cflonum? x)
-	     (compnum? y)
-	     (cflonum? y))
-	 (complex-quasi=? x y))
+	((or (flonum? x)
+	     (flonum? y))
+	 (flonum-quasi=? (inexact x) (inexact y)))
+	((and (compnum? x)
+	      (compnum? y))
+	 (compnum-quasi=? x y))
 	(else
 	 (= x y))))
 
 (define (flonum-quasi=? x y)
   (cond ((flnan? x)
 	 (flnan? y))
-	((infinite? x)
-	 (fl=? x y))
-	;;Here we cannot consider +0.0 different fro -0.0.
-	((flzero? x)
-	 (flzero? y))
+	((and (flinfinite? x)
+	      (flinfinite? y))
+	 (= x y))
+	((flzero?/positive x)
+	 (flzero?/positive y))
+	((flzero?/negative x)
+	 (flzero?/negative y))
 	(else
-	 (fl<? (flabs (fl- x y))
-	       1e-5)
-	 #;(fl<? (fl/ (flabs (fl- x y))
-		    (flabs x))
-	       1e-5))))
+	 #;(fl<? (flabs (fl/ (fl- x y) x)) 1e-5)
+	 (fl<? (flabs (fl- x y)) 1e-5)
+	 )))
 
 (define (cflonum-quasi=? x y)
   (and (flonum-quasi=? (real-part x) (real-part y))
        (flonum-quasi=? (imag-part x) (imag-part y))))
 
-(define (complex-quasi=? x y)
-  (let ((x.rep (real-part x))
-	(x.imp (imag-part x))
-	(y.rep (real-part y))
-	(y.imp (imag-part y)))
-    (and (inexact=? x.rep y.rep)
-	 (inexact=? x.imp y.imp))))
+(define (compnum-quasi=? x y)
+  (and (inexact=? (real-part x) (real-part y))
+       (inexact=? (imag-part x) (imag-part y))))
 
 (define-syntax catch-division-by-zero
   (syntax-rules ()
@@ -309,9 +304,9 @@
   (test	+nan.0+2.0i	-1/2	+nan.0+nan.0i)
   (test	+1.0+nan.0i	-1/2	+nan.0+nan.0i)
   (test	+nan.0+nan.0i	-1/2	+nan.0+nan.0i)
-  (test	+inf.0+2.0i	-1/2	+0.0+0.0i)
+  (test	+inf.0+2.0i	-1/2	+0.0-0.0i)
   (test	+1.0+inf.0i	-1/2	+0.0-0.0i)
-  (test	+inf.0+inf.0i	-1/2	+0.0+0.0i)
+  (test	+inf.0+inf.0i	-1/2	+0.0-0.0i)
   (test	-inf.0+2.0i	-1/2	+0.0-0.0i)
   (test	+1.0-inf.0i	-1/2	+0.0+0.0i)
   (test	-inf.0-inf.0i	-1/2	+0.0+0.0i)

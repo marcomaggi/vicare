@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2008-2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2008-2012, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -94,7 +94,8 @@
       (case num
 	((0) 'zero)
 	((1) 'one)
-	((2) 'two)))))
+	((2) 'two)
+	(else #f)))))
 
 (check		;the converted is NOT applied to the init value
     (gamma)

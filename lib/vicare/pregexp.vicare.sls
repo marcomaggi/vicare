@@ -267,18 +267,22 @@
 		      (new-vv (list new-re 'next-i)))
 		 (case c
 		   ((#\*) (set-car! (cddr new-re) 0)
-		    (set-car! (cdddr new-re) #f))
+		    (set-car! (cdddr new-re) #f)
+		    (values))
 		   ((#\+) (set-car! (cddr new-re) 1)
-		    (set-car! (cdddr new-re) #f))
+		    (set-car! (cdddr new-re) #f)
+		    (values))
 		   ((#\?) (set-car! (cddr new-re) 0)
-		    (set-car! (cdddr new-re) 1))
+		    (set-car! (cdddr new-re) 1)
+		    (values))
 		   ((#\{) (let ((pq (pregexp-read-nums s (+ i 1) n)))
 			    (if (not pq)
 				(error 'pregexp-wrap-quantifier-if-any
 				  "left brace must be followed by number"))
 			    (set-car! (cddr new-re) (car pq))
 			    (set-car! (cdddr new-re) (cadr pq))
-			    (set! i (caddr pq)))))
+			    (set! i (caddr pq)))
+		    (values)))
 		 (let loop ((i (+ i 1)))
 		   (if (>= i n)
 		       (begin (set-car! (cdr new-re) #f)
@@ -644,11 +648,14 @@
   (list ':sub (car (pregexp-read-pattern s 0 (string-length s)))))
 
 (define (pregexp-match-positions pat str . opt-args)
-  (cond ((string? pat) (set! pat (pregexp pat)))
-	((pair? pat) #t)
-	(else (error 'pregexp-match-positions
-		"pattern must be compiled or string regexp"
-		pat)))
+  (cond ((string? pat)
+	 (set! pat (pregexp pat)))
+	((pair? pat)
+	 (values))
+	(else
+	 (error 'pregexp-match-positions
+	   "pattern must be compiled or string regexp"
+	   pat)))
   (let* ((str-len (string-length str))
 	 (start (if (null? opt-args) 0
 		  (let ((start (car opt-args)))

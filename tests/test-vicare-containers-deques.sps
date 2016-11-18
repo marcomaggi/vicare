@@ -218,48 +218,48 @@
 
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-front! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-front! D obj))
 	  LIST-5)
 	(deque-size D))
     => 5)
 
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-front! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-front! D obj))
 	  LIST-20)
 	(deque-size D))
     => 20)
 
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-front! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-front! D obj))
 	  LIST-100)
 	(deque-size D))
     => 100)
 
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-rear! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-rear! D obj))
 	  LIST-5)
 	(deque-size D))
     => 5)
 
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-rear! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-rear! D obj))
 	  LIST-20)
 	(deque-size D))
     => 20)
 
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-rear! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-rear! D obj))
 	  LIST-100)
 	(deque-size D))
     => 100)
@@ -402,8 +402,8 @@
   ;;
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-front! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-front! D obj))
 	  LIST-5)
 	(map (lambda (dummy)
 	       (deque-pop-front! D))
@@ -414,8 +414,8 @@
   ;;
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-front! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-front! D obj))
 	  LIST-20)
 	(map (lambda (dummy)
 	       (deque-pop-front! D))
@@ -426,8 +426,8 @@
   ;;
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-front! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-front! D obj))
 	  LIST-100)
 	(map (lambda (dummy)
 	       (deque-pop-front! D))
@@ -440,8 +440,8 @@
   ;;
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-rear! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-rear! D obj))
 	  LIST-5)
 	(map (lambda (dummy)
 	       (deque-pop-rear! D))
@@ -452,8 +452,8 @@
   ;;
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-rear! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-rear! D obj))
 	  LIST-20)
 	(map (lambda (dummy)
 	       (deque-pop-rear! D))
@@ -464,8 +464,8 @@
   ;;
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-rear! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-rear! D obj))
 	  LIST-100)
 	(map (lambda (dummy)
 	       (deque-pop-rear! D))
@@ -478,8 +478,8 @@
   ;;
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-front! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-front! D obj))
 	  LIST-5)
 	(map (lambda (dummy)
 	       (deque-pop-rear! D))
@@ -490,8 +490,8 @@
   ;;
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-front! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-front! D obj))
 	  LIST-20)
 	(map (lambda (dummy)
 	       (deque-pop-rear! D))
@@ -502,8 +502,8 @@
   ;;
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-front! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-front! D obj))
 	  LIST-100)
 	(map (lambda (dummy)
 	       (deque-pop-rear! D))
@@ -516,8 +516,8 @@
   ;;
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-rear! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-rear! D obj))
 	  LIST-5)
 	(map (lambda (dummy)
 	       (deque-pop-front! D))
@@ -528,8 +528,8 @@
   ;;
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-rear! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-rear! D obj))
 	  LIST-20)
 	(map (lambda (dummy)
 	       (deque-pop-front! D))
@@ -540,8 +540,8 @@
   ;;
   (check
       (let ((D (make-deque)))
-	(map (lambda (obj)
-	       (deque-push-rear! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-rear! D obj))
 	  LIST-100)
 	(map (lambda (dummy)
 	       (deque-pop-front! D))
@@ -780,8 +780,8 @@
   (check
       (let ((D (list->deque LIST-100)))
 	(deque-purge! D)
-	(map (lambda (obj)
-	       (deque-push-front! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-front! D obj))
 	  LIST-20)
 	(deque-size D))
     => 20)
@@ -789,8 +789,8 @@
   (check
       (let ((D (list->deque LIST-100)))
 	(deque-purge! D)
-	(map (lambda (obj)
-	       (deque-push-front! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-front! D obj))
 	  LIST-20)
 	(deque->list D))
     => LIST-20-REVERSED)
@@ -798,8 +798,8 @@
   (check
       (let ((D (list->deque LIST-100)))
 	(deque-purge! D)
-	(map (lambda (obj)
-	       (deque-push-rear! D obj))
+	(for-each (lambda (obj)
+		    (deque-push-rear! D obj))
 	  LIST-20)
 	(deque->list D))
     => LIST-20)

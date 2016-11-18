@@ -678,21 +678,21 @@
        (vector-for-each (lambda (ch)
 			  (add-result ch))
 	 '#()))
-    => `(,(void) ()))
+    => `(()))
 
   (check
       (with-result
        (vector-for-each (lambda (ch)
 			  (add-result ch))
 	 '#(a)))
-    => `(,(void) (a)))
+    => `((a)))
 
   (check
       (with-result
        (vector-for-each (lambda (ch)
 			  (add-result ch))
 	 '#(a b c)))
-    => `(,(void) (a b c)))
+    => `((a b c)))
 
 ;;; --------------------------------------------------------------------
 
@@ -701,23 +701,23 @@
        (vector-for-each (lambda (ch1 ch2)
 			  (add-result (cons ch1 ch2)))
 	 '#() '#()))
-    => `(,(void) ()))
+    => `(()))
 
   (check
       (with-result
        (vector-for-each (lambda (ch1 ch2)
 			  (add-result (cons ch1 ch2)))
 	 '#(a) '#(b)))
-    => `(,(void) ((a . b))))
+    => `(((a . b))))
 
   (check
       (with-result
        (vector-for-each (lambda (ch1 ch2)
 			  (add-result (cons ch1 ch2)))
 	 '#(a b c) '#(d e f )))
-    => `(,(void) ((a . d)
-		  (b . e)
-		  (c . f))))
+    => `(((a . d)
+	  (b . e)
+	  (c . f))))
 
 ;;; --------------------------------------------------------------------
 
@@ -726,23 +726,23 @@
        (vector-for-each (lambda (ch1 ch2 ch3)
 			  (add-result (list ch1 ch2 ch3)))
 	 '#() '#() '#()))
-    => `(,(void) ()))
+    => `(()))
 
   (check
       (with-result
        (vector-for-each (lambda (ch1 ch2 ch3)
 			  (add-result (list ch1 ch2 ch3)))
 	 '#(a) '#(b) '#(c)))
-    => `(,(void) ((a b c))))
+    => `(((a b c))))
 
   (check
       (with-result
        (vector-for-each (lambda (ch1 ch2 ch3)
 			  (add-result (list ch1 ch2 ch3)))
 	 '#(a b c) '#(d e f ) '#(g h i)))
-    => `(,(void) ((a d g)
-		  (b e h)
-		  (c f i))))
+    => `(((a d g)
+	  (b e h)
+	  (c f i))))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: procedure
@@ -793,21 +793,21 @@
        ($vector-for-each1 (lambda (ch)
 			    (add-result ch))
 			  '#()))
-    => '(#t ()))
+    => '(()))
 
   (check
       (with-result
        ($vector-for-each1 (lambda (ch)
 			    (add-result ch))
 			  '#(a)))
-    => '(#t (a)))
+    => '((a)))
 
   (check
       (with-result
        ($vector-for-each1 (lambda (ch)
 			    (add-result ch))
 			  '#(a b c)))
-    => '(#t (a b c)))
+    => '((a b c)))
 
   #t)
 

@@ -141,7 +141,9 @@
 	  ((with)
 	   (%with-and-without set-maker-clause-spec-with!))
 	  ((without)
-	   (%with-and-without set-maker-clause-spec-without!)))
+	   (%with-and-without set-maker-clause-spec-without!))
+	  (else
+	   (assertion-violation __who__ "internal error, invalid keyword" definer-clause-spec)))
 	maker-clause-spec)
 
       (define (make-output-form maker-who-id variable-args-stx maker-sexp-stx keyword-specs)
@@ -210,7 +212,9 @@
 				    (synner "invalid maker clause values" args)))))
 		      (case-identifiers (syntax-clause-spec-keyword clause-spec)
 			((CLAUSE-KEYWORD)	(method-call CLAUSE-FIELD options value))
-			...))
+			...
+			(else
+			 (assertion-violation (quote combine) "internal error, invalid keyword" clause-spec))))
 		    options)
 		  (define synner
 		    (case-lambda

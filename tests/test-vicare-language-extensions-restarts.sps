@@ -18,7 +18,7 @@
 ;;;	9.1 Condition System Concepts -
 ;;;     <http://www.cs.cmu.edu/Groups/AI/html/hyperspec/HyperSpec/Body/sec_9-1.htm>
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -364,7 +364,7 @@
 	  (handler-bind
 	      ((&error (lambda (E)
 			 (add-result 'error-handler)
-			 (break 2))))
+			 (break))))
 	    (with-unwind-handler
 		(lambda (why)
 		  (add-result 'unwind-handler))
@@ -373,7 +373,7 @@
 		(signal (make-error))
 		(add-result 'body-out)
 		1)))))
-    => '(2 (body-in error-handler unwind-handler)))
+    => '((body-in error-handler unwind-handler)))
 
   ;;Use CONTINUE to perform a non-local exit from a condition handler.
   ;;

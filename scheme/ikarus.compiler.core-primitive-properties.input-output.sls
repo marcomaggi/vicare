@@ -778,9 +778,7 @@
 (declare-core-primitive put-datum
     (safe)
   (signatures
-   ((T:textual-output-port T:object)		=> (T:void)))
-  (attributes
-   ((_ _)		result-true)))
+   ((T:textual-output-port T:object)		=> ())))
 
 (declare-core-primitive write-char
     (safe)
@@ -794,29 +792,20 @@
 (declare-core-primitive write
     (safe)
   (signatures
-   ((T:object)				=> (T:void))
-   ((T:object T:textual-output-port)	=> (T:void)))
-  (attributes
-   ((_)			result-true)
-   ((_ _)		result-true)))
+   ((T:object)				=> ())
+   ((T:object T:textual-output-port)	=> ())))
 
 (declare-core-primitive display
     (safe)
   (signatures
-   ((T:object)				=> (T:void))
-   ((T:object T:textual-output-port)	=> (T:void)))
-  (attributes
-   ((_)			result-true)
-   ((_ _)		result-true)))
+   ((T:object)				=> ())
+   ((T:object T:textual-output-port)	=> ())))
 
 (declare-core-primitive newline
     (safe)
   (signatures
-   (()				=> (T:void))
-   (( T:textual-output-port)	=> (T:void)))
-  (attributes
-   (()			result-true)
-   ((_)			result-true)))
+   (()				=> ())
+   (( T:textual-output-port)	=> ())))
 
 ;;;
 

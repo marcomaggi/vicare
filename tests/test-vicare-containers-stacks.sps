@@ -219,24 +219,24 @@
 
   (check
       (let ((D (make-stack)))
-	(map (lambda (obj)
-	       (stack-push! D obj))
+	(for-each (lambda (obj)
+		    (stack-push! D obj))
 	  LIST-5)
 	(stack-size D))
     => 5)
 
   (check
       (let ((D (make-stack)))
-	(map (lambda (obj)
-	       (stack-push! D obj))
+	(for-each (lambda (obj)
+		    (stack-push! D obj))
 	  LIST-20)
 	(stack-size D))
     => 20)
 
   (check
       (let ((D (make-stack)))
-	(map (lambda (obj)
-	       (stack-push! D obj))
+	(for-each (lambda (obj)
+		    (stack-push! D obj))
 	  LIST-100)
 	(stack-size D))
     => 100)
@@ -329,8 +329,8 @@
   ;;
   (check
       (let ((D (make-stack)))
-	(map (lambda (obj)
-	       (stack-push! D obj))
+	(for-each (lambda (obj)
+		    (stack-push! D obj))
 	  LIST-5)
 	(map (lambda (dummy)
 	       (stack-pop! D))
@@ -341,8 +341,8 @@
   ;;
   (check
       (let ((D (make-stack)))
-	(map (lambda (obj)
-	       (stack-push! D obj))
+	(for-each (lambda (obj)
+		    (stack-push! D obj))
 	  LIST-20)
 	(map (lambda (dummy)
 	       (stack-pop! D))
@@ -353,8 +353,8 @@
   ;;
   (check
       (let ((D (make-stack)))
-	(map (lambda (obj)
-	       (stack-push! D obj))
+	(for-each (lambda (obj)
+		    (stack-push! D obj))
 	  LIST-100)
 	(map (lambda (dummy)
 	       (stack-pop! D))
@@ -593,8 +593,8 @@
   (check
       (let ((D (list->stack LIST-100)))
 	(stack-purge! D)
-	(map (lambda (obj)
-	       (stack-push! D obj))
+	(for-each (lambda (obj)
+		    (stack-push! D obj))
 	  LIST-20)
 	(stack-size D))
     => 20)
@@ -602,8 +602,8 @@
   (check
       (let ((D (list->stack LIST-100)))
 	(stack-purge! D)
-	(map (lambda (obj)
-	       (stack-push! D obj))
+	(for-each (lambda (obj)
+		    (stack-push! D obj))
 	  LIST-20)
 	(stack->list D))
     => LIST-20-REVERSED)

@@ -1395,10 +1395,9 @@
 		  (psi.core-expr test.psi)
 		(psi.core-expr consequent.psi)
 		(psi.core-expr alternate.psi))
-	      (type-signature.union-same-number-of-operands
-	       %signature-union-synner
-	       (psi.retvals-signature consequent.psi)
-	       (psi.retvals-signature alternate.psi))))
+	      (type-signature.union-same-number-of-operands %signature-union-synner
+							    (psi.retvals-signature consequent.psi)
+							    (psi.retvals-signature alternate.psi))))
 	   ((always-false)
 	    ;;The test always returns false.
 	    (make-psi input-form.stx
@@ -1428,8 +1427,9 @@
 						      (%perform-type-specialisation-for-predicate-application test.psi lexenv.run)
 						    lexenv.run)))
 				  (chi-expr ?consequent lexenv.run lexenv.expand))))
-       ;;We build  code to  make the  one-armed IF  return void  if the  alternate is
-       ;;unspecified; according to R6RS:
+       ;;We build code to  make the one-armed IF return zero  values if the alternate
+       ;;is  unspecified.  Notice  that  we are  breaking  R6RS compliance,  because,
+       ;;according to R6RS:
        ;;
        ;;* If  the test succeeds: the  return value must  be the return value  of the
        ;;consequent.
@@ -1440,9 +1440,6 @@
        ;;* If the test fails and there is *no* alternate: this syntax has unspecified
        ;;return values.
        ;;
-       ;;Notice that one-armed IF  is also used in the expansion  of WHEN and UNLESS;
-       ;;R6RS states that, for those syntaxes, when the body *is* executed the return
-       ;;value must be the return value of the last expression in the body.
        (let ((sym (%validate-and-qualify-single-signature caller-who input-form.stx test.psi)))
 	 (case sym
 	   ((maybe-false)
@@ -1451,8 +1448,8 @@
 	      (build-conditional no-source
 		  (psi.core-expr test.psi)
 		(psi.core-expr consequent.psi)
-		(build-void))
-	      (make-type-signature/single-void)))
+		(build-no-values))
+	      (make-type-signature/no-values)))
 
 	   ((always-false)
 	    ;;The test always returns false.
@@ -1616,7 +1613,7 @@
   #| end of module: AND-TRANSFORMER |# )
 
 
-;;;; module core-macro-transformer: AND
+;;;; module core-macro-transformer: OR
 
 (define-core-transformer (or input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to expand R6RS  OR macros from the  top-level built in

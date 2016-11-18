@@ -391,7 +391,8 @@
       (cond ((> arg-pos arg-len)
 	     (assertion-violation who "missing argument" (- arg-pos arg-len)))
 	    (option.flush-output?
-	     (flush-output-port port)))
+	     (flush-output-port port)
+	     (values)))
       (and getter (getter)))))
 
 
@@ -784,12 +785,14 @@
 		  (case conditional-type
 		    ((if-then)
 		     (if conditional-arg
-			 (format:format (car clauses) (list conditional-arg))))
+			 (format:format (car clauses) (list conditional-arg)))
+		     (values))
 		    ((if-else-then)
 		     (add-arg-pos (format:format (if conditional-arg
 						     (cadr clauses)
 						   (car clauses))
-						 (rest-args))))
+						 (rest-args)))
+		     (values))
 		    ((num-case)
 		     (when (or (not (integer? conditional-arg))
 			       (< conditional-arg 0))
@@ -799,7 +802,8 @@
 		       (add-arg-pos (format:format (if (>= conditional-arg (length clauses))
 						       clause-default
 						     (list-ref clauses conditional-arg))
-						   (rest-args))))))))
+						   (rest-args))))
+		     (values)))))
 	   (anychar-dispatch))
 
 	  ((#\{) ; Iteration begin
@@ -823,7 +827,8 @@
 	   (case modifier
 	     ((colon)
 	      (when (not max-iterations)
-		(set! max-iterations 1)))
+		(set! max-iterations 1))
+	      (values))
 	     ((colon-at at)
 	      (error who "illegal modifier")))
 	   (unless (null? params)
@@ -2089,9 +2094,11 @@
       (cond ((> left-zeros 0)
 	     ;; normalize 0{0}.nnn to n.nn
 	     (mantissa-shift-left left-zeros)
-	     (set! mantissa-dot-index 1))
+	     (set! mantissa-dot-index 1)
+	     (values))
 	    ((= mantissa-dot-index 0)
-	     (set! mantissa-dot-index 1)))
+	     (set! mantissa-dot-index 1)
+	     (values)))
       (integer->exponent-buffer (- (+ (- mantissa-dot-index intdigits)
 				      (exponent-buffer->integer))
 				   (if (> left-zeros 0)
@@ -2102,12 +2109,15 @@
       (cond
        ((< intdigits 0) ; leading zero
 	(mantissa-prepend-zeros (- intdigits))
-	(set! mantissa-dot-index 0))
+	(set! mantissa-dot-index 0)
+	(values))
        ((> intdigits mantissa-dot-index)
 	(mantissa-append-zeros (- intdigits mantissa-dot-index))
-	(set! mantissa-dot-index intdigits))
+	(set! mantissa-dot-index intdigits)
+	(values))
        (else
-	(set! mantissa-dot-index intdigits))))
+	(set! mantissa-dot-index intdigits)
+	(values))))
 
     (main)))
 

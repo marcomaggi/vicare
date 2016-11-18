@@ -130,10 +130,10 @@
   ;;Return the sorted list of applicable method entries.
   ;;
   (list-sort
-   (lambda (method-entry1 method-entry2)
+   (lambda ({_ <top>} method-entry1 method-entry2)
      (more-specific-signature? (car method-entry1) (car method-entry2) call-signature))
    (filter
-       (lambda (method-entry)
+       (lambda ({_ <top>} method-entry)
 	 (applicable-method-signature? call-signature (car method-entry)))
      (methods-alist-func))))
 
@@ -143,7 +143,7 @@
   ;;arguments having CALL-SIGNATURE.
   ;;
   (and (= (length call-signature) (length method-signature))
-       (for-all (lambda (maybe-parent maybe-child)
+       (for-all (lambda ({_ <top>} maybe-parent maybe-child)
 		  (memq (car maybe-parent) maybe-child))
 		method-signature call-signature)))
 
@@ -182,18 +182,18 @@
   ;;methods have  the same  signature, the one  from the  leftmost alist
   ;;takes precedence.
   ;;
-  (define-inline (main)
-    (if (null? list-of-methods-alist-funcs)
-	'()
-      (fold-left (lambda (result-alist next-alist-func)
-		   (merge-two-methods-alists result-alist (next-alist-func)))
-		 (list-copy ((car list-of-methods-alist-funcs)))
-		 (cdr list-of-methods-alist-funcs))))
+  (define (main)
+    (if (pair? list-of-methods-alist-funcs)
+	(fold-left (lambda ({_ <top>} result-alist next-alist-func)
+		     (merge-two-methods-alists result-alist (next-alist-func)))
+	  (list-copy ((car list-of-methods-alist-funcs)))
+	  (cdr list-of-methods-alist-funcs))
+      '()))
 
-  (define-inline (merge-two-methods-alists result-alist other-alist)
+  (define (merge-two-methods-alists result-alist other-alist)
     ;;Merge OTHER-ALIST into RESULT-ALIST and return a new alist.
     ;;
-    (fold-left (lambda (result-alist next-method-entry)
+    (fold-left (lambda ({_ <top>} result-alist next-method-entry)
 		 ;;If a method with  the same signature does not already
 		 ;;exist   in   RESULT-ALIST:    prepend   a   copy   of
 		 ;;NEXT-METHOD-ENTRY to RESULT-ALIST  and return the new
@@ -202,14 +202,14 @@
 		 ;;NEXT-METHOD-ENTRY is  duplicated because the original
 		 ;;can be modified by ADD-METHOD.
 		 ;;
-		 (if (find (lambda (method-entry)
+		 (if (find (lambda ({_ <top>} method-entry)
 			     (for-all eq? (car method-entry) (car next-method-entry)))
 		       result-alist)
 		     result-alist
 		   (cons (cons (car next-method-entry) (cdr next-method-entry))
 			 result-alist)))
-	       result-alist
-	       other-alist))
+      result-alist
+      other-alist))
 
   (main))
 

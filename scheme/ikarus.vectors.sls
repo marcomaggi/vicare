@@ -495,7 +495,8 @@
 (define* (vector-fill! {vec vector?} fill)
   ;;Defined by R6RS.  Store FILL in every element of VEC and returns unspecified.
   ;;
-  ($vector-fill-range! vec 0 ($vector-length vec) fill))
+  ($vector-fill-range! vec 0 ($vector-length vec) fill)
+  (values))
 
 (define ($vector-fill-range! vec start end fill)
   ;;Set to  FILL all  the slots in  VEC in  the range from  START (inclusive)  to END
@@ -527,10 +528,12 @@
   ;;
   (preconditions
    (valid-index-for-vector-slot vec idx))
-  ($vector-set! vec idx new-item))
+  ($vector-set! vec idx new-item)
+  (values))
 
 (define ($vector-set-void! vec idx)
-  ($vector-set! vec idx (void)))
+  ($vector-set! vec idx (void))
+  (values))
 
 
 ;;;; list conversion
@@ -711,8 +714,7 @@
   (({p procedure?} {v vector?})
    (let loop ((i 0) (len ($vector-length v)))
      (if ($fx= i len)
-	 ;;We want to make sure that the return value is void.
-	 (void)
+	 (values)
        (begin
 	 (p ($vector-ref v i))
 	 (loop ($fxadd1 i) len)))))
@@ -722,7 +724,7 @@
     (vectors-of-same-length v0 v1))
    (let loop ((i 0) (len ($vector-length v0)))
      (if ($fx= i len)
-	 (void)
+	 (values)
        (begin
 	 (p ($vector-ref v0 i)
 	    ($vector-ref v1 i))
@@ -733,7 +735,7 @@
     (vectors-of-same-length v0 v1 v*))
    (let loop ((i 0) (len ($vector-length v0)))
      (if ($fx= i len)
-	 (void)
+	 (values)
        (begin
 	 (apply p ($vector-ref v0 i) ($vector-ref v1 i)
 		(let inner-loop ((i i) (v* v*))
@@ -1056,7 +1058,7 @@
   (({vec vector?})
    (do ((i 0 (fxadd1 i)))
        ((fx=? i (vector-length vec))
-	(void))
+	(values))
      ($vector-set! vec i (void))))
   (({vec vector?} {start non-negative-fixnum?} {end non-negative-fixnum?})
    ;;Defined  by Vicare.   VEC must  be a  vector, and  START and  END must  be exact
@@ -1073,7 +1075,7 @@
     (start-and-end-indexes-in-correct-order start end))
    (do ((i start (fxadd1 i)))
        ((fx=? i end)
-	(void))
+	(values))
      ($vector-set! vec i (void)))))
 
 (define* (vector-copy! {src.vec vector?} {src.start non-negative-fixnum?}
@@ -1088,18 +1090,22 @@
    (valid-start-index-and-slot-count-for-vector src.vec src.start count)
    (valid-start-index-and-slot-count-for-vector dst.vec dst.start count))
   (cond (($fxzero? count)
-	 (void))
+	 (values))
 	((eq? src.vec dst.vec)
 	 (cond (($fx< dst.start src.start)
-		($vector-self-copy-forwards!  src.vec src.start dst.start count))
+		($vector-self-copy-forwards!  src.vec src.start dst.start count)
+		(values))
 	       (($fx> dst.start src.start)
 		($vector-self-copy-backwards! src.vec
 					      ($fx+ src.start count)
 					      ($fx+ dst.start count)
-					      count))
-	       (else (void))))
+					      count)
+		(values))
+	       (else
+		(values))))
 	(else
-	 ($vector-copy-source-count! src.vec src.start dst.vec dst.start count))))
+	 ($vector-copy-source-count! src.vec src.start dst.vec dst.start count)
+	 (values))))
 
 
 ;;;; predicates
@@ -1196,7 +1202,8 @@
     (or ($fx= i ($vector-length vec))
 	(begin
 	  (func ($vector-ref vec i))
-	  (loop ($fxadd1 i))))))
+	  (loop ($fxadd1 i)))))
+  (values))
 
 (define ($vector-for-all1 func vec)
   ;;Like VECTOR-FOR-ALL, but  for only one vector  argument: return true

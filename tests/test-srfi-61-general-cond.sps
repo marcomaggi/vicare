@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2012, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -36,13 +36,15 @@
 (check
     (let ((a 1))
       (srfi.cond ((= a 1)	1)
-		 ((= a 2)	2)))
+		 ((= a 2)	2)
+		 (else		#f)))
   => 1)
 
 (check
     (let ((a 2))
       (srfi.cond ((= a 1)	1)
-		 ((= a 2)	2)))
+		 ((= a 2)	2)
+		 (else		#f)))
   => 2)
 
 (check
@@ -55,17 +57,15 @@
 (check
     (let ((a 1))
       (srfi.cond ((= a 1)	1)
-		 ((= a 2)
-		  => (lambda (A)
-		       A))))
+		 ((= a 2)	=> (lambda (A) A))
+		 (else		#f)))
   => 1)
 
 (check
     (let ((a 2))
       (srfi.cond ((= a 1)	1)
-		 ((= a 2)
-		  => (lambda (A)
-		       A))))
+		 ((= a 2)	=> (lambda (A) A))
+		 (else		#f)))
   => #t)
 
 

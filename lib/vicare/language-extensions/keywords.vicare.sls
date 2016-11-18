@@ -7,7 +7,7 @@
 ;;;
 ;;;	This library is derived from old code in Nausicaa/Scheme.
 ;;;
-;;;Copyright (c) 2009-2010, 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2010, 2012-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -127,7 +127,7 @@
 						     (quasiquote KEYWORDS-ALIST))))
 		     ?form0 ?form ...))))))))
 
-(define (%parse-keywords who input-arguments allow-unknown options-specs)
+(define* (%parse-keywords who input-arguments allow-unknown options-specs)
   (let next-input-argument ((arguments input-arguments))
     (if (null? arguments)
 	'()
@@ -166,7 +166,10 @@
 
 	      ;;Input option is a value.
 	      ((not (keyword? arg))
-	       (cons arg (next-input-argument (cdr arguments)))))))))
+	       (cons arg (next-input-argument (cdr arguments))))
+
+	      (else
+	       (assertion-violation __who__ "internal error")))))))
 
 
 ;;;; done

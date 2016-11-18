@@ -255,14 +255,22 @@
 (define-macro-transformer (when input-form.stx)
   (syntax-match input-form.stx ()
     ((_ ?test ?expr ?expr* ...)
-     (bless `(if ,?test (begin ,?expr . ,?expr*))))
+     (bless `(if ,?test
+		 (begin
+		   (begin ,?expr . ,?expr*)
+		   (values))
+	       (values))))
     (_
      (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (unless input-form.stx)
   (syntax-match input-form.stx ()
     ((_ ?test ?expr ?expr* ...)
-     (bless `(if (not ,?test) (begin ,?expr . ,?expr*))))
+     (bless `(if ,?test
+		 (values)
+	       (begin
+		 (begin ,?expr . ,?expr*)
+		 (values)))))
     (_
      (__synner__ "invalid syntax in macro use"))))
 
@@ -348,7 +356,7 @@
       ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ...)
        (let* ((expr-result.id	(make-syntactic-identifier-for-temporary-variable "expr-result"))
 	      (else-proc.id	(make-syntactic-identifier-for-temporary-variable "else-proc"))
-	      (else-binding.stx	`(,else-proc.id (lambda/checked () (void)))))
+	      (else-binding.stx	`(,else-proc.id (lambda/checked ({_ . <list>}) (values)))))
 	 (%build-output-form input-form.stx expr-result.id ?expr
 			     (map cons
 			       (map cons ?datum0* ?datum**)
@@ -605,7 +613,7 @@
       ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ...)
        (let* ((expr-result.id	(make-syntactic-identifier-for-temporary-variable "expr-result"))
 	      (else-proc.id	(make-syntactic-identifier-for-temporary-variable "else-proc"))
-	      (else-binding.stx	`(,else-proc.id (lambda/checked () (void)))))
+	      (else-binding.stx	`(,else-proc.id (lambda/checked ({_ . <list>}) (values)))))
 	 (%build-output-form input-form.stx expr-result.id ?expr
 			     (map cons
 			       (map cons ?datum0* ?datum**)
@@ -3216,8 +3224,17 @@
   `(fluid-let-syntax
        ((break    (syntax-rules ()
 		    ((_ . ?args)
-		     (,escape . ?args))
-		    ))
+		     (,escape . ?args))))
+	(continue (syntax-rules ()
+		    ((_)
+		     (,next-iteration #t)))))
+     . ,body*))
+
+(define (with-escape-fluids/no-values escape next-iteration body*)
+  `(fluid-let-syntax
+       ((break    (syntax-rules ()
+		    ((_)
+		     (,escape))))
 	(continue (syntax-rules ()
 		    ((_)
 		     (,next-iteration #t)))))
@@ -3257,9 +3274,11 @@
 	       (let/std ,loop ()
 			(unwinding-call/cc
 			    (lambda/std (,next-iteration)
-			      ,(with-escape-fluids escape next-iteration (list ?body))))
+			      ,(with-escape-fluids/no-values escape next-iteration (list ?body))
+			      (values)))
 			(when ,?test
-			  (,loop))))))))
+			  (,loop)))
+	       (values))))))
 
     ;;This is an extended Vicare syntax.
     ;;
@@ -3277,9 +3296,11 @@
 	       (let/std ,loop ()
 			(unwinding-call/cc
 			    (lambda/std (,next-iteration)
-			      ,(with-escape-fluids escape next-iteration (list ?body))))
+			      ,(with-escape-fluids/no-values escape next-iteration (list ?body))
+			      (values)))
 			(until ,?test
-			  (,loop))))))))
+			  (,loop)))
+	       (values))))))
 
     ;;This is the R6RS syntax.
     ;;
@@ -3307,7 +3328,8 @@
 					       '(void)
 					     `(begin . ,?expr*))))))
 		    (,loop . ,?init*)))))))
-       ))
+       (_
+	(__synner__ "invalid syntax in macro use"))))
 
     (_
      (__synner__ "invalid syntax in macro use"))))
@@ -3386,7 +3408,7 @@
   (syntax-match input-form.stx ()
     ((_ (?var ?list-form)              ?body0 ?body* ...)
      (bless
-      `(dolist (,?var ,?list-form (void))
+      `(dolist (,?var ,?list-form (values))
 	 ,?body0 . ,?body*)))
     ((_ (?var ?list-form ?result-form) ?body0 ?body* ...)
      (let ((ell  (make-syntactic-identifier-for-temporary-variable "ell"))
@@ -3415,7 +3437,8 @@
        (bless
 	`(let/checked (({,max-var <top>} ,?count-form))
 	   (do ((,?var 0 (add1 ,?var)))
-	       ((>= ,?var ,max-var))
+	       ((>= ,?var ,max-var)
+		(values))
 	     ,?body0 . ,?body*)))))
     ((_ (?var ?count-form ?result-form) ?body0 ?body* ...)
      (let ((max-var (make-syntactic-identifier-for-temporary-variable)))
@@ -3450,9 +3473,10 @@
 		 (when (unwinding-call/cc
 			   (lambda/std (,next-iteration)
 			     (if ,?test
-				 ,(with-escape-fluids escape next-iteration `(,@?body* #t))
+				 ,(with-escape-fluids/no-values escape next-iteration `(,@?body* #t))
 			       #f)))
-		   (,loop))))))))
+		   (,loop)))
+	       (values))))))
     (_
      (__synner__ "invalid syntax in macro use"))))
 
@@ -3477,8 +3501,9 @@
 			   (lambda/std (,next-iteration)
 			     (if ,?test
 				 #f
-			       ,(with-escape-fluids escape next-iteration `(,@?body* #t)))))
-		   (,loop))))))))
+			       ,(with-escape-fluids/no-values escape next-iteration `(,@?body* #t)))))
+		   (,loop)))
+	       (values))))))
     (_
      (__synner__ "invalid syntax in macro use"))))
 
@@ -3505,10 +3530,11 @@
 		 (when (unwinding-call/cc
 			   (lambda/std (,next-iteration)
 			     (if ,?test
-				 ,(with-escape-fluids escape next-iteration `(,@?body* #t))
+				 ,(with-escape-fluids/no-values escape next-iteration `(,@?body* #t))
 			       #f)))
 		   ,?incr
-		   (,loop))))))))
+		   (,loop)))
+	       (values))))))
     (_
      (__synner__ "invalid syntax in macro use"))))
 
@@ -3769,17 +3795,21 @@
 	      ((?test => ?proc)
 	       (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
 		 `(let/std ((,tmp ,?test))
-		    (when ,tmp
-		      (,?proc ,tmp)))))
+		    (if ,tmp
+			(,?proc ,tmp)
+		      (cast-signature <list> (values))))))
 
 	      ((?expr)
 	       (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
 		 `(let/std ((,tmp ,?expr))
-		    (when ,tmp ,tmp))))
+		    (if ,tmp
+			,tmp
+		      (cast-signature <list> (values))))))
 
 	      ((?test ?expr* ...)
-	       `(when ,?test
-		  (internal-body . ,?expr*)))
+	       `(if ,?test
+		    (internal-body . ,?expr*)
+		  (cast-signature <list> (values))))
 
 	      (_
 	       (__synner__ "invalid last clause" cls)))

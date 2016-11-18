@@ -725,7 +725,7 @@
 	    (let ((d ($cdr ls)))
 	      (for-each1 f ($car ls) d (len d d 0))))
 	   ((null? ls)
-	    (void))
+	    (values))
 	   (else
 	    (%error-expected-proper-list-as-argument ls))))
 
@@ -737,7 +737,7 @@
 	      (%error-length-mismatch-among-list-arguments)))
 	   ((null? ls)
 	    (if (null? ls2)
-		(void)
+		(values)
 	      (%error-length-mismatch-among-list-arguments)))
 	   (else
 	    (%error-expected-proper-list-as-argument ls))))
@@ -787,7 +787,9 @@
 		 (for-each1 f ($car d) ($cdr d) ($fxsub1 n)))))
 	    ((null? d)
 	     (if ($fxzero? n)
-		 (f a)
+		 (begin
+		   (f a)
+		   (values))
 	       (%error-list-was-altered-while-processing)))
 	    (else
 	     (%error-list-was-altered-while-processing)))))
@@ -808,7 +810,9 @@
 	    ((null? d1)
 	     (if (null? d2)
 		 (if ($fxzero? n)
-		     (f a1 a2)
+		     (begin
+		       (f a1 a2)
+		       (values))
 		   (%error-list-was-altered-while-processing))
 	       (%error-length-mismatch-among-list-arguments)))
 	    (else

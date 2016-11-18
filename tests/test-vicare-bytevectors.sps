@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -1295,7 +1295,8 @@
 	bv)
     => (case (native-endianness)
 	 ((big)		#vu8(#x0A #xF0))
-	 ((little)	#vu8(#xF0 #x0A))))
+	 ((little)	#vu8(#xF0 #x0A))
+	 (else		(assertion-violation #f "bad endianness"))))
 
   (check
       (let ((bv (make-bytevector (mult 3) 0)))
@@ -1371,7 +1372,8 @@
       (bytevector-u16-ref #vu8(#xF0 #x0A) 0 (native-endianness))
     => (case (native-endianness)
 	 ((big)		#xF00A)
-	 ((little)	#x0AF0)))
+	 ((little)	#x0AF0)
+	 (else		(assertion-violation #f "bad endianness"))))
 
   (check
       (let ((bv #vu8(1 0 2 0 3 0)))
@@ -1429,7 +1431,8 @@
 	bv)
     => (case (native-endianness)
 	 ((big)		#vu8(#x0A #xF0))
-	 ((little)	#vu8(#xF0 #x0A))))
+	 ((little)	#vu8(#xF0 #x0A))
+	 (else		(assertion-violation #f "bad endianness"))))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
@@ -1477,7 +1480,8 @@
       (bytevector-u16-native-ref #vu8(#xF0 #x0A) 0)
     => (case (native-endianness)
 	 ((big)		#xF00A)
-	 ((little)	#x0AF0)))
+	 ((little)	#x0AF0)
+	 (else		(assertion-violation #f "bad endianness"))))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
@@ -1529,7 +1533,8 @@
 	bv)
     => (case (native-endianness)
 	 ((big)		#vu8(#x0A #xF0))
-	 ((little)	#vu8(#xF0 #x0A))))
+	 ((little)	#vu8(#xF0 #x0A))
+	 (else		(assertion-violation #f "bad endianness"))))
 
   (check
       (let ((bv (make-bytevector (mult 3) 0)))
@@ -1605,7 +1610,8 @@
       (bytevector-s16-ref #vu8(#x0F #x0A) 0 (native-endianness))
     => (case (native-endianness)
 	 ((big)		#x0F0A)
-	 ((little)	#x0A0F)))
+	 ((little)	#x0A0F)
+	 (else		(assertion-violation #f "bad endianness"))))
 
   (check
       (let ((bv #vu8(1 0 2 0 3 0)))
@@ -1687,7 +1693,8 @@
 	bv)
     => (case (native-endianness)
 	 ((big)		#vu8(#x0A #xF0))
-	 ((little)	#vu8(#xF0 #x0A))))
+	 ((little)	#vu8(#xF0 #x0A))
+	 (else		(assertion-violation #f "bad endianness"))))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
@@ -1735,7 +1742,8 @@
       (bytevector-s16-native-ref #vu8(#x0F #x0A) 0)
     => (case (native-endianness)
 	 ((big)		#x0F0A)
-	 ((little)	#x0A0F)))
+	 ((little)	#x0A0F)
+	 (else		(assertion-violation #f "bad endianness"))))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
@@ -1743,7 +1751,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#xFF 127))
-	 ((big)		#vu8(127 #xFF))))
+	 ((big)		#vu8(127 #xFF))
+	 (else		(assertion-violation #f "bad endianness"))))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
@@ -1751,7 +1760,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(0 #x80))
-	 ((big)		#vu8(#x80 0))))
+	 ((big)		#vu8(#x80 0))
+	 (else		(assertion-violation #f "bad endianness"))))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
@@ -1804,7 +1814,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#x78 #x56 #x34 #x12))
-	 ((big)		#vu8(#x12 #x34 #x56 #x78))))
+	 ((big)		#vu8(#x12 #x34 #x56 #x78))
+	 (else		(assertion-violation #f "bad endianness"))))
 
   (check
       (let ((bv (make-bytevector (mult 4) 0)))
@@ -1888,7 +1899,8 @@
       (let ((bv (make-bytevector bytes-per-word)))
 	(bytevector-u32-ref (case (native-endianness)
 			      ((little)	#vu8(#x78 #x56 #x34 #x12))
-			      ((big)	#vu8(#x12 #x34 #x56 #x78)))
+			      ((big)	#vu8(#x12 #x34 #x56 #x78))
+			      (else		(assertion-violation #f "bad endianness")))
 			    0 (native-endianness)))
     => #x12345678)
 
@@ -1957,7 +1969,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#x78 #x56 #x34 #x12))
-	 ((big)		#vu8(#x12 #x34 #x56 #x78))))
+	 ((big)		#vu8(#x12 #x34 #x56 #x78))
+	 (else		(assertion-violation #f "bad endianness"))))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
@@ -2006,7 +2019,8 @@
       (let ((bv (make-bytevector bytes-per-word)))
 	(bytevector-u32-native-ref (case (native-endianness)
 			      ((little)	#vu8(#x78 #x56 #x34 #x12))
-			      ((big)	#vu8(#x12 #x34 #x56 #x78)))
+			      ((big)	#vu8(#x12 #x34 #x56 #x78))
+			      (else		(assertion-violation #f "bad endianness")))
 			    0))
     => #x12345678)
 
@@ -2061,7 +2075,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#x78 #x56 #x34 #x12))
-	 ((big)		#vu8(#x12 #x34 #x56 #x78))))
+	 ((big)		#vu8(#x12 #x34 #x56 #x78))
+	 (else		(assertion-violation #f "bad endianness"))))
 
   (check
       (let ((bv (make-bytevector (mult 4) 0)))
@@ -2148,7 +2163,8 @@
       (let ((bv (make-bytevector bytes-per-word)))
 	(bytevector-s32-ref (case (native-endianness)
 			      ((little)	#vu8(#x78 #x56 #x34 #x12))
-			      ((big)	#vu8(#x12 #x34 #x56 #x78)))
+			      ((big)	#vu8(#x12 #x34 #x56 #x78))
+			      (else		(assertion-violation #f "bad endianness")))
 			    0 (native-endianness)))
     => #x12345678)
 
@@ -2235,7 +2251,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#x78 #x56 #x34 #x12))
-	 ((big)		#vu8(#x12 #x34 #x56 #x78))))
+	 ((big)		#vu8(#x12 #x34 #x56 #x78))
+	 (else		(assertion-violation #f "bad endianness"))))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
@@ -2284,7 +2301,8 @@
       (let ((bv (make-bytevector bytes-per-word)))
 	(bytevector-s32-native-ref (case (native-endianness)
 				     ((little)	#vu8(#x78 #x56 #x34 #x12))
-				     ((big)	#vu8(#x12 #x34 #x56 #x78)))
+				     ((big)	#vu8(#x12 #x34 #x56 #x78))
+				     (else		(assertion-violation #f "bad endianness")))
 				   0))
     => #x12345678)
 
@@ -2294,7 +2312,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#xFF #xFF #xFF 127))
-	 ((big)		#vu8(127 #xFF #xFF #xFF))))
+	 ((big)		#vu8(127 #xFF #xFF #xFF))
+	 (else		(assertion-violation #f "bad endianness"))))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
@@ -2302,7 +2321,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(0 0 0 #x80))
-	 ((big)		#vu8(#x80 0 0 0))))
+	 ((big)		#vu8(#x80 0 0 0))
+	 (else		(assertion-violation #f "bad endianness"))))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
@@ -2379,7 +2399,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
-	 ((big)		#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))))
+	 ((big)		#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))
+	 (else		(assertion-violation #f "bad endianness"))))
 
   (check	;greatest u64
       (let ((bv (make-bytevector bytes-per-word)))
@@ -2502,7 +2523,8 @@
   (check
       (bytevector-u64-ref (case (native-endianness)
 			    ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
-			    ((big)	#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08)))
+			    ((big)	#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))
+			    (else		(assertion-violation #f "bad endianness")))
 			  0 (native-endianness))
     => #x0102030405060708)
 
@@ -2569,7 +2591,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
-	 ((big)		#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))))
+	 ((big)		#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))
+	 (else		(assertion-violation #f "bad endianness"))))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
@@ -2634,7 +2657,8 @@
   (check
       (bytevector-u64-native-ref (case (native-endianness)
 				   ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
-				   ((big)	#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08)))
+				   ((big)	#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))
+				   (else		(assertion-violation #f "bad endianness")))
 				 0)
     => #x0102030405060708)
 
@@ -2704,7 +2728,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
-	 ((big)		#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))))
+	 ((big)		#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))
+	 (else		(assertion-violation #f "bad endianness"))))
 
   (check
       (let ((bv (make-bytevector (mult 4) 0)))
@@ -2821,7 +2846,8 @@
   (check
       (bytevector-s64-ref (case (native-endianness)
 			    ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
-			    ((big)	#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08)))
+			    ((big)	#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))
+			    (else		(assertion-violation #f "bad endianness")))
 			  0 (native-endianness))
     => #x0102030405060708)
 
@@ -2897,7 +2923,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
-	 ((big)		#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))))
+	 ((big)		#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))
+	 (else		(assertion-violation #f "bad endianness"))))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
@@ -2905,7 +2932,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#xFF #xFF #xFF #xFF #xFF #xFF #xFF 127))
-	 ((big)		#vu8(127 #xFF #xFF #xFF #xFF #xFF #xFF #xFF))))
+	 ((big)		#vu8(127 #xFF #xFF #xFF #xFF #xFF #xFF #xFF))
+	 (else		(assertion-violation #f "bad endianness"))))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
@@ -2913,7 +2941,8 @@
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(0 0 0 0 0 0 0 #x80))
-	 ((big)		#vu8(#x80 0 0 0 0 0 0 0))))
+	 ((big)		#vu8(#x80 0 0 0 0 0 0 0))
+	 (else		(assertion-violation #f "bad endianness"))))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
@@ -2976,7 +3005,8 @@
   (check
       (bytevector-s64-native-ref (case (native-endianness)
 				   ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
-				   ((big)	#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08)))
+				   ((big)	#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))
+				   (else		(assertion-violation #f "bad endianness")))
 				 0)
     => #x0102030405060708)
 

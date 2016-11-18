@@ -196,7 +196,7 @@
   ;;names; as  values syntactic  identifiers bound  to the  method implementation
   ;;functions.
   ;;
-  #`(list #,@(map (lambda (entry)
+  #`(list #,@(map (lambda ({_ <top>} entry)
 		    (let ((method-name.id	(car entry))
 			  (method-procname.id	(cdr entry)))
 		      #`(cons (quote #,method-name.id) (syntax #,method-procname.id))))
@@ -259,7 +259,7 @@
 	  (let recur ((head (car spec*))
 		      (tail (cdr spec*)))
 	    (receive (group rest)
-		(partition (lambda ({spec <method-spec>})
+		(partition (lambda ({_ <boolean>} {spec <method-spec>})
 			     (eq? (.name-sym head) (.name-sym spec)))
 		  tail)
 	      (cons (cons head group)
@@ -349,7 +349,7 @@
     ;;instead, the MIXINS clauses need to be spliced without changing the order.
     ;;
     (fold-right
-	(lambda (input-clause.stx parsed-clause*.stx)
+	(lambda ({_ <top>} input-clause.stx parsed-clause*.stx)
 	  (syntax-case input-clause.stx (mixins)
 	    ((mixins . ?mixins)
 	     (%splice-mixins results input-clause.stx #'?mixins parsed-clause*.stx))
@@ -540,11 +540,11 @@
     ;;
     ;;   #(#((?who . ?formals) . ?body) ...)
     ;;
-    (vector-fold-left (lambda (results arg)
+    (vector-fold-left (lambda ({_ <top>} results arg)
 			(%process-method-spec results arg synner))
       results args))
 
-  (define (%process-method-spec {results <parsing-results>} arg synner)
+  (define ({%process-method-spec <top>} {results <parsing-results>} arg synner)
     ;;We expect ARG to have the format:
     ;;
     ;;   #((?who . ?formals) . ?body)

@@ -119,22 +119,22 @@
   (case-define* write
     ((x)
      (%write-to-port x (current-output-port))
-     (void))
+     (values))
     ((x {p open-textual-output-port?})
      (%write-to-port x p)
-     (void)))
+     (values)))
 
   (define* (put-datum {p open-textual-output-port?} x)
     (%write-to-port x p)
-    (void))
+    (values))
 
   (case-define* display
     ((x)
      (%display-to-port x (current-output-port))
-     (void))
+     (values))
     ((x {p open-textual-output-port?})
      (%display-to-port x p)
-     (void)))
+     (values)))
 
 ;;; --------------------------------------------------------------------
 
