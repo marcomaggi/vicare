@@ -3797,19 +3797,19 @@
 		 `(let/std ((,tmp ,?test))
 		    (if ,tmp
 			(,?proc ,tmp)
-		      (cast-signature <list> (values))))))
+		      (values)))))
 
 	      ((?expr)
 	       (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
 		 `(let/std ((,tmp ,?expr))
 		    (if ,tmp
 			,tmp
-		      (cast-signature <list> (values))))))
+		      (values)))))
 
 	      ((?test ?expr* ...)
 	       `(if ,?test
 		    (internal-body . ,?expr*)
-		  (cast-signature <list> (values))))
+		  (values)))
 
 	      (_
 	       (__synner__ "invalid last clause" cls)))

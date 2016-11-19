@@ -1187,7 +1187,7 @@
 	      (else
 	       (synner "invalid clause syntax" clause.stx))))
 	;;If we are here: there is no ELSE clause.
-	'((else (cast-signature <list> (values)))))))
+	'((else (values))))))
 
 ;;; --------------------------------------------------------------------
 
