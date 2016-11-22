@@ -158,6 +158,23 @@
 	  (fx+ a b))
 	=> (<positive-fixnum>))
 
+;;; --------------------------------------------------------------------
+;;; named LET
+
+  (doit (let loop (({a <fixnum>}	1)
+		   ({b <list>}		'()))
+	  (if (fx=? a 3)
+	      b
+	    (loop (fxadd1 a) (cons a b))))
+	=> <list>)
+
+  (doit (let {loop <fixnum>} (({a <fixnum>}	1)
+			      ({b <list>}	'()))
+	     (if (fx=? a 3)
+		 b
+	       (loop (fxadd1 a) (cons a b))))
+	=> (<fixnum>))
+
   (void))
 
 

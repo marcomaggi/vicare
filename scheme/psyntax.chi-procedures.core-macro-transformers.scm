@@ -795,25 +795,20 @@
 		 (%warn-about-unused-lexical-variables __who__ lhs*.id lhs*.lab lexenv.run)))))))
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       (identifier? ?recur)
-       (chi-expr (bless
-		  `(letrec/checked ((,?recur (lambda/checked ,?lhs* ,?body . ,?body*)))
-		     (,?recur . ,?rhs*)))
-		 lexenv.run lexenv.expand))
-
-      #;((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       (identifier? ?recur)
-       (chi-expr (bless
-		  `(internal-body
-		     ;;Here we use DEFINE/CHECKED so that  we can easily define a typed
-		     ;;function.   Using  LETREC would  be  more  descriptive, but  not
-		     ;;significantly better.
-		     ;;
-		     ;;FIXME We do not want "__who__"  to be bound here.  (Marco Maggi;
-		     ;;Sat Feb 6, 2016)
-		     (define/checked (,?recur . ,?lhs*) ,?body . ,?body*)
-		     (,?recur . ,?rhs*)))
-		 lexenv.run lexenv.expand))
+       (receive (name.id rv-types.stx)
+	   (syntax-match ?recur (brace)
+	     ((brace ?name . ?rv-types)
+	      (identifier? ?name)
+	      (values ?name ?rv-types))
+	     (?name
+	      (identifier? ?name)
+	      (values ?name (<list>-type-id)))
+	     (_
+	      (__synner__ "invalid syntax in name of loop" ?recur)))
+	 (chi-expr (bless
+		    `(letrec/checked ((,name.id (lambda/checked ((brace _ . ,rv-types.stx) . ,?lhs*) ,?body . ,?body*)))
+		       (,name.id . ,?rhs*)))
+		   lexenv.run lexenv.expand)))
 
       ((_ ((?lhs* ?rhs*) ...))
        (__synner__ "missing body forms"))

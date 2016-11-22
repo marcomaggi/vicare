@@ -3831,6 +3831,7 @@ name is bound to the fluid syntax @syntax{__who__}.
 
 
 @deffn Syntax let/checked (@meta{typed-binding} @dots{}) . @meta{body}
+@deffnx Syntax let/checked @meta{recur} (@meta{typed-binding} @dots{}) . @meta{body}
 @deffnx Syntax let*/checked (@meta{typed-binding} @dots{}) . @meta{body}
 @deffnx Syntax letrec/checked (@meta{typed-binding} @dots{}) . @meta{body}
 @deffnx Syntax letrec*/checked (@meta{typed-binding} @dots{}) . @meta{body}
@@ -3840,6 +3841,32 @@ the syntaxes @syntax{let}, @syntax{let*}, @syntax{letrec},
 @strong{enabled}: they expand into a uses of @syntax{let/checked},
 @syntax{let*/checked}, @syntax{letrec/checked},
 @syntax{letrec*/checked}.
+
+Notice how we can specify type annotation when using the named--@syntax{let} syntax.  The following
+recursive function and its application to operands:
+
+@lisp
+(define/checked (@{loop <fixnum>@} @{a <fixnum>@} @{b <list>@})
+  (if (fx=? a 3)
+      b
+    (loop (fxadd1 a) (cons a b))))
+
+(loop 1 '())
+@end lisp
+
+@noindent
+can be written:
+
+@lisp
+(let/checked @{loop <fixnum>@} ((@{a <fixnum>@} 1)
+                                (@{b <list>@}   '()))
+  (if (fx=? a 3)
+      b
+    (loop (fxadd1 a) (cons a b))))
+@end lisp
+
+@noindent
+where the ``name'' of the named--@syntax{let} contains the type annotations of the return values.
 @end deffn
 
 
