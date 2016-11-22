@@ -401,6 +401,7 @@
     <void>-type-id			<void>-type-id?
     <top>-type-id			<top>-type-id?
     <bottom>-type-id			<bottom>-type-id?
+    <wildcard>-type-id			<wildcard>-type-id?
     <procedure>-type-id			<procedure>-type-id?
     <pair>-type-id			<pair>-type-id?
     <list>-type-id			<list>-type-id?
@@ -427,6 +428,7 @@
     <untyped>-ots			<untyped>-ots?
     <top>-ots				<top>-ots?
     <bottom>-ots			<bottom>-ots?
+    <wildcard>-ots			<wildcard>-ots?
     <procedure>-ots			<procedure>-ots?
     <pair>-ots				<pair>-ots?
     <null>-ots				<null>-ots?
@@ -3150,6 +3152,7 @@
   (define-type-id-retriever <untyped>-type-id			<untyped>)
   (define-type-id-retriever <bottom>-type-id			<bottom>)
   (define-type-id-retriever <top>-type-id			<top>)
+  (define-type-id-retriever <wildcard>-type-id			<wildcard>)
   (define-type-id-retriever <procedure>-type-id			<procedure>)
   (define-type-id-retriever <boolean>-type-id			<boolean>)
   (define-type-id-retriever <true>-type-id			<true>)
@@ -3186,6 +3189,7 @@
   (define-type-spec-retriever <void>-ots			<void>)
   (define-type-spec-retriever <untyped>-ots			<untyped>)
   (define-type-spec-retriever <bottom>-ots			<bottom>)
+  (define-type-spec-retriever <wildcard>-ots			<wildcard>)
   (define-type-spec-retriever <top>-ots				<top>)
   (define-type-spec-retriever <procedure>-ots			<procedure>)
   (define-type-spec-retriever <boolean>-ots			<boolean>)
@@ -3223,6 +3227,7 @@
   (define-type-id-predicate <untyped>-type-id?			<untyped>-type-id)
   (define-type-id-predicate <bottom>-type-id?			<bottom>-type-id)
   (define-type-id-predicate <top>-type-id?			<top>-type-id)
+  (define-type-id-predicate <wildcard>-type-id?			<wildcard>-type-id)
   (define-type-id-predicate <boolean>-type-id?			<boolean>-type-id)
   (define-type-id-predicate <true>-type-id?			<true>-type-id)
   (define-type-id-predicate <false>-type-id?			<false>-type-id)
@@ -3278,6 +3283,7 @@
   (define-type-spec-predicate <untyped>-ots?			<untyped>-ots)
   (define-type-spec-predicate <bottom>-ots?			<bottom>-ots)
   (define-type-spec-predicate <top>-ots?			<top>-ots)
+  (define-type-spec-predicate <wildcard>-ots?			<wildcard>-ots)
   (define-type-spec-predicate <boolean>-ots?			<boolean>-ots)
   (define-type-spec-predicate <true>-ots?			<true>-ots)
   (define-type-spec-predicate <false>-ots?			<false>-ots)

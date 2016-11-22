@@ -352,14 +352,14 @@
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <type-predicate>
 
-  ;; <type-predicate> == (lambda (<top>) => (<boolean>))
+  ;; <type-predicate> == (lambda (_) => (<boolean>))
 
   (doit-true	<type-predicate>	(lambda (<top>)	=> (<boolean>)))
   (doit-false	<type-predicate>	(lambda (<top>)	=> (<string>)))
   (doit-false	<type-predicate>	(lambda (<top>)	=> (<top>)))
   (doit-true	<type-predicate>	(lambda (<top>)	=> (<true>)))
   (doit-true	<type-predicate>	(lambda (<top>)	=> (<false>)))
-  (doit-false	<type-predicate>	(lambda (<string>)	=> (<boolean>)))
+  (doit-true	<type-predicate>	(lambda (<string>)	=> (<boolean>)))
 
   (doit-true	(lambda (<top>)	=> (<boolean>))		<type-predicate>)
   (doit-false	(lambda (<top>)	=> (<string>))		<type-predicate>)

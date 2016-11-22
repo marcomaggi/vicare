@@ -157,6 +157,7 @@
 	  core-type-descriptor.implemented-interfaces
 	  ;;;
 	  <void>-ctd				<top>-ctd			<bottom>-ctd
+	  <wildcard>-ctd
 	  <true>-ctd				<false>-ctd
 	  <char>-ctd				<keyword>-ctd			<symbol>-ctd
 	  <procedure>-ctd			<struct>-ctd			<record>-ctd
@@ -301,9 +302,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-type-descriptor-predicate <bottom>-ctd)
 (define-type-descriptor-predicate <void>-ctd)
+(define-type-descriptor-predicate <bottom>-ctd)
 (define-type-descriptor-predicate <top>-ctd)
+(define-type-descriptor-predicate <wildcard>-ctd)
+
 (define-type-descriptor-predicate <symbol>-ctd)
 
 (define-type-descriptor-predicate <list>-ctd)

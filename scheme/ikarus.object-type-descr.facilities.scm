@@ -324,6 +324,8 @@
   (define* (object-type-descr.matching-super-and-sub? super.des sub.des)
     (cond
      ((eq? super.des sub.des))
+     ((<wildcard>-ctd? super.des)		#t)
+     ((<wildcard>-ctd? sub.des)			#t)
      ((core-type-descriptor? sub.des)		(%matching-sub/core-type-descr      super.des sub.des))
      ((interface-type-descr? sub.des)		(%matching-sub/interface-type-descr super.des sub.des))
      (else
@@ -1024,6 +1026,8 @@
     ;;
     (cond
      ((core-type-descriptor? sub.des)		(%compatible-sub/core-type-descr   super.des sub.des))
+     ((<wildcard>-ctd? super.des)		#t)
+     ((<wildcard>-ctd? sub.des)			#t)
      (else
       (case-descriptor super.des
 	(core-type-descriptor?			(%compatible-super/core-type-descr super.des sub.des))

@@ -503,7 +503,8 @@
      (cond ((free-identifier=? #'_ id)
 	    (if in-tail-position?
 		#'<list>
-	      #'<top>))
+	      ;;The underscore is fine as type annotation.
+	      id))
 	   ;;FIXME  This  is   a  temporary  substitution.   When   type  unions  are
 	   ;;implemented  we should  remove  this  and use  a  proper definition  for
 	   ;;"<syntax-object>".  (Marco Maggi; Sun Dec 27, 2015)
@@ -1190,8 +1191,8 @@
        (declare-core-primitive ?who
 	   (?safety)
 	 (signatures
-	  ((<pair> _)		=> (<void>))
-	  ((<nelist> _)		=> (<top>)))
+	  ((<pair> <top>)		=> (<void>))
+	  ((<nelist> <top>)		=> (<top>)))
 	 (attributes
 	  ((_ _)		result-true))
 	 (replacements . ?replacements)))
@@ -1221,7 +1222,7 @@
        (declare-core-primitive ?who
 	   (?safety)
 	 (signatures
-	  ((?obj-tag <list>)	=> (_)))
+	  ((?obj-tag <list>)	=> (<top>)))
 	 (attributes
 	  ((_ _)			foldable effect-free))
 	 (replacements . ?replacements)))
@@ -1242,7 +1243,7 @@
 	 (?safety)
        (signatures
 	((?obj-tag <null>)	=> (<false>))
-	((?obj-tag <nelist>)	=> (_)))
+	((?obj-tag <nelist>)	=> (<top>)))
        (attributes
 	((_ ())			foldable effect-free result-false)
 	((_ _)			foldable effect-free))))

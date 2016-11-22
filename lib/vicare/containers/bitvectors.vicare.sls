@@ -62,7 +62,9 @@
 	     (gensym)
 	   (.the-uid this uid)))
 	((<gensym>)
-	 obj))))
+	 obj)
+	(else
+	 (assertion-violation __who__ "internal error, invalid uid value" obj)))))
 
   (method ({putprop} {key <symbol>} value)
     (putprop (.uid this) key value)

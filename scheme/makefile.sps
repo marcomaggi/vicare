@@ -3720,6 +3720,7 @@
 ;;; built-in Scheme object types
 
     (<untyped>)
+    (<wildcard>					v $language)
     (<bottom>					v $language)
     (<void>					v $language)
     (<top>					v $language)
@@ -4004,6 +4005,7 @@
     (<textual-input/output-port>-ctd		system-type-descriptors)
     (<time>-ctd					system-type-descriptors)
     (<bottom>-ctd				system-type-descriptors)
+    (<wildcard>-ctd				system-type-descriptors)
     (<untyped>-ctd				system-type-descriptors)
     (<top>-ctd					system-type-descriptors)
     (<transcoder>-ctd				system-type-descriptors)

@@ -1,4 +1,5 @@
 ;;;Copyright (c) 2008 Matthew Flatt
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>, Mon Nov 21, 2016.
 ;;;
 ;;;This library is free software;  you can redistribute it and/or modify
 ;;;it  under the  terms of  the GNU  Library General  Public  License as
@@ -23,10 +24,10 @@
 
   (define (run-control-tests)
 
-    (test (when (> 3 2) 'greater) 'greater)
+    (test/unspec (when (> 3 2) 'greater))
     (test/unspec (when (< 3 2) 'greater))
     (test/unspec (unless (> 3 2) 'less))
-    (test (unless (< 3 2) 'less) 'less)
+    (test/unspec (unless (< 3 2) 'less))
 
     (test (do ((vec (make-vector 5))
                (i 0 (+ i 1)))

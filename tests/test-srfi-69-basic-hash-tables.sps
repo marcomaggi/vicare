@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -239,7 +239,7 @@
        (let ((H (srfi.make-hash-table)))
 	 (srfi.hash-table-walk H (lambda (key val)
 				   (add-result (list key val))))))
-    => `(,(void) ()))
+    => '(()))
 
   (check-for-true
    (let ((rv (with-result
@@ -248,8 +248,8 @@
 		 (srfi.hash-table-set! H "hello" 2)
 		 (srfi.hash-table-walk H (lambda (key val)
 					   (add-result (list key val))))))))
-     (or (equal? rv `(,(void) (("ciao" 1) ("hello" 2))))
-	 (equal? rv `(,(void) (("hello" 2) ("ciao" 1)))))))
+     (or (equal? rv '((("ciao" 1) ("hello" 2))))
+	 (equal? rv '((("hello" 2) ("ciao" 1)))))))
 
 ;;; --------------------------------------------------------------------
 

@@ -1162,6 +1162,52 @@
 ;;; --------------------------------------------------------------------
 
   (define (%build-branches input-form.stx arg.id clause*.stx)
+    (syntax-match clause*.stx (else)
+      ((?clause* ... (else . ?else-body*))
+       (append (map (lambda (clause.stx)
+		      (syntax-match clause.stx (=> else)
+			(((?type) => ?receiver-expr)
+			 `((is-a? ,arg.id ,?type)
+			   (,?receiver-expr ,arg.id)))
+
+			(((?type) ?body0 ?body* ...)
+			 `((is-a? ,arg.id ,?type)
+			   ,?body0 . ,?body*))
+
+			((else ?body0 ?body* ...)
+			 (synner "the ELSE clause is not the last clause" clause.stx))
+
+			(else
+			 (synner "invalid clause syntax" clause.stx))))
+		 ?clause*)
+	       `((else . ,?else-body*))))
+
+      ((?clause* ...)
+       ;;No ELSE clause: we return no values in all the branches.
+       (append (map (lambda (clause.stx)
+		      (syntax-match clause.stx (=> else)
+			(((?type) => ?receiver-expr)
+			 `((is-a? ,arg.id ,?type)
+			   (,?receiver-expr ,arg.id)
+			   (values)))
+
+			(((?type) ?body0 ?body* ...)
+			 `((is-a? ,arg.id ,?type)
+			   (begin ,?body0 . ,?body*)
+			   (values)))
+
+			((else ?body0 ?body* ...)
+			 (synner "the ELSE clause is not the last clause" clause.stx))
+
+			(else
+			 (synner "invalid clause syntax" clause.stx))))
+		 ?clause*)
+	       `((else (values)))))
+
+      (_
+       (synner "invalid syntax"))))
+
+  #;(define (%build-branches input-form.stx arg.id clause*.stx)
     ;;This loop is like MAP, but we want  to detect if the ELSE clause (when present)
     ;;is used only as last clause.
     (let recur ((clause*.stx clause*.stx))

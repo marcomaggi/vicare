@@ -4224,6 +4224,7 @@ et cetera.
 * built-in void::               Type of the void object.
 * built-in top::                The universal super-type.
 * built-in bottom::             The universal sub-type.
+* built-in wildcard::           Wildcard annotation.
 * built-in unique::             Types of unique objects.
 * built-in booleans::           Type of boolean objects.
 * built-in chars::              Type of character objects.
@@ -4420,6 +4421,18 @@ signature in which the argument can be any value:
 (type-annotation (or  <bottom> <fixnum>))
 @result{} #[core-type-spec #[type (<fixnum>)]]
 @end lisp
+@end deftp
+
+@c page
+@node built-in wildcard
+@section Wildcard annotation
+
+
+@deftp {Core Type} @aclass{wildcard}
+@deftpx {Core Type} _
+A conventional type that is both the super--type of all the other types and the sub--type of all the
+other types.  This type annotation is useful as type of arguments to function that are themselves
+used as arguments to functions; @ref{built-in procedures type-predicate} for a usage example.
 @end deftp
 
 @c page
@@ -5276,7 +5289,7 @@ type is equivalent to:
 
 @lisp
 (define-type <type-predicate>
-  (lambda (<top>) => (<boolean>)))
+  (lambda (_) => (<boolean>)))
 @end lisp
 @end deftp
 
@@ -5291,7 +5304,7 @@ The definition of this type is equivalent to:
 
 @lisp
 (define-type <type-destructor>
-  (lambda (<top>) => <list>))
+  (lambda (_) => <list>))
 @end lisp
 @end deftp
 
@@ -5306,7 +5319,7 @@ type.  The definition of this type is equivalent to:
 
 @lisp
 (define-type <type-printer>
-  (lambda (<bottom> <textual-output-port> <procedure>) => <list>))
+  (lambda (_ <textual-output-port> <procedure>) => <list>))
 @end lisp
 @end deftp
 
@@ -5321,7 +5334,7 @@ this type is equivalent to:
 
 @lisp
 (define-type <equality-predicate>
-  (lambda (<bottom> <bottom>) => (<boolean>)))
+  (lambda (_ _) => (<boolean>)))
 @end lisp
 @end deftp
 
@@ -5336,7 +5349,7 @@ this type is equivalent to:
 
 @lisp
 (define-type <comparison-procedure>
-  (lambda (<bottom> <bottom>) => (<fixnum>)))
+  (lambda (_ _) => (<fixnum>)))
 @end lisp
 @end deftp
 
@@ -5351,7 +5364,7 @@ this type is equivalent to:
 
 @lisp
 (define-type <hash-function>
-  (lambda (<bottom>) => (<non-negative-fixnum>)))
+  (lambda (_) => (<non-negative-fixnum>)))
 @end lisp
 @end deftp
 

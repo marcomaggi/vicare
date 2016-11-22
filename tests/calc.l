@@ -26,7 +26,7 @@
 ;;; 	any of the  chars in [+-*\/^%,] or it  will result in tokenising
 ;;; 	errors when splitting "1*2", "1/2", "a-b" and such.
 ;;;
-;;;Copyright (C) 2007, 2009, 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2007, 2009, 2011, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2000 The Free Software Foundation
 ;;;
 ;;;Originally from Guile-Arith was written by Ian Grant <iang@pobox.com>
@@ -93,7 +93,9 @@ cparen		\)
 		  ((<) '<)
 		  ((>) '>)
 		  ((<=) '<=)
-		  ((>=) '>=))
+		  ((>=) '>=)
+		  (else
+		   (assertion-violation #f "internal error")))
 {symbol}	(string->symbol yytext)
 {comma}		'cons
 

@@ -225,6 +225,7 @@
 (declare-core-type-descriptor <true>-ctd)
 (declare-core-type-descriptor <untyped>-ctd)
 (declare-core-type-descriptor <bottom>-ctd)
+(declare-core-type-descriptor <wildcard>-ctd)
 (declare-core-type-descriptor <utsname>-ctd)
 (declare-core-type-descriptor <vector>-ctd)
 (declare-core-type-descriptor <nevector>-ctd)

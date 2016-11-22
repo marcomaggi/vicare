@@ -30,6 +30,11 @@
   (type-predicate always-false)
   (hash-function object-hash))
 
+(define-scheme-type <wildcard>
+    #f
+  (type-predicate always-false)
+  (hash-function object-hash))
+
 
 ;;;; standalone object types
 

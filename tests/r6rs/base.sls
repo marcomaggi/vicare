@@ -1,5 +1,5 @@
 ;;;Copyright (c) 2008 Matthew Flatt
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>.
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>, 2010-2016.
 ;;;
 ;;;This library is free software;  you can redistribute it and/or modify
 ;;;it  under the  terms of  the GNU  Library General  Public  License as
@@ -287,7 +287,8 @@
 
     ;; 11.4.5
     (test (cond ((> 3 2) 'greater)
-                ((< 3 2) 'less))
+                ((< 3 2) 'less)
+		(else #f))
           'greater)
 
     (test (cond ((> 3 3) 'greater)
@@ -300,11 +301,13 @@
 
     (test (case (* 2 3)
             ((2 3 5 7) 'prime)
-            ((1 4 6 8 9) 'composite))
+            ((1 4 6 8 9) 'composite)
+	    (else #f))
           'composite)
     (test/unspec (case (car '(c d))
                    ((a) 'a)
-                   ((b) 'b)))
+                   ((b) 'b)
+		   (else #f)))
     (test (case (car '(c d))
             ((a e i o u) 'vowel)
             ((w y) 'semivowel)
@@ -1493,7 +1496,8 @@
                   ((< (car numbers) 0)
                    (loop (cdr numbers)
                          nonneg
-                         (cons (car numbers) neg)))))
+                         (cons (car numbers) neg)))
+		  (else #f)))
           '((6 1 3) (-5 -2)))
 
     ;; 11.17
@@ -1603,7 +1607,8 @@
     (test (sequence 1 2 3 4) 4)
 
     (test (let ((=> #f))
-            (cond (#t => 'ok)))
+            (cond (#t => 'ok)
+		  (else #f)))
           'ok)
 
     (test p.car 4)

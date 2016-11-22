@@ -3778,67 +3778,166 @@
 ;;;; non-core macro: COND
 
 (define-macro-transformer (cond input-form.stx)
-  ;;Transformer function used to expand R6RS  COND macros from the top-level built in
-  ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
-  ;;must be further expanded.
+  ;;Transformer function used to expand R6RS COND macros, with Vicare's non-compliant
+  ;;constraints, from  the top-level  built in environment.   Expand the  contents of
+  ;;INPUT-FORM.STX; return a syntax object that must be further expanded.
   ;;
-  (syntax-match input-form.stx ()
-    ((_ ?cls ?cls* ...)
-     (bless
-      (let recur ((cls ?cls) (cls* ?cls*))
-	(if (null? cls*)
-	    ;;Here we process the last clause.
-	    (syntax-match cls (else =>)
-	      ((else ?expr ?expr* ...)
-	       `(internal-body ,?expr . ,?expr*))
+  (define (main)
+    (syntax-match input-form.stx (else)
+      ((_ (else ?else-body0 ?else-body* ...))
+       ;;Single ELSE clause with valid syntax.
+       (bless
+	`(internal-body ,?else-body0 . ,?else-body*)))
 
-	      ((?test => ?proc)
-	       (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
-		 `(let/std ((,tmp ,?test))
-		    (if ,tmp
-			(,?proc ,tmp)
-		      (values)))))
+      ((_ (else . ?stuff))
+       ;;Single ELSE clause with INvalid syntax.
+       (__synner__ "invalid syntax in ELSE clause"))
 
-	      ((?expr)
-	       (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
-		 `(let/std ((,tmp ,?expr))
-		    (if ,tmp
-			,tmp
-		      (values)))))
+      ((_ ?clause ?clause* ... (else ?else-body0 ?else-body* ...))
+       ;;Clauses and final ELSE clause with valid syntax.
+       (%build-output-form/with-else (cons ?clause ?clause*) (cons* (core-prim-id 'internal-body) ?else-body0 ?else-body*)))
 
-	      ((?test ?expr* ...)
-	       `(if ,?test
-		    (internal-body . ,?expr*)
-		  (values)))
+      ((_ ?clause ?clause* ... (else . ?stuff))
+       ;;Clauses and final ELSE clause with INvalid syntax.
+       (__synner__ "invalid syntax in ELSE clause"))
 
-	      (_
-	       (__synner__ "invalid last clause" cls)))
+      ((_ ?clause ?clause* ...)
+       (%build-output-form/no-else   (cons ?clause ?clause*)))
 
-	  (syntax-match cls (else =>)
-	    ((else ?expr ?expr* ...)
-	     (__synner__ "incorrect position of keyword ELSE" cls))
+      (_
+       (__synner__ "invalid syntax"))))
 
-	    ((?test => ?proc)
-	     (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
-	       `(let/std ((,tmp ,?test))
-		  (if ,tmp
-		      (,?proc ,tmp)
-		    ,(recur (car cls*) (cdr cls*))))))
+  (define (%build-output-form/with-else clause*.stx else-form.stx)
+    (bless
+     (let recur ((clause*.stx clause*.stx))
+       (if (pair? clause*.stx)
+	   (syntax-match (car clause*.stx) (else =>)
+	     ((else . ?else-body*)
+	      (__synner__ "the ELSE clause is not the last one" (car clause*.stx)))
 
-	    ((?expr)
-	     (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
-	       `(let/std ((,tmp ,?expr))
-		  (if ,tmp ,tmp ,(recur (car cls*) (cdr cls*))))))
+	     ((?test => ?proc)
+	      (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
+		`(let/std ((,tmp ,?test))
+		   (if ,tmp
+		       (,?proc ,tmp)
+		     ,(recur (cdr clause*.stx))))))
 
-	    ((?test ?expr* ...)
-	     `(if ,?test
-		  (internal-body . ,?expr*)
-		,(recur (car cls*) (cdr cls*))))
+	     ((?expr)
+	      (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
+		`(let/std ((,tmp ,?expr))
+		   (if ,tmp ,tmp ,(recur (cdr clause*.stx))))))
 
-	    (_
-	     (__synner__ "invalid last clause" cls)))))))
-    (_
-     (__synner__ "invalid syntax in macro use"))))
+	     ((?test ?expr* ...)
+	      `(if ,?test
+		   (internal-body . ,?expr*)
+		 ,(recur (cdr clause*.stx))))
+
+	     (_
+	      (__synner__ "invalid clause syntax" (car clause*.stx))))
+	 else-form.stx))))
+
+  (define (%build-output-form/no-else clause*.stx)
+    (bless
+     (let recur ((clause*.stx clause*.stx))
+       (if (pair? clause*.stx)
+	   (syntax-match (car clause*.stx) (else =>)
+	     ((else . ?else-body*)
+	      (__synner__ "the ELSE clause is not the last one" (car clause*.stx)))
+
+	     ((?test => ?proc)
+	      (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
+		`(let/std ((,tmp ,?test))
+		   (if ,tmp
+		       (begin
+			 (,?proc ,tmp)
+			 (values))
+		     ,(recur (cdr clause*.stx))))))
+
+	     ((?expr)
+	      (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
+		`(let/std ((,tmp ,?expr))
+		   (if ,tmp
+		       (begin ,tmp (values))
+		     ,(recur (cdr clause*.stx))))))
+
+	     ((?test ?expr* ...)
+	      `(if ,?test
+		   (begin
+		     (internal-body . ,?expr*)
+		     (values))
+		 ,(recur (cdr clause*.stx))))
+
+	     (_
+	      (__synner__ "invalid clause syntax" (car clause*.stx))))
+	 ;;This is the last form.
+	 '(values)))))
+
+  (main))
+
+;;; --------------------------------------------------------------------
+
+;; (define-macro-transformer (cond input-form.stx)
+;;   ;;Transformer function used to expand R6RS  COND macros from the top-level built in
+;;   ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
+;;   ;;must be further expanded.
+;;   ;;
+;;   (syntax-match input-form.stx ()
+;;     ((_ ?cls ?cls* ...)
+;;      (bless
+;;       (let recur ((cls ?cls) (cls* ?cls*))
+;; 	(if (null? cls*)
+;; 	    ;;Here we process the last clause.
+;; 	    (syntax-match cls (else =>)
+;; 	      ((else ?expr ?expr* ...)
+;; 	       `(internal-body ,?expr . ,?expr*))
+
+;; 	      ((?test => ?proc)
+;; 	       (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
+;; 		 `(let/std ((,tmp ,?test))
+;; 		    (if ,tmp
+;; 			(,?proc ,tmp)
+;; 		      (values)))))
+
+;; 	      ((?expr)
+;; 	       (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
+;; 		 `(let/std ((,tmp ,?expr))
+;; 		    (if ,tmp
+;; 			,tmp
+;; 		      (values)))))
+
+;; 	      ((?test ?expr* ...)
+;; 	       `(if ,?test
+;; 		    (internal-body . ,?expr*)
+;; 		  (values)))
+
+;; 	      (_
+;; 	       (__synner__ "invalid last clause" cls)))
+
+;; 	  (syntax-match cls (else =>)
+;; 	    ((else ?expr ?expr* ...)
+;; 	     (__synner__ "incorrect position of keyword ELSE" cls))
+
+;; 	    ((?test => ?proc)
+;; 	     (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
+;; 	       `(let/std ((,tmp ,?test))
+;; 		  (if ,tmp
+;; 		      (,?proc ,tmp)
+;; 		    ,(recur (car cls*) (cdr cls*))))))
+
+;; 	    ((?expr)
+;; 	     (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
+;; 	       `(let/std ((,tmp ,?expr))
+;; 		  (if ,tmp ,tmp ,(recur (car cls*) (cdr cls*))))))
+
+;; 	    ((?test ?expr* ...)
+;; 	     `(if ,?test
+;; 		  (internal-body . ,?expr*)
+;; 		,(recur (car cls*) (cdr cls*))))
+
+;; 	    (_
+;; 	     (__synner__ "invalid last clause" cls)))))))
+;;     (_
+;;      (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: QUASIQUOTE

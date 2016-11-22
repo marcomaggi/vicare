@@ -8,7 +8,7 @@
 )
 
 ;
-; Table generated from the file ../../tests/calc.l by SILex 1.0
+; Table generated from the file ../tests/calc.l by SILex 1.0
 ;
 
 (define calc-lexer-table/tree
@@ -70,7 +70,9 @@
 		  ((<) '<)
 		  ((>) '>)
 		  ((<=) '<=)
-		  ((>=) '>=))
+		  ((>=) '>=)
+		  (else
+		   (assertion-violation #f "internal error")))
         ))
     #t
     (lambda (yycontinue yygetc yyungetc)

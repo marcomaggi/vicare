@@ -29,7 +29,8 @@
 #!r6rs
 (program (test-vicare-compiler-scheme-objects-ontology)
   (options strict-r6rs)
-  (import (vicare)
+  (import (except (vicare)
+		  maybe)
     (ikarus.compiler.scheme-objects-ontology)
     (vicare expander)
     (vicare checks))

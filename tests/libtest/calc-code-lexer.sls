@@ -70,7 +70,9 @@
 		  ((<) '<)
 		  ((>) '>)
 		  ((<=) '<=)
-		  ((>=) '>=))
+		  ((>=) '>=)
+		  (else
+		   (assertion-violation #f "internal error")))
         ))
     #t
     (lambda (yycontinue yygetc yyungetc)

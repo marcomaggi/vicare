@@ -75,8 +75,9 @@
 ;;   0.1: 2005/08/18 - simple NFA interpreter over abstract chunked strings
 
 
-#!r6rs
+#!vicare
 (library (vicare irregex)
+  (options typed-language)
   (export
     irregex
     string->irregex sre->irregex irregex?
@@ -1424,7 +1425,7 @@
                      `(/ ,(integer->char #x80) ,(integer->char #xFF)))
                    (cdr lo-ls)))))
       (map
-       (lambda (i)
+       (lambda ({_ <top>} i)
          (sre-sequence
           (cons
            `(/ ,(integer->char (utf8-lowest-digit-of-length (+ i lo-len 1)))
@@ -1470,16 +1471,16 @@
   (let adjust ((sre sre)
                (utf8? (flag-set? flags ~utf8?))
                (ci? (flag-set? flags ~case-insensitive?)))
-    (define (rec sre) (adjust sre utf8? ci?))
+    (define ({rec <top>} sre) (adjust sre utf8? ci?))
     (cond
      ((pair? sre)
       (case (car sre)
         ((w/utf8) (adjust (sre-sequence (cdr sre)) #t ci?))
         ((w/noutf8) (adjust (sre-sequence (cdr sre)) #f ci?))
         ((w/case)
-         (cons (car sre) (map (lambda (s) (adjust s utf8? #f)) (cdr sre))))
+         (cons (car sre) (map (lambda ({_ <top>} s) (adjust s utf8? #f)) (cdr sre))))
         ((w/nocase)
-         (cons (car sre) (map (lambda (s) (adjust s utf8? #t)) (cdr sre))))
+         (cons (car sre) (map (lambda ({_ <top>} s) (adjust s utf8? #t)) (cdr sre))))
         ((/ ~ & -)
          (if (not utf8?)
              sre
@@ -1784,7 +1785,7 @@
    (else (cons 'or ls))))
 
 ;; returns an equivalent SRE without any match information
-(define (sre-strip-submatches sre)
+(define ({sre-strip-submatches <top>} sre)
   (if (not (pair? sre))
       sre
       (case (car sre)
@@ -1834,7 +1835,7 @@
                           (+ n (sre-count-submatches (car ls)))
                           (sre-names (car ls) n names))))
 
-(define (sre-remove-initial-bos sre)
+(define ({sre-remove-initial-bos <top>} sre)
   (cond
    ((pair? sre)
     (case (car sre)
@@ -2116,7 +2117,7 @@
                   (lp1 next (get-start next) state res-src res-index finalizer)
                   (and index
                        (%irregex-match-end-chunk matches index)
-                       (or (not finalizer) (finalize! finalizer memory matches))
+                       (or (not finalizer) (begin (finalize! finalizer memory matches) #t))
                        #t))))
            (else
             (let* ((ch (string-ref str i))
@@ -3564,7 +3565,7 @@
 
 (define (sre->cset sre . o)
   (let lp ((sre sre) (ci? (and (pair? o) (car o))))
-    (define (rec sre) (lp sre ci?))
+    (define ({rec <top>} sre) (lp sre ci?))
     (cond
      ((pair? sre)
       (if (string? (car sre))

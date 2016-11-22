@@ -654,6 +654,8 @@
 	      (sub.ots   (%normalise-reference-type-spec sub.ots)))
 	  (cond
 	   ((eq? super.ots sub.ots))
+	   ((<wildcard>-ots?		super.ots)	#t)
+	   ((<wildcard>-ots?		sub.ots)	#t)
 	   ((core-type-spec?		sub.ots)	(%matching-sub/core-type-spec  super.ots sub.ots))
 	   ((interface-type-spec?	sub.ots)	(%matching-sub/interface-type-spec super.ots sub.ots))
 	   ((label-type-spec?		sub.ots)	(%matching-sub/label-type-spec super.ots sub.ots))
@@ -688,7 +690,7 @@
   (module (%matching-sub/core-type-spec)
 
     (define (%matching-sub/core-type-spec super.ots sub.ots)
-      (or (<bottom>-ots? sub.ots)
+      (or (<bottom>-ots?   sub.ots)
 	  (cond-with-predicates super.ots
 	    (core-type-spec?
 	     ;;Both the descriptors are instances  of "<core-type-spec>".  We do this
@@ -1418,6 +1420,8 @@
     (let ((super.ots (%normalise-reference-type-spec super.ots))
 	  (sub.ots   (%normalise-reference-type-spec sub.ots)))
       (cond
+       ((<wildcard>-ots?	super.ots)	#t)
+       ((<wildcard>-ots?	sub.ots)	#t)
        ((core-type-spec?	sub.ots)	(%compatible-sub/core-type-spec   super.ots sub.ots))
        ((interface-type-spec?	sub.ots)	#f)
        ((label-type-spec?	sub.ots)	(%compatible-sub/label-type-spec  super.ots sub.ots))
@@ -2225,6 +2229,12 @@
 	((<void>-ots? ots2)
 	 (<void>-ots))
 
+	((<wildcard>-ots? ots1)
+	 ots1)
+
+	((<wildcard>-ots? ots2)
+	 ots2)
+
 	((reference-type-spec? ots1)
 	 (object-type-spec.common-ancestor (reference-type-spec.dereference ots1) ots2))
 
@@ -2402,6 +2412,9 @@
 	     (interface-type-spec?
 	      (and (interface-type-spec? ots2)
 		   ($interface-type-spec=? ots1 ots2)))
+
+	     (<wildcard>-ots?
+	      (<wildcard>-ots? ots2))
 
 	     (else #f)))))))
 
@@ -5769,7 +5782,11 @@
      (?type-id
       (identifier? ?type-id)
       (try
-	  (if (id->object-type-spec ?type-id lexenv) #t #f)
+	  (cond ((underscore-id? ?type-id)
+		 (<wildcard>-ots))
+		((id->object-type-spec ?type-id lexenv)
+		 #t)
+		(else #f))
 	(catch E
 	  (else #f))))
 
@@ -5908,7 +5925,10 @@
 	    (lambda (E)
 	      (raise (condition (make-who-condition __who__) E)))
 	  (lambda ()
-	    (id->object-type-spec ?type-id lexenv))))
+	    (cond ((underscore-id? ?type-id)
+		   (<wildcard>-ots))
+		  (else
+		   (id->object-type-spec ?type-id lexenv))))))
 
        ((pair ?car-type ?cdr-type)
 	(let ((car.ots (type-annotation->object-type-spec ?car-type lexenv))

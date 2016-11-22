@@ -41,7 +41,7 @@
     (safe)
   (signatures
    ((<struct>)				=> (<true>))
-   ((_)					=> (<boolean>))
+   ((<top>)				=> (<boolean>))
    ((<struct> <struct-type-descriptor>)	=> (<boolean>)))
   (attributes
    ((_)					foldable effect-free)
@@ -168,7 +168,7 @@
 (declare-core-primitive struct-set!
     (safe)
   (signatures
-   ((<struct> <non-negative-fixnum> _)	=> (<void>)))
+   ((<struct> <non-negative-fixnum> <top>)	=> (<void>)))
   (attributes
    ((_ _ _)		result-true)))
 
@@ -181,7 +181,7 @@
 (declare-core-primitive struct-guardian-log
     (safe)
   (signatures
-   ((<struct> _ <symbol>)	=> (<void>)))
+   ((<struct> <top> <symbol>)	=> (<void>)))
   (attributes
    ((_ _ _)			result-true)))
 
@@ -205,7 +205,7 @@
 (declare-core-primitive $struct
     (unsafe)
   (signatures
-   ((<struct-type-descriptor> . _)	=> (<struct>)))
+   ((<struct-type-descriptor> . <list>)	=> (<struct>)))
   (attributes
    ;;It must return a new struct every time.
    ((_ . _)				effect-free result-true)))
@@ -230,14 +230,14 @@
     (unsafe)
   (signatures
    ((<struct>)				=> (<true>))
-   ((_)					=> (<boolean>)))
+   ((<top>)				=> (<boolean>)))
   (attributes
    ((_)					foldable effect-free)))
 
 (declare-core-primitive $struct/rtd?
     (unsafe)
   (signatures
-   ((_ <struct-type-descriptor>)	=> (<boolean>)))
+   ((<top> <struct-type-descriptor>)	=> (<boolean>)))
   (attributes
    ((_ _)				foldable effect-free)))
 
@@ -262,7 +262,7 @@
     (unsafe)
   (signatures
    ((<struct> <non-negative-fixnum> <void>)	=> (<void>))
-   ((<struct> <non-negative-fixnum> _)		=> (<void>)))
+   ((<struct> <non-negative-fixnum> <top>)	=> (<void>)))
   (attributes
    ((_ _)			foldable result-true)))
 

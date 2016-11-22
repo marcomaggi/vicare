@@ -175,13 +175,13 @@
 ;;; --------------------------------------------------------------------
 
 (define-type-annotation <type-predicate>
-  (lambda (<top>) => (<boolean>)))
+  (lambda (_) => (<boolean>)))
 
 (define-type-annotation <type-destructor>
-  (lambda (<top>) => <list>))
+  (lambda (_) => <list>))
 
 (define-type-annotation <type-printer>
-  (lambda (<bottom> <textual-output-port> <procedure>) => <list>))
+  (lambda (_ <textual-output-port> <procedure>) => <list>))
 
 (define-type-annotation <type-method-retriever>
   (lambda (<symbol>) => ((or <false> <procedure>))))
@@ -189,13 +189,13 @@
 ;;; --------------------------------------------------------------------
 
 (define-type-annotation <equality-predicate>
-  (lambda (<bottom> <bottom>) => (<boolean>)))
+  (lambda (_ _) => (<boolean>)))
 
 (define-type-annotation <comparison-procedure>
-  (lambda (<bottom> <bottom>) => (<fixnum>)))
+  (lambda (_ _) => (<fixnum>)))
 
 (define-type-annotation <hash-function>
-  (lambda (<bottom>) => (<non-negative-fixnum>)))
+  (lambda (_) => (<non-negative-fixnum>)))
 
 
 ;;;; miscellaneous

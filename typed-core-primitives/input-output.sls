@@ -958,7 +958,7 @@
 (declare-core-primitive pretty-print*
     (safe)
   (signatures
-   ((<top> <textual-output-port> <non-negative-fixnum> _)	=> (<void>)))
+   ((<top> <textual-output-port> <non-negative-fixnum> <top>)	=> (<void>)))
   (attributes
    ((_ _ _ _)		result-true)))
 

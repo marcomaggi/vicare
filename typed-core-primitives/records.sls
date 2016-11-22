@@ -45,23 +45,23 @@
 (declare-core-primitive make-record-type-descriptor
     (safe)
   (signatures
-   ;;name parent uid sealed? opaque? fields
-   #;((<symbol> (or <false> <record-type-descriptor>) (or <false> <symbol>) _ _ <vector>) => (<record-type-descriptor>))
-   ((<symbol> <record-type-descriptor> <symbol> _ _ <vector>) => (<record-type-descriptor>))
-   ((<symbol> <record-type-descriptor> <false>  _ _ <vector>) => (<record-type-descriptor>))
-   ((<symbol> <false>                  <symbol> _ _ <vector>) => (<record-type-descriptor>))
-   ((<symbol> <false>                  <false>  _ _ <vector>) => (<record-type-descriptor>)))
+   ((<symbol>				   ;name
+     (or <false> <record-type-descriptor>) ;parent
+     (or <false> <symbol>)		   ;uid
+     <top>				   ;sealed?
+     <top>				   ;opaque?
+     <vector>)				   ;fields
+    => (<record-type-descriptor>)))
   (attributes
    ((_ _ _ _ _ _)		effect-free result-true)))
 
 (declare-core-primitive make-record-constructor-descriptor
     (safe)
   (signatures
-   #;((<record-type-descriptor> (or <false> <record-constructor-descriptor>) (or <false> <procedure>)) => (<record-constructor-descriptor>))
-   ((<record-type-descriptor> <record-constructor-descriptor> <procedure>) => (<record-constructor-descriptor>))
-   ((<record-type-descriptor> <record-constructor-descriptor> <false>)     => (<record-constructor-descriptor>))
-   ((<record-type-descriptor> <false> <procedure>)                         => (<record-constructor-descriptor>))
-   ((<record-type-descriptor> <false> <false>)                             => (<record-constructor-descriptor>)))
+   ((<record-type-descriptor>
+     (or <false> <record-constructor-descriptor>)
+     (or <false> <procedure>))
+    => (<record-constructor-descriptor>)))
   (attributes
    ((_ _ _)			effect-free result-true)))
 
@@ -370,7 +370,7 @@
 (declare-core-primitive record-guardian-log
     (safe)
   (signatures
-   ((<record> _ <symbol>)	=> (<void>)))
+   ((<record> <top> <symbol>)	=> (<void>)))
   (attributes
    ((_ _ _)			result-true)))
 

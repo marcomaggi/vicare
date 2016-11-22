@@ -1,4 +1,5 @@
 ;;;Copyright (c) 2008 Matthew Flatt
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>, Mon Nov 21, 2016.
 ;;;
 ;;;This library is free software;  you can redistribute it and/or modify
 ;;;it  under the  terms of  the GNU  Library General  Public  License as
@@ -187,8 +188,8 @@
 
     ;; ----------------------------------------
 
-    (test (eval '(cond [#t 1]) (null-environment 5)) 1)
-    (test (eval '(cond [#t => (lambda (x) x)]) (null-environment 5)) #t)
+    (test (eval '(cond [#t 1] (else #f)) (null-environment 5)) 1)
+    (test (eval '(cond [#t => (lambda (x) x)] (else #f)) (null-environment 5)) #t)
 
 
     (test (eval '(cons 1 2) (scheme-report-environment 5)) '(1 . 2))

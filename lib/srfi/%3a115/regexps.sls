@@ -34,6 +34,7 @@
 
 
 (library (srfi :115 regexps)
+  (options typed-language)
   (export
     regexp regexp? valid-sre? rx regexp->sre char-set->sre
     regexp-matches regexp-matches? regexp-search
@@ -342,7 +343,7 @@
                   res))))))
    ((list? md)
     (if recurse?
-        (map (lambda (x) (regexp-match-convert recurse? x str)) (reverse md))
+        (map (lambda ({_ <top>} x) (regexp-match-convert recurse? x str)) (reverse md))
         (regexp-match-convert recurse? (car md) str)))
    ((and (pair? md) (string-cursor? (car md)) (string-cursor? (cdr md)))
     (substring-cursor str (car md) (cdr md)))
@@ -521,9 +522,12 @@
       ;; Follow transitions.
       (cond
        ((state-accept? st)
-        (set-cdr! accept (searcher-max sr (cdr accept))))
+        (set-cdr! accept (searcher-max sr (cdr accept)))
+	(values))
        ((posse-ref seen sr)
-        => (lambda (sr-prev) (searcher-merge! sr-prev sr)))
+        => (lambda (sr-prev)
+	     (searcher-merge! sr-prev sr)
+	     (values)))
        ((epsilon-state? st)
         (let ((ch (and (string-cursor<? i end) (string-cursor-ref str i))))
           ;; Epsilon transition.  If there is a procedure matcher,
@@ -542,21 +546,25 @@
                 (let ((sr2 (make-searcher
                             next2
                             (copy-regexp-match (searcher-matches sr)))))
-                  (advance! sr2)))))))))
+                  (advance! sr2))))))))
+	(values))
        ;; Non-special, non-epsilon searcher, add to posse.
        ((posse-ref new sr)
         ;; Merge regexp-match for existing searcher.
-        => (lambda (sr-prev) (searcher-merge! sr-prev sr)))
+        => (lambda (sr-prev)
+	     (searcher-merge! sr-prev sr)
+	     (values)))
        (else
         ;; Add new searcher.
-        (posse-add! new sr))))))
+        (posse-add! new sr)
+	(values))))))
 
 ;; Run so long as there is more to match.
 
 (define (regexp-run-offsets search? rx str start end)
   (let ((rx (regexp rx))
         (epsilons (posse))
-        (accept (list #f)))
+        ({accept <list>} (list #f)))
     (let lp ((i start)
              (searchers1 (posse))
              (searchers2 (posse)))
@@ -776,7 +784,7 @@
 (define (valid-sre? x)
   (guard (exn (else #f)) (regexp x) #t))
 
-(define (sre->char-set sre . o)
+(define ({sre->char-set <top>} sre . o)
   (let ((flags (if (pair? o) (car o) ~none)))
     (define (->cs sre) (sre->char-set sre flags))
     (define (maybe-ci sre)
@@ -796,7 +804,7 @@
             ((char-set) (maybe-ci (string->char-set (cadr sre))))
             ((/ char-range)
              (->cs
-              `(or ,@(map (lambda (x)
+              `(or ,@(map (lambda ({_ <top>} x)
                             (ucs-range->char-set
                              (char->integer (car x))
                              (+ 1 (char->integer (cdr x)))))
@@ -845,10 +853,10 @@
 ;;> Compile an \var{sre} into a regexp.
 
 (define (regexp sre . o)
-  (define current-index 2)
-  (define current-match 0)
-  (define match-names '())
-  (define match-rules (list (cons 0 1)))
+  (define {current-index <top>} 2)
+  (define {current-match <top>} 0)
+  (define {match-names <top>} '())
+  (define {match-rules <top>} (list (cons 0 1)))
   (define (make-submatch-state sre flags next index)
     (let* ((n3 (make-epsilon-state next))
            (n2 (->rx sre flags n3))
@@ -858,7 +866,7 @@
       (state-match-set! n3 (+ index 1))
       (state-match-rule-set! n3 'right)
       n1))
-  (define (->rx sre flags next)
+  (define ({->rx <top>} sre flags next)
     (cond
      ;; The base cases chars and strings match literally.
      ((char? sre)
@@ -868,7 +876,7 @@
      ((string? sre)
       (->rx (cons 'seq (string->list sre)) flags next))
      ((and (symbol? sre) (lookup-char-set sre flags))
-      => (lambda (cset) (make-char-state cset ~none next)))
+      => (lambda ({_ <top>} cset) (make-char-state cset ~none next)))
      ((symbol? sre)
       (case sre
         ((epsilon) next)
@@ -1037,7 +1045,9 @@
         (else
          (if (string? (car sre))
              (make-char-state (sre->char-set sre flags) ~none next)
-             (error #f "unknown sre" sre)))))))
+             (error #f "unknown sre" sre)))))
+      (else
+       (error #f "internal error"))))
   (let ((flags (parse-flags (and (pair? o) (car o)))))
     (if (regexp? sre)
         sre

@@ -133,9 +133,11 @@
 		  (display x))))
 	 (bind ((lex.x_0 (funcall (primref read))))
 	   (conditional (funcall (primref fixnum?) lex.x_0)
-	       (funcall (primref display)
-		 (known lex.x_0 (T:fixnum T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object)))
-	     (constant #!void))))
+	       (seq
+		 (funcall (primref display)
+		   (known lex.x_0 (T:fixnum T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object)))
+		 (funcall (primref values)))
+	     (funcall (primref values)))))
 
   ;;bignum predicate
   (doit* (let ((x (read)))
@@ -143,9 +145,11 @@
 		  (display x))))
 	 (bind ((lex.x_0 (funcall (primref read))))
 	   (conditional (funcall (primref bignum?) lex.x_0)
-	       (funcall (primref display)
-		 (known lex.x_0 (T:bignum T:non-false T:nonimmediate T:exact-real T:real T:exact-integer T:exact T:number T:object)))
-	     (constant #!void))))
+	       (seq
+		 (funcall (primref display)
+		   (known lex.x_0 (T:bignum T:non-false T:nonimmediate T:exact-real T:real T:exact-integer T:exact T:number T:object)))
+		 (funcall (primref values)))
+	     (funcall (primref values)))))
 
   ;;ratnum predicate
   (doit* (let ((x (read)))
@@ -153,9 +157,11 @@
 		  (display x))))
 	 (bind ((lex.x_0 (funcall (primref read))))
 	   (conditional (funcall (primref ratnum?) lex.x_0)
-	       (funcall (primref display)
-		 (known lex.x_0 (T:ratnum T:non-false T:nonimmediate T:exact-real T:real T:exact T:number T:object)))
-	     (constant #!void))))
+	       (seq
+		 (funcall (primref display)
+		   (known lex.x_0 (T:ratnum T:non-false T:nonimmediate T:exact-real T:real T:exact T:number T:object)))
+		 (funcall (primref values)))
+	     (funcall (primref values)))))
 
   ;;flonum predicate
   (doit* (let ((x (read)))
@@ -163,9 +169,11 @@
 		  (display x))))
 	 (bind ((lex.x_0 (funcall (primref read))))
 	   (conditional (funcall (primref flonum?) lex.x_0)
-	       (funcall (primref display)
-		 (known lex.x_0 (T:non-false T:nonimmediate T:real T:inexact T:flonum T:number T:object)))
-	     (constant #!void))))
+	       (seq
+		 (funcall (primref display)
+		   (known lex.x_0 (T:non-false T:nonimmediate T:real T:inexact T:flonum T:number T:object)))
+		 (funcall (primref values)))
+	     (funcall (primref values)))))
 
   ;;cflonum predicate
   (doit* (let ((x (read)))
@@ -173,9 +181,11 @@
 		  (display x))))
 	 (bind ((lex.x_0 (funcall (primref read))))
 	   (conditional (funcall (primref cflonum?) lex.x_0)
-	       (funcall (primref display)
-		 (known lex.x_0 (T:cflonum T:non-false T:nonimmediate T:non-real T:inexact T:number T:object)))
-	     (constant #!void))))
+	       (seq
+		 (funcall (primref display)
+		   (known lex.x_0 (T:cflonum T:non-false T:nonimmediate T:non-real T:inexact T:number T:object)))
+		 (funcall (primref values)))
+	     (funcall (primref values)))))
 
   ;;compnum predicate
   (doit* (let ((x (read)))
@@ -183,9 +193,11 @@
 		  (display x))))
 	 (bind ((lex.x_0 (funcall (primref read))))
 	   (conditional (funcall (primref compnum?) lex.x_0)
-	       (funcall (primref display)
-		 (known lex.x_0 (T:compnum T:non-false T:nonimmediate T:non-real T:number T:object)))
-	     (constant #!void))))
+	       (seq
+		 (funcall (primref display)
+		   (known lex.x_0 (T:compnum T:non-false T:nonimmediate T:non-real T:number T:object)))
+		 (funcall (primref values)))
+	     (funcall (primref values)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -539,9 +551,11 @@
 	     (display x)))
 	 (bind ((lex.x_0 (funcall (primref read))))
 	   (conditional (funcall (primref flonum?) lex.x_0)
-	       (funcall (primref display)
-		 (known lex.x_0 (T:non-false T:nonimmediate T:real T:inexact T:flonum T:number T:object)))
-	     (constant #!void))))
+	       (seq
+		 (funcall (primref display)
+		   (known lex.x_0 (T:non-false T:nonimmediate T:real T:inexact T:flonum T:number T:object)))
+		 (funcall (primref values)))
+	     (funcall (primref values)))))
 
   ;;FLINFINITE?
   (doit (let ((x ((primitive read))))

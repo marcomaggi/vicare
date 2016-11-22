@@ -7,9 +7,6 @@
 ;;;
 ;;;	SILex stands for "Scheme Implementation of Lex".  It generates a
 ;;;	Scheme  lexical analyser  from a  Lex--like  specification file.
-;;;	Notice  that  the  original  distribution  of  SILex  should  be
-;;;	included in  the Nausicaa  source tree, under  the "src/foreign"
-;;;	directory.
 ;;;
 ;;;	  Quick guide to browsing the code:
 ;;;

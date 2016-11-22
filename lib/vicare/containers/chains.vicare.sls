@@ -361,7 +361,8 @@
 	   (values))
 	  (next?
 	   ($<chain-link>-next-set! link '())
-	   ($<chain-link>-prev-set! next '()))))
+	   ($<chain-link>-prev-set! next '())
+	   (values))))
   link)
 
 ;;; --------------------------------------------------------------------

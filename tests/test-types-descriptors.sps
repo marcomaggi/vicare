@@ -2388,9 +2388,9 @@
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <type-predicate>
 
-  ;; <type-predicate> == (lambda (<top>) => (<boolean>))
+  ;; <type-predicate> == (lambda (<wildcard>) => (<boolean>))
   (doit-true	<type-predicate>		(lambda (<top>) => (<boolean>)))
-  (doit-false	<type-predicate>		(lambda (<string>) => (<boolean>)))
+  (doit-true	<type-predicate>		(lambda (<string>) => (<boolean>)))
   (doit-true	(lambda (<string>) => (<boolean>))	<type-predicate>)
 
   (doit-false <type-predicate>		(lambda (<top>) => (<string>)))
@@ -2421,7 +2421,7 @@
 
   (doit-true	<type-printer>	(lambda (<top>    <textual-output-port> <procedure>) => <list>))
   (doit-true	<type-printer>	(lambda (<fixnum> <textual-output-port> <procedure>) => (<void>)))
-  (doit-false	(lambda (<fixnum> <textual-output-port> <procedure>) => <list>)	<type-printer>)
+  (doit-true	(lambda (<fixnum> <textual-output-port> <procedure>) => <list>)	<type-printer>)
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <equality-predicate>
@@ -2431,7 +2431,7 @@
   (doit-false	<equality-predicate>	(lambda (<top>    <top>)	=> (<top>)))
   (doit-false	<equality-predicate>	(lambda (<top> <top> <top>)	=> (<boolean>)))
 
-  (doit-false	(lambda (<string> <string>) => (<boolean>))	<equality-predicate>)
+  (doit-true	(lambda (<string> <string>) => (<boolean>))	<equality-predicate>)
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <comparison-procedure>
@@ -2445,7 +2445,7 @@
   ;;Wrong number of arguments.
   (doit-false	<comparison-procedure>		(lambda (<top> <top> <top>)	=> (<fixnum>)))
 
-  (doit-false	(lambda (<string> <string>) => (<fixnum>))	<comparison-procedure>)
+  (doit-true	(lambda (<string> <string>) => (<fixnum>))	<comparison-procedure>)
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <hash-function>
@@ -2455,7 +2455,7 @@
   (doit-false	<hash-function>		(lambda (<top>) => (<fixnum>)))
   (doit-false	<hash-function>		(lambda (<top> <top>) => (<non-negative-fixnum>)))
 
-  (doit-false	(lambda (<string>) => (<non-negative-fixnum>))	<hash-function>)
+  (doit-true	(lambda (<string>) => (<non-negative-fixnum>))	<hash-function>)
 
 ;;; --------------------------------------------------------------------
 ;;; special procedures types: <type-method-retriever>
@@ -3407,9 +3407,9 @@
 	=> no-match)
 
   ;; <type-predicate> == (lambda (<top>) => (<boolean>))
-  (doit <type-predicate>	(lambda (<bottom>)	=> (<boolean>))	=> no-match)
+  (doit <type-predicate>	(lambda (<bottom>)	=> (<boolean>))	=> exact-match)
   (doit <type-predicate>	(lambda (<top>)	=> (<boolean>))	=> exact-match)
-  (doit <type-predicate>	(lambda (<string>)	=> (<boolean>))	=> no-match)
+  (doit <type-predicate>	(lambda (<string>)	=> (<boolean>))	=> exact-match)
 
   (doit (lambda (<bottom>)	=> (<boolean>))		<type-predicate>	=> exact-match)
   (doit (lambda (<top>)	=> (<boolean>))		<type-predicate>	=> exact-match)

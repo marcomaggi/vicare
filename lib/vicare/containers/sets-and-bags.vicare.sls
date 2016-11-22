@@ -231,11 +231,11 @@
     ;;Given a  proper list of SOB  objects: return true if  all the SOBs have  the same
     ;;comparator according to EQ?.
     ;;
-    (when (pair? sobs)
-      (let ((first-compar (sob-comparator (car sobs))))
-	(for-all (lambda (sob)
-		   (eq? first-compar (sob-comparator sob)))
-	  (cdr sobs)))))
+    (and (pair? sobs)
+	 (let ((first-compar (sob-comparator (car sobs))))
+	   (for-all (lambda (sob)
+		      (eq? first-compar (sob-comparator sob)))
+	     (cdr sobs)))))
 
   #| end of module |# )
 
@@ -841,7 +841,7 @@
   ;;
   ((who sob)
    (sob-fold cons '() sob))
-  ((who sob {compar (or <boolean> (lambda (<bottom> <bottom>) => (<boolean>)))})
+  ((who sob {compar (or <boolean> <equality-predicate>)})
    (cond ((not compar)
 	  (sob-fold cons '() sob))
 	 ((eq? #t compar)
@@ -860,13 +860,13 @@
 (case-define set->list
   (({set <set>})
    (sob->list __who__ set))
-  (({set <set>} {compar (or <boolean> (lambda (<bottom> <bottom>) => (<boolean>)))})
+  (({set <set>} {compar (or <boolean> <equality-predicate>)})
    (sob->list __who__ set compar)))
 
 (case-define bag->list
   (({bag <bag>})
    (sob->list __who__ bag))
-  (({bag <bag>} {compar (or <boolean> (lambda (<bottom> <bottom>) => (<boolean>)))})
+  (({bag <bag>} {compar (or <boolean> <equality-predicate>)})
    (sob->list __who__ bag compar)))
 
 ;;;
@@ -1443,7 +1443,7 @@
 	 (cons (cons elem count) list))
      '()
      bag))
-  (({bag <bag>} {compar (or <boolean> <procedure>)})
+  (({bag <bag>} {compar (or <boolean> <equality-predicate>)})
    (let ((al (bag-fold-unique
 		 (lambda (elem count list)
 		   (cons (cons elem count) list))
@@ -1457,8 +1457,8 @@
 			   (= -1 (compar (car x) (car y))))
 			 al)))
 	   ((procedure? compar)
-	    (list-sort (lambda ({_ <boolean>} x y)
-			 ((cast-signature (<procedure>) compar) (car x) (car y)))
+	    (list-sort (lambda (x y)
+			 ((cast-signature (<equality-predicate>) compar) (car x) (car y)))
 		       al))
 	   (else
 	    (procedure-argument-violation __who__

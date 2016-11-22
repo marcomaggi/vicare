@@ -797,7 +797,7 @@ clean-fasl:
 SILEX_SRCDIR		= $(slsdir)/vicare/parser-tools/silex
 NAUIPADDR_SRCDIR	= $(slsdir)/nausicaa/parser-tools/ip-addresses
 
-.PHONY: silex-internals silex-backup ip-address-tables
+.PHONY: silex-internals silex-backup ip-address-tables silex-test-files
 
 silex-internals:
 	@echo; echo "*** Special rule: rebuilding SILex internals lexer tables"; echo
@@ -810,6 +810,10 @@ silex-backup:
 ip-address-tables:
 	@echo; echo "*** Special rule: rebuilding net libraries tables"; echo
 	@export NAUIPADDR_SRCDIR=$(NAUIPADDR_SRCDIR); $(VICARE_COMPILE_RUN) $(NAUIPADDR_SRCDIR)/make-tables.sps
+
+silex-test-files:
+	export testdir=$(srcdir)/tests; \
+	$(VICARE_NEW_EXECUTABLE) --r6rs-script $(srcdir)/tests/make-silex-calc.sps
 
 #page
 #### running the test suite: test files
