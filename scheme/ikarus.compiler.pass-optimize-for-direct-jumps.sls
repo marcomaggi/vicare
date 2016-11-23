@@ -146,10 +146,13 @@
 		    ;;means LHS  references the same  CLAMBDA struct.  CLAM  is the
 		    ;;referenced CLAMBDA struct.
 		    => (lambda (clam)
-			 ($set-prelex-referenced-clambda! lhs clam)))))
+			 ($set-prelex-referenced-clambda! lhs clam)
+			 (values)))
+		   (else
+		    (values))))
 	    (else
 	     ;;LHS does not reference a CLAMBDA struct.
-	     (void))))
+	     (values))))
       lhs* rhs*^)
     (make-bind lhs* rhs*^ (E body))))
 

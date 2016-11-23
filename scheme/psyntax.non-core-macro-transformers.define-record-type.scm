@@ -1143,7 +1143,7 @@
 				(value.id	(make-syntactic-identifier-for-temporary-variable "new-value")))
 			    `(define-syntax ,unsafe-field-mutator
 			       (identifier-syntax
-				(lambda/typed ((brace _ <void>) (brace ,record.id ,foo) (brace ,value.id ,field-type.ann))
+				(lambda/typed ((brace _) (brace ,record.id ,foo) (brace ,value.id ,field-type.ann))
 				  ($struct-set! ,record.id ,the-index ,value.id)))))
 			  knil)
 		  knil))
@@ -1207,7 +1207,7 @@
 	  (if safe-field-mutator
 	      (cons (let ((record.id	(make-syntactic-identifier-for-temporary-variable "record"))
 			  (val.id	(make-syntactic-identifier-for-temporary-variable "new-value")))
-		      `(define/checked ((brace ,safe-field-mutator <void>) (brace ,record.id ,foo) (brace ,val.id ,field-type.ann))
+		      `(define/checked ((brace ,safe-field-mutator) (brace ,record.id ,foo) (brace ,val.id ,field-type.ann))
 			 (,unsafe-field-mutator ,record.id ,val.id)))
 		    knil)
 	    knil))
@@ -1247,7 +1247,7 @@
 	       `(begin
 		  (define/overload ((brace ,safe-method-procname.id ,field-type.ann) (brace ,record.id ,foo))
 		    (unsafe-cast-signature (,field-type.ann) (,unsafe-field-accessor ,record.id)))
-		  (define/overload ((brace ,safe-method-procname.id <void>) (brace ,record.id ,foo) (brace ,new-value.id ,field-type.ann))
+		  (define/overload ((brace ,safe-method-procname.id) (brace ,record.id ,foo) (brace ,new-value.id ,field-type.ann))
 		    (,unsafe-field-mutator ,record.id ,new-value.id)))
 	     `(define/checked ((brace ,safe-method-procname.id ,field-type.ann) (brace ,record.id ,foo))
 		(unsafe-cast-signature (,field-type.ann) (,unsafe-field-accessor ,record.id))))))

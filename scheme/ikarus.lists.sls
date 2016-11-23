@@ -1274,9 +1274,11 @@
 	  (let ((old-last-pair ($cdr (queue)))
 		(new-last-pair (list item)))
 	    ($set-cdr! old-last-pair new-last-pair)
-	    ($set-cdr! (queue) new-last-pair))
+	    ($set-cdr! (queue) new-last-pair)
+	    (values))
 	(let ((Q (list item)))
-	  (queue (cons Q Q)))))
+	  (queue (cons Q Q))
+	  (values))))
 
     (define (dequeue!)
       (if (queue)

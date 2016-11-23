@@ -1754,7 +1754,7 @@
        (declare-core-primitive ?who
 	   (?safety)
 	 (signatures
-	  ((T:pair _)		=> (T:void)))
+	  ((T:pair _)		=> ()))
 	 (attributes
 	  ((_ _)		result-true))
 	 (replacements . ?replacements)))

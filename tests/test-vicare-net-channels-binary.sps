@@ -129,7 +129,9 @@
 
   (check
       (let ((chan (new <binary-input-only-channel> in-port)))
-        (void-object? (.maximum-message-size chan 1000)))
+        (receive ()
+	    (.maximum-message-size chan 1000)
+	  #t))
     => #t)
 
 ;;; --------------------------------------------------------------------

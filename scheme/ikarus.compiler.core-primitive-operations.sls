@@ -4146,16 +4146,26 @@
    ;;Store a  new word in  the field at index  I.  Mutating a  struct is
    ;;like mutating a vector.
    ;;
-   ((V stru idx v)
-    (multiple-forms-sequence
-     (cogen-effect-$vector-set! stru idx v)
-     (KN VOID-OBJECT)))
    ((E stru idx v)
-    (cogen-effect-$vector-set! stru idx v))
-   ((P stru idx v)
-    (multiple-forms-sequence
-     (cogen-effect-$vector-set! stru idx v)
-     (K #t))))
+    (cogen-effect-$vector-set! stru idx v)))
+
+ ;;NOTE The version below has a single return  value, while the one above is meant to
+ ;;return zero values.  (Marco Maggi; Wed Nov 23, 2016)
+ ;;
+ ;; (define-core-primitive-operation $struct-set! unsafe
+ ;;   ;;Store a  new word in  the field at index  I.  Mutating a  struct is
+ ;;   ;;like mutating a vector.
+ ;;   ;;
+ ;;   ((V stru idx v)
+ ;;    (multiple-forms-sequence
+ ;;     (cogen-effect-$vector-set! stru idx v)
+ ;;     (KN VOID-OBJECT)))
+ ;;   ((E stru idx v)
+ ;;    (cogen-effect-$vector-set! stru idx v))
+ ;;   ((P stru idx v)
+ ;;    (multiple-forms-sequence
+ ;;     (cogen-effect-$vector-set! stru idx v)
+ ;;     (K #t))))
 
  (define-core-primitive-operation $struct unsafe
    ((V std . field*)

@@ -269,7 +269,7 @@
 (declare-core-primitive $vector-set!
     (unsafe)
   (signatures
-   ((T:vector T:non-negative-fixnum _)	=> (T:void)))
+   ((T:vector T:non-negative-fixnum _)	=> ()))
   (attributes
    ((_ _ _)			result-true)))
 

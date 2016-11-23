@@ -36,13 +36,15 @@
 		     ;;go on with the execution.
 		     (let ((port (console-error-port)))
 		       (display "*** Vicare: warning:\n" port)
-		       (print-condition x port)))
+		       (print-condition x port))
+		     (values))
 		    (else
 		     (let ((port (console-error-port)))
 		       (display "*** Vicare: unhandled exception:\n" port)
 		       (print-condition x port))
 		     (when (serious-condition? x)
-		       (exit -1)))))
+		       (exit -1))
+		     (values))))
 	    (lambda args
 	      (exit -1)))))
 

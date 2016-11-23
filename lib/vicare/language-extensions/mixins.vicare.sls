@@ -112,7 +112,7 @@
   (constructor-signature
     (lambda (xp::<syntactic-identifier>) => (<parsing-results>)))
 
-  (method ({push-clause! <void>} clause.stx)
+  (method ({push-clause!} clause.stx)
     (.rev-parsed-clauses this (cons clause.stx (.rev-parsed-clauses this))))
 
   (method (parsed-clauses)
@@ -266,7 +266,7 @@
 		   (%validate-stuff spliced-clause.stx #'?stuff synner))
 
 		  (_
-		   (void))))
+		   (values))))
       spliced-clause*.stx))
 
   (define (%validate-stuff clause.stx stuff.stx synner)
@@ -277,7 +277,7 @@
 	 (synner "found double protection level specification in clause"
 		 clause.stx)))
       (_
-       (void))))
+       (values))))
 
   (define (protection-level-id stx)
     (and (identifier? stx)
@@ -543,10 +543,10 @@
     (syntax-case name-spec.stx (brace)
       (?field-name
        (identifier? #'?field-name)
-       (void))
+       (values))
       ((brace ?field-name ?type-annotation)
        (identifier? #'?field-name)
-       (void))
+       (values))
       (_
        (synner "invalid field specification" field-spec.stx))))
 
@@ -609,10 +609,10 @@
     (syntax-case who.stx (brace)
       (?method-name
        (identifier? #'?method-name)
-       (void))
+       (values))
       ((brace ?method-name . ?rv-types)
        (identifier? #'?method-name)
-       (void))
+       (values))
       (_
        (synner "invalid method name and/or return values specification" #'?who))))
 
@@ -675,10 +675,10 @@
     (syntax-case who.stx (brace)
       (?method-name
        (identifier? #'?method-name)
-       (void))
+       (values))
       ((brace ?method-name . ?rv-types)
        (identifier? #'?method-name)
-       (void))
+       (values))
       (_
        (synner "invalid method name and/or return values specification" #'?who))))
 
@@ -741,10 +741,10 @@
     (syntax-case who.stx (brace)
       (?method-name
        (identifier? #'?method-name)
-       (void))
+       (values))
       ((brace ?method-name . ?rv-types)
        (identifier? #'?method-name)
-       (void))
+       (values))
       (_
        (synner "invalid method name and/or return values specification" #'?who))))
 

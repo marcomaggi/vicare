@@ -1191,8 +1191,8 @@
        (declare-core-primitive ?who
 	   (?safety)
 	 (signatures
-	  ((<pair> <top>)		=> (<void>))
-	  ((<nelist> <top>)		=> (<top>)))
+	  ((<pair> <top>)		=> ())
+	  ((<nelist> <top>)		=> ()))
 	 (attributes
 	  ((_ _)		result-true))
 	 (replacements . ?replacements)))

@@ -117,10 +117,10 @@
 (define-interface-type <<channel>>
   (method-prototype expiration-time		(case-lambda
 						  (()			=> (<epoch-time>))
-						  ((<epoch-time>)	=> (<void>))))
+						  ((<epoch-time>)	=> ())))
   (method-prototype maximum-message-size	(case-lambda
 						  (()			=> (<positive-fixnum>))
-						  ((<positive-fixnum>)	=> (<void>))))
+						  ((<positive-fixnum>)	=> ())))
   (method-prototype current-message-size	(lambda ()			=> (<non-negative-fixnum>)))
   (method-prototype receiving?			(lambda ()			=> (<boolean>)))
   (method-prototype sending?			(lambda ()			=> (<boolean>)))
@@ -134,11 +134,11 @@
   (parent <<channel>>)
   (method-prototype message-terminators		(case-lambda
 						  (()				=> (<binary-terminators>))
-						  ((<binary-terminators>)	=> (<void>))))
-  (method-prototype recv-begin!			(lambda () => (<void>)))
+						  ((<binary-terminators>)	=> ())))
+  (method-prototype recv-begin!			(lambda () => ()))
   (method-prototype recv-end!/rbl		(lambda () => (<positive-fixnum> (list-of <nebytevector>))))
   (method-prototype recv-end!			(lambda () => (<nebytevector>)))
-  (method-prototype recv-abort!			(lambda () => (<void>)))
+  (method-prototype recv-abort!			(lambda () => ()))
   (method-prototype recv-full-message		(lambda () => ((or <eof> <bytevector>))))
   (method-prototype recv-message-portion!	(lambda () => ((or <eof> <would-block> <boolean>))))
   #| end of DEFINE-INTERFACE-TYPE |# )
@@ -147,11 +147,11 @@
   (parent <<channel>>)
   (method-prototype message-terminators		(case-lambda
 						  (()				=> (<textual-terminators>))
-						  ((<textual-terminators>)	=> (<void>))))
-  (method-prototype recv-begin!			(lambda () => (<void>)))
+						  ((<textual-terminators>)	=> ())))
+  (method-prototype recv-begin!			(lambda () => ()))
   (method-prototype recv-end!/rbl		(lambda () => (<positive-fixnum> (list-of <nestring>))))
   (method-prototype recv-end!			(lambda () => (<nestring>)))
-  (method-prototype recv-abort!			(lambda () => (<void>)))
+  (method-prototype recv-abort!			(lambda () => ()))
   (method-prototype recv-full-message		(lambda () => ((or <eof> <string>))))
   (method-prototype recv-message-portion!	(lambda () => ((or <eof> <would-block> <boolean>))))
   #| end of DEFINE-INTERFACE-TYPE |# )
@@ -160,22 +160,22 @@
 
 (define-interface-type <<binary-output-channel>>
   (parent <<channel>>)
-  (method-prototype send-begin!			(lambda () => (<void>)))
+  (method-prototype send-begin!			(lambda () => ()))
   (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
-  (method-prototype send-abort!			(lambda () => (<void>)))
-  (method-prototype send-message-portion!	(lambda (<bytevector>) => (<void>)))
+  (method-prototype send-abort!			(lambda () => ()))
+  (method-prototype send-message-portion!	(lambda (<bytevector>) => ()))
   (method-prototype send-full-message		(lambda (list-of <bytevector>) => (<non-negative-fixnum>)))
-  (method-prototype flush			(lambda () => (<void>)))
+  (method-prototype flush			(lambda () => ()))
   #| end of DEFINE-INTERFACE-TYPE |# )
 
 (define-interface-type <<textual-output-channel>>
   (parent <<channel>>)
-  (method-prototype send-begin!			(lambda () => (<void>)))
+  (method-prototype send-begin!			(lambda () => ()))
   (method-prototype send-end!			(lambda () => (<non-negative-fixnum>)))
-  (method-prototype send-abort!			(lambda () => (<void>)))
-  (method-prototype send-message-portion!	(lambda (<string>) => (<void>)))
+  (method-prototype send-abort!			(lambda () => ()))
+  (method-prototype send-message-portion!	(lambda (<string>) => ()))
   (method-prototype send-full-message		(lambda (list-of <string>) => (<non-negative-fixnum>)))
-  (method-prototype flush			(lambda () => (<void>)))
+  (method-prototype flush			(lambda () => ()))
   #| end of DEFINE-INTERFACE-TYPE |# )
 
 
@@ -267,7 +267,7 @@
     (.message-size this))
 
   (protected
-    (method ({message-increment-size! <void>} {delta-size <positive-fixnum>})
+    (method ({message-increment-size!} {delta-size <positive-fixnum>})
       ;;Increment the total message size by DELTA-SIZE.
       ;;
       ;;FIXME  A generic  exception is  raised if  the sum  of the  numbers is  not a
@@ -285,16 +285,15 @@
 		;"receive message portion" operation.
     #| end of FIELDS |# )
 
-  (method ({recv-begin! <void>})
+  (method ({recv-begin!})
     ;;Configure a  channel to start  receiving a message; return  unspecified values.
     ;;THIS must be an input or input/output channel; it is an error if the channel is
     ;;not inactive.
     ;;
     (assert-inactive-channel __who__ this)
-    (.action this 'recv)
-    (void))
+    (.action this 'recv))
 
-  (method ({recv-abort! <void>})
+  (method ({recv-abort!})
     ;;Abort  the  current  operation  and  reset  the  channel  to  inactive;  return
     ;;unspecified values.  Send and receive nothing.
     ;;
@@ -303,8 +302,7 @@
     (.message-buffer      this '())
     (.message-size        this 0)
     (.message-terminated? this #f)
-    (.expiration-time     this (faraway-time))
-    (void))
+    (.expiration-time     this (faraway-time)))
 
   #| end of DEFINE-MIXIN-TYPE |# )
 
@@ -336,7 +334,7 @@
 ;;; --------------------------------------------------------------------
 
   (protected
-    (method ({message-buffer-push! <void>} {data <nebytevector>})
+    (method ({message-buffer-push!} {data <nebytevector>})
       (.message-buffer this (cons data (.message-buffer this)))
       (.message-increment-size! this (.length data))))
 
@@ -489,7 +487,7 @@
 ;;; --------------------------------------------------------------------
 
   (protected
-    (method ({message-buffer-push! <void>} {data <nestring>})
+    (method ({message-buffer-push!} {data <nestring>})
       (.message-buffer this (cons data (.message-buffer this)))
       (.message-increment-size! this (.length data))))
 
@@ -614,13 +612,12 @@
 
 (define-mixin-type <sending-channel-methods>
 
-  (method ({send-begin! <void>})
+  (method ({send-begin!})
     ;;Configure a channel to start sending  a message; return unspecified values.  It
     ;;is an error if the channel is not inactive.
     ;;
     (assert-inactive-channel __who__ this)
-    (.action this 'send)
-    (void))
+    (.action this 'send))
 
   (method ({send-end! <non-negative-fixnum>})
     ;;Finish sending a  message by flushing the connect port  and returning the total
@@ -637,15 +634,16 @@
 	(.message-size this)
       (.send-abort! this)))
 
-  (method ({flush <void>})
+  (method ({flush})
     ;;Flush to the destination the data buffered in the underlying device.
     ;;
     (assert-sending-channel __who__ this)
     (if (.delivery-timeout-expired? this)
 	(%error-message-delivery-timeout-expired __who__ this)
-      (flush-output-port (.connect-ou-port this))))
+      (flush-output-port (.connect-ou-port this)))
+    (values))
 
-  (method ({send-abort! <void>})
+  (method ({send-abort!})
     ;;Abort  the  current  operation  and  reset  the  channel  to  inactive;  return
     ;;unspecified values.  Send and receive nothing.
     ;;
@@ -653,8 +651,7 @@
     (.action              this 'none)
     (.message-size        this 0)
     (.message-terminated? this #f)
-    (.expiration-time     this (faraway-time))
-    (void))
+    (.expiration-time     this (faraway-time)))
 
   #| end of mixin |# )
 
@@ -670,7 +667,7 @@
 
   (mixins <sending-channel-methods>)
 
-  (method ({send-message-portion! <void>} {portion <bytevector>})
+  (method ({send-message-portion!} {portion <bytevector>})
     ;;Send a portion of output message  through the given channel; return unspecified
     ;;values.  It  is an  error if  the channel  is not  in the  course of  sending a
     ;;message.
@@ -686,7 +683,8 @@
 	  ((.maximum-size-exceeded? this)
 	   (%error-maximum-message-size-exceeded    __who__ this))
 	  (else
-	   (put-bytevector (.connect-ou-port this) portion))))
+	   (put-bytevector (.connect-ou-port this) portion)))
+    (values))
 
   (method ({send-full-message <non-negative-fixnum>} . {message-portions (list-of <bytevector>)})
     ;;Send a  full message composed of  the given MESSAGE-PORTIONS; return  the total
@@ -714,7 +712,7 @@
 
   (mixins <sending-channel-methods>)
 
-  (method ({send-message-portion! <void>} {portion <string>})
+  (method ({send-message-portion!} {portion <string>})
     ;;Send a portion of output message  through the given channel; return unspecified
     ;;values.  It  is an  error if  the channel  is not  in the  course of  sending a
     ;;message.
@@ -730,7 +728,8 @@
 	  ((.maximum-size-exceeded? this)
 	   (%error-maximum-message-size-exceeded    __who__ this))
 	  (else
-	   (put-string (.connect-ou-port this) portion))))
+	   (put-string (.connect-ou-port this) portion)))
+    (values))
 
   (method ({send-full-message <non-negative-fixnum>} . {message-portions (list-of <string>)})
     ;;Send a  full message composed of  the given MESSAGE-PORTIONS; return  the total

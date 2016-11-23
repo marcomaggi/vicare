@@ -168,7 +168,7 @@
 (declare-core-primitive struct-set!
     (safe)
   (signatures
-   ((<struct> <non-negative-fixnum> <top>)	=> (<void>)))
+   ((<struct> <non-negative-fixnum> <top>)	=> ()))
   (attributes
    ((_ _ _)		result-true)))
 
@@ -261,8 +261,8 @@
 (declare-core-primitive $struct-set!
     (unsafe)
   (signatures
-   ((<struct> <non-negative-fixnum> <void>)	=> (<void>))
-   ((<struct> <non-negative-fixnum> <top>)	=> (<void>)))
+   ((<struct> <non-negative-fixnum> <void>)	=> ())
+   ((<struct> <non-negative-fixnum> <top>)	=> ()))
   (attributes
    ((_ _)			foldable result-true)))
 

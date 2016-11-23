@@ -167,7 +167,7 @@
       (map (lambda (mutator.id unsafe-mutator.id field-type.ann)
 	     (let ((stru.id	(make-syntactic-identifier-for-temporary-variable "stru"))
 		   (val.id	(make-syntactic-identifier-for-temporary-variable "val")))
-	       `(define/checked ({,mutator.id <void>} {,stru.id ,type.id} {,val.id ,field-type.ann})
+	       `(define/checked ({,mutator.id} {,stru.id ,type.id} {,val.id ,field-type.ann})
 		  (,unsafe-mutator.id ,stru.id ,val.id))))
 	mutator*.id unsafe-mutator*.id field-type*.ann))
 
@@ -180,11 +180,11 @@
 	       ;;it would introduce a dependency from the overloaded functions' code.
 	       ;;If we use CASE-DEFINE/CHECKED there is no dependency.  (Marco Maggi;
 	       ;;Sat Aug 27, 2016)
-    	       `(case-define/checked ,method.id
-		  (({_ ,field-type.ann} {,stru.id ,type.id})
-		   (,unsafe-accessor.id ,stru.id))
-		  (({_ <void>} {,stru.id ,type.id} {,val.id ,field-type.ann})
-		   (,unsafe-mutator.id ,stru.id ,val.id)))))
+    	       `(begin
+		  (define/overload ({,method.id ,field-type.ann} {,stru.id ,type.id})
+		    (,unsafe-accessor.id ,stru.id))
+		  (define/overload ({,method.id} {,stru.id ,type.id} {,val.id ,field-type.ann})
+		    (,unsafe-mutator.id ,stru.id ,val.id)))))
     	method*.id unsafe-accessor*.id unsafe-mutator*.id field-type*.ann))
 
 ;;; --------------------------------------------------------------------
@@ -204,7 +204,7 @@
 		   (val.id	(make-syntactic-identifier-for-temporary-variable "val")))
 	       `(define-syntax ,unsafe-mutator.id
 		  (identifier-syntax
-		   (lambda/typed ({_ <void>} {,stru.id <struct>} {,val.id ,field-type.ann})
+		   (lambda/typed ({_} {,stru.id <struct>} {,val.id ,field-type.ann})
 		     ($struct-set! ,stru.id ,field.idx ,val.id))))))
 	unsafe-mutator*.id field*.idx field-type*.ann))
 

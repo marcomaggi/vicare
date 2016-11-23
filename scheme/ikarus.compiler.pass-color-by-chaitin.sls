@@ -808,18 +808,21 @@
 			     ;;NODE2 is  not in  the graph.  Add  NODE2 to  the graph
 			     ;;with an edge from NODE2 to NODE1.
 			     ($set-graph-entry*! G (cons (%make-singleton-entry node2 node1)
-							 old-entry*)))))))
+							 old-entry*)))))
+		    (values)))
 	      ((assq node2 old-entry*)
 	       => (lambda (node2.entry)
 		    (%add-directed-edge-to-entry! node2.entry node1)
 		    ($set-graph-entry*! G (cons (%make-singleton-entry node1 node2)
-						old-entry*))))
+						old-entry*))
+		    (values)))
 	      (else
 	       ;;Neither NODE1 nor NODE2 are already nodes in the graph.  Add both of
 	       ;;them.
 	       ($set-graph-entry*! G (cons* (%make-singleton-entry node1 node2)
 					    (%make-singleton-entry node2 node1)
-					    old-entry*))))))
+					    old-entry*))
+	       (values)))))
 
     (define-syntax-rule (%make-singleton-entry ?src-node ?dst-node)
       ;;Build and  return a new  entry representing  node ?SRC-NODE with  an outgoing

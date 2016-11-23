@@ -344,8 +344,8 @@
 (declare-core-primitive $vector-set!
     (unsafe)
   (signatures
-   ((<nevector> <non-negative-fixnum> <void>)	=> (<void>))
-   ((<nevector> <non-negative-fixnum> _)	=> (<void>)))
+   ((<nevector> <non-negative-fixnum> <void>)	=> ())
+   ((<nevector> <non-negative-fixnum> _)	=> ()))
   (attributes
    ((_ _ _)			result-true)))
 

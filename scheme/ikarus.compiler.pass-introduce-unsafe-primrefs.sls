@@ -178,7 +178,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%compatible-operands-for-primitive-call? prim-name rand*.vec)
+  (define* (%compatible-operands-for-primitive-call? prim-name rand*.vec)
     ;;Validate the operands  against the types expected by the  core primitive.  Each
     ;;applicable core primitive might support multiple operands signatures:
     ;;
@@ -216,7 +216,9 @@
 			   ((wrong-num-args)
 			    ;;This signature  does not match because  of wrong number
 			    ;;of operands: try the next.
-			    (loop (cdr signature*) (and wrong-num-args? #t)))))
+			    (loop (cdr signature*) (and wrong-num-args? #t)))
+			   (else
+			    (assertion-violation __who__ "internal error"))))
 			(wrong-num-args?
 			 ;;No more signatures to test:  no match.  All the signatures
 			 ;;failed to match because of wrong number of operands.
