@@ -476,7 +476,8 @@
 	(%flush-output-port port who))
       (port.mark-as-closed!)
       (when (procedure? port.close)
-	(port.close)))))
+	(port.close))))
+  (values))
 
 
 ;;;; auxiliary port functions

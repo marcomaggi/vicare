@@ -463,23 +463,17 @@
 (declare-core-primitive close-port
     (safe)
   (signatures
-   ((<port>)		=> (<void>)))
-  (attributes
-   ((_)			result-true)))
+   ((<port>)		=> ())))
 
 (declare-core-primitive close-input-port
     (safe)
   (signatures
-   ((<input-port>)	=> (<void>)))
-  (attributes
-   ((_)			result-true)))
+   ((<input-port>)	=> ())))
 
 (declare-core-primitive close-output-port
     (safe)
   (signatures
-   ((<output-port>)	=> (<void>)))
-  (attributes
-   ((_)			result-true)))
+   ((<output-port>)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators

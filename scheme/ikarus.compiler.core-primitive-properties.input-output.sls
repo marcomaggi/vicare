@@ -385,23 +385,17 @@
 (declare-core-primitive close-port
     (safe)
   (signatures
-   ((T:port)		=> (T:void)))
-  (attributes
-   ((_)			result-true)))
+   ((T:port)		=> ())))
 
 (declare-core-primitive close-input-port
     (safe)
   (signatures
-   ((T:input-port)	=> (T:void)))
-  (attributes
-   ((_)			result-true)))
+   ((T:input-port)	=> ())))
 
 (declare-core-primitive close-output-port
     (safe)
   (signatures
-   ((T:output-port)	=> (T:void)))
-  (attributes
-   ((_)			result-true)))
+   ((T:output-port)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators
