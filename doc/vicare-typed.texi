@@ -7431,12 +7431,12 @@ Apply @func{string-empty?} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} length @var{this}
+@deftypemethod @aclass{string} @aclass{non-negative-fixnum} length @var{this}
 Apply @func{string-length} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} for-each @var{this} @var{func} @var{str} @dots{}
+@deftypemethod @aclass{string} {()} for-each @var{this} @var{func} @var{str} @dots{}
 Apply @func{string-for-each} to the function @var{func}, the instance
 and the arguments.  Example:
 
@@ -7450,12 +7450,12 @@ and the arguments.  Example:
 @subsubheading Constructors
 
 
-@deftypemethod @aclass{string} copy @var{this}
+@deftypemethod @aclass{string} @aclass{string} copy @var{this}
 Apply @func{string-copy} to the instance and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} append @var{this} @bracearg{str, string} @dots{}
+@deftypemethod @aclass{string} @aclass{string} append @var{this} @bracearg{str, string} @dots{}
 Apply @func{string-append} to the arguments and return its return value.
 @end deftypemethod
 
@@ -7464,7 +7464,7 @@ Apply @func{string-append} to the arguments and return its return value.
 @subsubheading Accessors and mutators
 
 
-@deftypemethod @aclass{string} fill! @var{this} @var{char}
+@deftypemethod @aclass{string} @aclass{string} fill! @var{this} @var{char}
 Apply @func{string-fill!} to the instance.
 @end deftypemethod
 
@@ -7473,27 +7473,27 @@ Apply @func{string-fill!} to the instance.
 @subsubheading Encoding inspection
 
 
-@deftypemethod @aclass{string} ascii-encoded? @var{this}
+@deftypemethod @aclass{string} @aclass{boolean} ascii-encoded? @var{this}
 Apply @func{ascii-encoded-string?} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} latin1-encoded? @var{this}
+@deftypemethod @aclass{string} @aclass{boolean} latin1-encoded? @var{this}
 Apply @func{latin1-encoded-string?} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} octets-encoded? @var{this}
+@deftypemethod @aclass{string} @aclass{boolean} octets-encoded? @var{this}
 Apply @func{octets-encoded-string?} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} uri-encoded @var{this}
+@deftypemethod @aclass{string} @aclass{boolean} uri-encoded? @var{this}
 Apply @func{uri-encoded-string?} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} pencent-encoded? @var{this}
+@deftypemethod @aclass{string} @aclass{boolean} pencent-encoded? @var{this}
 Apply @func{percent-encoded-string?} to the instance.
 @end deftypemethod
 
@@ -7502,23 +7502,23 @@ Apply @func{percent-encoded-string?} to the instance.
 @subsubheading Comparison
 
 
-@deftypemethod @aclass{string} = @var{this} @var{str} @dots{}
-@deftypemethodx @aclass{string} != @var{this} @var{str} @dots{}
-@deftypemethodx @aclass{string} < @var{this} @var{str} @dots{}
-@deftypemethodx @aclass{string} > @var{this} @var{str} @dots{}
-@deftypemethodx @aclass{string} <= @var{this} @var{str} @dots{}
-@deftypemethodx @aclass{string} >= @var{this} @var{str} @dots{}
+@deftypemethod @aclass{string} @aclass{boolean} = @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} @aclass{boolean} != @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} @aclass{boolean} < @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} @aclass{boolean} > @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} @aclass{boolean} <= @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} @aclass{boolean} >= @var{this} @var{str} @dots{}
 Apply @func{string=?}, @func{string!=?}, @func{string<?},
 @func{string>?}, @func{string<=?}, @func{string>=?} to the instance and
 the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} ci= @var{this} @var{str} @dots{}
-@deftypemethodx @aclass{string} ci< @var{this} @var{str} @dots{}
-@deftypemethodx @aclass{string} ci> @var{this} @var{str} @dots{}
-@deftypemethodx @aclass{string} ci<= @var{this} @var{str} @dots{}
-@deftypemethodx @aclass{string} ci>= @var{this} @var{str} @dots{}
+@deftypemethod @aclass{string} @aclass{boolean} ci= @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} @aclass{boolean} ci< @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} @aclass{boolean} ci> @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} @aclass{boolean} ci<= @var{this} @var{str} @dots{}
+@deftypemethodx @aclass{string} @aclass{boolean} ci>= @var{this} @var{str} @dots{}
 Apply @func{string-ci=?}, @func{string-ci<?}, @func{string-ci>?},
 @func{string-ci<=?}, @func{string-ci>=?}, to the instance and the
 arguments and return its return value.
@@ -7529,22 +7529,22 @@ arguments and return its return value.
 @subsubheading Case handling
 
 
-@deftypemethod @aclass{string} titlecase @var{this}
+@deftypemethod @aclass{string} @aclass{string} titlecase @var{this}
 Apply @func{string-titlecase} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} upcase @var{this}
+@deftypemethod @aclass{string} @aclass{string} upcase @var{this}
 Apply @func{string-upcase} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} downcase @var{this}
+@deftypemethod @aclass{string} @aclass{string} downcase @var{this}
 Apply @func{string-downcase} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} foldcase @var{this}
+@deftypemethod @aclass{string} @aclass{string} foldcase @var{this}
 Apply @func{string-foldcase} to the instance.
 @end deftypemethod
 
@@ -7553,22 +7553,22 @@ Apply @func{string-foldcase} to the instance.
 @subsubheading Normalisation
 
 
-@deftypemethod @aclass{string} normalize-nfc @var{this}
+@deftypemethod @aclass{string} @aclass{string} normalize-nfc @var{this}
 Apply @func{string-normalize-nfc} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} normalize-nfd @var{this}
+@deftypemethod @aclass{string} @aclass{string} normalize-nfd @var{this}
 Apply @func{string-normalize-nfd} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} normalize-nfkc @var{this}
+@deftypemethod @aclass{string} @aclass{string} normalize-nfkc @var{this}
 Apply @func{string-normalize-nfkc} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} normalize-nfkd @var{this}
+@deftypemethod @aclass{string} @aclass{string} normalize-nfkd @var{this}
 Apply @func{string-normalize-nfkd} to the instance.
 @end deftypemethod
 
@@ -7577,101 +7577,101 @@ Apply @func{string-normalize-nfkd} to the instance.
 @subsubheading Conversion
 
 
-@deftypemethod @aclass{string} flonum @var{this}
+@deftypemethod @aclass{string} @aclass{flonum} flonum @var{this}
 Apply @func{string->flonum} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} number @var{this}
-@deftypemethodx @aclass{string} number @var{this} @var{radix}
+@deftypemethod @aclass{string} @aclass{number} number @var{this}
+@deftypemethodx @aclass{string} @aclass{number} number @var{this} @var{radix}
 Apply @func{string->number} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} utf8 @var{this}
+@deftypemethod @aclass{string} @aclass{bytevector} utf8 @var{this}
 Apply @func{string->utf8} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} utf16 @var{this}
-@deftypemethodx @aclass{string} utf16 @var{this} @var{endianness}
+@deftypemethod @aclass{string} @aclass{bytevector} utf16 @var{this}
+@deftypemethodx @aclass{string} @aclass{bytevector} utf16 @var{this} @var{endianness}
 Apply @func{string->utf16} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} utf16be @var{this}
+@deftypemethod @aclass{string} @aclass{bytevector} utf16be @var{this}
 Apply @func{string->utf16be} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} utf16le @var{this}
+@deftypemethod @aclass{string} @aclass{bytevector} utf16le @var{this}
 Apply @func{string->utf16le} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} utf16n @var{this}
+@deftypemethod @aclass{string} @aclass{bytevector} utf16n @var{this}
 Apply @func{string->utf16n} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} utf32 @var{this}
-@deftypemethodx @aclass{string} utf32 @var{this} @var{endianness}
+@deftypemethod @aclass{string} @aclass{bytevector} utf32 @var{this}
+@deftypemethodx @aclass{string} @aclass{bytevector} utf32 @var{this} @var{endianness}
 Apply @func{string->utf32} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} bytevector @var{this}
-@deftypemethodx @aclass{string} bytevector @var{this} @var{transcoder}
+@deftypemethod @aclass{string} @aclass{bytevector} bytevector @var{this}
+@deftypemethodx @aclass{string} @aclass{bytevector} bytevector @var{this} @var{transcoder}
 Apply @func{string->bytevector} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} ascii @var{this}
+@deftypemethod @aclass{string} @aclass{bytevector} ascii @var{this}
 Apply @func{string->ascii} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} latin1 @var{this}
+@deftypemethod @aclass{string} @aclass{bytevector} latin1 @var{this}
 Apply @func{string->latin1} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} octets @var{this}
+@deftypemethod @aclass{string} @aclass{bytevector} octets @var{this}
 Apply @func{string->octets} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} percent-encoding @var{this}
+@deftypemethod @aclass{string} @aclass{bytevector} percent-encoding @var{this}
 Apply @func{string->percent-encoding} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} uri-encoding @var{this}
+@deftypemethod @aclass{string} @aclass{bytevector} uri-encoding @var{this}
 Apply @func{string->uri-encoding} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} base64->bytevector @var{this}
+@deftypemethod @aclass{string} @aclass{bytevector} base64->bytevector @var{this}
 Apply @func{string-base64->bytevector} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} hex->bytevector @var{this}
+@deftypemethod @aclass{string} @aclass{bytevector} hex->bytevector @var{this}
 Apply @func{string-hex->bytevector} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} symbol @var{this}
+@deftypemethod @aclass{string} @aclass{symbol} symbol @var{this}
 Apply @func{string->symbol} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} keyword @var{this}
+@deftypemethod @aclass{string} @aclass{keyword} keyword @var{this}
 Apply @func{string->keyword} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} list @var{this}
+@deftypemethod @aclass{string} {(list-of @aclass{char})} list @var{this}
 Apply @func{string->list} to the instance.
 @end deftypemethod
 

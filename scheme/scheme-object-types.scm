@@ -503,7 +503,7 @@
    (ascii-encoded?		ascii-encoded-string?)
    (latin1-encoded?		latin1-encoded-string?)
    (octets-encoded?		octets-encoded-string?)
-   (uri-encoded			uri-encoded-string?)
+   (uri-encoded?		uri-encoded-string?)
    (pencent-encoded?		percent-encoded-string?)
 
    (=				string=?)
