@@ -1364,12 +1364,10 @@
 	 (safe)
        (signatures
 	(()			=> (?value-tag))
-	((?value-tag)		=> (<void>))
-	((?value-tag <boolean>)	=> (<void>)))
+	((?value-tag)		=> ())
+	((?value-tag <boolean>)	=> ()))
        (attributes
-	(()			effect-free)
-	((_)			result-true)
-	((_ _)			result-true))))
+	(()			effect-free))))
     ))
 
 (define-syntax declare-object-retriever

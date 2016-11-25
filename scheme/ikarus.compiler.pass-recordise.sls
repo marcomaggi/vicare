@@ -876,38 +876,44 @@
        (let ((val-expr	(car rand*))
 	     (t		(gensym 't))
 	     (x		(gensym 'x))
-	     (bool		(gensym 'bool)))
+	     (bool	(gensym 'bool)))
 	 (E `((lambda (,t)
 		(case-lambda
-		 (() ,t)
-		 ((,x) (set! ,t ,x))
-		 ((,x ,bool)
-		  (set! ,t ,x))))
+		  (() ,t)
+		  ((,x)
+		   (set! ,t ,x)
+		   (values))
+		  ((,x ,bool)
+		   (set! ,t ,x)
+		   (values))))
 	      ,val-expr)
 	    ctxt)))
       ((2)	;MAKE-PARAMETER called with two arguments.
-       (let ((val-expr	(car rand*))
+       (let ((val-expr		(car rand*))
 	     (guard-expr	(cadr rand*))
-	     (f		(gensym 'f))
-	     (t		(gensym 't))
+	     (f			(gensym 'f))
+	     (t			(gensym 't))
 	     (t0		(gensym 't))
-	     (x		(gensym 'x))
+	     (x			(gensym 'x))
 	     (bool		(gensym 'bool)))
 	 (E `((case-lambda
-	       ((,t ,f)
-		(if ((primitive procedure?) ,f)
-		    ((case-lambda
-		      ((,t0)
-		       (case-lambda
-			(() ,t0)
-			((,x) (set! ,t0 (,f ,x)))
-			((,x ,bool)
-			 (if ,bool
-			     (set! ,t0 (,f ,x))
-			   (set! ,t0 ,x))))))
-		     ,t)
-		  ((primitive procedure-argument-violation) 'make-parameter
-		   '"expected procedure as guard function argument" ,f))))
+		((,t ,f)
+		 (if ((primitive procedure?) ,f)
+		     ((case-lambda
+			((,t0)
+			 (case-lambda
+			   (() ,t0)
+			   ((,x)
+			    (set! ,t0 (,f ,x))
+			    (values))
+			   ((,x ,bool)
+			    (if ,bool
+				(set! ,t0 (,f ,x))
+			      (set! ,t0 ,x))
+			    (values)))))
+		      ,t)
+		   ((primitive procedure-argument-violation) 'make-parameter
+		    '"expected procedure as guard function argument" ,f))))
 	      ,val-expr
 	      ,guard-expr)
 	    ctxt)))

@@ -172,6 +172,12 @@
 (define-type-annotation <thunk>
   (lambda () => <list>))
 
+(define-type-annotation <parameter-procedure>
+  (case-lambda
+    (()			=> (<top>))
+    ((<top>)		=> ())
+    ((<top> <boolean>)	=> ())))
+
 ;;; --------------------------------------------------------------------
 
 (define-type-annotation <type-predicate>

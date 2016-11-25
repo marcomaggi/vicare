@@ -129,8 +129,8 @@
 (declare-core-primitive make-parameter
     (safe)
   (signatures
-   ((<top>)			=> (<procedure>))
-   ((<top> <procedure>)	=> (<procedure>)))
+   ((<top>)			=> (<parameter-procedure>))
+   ((<top> <procedure>)		=> (<parameter-procedure>)))
   (attributes
    ((_)				effect-free result-true)
    ((_ _)			effect-free result-true)))

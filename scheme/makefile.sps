@@ -3823,6 +3823,7 @@
 
     (<file-descriptor>				v $language)
     (<thunk>					v $language)
+    (<parameter-procedure>			v $language)
     (<type-predicate>				v $language)
     (<type-destructor>				v $language)
     (<type-printer>				v $language)

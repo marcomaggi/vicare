@@ -1896,12 +1896,10 @@
 	 (safe)
        (signatures
 	(()			=> (?value-tag))
-	((?value-tag)		=> (T:void))
-	((?value-tag T:boolean)	=> (T:void)))
+	((?value-tag)		=> ())
+	((?value-tag T:boolean)	=> ()))
        (attributes
-	(()			effect-free)
-	((_)			result-true)
-	((_ _)			result-true))))
+	(()			effect-free))))
     ))
 
 (define-syntax declare-object-retriever

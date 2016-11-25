@@ -5265,6 +5265,8 @@ its return value.
 @menu
 * built-in procedures procedures::       The @class{procedure} object-type.
 * built-in procedures thunk::            The @class{thunk} object-type.
+* built-in procedures parameter::        The @class{parameter-procedure} object-type.
+
 * built-in procedures type-predicate::   The @class{type-predicate} object-type.
 * built-in procedures type-destructor::  The @class{type-destructor} object-type.
 * built-in procedures type-printer::     The @class{type-printer} object-type.
@@ -5302,6 +5304,24 @@ is equivalent to:
 @lisp
 (define-type <thunk>
   (lambda () => <list>))
+@end lisp
+@end deftp
+
+@c page
+@node built-in procedures parameter
+@subsection The @class{parameter-procedure} object--type
+
+
+@deftp {Core Type} @aclass{parameter-procedure}
+Type of parameter procedures returned by @func{make-parameter}.  The definition of this type is
+equivalent to:
+
+@lisp
+(define-type <parameter-procedure>
+  (case-lambda
+    (()			=> (<top>))
+    ((<top>)		=> ())
+    ((<top> <boolean>)	=> ())))
 @end lisp
 @end deftp
 
