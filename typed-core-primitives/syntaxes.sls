@@ -1313,7 +1313,7 @@
      (declare-core-primitive ?who
 	 (unsafe)
        (signatures
-	((<nebytevector> <non-negative-fixnum> ?new-value-tag)	=> (<void>)))))
+	((<nebytevector> <non-negative-fixnum> ?new-value-tag)	=> ()))))
     ))
 
 (define-syntax declare-unsafe-bytevector-mutator/endianness
@@ -1326,7 +1326,7 @@
      (declare-core-primitive ?who
 	 (unsafe)
        (signatures
-	((<nebytevector> <non-negative-fixnum> ?new-value-tag <symbol>)	=> (<void>)))))
+	((<nebytevector> <non-negative-fixnum> ?new-value-tag <symbol>)	=> ()))))
     ))
 
 (define-syntax declare-unsafe-bytevector-conversion

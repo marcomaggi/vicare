@@ -110,16 +110,12 @@
 (declare-core-primitive reset-symbol-proc!
     (safe)
   (signatures
-   ((T:symbol)			=> (T:void)))
-  (attributes
-   ((_)				result-true)))
+   ((T:symbol)			=> ())))
 
 (declare-core-primitive set-symbol-value!
     (safe)
   (signatures
-   ((T:symbol T:object)		=> (T:void)))
-  (attributes
-   ((_ _)			result-true)))
+   ((T:symbol T:object)		=> ())))
 
 ;;; --------------------------------------------------------------------
 
@@ -251,7 +247,7 @@
 				(declare-core-primitive ?who
 				    (unsafe)
 				  (signatures
-				   ((T:symbol ?obj-tag)	=> (T:void)))))
+				   ((T:symbol ?obj-tag)	=> ()))))
 			       )))
   (declare-symbol-mutator $set-symbol-value!		T:object)
   (declare-symbol-mutator $set-symbol-proc!		T:object)
@@ -266,21 +262,17 @@
 (declare-core-primitive $putprop
     (unsafe)
   (signatures
-   ((T:symbol T:symbol _) => (T:void)))
-  (attributes
-   ((_ _ _)		result-true)))
+   ((T:symbol T:symbol _) => ())))
 
 (declare-core-primitive $getprop
     (unsafe)
   (signatures
-   ((T:symbol T:symbol) => (T:void)))
-  (attributes
-   ((_ _)		effect-free)))
+   ((T:symbol T:symbol) => (T:object))))
 
 (declare-core-primitive $remprop
     (unsafe)
   (signatures
-   ((T:symbol T:symbol) => (T:void)))
+   ((T:symbol T:symbol) => ()))
   (attributes
    ((_ _)		result-true)))
 

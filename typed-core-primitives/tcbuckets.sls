@@ -77,22 +77,22 @@
 (declare-core-primitive $set-tcbucket-tconc!
     (unsafe)
   (signatures
-   ((<tcbucket> <pair>)		=> (<void>))))
+   ((<tcbucket> <pair>)		=> ())))
 
 (declare-core-primitive $set-tcbucket-key!
     (unsafe)
   (signatures
-   ((<tcbucket> <top>)		=> (<void>))))
+   ((<tcbucket> <top>)		=> ())))
 
 (declare-core-primitive $set-tcbucket-val!
     (unsafe)
   (signatures
-   ((<tcbucket> <top>)		=> (<void>))))
+   ((<tcbucket> <top>)		=> ())))
 
 (declare-core-primitive $set-tcbucket-next!
     (unsafe)
   (signatures
-   ((<tcbucket> (or <tcbucket> <non-negative-fixnum>))		=> (<void>))))
+   ((<tcbucket> (or <tcbucket> <non-negative-fixnum>))		=> ())))
 
 /section)
 

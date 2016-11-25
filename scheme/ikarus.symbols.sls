@@ -151,7 +151,7 @@
 
 (define* ($unintern-gensym {x symbol?})
   (foreign-call "ikrt_unintern_gensym" x)
-  (void))
+  (values))
 
 (define* (gensym->unique-string {x symbol?})
   (let ((us ($symbol-unique-string x)))

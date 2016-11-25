@@ -155,14 +155,14 @@
 (declare-core-primitive reset-symbol-proc!
     (safe)
   (signatures
-   ((<symbol>)			=> (<void>)))
+   ((<symbol>)			=> ()))
   (attributes
    ((_)				result-true)))
 
 (declare-core-primitive set-symbol-value!
     (safe)
   (signatures
-   ((<symbol> <top>)		=> (<void>)))
+   ((<symbol> <top>)		=> ()))
   (attributes
    ((_ _)			result-true)))
 
@@ -212,7 +212,7 @@
 (declare-core-primitive $unintern-gensym
     (unsafe)
   (signatures
-   ((<symbol>)			=> (<void>))))
+   ((<symbol>)			=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; components
@@ -240,7 +240,7 @@
 				(declare-core-primitive ?who
 				    (unsafe)
 				  (signatures
-				   ((<symbol> ?obj-tag)	=> (<void>)))))
+				   ((<symbol> ?obj-tag)	=> ()))))
 			       )))
   (declare-symbol-mutator $set-symbol-value!		<top>)
   (declare-symbol-mutator $set-symbol-proc!		<top>)
@@ -255,21 +255,21 @@
 (declare-core-primitive $putprop
     (unsafe)
   (signatures
-   ((<symbol> <symbol> _) => (<void>)))
+   ((<symbol> <symbol> _) => ()))
   (attributes
    ((_ _ _)		result-true)))
 
 (declare-core-primitive $getprop
     (unsafe)
   (signatures
-   ((<symbol> <symbol>) => (<void>)))
+   ((<symbol> <symbol>) => (<top>)))
   (attributes
    ((_ _)		effect-free)))
 
 (declare-core-primitive $remprop
     (unsafe)
   (signatures
-   ((<symbol> <symbol>) => (<void>)))
+   ((<symbol> <symbol>) => ()))
   (attributes
    ((_ _)		result-true)))
 
@@ -301,7 +301,7 @@
     (safe)
   (signatures
    ((<symbol>)		=> (<top>))
-   ((<symbol> <top>)	=> (<void>))))
+   ((<symbol> <top>)	=> ())))
 
 /section)
 
