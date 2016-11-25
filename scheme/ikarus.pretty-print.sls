@@ -152,7 +152,8 @@
 	(writer::traverse x marks-table)
 	(output (boxify x marks-table) port start-column)))
     (when ending-newline?
-      (newline port)))
+      (newline port))
+    (values))
 
   #| end of module |# )
 
@@ -163,8 +164,7 @@
   ;;
   (pretty-print args (current-error-port))
   (newline (current-error-port))
-  (when (pair? args)
-    (car args)))
+  #f)
 
 (define debug-print-enabled?
   (make-parameter #f
@@ -173,7 +173,8 @@
 
 (define (debug-print* . args)
   (when (debug-print-enabled?)
-    (apply debug-print args)))
+    (apply debug-print args))
+  #f)
 
 
 (define (boxify x marks-table)

@@ -440,16 +440,12 @@
 (declare-core-primitive port-set-non-blocking-mode!
     (safe)
   (signatures
-   ((T:port)		=> (T:void)))
-  (attributes
-   ((_)			result-true)))
+   ((T:port)		=> ())))
 
 (declare-core-primitive port-unset-non-blocking-mode!
     (safe)
   (signatures
-   ((T:port)		=> (T:void)))
-  (attributes
-   ((_)			result-true)))
+   ((T:port)		=> ())))
 
 ;;;
 
@@ -463,25 +459,19 @@
 (declare-core-primitive set-port-mode!
     (safe)
   (signatures
-   ((T:port T:symbol)		=> (T:void)))
-  (attributes
-   ((_ _)			result-true)))
+   ((T:port T:symbol)		=> ())))
 
 ;;;
 
 (declare-core-primitive set-port-buffer-mode!
     (safe)
   (signatures
-   ((T:port T:symbol)		=> (T:void)))
-  (attributes
-   ((_ _)			result-true)))
+   ((T:port T:symbol)		=> ())))
 
 (declare-core-primitive port-dump-status
     (safe)
   (signatures
-   ((T:port)			=> (T:void)))
-  (attributes
-   ((_)				result-true)))
+   ((T:port)			=> ())))
 
 ;;;
 
@@ -502,18 +492,14 @@
 (declare-core-primitive set-port-position!
     (safe)
   (signatures
-   ((T:port T:exact-integer)	=> (T:void)))
-  (attributes
-   ((_ _)			result-true)))
+   ((T:port T:exact-integer)	=> ())))
 
 ;;;
 
 (declare-core-primitive port-putprop
     (safe)
   (signatures
-   ((T:port T:symbol T:object)		=> (T:void)))
-  (attributes
-   ((_ _ _)				result-true)))
+   ((T:port T:symbol T:object)		=> ())))
 
 (declare-core-primitive port-getprop
     (safe)
@@ -525,9 +511,7 @@
 (declare-core-primitive port-remprop
     (safe)
   (signatures
-   ((T:port T:symbol)			=> (T:void)))
-  (attributes
-   ((_ _)				result-true)))
+   ((T:port T:symbol)			=> ())))
 
 (declare-core-primitive port-property-list
     (safe)
@@ -541,16 +525,12 @@
 (declare-core-primitive reset-input-port!
     (safe)
   (signatures
-   ((T:input-port)	=> (T:void)))
-  (attributes
-   ((_)			result-true)))
+   ((T:input-port)	=> ())))
 
 (declare-core-primitive reset-output-port!
     (safe)
   (signatures
-   ((T:input-port)	=> (T:void)))
-  (attributes
-   ((_)			result-true)))
+   ((T:input-port)	=> ())))
 
 ;;;
 
@@ -736,38 +716,26 @@
 (declare-core-primitive put-bytevector
     (safe)
   (signatures
-   ((T:binary-output-port T:bytevector)							=> (T:void))
-   ((T:binary-output-port T:bytevector T:non-negative-fixnum)				=> (T:void))
-   ((T:binary-output-port T:bytevector T:non-negative-fixnum T:non-negative-fixnum)	=> (T:void)))
-  (attributes
-   ((_ _)			result-true)
-   ((_ _ _)			result-true)
-   ((_ _ _ _)			result-true)))
+   ((T:binary-output-port T:bytevector)							=> ())
+   ((T:binary-output-port T:bytevector T:non-negative-fixnum)				=> ())
+   ((T:binary-output-port T:bytevector T:non-negative-fixnum T:non-negative-fixnum)	=> ())))
 
 (declare-core-primitive put-string
     (safe)
   (signatures
-   ((T:textual-output-port T:string)							=> (T:void))
-   ((T:textual-output-port T:string T:non-negative-fixnum)				=> (T:void))
-   ((T:textual-output-port T:string T:non-negative-fixnum T:non-negative-fixnum)	=> (T:void)))
-  (attributes
-   ((_ _)			result-true)
-   ((_ _ _)			result-true)
-   ((_ _ _ _)			result-true)))
+   ((T:textual-output-port T:string)							=> ())
+   ((T:textual-output-port T:string T:non-negative-fixnum)				=> ())
+   ((T:textual-output-port T:string T:non-negative-fixnum T:non-negative-fixnum)	=> ())))
 
 (declare-core-primitive put-u8
     (safe)
   (signatures
-   ((T:binary-output-port T:octet)		=> (T:void)))
-  (attributes
-   ((_ _)		result-true)))
+   ((T:binary-output-port T:octet)		=> ())))
 
 (declare-core-primitive put-char
     (safe)
   (signatures
-   ((T:textual-output-port T:char)		=> (T:void)))
-  (attributes
-   ((_ _)		result-true)))
+   ((T:textual-output-port T:char)		=> ())))
 
 (declare-core-primitive put-datum
     (safe)
@@ -777,11 +745,8 @@
 (declare-core-primitive write-char
     (safe)
   (signatures
-   ((T:char)				=> (T:void))
-   ((T:char T:textual-output-port)	=> (T:void)))
-  (attributes
-   ((_)			result-true)
-   ((_ _)		result-true)))
+   ((T:char)				=> ())
+   ((T:char T:textual-output-port)	=> ())))
 
 (declare-core-primitive write
     (safe)
@@ -806,9 +771,7 @@
 (declare-core-primitive flush-output-port
     (safe)
   (signatures
-   ((T:output-port)		=> (T:void)))
-  (attributes
-   ((_)				result-true)))
+   ((T:output-port)		=> ())))
 
 ;;;
 
@@ -822,16 +785,12 @@
 (declare-core-primitive printf
     (safe)
   (signatures
-   ((T:string . T:object)	=> (T:void)))
-  (attributes
-   ((_ . _)		result-true)))
+   ((T:string . T:object)	=> ())))
 
 (declare-core-primitive fprintf
     (safe)
   (signatures
-   ((T:textual-output-port T:string . T:object)	=> (T:void)))
-  (attributes
-   ((_ _ . _)		result-true)))
+   ((T:textual-output-port T:string . T:object)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; special values
@@ -855,18 +814,13 @@
 (declare-core-primitive pretty-print
     (safe)
   (signatures
-   ((T:object)				=> (T:void))
-   ((T:object T:textual-output-port)	=> (T:void)))
-  (attributes
-   ((_)			result-true)
-   ((_ _)		result-true)))
+   ((T:object)				=> ())
+   ((T:object T:textual-output-port)	=> ())))
 
 (declare-core-primitive pretty-print*
     (safe)
   (signatures
-   ((T:object T:textual-output-port T:non-negative-fixnum _)	=> (T:void)))
-  (attributes
-   ((_ _ _ _)		result-true)))
+   ((T:object T:textual-output-port T:non-negative-fixnum _)	=> ())))
 
 (declare-parameter pretty-width		T:non-negative-exact-integer)
 
@@ -880,16 +834,16 @@
 (declare-core-primitive debug-print
     (safe)
   (signatures
-   (T:object		=> (T:void)))
+   (T:object		=> (T:false)))
   (attributes
-   (_			result-true)))
+   (_			result-false)))
 
 (declare-core-primitive debug-print*
     (safe)
   (signatures
-   (T:object		=> (T:void)))
+   (T:object		=> (T:false)))
   (attributes
-   (_			result-true)))
+   (_			result-false)))
 
 (declare-parameter debug-print-enabled?)
 
@@ -951,9 +905,7 @@
 	 (declare-core-primitive ?who
 	     (unsafe)
 	   (signatures
-	    ((T:port ?new-value-tag)	=> (T:void)))
-	   (attributes
-	    ((_ _)			result-true))))
+	    ((T:port ?new-value-tag)	=> ()))))
 	)))
   (declare-unsafe-port-mutator $set-port-index!		T:non-negative-fixnum)
   (declare-unsafe-port-mutator $set-port-size!		T:non-negative-fixnum)

@@ -415,7 +415,8 @@
 	   => (lambda (x)
 		($set-cdr! x v)))
 	  (else
-	   ($set-symbol-plist! x (cons (cons k v) p))))))
+	   ($set-symbol-plist! x (cons (cons k v) p)))))
+  (values))
 
 (define* (getprop {x symbol?} {k symbol?})
   ;;Return  the value  of the  property K  in the  property list  of the
@@ -446,7 +447,8 @@
 	      (let ((a ($car plist)))
 		(if (eq? ($car a) k)
 		    ($set-cdr! q ($cdr plist))
-		  (loop plist ($cdr plist)))))))))))
+		  (loop plist ($cdr plist))))))))))
+  (values))
 
 (define* (property-list {x symbol?})
   ;;Return a new association list  representing the property list of the

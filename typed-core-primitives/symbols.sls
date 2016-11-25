@@ -118,7 +118,7 @@
 (declare-core-primitive putprop
     (safe)
   (signatures
-   ((<symbol> <symbol> <top>)	=> (<void>))))
+   ((<symbol> <symbol> <top>)	=> ())))
 
 (declare-core-primitive getprop
     (safe)
@@ -128,7 +128,7 @@
 (declare-core-primitive remprop
     (safe)
   (signatures
-   ((<symbol> <symbol>)		=> (<void>))))
+   ((<symbol> <symbol>)		=> ())))
 
 (declare-core-primitive property-list
     (safe)

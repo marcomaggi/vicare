@@ -15606,7 +15606,7 @@ gensyms were created.
 @defun debug-print . @var{args}
 Print the given arguments on the current error port using
 @func{pretty-print}.  This is a convenience function, useful while
-debugging code.
+debugging code.  Return @false{}.
 @end defun
 
 
@@ -15620,7 +15620,7 @@ internally the value is normalised to @true{} or @false{}.
 
 @defun debug-print* . @var{args}
 Like @func{debug-print}, but print arguments only when the parameter
-@func{debug-print-enabled?} is set to true.
+@func{debug-print-enabled?} is set to true.  Return @false{}.
 @end defun
 
 @c page

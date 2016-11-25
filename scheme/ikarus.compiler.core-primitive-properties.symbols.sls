@@ -181,15 +181,13 @@
 (declare-core-primitive putprop
     (safe)
   (signatures
-   ((T:symbol T:symbol _) => (_)))
-  (attributes
-   ((_ _ _)		result-true))
+   ((T:symbol T:symbol _) => ()))
   (replacements $putprop))
 
 (declare-core-primitive getprop
     (safe)
   (signatures
-   ((T:symbol T:symbol) => (T:void)))
+   ((T:symbol T:symbol) => (_)))
   (attributes
    ((_ _)		effect-free))
   (replacements $getprop))
@@ -197,9 +195,7 @@
 (declare-core-primitive remprop
     (safe)
   (signatures
-   ((T:symbol T:symbol) => (T:void)))
-  (attributes
-   ((_ _)		result-true))
+   ((T:symbol T:symbol) => ()))
   (replacements $remprop))
 
 (declare-core-primitive property-list

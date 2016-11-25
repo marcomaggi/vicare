@@ -146,7 +146,8 @@
 		     ;;Partial success,  some data absorbed.   Try again
 		     ;;flushing the data left in the buffer.
 		     (port.device.position.incr! written-count)
-		     (try-again-after-partial-write ($fx+ buffer.offset written-count)))))))))))
+		     (try-again-after-partial-write ($fx+ buffer.offset written-count))))))))))
+  (values))
 
 
 ;;;; byte and bytevector output
@@ -171,7 +172,8 @@
 		(set! port.buffer.used-size buffer.past))
 	      (set! port.buffer.index buffer.past))))
 	 (when port.buffer-mode-none?
-	   (%flush-output-port port __who__))))))
+	   (%flush-output-port port __who__)))))
+    (values))
 
   (case-define* put-bytevector
     ;;Defined by  R6RS.  START and COUNT  must be non-negative exact  integer objects
@@ -234,7 +236,8 @@
 	       (%flush-output-port port who)
 	       (try-again-after-flushing-buffer ($fx+ src.start room)
 						($fx- count room)
-						(port.buffer.room)))))))
+						(port.buffer.room))))))
+    (values))
 
   #| end of module |# )
 
@@ -495,11 +498,9 @@
     ;;If PORT is omitted, it defaults to the value returned by CURRENT-OUTPUT-PORT.
     ;;
     (()
-     (%do-put-char (current-output-port) #\newline __who__)
-     (values))
+     (%do-put-char (current-output-port) #\newline __who__))
     (({port textual-output-port?})
-     (%do-put-char port #\newline __who__)
-     (values)))
+     (%do-put-char port #\newline __who__)))
 
   (define (%do-put-char port ch who)
     (let* ((code-point	($char->fixnum ch))
@@ -646,7 +647,8 @@
 
       (when (or ($port-buffer-mode-none? port)
 		(and newline? ($port-buffer-mode-line? port)))
-	(%flush-output-port port who))))
+	(%flush-output-port port who)))
+    (values))
 
   #| end of module |# )
 
@@ -729,7 +731,8 @@
 	((FAST-PUT-UTF16BE-TAG)
 	 (%put-it buffer-mode-line? eol-bits %put-utf16be))))
     (when ($port-buffer-mode-none? port)
-      (%flush-output-port port who)))
+      (%flush-output-port port who))
+    (values))
 
   #| end of module: PUT-STRING |# )
 

@@ -140,11 +140,11 @@
 
   (define* (fprintf {p open-textual-output-port?} {fmt string?} . args)
     (%formatter __who__ p fmt args)
-    (void))
+    (values))
 
   (define* (printf {fmt string?} . args)
     (%formatter __who__ (current-output-port) fmt args)
-    (void))
+    (values))
 
   (define* (format {fmt string?} . args)
     (receive (port extract)
@@ -159,14 +159,14 @@
       (let ((marks-table (make-eq-hashtable)))
 	(traverse x marks-table)
 	(write-object x p #t marks-table 0)
-	(void))))
+	(values))))
 
   (define (%display-to-port x p)
     (parametrise ((the-printer-printing-style 'display))
       (let ((marks-table (make-eq-hashtable)))
 	(traverse x marks-table)
 	(write-object x p #f marks-table 0)
-	(void))))
+	(values))))
 
 ;;; --------------------------------------------------------------------
 

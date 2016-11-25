@@ -139,7 +139,8 @@
 	       (%set-with-boolean port))
 	      (else
 	       (assertion-violation __who__
-		 "port does not support SET-PORT-POSITION! operation" port)))))
+		 "port does not support SET-PORT-POSITION! operation" port))))
+      (values))
 
     (define (%set-with-procedure port set-position! port.old-position)
       ;;The SET-POSITION!  field is a procedure:  an underlying device exists.  If we
@@ -525,7 +526,8 @@
   ;;Defined by Ikarus.  The port mode is used only by the reader.
   ;;
   (with-port (port)
-    (set! port.mode mode)))
+    (set! port.mode mode))
+  (values))
 
 (define* (port-eof? {port open-input-port?})
   ;;Defined by  R6RS.  PORT  must be an  input port.  Return  #t if  the LOOKAHEAD-U8
@@ -560,7 +562,8 @@
   (let ((rv (capi::platform-fd-set-non-blocking-mode (with-port (port)
 						      port.device))))
     (when ($fxnegative? rv)
-      (%raise-io-error __who__ rv port))))
+      (%raise-io-error __who__ rv port)))
+  (values))
 
 (define* (port-unset-non-blocking-mode! {port port-with-file-descriptor?})
   ;;Defined by Vicare.  Unset non-blocking  mode for PORT; return unspecified values.
@@ -569,7 +572,8 @@
   (let ((rv (capi::platform-fd-unset-non-blocking-mode (with-port (port)
 							port.device))))
     (when ($fxnegative? rv)
-      (%raise-io-error __who__ rv port))))
+      (%raise-io-error __who__ rv port)))
+  (values))
 
 (define* (port-in-non-blocking-mode? {port port?})
   ;;Defined by Vicare.   Query PORT for its non-blocking mode;  if successful: return
@@ -601,11 +605,13 @@
 
 (define* (reset-input-port! {port input-port?})
   (with-port (port)
-    (set! port.buffer.index port.buffer.used-size)))
+    (set! port.buffer.index port.buffer.used-size))
+  (values))
 
 (define* (reset-output-port! {port output-port?})
   (with-port (port)
-    (set! port.buffer.index 0)))
+    (set! port.buffer.index 0))
+  (values))
 
 ;;; --------------------------------------------------------------------
 
@@ -622,8 +628,8 @@
     (%display "port.buffer.index: ")		(%display port.buffer.index)
     (%newline)
     (%display "port.buffer.used-size: ")	(%display port.buffer.used-size)
-    (%newline)
-    ))
+    (%newline))
+  (values))
 
 
 ;;;; done

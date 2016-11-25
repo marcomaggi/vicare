@@ -5017,7 +5017,7 @@ Apply @func{symbol-max} to the arguments and return its return value.
 @subsubheading Methods: property lists
 
 
-@deftypemethod @class{symbol} @aclass{void} putprop @var{this} (@var{key} @aclass{symbol}) @var{value}
+@deftypemethod @class{symbol} () putprop @var{this} (@var{key} @aclass{symbol}) @var{value}
 Apply @func{putprop} to the instance.
 @end deftypemethod
 
@@ -5027,7 +5027,7 @@ Apply @func{getprop} to the instance.
 @end deftypemethod
 
 
-@deftypemethod @class{symbol} @aclass{void} remprop @var{this} (@var{key} @aclass{symbol})
+@deftypemethod @class{symbol} () remprop @var{this} (@var{key} @aclass{symbol})
 Apply @func{remprop} to the instance.
 @end deftypemethod
 
@@ -8938,8 +8938,8 @@ Return @true{} if @var{this} is, respectively, open or closed; otherwise return 
 @subsubheading Methods: configuration
 
 
-@deftypemethod @class{port} @aclass{void} set-non-blocking-mode @var{this}
-@deftypemethodx @class{port} @aclass{void} unset-non-blocking-mode @var{this}
+@deftypemethod @class{port} () set-non-blocking-mode @var{this}
+@deftypemethodx @class{port} () unset-non-blocking-mode @var{this}
 Apply @func{port-set-non-blocking-mode!} or @func{port-unset-non-blocking-mode!} to the argument and
 return its return value.
 @end deftypemethod
@@ -8965,7 +8965,7 @@ Apply @func{port-has-set-port-position!?} to the argument and return its return 
 
 
 @deftypemethod @class{port} @aclass{non-negative-exact-integer} position @var{this}
-@deftypemethodx @class{port} @aclass{void} position @var{this} @bracearg{pos, non-negative-exact-integer}
+@deftypemethodx @class{port} () position @var{this} @bracearg{pos, non-negative-exact-integer}
 Apply @func{port-position} or @func{set-port-position!} to the arguments and return its return
 value.
 @end deftypemethod
@@ -8990,7 +8990,7 @@ Apply @func{port-uid} to the argument and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{port} @aclass{void} dump-status @var{this}
+@deftypemethod @class{port} () dump-status @var{this}
 Apply @func{port-dump-status} to the argument and return its return value.
 @end deftypemethod
 
@@ -9004,7 +9004,7 @@ Apply @func{port-transcoder} to the argument and return its return value.
 @subsubheading Methods: properties
 
 
-@deftypemethod @class{port} @aclass{void} putprop @var{this} @bracearg{key, symbol} @var{value}
+@deftypemethod @class{port} () putprop @var{this} @bracearg{key, symbol} @var{value}
 Apply @func{port-putprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -9014,7 +9014,7 @@ Apply @func{port-getprop} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{port} @aclass{void} remprop @var{this} @bracearg{key, symbol}
+@deftypemethod @class{port} () remprop @var{this} @bracearg{key, symbol}
 Apply @func{port-remprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -9028,7 +9028,7 @@ Apply @func{port-property-list} to the arguments and return its return value.
 @subsubheading Methods: miscellaneous
 
 
-@deftypemethod @class{port} @aclass{void} close @var{this}
+@deftypemethod @class{port} () close @var{this}
 Apply @func{port-close} to the argument.
 @end deftypemethod
 
@@ -9063,7 +9063,7 @@ The type predicate is @func{textual-input-only-port?}.
 
 
 @deftypemethod @class{textual-input-only-port} @aclass{reader-input-port-mode} mode @var{this}
-@deftypemethodx @class{textual-input-only-port} @aclass{void} mode @var{this} @bracearg{mode, reader-input-port-mode}
+@deftypemethodx @class{textual-input-only-port} () mode @var{this} @bracearg{mode, reader-input-port-mode}
 Accessor and mutator for the port reader mode.  The accessor applies @func{port-mode} to the
 argument; the mutator applies @func{set-port-mode!} to the arguments.
 @end deftypemethod
@@ -9104,13 +9104,13 @@ The type predicate is @func{textual-output-only-port?}.
 
 
 @deftypemethod @class{textual-output-only-port} @aclass{output-port-buffer-mode} buffer-mode @var{this}
-@deftypemethodx @class{textual-output-only-port} @aclass{void} buffer-mode @var{this} @bracearg{buffer-mode, output-port-buffer-mode}
+@deftypemethodx @class{textual-output-only-port} () buffer-mode @var{this} @bracearg{buffer-mode, output-port-buffer-mode}
 Accessor and mutator for the port buffer mode.  The accessor applies @func{output-port-buffer-mode}
 to the argument; the mutator applies @func{set-port-buffer-mode!} to the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{textual-output-only-port} @class{void} flush @var{this}
+@deftypemethod @class{textual-output-only-port} () flush @var{this}
 Apply @func{flush-output-port} to the instance.
 @end deftypemethod
 
@@ -9145,7 +9145,7 @@ The type predicate is @func{textual-input/output-port?}.
 
 
 @deftypemethod @class{textual-input/output-port} @aclass{reader-input-port-mode} mode @var{this}
-@deftypemethodx @class{textual-input/output-port} @aclass{void} mode @var{this} @bracearg{mode, reader-input-port-mode}
+@deftypemethodx @class{textual-input/output-port} () mode @var{this} @bracearg{mode, reader-input-port-mode}
 Accessor and mutator for the port reader mode.  The accessor applies @func{port-mode} to the
 argument; the mutator applies @func{set-port-mode!} to the arguments.
 @end deftypemethod
@@ -9166,13 +9166,13 @@ Apply @func{port-eof?} to the instance and return its return value.
 
 
 @deftypemethod @class{textual-input/output-port} @aclass{output-port-buffer-mode} buffer-mode @var{this}
-@deftypemethodx @class{textual-input/output-port} @aclass{void} buffer-mode @var{this} @bracearg{buffer-mode, output-port-buffer-mode}
+@deftypemethodx @class{textual-input/output-port} () buffer-mode @var{this} @bracearg{buffer-mode, output-port-buffer-mode}
 Accessor and mutator for the port buffer mode.  The accessor applies @func{output-port-buffer-mode}
 to the argument; the mutator applies @func{set-port-buffer-mode!} to the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{textual-input/output-port} @class{void} flush @var{this}
+@deftypemethod @class{textual-input/output-port} () flush @var{this}
 Apply @func{flush-output-port} to the instance.
 @end deftypemethod
 
@@ -9235,7 +9235,7 @@ The type predicate is @func{binary-output-only-port?}.
 @subsubheading Methods
 
 
-@deftypemethod @class{binary-output-only-port} @class{void} flush @var{this}
+@deftypemethod @class{binary-output-only-port} () flush @var{this}
 Apply @func{flush-output-port} to the instance.
 @end deftypemethod
 
@@ -9273,7 +9273,7 @@ Apply @func{port-eof?} to the instance and return its return value.
 @subsubheading Methods: output side
 
 
-@deftypemethod @class{binary-input/output-port} @class{void} flush @var{this}
+@deftypemethod @class{binary-input/output-port} () flush @var{this}
 Apply @func{flush-output-port} to the instance.
 @end deftypemethod
 
@@ -9343,8 +9343,8 @@ Return @true{} if @var{this} is, respectively, open or closed; otherwise return 
 @subsubheading Methods: configuration
 
 
-@deftypemethod @class{input-port} @aclass{void} set-non-blocking-mode @var{this}
-@deftypemethodx @class{input-port} @aclass{void} unset-non-blocking-mode @var{this}
+@deftypemethod @class{input-port} () set-non-blocking-mode @var{this}
+@deftypemethodx @class{input-port} () unset-non-blocking-mode @var{this}
 Apply @func{port-set-non-blocking-mode!} or @func{port-unset-non-blocking-mode!} to the argument and
 return its return value.
 @end deftypemethod
@@ -9370,7 +9370,7 @@ Apply @func{port-has-set-port-position!?} to the argument and return its return 
 
 
 @deftypemethod @class{input-port} @aclass{non-negative-exact-integer} position @var{this}
-@deftypemethodx @class{input-port} @aclass{void} position @var{this} @bracearg{pos, non-negative-exact-integer}
+@deftypemethodx @class{input-port} () position @var{this} @bracearg{pos, non-negative-exact-integer}
 Apply @func{port-position} or @func{set-port-position!} to the arguments and return its return
 value.
 @end deftypemethod
@@ -9395,7 +9395,7 @@ Apply @func{port-uid} to the argument and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{input-port} @aclass{void} dump-status @var{this}
+@deftypemethod @class{input-port} () dump-status @var{this}
 Apply @func{port-dump-status} to the argument and return its return value.
 @end deftypemethod
 
@@ -9409,7 +9409,7 @@ Apply @func{port-transcoder} to the argument and return its return value.
 @subsubheading Methods: properties
 
 
-@deftypemethod @class{input-port} @aclass{void} putprop @var{this} @bracearg{key, symbol} @var{value}
+@deftypemethod @class{input-port} () putprop @var{this} @bracearg{key, symbol} @var{value}
 Apply @func{port-putprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -9419,7 +9419,7 @@ Apply @func{port-getprop} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{input-port} @aclass{void} remprop @var{this} @bracearg{key, symbol}
+@deftypemethod @class{input-port} () remprop @var{this} @bracearg{key, symbol}
 Apply @func{port-remprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -9433,7 +9433,7 @@ Apply @func{port-property-list} to the arguments and return its return value.
 @subsubheading Methods: miscellaneous
 
 
-@deftypemethod @class{input-port} @aclass{void} close @var{this}
+@deftypemethod @class{input-port} () close @var{this}
 Apply @func{port-close} to the argument.
 @end deftypemethod
 
@@ -9500,8 +9500,8 @@ Return @true{} if @var{this} is, respectively, open or closed; otherwise return 
 @subsubheading Methods: configuration
 
 
-@deftypemethod @class{output-port} @aclass{void} set-non-blocking-mode @var{this}
-@deftypemethodx @class{output-port} @aclass{void} unset-non-blocking-mode @var{this}
+@deftypemethod @class{output-port} () set-non-blocking-mode @var{this}
+@deftypemethodx @class{output-port} () unset-non-blocking-mode @var{this}
 Apply @func{port-set-non-blocking-mode!} or @func{port-unset-non-blocking-mode!} to the argument and
 return its return value.
 @end deftypemethod
@@ -9527,7 +9527,7 @@ Apply @func{port-has-set-port-position!?} to the argument and return its return 
 
 
 @deftypemethod @class{output-port} @aclass{non-negative-exact-integer} position @var{this}
-@deftypemethodx @class{output-port} @aclass{void} position @var{this} @bracearg{pos, non-negative-exact-integer}
+@deftypemethodx @class{output-port} () position @var{this} @bracearg{pos, non-negative-exact-integer}
 Apply @func{port-position} or @func{set-port-position!} to the arguments and return its return
 value.
 @end deftypemethod
@@ -9552,7 +9552,7 @@ Apply @func{port-uid} to the argument and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{output-port} @aclass{void} dump-status @var{this}
+@deftypemethod @class{output-port} () dump-status @var{this}
 Apply @func{port-dump-status} to the argument and return its return value.
 @end deftypemethod
 
@@ -9566,7 +9566,7 @@ Apply @func{port-transcoder} to the argument and return its return value.
 @subsubheading Methods: properties
 
 
-@deftypemethod @class{output-port} @aclass{void} putprop @var{this} @bracearg{key, symbol} @var{value}
+@deftypemethod @class{output-port} () putprop @var{this} @bracearg{key, symbol} @var{value}
 Apply @func{port-putprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -9576,7 +9576,7 @@ Apply @func{port-getprop} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{output-port} @aclass{void} remprop @var{this} @bracearg{key, symbol}
+@deftypemethod @class{output-port} () remprop @var{this} @bracearg{key, symbol}
 Apply @func{port-remprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -9590,7 +9590,7 @@ Apply @func{port-property-list} to the arguments and return its return value.
 @subsubheading Methods: miscellaneous
 
 
-@deftypemethod @class{output-port} @aclass{void} close @var{this}
+@deftypemethod @class{output-port} () close @var{this}
 Apply @func{port-close} to the argument.
 @end deftypemethod
 
@@ -9604,7 +9604,7 @@ Apply @func{reset-input-port!} or @func{reset-output-port!} to the argument.
 @subsubheading Methods: output ports
 
 
-@deftypemethod @class{output-port} @class{void} flush @var{this}
+@deftypemethod @class{output-port} () flush @var{this}
 Apply @func{flush-output-port} to the instance.
 @end deftypemethod
 
@@ -9656,8 +9656,8 @@ Return @true{} if @var{this} is, respectively, open or closed; otherwise return 
 @subsubheading Methods: configuration
 
 
-@deftypemethod @class{input/output-port} @aclass{void} set-non-blocking-mode @var{this}
-@deftypemethodx @class{input/output-port} @aclass{void} unset-non-blocking-mode @var{this}
+@deftypemethod @class{input/output-port} () set-non-blocking-mode @var{this}
+@deftypemethodx @class{input/output-port} () unset-non-blocking-mode @var{this}
 Apply @func{port-set-non-blocking-mode!} or @func{port-unset-non-blocking-mode!} to the argument and
 return its return value.
 @end deftypemethod
@@ -9683,7 +9683,7 @@ Apply @func{port-has-set-port-position!?} to the argument and return its return 
 
 
 @deftypemethod @class{input/output-port} @aclass{non-negative-exact-integer} position @var{this}
-@deftypemethodx @class{input/output-port} @aclass{void} position @var{this} @bracearg{pos, non-negative-exact-integer}
+@deftypemethodx @class{input/output-port} () position @var{this} @bracearg{pos, non-negative-exact-integer}
 Apply @func{port-position} or @func{set-port-position!} to the arguments and return its return
 value.
 @end deftypemethod
@@ -9708,7 +9708,7 @@ Apply @func{port-uid} to the argument and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{input/output-port} @aclass{void} dump-status @var{this}
+@deftypemethod @class{input/output-port} () dump-status @var{this}
 Apply @func{port-dump-status} to the argument and return its return value.
 @end deftypemethod
 
@@ -9722,7 +9722,7 @@ Apply @func{port-transcoder} to the argument and return its return value.
 @subsubheading Methods: properties
 
 
-@deftypemethod @class{input/output-port} @aclass{void} putprop @var{this} @bracearg{key, symbol} @var{value}
+@deftypemethod @class{input/output-port} () putprop @var{this} @bracearg{key, symbol} @var{value}
 Apply @func{port-putprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -9732,7 +9732,7 @@ Apply @func{port-getprop} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{input/output-port} @aclass{void} remprop @var{this} @bracearg{key, symbol}
+@deftypemethod @class{input/output-port} () remprop @var{this} @bracearg{key, symbol}
 Apply @func{port-remprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -9746,7 +9746,7 @@ Apply @func{port-property-list} to the arguments and return its return value.
 @subsubheading Methods: miscellaneous
 
 
-@deftypemethod @class{input/output-port} @aclass{void} close @var{this}
+@deftypemethod @class{input/output-port} () close @var{this}
 Apply @func{port-close} to the argument.
 @end deftypemethod
 
@@ -9769,7 +9769,7 @@ Apply @func{port-eof?} to the instance and return its return value.
 @subsubheading Methods: output ports
 
 
-@deftypemethod @class{input/output-port} @class{void} flush @var{this}
+@deftypemethod @class{input/output-port} () flush @var{this}
 Apply @func{flush-output-port} to the instance.
 @end deftypemethod
 
@@ -9822,8 +9822,8 @@ Return @true{} if @var{this} is, respectively, open or closed; otherwise return 
 @subsubheading Methods: configuration
 
 
-@deftypemethod @class{binary-port} @aclass{void} set-non-blocking-mode @var{this}
-@deftypemethodx @class{binary-port} @aclass{void} unset-non-blocking-mode @var{this}
+@deftypemethod @class{binary-port} () set-non-blocking-mode @var{this}
+@deftypemethodx @class{binary-port} () unset-non-blocking-mode @var{this}
 Apply @func{port-set-non-blocking-mode!} or @func{port-unset-non-blocking-mode!} to the argument and
 return its return value.
 @end deftypemethod
@@ -9849,7 +9849,7 @@ Apply @func{port-has-set-port-position!?} to the argument and return its return 
 
 
 @deftypemethod @class{binary-port} @aclass{non-negative-exact-integer} position @var{this}
-@deftypemethodx @class{binary-port} @aclass{void} position @var{this} @bracearg{pos, non-negative-exact-integer}
+@deftypemethodx @class{binary-port} () position @var{this} @bracearg{pos, non-negative-exact-integer}
 Apply @func{port-position} or @func{set-port-position!} to the arguments and return its return
 value.
 @end deftypemethod
@@ -9874,7 +9874,7 @@ Apply @func{port-uid} to the argument and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{binary-port} @aclass{void} dump-status @var{this}
+@deftypemethod @class{binary-port} () dump-status @var{this}
 Apply @func{port-dump-status} to the argument and return its return value.
 @end deftypemethod
 
@@ -9888,7 +9888,7 @@ Apply @func{port-transcoder} to the argument and return its return value.
 @subsubheading Methods: properties
 
 
-@deftypemethod @class{binary-port} @aclass{void} putprop @var{this} @bracearg{key, symbol} @var{value}
+@deftypemethod @class{binary-port} () putprop @var{this} @bracearg{key, symbol} @var{value}
 Apply @func{port-putprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -9898,7 +9898,7 @@ Apply @func{port-getprop} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{binary-port} @aclass{void} remprop @var{this} @bracearg{key, symbol}
+@deftypemethod @class{binary-port} () remprop @var{this} @bracearg{key, symbol}
 Apply @func{port-remprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -9912,7 +9912,7 @@ Apply @func{port-property-list} to the arguments and return its return value.
 @subsubheading Methods: miscellaneous
 
 
-@deftypemethod @class{binary-port} @aclass{void} close @var{this}
+@deftypemethod @class{binary-port} () close @var{this}
 Apply @func{port-close} to the argument.
 @end deftypemethod
 
@@ -9970,8 +9970,8 @@ Return @true{} if @var{this} is, respectively, open or closed; otherwise return 
 @subsubheading Methods: configuration
 
 
-@deftypemethod @class{textual-port} @aclass{void} set-non-blocking-mode @var{this}
-@deftypemethodx @class{textual-port} @aclass{void} unset-non-blocking-mode @var{this}
+@deftypemethod @class{textual-port} () set-non-blocking-mode @var{this}
+@deftypemethodx @class{textual-port} () unset-non-blocking-mode @var{this}
 Apply @func{port-set-non-blocking-mode!} or @func{port-unset-non-blocking-mode!} to the argument and
 return its return value.
 @end deftypemethod
@@ -9997,7 +9997,7 @@ Apply @func{port-has-set-port-position!?} to the argument and return its return 
 
 
 @deftypemethod @class{textual-port} @aclass{non-negative-exact-integer} position @var{this}
-@deftypemethodx @class{textual-port} @aclass{void} position @var{this} @bracearg{pos, non-negative-exact-integer}
+@deftypemethodx @class{textual-port} () position @var{this} @bracearg{pos, non-negative-exact-integer}
 Apply @func{port-position} or @func{set-port-position!} to the arguments and return its return
 value.
 @end deftypemethod
@@ -10022,7 +10022,7 @@ Apply @func{port-uid} to the argument and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{textual-port} @aclass{void} dump-status @var{this}
+@deftypemethod @class{textual-port} () dump-status @var{this}
 Apply @func{port-dump-status} to the argument and return its return value.
 @end deftypemethod
 
@@ -10036,7 +10036,7 @@ Apply @func{port-transcoder} to the argument and return its return value.
 @subsubheading Methods: properties
 
 
-@deftypemethod @class{textual-port} @aclass{void} putprop @var{this} @bracearg{key, symbol} @var{value}
+@deftypemethod @class{textual-port} () putprop @var{this} @bracearg{key, symbol} @var{value}
 Apply @func{port-putprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -10046,7 +10046,7 @@ Apply @func{port-getprop} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{textual-port} @aclass{void} remprop @var{this} @bracearg{key, symbol}
+@deftypemethod @class{textual-port} () remprop @var{this} @bracearg{key, symbol}
 Apply @func{port-remprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -10060,7 +10060,7 @@ Apply @func{port-property-list} to the arguments and return its return value.
 @subsubheading Methods: miscellaneous
 
 
-@deftypemethod @class{textual-port} @aclass{void} close @var{this}
+@deftypemethod @class{textual-port} () close @var{this}
 Apply @func{port-close} to the argument.
 @end deftypemethod
 
@@ -10117,8 +10117,8 @@ Return @true{} if @var{this} is, respectively, open or closed; otherwise return 
 @subsubheading Methods: configuration
 
 
-@deftypemethod @class{binary-input-port} @aclass{void} set-non-blocking-mode @var{this}
-@deftypemethodx @class{binary-input-port} @aclass{void} unset-non-blocking-mode @var{this}
+@deftypemethod @class{binary-input-port} () set-non-blocking-mode @var{this}
+@deftypemethodx @class{binary-input-port} () unset-non-blocking-mode @var{this}
 Apply @func{port-set-non-blocking-mode!} or @func{port-unset-non-blocking-mode!} to the argument and
 return its return value.
 @end deftypemethod
@@ -10144,7 +10144,7 @@ Apply @func{port-has-set-port-position!?} to the argument and return its return 
 
 
 @deftypemethod @class{binary-input-port} @aclass{non-negative-exact-integer} position @var{this}
-@deftypemethodx @class{binary-input-port} @aclass{void} position @var{this} @bracearg{pos, non-negative-exact-integer}
+@deftypemethodx @class{binary-input-port} () position @var{this} @bracearg{pos, non-negative-exact-integer}
 Apply @func{port-position} or @func{set-port-position!} to the arguments and return its return
 value.
 @end deftypemethod
@@ -10169,7 +10169,7 @@ Apply @func{port-uid} to the argument and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{binary-input-port} @aclass{void} dump-status @var{this}
+@deftypemethod @class{binary-input-port} () dump-status @var{this}
 Apply @func{port-dump-status} to the argument and return its return value.
 @end deftypemethod
 
@@ -10183,7 +10183,7 @@ Apply @func{port-transcoder} to the argument and return its return value.
 @subsubheading Methods: properties
 
 
-@deftypemethod @class{binary-input-port} @aclass{void} putprop @var{this} @bracearg{key, symbol} @var{value}
+@deftypemethod @class{binary-input-port} () putprop @var{this} @bracearg{key, symbol} @var{value}
 Apply @func{port-putprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -10193,7 +10193,7 @@ Apply @func{port-getprop} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{binary-input-port} @aclass{void} remprop @var{this} @bracearg{key, symbol}
+@deftypemethod @class{binary-input-port} () remprop @var{this} @bracearg{key, symbol}
 Apply @func{port-remprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -10207,7 +10207,7 @@ Apply @func{port-property-list} to the arguments and return its return value.
 @subsubheading Methods: miscellaneous
 
 
-@deftypemethod @class{binary-input-port} @aclass{void} close @var{this}
+@deftypemethod @class{binary-input-port} () close @var{this}
 Apply @func{port-close} to the argument.
 @end deftypemethod
 
@@ -10273,8 +10273,8 @@ Return @true{} if @var{this} is, respectively, open or closed; otherwise return 
 @subsubheading Methods: configuration
 
 
-@deftypemethod @class{binary-output-port} @aclass{void} set-non-blocking-mode @var{this}
-@deftypemethodx @class{binary-output-port} @aclass{void} unset-non-blocking-mode @var{this}
+@deftypemethod @class{binary-output-port} () set-non-blocking-mode @var{this}
+@deftypemethodx @class{binary-output-port} () unset-non-blocking-mode @var{this}
 Apply @func{port-set-non-blocking-mode!} or @func{port-unset-non-blocking-mode!} to the argument and
 return its return value.
 @end deftypemethod
@@ -10300,7 +10300,7 @@ Apply @func{port-has-set-port-position!?} to the argument and return its return 
 
 
 @deftypemethod @class{binary-output-port} @aclass{non-negative-exact-integer} position @var{this}
-@deftypemethodx @class{binary-output-port} @aclass{void} position @var{this} @bracearg{pos, non-negative-exact-integer}
+@deftypemethodx @class{binary-output-port} () position @var{this} @bracearg{pos, non-negative-exact-integer}
 Apply @func{port-position} or @func{set-port-position!} to the arguments and return its return
 value.
 @end deftypemethod
@@ -10325,7 +10325,7 @@ Apply @func{port-uid} to the argument and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{binary-output-port} @aclass{void} dump-status @var{this}
+@deftypemethod @class{binary-output-port} () dump-status @var{this}
 Apply @func{port-dump-status} to the argument and return its return value.
 @end deftypemethod
 
@@ -10339,7 +10339,7 @@ Apply @func{port-transcoder} to the argument and return its return value.
 @subsubheading Methods: properties
 
 
-@deftypemethod @class{binary-output-port} @aclass{void} putprop @var{this} @bracearg{key, symbol} @var{value}
+@deftypemethod @class{binary-output-port} () putprop @var{this} @bracearg{key, symbol} @var{value}
 Apply @func{port-putprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -10349,7 +10349,7 @@ Apply @func{port-getprop} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{binary-output-port} @aclass{void} remprop @var{this} @bracearg{key, symbol}
+@deftypemethod @class{binary-output-port} () remprop @var{this} @bracearg{key, symbol}
 Apply @func{port-remprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -10363,7 +10363,7 @@ Apply @func{port-property-list} to the arguments and return its return value.
 @subsubheading Methods: miscellaneous
 
 
-@deftypemethod @class{binary-output-port} @aclass{void} close @var{this}
+@deftypemethod @class{binary-output-port} () close @var{this}
 Apply @func{port-close} to the argument.
 @end deftypemethod
 
@@ -10377,7 +10377,7 @@ Apply @func{reset-input-port!} or @func{reset-output-port!} to the argument.
 @subsubheading Methods: output ports
 
 
-@deftypemethod @class{binary-output-port} @class{void} flush @var{this}
+@deftypemethod @class{binary-output-port} () flush @var{this}
 Apply @func{flush-output-port} to the instance.
 @end deftypemethod
 
@@ -10429,8 +10429,8 @@ Return @true{} if @var{this} is, respectively, open or closed; otherwise return 
 @subsubheading Methods: configuration
 
 
-@deftypemethod @class{textual-input-port} @aclass{void} set-non-blocking-mode @var{this}
-@deftypemethodx @class{textual-input-port} @aclass{void} unset-non-blocking-mode @var{this}
+@deftypemethod @class{textual-input-port} () set-non-blocking-mode @var{this}
+@deftypemethodx @class{textual-input-port} () unset-non-blocking-mode @var{this}
 Apply @func{port-set-non-blocking-mode!} or @func{port-unset-non-blocking-mode!} to the argument and
 return its return value.
 @end deftypemethod
@@ -10456,7 +10456,7 @@ Apply @func{port-has-set-port-position!?} to the argument and return its return 
 
 
 @deftypemethod @class{textual-input-port} @aclass{non-negative-exact-integer} position @var{this}
-@deftypemethodx @class{textual-input-port} @aclass{void} position @var{this} @bracearg{pos, non-negative-exact-integer}
+@deftypemethodx @class{textual-input-port} () position @var{this} @bracearg{pos, non-negative-exact-integer}
 Apply @func{port-position} or @func{set-port-position!} to the arguments and return its return
 value.
 @end deftypemethod
@@ -10481,7 +10481,7 @@ Apply @func{port-uid} to the argument and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{textual-input-port} @aclass{void} dump-status @var{this}
+@deftypemethod @class{textual-input-port} () dump-status @var{this}
 Apply @func{port-dump-status} to the argument and return its return value.
 @end deftypemethod
 
@@ -10495,7 +10495,7 @@ Apply @func{port-transcoder} to the argument and return its return value.
 @subsubheading Methods: properties
 
 
-@deftypemethod @class{textual-input-port} @aclass{void} putprop @var{this} @bracearg{key, symbol} @var{value}
+@deftypemethod @class{textual-input-port} () putprop @var{this} @bracearg{key, symbol} @var{value}
 Apply @func{port-putprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -10505,7 +10505,7 @@ Apply @func{port-getprop} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{textual-input-port} @aclass{void} remprop @var{this} @bracearg{key, symbol}
+@deftypemethod @class{textual-input-port} () remprop @var{this} @bracearg{key, symbol}
 Apply @func{port-remprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -10519,7 +10519,7 @@ Apply @func{port-property-list} to the arguments and return its return value.
 @subsubheading Methods: miscellaneous
 
 
-@deftypemethod @class{textual-input-port} @aclass{void} close @var{this}
+@deftypemethod @class{textual-input-port} () close @var{this}
 Apply @func{port-close} to the argument.
 @end deftypemethod
 
@@ -10585,8 +10585,8 @@ Return @true{} if @var{this} is, respectively, open or closed; otherwise return 
 @subsubheading Methods: configuration
 
 
-@deftypemethod @class{textual-output-port} @aclass{void} set-non-blocking-mode @var{this}
-@deftypemethodx @class{textual-output-port} @aclass{void} unset-non-blocking-mode @var{this}
+@deftypemethod @class{textual-output-port} () set-non-blocking-mode @var{this}
+@deftypemethodx @class{textual-output-port} () unset-non-blocking-mode @var{this}
 Apply @func{port-set-non-blocking-mode!} or @func{port-unset-non-blocking-mode!} to the argument and
 return its return value.
 @end deftypemethod
@@ -10612,7 +10612,7 @@ Apply @func{port-has-set-port-position!?} to the argument and return its return 
 
 
 @deftypemethod @class{textual-output-port} @aclass{non-negative-exact-integer} position @var{this}
-@deftypemethodx @class{textual-output-port} @aclass{void} position @var{this} @bracearg{pos, non-negative-exact-integer}
+@deftypemethodx @class{textual-output-port} () position @var{this} @bracearg{pos, non-negative-exact-integer}
 Apply @func{port-position} or @func{set-port-position!} to the arguments and return its return
 value.
 @end deftypemethod
@@ -10637,7 +10637,7 @@ Apply @func{port-uid} to the argument and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{textual-output-port} @aclass{void} dump-status @var{this}
+@deftypemethod @class{textual-output-port} () dump-status @var{this}
 Apply @func{port-dump-status} to the argument and return its return value.
 @end deftypemethod
 
@@ -10651,7 +10651,7 @@ Apply @func{port-transcoder} to the argument and return its return value.
 @subsubheading Methods: properties
 
 
-@deftypemethod @class{textual-output-port} @aclass{void} putprop @var{this} @bracearg{key, symbol} @var{value}
+@deftypemethod @class{textual-output-port} () putprop @var{this} @bracearg{key, symbol} @var{value}
 Apply @func{port-putprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -10661,7 +10661,7 @@ Apply @func{port-getprop} to the arguments and return its return value.
 @end deftypemethod
 
 
-@deftypemethod @class{textual-output-port} @aclass{void} remprop @var{this} @bracearg{key, symbol}
+@deftypemethod @class{textual-output-port} () remprop @var{this} @bracearg{key, symbol}
 Apply @func{port-remprop} to the arguments and return its return value.
 @end deftypemethod
 
@@ -10675,7 +10675,7 @@ Apply @func{port-property-list} to the arguments and return its return value.
 @subsubheading Methods: miscellaneous
 
 
-@deftypemethod @class{textual-output-port} @aclass{void} close @var{this}
+@deftypemethod @class{textual-output-port} () close @var{this}
 Apply @func{port-close} to the argument.
 @end deftypemethod
 
@@ -10689,7 +10689,7 @@ Apply @func{reset-input-port!} or @func{reset-output-port!} to the argument.
 @subsubheading Methods: output ports
 
 
-@deftypemethod @class{textual-output-port} @class{void} flush @var{this}
+@deftypemethod @class{textual-output-port} () flush @var{this}
 Apply @func{flush-output-port} to the instance.
 @end deftypemethod
 
