@@ -102,9 +102,7 @@
 (declare-core-primitive string-copy!
     (safe)
   (signatures
-   ((<string> <non-negative-fixnum> <string> <non-negative-fixnum> <non-negative-fixnum>)	=> (<void>)))
-  (attributes
-   ((_ _)		result-true)))
+   ((<string> <non-negative-fixnum> <string> <non-negative-fixnum> <non-negative-fixnum>)	=> ())))
 
 (declare-core-primitive string-append
     (safe)
@@ -146,10 +144,7 @@
 (declare-core-primitive string-for-each
     (safe)
   (signatures
-   ((<procedure> <string> . (list-of <string>))		=> (<void>)))
-  (attributes
-   ;;Not foldable and not effect-free because it applies an unknown procedure.
-   ((_ _ . _)					result-true)))
+   ((<procedure> <string> . (list-of <string>))		=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators
@@ -172,16 +167,12 @@
 (declare-core-primitive string-set!
     (safe)
   (signatures
-   ((<nestring> <non-negative-fixnum> <char>)	=> (<void>)))
-  (attributes
-   ((_ _ _)		result-true)))
+   ((<nestring> <non-negative-fixnum> <char>)	=> ())))
 
 (declare-core-primitive string-fill!
     (safe)
   (signatures
-   ((<string> <char>)	=> (<void>)))
-  (attributes
-   ((_ _)		result-true)))
+   ((<string> <char>)	=> (<string>))))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -426,9 +417,7 @@
 (declare-core-primitive $string-set!
     (unsafe)
   (signatures
-   ((<nestring> <non-negative-fixnum> <char>)	=> (<void>)))
-  (attributes
-   ((_ _ _)		result-true)))
+   ((<nestring> <non-negative-fixnum> <char>)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -574,7 +563,7 @@
 (declare-core-primitive <string>-for-each
     (safe)
   (signatures
-   ((<string> <procedure> . (list-of <string>))	=> (<void>))))
+   ((<string> <procedure> . (list-of <string>))	=> ())))
 
 /section)
 

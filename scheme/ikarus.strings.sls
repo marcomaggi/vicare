@@ -836,13 +836,13 @@
   ;;DST.STR starting at DST.START inclusive.
   ;;
   (cond (($fx= src.start src.end)
-	 (void))
+	 (values))
 	((eq? src.str dst.str)
 	 (cond (($fx< dst.start src.start)
 		($string-copy-forwards!  src.str src.start dst.str dst.start src.end))
 	       (($fx> dst.start src.start)
 		($string-copy-backwards! src.str src.start dst.str dst.start src.end))
-	       (else (void))))
+	       (else (values))))
 	(else
 	 ($string-copy-forwards!  src.str src.start dst.str dst.start src.end))))
 
@@ -878,13 +878,13 @@
   ;;starting at DST.START inclusive.
   ;;
   (cond (($fxzero? count)
-	 (void))
+	 (values))
 	((eq? src.str dst.str)
 	 (cond (($fx< dst.start src.start)
 		($string-self-copy-forwards!/count  src.str src.start dst.start count))
 	       (($fx> dst.start src.start)
 		($string-self-copy-backwards!/count src.str src.start dst.start count))
-	       (else (void))))
+	       (else (values))))
 	(else
 	 (let ((src.end ($fx+ src.start count)))
 	   ($string-copy-forwards! src.str src.start dst.str dst.start src.end)))))

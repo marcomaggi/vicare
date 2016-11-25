@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -104,16 +104,14 @@
 (declare-core-primitive string-copy
     (safe)
   (signatures
-   ((T:string)		=> (T:void)))
+   ((T:string)		=> (T:string)))
   (attributes
    ((_)			effect-free result-true)))
 
 (declare-core-primitive string-copy!
     (safe)
   (signatures
-   ((T:string T:fixnum T:string T:fixnum T:fixnum)	=> (T:void)))
-  (attributes
-   ((_ _)		result-true)))
+   ((T:string T:fixnum T:string T:fixnum T:fixnum)	=> ())))
 
 (declare-core-primitive string-append
     (safe)
@@ -143,10 +141,7 @@
 (declare-core-primitive string-for-each
     (safe)
   (signatures
-   ((T:procedure T:string . T:string)		=> (T:void)))
-  (attributes
-   ;;Not foldable and not effect-free because it applies an unknown procedure.
-   ((_ _ . _)					result-true)))
+   ((T:procedure T:string . T:string)		=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators
@@ -169,14 +164,12 @@
 (declare-core-primitive string-set!
     (safe)
   (signatures
-   ((T:string T:fixnum T:char)	=> (T:void)))
-  (attributes
-   ((_ _ _)		result-true)))
+   ((T:string T:fixnum T:char)	=> ())))
 
 (declare-core-primitive string-fill!
     (safe)
   (signatures
-   ((T:string T:char)	=> (T:void)))
+   ((T:string T:char)	=> (T:string)))
   (attributes
    ((_ _)		result-true)))
 
@@ -408,9 +401,7 @@
 (declare-core-primitive $string-set!
     (unsafe)
   (signatures
-   ((T:string T:fixnum T:char)	=> (T:void)))
-  (attributes
-   ((_ _ _)		result-true)))
+   ((T:string T:fixnum T:char)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
