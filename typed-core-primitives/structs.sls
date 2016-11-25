@@ -99,7 +99,7 @@
 (declare-core-primitive struct-type-field-mutator
     (safe)
   (signatures
-   ((<struct-type-descriptor> (or <non-negative-fixnum> <symbol>))	=> ((lambda (<struct> <top>) => (<void>)))))
+   ((<struct-type-descriptor> (or <non-negative-fixnum> <symbol>))	=> ((lambda (<struct> <top>) => ()))))
   (attributes
    ((_ _)		effect-free result-true)))
 
@@ -108,7 +108,7 @@
   (signatures
    ((<struct-type-descriptor> (or <non-negative-fixnum> <symbol>))	=> ((case-lambda
 									      ((<struct>)       => (<top>))
-									      ((<struct> <top>) => (<void>))))))
+									      ((<struct> <top>) => ())))))
   (attributes
    ((_ _)		effect-free result-true)))
 
@@ -118,11 +118,7 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    #;((<struct-type-descriptor> (or <false> ?new-value-tag))	=> (<void>))
-		    ((<struct-type-descriptor> ?new-value-tag)	=> (<void>))
-		    ((<struct-type-descriptor> <false>)		=> (<void>)))
-		   (attributes
-		    ((_ _)		result-true))))
+		    ((<struct-type-descriptor> (or <false> ?new-value-tag))	=> ()))))
 		)))
   (declare set-struct-type-printer!	<procedure>)
   (declare set-struct-type-destructor!	<procedure>)
@@ -146,16 +142,13 @@
   (declare struct-length	<non-negative-fixnum>)
   (declare struct-field-names	(list-of <symbol>))
   (declare struct-printer	<procedure>)
-  #;(declare struct-destructor	(or <false> <procedure>))
-  (declare struct-destructor	<top>)
+  (declare struct-destructor	(or <false> <procedure>))
   #| end of LET-SYNTAX |# )
 
 (declare-core-primitive struct-reset!
     (safe)
   (signatures
-   ((<struct>)		=> (<void>)))
-  (attributes
-   ((_)			result-true)))
+   ((<struct>)		=> ())))
 
 (declare-core-primitive struct-ref
     (safe)
@@ -168,22 +161,17 @@
 (declare-core-primitive struct-set!
     (safe)
   (signatures
-   ((<struct> <non-negative-fixnum> <top>)	=> ()))
-  (attributes
-   ((_ _ _)		result-true)))
+   ((<struct> <non-negative-fixnum> <top>)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous
 
-(declare-parameter struct-guardian-logger	<top>)
-#;(declare-parameter struct-guardian-logger	(or <boolean> <procedure>))
+(declare-parameter struct-guardian-logger	(or <boolean> <procedure>))
 
 (declare-core-primitive struct-guardian-log
     (safe)
   (signatures
-   ((<struct> <top> <symbol>)	=> (<void>)))
-  (attributes
-   ((_ _ _)			result-true)))
+   ((<struct> <top> <symbol>)	=> ())))
 
 /section)
 
@@ -295,7 +283,7 @@
 	 (declare-core-primitive ?who
 	     (unsafe)
 	   (signatures
-	    ((<struct-type-descriptor> ?new-value-tag)	=> (<void>)))))
+	    ((<struct-type-descriptor> ?new-value-tag)	=> ()))))
 	)))
   (declare-unsafe-struct-mutator $set-std-std!		<struct-type-descriptor>)
   (declare-unsafe-struct-mutator $set-std-name!		<string>)
@@ -312,8 +300,7 @@
 (declare-core-primitive $struct-guardian
     (unsafe)
   (signatures
-   ((<struct>)		=> (<void>))))
-
+   ((<struct>)		=> (<struct>))))
 
 /section)
 

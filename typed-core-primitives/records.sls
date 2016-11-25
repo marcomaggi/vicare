@@ -242,10 +242,8 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((<record-type-descriptor> ?arg-type)	=> (<void>))
-		    ((<record-type-descriptor> <false>)		=> (<void>)))
-		   (attributes
-		    ((_ _)		result-true)))))))
+		    ((<record-type-descriptor> (or <false> ?arg-type))	=> ()))))
+		)))
   (declare record-type-destructor-set!			<type-destructor>)
   (declare record-type-printer-set!			<type-printer>)
   (declare record-type-equality-predicate-set!		<equality-predicate>)
@@ -363,16 +361,12 @@
 (declare-core-primitive record-reset!
     (safe)
   (signatures
-   ((<record>)		=> (<void>)))
-  (attributes
-   ((_)			result-true)))
+   ((<record>)		=> ())))
 
 (declare-core-primitive record-guardian-log
     (safe)
   (signatures
-   ((<record> <top> <symbol>)	=> (<void>)))
-  (attributes
-   ((_ _ _)			result-true)))
+   ((<record> <top> <symbol>)	=> ())))
 
 (declare-parameter record-guardian-logger	(or <boolean> <procedure>))
 
@@ -468,8 +462,8 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((<record-type-descriptor> ?arg-type)	=> (<void>))
-		    ((<record-type-descriptor> <false>)		=> (<void>))))))))
+		    ((<record-type-descriptor> ?arg-type)	=> ())
+		    ((<record-type-descriptor> <false>)		=> ())))))))
   (declare $record-type-equality-predicate-set!		<equality-predicate>)
   (declare $record-type-comparison-procedure-set!	<comparison-procedure>)
   (declare $record-type-hash-function-set!		<hash-function>)
@@ -536,7 +530,7 @@
 (declare-core-primitive $record-guardian
     (unsafe)
   (signatures
-   ((<record>)		=> (<void>))))
+   ((<record>)		=> (<record>))))
 
 /section)
 

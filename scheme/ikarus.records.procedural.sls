@@ -1509,7 +1509,8 @@
   ;;descriptor.
   (let ((len ($struct-ref ($struct-rtd x) 1)))
     (do ((i 0 ($fxadd1 i)))
-	(($fx= i len))
+	(($fx= i len)
+	 (values))
       ($struct-set! x i (void)))))
 
 ;;;

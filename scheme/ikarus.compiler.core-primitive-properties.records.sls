@@ -213,13 +213,6 @@
   (attributes
    ((_)			effect-free)))
 
-(declare-core-primitive record-destructor-set!
-    (safe)
-  (signatures
-   ((T:record-type-descriptor T:procedure)	=> (T:void)))
-  (attributes
-   ((_ _)			result-true)))
-
 
 ;;;; R6RS records, safe primitives
 
@@ -250,16 +243,12 @@
 (declare-core-primitive record-reset!
     (safe)
   (signatures
-   ((T:record)		=> (T:void)))
-  (attributes
-   ((_)			result-true)))
+   ((T:record)		=> ())))
 
 (declare-core-primitive record-guardian-log
     (safe)
   (signatures
-   ((T:record _ T:symbol)	=> (T:void)))
-  (attributes
-   ((_ _ _)			result-true)))
+   ((T:record _ T:symbol)	=> ())))
 
 (declare-parameter record-guardian-logger	[or T:boolean T:procedure])
 
@@ -272,7 +261,7 @@
 (declare-core-primitive $record-guardian
     (unsafe)
   (signatures
-   ((T:record)		=> (T:void))))
+   ((T:record)		=> (T:record))))
 
 
 

@@ -127,7 +127,7 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((T:struct-type-descriptor (or T:false ?new-value-tag))	=> (T:void)))
+		    ((T:struct-type-descriptor (or T:false ?new-value-tag))	=> ()))
 		   (attributes
 		    ((_ _)		result-true))))
 		)))
@@ -158,9 +158,7 @@
 (declare-core-primitive struct-reset!
     (safe)
   (signatures
-   ((T:struct)		=> (T:void)))
-  (attributes
-   ((_)			result-true)))
+   ((T:struct)		=> ())))
 
 (declare-core-primitive struct-ref
     (safe)
@@ -173,9 +171,7 @@
 (declare-core-primitive struct-set!
     (safe)
   (signatures
-   ((T:struct T:non-negative-fixnum _)	=> ()))
-  (attributes
-   ((_ _ _)		result-true)))
+   ((T:struct T:non-negative-fixnum _)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous
@@ -185,9 +181,7 @@
 (declare-core-primitive struct-guardian-log
     (safe)
   (signatures
-   ((T:struct _ T:symbol)	=> (T:void)))
-  (attributes
-   ((_ _ _)			result-true)))
+   ((T:struct _ T:symbol)	=> ())))
 
 
 ;;;; structs, unsafe primitives
@@ -289,7 +283,7 @@
 	 (declare-core-primitive ?who
 	     (unsafe)
 	   (signatures
-	    ((T:struct-type-descriptor ?new-value-tag)	=> (T:void)))))
+	    ((T:struct-type-descriptor ?new-value-tag)	=> ()))))
 	)))
   (declare-unsafe-struct-mutator $set-std-std!		T:struct-type-descriptor)
   (declare-unsafe-struct-mutator $set-std-name!		T:string)
@@ -306,7 +300,7 @@
 (declare-core-primitive $struct-guardian
     (unsafe)
   (signatures
-   ((T:struct)		=> (T:void))))
+   ((T:struct)		=> (T:struct))))
 
 
 ;;;; done
