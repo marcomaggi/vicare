@@ -163,16 +163,12 @@
 (declare-core-primitive bytevector-fill!
     (safe)
   (signatures
-   ((T:bytevector T:octet/byte)	=> (T:void)))
-  (attributes
-   ((_ _)			result-true)))
+   ((T:bytevector T:octet/byte)	=> ())))
 
 (declare-core-primitive bytevector-copy!
     (safe)
   (signatures
-   ((T:bytevector T:non-negative-fixnum T:bytevector T:non-negative-fixnum T:non-negative-fixnum)     => (T:void)))
-  (attributes
-   ((_ _ _ _ _)			result-true)))
+   ((T:bytevector T:non-negative-fixnum T:bytevector T:non-negative-fixnum T:non-negative-fixnum)     => ())))
 
 ;;;
 
@@ -251,12 +247,12 @@
 (declare-core-primitive bytevector-s8-set!
     (safe)
   (signatures
-   ((T:bytevector T:non-negative-fixnum T:byte)	=> (T:void))))
+   ((T:bytevector T:non-negative-fixnum T:byte)	=> ())))
 
 (declare-core-primitive bytevector-u8-set!
     (safe)
   (signatures
-   ((T:bytevector T:non-negative-fixnum T:octet)	=> (T:void))))
+   ((T:bytevector T:non-negative-fixnum T:octet)	=> ())))
 
 (let-syntax
     ((declare-safe-bytevector-mutator
@@ -265,7 +261,7 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((T:bytevector T:non-negative-fixnum ?new-value-tag)	=> (T:void)))))
+	    ((T:bytevector T:non-negative-fixnum ?new-value-tag)	=> ()))))
 	)))
   (declare-safe-bytevector-mutator bytevector-s16-native-set!		T:sint16)
   (declare-safe-bytevector-mutator bytevector-u16-native-set!		T:uint16)
@@ -284,7 +280,7 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((T:bytevector T:non-negative-fixnum ?new-value-tag T:symbol)	=> (T:void)))))
+	    ((T:bytevector T:non-negative-fixnum ?new-value-tag T:symbol)	=> ()))))
 	)))
   (declare-safe-bytevector-mutator bytevector-s16-set!		T:sint16)
   (declare-safe-bytevector-mutator bytevector-u16-set!		T:uint16)
@@ -299,12 +295,12 @@
 (declare-core-primitive bytevector-sint-set!
     (safe)
   (signatures
-   ((T:bytevector T:non-negative-fixnum T:exact-integer T:symbol T:positive-fixnum)	=> (T:exact-integer))))
+   ((T:bytevector T:non-negative-fixnum T:exact-integer T:symbol T:positive-fixnum)	=> ())))
 
 (declare-core-primitive bytevector-uint-set!
     (safe)
   (signatures
-   ((T:bytevector T:non-negative-fixnum T:exact-integer T:symbol T:positive-fixnum)	=> (T:non-negative-exact-integer))))
+   ((T:bytevector T:non-negative-fixnum T:exact-integer T:symbol T:positive-fixnum)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; conversion

@@ -1859,7 +1859,7 @@
      (declare-core-primitive ?who
 	 (unsafe)
        (signatures
-	((T:bytevector T:fixnum ?new-value-tag)	=> (T:void)))))
+	((T:bytevector T:fixnum ?new-value-tag)	=> ()))))
     ))
 
 (define-syntax declare-unsafe-bytevector-conversion

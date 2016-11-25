@@ -206,16 +206,12 @@
 (declare-core-primitive bytevector-fill!
     (safe)
   (signatures
-   ((<bytevector> <fixnum>)	=> (<void>)))
-  (attributes
-   ((_ _)			result-true)))
+   ((<bytevector> <fixnum>)	=> ())))
 
 (declare-core-primitive bytevector-copy!
     (safe)
   (signatures
-   ((<bytevector> <non-negative-fixnum> <bytevector> <non-negative-fixnum> <non-negative-fixnum>)     => (<void>)))
-  (attributes
-   ((_ _ _ _ _)			result-true)))
+   ((<bytevector> <non-negative-fixnum> <bytevector> <non-negative-fixnum> <non-negative-fixnum>)     => ())))
 
 ;;;
 
@@ -294,12 +290,12 @@
 (declare-core-primitive bytevector-s8-set!
     (safe)
   (signatures
-   ((<nebytevector> <non-negative-fixnum> <fixnum>)	=> (<void>))))
+   ((<nebytevector> <non-negative-fixnum> <fixnum>)	=> ())))
 
 (declare-core-primitive bytevector-u8-set!
     (safe)
   (signatures
-   ((<nebytevector> <non-negative-fixnum> <non-negative-fixnum>)	=> (<void>))))
+   ((<nebytevector> <non-negative-fixnum> <non-negative-fixnum>)	=> ())))
 
 (let-syntax
     ((declare-safe-bytevector-mutator
@@ -308,7 +304,7 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((<nebytevector> <non-negative-fixnum> ?new-value-tag)	=> (<void>)))))
+	    ((<nebytevector> <non-negative-fixnum> ?new-value-tag)	=> ()))))
 	)))
   (declare-safe-bytevector-mutator bytevector-s16-native-set!		<fixnum>)
   (declare-safe-bytevector-mutator bytevector-u16-native-set!		<non-negative-fixnum>)
@@ -327,7 +323,7 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((<nebytevector> <non-negative-fixnum> ?new-value-tag <symbol>)	=> (<void>)))))
+	    ((<nebytevector> <non-negative-fixnum> ?new-value-tag <symbol>)	=> ()))))
 	)))
   (declare-safe-bytevector-mutator bytevector-s16-set!		<fixnum>)
   (declare-safe-bytevector-mutator bytevector-u16-set!		<non-negative-fixnum>)
@@ -342,12 +338,12 @@
 (declare-core-primitive bytevector-sint-set!
     (safe)
   (signatures
-   ((<nebytevector> <non-negative-fixnum> <exact-integer> <symbol> <positive-fixnum>)	=> (<exact-integer>))))
+   ((<nebytevector> <non-negative-fixnum> <exact-integer> <symbol> <positive-fixnum>)	=> ())))
 
 (declare-core-primitive bytevector-uint-set!
     (safe)
   (signatures
-   ((<nebytevector> <non-negative-fixnum> <exact-integer> <symbol> <positive-fixnum>)	=> (<exact-integer>))))
+   ((<nebytevector> <non-negative-fixnum> <exact-integer> <symbol> <positive-fixnum>)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
@@ -778,7 +774,7 @@
 (declare-core-primitive $bytevector-set!
     (unsafe)
   (signatures
-   ((<bytevector> <fixnum> <fixnum>)	=> (<void>))))
+   ((<bytevector> <fixnum> <fixnum>)	=> ())))
 
 (declare-unsafe-bytevector-accessor $bytevector-u8-ref		<non-negative-fixnum>)
 (declare-unsafe-bytevector-mutator  $bytevector-u8-set!		<non-negative-fixnum>)
@@ -872,43 +868,43 @@
     (unsafe)
   (signatures
    ((<bytevector> <non-negative-fixnum> <bytevector> <non-negative-fixnum> <non-negative-fixnum>)
-    => (<void>))))
+    => ())))
 
 (declare-core-primitive $bytevector-copy-forwards!
     (unsafe)
   (signatures
    ((<bytevector> <non-negative-fixnum> <bytevector> <non-negative-fixnum> <non-negative-fixnum>)
-    => (<void>))))
+    => ())))
 
 (declare-core-primitive $bytevector-copy-backwards!
     (unsafe)
   (signatures
    ((<bytevector> <non-negative-fixnum> <bytevector> <non-negative-fixnum> <non-negative-fixnum>)
-    => (<void>))))
+    => ())))
 
 (declare-core-primitive $bytevector-copy!/count
     (unsafe)
   (signatures
    ((<bytevector> <non-negative-fixnum> <bytevector> <non-negative-fixnum> <non-negative-fixnum>)
-    => (<void>))))
+    => ())))
 
 (declare-core-primitive $bytevector-self-copy-forwards!/count
     (unsafe)
   (signatures
    ((<bytevector> <non-negative-fixnum> <non-negative-fixnum> <non-negative-fixnum>)
-    => (<void>))))
+    => ())))
 
 (declare-core-primitive $bytevector-self-copy-backwards!/count
     (unsafe)
   (signatures
    ((<bytevector> <non-negative-fixnum> <non-negative-fixnum> <non-negative-fixnum>)
-    => (<void>))))
+    => ())))
 
 (declare-core-primitive $bytevector-fill!
     (unsafe)
   (signatures
    ((<bytevector> <non-negative-fixnum> <non-negative-fixnum> <fixnum>)
-    => (<void>))))
+    => ())))
 
 /section)
 

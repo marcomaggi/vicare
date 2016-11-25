@@ -8257,10 +8257,30 @@ value.
 @end deftypemethod
 
 
-@deftypemethod @aclass{bytevector} = @var{this} @bracearg{bv, bytevector} @dots{}
-@deftypemethodx @aclass{bytevector} != @var{this} @bracearg{bv, bytevector} @dots{}
+@deftypemethod @class{bytevector} = @var{this} @bracearg{bv, bytevector} @dots{}
+@deftypemethodx @class{bytevector} != @var{this} @bracearg{bv, bytevector} @dots{}
 Apply @func{bytevector=?}, @func{bytevector!=?} to the instance and the
 arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{bytevector} @aclass{bytevector} append @var{this} @bracearg{bv, bytevector} @dots{}
+Apply @func{bytevector-append} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{bytevector} @aclass{bytevector} copy @var{this}
+Apply @func{bytevector-copy} to the instance and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{bytevector} {()} copy! @var{this} @bracearg{src-start, non-negative-fixnum} @bracearg{dst, bytevector} @bracearg{dst-start, non-negative-fixnum} @bracearg{k, non-negative-fixnum}
+Apply @func{bytevector-copy!} to the arguments and return its return value.
+@end deftypemethod
+
+
+@deftypemethod @class{bytevector} {()} fill! @var{this} @bracearg{fill, fixnum}
+Apply @func{bytevector-fill!} to the arguments and return its return value.
 @end deftypemethod
 
 @c page

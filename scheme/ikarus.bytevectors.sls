@@ -874,7 +874,9 @@
   (({bv.len bytevector-length?})
    ($make-bytevector bv.len))
   (({bv.len bytevector-length?} {fill bytevector-byte-filler?})
-   ($bytevector-fill! ($make-bytevector bv.len) 0 bv.len fill)))
+   (receive-and-return (bv)
+       ($make-bytevector bv.len)
+     ($bytevector-fill! bv 0 bv.len fill))))
 
 ;;; --------------------------------------------------------------------
 
@@ -959,13 +961,14 @@
   ;;DST.BV starting at DST.START inclusive.
   ;;
   (cond (($fx= src.start src.end)
-	 (void))
+	 (values))
 	((eq? src.bv dst.bv)
 	 (cond (($fx< dst.start src.start)
 		($bytevector-copy-forwards!  src.bv src.start dst.bv dst.start src.end))
 	       (($fx> dst.start src.start)
 		($bytevector-copy-backwards! src.bv src.start dst.bv dst.start src.end))
-	       (else (void))))
+	       (else
+		(values))))
 	(else
 	 ($bytevector-copy-forwards!  src.bv src.start dst.bv dst.start src.end))))
 
@@ -1001,13 +1004,14 @@
   ;;starting at DST.START inclusive.
   ;;
   (cond (($fxzero? count)
-	 (void))
+	 (values))
 	((eq? src.bv dst.bv)
 	 (cond (($fx< dst.start src.start)
 		($bytevector-self-copy-forwards!/count  src.bv src.start dst.start count))
 	       (($fx> dst.start src.start)
 		($bytevector-self-copy-backwards!/count src.bv src.start dst.start count))
-	       (else (void))))
+	       (else
+		(values))))
 	(else
 	 (let ((src.end ($fx+ src.start count)))
 	   ($bytevector-copy-forwards! src.bv src.start dst.bv dst.start src.end)))))
@@ -1053,11 +1057,9 @@
 (define ($bytevector-fill! bv index end fill)
   ;;Fill the positions in BV from INDEX inclusive to END exclusive with FILL.
   ;;
-  (if ($fx< index end)
-      (begin
-	($bytevector-set! bv index fill)
-	($bytevector-fill! bv ($fxadd1 index) end fill))
-    bv))
+  (when ($fx< index end)
+    ($bytevector-set! bv index fill)
+    ($bytevector-fill! bv ($fxadd1 index) end fill)))
 
 
 ;;;; subbytevectors, bytes

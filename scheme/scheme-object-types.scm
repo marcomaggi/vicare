@@ -624,7 +624,13 @@
   (methods
    (length		bytevector-length)
    (=			bytevector=?)
-   (!=			bytevector!=?)))
+   (!=			bytevector!=?)
+   ;;
+   (append		bytevector-append)
+   (copy		bytevector-copy)
+   (copy!		bytevector-copy!)
+   (fill!		bytevector-fill!)
+   ))
 
 (define-scheme-type <empty-bytevector>
     <bytevector>
