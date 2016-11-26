@@ -1019,7 +1019,9 @@
 	  (fields one two))
 	(define O
 	  (make-duo 1 2))
-	(void-object? (delete O)))
+	(receive ()
+	    (delete O)
+	  #t))
     => #t)
 
   ;;No parent, this type with destructor.
@@ -1032,11 +1034,14 @@
 	    (destructor-protocol
 	      (lambda ()
 		(lambda (record)
-		  (add-result 'duo-destructor)))))
+		  (add-result 'duo-destructor)
+		  (values)))))
 	  (define O
 	    (make-duo 1 2))
-	  (delete O)))
-    => '(duo-destructor (duo-destructor)))
+	  (receive ()
+	      (delete O)
+	    #t)))
+    => '(#t (duo-destructor)))
 
   ;;No parent, this type with destructor.
   ;;
@@ -1048,9 +1053,12 @@
 	    (destructor-protocol
 	      (lambda ()
 		(lambda (record)
-		  (add-result 'duo-destructor)))))
-	  (delete (make-duo 1 2))))
-    => '(duo-destructor (duo-destructor)))
+		  (add-result 'duo-destructor)
+		  (values)))))
+	  (receive ()
+	      (delete (make-duo 1 2))
+	    #t)))
+    => '(#t (duo-destructor)))
 
 ;;; --------------------------------------------------------------------
 ;;; parent specified with PARENT clause
@@ -1076,8 +1084,8 @@
 	  (define O
 	    (make-beta 1 2 3 4))
 
-	  (delete O)))
-    => '(beta-destructor (beta-destructor)))
+	  (values->list (delete O))))
+    => '(() (beta-destructor)))
 
   ;;Both this type and its parent with destructor.
   ;;
@@ -1104,8 +1112,8 @@
 	  (define O
 	    (make-beta 1 2 3 4))
 
-	  (delete O)))
-    => '(beta-destructor (alpha-destructor beta-destructor)))
+	  (values->list (delete O))))
+    => '(() (alpha-destructor beta-destructor)))
 
   ;;Parent with destructor, this type with no destructor.
   ;;
@@ -1127,8 +1135,8 @@
 	  (define O
 	    (make-beta 1 2 3 4))
 
-	  (delete O)))
-    => '(alpha-destructor (alpha-destructor)))
+	  (values->list (delete O))))
+    => '(() (alpha-destructor)))
 
 ;;; --------------------------------------------------------------------
 ;;; parent specified with PARENT-RTD clause
@@ -1155,8 +1163,8 @@
 	  (define O
 	    (make-beta 1 2 3 4))
 
-	  (delete O)))
-    => '(beta-destructor (beta-destructor)))
+	  (values->list (delete O))))
+    => '(() (beta-destructor)))
 
   ;;Both this type and its parent with destructor.
   ;;
@@ -1184,8 +1192,8 @@
 	  (define O
 	    (make-beta 1 2 3 4))
 
-	  (delete O)))
-    => '(beta-destructor (alpha-destructor beta-destructor)))
+	  (values->list (delete O))))
+    => '(() (alpha-destructor beta-destructor)))
 
   ;;Parent with destructor, this type with no destructor.
   ;;
@@ -1208,8 +1216,8 @@
 	  (define O
 	    (make-beta 1 2 3 4))
 
-	  (delete O)))
-    => '(alpha-destructor (alpha-destructor)))
+	  (values->list (delete O))))
+    => '(() (alpha-destructor)))
 
   (collect))
 

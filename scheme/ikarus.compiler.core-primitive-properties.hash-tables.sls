@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -107,32 +107,23 @@
 (declare-core-primitive hashtable-set!
     (safe)
   (signatures
-   ((T:hashtable T:object T:object)	=> (T:void)))
-  (attributes
-   ((_ _ _)				result-true)))
+   ((T:hashtable T:object T:object)	=> ())))
 
 (declare-core-primitive hashtable-delete!
     (safe)
   (signatures
-   ((T:hashtable T:object)		=> (T:void)))
-  (attributes
-   ((_ _) 				result-true)))
+   ((T:hashtable T:object)		=> (T:object T:object))))
 
 (declare-core-primitive hashtable-clear!
     (safe)
   (signatures
-   ((T:hashtable)			=> (T:void))
-   ((T:hashtable T:exact-integer)	=> (T:void)))
-  (attributes
-   ((_)					result-true)
-   ((_ _)				result-true)))
+   ((T:hashtable)			=> ())
+   ((T:hashtable T:exact-integer)	=> ())))
 
 (declare-core-primitive hashtable-update!
     (safe)
   (signatures
-   ((T:hashtable T:object T:procedure T:object)	=> (T:void)))
-  (attributes
-   ((_ _ _ _)				result-true)))
+   ((T:hashtable T:object T:procedure T:object)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; inspection
@@ -219,16 +210,12 @@
 (declare-core-primitive hashtable-for-each-key
     (safe)
   (signatures
-   ((T:procedure T:hashtable)		=> (T:void)))
-  (attributes
-   ((_ _)				result-true)))
+   ((T:procedure T:hashtable)		=> ())))
 
 (declare-core-primitive hashtable-for-each-entry
     (safe)
   (signatures
-   ((T:procedure T:hashtable)		=> (T:void)))
-  (attributes
-   ((_ _)				result-true)))
+   ((T:procedure T:hashtable)		=> ())))
 
 (declare-core-primitive hashtable-for-all-keys
     (safe)

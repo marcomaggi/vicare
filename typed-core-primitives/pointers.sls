@@ -58,9 +58,7 @@
 (declare-core-primitive set-pointer-null!
     (safe)
   (signatures
-   ((<pointer>)			=> (<void>)))
-  (attributes
-   ((_)				result-true)))
+   ((<pointer>)			=> ())))
 
 ;;; --------------------------------------------------------------------
 

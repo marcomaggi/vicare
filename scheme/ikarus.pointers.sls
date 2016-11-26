@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011-2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -510,7 +510,8 @@
   (and (pointer? obj) (capi.ffi-pointer-null? obj)))
 
 (define* (set-pointer-null! {ptr pointer?})
-  (capi.ffi-set-pointer-null! ptr))
+  (capi.ffi-set-pointer-null! ptr)
+  (values))
 
 (define (pointer-non-null? obj)
   (and (pointer? obj)

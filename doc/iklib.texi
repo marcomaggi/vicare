@@ -9247,6 +9247,9 @@ and the parent has a destructor function: the parent's destructor
 function becomes this type's destructor function.
 @end itemize
 
+The destructor function must return zero values (for example using @code{(values)} in tail
+position).
+
 @c page
 @node iklib records defs consig
 @subsubsection The constructor signature

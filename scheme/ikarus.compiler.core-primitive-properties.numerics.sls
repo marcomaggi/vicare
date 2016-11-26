@@ -1303,32 +1303,32 @@
 (declare-core-primitive error@fx+
     (safe)
   (signatures
-   ((T:object T:object)		=> (T:void))))
+   ((T:object T:object)		=> ())))
 
 (declare-core-primitive error@fx*
     (safe)
   (signatures
-   ((T:object T:object)		=> (T:void))))
+   ((T:object T:object)		=> ())))
 
 (declare-core-primitive error@fxadd1
     (safe)
   (signatures
-   ((T:object)			=> (T:void))))
+   ((T:object)			=> ())))
 
 (declare-core-primitive error@fxsub1
     (safe)
   (signatures
-   ((T:object)			=> (T:void))))
+   ((T:object)			=> ())))
 
 (declare-core-primitive error@fxarithmetic-shift-left
     (safe)
   (signatures
-   ((T:object T:object)		=> (T:void))))
+   ((T:object T:object)		=> ())))
 
 (declare-core-primitive error@fxarithmetic-shift-right
     (safe)
   (signatures
-   ((T:object T:object)		=> (T:void))))
+   ((T:object T:object)		=> ())))
 
 ;;;
 

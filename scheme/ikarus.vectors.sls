@@ -532,8 +532,7 @@
   (values))
 
 (define ($vector-set-void! vec idx)
-  ($vector-set! vec idx (void))
-  (values))
+  ($vector-set! vec idx (void)))
 
 
 ;;;; list conversion
@@ -1199,11 +1198,11 @@
   ;;to all the items of VEC and discard the return values.
   ;;
   (let loop ((i 0))
-    (or ($fx= i ($vector-length vec))
-	(begin
-	  (func ($vector-ref vec i))
-	  (loop ($fxadd1 i)))))
-  (values))
+    (if ($fx= i ($vector-length vec))
+	(values)
+      (begin
+	(func ($vector-ref vec i))
+	(loop ($fxadd1 i))))))
 
 (define ($vector-for-all1 func vec)
   ;;Like VECTOR-FOR-ALL, but  for only one vector  argument: return true

@@ -2963,6 +2963,8 @@ return the return value of the application.  The evaluation of
 @meta{expr} must return a single return value.
 
 If the object has no destructor function: an exception is raised.
+
+The destructor function must return zero values.
 @end deffn
 
 @c page

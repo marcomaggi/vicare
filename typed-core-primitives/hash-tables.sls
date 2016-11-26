@@ -108,32 +108,23 @@
 (declare-core-primitive hashtable-set!
     (safe)
   (signatures
-   ((<hashtable> <top> <top>)	=> (<void>)))
-  (attributes
-   ((_ _ _)				result-true)))
+   ((<hashtable> <top> <top>)	=> ())))
 
 (declare-core-primitive hashtable-delete!
     (safe)
   (signatures
-   ((<hashtable> <top>)		=> (<top> <top>)))
-  (attributes
-   ((_ _) 				result-true)))
+   ((<hashtable> <top>)		=> (<top> <top>))))
 
 (declare-core-primitive hashtable-clear!
     (safe)
   (signatures
-   ((<hashtable>)			=> (<void>))
-   ((<hashtable> <exact-integer>)	=> (<void>)))
-  (attributes
-   ((_)					result-true)
-   ((_ _)				result-true)))
+   ((<hashtable>)			=> ())
+   ((<hashtable> <exact-integer>)	=> ())))
 
 (declare-core-primitive hashtable-update!
     (safe)
   (signatures
-   ((<hashtable> <top> <procedure> <top>)	=> (<void>)))
-  (attributes
-   ((_ _ _ _)				result-true)))
+   ((<hashtable> <top> <procedure> <top>)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; inspection
@@ -226,16 +217,12 @@
 (declare-core-primitive hashtable-for-each-key
     (safe)
   (signatures
-   ((<procedure> <hashtable>)		=> (<void>)))
-  (attributes
-   ((_ _)				result-true)))
+   ((<procedure> <hashtable>)		=> ())))
 
 (declare-core-primitive hashtable-for-each-entry
     (safe)
   (signatures
-   ((<procedure> <hashtable>)		=> (<void>)))
-  (attributes
-   ((_ _)				result-true)))
+   ((<procedure> <hashtable>)		=> ())))
 
 (declare-core-primitive hashtable-for-all-keys
     (safe)
@@ -443,7 +430,7 @@
 (declare-core-primitive $hashtable-type-descriptor-set!
     (unsafe)
   (signatures
-   ((<hashtable> <hashtable-type-descr>)	=> (<void>))))
+   ((<hashtable> <hashtable-type-descr>)	=> ())))
 
 (declare-core-primitive $hashtable-type-descriptor
     (unsafe)

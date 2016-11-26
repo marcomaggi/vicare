@@ -1394,32 +1394,32 @@
 (declare-core-primitive error@fx+
     (safe)
   (signatures
-   ((<top> <top>)		=> (<void>))))
+   ((<top> <top>)		=> <bottom>)))
 
 (declare-core-primitive error@fx*
     (safe)
   (signatures
-   ((<top> <top>)		=> (<void>))))
+   ((<top> <top>)		=> <bottom>)))
 
 (declare-core-primitive error@fxadd1
     (safe)
   (signatures
-   ((<top>)			=> (<void>))))
+   ((<top>)			=> <bottom>)))
 
 (declare-core-primitive error@fxsub1
     (safe)
   (signatures
-   ((<top>)			=> (<void>))))
+   ((<top>)			=> <bottom>)))
 
 (declare-core-primitive error@fxarithmetic-shift-left
     (safe)
   (signatures
-   ((<top> <top>)		=> (<void>))))
+   ((<top> <top>)		=> <bottom>)))
 
 (declare-core-primitive error@fxarithmetic-shift-right
     (safe)
   (signatures
-   ((<top> <top>)		=> (<void>))))
+   ((<top> <top>)		=> <bottom>)))
 
 ;;;
 

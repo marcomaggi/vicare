@@ -134,7 +134,7 @@
 (declare-core-primitive internal-delete
     (safe)
   (signatures
-   ((<top>)				=> (<void>))))
+   ((<top>)				=> ())))
 
 /section)
 
@@ -787,8 +787,7 @@
 (declare-core-primitive overloaded-function-descriptor.register!
     (safe)
   (signatures
-   ((<overloaded-function-descriptor> <lambda-descriptors> <procedure>)
-    => (<void>))))
+   ((<overloaded-function-descriptor> <lambda-descriptors> <procedure>)	=> ())))
 
 (declare-core-primitive overloaded-function-descriptor.select-matching-entry
     (safe)

@@ -506,8 +506,7 @@
 	       (cond ((or (direct-lookup key b)
 			  (rehash-lookup H (hasht-tc H) key))
 		      => (lambda (b)
-			   ($set-tcbucket-val! b v)
-			   (void)))
+			   ($set-tcbucket-val! b v)))
 		     (else
 		      ;;Prepend a  new TCBUCKET in  the buckets vector slot  at index
 		      ;;IDX.
@@ -524,7 +523,8 @@
 		      (let ((ct (hasht-size H)))
 			(set-hasht-size! H (fxadd1 ct))
 			(when ($fx> ct ($vector-length vec))
-			  (enlarge-table H)))))))))
+			  (enlarge-table H))))))
+	     (values))))
 
     (define (put-hashed H key v ih)
       (let* ((equiv? (hasht-equivf H))
@@ -536,11 +536,14 @@
 		 (let ((ct (hasht-size H)))
 		   (set-hasht-size! H (fxadd1 ct))
 		   (when ($fx> ct ($vector-length vec))
-		     (enlarge-table H))))
+		     (enlarge-table H)))
+		 (values))
 		((equiv? key ($tcbucket-key b))
-		 ($set-tcbucket-val! b v))
+		 ($set-tcbucket-val! b v)
+		 (values))
 		(else
-		 (next-tcbucket ($tcbucket-next b)))))))
+		 (next-tcbucket ($tcbucket-next b))
+		 (values))))))
 
     #| end of module |# )
 
@@ -674,7 +677,8 @@
     (init-buckets-vector v 0 (vector-length v)))
   (unless (hasht-hashf h)
     (set-hasht-tc! h (make-empty-tc)))
-  (set-hasht-size! h 0))
+  (set-hasht-size! h 0)
+  (values))
 
 ;;; --------------------------------------------------------------------
 
@@ -1360,8 +1364,8 @@
   ;;
   (receive-and-return (table^)
       (hasht-copy-skeleton table #t)
-    (vector-map (lambda (key)
-		  (hashtable-set! table^ key (proc key)))
+    (vector-for-each (lambda (key)
+		       (hashtable-set! table^ key (proc key)))
       (hashtable-keys table))))
 
 (define* (hashtable-map-entries {proc procedure?} {table hashtable?})
@@ -1374,8 +1378,8 @@
       (hasht-copy-skeleton table #t)
     (receive (keys vals)
 	(hashtable-entries table)
-      (vector-map (lambda (key val)
-		    (hashtable-set! table^ key (proc key val)))
+      (vector-for-each (lambda (key val)
+			 (hashtable-set! table^ key (proc key val)))
 	keys vals))))
 
 ;;; --------------------------------------------------------------------
@@ -1497,8 +1501,8 @@
 (define* (alist->hashtable! {table hashtable?} al)
   ;;Fill TABLE with the entries of the alist AL.
   ;;
-  (map (lambda (P)
-	 (hashtable-set! table (car P) (cdr P)))
+  (for-each (lambda (P)
+	      (hashtable-set! table (car P) (cdr P)))
     al)
   table)
 

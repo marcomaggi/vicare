@@ -72,9 +72,7 @@
 (declare-core-primitive set-pointer-null!
     (safe)
   (signatures
-   ((T:pointer)			=> (T:void)))
-  (attributes
-   ((_)				result-true)))
+   ((T:pointer)			=> ())))
 
 ;;; --------------------------------------------------------------------
 

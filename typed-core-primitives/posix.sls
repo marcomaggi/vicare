@@ -110,10 +110,8 @@
 (declare-core-primitive delete-file
     (safe)
   (signatures
-   ((<string>)		=> (<void>))
-   ((<bytevector>)	=> (<void>)))
-  (attributes
-   ((_)			result-true)))
+   ((<string>)		=> ())
+   ((<bytevector>)	=> ())))
 
 (declare-core-primitive file-modification-time
     (safe)
@@ -134,18 +132,12 @@
 (declare-core-primitive mkdir
     (safe)
   (signatures
-   ((<string> <fixnum>)		=> (<void>))
-   ((<bytevector> <fixnum>)	=> (<void>)))
-  (attributes
-   ((_ _)			result-true)))
+   (((or <string> <bytevector>) <fixnum>)	=> ())))
 
 (declare-core-primitive mkdir/parents
     (safe)
   (signatures
-   ((<string> <fixnum>)		=> (<void>))
-   ((<bytevector> <fixnum>)	=> (<void>)))
-  (attributes
-   ((_ _)			result-true)))
+   (((or <string> <bytevector>) <fixnum>)	=> ())))
 
 ;;; --------------------------------------------------------------------
 

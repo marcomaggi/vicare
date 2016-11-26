@@ -2645,8 +2645,8 @@
 	  (define O
 	    (new duo 1 2))
 
-	  (delete O)))
-    => '(1234 ("#[struct duo one=1 two=2]")))
+	  (values->list (delete O))))
+    => '(() ("#[struct duo one=1 two=2]")))
 
 ;;; --------------------------------------------------------------------
 ;;; records
@@ -2672,8 +2672,8 @@
 	  (define O
 	    (new duo 1 2))
 
-	  (delete O)))
-    => '(1234 ("#[record duo one=1 two=2]")))
+	  (values->list (delete O))))
+    => '(() ("#[record duo one=1 two=2]")))
 
   ;;Record with parent, no protocols.
   ;;
@@ -2702,8 +2702,8 @@
 	  (define O
 	    (new beta 1 2 3 4))
 
-	  (delete O)))
-    => '(1234 ("#[record beta a=1 b=2 c=3 d=4]")))
+	  (values->list (delete O))))
+    => '(() ("#[record beta a=1 b=2 c=3 d=4]")))
 
   ;;Record with parent, parent with protocol.
   ;;
@@ -2740,8 +2740,8 @@
 	  (define O
 	    (new beta 1 3))
 
-	  (delete O)))
-    => '(1234 ("#[record beta a=1 b=2 c=3 d=4]")))
+	  (values->list (delete O))))
+    => '(() ("#[record beta a=1 b=2 c=3 d=4]")))
 
   ;;Record with parent, child with protocol.
   ;;
@@ -2774,8 +2774,8 @@
 	  (define O
 	    (new beta 1 2 3))
 
-	  (delete O)))
-    => '(1234 ("#[record beta a=1 b=2 c=3 d=4]")))
+	  (values->list (delete O))))
+    => '(() ("#[record beta a=1 b=2 c=3 d=4]")))
 
   ;;Record with parent, parent and child with protocols.
   ;;
@@ -2812,8 +2812,8 @@
 	  (define O
 	    (new beta 1 3))
 
-	  (delete O)))
-    => '(1234 ("#[record beta a=1 b=2 c=3 d=4]")))
+	  (values->list (delete O))))
+    => '(() ("#[record beta a=1 b=2 c=3 d=4]")))
 
 ;;; --------------------------------------------------------------------
 ;;; compensations

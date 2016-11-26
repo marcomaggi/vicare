@@ -111,9 +111,7 @@
 (declare-core-primitive delete-file
     (safe)
   (signatures
-   ((T:pathname)	=> (T:void)))
-  (attributes
-   ((_)			result-true)))
+   ((T:pathname)	=> ())))
 
 (declare-core-primitive file-modification-time
     (safe)
@@ -132,16 +130,12 @@
 (declare-core-primitive mkdir
     (safe)
   (signatures
-   ((T:pathname T:fixnum)	=> (T:void)))
-  (attributes
-   ((_ _)			result-true)))
+   ((T:pathname T:fixnum)	=> ())))
 
 (declare-core-primitive mkdir/parents
     (safe)
   (signatures
-   ((T:pathname T:fixnum)	=> (T:void)))
-  (attributes
-   ((_ _)			result-true)))
+   ((T:pathname T:fixnum)	=> ())))
 
 ;;; --------------------------------------------------------------------
 

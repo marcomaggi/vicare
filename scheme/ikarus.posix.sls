@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -399,7 +399,8 @@
   (with-pathnames ((pathname.bv pathname))
     (let ((rv (capi.posix-mkdir pathname.bv mode)))
       (unless ($fxzero? rv)
-	(%raise-errno-error/filename __who__ rv pathname mode)))))
+	(%raise-errno-error/filename __who__ rv pathname mode))))
+  (values))
 
 (module (mkdir/parents)
 
@@ -413,7 +414,8 @@
 	  (unless ($fxzero? ($string-length base))
 	    (next-component base))
 	  (unless ($fxzero? ($string-length suffix))
-	    (mkdir pathname mode))))))
+	    (mkdir pathname mode)))))
+    (values))
 
   (define (%file-is-directory? who pathname)
     (with-pathnames ((pathname.bv pathname))
@@ -576,7 +578,8 @@
   (with-pathnames ((pathname.bv pathname))
     (let ((rv (capi.posix-unlink pathname.bv)))
       (unless ($fxzero? rv)
-	(%raise-errno-error/filename __who__ rv pathname)))))
+	(%raise-errno-error/filename __who__ rv pathname))))
+  (values))
 
 
 ;;;; string pathnames

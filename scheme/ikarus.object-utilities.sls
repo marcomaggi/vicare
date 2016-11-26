@@ -373,7 +373,8 @@
 	 (close-port obj))
 	(else
 	 (assertion-violation 'delete
-	   "unknown method to destroy object" obj))))
+	   "unknown method to destroy object" obj)))
+  (values))
 
 
 ;;;; interface-type predicates
