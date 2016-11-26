@@ -123,13 +123,6 @@
    ((<void>)			=> (<true>))
    ((<top>)			=> (<boolean>))))
 
-(declare-core-primitive unspecified-values
-    (safe)
-  (signatures
-   (()				=> (list-of <void>)))
-  (attributes
-   (()				foldable effect-free result-true)))
-
 (declare-core-primitive load
     (safe)
   (signatures
@@ -199,11 +192,8 @@
 (declare-core-primitive new-cafe
     (safe)
   (signatures
-   (()			=> (<void>))
-   ((<procedure>)	=> (<void>)))
-  (attributes
-   (()			result-true)
-   ((_)			result-true)))
+   (()			=> ())
+   ((<procedure>)	=> ())))
 
 (declare-parameter waiter-prompt-string		<string>)
 (declare-parameter cafe-input-port		<textual-input-port>)
@@ -211,9 +201,7 @@
 (declare-core-primitive apropos
     (safe)
   (signatures
-   ((<string>)		=> (<void>)))
-  (attributes
-   ((_)			result-true)))
+   ((<string>)		=> ())))
 
 ;;; --------------------------------------------------------------------
 
@@ -250,11 +238,8 @@
 (declare-core-primitive fasl-write
     (safe)
   (signatures
-   ((<top> <binary-output-port>)			=> (<void>))
-   ((<top> <binary-output-port> <list>)	=> (<void>)))
-  (attributes
-   ((_ _)		result-true)
-   ((_ _ _)		result-true)))
+   ((<top> <binary-output-port>)		=> ())
+   ((<top> <binary-output-port> <list>)		=> ())))
 
 (declare-core-primitive fasl-read
     (safe)
@@ -487,22 +472,22 @@
 (declare-core-primitive print-stderr-message
     (safe)
   (signatures
-   ((<string> <string> <list>)	=> (<void>))))
+   ((<string> <string> <list>)	=> ())))
 
 (declare-core-primitive print-error-message
     (safe)
   (signatures
-   ((<string> . <list>)		=> (<void>))))
+   ((<string> . <list>)		=> ())))
 
 (declare-core-primitive print-verbose-message
     (safe)
   (signatures
-   ((<string> . <list>)		=> (<void>))))
+   ((<string> . <list>)		=> ())))
 
 (declare-core-primitive print-debug-message
     (safe)
   (signatures
-   ((<string> . <list>)		=> (<void>))))
+   ((<string> . <list>)		=> ())))
 
 /section)
 

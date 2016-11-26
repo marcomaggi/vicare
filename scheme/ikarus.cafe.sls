@@ -148,7 +148,7 @@
 	;;Exit the REPL.
 	(begin
 	  (newline (console-output-port))
-	  (exit-repl-k (void)))
+	  (exit-repl-k))
       (call-with-values
 	  ;;Perform the EVAL.
 	  (lambda ()

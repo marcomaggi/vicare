@@ -37,6 +37,8 @@
 
 
 (define (print-stderr-message prefix template arg*)
+  ;;This must return zero values.
+  ;;
   (with-blocked-exceptions
       (lambda ()
 	(let ((P (current-error-port)))
@@ -45,8 +47,7 @@
 	    (display prefix P))
 	  (apply fprintf P template arg*)
 	  (newline P)
-	  (flush-output-port P))))
-  (void))
+	  (flush-output-port P)))))
 
 (define (print-error-message template . args)
   (print-stderr-message "error: " template args))

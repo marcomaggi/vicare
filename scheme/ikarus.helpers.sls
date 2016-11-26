@@ -32,14 +32,12 @@
 
     ;; predicates
     always-true				always-false
-    unspecified-values
     expect-single-argument-and-return-it
     expect-single-argument-and-return-true
     expect-single-argument-and-return-false)
   (import (except (vicare)
 		  any->symbol		any->string
 		  always-true		always-false
-		  unspecified-values
 		  expect-single-argument-and-return-it
 		  expect-single-argument-and-return-true
 		  expect-single-argument-and-return-false))
@@ -73,9 +71,6 @@
 
 (define (always-false . args)
   #f)
-
-(define (unspecified-values)
-  (void))
 
 (define (expect-single-argument-and-return-true arg)
   ;;This function is  used by some syntaxes  to check at run-time  that an expression

@@ -190,7 +190,7 @@
 				     (%write-object (car ls) port refcount-table next-mark)))))
 		       1)))
       (%write-object obj port refcount-table next-mark)
-      (void))))
+      (values))))
 
 
 (define (make-graph x h)
@@ -237,7 +237,7 @@
 		  (when (gensym? x)
 		    (make-graph (gensym->unique-string x) h)))
 		 ((string? x)
-		  (void))
+		  (values))
 		 ((code-objects::code? x)
 		  (make-graph ($code-annotation x) h)
 		  (make-graph (code-objects::code-reloc-vector x) h))
@@ -290,11 +290,11 @@
 			x (code-objects::code-freevars code)))
 		    (make-graph code h)))
 		 ((bytevector? x)
-		  (void))
+		  (values))
 		 ((flonum? x)
-		  (void))
+		  (values))
 		 ((bignum? x)
-		  (void))
+		  (values))
 		 ((ratnum? x)
 		  (make-graph (numerator x) h)
 		  (make-graph (denominator x) h))

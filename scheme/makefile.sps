@@ -3330,7 +3330,6 @@
     (load					v $language)
     (void					v $language)
     (void-object?				v $language)
-    (unspecified-values				v $language)
     (gensym					v $language)
     (symbol-value				v $language)
     (set-symbol-value!				v $language)

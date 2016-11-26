@@ -191,11 +191,8 @@
 (declare-core-primitive new-cafe
     (safe)
   (signatures
-   (()			=> (T:void))
-   ((T:procedure)	=> (T:void)))
-  (attributes
-   (()			result-true)
-   ((_)			result-true)))
+   (()			=> ())
+   ((T:procedure)	=> ())))
 
 (declare-parameter waiter-prompt-string		T:string)
 (declare-parameter cafe-input-port		T:textual-input-port)
@@ -203,9 +200,7 @@
 (declare-core-primitive apropos
     (safe)
   (signatures
-   ((T:string)		=> (T:void)))
-  (attributes
-   ((_)			result-true)))
+   ((T:string)		=> ())))
 
 ;;; --------------------------------------------------------------------
 
@@ -239,11 +234,8 @@
 (declare-core-primitive fasl-write
     (safe)
   (signatures
-   ((T:object T:binary-output-port)			=> (T:void))
-   ((T:object T:binary-output-port T:proper-list)	=> (T:void)))
-  (attributes
-   ((_ _)		result-true)
-   ((_ _ _)		result-true)))
+   ((T:object T:binary-output-port)			=> ())
+   ((T:object T:binary-output-port T:proper-list)	=> ())))
 
 (declare-core-primitive fasl-read
     (safe)

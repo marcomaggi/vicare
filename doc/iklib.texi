@@ -19404,14 +19404,6 @@ Always return @true{} or @false{}, ignoring the arguments.
 @end defun
 
 
-@defun unspecified-values
-Formally return unspecified values.  It returns a single void value, but
-typed as list of void values of unspecified length.  A call to this
-function may be useful as body in the @clause{else} clause of syntaxes
-like @syntax{cond} and @syntax{case}.
-@end defun
-
-
 @defun expect-single-argument-and-return-it @var{arg}
 @defunx expect-single-argument-and-return-true @var{arg}
 @defunx expect-single-argument-and-return-false @var{arg}

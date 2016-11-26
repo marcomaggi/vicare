@@ -651,9 +651,7 @@
  (declare-core-primitive $flonum-set!
    (unsafe)
    (signatures
-    ((<flonum> <fixnum> <fixnum>)	=> (<void>)))
-   (attributes
-    ((_ _ _)				result-true)))
+    ((<flonum> <fixnum> <fixnum>)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; trigonometric
