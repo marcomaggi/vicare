@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -126,16 +126,17 @@
 (declare-core-primitive run-compensations
     (safe)
   (signatures
-   (()			=> (T:void)))
-  (attributes
-   (()			result-true)))
+   (()			=> ())))
 
 (declare-core-primitive push-compensation-thunk
     (safe)
   (signatures
-   ((T:procedure)	=> (T:void)))
-  (attributes
-   ((_)			result-true)))
+   ((T:procedure)	=> ())))
+
+(declare-core-primitive run-compensations-store
+    (safe)
+  (signatures
+   ((T:procedure)	=> ())))
 
 
 ;;;; invocation and termination procedures
@@ -145,8 +146,8 @@
 (declare-core-primitive exit
     (safe)
   (signatures
-   (()				=> (T:void))
-   ((T:fixnum)			=> (T:void))))
+   (()				=> ())
+   ((T:fixnum)			=> ())))
 
 (declare-parameter exit-hooks	T:proper-list)
 

@@ -344,10 +344,10 @@
     (for-each (lambda (f)
 		;;Catch and discard any  exception: exit hooks must take
 		;;care of themselves.
-		(guard (E (else (void)))
-		  (f)))
+		(with-blocked-exceptions f))
       (exit-hooks))
-    (foreign-call "ikrt_exit" status))))
+    (foreign-call "ikrt_exit" status)
+    (values))))
 
 (define exit-hooks
   (make-parameter '()

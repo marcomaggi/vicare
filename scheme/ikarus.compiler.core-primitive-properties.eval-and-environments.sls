@@ -82,10 +82,9 @@
     (safe)
   (signatures
    (()				=> (T:lexical-environment))
-   ((T:lexical-environment)	=> (T:void)))
+   ((T:lexical-environment)	=> ()))
   (attributes
-   (()			result-true)
-   ((_)			result-true)))
+   (()			result-true)))
 
 (declare-core-primitive new-interaction-environment
     (safe)

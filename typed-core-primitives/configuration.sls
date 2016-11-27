@@ -39,7 +39,7 @@
 		      (safe)
 		    (signatures
 		     (()		=> (<boolean>))
-		     ((<top>)		=> (<void>)))))
+		     ((<top>)		=> ()))))
 		 )))
    (declare debug-mode-enabled?)
    (declare print-verbose-messages?)

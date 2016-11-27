@@ -8,7 +8,7 @@
 ;;;
 ;;;	This library was originally part of Nausicaa/Scheme.
 ;;;
-;;;Copyright (c) 2009-2011, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2011, 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -81,13 +81,14 @@
 		  (with-exception-handler escape closure))))
 	(store)))
     (store #f)
-    (void))
+    (values))
 
   (define (push-compensation-thunk compensation-thunk)
     ;;Push a compensation thunk on the current store.
     ;;
     (assert (procedure? compensation-thunk))
-    ((compensations) compensation-thunk))
+    ((compensations) compensation-thunk)
+    (values))
 
   #| end of library |# )
 

@@ -147,23 +147,19 @@
 (declare-core-primitive run-compensations
     (safe)
   (signatures
-   (()			=> (<void>)))
-  (attributes
-   (()			result-true)))
+   (()			=> ())))
 
 (declare-core-primitive push-compensation-thunk
     (safe)
   (signatures
-   ((<procedure>)	=> (<void>)))
-  (attributes
-   ((_)			result-true)))
+   ((<procedure>)	=> ())))
 
 (declare-parameter compensations	<procedure>)
 
 (declare-core-primitive run-compensations-store
     (safe)
   (signatures
-   ((<procedure>)	=> (<void>))))
+   ((<procedure>)	=> ())))
 
 /section)
 
@@ -178,8 +174,8 @@
 (declare-core-primitive exit
     (safe)
   (signatures
-   (()				=> (<void>))
-   ((<fixnum>)			=> (<void>))))
+   (()				=> ())
+   ((<fixnum>)			=> ())))
 
 (declare-parameter exit-hooks	<list>)
 
@@ -219,7 +215,7 @@
 (declare-core-primitive $unset-interrupted!
     (unsafe)
   (signatures
-   (()			=> (<void>))))
+   (()			=> ())))
 
 (declare-core-primitive $do-event
     (unsafe)

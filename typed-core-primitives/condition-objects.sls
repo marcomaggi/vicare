@@ -89,11 +89,8 @@
 (declare-core-primitive print-condition
     (safe)
   (signatures
-   ((<condition>)				=> (<void>))
-   ((<condition> <textual-output-port>)		=> (<void>)))
-  (attributes
-   ((_)			result-true)
-   ((_ _)		result-true)))
+   ((<condition>)				=> ())
+   ((<condition> <textual-output-port>)		=> ())))
 
 /section)
 
