@@ -194,9 +194,7 @@
 (declare-core-primitive syntactic-binding-putprop
     (safe)
   (signatures
-   ((T:identifier T:symbol T:object)	=> (T:void)))
-  (attributes
-   ((_ _)		result-true)))
+   ((T:identifier T:symbol T:object)	=> ())))
 
 (declare-core-primitive syntactic-binding-getprop
     (safe)
@@ -208,9 +206,7 @@
 (declare-core-primitive syntactic-binding-remprop
     (safe)
   (signatures
-   ((T:identifier T:symbol)		=> (T:void)))
-  (attributes
-   ((_ _)		result-true)))
+   ((T:identifier T:symbol)		=> ())))
 
 (declare-core-primitive syntactic-binding-property-list
     (safe)
@@ -454,57 +450,32 @@
 (declare-core-primitive syntax-clauses-verify-at-least-once
     (safe)
   (signatures
-   ((T:proper-list T:proper-list)		=> (T:void))
-   ((T:proper-list T:proper-list T:procedure)	=> (T:void)))
-  (attributes
-   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
-   ;;failure.
-   ((_ _)		result-true)
-   ((_ _ _)		result-true)))
+   ((T:proper-list T:proper-list)		=> ())
+   ((T:proper-list T:proper-list T:procedure)	=> ())))
 
 (declare-core-primitive syntax-clauses-verify-at-most-once
     (safe)
   (signatures
-   ((T:proper-list T:proper-list)		=> (T:void))
-   ((T:proper-list T:proper-list T:procedure)	=> (T:void)))
-  (attributes
-   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
-   ;;failure.
-   ((_ _)		result-true)
-   ((_ _ _)		result-true)))
+   ((T:proper-list T:proper-list)		=> ())
+   ((T:proper-list T:proper-list T:procedure)	=> ())))
 
 (declare-core-primitive syntax-clauses-verify-exactly-once
     (safe)
   (signatures
-   ((T:proper-list T:proper-list)		=> (T:void))
-   ((T:proper-list T:proper-list T:procedure)	=> (T:void)))
-  (attributes
-   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
-   ;;failure.
-   ((_ _)		result-true)
-   ((_ _ _)		result-true)))
+   ((T:proper-list T:proper-list)		=> ())
+   ((T:proper-list T:proper-list T:procedure)	=> ())))
 
 (declare-core-primitive syntax-clauses-verify-mutually-inclusive
     (safe)
   (signatures
-   ((T:proper-list T:proper-list)		=> (T:void))
-   ((T:proper-list T:proper-list T:procedure)	=> (T:void)))
-  (attributes
-   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
-   ;;failure.
-   ((_ _)		result-true)
-   ((_ _ _)		result-true)))
+   ((T:proper-list T:proper-list)		=> ())
+   ((T:proper-list T:proper-list T:procedure)	=> ())))
 
 (declare-core-primitive syntax-clauses-verify-mutually-exclusive
     (safe)
   (signatures
-   ((T:proper-list T:proper-list)		=> (T:void))
-   ((T:proper-list T:proper-list T:procedure)	=> (T:void)))
-  (attributes
-   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
-   ;;failure.
-   ((_ _)		result-true)
-   ((_ _ _)		result-true)))
+   ((T:proper-list T:proper-list)		=> ())
+   ((T:proper-list T:proper-list T:procedure)	=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; clause specification structs

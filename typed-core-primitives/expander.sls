@@ -38,7 +38,7 @@
 (declare-core-primitive initialise-expander
     (safe)
   (signatures
-   (()				=> (<void>))))
+   (()				=> ())))
 
 (declare-parameter generate-descriptive-gensyms?)
 (declare-parameter generate-descriptive-marks?)
@@ -259,9 +259,7 @@
 (declare-core-primitive syntactic-binding-putprop
     (safe)
   (signatures
-   ((<syntactic-identifier> <symbol> <top>)	=> (<void>)))
-  (attributes
-   ((_ _)		result-true)))
+   ((<syntactic-identifier> <symbol> <top>)	=> ())))
 
 (declare-core-primitive syntactic-binding-getprop
     (safe)
@@ -273,9 +271,7 @@
 (declare-core-primitive syntactic-binding-remprop
     (safe)
   (signatures
-   ((<syntactic-identifier> <symbol>)		=> (<void>)))
-  (attributes
-   ((_ _)		result-true)))
+   ((<syntactic-identifier> <symbol>)		=> ())))
 
 (declare-core-primitive syntactic-binding-property-list
     (safe)
@@ -614,57 +610,32 @@
 (declare-core-primitive syntax-clauses-verify-at-least-once
     (safe)
   (signatures
-   ((<list> <list>)		=> (<void>))
-   ((<list> <list> <procedure>)	=> (<void>)))
-  (attributes
-   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
-   ;;failure.
-   ((_ _)		result-true)
-   ((_ _ _)		result-true)))
+   ((<list> <list>)		=> ())
+   ((<list> <list> <procedure>)	=> ())))
 
 (declare-core-primitive syntax-clauses-verify-at-most-once
     (safe)
   (signatures
-   ((<list> <list>)		=> (<void>))
-   ((<list> <list> <procedure>)	=> (<void>)))
-  (attributes
-   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
-   ;;failure.
-   ((_ _)		result-true)
-   ((_ _ _)		result-true)))
+   ((<list> <list>)		=> ())
+   ((<list> <list> <procedure>)	=> ())))
 
 (declare-core-primitive syntax-clauses-verify-exactly-once
     (safe)
   (signatures
-   ((<list> <list>)		=> (<void>))
-   ((<list> <list> <procedure>)	=> (<void>)))
-  (attributes
-   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
-   ;;failure.
-   ((_ _)		result-true)
-   ((_ _ _)		result-true)))
+   ((<list> <list>)		=> ())
+   ((<list> <list> <procedure>)	=> ())))
 
 (declare-core-primitive syntax-clauses-verify-mutually-inclusive
     (safe)
   (signatures
-   ((<list> <list>)		=> (<void>))
-   ((<list> <list> <procedure>)	=> (<void>)))
-  (attributes
-   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
-   ;;failure.
-   ((_ _)		result-true)
-   ((_ _ _)		result-true)))
+   ((<list> <list>)		=> ())
+   ((<list> <list> <procedure>)	=> ())))
 
 (declare-core-primitive syntax-clauses-verify-mutually-exclusive
     (safe)
   (signatures
-   ((<list> <list>)		=> (<void>))
-   ((<list> <list> <procedure>)	=> (<void>)))
-  (attributes
-   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
-   ;;failure.
-   ((_ _)		result-true)
-   ((_ _ _)		result-true)))
+   ((<list> <list>)		=> ())
+   ((<list> <list> <procedure>)	=> ())))
 
 /section)
 
@@ -724,22 +695,22 @@
 (declare-core-primitive object-type-spec.methods-table-public-set!
     (safe)
   (signatures
-   ((<object-type-spec> <list>)		=> (<void>))))
+   ((<object-type-spec> <list>)		=> ())))
 
 (declare-core-primitive object-type-spec.methods-table-protected-set!
     (safe)
   (signatures
-   ((<object-type-spec> <list>)		=> (<void>))))
+   ((<object-type-spec> <list>)		=> ())))
 
 (declare-core-primitive object-type-spec.methods-table-private-set!
     (safe)
   (signatures
-   ((<object-type-spec> <list>)		=> (<void>))))
+   ((<object-type-spec> <list>)		=> ())))
 
 (declare-core-primitive object-type-spec.virtual-method-signatures-set!
     (safe)
   (signatures
-   ((<object-type-spec> <list>)		=> (<void>))))
+   ((<object-type-spec> <list>)		=> ())))
 
 ;;; --------------------------------------------------------------------
 
@@ -853,7 +824,7 @@
     (safe)
   (signatures
    ((<record-type-spec> (alist <symbol> (pair <fixnum> (or <false> <closure-type-spec>))))
-    => (<void>))))
+    => ())))
 
 (declare-core-primitive record-type-spec.parent-and-child?
     (safe)
