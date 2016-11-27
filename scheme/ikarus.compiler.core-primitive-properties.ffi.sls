@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -53,7 +53,7 @@
     (safe)
   (signatures
    (()				=> (T:fixnum))
-   ((T:fixnum)			=> (T:void)))
+   ((T:fixnum)			=> ()))
   (attributes
    (()			effect-free result-true)
    ((_)			result-true)))
@@ -63,7 +63,7 @@
 (declare-core-primitive free
     (safe)
   (signatures
-   ((T:pointer/memory-block)		=> (T:void))))
+   ((T:pointer/memory-block)		=> ())))
 
 (declare-core-primitive malloc
     (safe)
@@ -102,12 +102,12 @@
 (declare-core-primitive memcpy
     (safe)
   (signatures
-   ((T:pointer T:pointer T:exact-integer)	=> (T:void))))
+   ((T:pointer T:pointer T:exact-integer)	=> ())))
 
 (declare-core-primitive memmove
     (safe)
   (signatures
-   ((T:pointer T:pointer T:exact-integer)	=> (T:void))))
+   ((T:pointer T:pointer T:exact-integer)	=> ())))
 
 (declare-core-primitive memcmp
     (safe)
@@ -117,7 +117,7 @@
 (declare-core-primitive memset
     (safe)
   (signatures
-   ((T:pointer T:exact-integer T:exact-integer)	=> (T:void))))
+   ((T:pointer T:exact-integer T:exact-integer)	=> ())))
 
 ;;; --------------------------------------------------------------------
 
@@ -176,6 +176,11 @@
   (attributes
    ((_)					effect-free result-true)))
 
+(declare-core-primitive memory-block-reset
+    (safe)
+  (signatures
+   ((T:memory-block)			=> ())))
+
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive make-out-of-memory-error
@@ -198,7 +203,7 @@
 (declare-core-primitive memory-copy
     (safe)
   (signatures
-   ((T:pointer/bytevector T:fixnum T:pointer/bytevector T:fixnum T:fixnum)	=> (T:void))))
+   ((T:pointer/bytevector T:fixnum T:pointer/bytevector T:fixnum T:fixnum)	=> ())))
 
 (declare-core-primitive memory->bytevector
     (safe)
@@ -459,7 +464,7 @@
 (declare-core-primitive free-c-callback
     (safe)
   (signatures
-   ((T:pointer)				=> (T:void))))
+   ((T:pointer)				=> ())))
 
 
 ;;;; foreign functions interface: raw memory accessors and mutators, safe procedures
@@ -515,7 +520,7 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((T:pointer T:non-negative-exact-integer ?new-value-tag)	=> (T:void)))
+		    ((T:pointer T:non-negative-exact-integer ?new-value-tag)	=> ()))
 		   (attributes
 		    ((_ _)		effect-free))))
 		)))
@@ -605,7 +610,7 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((T:pointer T:non-negative-exact-integer ?new-value-tag)	=> (T:void)))
+		    ((T:pointer T:non-negative-exact-integer ?new-value-tag)	=> ()))
 		   (attributes
 		    ((_ _)		effect-free))))
 		)))

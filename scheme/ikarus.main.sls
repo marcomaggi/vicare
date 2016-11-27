@@ -100,9 +100,6 @@
 	  $initialize-interned-strings-table!)
     (only (ikarus records procedural)
 	  $record-type-destructor)
-    (prefix (only (ikarus.pointers)
-		  initialise-pointers-stuff)
-	    pointers::)
     (prefix (only (ikarus.pretty-formats)
 		  initialise-pretty-formats)
 	    pretty-formats::)
@@ -1259,7 +1256,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   ;;See "ikarus.strings.table.sls".
   ($initialize-interned-strings-table!)
 
-  (pointers::initialise-pointers-stuff)
   (cafe-input-port (console-input-port))
   (pretty-formats::initialise-pretty-formats)
 

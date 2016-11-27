@@ -155,9 +155,7 @@
     $pointer<				$pointer>
     $pointer<=				$pointer>=
     $pointer-min			$pointer-max
-
-    ;; for internal use only
-    initialise-pointers-stuff)
+    #| end of EXPORT |# )
   (import (except (vicare)
 		  ;; pointer objects
 		  pointer?				list-of-pointers?
@@ -394,7 +392,8 @@
   (()
    (foreign-call "ikrt_last_errno"))
   (({errno errno-value?})
-   (foreign-call "ikrt_set_errno" errno)))
+   (foreign-call "ikrt_set_errno" errno)
+   (values)))
 
 
 ;;;; memory blocks
@@ -450,8 +449,7 @@
   (%memory-block-destructor B)
   ($set-memory-block-pointer! B (null-pointer))
   ($set-memory-block-size!    B 0)
-  ($set-memory-block-owner?!  B #f)
-  (void))
+  ($set-memory-block-owner?!  B #f))
 
 ;;; --------------------------------------------------------------------
 
@@ -666,7 +664,8 @@
 	    ((_ ?who ?mutator ?type-pred ?data-size)
 	     (define* (?who {memory pointer/memory-block?} {offset words.ptrdiff_t?} {value ?type-pred})
 	       (assert-memory-and-ptrdiff memory offset ?data-size)
-	       (?mutator memory offset value)))
+	       (?mutator memory offset value)
+	       (values)))
 	    )))
   (def pointer-set-c-uint8!		capi.ffi-pointer-set-c-uint8!		words.word-u8?	      1)
   (def pointer-set-c-sint8!		capi.ffi-pointer-set-c-sint8!		words.word-s8?	      1)
@@ -754,7 +753,8 @@
 	     (define* (?who {memory pointer/memory-block?} {index words.ptrdiff_t?} {value ?type-pred})
 	       (assert-memory-and-ptrdiff memory index ?data-size)
 	       (assert-memory-and-index   memory index ?data-size)
-	       (?mutator memory index value)))
+	       (?mutator memory index value)
+	       (values)))
 	    )))
   (def array-set-c-uint8!		capi.ffi-array-set-c-uint8!		words.word-u8?	      1)
   (def array-set-c-sint8!		capi.ffi-array-set-c-sint8!		words.word-s8?	      1)
@@ -813,7 +813,8 @@
 (define* (free {obj pointer/memory-block?})
   ;;Take care  at the C level  not to "free()" null  pointers and of mutating  PTR to
   ;;NULL.  Also if OBJ is a MEMORY-BLOCK: set the size to zero.
-  (capi.ffi-free obj))
+  (capi.ffi-free obj)
+  (values))
 
 ;;; --------------------------------------------------------------------
 
@@ -822,10 +823,13 @@
 	 (cond ((pointer? src)
 		(capi.ffi-memcpy (pointer-add dst dst.start)
 				 (pointer-add src src.start)
-				 count))
+				 count)
+		(values))
 	       ((bytevector? src)
 		(if (bytevector-start-index-and-count-for-word8? src src.start count)
-		    (foreign-call "ikrt_memcpy_from_bv" (pointer-add dst dst.start) src src.start count)
+		    (begin
+		      (foreign-call "ikrt_memcpy_from_bv" (pointer-add dst dst.start) src src.start count)
+		      (values))
 		  (procedure-arguments-consistency-violation __who__
 		    "start index and bytes count out of range for source bytevector" src src.start count)))
 	       (else
@@ -835,12 +839,16 @@
 	   (procedure-arguments-consistency-violation __who__
 	     "start index and bytes count out of range for destination bytevector" dst dst.start count))
 	 (cond ((pointer? src)
-		(foreign-call "ikrt_memcpy_to_bv" dst dst.start (pointer-add src src.start) count))
+		(foreign-call "ikrt_memcpy_to_bv" dst dst.start (pointer-add src src.start) count)
+		(values))
 	       ((bytevector? src)
 		(unless (bytevector-start-index-and-count-for-word8? src src.start count)
 		  (procedure-arguments-consistency-violation __who__
 		    "start index and bytes count out of range for source bytevector" src src.start count))
-		($bytevector-copy!/count src src.start dst dst.start count))
+		($bytevector-copy!/count src src.start dst dst.start count)
+		;;FIXME This VALUES is to be removed at the next boot image rotation.
+		;;(Marco Maggi; Sun Nov 27, 2016)
+		(values))
 	       (else
 		(procedure-argument-violation __who__ "expected pointer or bytevector as source argument" src))))
 	(else
@@ -849,13 +857,16 @@
 ;;; --------------------------------------------------------------------
 
 (define* (memcpy {dst pointer?} {src pointer?} {count number-of-bytes?})
-  (capi.ffi-memcpy dst src count))
+  (capi.ffi-memcpy dst src count)
+  (values))
 
 (define* (memmove {dst pointer?} {src pointer?} {count number-of-bytes?})
-  (capi.ffi-memmove dst src count))
+  (capi.ffi-memmove dst src count)
+  (values))
 
 (define* (memset {ptr pointer?} {byte byte/octet?} {count number-of-bytes?})
-  (capi.ffi-memset ptr byte count))
+  (capi.ffi-memset ptr byte count)
+  (values))
 
 (define* (memcmp {ptr1 pointer?} {ptr2 pointer?} {count number-of-bytes?})
   (capi.ffi-memcmp ptr1 ptr2 count))
@@ -1428,19 +1439,17 @@
 	(assertion-violation __who__ "internal error building FFI callback"))))
 
 (define* (free-c-callback {c-callback-pointer pointer?})
-  (or (capi.ffi-free-c-callback c-callback-pointer)
-      (assertion-violation __who__
-	"attempt to release unkwnown callback pointer" c-callback-pointer)))
+  (unless (capi.ffi-free-c-callback c-callback-pointer)
+    (assertion-violation __who__
+      "attempt to release unkwnown callback pointer" c-callback-pointer)))
 
 
 ;;;; done
 
-(define (initialise-pointers-stuff)
-  (set! %memory-guardian (make-guardian))
-  (set-struct-type-printer!	(type-descriptor memory-block)	%struct-memory-block-printer)
-  (set-struct-type-destructor!	(type-descriptor memory-block)	%memory-block-destructor)
-  (post-gc-hooks (cons %free-allocated-memory (post-gc-hooks))))
-
+(set! %memory-guardian (make-guardian))
+(set-struct-type-printer!	(type-descriptor memory-block)	%struct-memory-block-printer)
+(set-struct-type-destructor!	(type-descriptor memory-block)	%memory-block-destructor)
+(post-gc-hooks (cons %free-allocated-memory (post-gc-hooks)))
 
 
 ;; (define end-of-file-dummy

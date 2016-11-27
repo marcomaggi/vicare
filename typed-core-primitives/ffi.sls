@@ -41,7 +41,7 @@
     (safe)
   (signatures
    (()				=> (<fixnum>))
-   ((<fixnum>)			=> (<void>)))
+   ((<fixnum>)			=> ()))
   (attributes
    (()			effect-free result-true)
    ((_)			result-true)))
@@ -51,8 +51,7 @@
 (declare-core-primitive free
     (safe)
   (signatures
-   ((<pointer>)				=> (<void>))
-   ((<memory-block>)			=> (<void>))))
+   (((or <pointer> <memory-block>))	=> ())))
 
 (declare-core-primitive malloc
     (safe)
@@ -92,12 +91,12 @@
 (declare-core-primitive memcpy
     (safe)
   (signatures
-   ((<pointer> <pointer> <exact-integer>)	=> (<void>))))
+   ((<pointer> <pointer> <exact-integer>)	=> ())))
 
 (declare-core-primitive memmove
     (safe)
   (signatures
-   ((<pointer> <pointer> <exact-integer>)	=> (<void>))))
+   ((<pointer> <pointer> <exact-integer>)	=> ())))
 
 (declare-core-primitive memcmp
     (safe)
@@ -107,7 +106,7 @@
 (declare-core-primitive memset
     (safe)
   (signatures
-   ((<pointer> <exact-integer> <exact-integer>)	=> (<void>))))
+   ((<pointer> <exact-integer> <exact-integer>)	=> ())))
 
 ;;; --------------------------------------------------------------------
 
@@ -133,7 +132,7 @@
 (declare-core-primitive memory-block-reset
     (safe)
   (signatures
-   ((<memory-block>)			=> (<void>))))
+   ((<memory-block>)			=> ())))
 
 (declare-core-primitive memory-block?/not-null
     (safe)
@@ -184,11 +183,11 @@
 (declare-core-primitive memory-copy
     (safe)
   (signatures
-   ((<pointer>    <fixnum> <pointer>     <fixnum> <fixnum>)	=> (<void>))
-   ((<bytevector> <fixnum> <bytevector>  <fixnum> <fixnum>)	=> (<void>))
-   ((<pointer>    <fixnum> <bytevector> <fixnum> <fixnum>)	=> (<void>))
-   ((<bytevector> <fixnum> <pointer>    <fixnum> <fixnum>)	=> (<void>))
-   ))
+   (((or <pointer> <bytevector>)
+     <fixnum>
+     (or <pointer> <bytevector>)
+     <fixnum>
+     <fixnum>)	=> ())))
 
 (declare-core-primitive memory->bytevector
     (safe)
@@ -456,7 +455,7 @@
 (declare-core-primitive free-c-callback
     (safe)
   (signatures
-   ((<pointer>)				=> (<void>))))
+   ((<pointer>)				=> ())))
 
 
 ;;;; foreign functions interface: raw memory accessors and mutators, safe procedures
@@ -513,7 +512,7 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((<pointer> <non-negative-exact-integer> ?new-value-tag)	=> (<void>)))
+		    ((<pointer> <non-negative-exact-integer> ?new-value-tag)	=> ()))
 		   (attributes
 		    ((_ _)		effect-free))))
 		)))
@@ -604,7 +603,7 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((<pointer> <non-negative-exact-integer> ?new-value-tag)	=> (<void>)))
+		    ((<pointer> <non-negative-exact-integer> ?new-value-tag)	=> ()))
 		   (attributes
 		    ((_ _)		effect-free))))
 		)))
