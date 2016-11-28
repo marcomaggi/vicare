@@ -38,14 +38,14 @@
 (declare-core-primitive collect
     (safe)
   (signatures
-   (()						=> (<void>))
-   (((or <symbol> <non-negative-fixnum>))	=> (<void>))))
+   (()						=> ())
+   (((or <symbol> <non-negative-fixnum>))	=> ())))
 
 (declare-core-primitive automatic-collect
     (safe)
   (signatures
-   (()						=> (<void>))
-   (((or <symbol> <non-negative-fixnum>))	=> (<void>))))
+   (()						=> ())
+   (((or <symbol> <non-negative-fixnum>))	=> ())))
 
 (declare-parameter automatic-garbage-collection)
 
@@ -72,7 +72,7 @@
     (safe)
   (signatures
    (()					=> (<gensym>))
-   ((<gensym>)				=> (<void>))))
+   ((<gensym>)				=> ())))
 
 /section)
 
@@ -109,7 +109,7 @@
 (declare-core-primitive purge-collection-avoidance-list
     (safe)
   (signatures
-   (()					=> (<void>))))
+   (()					=> ())))
 
 /section)
 

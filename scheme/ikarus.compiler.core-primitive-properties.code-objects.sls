@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -119,9 +119,7 @@
 (declare-core-primitive $set-code-annotation!
     (safe)
   (signatures
-   ((T:code T:object)	=> (T:void)))
-  (attributes
-   ((_ _)		result-true)))
+   ((T:code T:object)	=> ())))
 
 ;;; --------------------------------------------------------------------
 
@@ -135,9 +133,7 @@
 (declare-core-primitive $code-set!
     (safe)
   (signatures
-   ((T:code T:non-negative-exact-integer T:octet)	=> (T:void)))
-  (attributes
-   ((_ _ _)		result-true)))
+   ((T:code T:non-negative-exact-integer T:octet)	=> ())))
 
 
 ;;;; done

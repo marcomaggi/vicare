@@ -105,9 +105,7 @@
 (declare-core-primitive $set-code-annotation!
     (safe)
   (signatures
-   ((<code> <top>)	=> (<void>)))
-  (attributes
-   ((_ _)		result-true)))
+   ((<code> <top>)	=> ())))
 
 ;;; --------------------------------------------------------------------
 
@@ -121,9 +119,7 @@
 (declare-core-primitive $code-set!
     (safe)
   (signatures
-   ((<code> <non-negative-exact-integer> <non-negative-fixnum>)	=> (<void>)))
-  (attributes
-   ((_ _ _)		result-true)))
+   ((<code> <non-negative-exact-integer> <non-negative-fixnum>)	=> ())))
 
 /section)
 

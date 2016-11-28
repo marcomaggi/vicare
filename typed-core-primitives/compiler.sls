@@ -38,7 +38,7 @@
 (declare-core-primitive initialise-compiler
     (safe)
   (signatures
-   (()					=> (<void>))))
+   (()					=> ())))
 
 ;;; --------------------------------------------------------------------
 ;;; parameters

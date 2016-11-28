@@ -516,20 +516,23 @@
       (parametrise ((struct-guardian-logger #t))
   	(let ((S (make-alpha 1 2 3)))
   	  (check-pretty-print S)
-  	  (collect)))
-    => (void))
+	  (collect)
+	  #t))
+    => #t)
 
   (check
       (let ((S (make-alpha 1 2 3)))
   	(check-pretty-print S)
-  	(collect))
-    => (void))
+  	(collect)
+	#t)
+    => #t)
 
   (check
       (let ((S (make-alpha 1 2 3)))
   	(check-pretty-print S)
-  	(collect))
-    => (void))
+  	(collect)
+	#t)
+    => #t)
 
   (collect))
 

@@ -110,7 +110,8 @@
       (if automatic?
 	  (foreign-call "ik_automatic_collect_from_scheme_with_hooks" number-of-words requested-generation)
 	(foreign-call "ik_explicit_collect_from_scheme_with_hooks" number-of-words requested-generation))
-      (%post-gc-operations number-of-words automatic?)))
+      (%post-gc-operations number-of-words automatic?))
+    (values))
 
   (define (%post-gc-operations number-of-words automatic?)
     (let ((ls (post-gc-hooks)))
@@ -202,7 +203,8 @@
   (foreign-call "ik_collection_avoidance_list"))
 
 (define (purge-collection-avoidance-list)
-  (foreign-call "ik_purge_collection_avoidance_list"))
+  (foreign-call "ik_purge_collection_avoidance_list")
+  (values))
 
 
 ;;;; done

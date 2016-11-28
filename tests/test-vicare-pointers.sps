@@ -389,7 +389,9 @@
   (check
       (begin
 	(make-memory-block/guarded (malloc 16) 16)
-	(void-object? (collect)))
+	(receive ()
+	    (collect)
+	  #t))
     => #t)
 
 ;;; --------------------------------------------------------------------
