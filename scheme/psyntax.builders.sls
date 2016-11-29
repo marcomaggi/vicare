@@ -357,7 +357,9 @@
 	       (case (car core)
 		 ((letrec)	`(letrec  ,bind*.sexp ,body.sexp))
 		 ((letrec*)	`(letrec* ,bind*.sexp ,body.sexp))
-		 ((let)		`(let     ,bind*.sexp ,body.sexp))))))
+		 ((let)		`(let     ,bind*.sexp ,body.sexp))
+		 (else
+		  (assertion-violation #f "internal error"))))))
 
           ((quote)
            core)

@@ -365,7 +365,8 @@
 (declare-core-primitive time-it
     (safe)
   (signatures
-   ((<string> <procedure>)	=> <list>)))
+   ((<procedure>)		=> <list>)
+   ((<top> <procedure>)		=> <list>)))
 
 (declare-core-primitive time-and-gather
     (safe)

@@ -26,7 +26,7 @@
     pass-assign-frame-sizes
     pass-color-by-chaitin
     pass-flatten-codes)
-  (import (rnrs)
+  (import (vicare)
     ;;NOTE Here we must load only "(ikarus.compiler.*)" libraries.
     (ikarus.compiler.config)
     (only (ikarus.compiler.helpers)
@@ -47,10 +47,10 @@
     (let* ((x  (pass-specify-representation x))
 	   (x  (pass-impose-calling-convention/evaluation-order x))
 	   (x  (pass-assign-frame-sizes x))
-	   (x  (if (check-compiler-pass-preconditions)
-		   (preconditions-for-color-by-chaitin x)
-		 x))
-	   (x  (pass-color-by-chaitin x))
+	   (x  (begin
+		 (when (check-compiler-pass-preconditions)
+		   (preconditions-for-color-by-chaitin x))
+		 (pass-color-by-chaitin x)))
 	   (code-object-sexp* (pass-flatten-codes x)))
       code-object-sexp*))
 

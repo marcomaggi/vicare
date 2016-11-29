@@ -93,7 +93,7 @@
 		(not (null? (syntax->datum else-body))))
 	   else-body)
 	  (else
-	   #'((void)))))
+	   #'((values)))))
 
   (define (%parse-clauses clauses)
     (let next-clause ((clauses		clauses)
@@ -105,7 +105,7 @@
       (syntax-case clauses (else)
 	(()
 	 (values bsd-body cygwin-body darwin-body linux-body
-		 (or else-body #'((void)))))
+		 (or else-body #'((values)))))
 
 	(((else . ?else-body) . ?other-clauses)
 	 (if (not else-body)

@@ -133,7 +133,7 @@
 
 (case-define* time-it
   (({proc procedure?})
-   (time-it #f proc))
+   (time-it #t proc))
   ((message {proc procedure?})
    (let* ((t0 (make-stats))
 	  (t1 (make-stats)))

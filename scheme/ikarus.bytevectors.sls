@@ -298,7 +298,7 @@
 	  $bytevector-ieee-single-native-set!
 	  $bytevector-ieee-single-nonnative-ref
 	  $bytevector-ieee-single-nonnative-set!)
-    (prefix (vicare platform words) words.)
+    (prefix (vicare platform words) words::)
     (only (ikarus conditions)
 	  preconditions)
     (only (vicare language-extensions syntaxes)
@@ -327,7 +327,9 @@
     ((_ ((big) ?big-stuff) ((little) ?little-stuff))
      (case platform-endianness
        ((big)		#'?big-stuff)
-       ((little)	#'?little-stuff)))
+       ((little)	#'?little-stuff)
+       (else
+	(assertion-violation #f "internal error"))))
     ))
 
 (define-syntax define-cased-accessor
@@ -644,19 +646,19 @@
   ;;Return  true if  IDX is  a  fixnum exact  multiple of  2,  which can  be used  to
   ;;reference 16-bit words in bytevectors.
   ;;
-  (words.fixnum-aligned-to-2? idx))
+  (words::fixnum-aligned-to-2? idx))
 
 (define (bytevector-index-aligned-to-4? idx)
   ;;Return  true if  IDX is  a  fixnum exact  multiple of  4,  which can  be used  to
   ;;reference 32-bit words in bytevectors.
   ;;
-  (words.fixnum-aligned-to-4? idx))
+  (words::fixnum-aligned-to-4? idx))
 
 (define (bytevector-index-aligned-to-8? idx)
   ;;Return  true if  IDX is  a  fixnum exact  multiple of  8,  which can  be used  to
   ;;reference 64-bit words in bytevectors.
   ;;
-  (words.fixnum-aligned-to-8? idx))
+  (words::fixnum-aligned-to-8? idx))
 
 
 ;;;; predicates
@@ -1242,12 +1244,12 @@
     (bytevector-index-for-word8? bv index))
   ($bytevector-u8-ref bv index))
 
-(define* (bytevector-s8-set! {bv bytevector?} {index bytevector-index?} {byte words.word-s8?})
+(define* (bytevector-s8-set! {bv bytevector?} {index bytevector-index?} {byte words::word-s8?})
   (preconditions
     (bytevector-index-for-word8? bv index))
   ($bytevector-s8-set! bv index byte))
 
-(define* (bytevector-u8-set! {bv bytevector?} {index bytevector-index?} {octet words.word-u8?})
+(define* (bytevector-u8-set! {bv bytevector?} {index bytevector-index?} {octet words::word-u8?})
   (preconditions
     (bytevector-index-for-word8? bv index))
   ($bytevector-u8-set! bv index octet))
@@ -1274,7 +1276,7 @@
     ((little)
      ($bytevector-u16l-ref bv index))))
 
-(define* (bytevector-u16-set! {bv bytevector?} {index bytevector-index?} {word words.word-u16?} endianness)
+(define* (bytevector-u16-set! {bv bytevector?} {index bytevector-index?} {word words::word-u16?} endianness)
   (preconditions
     (bytevector-index-for-word16? bv index))
   (case-endianness (__who__ endianness)
@@ -1294,7 +1296,7 @@
     ((little)
      ($bytevector-s16l-ref bv index))))
 
-(define* (bytevector-s16-set! {bv bytevector?} {index bytevector-index?} {word words.word-s16?} endianness)
+(define* (bytevector-s16-set! {bv bytevector?} {index bytevector-index?} {word words::word-s16?} endianness)
   (preconditions
     (bytevector-index-for-word16? bv index))
   (case-endianness (__who__ endianness)
@@ -1307,13 +1309,13 @@
 
 (define* (bytevector-u16-native-ref {bv bytevector?} {index bytevector-index?})
   (preconditions
-    (words.fixnum-aligned-to-2? index)
+    (words::fixnum-aligned-to-2? index)
     (bytevector-index-for-word16? bv index))
   ($bytevector-u16n-ref bv index))
 
-(define* (bytevector-u16-native-set! {bv bytevector?} {index bytevector-index?} {word words.word-u16?})
+(define* (bytevector-u16-native-set! {bv bytevector?} {index bytevector-index?} {word words::word-u16?})
   (preconditions
-    (words.fixnum-aligned-to-2? index)
+    (words::fixnum-aligned-to-2? index)
     (bytevector-index-for-word16? bv index))
   ($bytevector-u16n-set! bv index word))
 
@@ -1321,13 +1323,13 @@
 
 (define* (bytevector-s16-native-ref {bv bytevector?} {index bytevector-index?})
   (preconditions
-    (words.fixnum-aligned-to-2? index)
+    (words::fixnum-aligned-to-2? index)
     (bytevector-index-for-word16? bv index))
   ($bytevector-s16n-ref bv index))
 
-(define* (bytevector-s16-native-set! {bv bytevector?} {index bytevector-index?} {word words.word-s16?})
+(define* (bytevector-s16-native-set! {bv bytevector?} {index bytevector-index?} {word words::word-s16?})
   (preconditions
-    (words.fixnum-aligned-to-2? index)
+    (words::fixnum-aligned-to-2? index)
     (bytevector-index-for-word16? bv index))
   ($bytevector-s16n-set! bv index word))
 
@@ -1343,7 +1345,7 @@
     ((little)
      ($bytevector-u32l-ref bv index))))
 
-(define* (bytevector-u32-set! {bv bytevector?} {index bytevector-index?} {word words.word-u32?} endianness)
+(define* (bytevector-u32-set! {bv bytevector?} {index bytevector-index?} {word words::word-u32?} endianness)
   (preconditions
     (bytevector-index-for-word32? bv index))
   (case-endianness (__who__ endianness)
@@ -1363,7 +1365,7 @@
     ((little)
      ($bytevector-s32l-ref bv index))))
 
-(define* (bytevector-s32-set! {bv bytevector?} {index bytevector-index?} {word words.word-s32?} endianness)
+(define* (bytevector-s32-set! {bv bytevector?} {index bytevector-index?} {word words::word-s32?} endianness)
   (preconditions
     (bytevector-index-for-word32? bv index))
   (case-endianness (__who__ endianness)
@@ -1376,13 +1378,13 @@
 
 (define* (bytevector-u32-native-ref {bv bytevector?} {index bytevector-index?})
   (preconditions
-    (words.fixnum-aligned-to-4? index)
+    (words::fixnum-aligned-to-4? index)
     (bytevector-index-for-word32? bv index))
   ($bytevector-u32n-ref bv index))
 
-(define* (bytevector-u32-native-set! {bv bytevector?} {index bytevector-index?} {word words.word-u32?})
+(define* (bytevector-u32-native-set! {bv bytevector?} {index bytevector-index?} {word words::word-u32?})
   (preconditions
-    (words.fixnum-aligned-to-4? index)
+    (words::fixnum-aligned-to-4? index)
     (bytevector-index-for-word32? bv index))
   ($bytevector-u32n-set! bv index word))
 
@@ -1390,13 +1392,13 @@
 
 (define* (bytevector-s32-native-ref {bv bytevector?} {index bytevector-index?})
   (preconditions
-    (words.fixnum-aligned-to-4? index)
+    (words::fixnum-aligned-to-4? index)
     (bytevector-index-for-word32? bv index))
   ($bytevector-s32n-ref bv index))
 
-(define* (bytevector-s32-native-set! {bv bytevector?} {index bytevector-index?} {word words.word-s32?})
+(define* (bytevector-s32-native-set! {bv bytevector?} {index bytevector-index?} {word words::word-s32?})
   (preconditions
-    (words.fixnum-aligned-to-4? index)
+    (words::fixnum-aligned-to-4? index)
     (bytevector-index-for-word32? bv index))
   ($bytevector-s32n-set! bv index word))
 
@@ -1412,7 +1414,7 @@
     ((little)
      ($bytevector-u64l-ref bv index))))
 
-(define* (bytevector-u64-set! {bv bytevector?} {index bytevector-index?} {word words.word-u64?} endianness)
+(define* (bytevector-u64-set! {bv bytevector?} {index bytevector-index?} {word words::word-u64?} endianness)
   (preconditions
     (bytevector-index-for-word64? bv index))
   (case-endianness (__who__ endianness)
@@ -1432,7 +1434,7 @@
     ((little)
      ($bytevector-s64l-ref bv index))))
 
-(define* (bytevector-s64-set! {bv bytevector?} {index bytevector-index?} {word words.word-s64?} endianness)
+(define* (bytevector-s64-set! {bv bytevector?} {index bytevector-index?} {word words::word-s64?} endianness)
   (preconditions
     (bytevector-index-for-word64? bv index))
   (case-endianness (__who__ endianness)
@@ -1445,13 +1447,13 @@
 
 (define* (bytevector-u64-native-ref {bv bytevector?} {index bytevector-index?})
   (preconditions
-    (words.fixnum-aligned-to-8? index)
+    (words::fixnum-aligned-to-8? index)
     (bytevector-index-for-word64? bv index))
   ($bytevector-u64n-ref bv index))
 
-(define* (bytevector-u64-native-set! {bv bytevector?} {index bytevector-index?} {word words.word-u64?})
+(define* (bytevector-u64-native-set! {bv bytevector?} {index bytevector-index?} {word words::word-u64?})
   (preconditions
-    (words.fixnum-aligned-to-8? index)
+    (words::fixnum-aligned-to-8? index)
     (bytevector-index-for-word64? bv index))
   ($bytevector-u64n-set! bv index word))
 
@@ -1459,13 +1461,13 @@
 
 (define* (bytevector-s64-native-ref {bv bytevector?} {index bytevector-index?})
   (preconditions
-    (words.fixnum-aligned-to-8? index)
+    (words::fixnum-aligned-to-8? index)
     (bytevector-index-for-word64? bv index))
   ($bytevector-s64n-ref bv index))
 
-(define* (bytevector-s64-native-set! {bv bytevector?} {index bytevector-index?} {word words.word-s64?})
+(define* (bytevector-s64-native-set! {bv bytevector?} {index bytevector-index?} {word words::word-s64?})
   (preconditions
-    (words.fixnum-aligned-to-8? index)
+    (words::fixnum-aligned-to-8? index)
     (bytevector-index-for-word64? bv index))
   ($bytevector-s64n-set! bv index word))
 
@@ -1475,7 +1477,7 @@
 (define* (bytevector-ieee-double-ref {bv bytevector?} {index bytevector-index?} endianness)
   (preconditions
     (bytevector-index-for-double-flonum? bv index))
-  (if (words.fixnum-aligned-to-8? index)
+  (if (words::fixnum-aligned-to-8? index)
       (case-endianness (__who__ endianness)
 	((little)
 	 ($bytevector-ieee-double-native-ref    bv index))
@@ -1490,7 +1492,7 @@
 (define* (bytevector-ieee-double-set! {bv bytevector?} {index bytevector-index?} {X flonum?} endianness)
   (preconditions
     (bytevector-index-for-double-flonum? bv index))
-  (if (words.fixnum-aligned-to-8? index)
+  (if (words::fixnum-aligned-to-8? index)
       (case-endianness (__who__ endianness)
 	((little)
 	 ($bytevector-ieee-double-native-set! bv index X))
@@ -1522,7 +1524,7 @@
 (define* (bytevector-ieee-single-ref {bv bytevector?} {index bytevector-index?} endianness)
   (preconditions
     (bytevector-index-for-single-flonum? bv index))
-  (if (words.fixnum-aligned-to-4? index)
+  (if (words::fixnum-aligned-to-4? index)
       (case-endianness (__who__ endianness)
 	((little)
 	 ($bytevector-ieee-single-native-ref bv index))
@@ -1538,7 +1540,7 @@
 				      {X flonum?} endianness)
   (preconditions
     (bytevector-index-for-single-flonum? bv index))
-  (if (words.fixnum-aligned-to-4? index)
+  (if (words::fixnum-aligned-to-4? index)
       (case-endianness (__who__ endianness)
 	((little)
 	 ($bytevector-ieee-single-native-set! bv index X))
@@ -2391,9 +2393,9 @@
 	 (fill s 0 ls))))))
 
 (define-byte-list-to-bytevector u8-list->bytevector
-  vu8 words.word-u8? $bytevector-set!)
+  vu8 words::word-u8? $bytevector-set!)
 (define-byte-list-to-bytevector s8-list->bytevector
-  vs8 words.word-s8? $bytevector-set!)
+  vs8 words::word-s8? $bytevector-set!)
 
 ;;; --------------------------------------------------------------------
 
@@ -2436,19 +2438,19 @@
 
 (define-word-list-to-bytevector u16l-list->bytevector
   'vu16l		       ;tag
-  words.word-u16?	       ;to validate numbers
+  words::word-u16?	       ;to validate numbers
   2			       ;number of bytes in word
   $bytevector-u16l-set!) ;setter
 
 (define-word-list-to-bytevector u16b-list->bytevector
   'vu16b		       ;tag
-  words.word-u16?	       ;to validate numbers
+  words::word-u16?	       ;to validate numbers
   2			       ;number of bytes in word
   $bytevector-u16b-set!) ;setter
 
 (define-word-list-to-bytevector u16n-list->bytevector
   'vu16n		       ;tag
-  words.word-u16?	       ;to validate numbers
+  words::word-u16?	       ;to validate numbers
   2			       ;number of bytes in word
   $bytevector-u16n-set!) ;setter
 
@@ -2456,19 +2458,19 @@
 
 (define-word-list-to-bytevector s16l-list->bytevector
   'vs16l		       ;tag
-  words.word-s16?	      ;to validate numbers
+  words::word-s16?	      ;to validate numbers
   2			       ;number of bytes in word
   $bytevector-s16l-set!) ;setter
 
 (define-word-list-to-bytevector s16b-list->bytevector
   'vs16b		       ;tag
-  words.word-s16?	       ;to validate numbers
+  words::word-s16?	       ;to validate numbers
   2			       ;number of bytes in word
   $bytevector-s16b-set!) ;setter
 
 (define-word-list-to-bytevector s16n-list->bytevector
   'vs16n		       ;tag
-  words.word-s16?	       ;to validate numbers
+  words::word-s16?	       ;to validate numbers
   2			       ;number of bytes in word
   $bytevector-s16n-set!) ;setter
 
@@ -2476,19 +2478,19 @@
 
 (define-word-list-to-bytevector u32l-list->bytevector
   'vu32l		       ;tag
-  words.word-u32?	       ;to validate numbers
+  words::word-u32?	       ;to validate numbers
   4			       ;number of bytes in word
   $bytevector-u32l-set!) ;setter
 
 (define-word-list-to-bytevector u32b-list->bytevector
   'vu32b		       ;tag
-  words.word-u32?	       ;to validate numbers
+  words::word-u32?	       ;to validate numbers
   4			       ;number of bytes in word
   $bytevector-u32b-set!) ;setter
 
 (define-word-list-to-bytevector u32n-list->bytevector
   'vu32n		       ;tag
-  words.word-u32?	       ;to validate numbers
+  words::word-u32?	       ;to validate numbers
   4			       ;number of bytes in word
   $bytevector-u32n-set!) ;setter
 
@@ -2496,19 +2498,19 @@
 
 (define-word-list-to-bytevector s32l-list->bytevector
   'vs32l		       ;tag
-  words.word-s32?	       ;to validate numbers
+  words::word-s32?	       ;to validate numbers
   4			       ;number of bytes in word
   $bytevector-s32l-set!) ;setter
 
 (define-word-list-to-bytevector s32b-list->bytevector
   'vs32b		       ;tag
-  words.word-s32?	       ;to validate numbers
+  words::word-s32?	       ;to validate numbers
   4			       ;number of bytes in word
   $bytevector-s32b-set!) ;setter
 
 (define-word-list-to-bytevector s32n-list->bytevector
   'vs32n		       ;tag
-  words.word-s32?	       ;to validate numbers
+  words::word-s32?	       ;to validate numbers
   4			       ;number of bytes in word
   $bytevector-s32n-set!) ;setter
 
@@ -2516,19 +2518,19 @@
 
 (define-word-list-to-bytevector u64l-list->bytevector
   'vu64l		       ;tag
-  words.word-u64?	       ;to validate numbers
+  words::word-u64?	       ;to validate numbers
   8			       ;number of bytes in word
   $bytevector-u64l-set!) ;setter
 
 (define-word-list-to-bytevector u64b-list->bytevector
   'vu64b		       ;tag
-  words.word-u64?	       ;to validate numbers
+  words::word-u64?	       ;to validate numbers
   8			       ;number of bytes in word
   $bytevector-u64b-set!) ;setter
 
 (define-word-list-to-bytevector u64n-list->bytevector
   'vu64n		       ;tag
-  words.word-u64?	       ;to validate numbers
+  words::word-u64?	       ;to validate numbers
   8			       ;number of bytes in word
   $bytevector-u64n-set!) ;setter
 
@@ -2536,19 +2538,19 @@
 
 (define-word-list-to-bytevector s64l-list->bytevector
   'vs64l		       ;tag
-  words.word-s64?	       ;to validate numbers
+  words::word-s64?	       ;to validate numbers
   8			       ;number of bytes in word
   $bytevector-s64l-set!) ;setter
 
 (define-word-list-to-bytevector s64b-list->bytevector
   'vs64b		       ;tag
-  words.word-s64?	       ;to validate numbers
+  words::word-s64?	       ;to validate numbers
   8			       ;number of bytes in word
   $bytevector-s64b-set!) ;setter
 
 (define-word-list-to-bytevector s64n-list->bytevector
   'vs64n		       ;tag
-  words.word-s64?	       ;to validate numbers
+  words::word-s64?	       ;to validate numbers
   8			       ;number of bytes in word
   $bytevector-s64n-set!) ;setter
 

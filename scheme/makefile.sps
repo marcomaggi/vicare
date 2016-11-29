@@ -6987,8 +6987,9 @@
 			;;   (with-output-to-file "generic-arith"
 			;;     (lambda ()
 			;;       (pretty-print (syntax->datum core)))))
-			(debug-printf "compiling: ~s\n" name)
-			(compiler::compile-core-expr-to-port core port))
+			(debug-printf "compiling: ~s ... " name)
+			(compiler::compile-core-expr-to-port core port)
+			(debug-printf "done\n"))
 	      name*
 	      invoke-code*)))
 	(close-output-port port)))))

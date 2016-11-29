@@ -326,7 +326,8 @@
 		    (device.new-position (- device.old-position delta-idx)))
 	       (set-position! device.new-position)
 	       (set! port.device.position device.new-position)
-	       (port.buffer.reset-to-empty!)))
+	       (port.buffer.reset-to-empty!))
+	     (values))
 	    ((and (boolean? set-position!) set-position!)
 	     ;;The  cookie's POS  field  holds  a value  representing  a correct  and
 	     ;;immutable  device position.   For this  port the  current position  is
@@ -339,11 +340,12 @@
 	     ;;   ^       ^                             ^
 	     ;;   0     index                     used-size = size
 	     ;;
-	     (void))
+	     (values))
 	    (else
 	     ;;If PORT does not  support the set port position (for  example: it is a
 	     ;;network socket), we just reset the buffer to empty state.
-	     (port.buffer.reset-to-empty!))))))
+	     (port.buffer.reset-to-empty!)
+	     (values))))))
 
 (define (%reconfigure-output-buffer-to-input-buffer port who)
   ;;Assuming PORT  is an  output port: set  the device position  to the  current port

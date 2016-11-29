@@ -2035,7 +2035,7 @@
   (main))
 
 
-(define (finalise-tokenisation port locations kont token pos)
+(define* (finalise-tokenisation port locations kont token pos)
   (define-syntax-rule (%error   msg . irritants)
     (die/p   port 'vicare-reader msg . irritants))
   (define-syntax-rule (%error-1 msg . irritants)
@@ -2192,7 +2192,10 @@
 		     ((eq? token 'vc8n)
 		      (finish-tokenisation-of-bytevector-c8n port locations kont 0 '()))
 		     ((eq? token 've)
-		      (finish-tokenisation-of-bytevector-ve  port locations kont)))
+		      (finish-tokenisation-of-bytevector-ve  port locations kont))
+
+		     (else
+		      (assertion-violation __who__ "internal error")))
 	     (values bv (annotate bv bv/ann pos) locations kont)))
 
 	  ;;Read a comment list.
