@@ -98,7 +98,8 @@
 ;;;; done
 
 ;; #!vicare
-;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.keywords after"))
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.keywords after")))
 
 #| end of library |# )
 

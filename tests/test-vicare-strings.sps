@@ -1056,21 +1056,21 @@
        (string-for-each (lambda (ch)
 			  (add-result ch))
 	 ""))
-    => `(,(void) ()))
+    => `(()))
 
   (check
       (with-result
        (string-for-each (lambda (ch)
 			  (add-result ch))
 	 "a"))
-    => `(,(void) (#\a)))
+    => `((#\a)))
 
   (check
       (with-result
        (string-for-each (lambda (ch)
 			  (add-result ch))
 	 "abc"))
-    => `(,(void) (#\a #\b #\c)))
+    => `((#\a #\b #\c)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1079,23 +1079,23 @@
        (string-for-each (lambda (ch1 ch2)
 			  (add-result (cons ch1 ch2)))
 	 "" ""))
-    => `(,(void) ()))
+    => `(()))
 
   (check
       (with-result
        (string-for-each (lambda (ch1 ch2)
 			  (add-result (cons ch1 ch2)))
 	 "a" "b"))
-    => `(,(void) ((#\a . #\b))))
+    => `(((#\a . #\b))))
 
   (check
       (with-result
        (string-for-each (lambda (ch1 ch2)
 			  (add-result (cons ch1 ch2)))
 	 "abc" "def"))
-    => `(,(void) ((#\a . #\d)
-		  (#\b . #\e)
-		  (#\c . #\f))))
+    => `(((#\a . #\d)
+	  (#\b . #\e)
+	  (#\c . #\f))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1104,23 +1104,23 @@
        (string-for-each (lambda (ch1 ch2 ch3)
 			  (add-result (list ch1 ch2 ch3)))
 	 "" "" ""))
-    => `(,(void) ()))
+    => `(()))
 
   (check
       (with-result
        (string-for-each (lambda (ch1 ch2 ch3)
 			  (add-result (list ch1 ch2 ch3)))
 	 "a" "b" "c"))
-    => `(,(void) ((#\a #\b #\c))))
+    => `(((#\a #\b #\c))))
 
   (check
       (with-result
        (string-for-each (lambda (ch1 ch2 ch3)
 			  (add-result (list ch1 ch2 ch3)))
 	 "abc" "def" "ghi"))
-    => `(,(void) ((#\a #\d #\g)
-		  (#\b #\e #\h)
-		  (#\c #\f #\i))))
+    => `(((#\a #\d #\g)
+	  (#\b #\e #\h)
+	  (#\c #\f #\i))))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: procedure

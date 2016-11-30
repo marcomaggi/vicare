@@ -152,13 +152,13 @@
       (with-result
 	(let (({O <string>} "ciao"))
 	  (.for-each O add-result)))
-    => '(#!void (#\c #\i #\a #\o)))
+    => '((#\c #\i #\a #\o)))
 
   (check
       (with-result
 	(let (({O <nestring>} "ciao"))
 	  (.for-each O add-result)))
-    => '(#!void (#\c #\i #\a #\o)))
+    => '((#\c #\i #\a #\o)))
 
 ;;; --------------------------------------------------------------------
 

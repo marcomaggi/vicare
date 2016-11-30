@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -46,7 +46,7 @@
        (coroutine (lambda ()
 		    (add-result 1)))
        (finish-coroutines))
-    => `(,(void) (1)))
+    => `((1)))
 
   (check
       (with-result
@@ -71,8 +71,7 @@
 	   (add-result '(three 3)))
 	 (coroutine one)
 	 (finish-coroutines)))
-    => `(,(void)
-	 ((one 1) (two 1) (one 2) (three 1) (two 2) (one 3)
+    => `(((one 1) (two 1) (one 2) (three 1) (two 2) (one 3)
 	  (three 2) (two 3) (three 3))))
 
   (check

@@ -429,42 +429,43 @@
      ;;
      (syntax-match body-form.stx ()
        ((_ ((?xlhs* ?xrhs*) ...) ?xbody* ...)
-	(unless (valid-bound-ids? ?xlhs*)
-	  (stx-error body-form.stx "invalid identifiers"))
-	(let* ((xlab*  (map generate-label-gensym ?xlhs*))
-	       (xrib   (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
-	       ;;We  evaluate the  transformers  for LET-SYNTAX  without pushing  the
-	       ;;XRIB: the syntax  bindings do not exist in the  environment in which
-	       ;;the transformer is evaluated.
-	       ;;
-	       ;;We  evaluate the  transformers for  LETREC-SYNTAX after  pushing the
-	       ;;XRIB: the syntax  bindings do exist in the environment  in which the
-	       ;;transformer is evaluated.
-	       (xbind* (map (lambda (x)
-			      (let ((in-form (case (syntactic-binding-descriptor.value descr)
-					       ((let-syntax)
-						x)
-					       ((letrec-syntax)
-						(push-lexical-contour xrib x))
-					       (else
-						(assertion-violation __module_who__ "internal error" body-form.stx)))))
-				(eval-macro-transformer (expand-macro-transformer in-form lexenv.expand))))
-			 ?xrhs*)))
-	  (chi-body*
-	   ;;Splice the internal body forms but add a lexical contour to them.
-	   (append (map (lambda (internal-body-form)
-			  (push-lexical-contour xrib
-			    internal-body-form))
-		     ?xbody*)
-		   (cdr body-form*.stx))
-	   ;;Push on  the lexical  environment entries  corresponding to  the defined
-	   ;;syntaxes.  Such entries will stay there even after we have processed the
-	   ;;internal body forms; this is not  a problem because the labels cannot be
-	   ;;seen by the rest of the body.
-	   (append (map cons xlab* xbind*) lexenv.run)
-	   (append (map cons xlab* xbind*) lexenv.expand)
-	   rev-qdef* mod** kwd* export-spec* rib
-	   mix? shadow/redefine-bindings?)))))
+	(begin
+	  (unless (valid-bound-ids? ?xlhs*)
+	    (stx-error body-form.stx "invalid identifiers"))
+	  (let* ((xlab*  (map generate-label-gensym ?xlhs*))
+		 (xrib   (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
+		 ;;We evaluate  the transformers  for LET-SYNTAX without  pushing the
+		 ;;XRIB: the syntax bindings do not exist in the environment in which
+		 ;;the transformer is evaluated.
+		 ;;
+		 ;;We evaluate  the transformers for LETREC-SYNTAX  after pushing the
+		 ;;XRIB: the syntax bindings do exist in the environment in which the
+		 ;;transformer is evaluated.
+		 (xbind* (map (lambda (x)
+				(let ((in-form (case (syntactic-binding-descriptor.value descr)
+						 ((let-syntax)
+						  x)
+						 ((letrec-syntax)
+						  (push-lexical-contour xrib x))
+						 (else
+						  (assertion-violation __module_who__ "internal error" body-form.stx)))))
+				  (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand))))
+			   ?xrhs*)))
+	    (chi-body*
+	     ;;Splice the internal body forms but add a lexical contour to them.
+	     (append (map (lambda (internal-body-form)
+			    (push-lexical-contour xrib
+			      internal-body-form))
+		       ?xbody*)
+		     (cdr body-form*.stx))
+	     ;;Push on the  lexical environment entries corresponding  to the defined
+	     ;;syntaxes.  Such entries  will stay there even after  we have processed
+	     ;;the internal  body forms;  this is  not a  problem because  the labels
+	     ;;cannot be seen by the rest of the body.
+	     (append (map cons xlab* xbind*) lexenv.run)
+	     (append (map cons xlab* xbind*) lexenv.expand)
+	     rev-qdef* mod** kwd* export-spec* rib
+	     mix? shadow/redefine-bindings?))))))
 
     ((begin-for-syntax)
      (chi-begin-for-syntax body-form.stx body-form*.stx lexenv.run lexenv.expand

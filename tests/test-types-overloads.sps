@@ -132,8 +132,7 @@
 	  (make-alpha 1 2))
 
 	(values (method-call get-a O)
-		(method-call get-b O))
-	(values 1 2))
+		(method-call get-b O)))
     => 1 2)
 
   (check
@@ -268,7 +267,7 @@
     => 10 20)
 
 ;;; --------------------------------------------------------------------
-;;; actual overloadgin with multiple implementations
+;;; actual overloading with multiple implementations
 
   (check
       (internal-body
@@ -280,7 +279,8 @@
 	  (method (doit {A <symbol>})
 	    (list (.a this) (.b this) 'symbol A))
 	  (method (doit {A <number>} {B <number>})
-	    (list (.a this) (.b this) 'numbers A B)))
+	    (list (.a this) (.b this) 'numbers A B))
+	  #| end of DEFINE-RECORD-TYPE |# )
 
 	(define {O alpha}
 	  (make-alpha 1 2))

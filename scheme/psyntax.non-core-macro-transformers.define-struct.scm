@@ -180,11 +180,11 @@
 	       ;;it would introduce a dependency from the overloaded functions' code.
 	       ;;If we use CASE-DEFINE/CHECKED there is no dependency.  (Marco Maggi;
 	       ;;Sat Aug 27, 2016)
-    	       `(begin
-		  (define/overload ({,method.id ,field-type.ann} {,stru.id ,type.id})
-		    (,unsafe-accessor.id ,stru.id))
-		  (define/overload ({,method.id} {,stru.id ,type.id} {,val.id ,field-type.ann})
-		    (,unsafe-mutator.id ,stru.id ,val.id)))))
+    	       `(case-define/checked ,method.id
+		  (({_ ,field-type.ann} {,stru.id ,type.id})
+		   (,unsafe-accessor.id ,stru.id))
+		  (({_}                 {,stru.id ,type.id} {,val.id ,field-type.ann})
+		   (,unsafe-mutator.id ,stru.id ,val.id)))))
     	method*.id unsafe-accessor*.id unsafe-mutator*.id field-type*.ann))
 
 ;;; --------------------------------------------------------------------

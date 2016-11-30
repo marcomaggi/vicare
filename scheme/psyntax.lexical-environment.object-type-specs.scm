@@ -5983,11 +5983,11 @@
 
        ((enumeration ?symbol ?symbol* ...)
 	(let ((sym*.stx (cons ?symbol ?symbol*)))
-	  (for-all (lambda (sym.stx)
-		     (unless (identifier? sym.stx)
-		       (syntax-violation __who__
-			 "expected symbol object as component of enumeration"
-			 annotation.stx sym.stx)))
+	  (for-each (lambda (sym.stx)
+		      (unless (identifier? sym.stx)
+			(syntax-violation __who__
+			  "expected symbol object as component of enumeration"
+			  annotation.stx sym.stx)))
 	    sym*.stx)
 	  (let ((sym*.stx (delete-duplicate-identifiers sym*.stx)))
 	    (make-enumeration-type-spec (syntax->datum sym*.stx)

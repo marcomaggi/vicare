@@ -951,25 +951,26 @@
 	  ;;LET-SYNTAX or LETREC-SYNTAX core macro uses.
 	  (syntax-match expr.stx ()
 	    ((?key ((?xlhs* ?xrhs*) ...) ?xbody ?xbody* ...)
-	     (unless (valid-bound-ids? ?xlhs*)
-	       (syntax-violation __module_who__ "invalid identifiers" expr.stx))
-	     (let* ((xlab* (map generate-label-gensym ?xlhs*))
-		    (xrib  (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
-		    (xb*   (map (lambda (x)
-				  (let ((in-form (if (eq? type 'let-syntax)
-						     x
-						   (push-lexical-contour xrib x))))
-				    (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand))))
-			     ?xrhs*)))
-	       (let ((body*.psi (chi-expr* (map (lambda (x)
-						  (push-lexical-contour xrib x))
-					     (cons ?xbody ?xbody*))
-					   (append (map cons xlab* xb*) lexenv.run)
-					   (append (map cons xlab* xb*) lexenv.expand))))
-		 (make-psi expr.stx
-		   (build-sequence no-source
-		     (map psi.core-expr body*.psi))
-		   (psi.retvals-signature (proper-list->last-item body*.psi))))))
+	     (begin
+	       (unless (valid-bound-ids? ?xlhs*)
+		 (syntax-violation __module_who__ "invalid identifiers" expr.stx))
+	       (let* ((xlab* (map generate-label-gensym ?xlhs*))
+		      (xrib  (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
+		      (xb*   (map (lambda (x)
+				    (let ((in-form (if (eq? type 'let-syntax)
+						       x
+						     (push-lexical-contour xrib x))))
+				      (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand))))
+			       ?xrhs*)))
+		 (let ((body*.psi (chi-expr* (map (lambda (x)
+						    (push-lexical-contour xrib x))
+					       (cons ?xbody ?xbody*))
+					     (append (map cons xlab* xb*) lexenv.run)
+					     (append (map cons xlab* xb*) lexenv.expand))))
+		   (make-psi expr.stx
+		     (build-sequence no-source
+		       (map psi.core-expr body*.psi))
+		     (psi.retvals-signature (proper-list->last-item body*.psi)))))))
 	    ))
 
 	 ((define/std define/typed define/checked define-syntax define-fluid-syntax define-alias module import library)
