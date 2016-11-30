@@ -565,29 +565,29 @@
   (module (%check-that-there-are-no-invalid-protection-levels)
 
     (define (%check-that-there-are-no-invalid-protection-levels clause*.stx synner)
-    (syntax-match clause*.stx ()
-      (()
-       (void))
-      ((?head . ?tail)
-       (syntax-match ?head (fields method virtual-method seal-method)
-	 ((fields . ?stuff)
-	  (%check-stuff-for-double ?head ?stuff synner))
+      (syntax-match clause*.stx ()
+	(()
+	 (values))
+	((?head . ?tail)
+	 (syntax-match ?head (fields method virtual-method seal-method)
+	   ((fields . ?stuff)
+	    (%check-stuff-for-double ?head ?stuff synner))
 
-	 ((method . ?stuff)
-	  (%check-stuff-for-double ?head ?stuff synner))
+	   ((method . ?stuff)
+	    (%check-stuff-for-double ?head ?stuff synner))
 
-	 ((virtual-method . ?stuff)
-	  (%check-stuff-for-double ?head ?stuff synner))
+	   ((virtual-method . ?stuff)
+	    (%check-stuff-for-double ?head ?stuff synner))
 
-	 ((seal-method . ?stuff)
-	  (%check-stuff-for-double ?head ?stuff synner))
+	   ((seal-method . ?stuff)
+	    (%check-stuff-for-double ?head ?stuff synner))
 
-	 ((_ ?thing . ?rest)
-	  (protection-level-id? ?thing)
-	  (synner "found protection level specification in clause not supporting it" ?head))
+	   ((_ ?thing . ?rest)
+	    (protection-level-id? ?thing)
+	    (synner "found protection level specification in clause not supporting it" ?head))
 
-	 (_
-	  (%check-that-there-are-no-invalid-protection-levels ?tail synner))))))
+	   (_
+	    (%check-that-there-are-no-invalid-protection-levels ?tail synner))))))
 
     (define (%check-stuff-for-double head.stx stuff.stx synner)
       (syntax-match stuff.stx ()
@@ -598,7 +598,7 @@
 		    (protection-level-id? ?thing2))
 	   (synner "while processing DEFINE-RECORD-TYPE, found double protection level specification" head.stx)))
 	(_
-	 (void))))
+	 (values))))
 
     #| end of module: %CHECK-THAT-THERE-ARE-NO-INVALID-PROTECTION-LEVELS |# )
 
@@ -2111,14 +2111,14 @@
 		   => (lambda (entry)
 			(if (vmsa.signature entry)
 			    ;;The parent has a virtual method with this name.
-			    (void)
+			    (values)
 			  ;;The parent has a sealed method with this name.
 			  (synner "attempt to override a method declared sealed by the parent record-type"
 				  method-name.sym))))
 		  (else
 		   ;;Fine, the  parent has  neither virtual  nor sealed  methods with
 		   ;;this name.
-		   (void)))))
+		   (values)))))
       group*))
 
   (define (%check-that-overriding-methods-have-the-same-protection-of-the-parent-virtual-method
@@ -2142,7 +2142,7 @@
 			       ;;The parent has a virtual  or sealed method with this
 			       ;;name  and the  same protection  level of  the group.
 			       ;;Good.
-			       (void))
+			       (values))
 			      (else
 			       ;;The parent has a virtual  or sealed method with this
 			       ;;name but different protection level.
@@ -2151,7 +2151,7 @@
 		  (else
 		   ;;Fine, the  parent has  neither virtual  nor sealed  methods with
 		   ;;this name.
-		   (void)))))
+		   (values)))))
       group*))
 
 ;;; --------------------------------------------------------------------
