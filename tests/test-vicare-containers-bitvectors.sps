@@ -29,7 +29,9 @@
   (options typed-language)
   (import (vicare)
     (vicare containers bitvectors)
-    (vicare checks))
+    (vicare checks)
+    (prefix (vicare platform words)
+	    words::))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare libraries: bitvector containers\n")
@@ -393,7 +395,11 @@
 
   (check
       (exact-integer->fixnums (bitwise-arithmetic-shift-left (least-positive-bignum) 1234))
-    => '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 17179869184))
+    => (words::case-word-size
+	((32)
+	 '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 65536))
+	((64)
+	 '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 17179869184))))
 
 ;;; --------------------------------------------------------------------
 
@@ -406,7 +412,11 @@
   (check (fixnums->exact-integer '(0 2))			=> (* 2 (least-positive-bignum)))
 
   (check
-      (fixnums->exact-integer '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 17179869184))
+      (words::case-word-size
+       ((32)
+	(fixnums->exact-integer '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 65536)))
+       ((64)
+	(fixnums->exact-integer '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 17179869184))))
     => (bitwise-arithmetic-shift-left (least-positive-bignum) 1234))
 
 ;;; --------------------------------------------------------------------
