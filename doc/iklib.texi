@@ -19201,9 +19201,7 @@ functions}) with the argument @code{CLOCK_REALTIME}.
 
 
 @deftypefun @aclass{epoch-time} faraway-time
-Return an instance of @class{epoch-time} representing a time since the
-Epoch with @code{(greatest-fixnum)} seconds and zero nanoseconds.  This
-@class{epoch-time} object is meant to represent a time in the not near
+Return an instance of @class{epoch-time} representing a time since the Epoch that is ``far'' in the
 future.
 @end deftypefun
 

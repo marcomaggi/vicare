@@ -336,7 +336,7 @@
   (foreign-call "ikrt_current_time" (make-epoch-time 0 0 0)))
 
 (define (faraway-time)
-  (make-epoch-time 0 (greatest-fixnum) 0))
+  (make-epoch-time (greatest-fixnum) (time-seconds (current-time)) 0))
 
 (define-list-of-type-predicate list-of-epoch-times? epoch-time?)
 
