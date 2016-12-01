@@ -172,23 +172,16 @@
 	  $record-hash-function)
     (only (vicare system $transcoders)
 	  $transcoder->data)
-    (except (vicare system $tcbuckets)
-	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
-	    ;;(Marco Maggi; Tue Nov 8, 2016)
-	    tcbucket?)
-    ;;Let's import the primitive operation.
-    ;;
-    ;;FIXME  After  the next  boot  image  rotation:  we  can import  TCBUCKET?  from
-    ;;(vicare).  (Marco Maggi; Tue Nov 8, 2016)
-    (prefix (only (psyntax system $all)
-		  tcbucket?)
-	    sys::)
+    (vicare system $tcbuckets)
     (only (vicare system $structs)
 	  $set-std-printer!)
     (except (vicare system structs)
 	    struct-hash)
     (only (ikarus unique-objects)
 	  SENTINEL)
+    (prefix (only (vicare)
+		  tcbucket?)
+	    sys::)
     (prefix (only (vicare unsafe capi)
 		  ffi-pointer->integer)
 	    capi.)

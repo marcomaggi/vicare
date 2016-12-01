@@ -43,15 +43,7 @@
     #| end of EXPORT |# )
   (import (except (vicare)
 		  method-call-late-binding
-		  object-type-implements-interface?
-
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Sat Oct 1, 2016)
-		  binary-input-only-port?
-		  binary-output-only-port?
-		  textual-input-only-port?
-		  textual-output-only-port?
-		  struct-type-field-method)
+		  object-type-implements-interface?)
     (ikarus records syntactic)
     (only (ikarus.core-type-descr)
 	  core-type-descriptor?
@@ -74,14 +66,7 @@
     (only (vicare system $records)
 	  $record-type-method-retriever
 	  $record-type-hash-function)
-    (except (vicare system structs)
-	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
-	    ;;(Marco Maggi; Fri Oct 28, 2016)
-	    struct-type-field-method)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
-    ;;2016)
-    (only (ikarus structs)
-	  struct-type-field-method)
+    (vicare system structs)
     (prefix (only (ikarus records procedural)
 		  record-type-implemented-interfaces)
 	    td::)
@@ -94,13 +79,6 @@
 		  make-descriptors-signature
 		  type-descriptor-of)
 	    td::)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Oct 1,
-    ;;2016)
-    (only (ikarus.io)
-	  binary-input-only-port?
-	  binary-output-only-port?
-	  textual-input-only-port?
-	  textual-output-only-port?)
     #| end of IMPORT |# )
 
 

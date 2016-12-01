@@ -78,16 +78,9 @@
 		  time-gmt-offset
 
 		  ;; date functions
-		  date-string
-
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Mon Sep 19, 2016)
-		  compar-fixnum
-		  compar-exact-integer)
+		  date-string)
     (ikarus records syntactic)
-    ;;FIXME To be fixed  at the next boot image rotation.  (Marco  Maggi; Mon Sep 19,
-    ;;2016)
-    (only (ikarus.comparison-procedures) #;(vicare system comparison-procedures)
+    (only (vicare system comparison-procedures)
 	  compar-fixnum
 	  compar-exact-integer)
     (only (vicare language-extensions syntaxes)

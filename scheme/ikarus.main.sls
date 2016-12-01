@@ -38,12 +38,7 @@
 		  struct-guardian-log
 		  $record-guardian
 		  record-guardian-logger
-		  record-guardian-log
-
-		  ;;FIXME  This except  is  to  be removed  at  the  next boot  image
-		  ;;rotation.  (Marco Maggi; Fri Oct 28, 2016)
-		  struct-reset!
-		  record-reset!)
+		  record-guardian-log)
     (prefix (only (ikarus.options)
 		  print-verbose-messages?
 		  debug-mode-enabled?
@@ -109,20 +104,9 @@
 		  real-pathname
 		  split-search-path-string)
 	    posix::)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
-    ;;2016)
-    (only (ikarus records procedural)
-	  record-reset!)
     (except (vicare system structs)
 	    struct-guardian-logger
-	    struct-guardian-log
-	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
-	    ;;(Marco Maggi; Fri Oct 28, 2016)
-	    struct-reset!)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
-    ;;2016)
-    (only (ikarus structs)
-	  struct-reset!)
+	    struct-guardian-log)
     (only (vicare system $structs)
 	  $struct-ref)
     (prefix (only (ikarus.readline)

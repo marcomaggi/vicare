@@ -1024,9 +1024,7 @@
     ($runtime			(vicare system $runtime)		#f	#t)
 ;;;
     (system-structs		(vicare system structs)			#t	#t)
-    ;;FIXME To be made  required at the next boot image  rotation.  (Marco Maggi; Mon
-    ;;Aug 29, 2016)
-    (system-compar		(vicare system comparison-procedures)	#t	#f)
+    (system-compar		(vicare system comparison-procedures)	#t	#t)
     (system-type-descriptors	(vicare system type-descriptors)	#t	#t)
     (system-options		(vicare system options)			#t	#t)
     (system-code-objects	(vicare system code-objects)		#t	#t)

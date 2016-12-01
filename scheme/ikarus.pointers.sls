@@ -845,10 +845,7 @@
 		(unless (bytevector-start-index-and-count-for-word8? src src.start count)
 		  (procedure-arguments-consistency-violation __who__
 		    "start index and bytes count out of range for source bytevector" src src.start count))
-		($bytevector-copy!/count src src.start dst dst.start count)
-		;;FIXME This VALUES is to be removed at the next boot image rotation.
-		;;(Marco Maggi; Sun Nov 27, 2016)
-		(values))
+		($bytevector-copy!/count src src.start dst dst.start count))
 	       (else
 		(procedure-argument-violation __who__ "expected pointer or bytevector as source argument" src))))
 	(else
