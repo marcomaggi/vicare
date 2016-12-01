@@ -482,7 +482,9 @@
   (vicare system $pairs)
   (vicare system $fx)
   (vicare system $flonums)
-  (rename (only (vicare system $flonums)
+  ;;We have  to import from "(ikarus  numerics flonums)" because that  is the library
+  ;;providing the implementation.
+  (rename (only (ikarus numerics flonums)
 		$flexp
 		$flsin
 		$flcos
