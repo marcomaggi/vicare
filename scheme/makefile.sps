@@ -4884,10 +4884,6 @@
     (<syntactic-identifier>				$expander)
     (syntactic-identifier?				$expander)
 
-    ;;FIXME This  is a temporary substitution.   When type unions are  implemented we
-    ;;should  uncomment  this and  use  a  proper definition  for  "<syntax-object>".
-    ;;(Marco Maggi; Sun Dec 27, 2015)
-    #;(<syntax-object>					$expander)
     (syntax-object?					$expander)
 
     (expand-form-to-core-language			$expander)
