@@ -62,65 +62,7 @@
     <port>-reset			<port>-position
 
     #| end of EXPORT |# )
-  (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Sat Oct 1, 2016)
-		  empty-vector?
-		  nevector?
-		  vector=?
-		  vector!=?
-		  ;;
-		  struct!=?
-		  struct-reset!
-		  struct-type-constructor
-		  struct-type-predicate
-		  struct-type-field-accessor
-		  struct-type-field-mutator
-		  struct-type-field-method
-		  ;;
-		  record!=?
-		  record-reset!
-		  ;;
-		  bignum-hash
-		  ratnum-hash
-		  cflonum-hash
-		  compnum-hash
-		  vector-hash
-		  list-hash
-		  pair-hash
-		  ipair-hash
-		  sentinel-hash
-		  enum-set-hash
-		  promise-hash
-		  ;;
-		  empty-bytevector?
-		  nebytevector?
-		  ;;
-		  open-port?
-		  closed-port?
-		  binary-input-only-port?
-		  binary-output-only-port?
-		  textual-input-only-port?
-		  textual-output-only-port?
-		  ;;
-		  memory-block=?
-		  ;;
-		  compar-fixnum
-		  compar-bignum
-		  compar-exact-integer
-		  compar-ratnum
-		  compar-exact-real
-		  compar-flonum
-		  compar-real
-		  compar-char
-		  compar-string
-		  compar-string-ci
-		  compar-symbol
-		  compar-boolean
-		  compar-true
-		  compar-false
-		  compar-transcoder
-		  compar-pointer)
+  (import (vicare)
     (ikarus records syntactic)
     (only (vicare system $fx)
 	  $fxadd1)
@@ -138,94 +80,8 @@
 	  syntax-clause-spec-keyword
 	  syntax-clause-spec?
 	  make-syntax-clause-spec)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Tue Nov 8,
-    ;;2016)
-    (only (psyntax system $all)
-     	  tcbucket?)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
-    ;;2016)
-    #;(vicare system comparison-procedures)
-    (only (ikarus.comparison-procedures)
-	  compar-fixnum
-	  compar-bignum
-	  compar-exact-integer
-	  compar-ratnum
-	  compar-exact-real
-	  compar-flonum
-	  compar-real
-	  compar-char
-	  compar-string
-	  compar-string-ci
-	  compar-symbol
-	  compar-boolean
-	  compar-true
-	  compar-false
-	  compar-transcoder
-	  compar-pointer)
-    (except (vicare system structs)
-	    ;;FIXME These excepts are to be  removed at the next boot image rotation.
-	    ;;(Marco Maggi; Fri Oct 28, 2016)
-	    struct!=?
-	    struct-reset!
-	    struct-type-constructor
-	    struct-type-predicate
-	    struct-type-field-accessor
-	    struct-type-field-mutator
-	    struct-type-field-method)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Mon Nov 7,
-    ;;2016)
-    (only (ikarus.pointers)
-	  memory-block=?)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
-    ;;2016)
-    (only (ikarus structs)
-	  struct!=?
-	  struct-reset!
-	  struct-type-constructor
-	  struct-type-predicate
-	  struct-type-field-accessor
-	  struct-type-field-mutator
-	  struct-type-field-method)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Oct 28,
-    ;;2016)
-    (only (ikarus records procedural)
-	  record!=?
-	  record-reset!)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Wed Oct 26,
-    ;;2016)
-    (only (ikarus vectors)
-	  vector=?
-	  vector!=?
-	  empty-vector?
-	  nevector?)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Oct 1,
-    ;;2016)
-    (only (ikarus.io)
-	  open-port?
-	  closed-port?
-	  binary-input-only-port?
-	  binary-output-only-port?
-	  textual-input-only-port?
-	  textual-output-only-port?)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Oct 22,
-    ;;2016)
-    (only (ikarus hash-tables)
-	  bignum-hash
-	  ratnum-hash
-	  cflonum-hash
-	  compnum-hash
-	  vector-hash
-	  list-hash
-	  pair-hash
-	  ipair-hash
-	  sentinel-hash
-	  enum-set-hash
-	  promise-hash)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Oct 27,
-    ;;2016)
-    (only (ikarus bytevectors)
-	  empty-bytevector?
-	  nebytevector?)
+    (vicare system comparison-procedures)
+    (vicare system structs)
     #| end of IMPORT |# )
 
 
