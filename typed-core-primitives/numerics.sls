@@ -337,10 +337,10 @@
 (declare-core-primitive =
     (safe)
   (signatures
-   #;((<positive>     <non-positive> . (list-of <number>))		=> (<false>))
-   #;((<non-positive> <positive>     . (list-of <number>))		=> (<false>))
-   #;((<negative>     <non-negative> . (list-of <number>))		=> (<false>))
-   #;((<non-negative> <negative>     . (list-of <number>))		=> (<false>))
+   ((<positive>     <non-positive> . (list-of <number>))		=> (<false>))
+   ((<non-positive> <positive>     . (list-of <number>))		=> (<false>))
+   ((<negative>     <non-negative> . (list-of <number>))		=> (<false>))
+   ((<non-negative> <negative>     . (list-of <number>))		=> (<false>))
    ((<number> . (list-of <number>))	=> (<boolean>)))
   (attributes
    ((_ _ . _)			foldable effect-free)))
@@ -348,10 +348,10 @@
 (declare-core-primitive !=
     (safe)
   (signatures
-   #;((<positive>     <non-positive> . (list-of <number>))		=> (<true>))
-   #;((<non-positive> <positive>     . (list-of <number>))		=> (<true>))
-   #;((<negative>     <non-negative> . (list-of <number>))		=> (<true>))
-   #;((<non-negative> <negative>     . (list-of <number>))		=> (<true>))
+   ((<positive>     <non-positive> . (list-of <number>))		=> (<true>))
+   ((<non-positive> <positive>     . (list-of <number>))		=> (<true>))
+   ((<negative>     <non-negative> . (list-of <number>))		=> (<true>))
+   ((<non-negative> <negative>     . (list-of <number>))		=> (<true>))
    ((<number> . (list-of <number>))	=> (<boolean>)))
   (attributes
    ((_ _ . _)			foldable effect-free)))
@@ -359,40 +359,40 @@
 (declare-core-primitive <
     (safe)
   (signatures
-   #;((<positive>     <non-positive>)	=> (<false>))
-   #;((<non-negative> <negative>)	=> (<false>))
-   #;((<non-positive> <positive>)	=> (<true>))
-   #;((<negative>     <non-negative>)	=> (<true>))
-   ((<real> <real> . (list-of <real>))	=> (<boolean>)))
+   ((<non-positive> <positive>)				=> (<true>))
+   ((<negative>     <non-negative>)			=> (<true>))
+   ((<positive>     <non-positive> . (list-of <real>))	=> (<false>))
+   ((<non-negative> <negative>     . (list-of <real>))	=> (<false>))
+   ((<real> <real> . (list-of <real>))			=> (<boolean>)))
   (attributes
    ((_ _ . _)			foldable effect-free)))
 
 (declare-core-primitive >
     (safe)
   (signatures
-   #;((<positive>     <non-positive>)	=> (<true>))
-   #;((<non-negative> <negative>)	=> (<true>))
-   #;((<non-positive> <positive>)	=> (<false>))
-   #;((<negative>     <non-negative>)	=> (<false>))
-   ((<real> <real> . (list-of <real>))	=> (<boolean>)))
+   ((<positive>     <non-positive>)			=> (<true>))
+   ((<non-negative> <negative>)				=> (<true>))
+   ((<non-positive> <positive>     . (list-of <real>))	=> (<false>))
+   ((<negative>     <non-negative> . (list-of <real>))	=> (<false>))
+   ((<real> <real> . (list-of <real>))			=> (<boolean>)))
   (attributes
    ((_ _ . _)			foldable effect-free)))
 
 (declare-core-primitive <=
     (safe)
   (signatures
-   #;((<positive> <negative>)		=> (<false>))
-   #;((<negative> <positive>)		=> (<true>))
-   ((<real> <real> . (list-of <real>))	=> (<boolean>)))
+   ((<negative> <positive>)				=> (<true>))
+   ((<positive> <negative> . (list-of <real>))		=> (<false>))
+   ((<real>     <real>     . (list-of <real>))		=> (<boolean>)))
   (attributes
    ((_ _ . _)			foldable effect-free)))
 
 (declare-core-primitive >=
     (safe)
   (signatures
-   #;((<positive> <negative>)		=> (<true>))
-   #;((<negative> <positive>)		=> (<false>))
-   ((<real> <real> . (list-of <real>))	=> (<boolean>)))
+   ((<positive> <negative>)				=> (<true>))
+   ((<negative> <positive> . (list-of <real>))		=> (<false>))
+   ((<real>     <real>     . (list-of <real>))		=> (<boolean>)))
   (attributes
    ((_ _ . _)			foldable effect-free)))
 
@@ -410,7 +410,7 @@
    ((<real>		. (list-of <real>))		=> (<real>)))
   (attributes
    ((_ . _)				foldable effect-free result-true))
-  #;(replacements
+  (replacements
    $max-fixnum-fixnum $max-fixnum-bignum $max-fixnum-flonum $max-fixnum-ratnum
    $max-bignum-fixnum $max-bignum-bignum $max-bignum-flonum $max-bignum-ratnum
    $max-flonum-fixnum $max-flonum-bignum $max-flonum-flonum $max-flonum-ratnum
@@ -430,7 +430,7 @@
    ((<real>		. (list-of <real>))		=> (<real>)))
   (attributes
    ((_ . _)			foldable effect-free result-true))
-  #;(replacements
+  (replacements
    $min-fixnum-fixnum $min-fixnum-bignum $min-fixnum-flonum $min-fixnum-ratnum
    $min-bignum-fixnum $min-bignum-bignum $min-bignum-flonum $min-bignum-ratnum
    $min-flonum-fixnum $min-flonum-bignum $min-flonum-flonum $min-flonum-ratnum
