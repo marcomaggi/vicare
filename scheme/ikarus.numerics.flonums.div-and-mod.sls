@@ -33,95 +33,134 @@
     (except (vicare system $flonums)
 	    $fldiv		$flmod
 	    $fldiv0		$flmod0
-	    $fldiv-and-mod	$fldiv0-and-mod0))
+	    $fldiv-and-mod	$fldiv0-and-mod0
+	    ;;FIXME  This  last except  is  to  be removed  at  the  next boot  image
+	    ;;rotation.  (Marco Maggi; Sun Dec 4, 2016)
+	    $flexact)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sun Dec 4,
+    ;;2016)
+    (only (ikarus numerics flonums)
+	  $flexact)
+    #| end of IMPORT |# )
 
 
 ;;;; helpers
 
-(define-syntax define-fl-operation/two
+(define-syntax define-fl-operation/two-args
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
      (define* (?safe-who {x flonum?} {y flonum?})
-       (?unsafe-who x y)))))
+       (?unsafe-who x y)))
+    ))
 
 
-(define-fl-operation/two fldiv			$fldiv)
-(define-fl-operation/two flmod			$flmod)
-(define-fl-operation/two fldiv-and-mod		$fldiv-and-mod)
-(define-fl-operation/two fldiv0			$fldiv0)
-(define-fl-operation/two flmod0			$flmod0)
-(define-fl-operation/two fldiv0-and-mod0	$fldiv0-and-mod0)
+(define-fl-operation/two-args fldiv		$fldiv)
+(define-fl-operation/two-args flmod		$flmod)
+(define-fl-operation/two-args fldiv-and-mod	$fldiv-and-mod)
+(define-fl-operation/two-args fldiv0		$fldiv0)
+(define-fl-operation/two-args flmod0		$flmod0)
+(define-fl-operation/two-args fldiv0-and-mod0	$fldiv0-and-mod0)
 
 (define ($flmod n m)
-  (let ((d0 ($fltruncate ($fl/ n m))))
-    (let ((m0 ($fl- n ($fl* d0 m))))
-      (if ($fl>= m0 0.0)
-	  m0
-	(if ($fl>= m 0.0)
-	    ($fl+ m0 m)
-	  ($fl- m0 m))))))
+  (cond (($flnan? n)
+	 n)
+	(($flnan? m)
+	 m)
+	(else
+	 (let ((d0 ($fltruncate ($fl/ n m))))
+	   (let ((m0 ($fl- n ($fl* d0 m))))
+	     (if ($fl>= m0 0.0)
+		 m0
+	       (if ($fl>= m 0.0)
+		   ($fl+ m0 m)
+		 ($fl- m0 m))))))))
 
 (define ($fldiv n m)
-  (let ((d0 ($fltruncate ($fl/ n m))))
-    (if ($fl>= n ($fl* d0 m))
-	d0
-      (if ($fl>= m 0.0)
-	  ($fl- d0 1.0)
-	($fl+ d0 1.0)))))
+  (cond (($flnan? n)
+	 n)
+	(($flnan? m)
+	 m)
+	(else
+	 (let ((d0 ($fltruncate ($fl/ n m))))
+	   (if ($fl>= n ($fl* d0 m))
+	       d0
+	     (if ($fl>= m 0.0)
+		 ($fl- d0 1.0)
+	       ($fl+ d0 1.0)))))))
 
 (define ($fldiv-and-mod n m)
-  (let ((d0 ($fltruncate ($fl/ n m))))
-    (let ((m0 ($fl- n ($fl* d0 m))))
-      (if ($fl>= m0 0.0)
-	  (values d0 m0)
-	(if ($fl>= m 0.0)
-	    (values ($fl- d0 1.0) ($fl+ m0 m))
-	  (values ($fl+ d0 1.0) ($fl- m0 m)))))))
+  (cond (($flnan? n)
+	 (values n n))
+	(($flnan? m)
+	 (values m m))
+	(else
+	 (let ((d0 ($fltruncate ($fl/ n m))))
+	   (let ((m0 ($fl- n ($fl* d0 m))))
+	     (if ($fl>= m0 0.0)
+		 (values d0 m0)
+	       (if ($fl>= m 0.0)
+		   (values ($fl- d0 1.0) ($fl+ m0 m))
+		 (values ($fl+ d0 1.0) ($fl- m0 m)))))))))
 
 (define ($fldiv0-and-mod0 n m)
-  (let ((d0 ($fltruncate ($fl/ n m))))
-    (let ((m0 ($fl- n ($fl* d0 m))))
-      (if ($fl>= m 0.0)
-	  (if ($fl< m0 ($fl/ m 2.0))
-	      (if ($fl>= m0 ($fl/ m -2.0))
-		  (values d0 m0)
-		(values ($fl- d0 1.0) ($fl+ m0 m)))
-	    (values ($fl+ d0 1.0) ($fl- m0 m)))
-	(if ($fl< m0 ($fl/ m -2.0))
-	    (if ($fl>= m0 ($fl/ m 2.0))
-		(values d0 m0)
-	      (values ($fl+ d0 1.0) ($fl- m0 m)))
-	  (values ($fl- d0 1.0) ($fl+ m0 m)))))))
+  (cond (($flnan? n)
+	 (values n n))
+	(($flnan? m)
+	 (values m m))
+	(else
+	 (let ((d0 ($fltruncate ($fl/ n m))))
+	   (let ((m0 ($fl- n ($fl* d0 m))))
+	     (if ($fl>= m 0.0)
+		 (if ($fl< m0 ($fl/ m 2.0))
+		     (if ($fl>= m0 ($fl/ m -2.0))
+			 (values d0 m0)
+		       (values ($fl- d0 1.0) ($fl+ m0 m)))
+		   (values ($fl+ d0 1.0) ($fl- m0 m)))
+	       (if ($fl< m0 ($fl/ m -2.0))
+		   (if ($fl>= m0 ($fl/ m 2.0))
+		       (values d0 m0)
+		     (values ($fl+ d0 1.0) ($fl- m0 m)))
+		 (values ($fl- d0 1.0) ($fl+ m0 m)))))))))
 
 (define ($fldiv0 n m)
-  (let ((d0 ($fltruncate ($fl/ n m))))
-    (let ((m0 ($fl- n ($fl* d0 m))))
-      (if ($fl>= m 0.0)
-	  (if ($fl< m0 ($fl/ m 2.0))
-	      (if ($fl>= m0 ($fl/ m -2.0))
-		  d0
-		($fl- d0 1.0))
-	    ($fl+ d0 1.0))
-	(if ($fl< m0 ($fl/ m -2.0))
-	    (if ($fl>= m0 ($fl/ m 2.0))
-		d0
-	      ($fl+ d0 1.0))
-	  ($fl- d0 1.0))))))
+  (cond (($flnan? n)
+	 n)
+	(($flnan? m)
+	 m)
+	(else
+	 (let ((d0 ($fltruncate ($fl/ n m))))
+	   (let ((m0 ($fl- n ($fl* d0 m))))
+	     (if ($fl>= m 0.0)
+		 (if ($fl< m0 ($fl/ m 2.0))
+		     (if ($fl>= m0 ($fl/ m -2.0))
+			 d0
+		       ($fl- d0 1.0))
+		   ($fl+ d0 1.0))
+	       (if ($fl< m0 ($fl/ m -2.0))
+		   (if ($fl>= m0 ($fl/ m 2.0))
+		       d0
+		     ($fl+ d0 1.0))
+		 ($fl- d0 1.0))))))))
 
 (define ($flmod0 n m)
-  (let ((d0 ($fltruncate ($fl/ n m))))
-    (let ((m0 ($fl- n ($fl* d0 m))))
-      (if ($fl>= m 0.0)
-	  (if ($fl< m0 ($fl/ m 2.0))
-	      (if ($fl>= m0 ($fl/ m -2.0))
-		  m0
-		($fl+ m0 m))
-	    ($fl- m0 m))
-	(if ($fl< m0 ($fl/ m -2.0))
-	    (if ($fl>= m0 ($fl/ m 2.0))
-		m0
-	      ($fl- m0 m))
-	  ($fl+ m0 m))))))
+  (cond (($flnan? n)
+	 n)
+	(($flnan? m)
+	 m)
+	(else
+	 (let ((d0 ($fltruncate ($fl/ n m))))
+	   (let ((m0 ($fl- n ($fl* d0 m))))
+	     (if ($fl>= m 0.0)
+		 (if ($fl< m0 ($fl/ m 2.0))
+		     (if ($fl>= m0 ($fl/ m -2.0))
+			 m0
+		       ($fl+ m0 m))
+		   ($fl- m0 m))
+	       (if ($fl< m0 ($fl/ m -2.0))
+		   (if ($fl>= m0 ($fl/ m 2.0))
+		       m0
+		     ($fl- m0 m))
+		 ($fl+ m0 m))))))))
 
 
 ;;;; done

@@ -20,7 +20,8 @@
   (export
     list-of-flonums?
 
-    inexact->exact	exact		$flonum->exact
+    inexact->exact	exact
+    $flonum->maybe-exact	$flexact
     fixnum->flonum	$fixnum->flonum
 
     flzero?		$flzero?
@@ -125,7 +126,7 @@
     (vicare system $bytevectors)
     (except (vicare system $flonums)
 	    $fixnum->flonum
-	    $flonum->exact
+	    $flonum->maybe-exact
 	    $flzero?
 	    $flzero?/positive
 	    $flzero?/negative
@@ -257,15 +258,15 @@
 
 (module ($flround)
 
-  (define ($flround x)
-    (let* ((sbe ($flonum-sbe x))	;this is a fixnum
+  (define ($flround fl)
+    (let* ((sbe ($flonum-sbe fl))	;this is a fixnum
 	   (be  ($fxlogand sbe #x7FF)))	;this is a fixnum
       (if ($fx>= be 1075)
 	  ;;Nans, infinities, magnitude large enough to be an integer.
-	  x
+	  fl
 	;;This really needs to get optimized.
 	(receive (positive? be mantissa)
-	    (flonum-parts x)
+	    (flonum-parts fl)
 	  (if ($fxzero? be)
 	      ;;denormalized
 	      (if positive? +0.0 -0.0)
@@ -293,12 +294,17 @@
 
 (define-fl-operation/one flceiling $flceiling)
 
-(define ($flceiling x)
+(define ($flceiling fl)
   ;;FIXME Optimize for integer flonums case.  (Abdulaziz Ghuloum)
-  (let ((e ($flonum->exact x)))
-    (if (ratnum? e)
-	(exact->inexact (ceiling e))
-      x)))
+  (cond (($flnan? fl)
+	 fl)
+	(($flinfinite? fl)
+	 fl)
+	(else
+	 (let ((e ($flexact fl)))
+	   (if (ratnum? e)
+	       (exact->inexact (ceiling e))
+	     fl)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -306,16 +312,21 @@
 
   (define-fl-operation/one flfloor $flfloor)
 
-  (define ($flfloor x)
+  (define ($flfloor fl)
     ;;FIXME Optimize for integer flonums case.  (Abdulaziz Ghuloum)
-    (let ((e ($flonum->exact x)))
-      (if (ratnum? e)
-	  (exact->inexact (%ratnum-floor e))
-	x)))
+    (cond (($flnan? fl)
+	   fl)
+	  (($flinfinite? fl)
+	   fl)
+	  (else
+	   (let ((e ($flexact fl)))
+	     (if (ratnum? e)
+		 (exact->inexact (%ratnum-floor e))
+	       fl)))))
 
-  (define (%ratnum-floor x)
-    (let* ((n ($ratnum-n x))
-	   (d ($ratnum-d x))
+  (define (%ratnum-floor fl)
+    (let* ((n ($ratnum-num fl))
+	   (d ($ratnum-den fl))
 	   (q (quotient n d)))
       (if (>= n 0)
 	  q
@@ -329,16 +340,18 @@
 
   (define-fl-operation/one fltruncate $fltruncate)
 
-  (define ($fltruncate x)
+  (define ($fltruncate fl)
     ;;FIXME It should preserve the sign of -0.0.  (Abdulaziz Ghuloum)
-    (let ((v ($flonum->exact x)))
-      (if (ratnum? v)
-	  (exact->inexact ($ratnum-truncate v))
-	x)))
+    (if ($flnan? fl)
+	fl
+      (let ((v ($flexact fl)))
+	(if (ratnum? v)
+	    (exact->inexact ($ratnum-truncate v))
+	  fl))))
 
-  (define ($ratnum-truncate x)
-    (let ((n ($ratnum-n x))
-	  (d ($ratnum-d x)))
+  (define ($ratnum-truncate fl)
+    (let ((n ($ratnum-num fl))
+	  (d ($ratnum-den fl)))
       (quotient n d)))
 
   #| end of module |# )
@@ -353,14 +366,14 @@
   (cond (($flonum-integer? x)
 	 x)
 	(($flonum-rational? x)
-	 (exact->inexact (numerator ($flonum->exact x))))
+	 (exact->inexact (numerator ($flexact x))))
 	(else x)))
 
 (define ($fldenominator x)
   (cond (($flonum-integer? x)
 	 1.0)
 	(($flonum-rational? x)
-	 (exact->inexact (denominator ($flonum->exact x))))
+	 (exact->inexact (denominator ($flexact x))))
 	((flnan? x)
 	 x)
 	(else 1.0)))
@@ -372,7 +385,7 @@
 (define-fl-operation/one flodd?  $flodd?)
 
 (define* ($fleven? x)
-  (let ((v ($flonum->exact x)))
+  (let ((v ($flexact x)))
     (cond-exact-integer-operand v
       ((fixnum?)	($fxeven? v))
       ((bignum?)	($bignum-even? v))
@@ -380,7 +393,7 @@
        (assertion-violation __who__ "not an integer flonum" x)))))
 
 (define* ($flodd? x)
-  (let ((v ($flonum->exact x)))
+  (let ((v ($flexact x)))
     (cond-exact-integer-operand v
       ((fixnum?)	($fxodd? v))
       ((bignum?)	($bignum-odd? v))
@@ -563,23 +576,30 @@
       (else
        (procedure-argument-violation who "expected number as argument" x))))
 
-  (define* ($flexact x)
-    (or ($flonum->exact x)
-	(%error-no-real-value __who__ x)))
+  (define ($flexact fl)
+    (receive-and-return (X)
+	($flonum->maybe-exact fl)
+      (unless X
+	(raise
+	 (condition (make-implementation-restriction-violation)
+		    (make-assertion-violation)
+		    (make-who-condition '$flexact)
+		    (make-message-condition "infinity and not-a-number have no exact representation")
+		    (make-irritants-condition (list fl)))))))
 
   (define* ($cflexact x)
     (import (vicare system $compnums))
-    (make-rectangular (or ($flonum->exact ($cflonum-real x)) (%error-no-real-value __who__ x))
-		      (or ($flonum->exact ($cflonum-imag x)) (%error-no-real-value __who__ x))))
+    (make-rectangular ($flexact ($cflonum-real x))
+		      ($flexact ($cflonum-imag x))))
 
   (define (%error-no-real-value who x)
     (procedure-argument-violation who "number has no real value" x))
 
   #| end of module |# )
 
-(module ($flonum->exact)
+(module ($flonum->maybe-exact)
 
-  (define ($flonum->exact x)
+  (define ($flonum->maybe-exact x)
     (let* ((sbe ($flonum-sbe x))
 	   (be  ($fxlogand sbe #x7FF)))
       (cond (($fx= be 2047) ;nans/infs
@@ -620,7 +640,7 @@
 	  (+ (bitwise-arithmetic-shift-left ($fx- 0 ($fxlogor m1 ($fxsll m2 24))) 24)
 	     ($fx- 0 m0))))))
 
-  #| end of module: $flonum->exact |# )
+  #| end of module: $FLONUM->MAYBE-EXACT |# )
 
 
 ;;;; min max
@@ -789,7 +809,7 @@
 (define-fl-operation/two flexpt $flexpt)
 
 (define ($flexpt x y)
-  (let ((y^ ($flonum->exact y)))
+  (let ((y^ ($flexact y)))
     ;;FIXME Performance bottleneck?  (Abdulaziz Ghuloum)
     (cond ((fixnum? y^)
 	   (inexact (expt x y^)))

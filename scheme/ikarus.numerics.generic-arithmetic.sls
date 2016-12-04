@@ -481,7 +481,14 @@
 		bytevector->bignum		bignum->bytevector)
   (vicare system $pairs)
   (vicare system $fx)
-  (vicare system $flonums)
+  (except (vicare system $flonums)
+	  ;;FIXME  This except  is to  be removed  at the  next boot  image rotation.
+	  ;;(Marco Maggi; Sun Dec 4, 2016)
+	  $flexact)
+  ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Sun Dec 4,
+  ;;2016)
+  (only (ikarus numerics flonums)
+	$flexact)
   ;;We have  to import from "(ikarus  numerics flonums)" because that  is the library
   ;;providing the implementation.
   (rename (only (ikarus numerics flonums)
@@ -673,8 +680,8 @@
     ($fl- x))
 
   (define ($neg-ratnum x)
-    (let ((y.num ($ratnum-n x))
-	  (y.den ($ratnum-d x)))
+    (let ((y.num ($ratnum-num x))
+	  (y.den ($ratnum-den x)))
       ($div-number-number ($neg-number y.num)
 			  y.den)))
 
@@ -727,8 +734,8 @@
     (foreign-call "ikrt_fl_invert" x))
 
   (define ($inv-ratnum x)
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x)))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x)))
       (cond (($fx= x.num +1) ;this works also when X.NUM is not a fixnum
 	     x.den)
 	    (($fx= x.num -1) ;this works also when X.NUM is not a fixnum
@@ -957,8 +964,8 @@
     ;; x + ----- = -----------------
     ;;     y.den         y.den
     ;;
-    (let ((y.num ($ratnum-n y))
-	  (y.den ($ratnum-d y)))
+    (let ((y.num ($ratnum-num y))
+	  (y.den ($ratnum-den y)))
       ($make-ratnum ($add-number-number ($mul-fixnum-number x y.den)
 					y.num)
 		    y.den)))
@@ -988,8 +995,8 @@
     ;; x + ----- = -----------------
     ;;     y.den         y.den
     ;;
-    (let ((y.num ($ratnum-n y))
-	  (y.den ($ratnum-d y)))
+    (let ((y.num ($ratnum-num y))
+	  (y.den ($ratnum-den y)))
       ($make-ratnum ($add-number-number ($mul-bignum-number x y.den)
 					y.num)
 		    y.den)))
@@ -1034,8 +1041,8 @@
     ;; ----- + y = -----------------
     ;; x.den            x.den
     ;;
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x)))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x)))
       ($make-ratnum ($add-number-number x.num ($mul-fixnum-number y x.den))
 		    x.den)))
 
@@ -1044,8 +1051,8 @@
     ;; ----- + y = -----------------
     ;; x.den            x.den
     ;;
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x)))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x)))
       ($make-ratnum ($add-number-number x.num ($mul-bignum-number y x.den))
 		    x.den)))
 
@@ -1057,10 +1064,10 @@
     ;; ----- + ----- = -----------------------------
     ;; x.den   y.den          x.den * y.den
     ;;
-    (let ((x.num ($ratnum-n x))
-	  (y.num ($ratnum-n y))
-	  (x.den ($ratnum-d x))
-	  (y.den ($ratnum-d y)))
+    (let ((x.num ($ratnum-num x))
+	  (y.num ($ratnum-num y))
+	  (x.den ($ratnum-den x))
+	  (y.den ($ratnum-den y)))
       ($div-number-number ($add-number-number ($mul-number-number x.num y.den)
 					      ($mul-number-number x.den y.num))
 			  ($mul-number-number x.den y.den))))
@@ -1430,8 +1437,8 @@
     ;; x - ----- = -----------------
     ;;     y.den        y.den
     ;;
-    (let ((y.num ($ratnum-n y))
-	  (y.den ($ratnum-d y)))
+    (let ((y.num ($ratnum-num y))
+	  (y.den ($ratnum-den y)))
       ($div-number-number ($sub-number-number ($mul-fixnum-number x y.den) y.num)
 			  y.den)))
 
@@ -1465,8 +1472,8 @@
     ;; x - ----- = -----------------
     ;;     y.den        y.den
     ;;
-    (let ((y.num ($ratnum-n y))
-	  (y.den ($ratnum-d y)))
+    (let ((y.num ($ratnum-num y))
+	  (y.den ($ratnum-den y)))
       ($div-number-number ($sub-number-number ($mul-bignum-number x y.den) y.num)
 			  y.den)))
 
@@ -1497,8 +1504,8 @@
     ;; x - ----- = -----------------
     ;;     y.den        y.den
     ;;
-    (let ((y.num ($ratnum-n y))
-	  (y.den ($ratnum-d y)))
+    (let ((y.num ($ratnum-num y))
+	  (y.den ($ratnum-den y)))
       ($div-flonum-number ($sub-flonum-number ($mul-flonum-number x y.den) y.num)
 			  y.den)))
 
@@ -1526,8 +1533,8 @@
     ;; ----- - y = -----------------
     ;; x.den            x.den
     ;;
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x)))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x)))
       ($div-number-number ($sub-number-number x.num ($mul-fixnum-number y x.den))
 			  x.den)))
 
@@ -1536,8 +1543,8 @@
     ;; ----- - y = -----------------
     ;; x.den            x.den
     ;;
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x)))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x)))
       ($div-number-number ($sub-number-number x.num ($mul-bignum-number y x.den))
 			  x.den)))
 
@@ -1546,8 +1553,8 @@
     ;; ----- - y = -----------------
     ;; x.den            x.den
     ;;
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x)))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x)))
       ($div-flonum-number ($sub-number-flonum x.num ($mul-flonum-number y x.den))
 			  x.den)))
 
@@ -1556,10 +1563,10 @@
     ;; ----- - ----- = -----------------------------
     ;; x.den   y.den           x.den * y.den
     ;;
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x))
-	  (y.num ($ratnum-n y))
-	  (y.den ($ratnum-d y)))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x))
+	  (y.num ($ratnum-num y))
+	  (y.den ($ratnum-den y)))
       ($div-number-number ($sub-number-number ($mul-number-number x.num y.den)
 					      ($mul-number-number y.num x.den))
 			  ($mul-number-number x.den y.den))))
@@ -1845,8 +1852,8 @@
   (define ($mul-fixnum-ratnum x y)
     (if ($fx= x 1)
 	y
-      ($div-number-number ($mul-fixnum-number x ($ratnum-n y))
-			  ($ratnum-d y))))
+      ($div-number-number ($mul-fixnum-number x ($ratnum-num y))
+			  ($ratnum-den y))))
 
   (define ($mul-fixnum-compnum x y)
     (if ($fx= x 1)
@@ -1872,8 +1879,8 @@
     ($fl* ($bignum->flonum x) y))
 
   (define ($mul-bignum-ratnum x y)
-    ($div-number-number ($mul-bignum-number x ($ratnum-n y))
-			($ratnum-d y)))
+    ($div-number-number ($mul-bignum-number x ($ratnum-num y))
+			($ratnum-den y)))
 
   (define ($mul-bignum-compnum x y)
     ($make-rectangular ($mul-bignum-number x ($compnum-real y))
@@ -1894,8 +1901,8 @@
     ($fl* x ($bignum->flonum y)))
 
   (define ($mul-flonum-ratnum x y)
-    ($div-flonum-number ($mul-flonum-number x ($ratnum-n y))
-			($ratnum-d y)))
+    ($div-flonum-number ($mul-flonum-number x ($ratnum-num y))
+			($ratnum-den y)))
 
   (define ($mul-flonum-flonum x y)
     ($fl* x y))
@@ -1921,8 +1928,8 @@
     ;; ----- * ----- = -------------
     ;; x.den   y.den   x.den * y.den
     ;;
-    ($div-number-number ($mul-number-number ($ratnum-n x) ($ratnum-n y))
-			($mul-number-number ($ratnum-d x) ($ratnum-d y))))
+    ($div-number-number ($mul-number-number ($ratnum-num x) ($ratnum-num y))
+			($mul-number-number ($ratnum-den x) ($ratnum-den y))))
 
   (define ($mul-ratnum-flonum x y)
     ($mul-flonum-ratnum y x))
@@ -2323,8 +2330,8 @@
     ;; x / ----- = x * -----
     ;;     y.den       y.num
     ;;
-    (let ((y.num ($ratnum-n y))
-	  (y.den ($ratnum-d y)))
+    (let ((y.num ($ratnum-num y))
+	  (y.den ($ratnum-den y)))
       ;;The case X = Y.NUM is rare, but we do check the equality because
       ;;it is cheap between fixnums.  EQ? is fine to compare fixnums (it
       ;;generates the same assembly code of $fx=).
@@ -2471,8 +2478,8 @@
     ;; x / ----- = x * -----
     ;;     y.den       y.num
     ;;
-    ($div-number-number ($mul-bignum-number x ($ratnum-d y))
-			($ratnum-n y)))
+    ($div-number-number ($mul-bignum-number x ($ratnum-den y))
+			($ratnum-num y)))
 
   (define ($div-bignum-compnum x y)
     ;;         x                   x           y.rep - i * y.imp
@@ -2529,26 +2536,26 @@
     ;;
     (if ($fx= 1 y)
 	x
-      ($div-number-number ($ratnum-n x)
-			  ($mul-number-fixnum ($ratnum-d x) y))))
+      ($div-number-number ($ratnum-num x)
+			  ($mul-number-fixnum ($ratnum-den x) y))))
 
   (define ($div-ratnum-bignum x y)
     ;; x.num       x.num   1     x.num
     ;; ----- / y = ----- * - = ---------
     ;; x.den       x.den   y   x.den * y
     ;;
-    ($div-number-number ($ratnum-n x)
-			($mul-number-bignum ($ratnum-d x) y)))
+    ($div-number-number ($ratnum-num x)
+			($mul-number-bignum ($ratnum-den x) y)))
 
   (define ($div-ratnum-ratnum x y)
     ;; x.num   y.num   x.num   y.den
     ;; ----- / ----- = ----- * -----
     ;; x.den   y.den   x.den   y.num
     ;;
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x))
-	  (y.num ($ratnum-n y))
-	  (y.den ($ratnum-d y)))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x))
+	  (y.num ($ratnum-num y))
+	  (y.den ($ratnum-den y)))
       (if (and (= x.num y.num)
 	       (= x.den y.den))
 	  1
@@ -2560,8 +2567,8 @@
     ;; ----- / y = ----- * - = ---------
     ;; x.den       x.den   y   x.den * y
     ;;
-    ($div-number-flonum ($ratnum-n x)
-			($mul-number-flonum ($ratnum-d x) y)))
+    ($div-number-flonum ($ratnum-num x)
+			($mul-number-flonum ($ratnum-den x) y)))
 
   (define ($div-ratnum-compnum x y)
     ;; x.num                         x.num          1
@@ -2577,8 +2584,8 @@
     ;; = ----- * ----------------- = ---------------------------------
     ;;   x.den   y.rep^2 + y.imp^2     x.den * (y.rep^2 + y.imp^2)
     ;;
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x))
 	  (y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
       (let ((denom   ($mul-number-number x.den ($add-number-number (square y.rep)
@@ -2602,8 +2609,8 @@
     ;; = ----- * ----------------- = ---------------------------------
     ;;   x.den   y.rep^2 + y.imp^2     x.den * (y.rep^2 + y.imp^2)
     ;;
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x))
 	  (y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
       (let ((denom   ($mul-number-flonum x.den ($fl+ ($flsquare y.rep)
@@ -2698,8 +2705,8 @@
     ;;
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x))
-	  (y.num ($ratnum-n y))
-	  (y.den ($ratnum-d y)))
+	  (y.num ($ratnum-num y))
+	  (y.den ($ratnum-den y)))
       ($make-rectangular ($div-number-number ($mul-number-number x.rep y.den)
 					     y.num)
 			 ($div-number-number ($mul-number-number x.imp y.den)
@@ -2792,8 +2799,8 @@
     ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x))
-	  (y.num ($ratnum-n y))
-	  (y.den ($ratnum-d y)))
+	  (y.num ($ratnum-num y))
+	  (y.den ($ratnum-den y)))
       ($make-cflonum ($div-flonum-number ($mul-flonum-number x.rep y.den)
 					 y.num)
 		     ($div-flonum-number ($mul-flonum-number x.imp y.den)
@@ -2922,7 +2929,7 @@
 	   x
 	 (- x)))
       ((flonum?)
-       (inexact ($gcd-number ($flonum->exact x))))
+       (inexact ($gcd-number ($flexact x))))
       (else
        (%error-not-integer x))))
 
@@ -3036,7 +3043,7 @@
 	       x.abs)))))
 
   (define* ($gcd-fixnum-flonum x y)
-    (let ((y.exact ($flonum->exact y)))
+    (let ((y.exact ($flexact y)))
       (cond-exact-integer-operand y.exact
 	((fixnum?)	(inexact ($gcd-fixnum-fixnum x y.exact)))
 	((bignum?)	(inexact ($gcd-fixnum-bignum x y.exact)))
@@ -3072,7 +3079,7 @@
 	     x.abs))))
 
   (define* ($gcd-bignum-flonum x y)
-    (let ((y.exact ($flonum->exact y)))
+    (let ((y.exact ($flexact y)))
       (cond-exact-integer-operand y.exact
 	((fixnum?)	(inexact ($gcd-bignum-fixnum x y.exact)))
 	((bignum?)	(inexact ($gcd-bignum-bignum x y.exact)))
@@ -3082,7 +3089,7 @@
 ;;; --------------------------------------------------------------------
 
   (define* ($gcd-flonum-fixnum x y)
-    (let ((x.exact ($flonum->exact x)))
+    (let ((x.exact ($flexact x)))
       (cond-exact-integer-operand x.exact
 	((fixnum?)	(inexact ($gcd-fixnum-fixnum x.exact y)))
 	((bignum?)	(inexact ($gcd-bignum-fixnum x.exact y)))
@@ -3090,7 +3097,7 @@
 	 (%error-not-integer x)))))
 
   (define* ($gcd-flonum-bignum x y)
-    (let ((x.exact ($flonum->exact x)))
+    (let ((x.exact ($flexact x)))
       (cond-exact-integer-operand x.exact
 	((fixnum?)	(inexact ($gcd-fixnum-bignum x.exact y)))
 	((bignum?)	(inexact ($gcd-bignum-bignum x.exact y)))
@@ -3098,7 +3105,7 @@
 	 (%error-not-integer x)))))
 
   (define* ($gcd-flonum-flonum x y)
-    (let ((x.exact ($flonum->exact x)))
+    (let ((x.exact ($flexact x)))
       (cond-exact-integer-operand x.exact
 	((fixnum?)	($gcd-fixnum-flonum x.exact y))
 	((bignum?)	($gcd-bignum-flonum x.exact y))
@@ -3166,7 +3173,7 @@
 	   x
 	 (- x)))
       ((flonum?)
-       (inexact ($lcm-number ($flonum->exact x))))
+       (inexact ($lcm-number ($flexact x))))
       (else
        (%error-not-exact-integer x))))
 
@@ -3254,7 +3261,7 @@
 	($least-common-multiple x.abs ($abs-bignum y)))))
 
   (define* ($lcm-fixnum-flonum x y)
-    (let ((y.exact ($flonum->exact y)))
+    (let ((y.exact ($flexact y)))
       (cond-exact-integer-operand y.exact
 	((fixnum?)	(inexact ($lcm-fixnum-fixnum x y.exact)))
 	((bignum?)	(inexact ($lcm-fixnum-bignum x y.exact)))
@@ -3273,7 +3280,7 @@
     ($least-common-multiple ($abs-bignum x) ($abs-bignum y)))
 
   (define* ($lcm-bignum-flonum x y)
-    (let ((y.exact ($flonum->exact y)))
+    (let ((y.exact ($flexact y)))
       (cond-exact-integer-operand y.exact
 	((fixnum?)	(inexact ($lcm-bignum-fixnum x y.exact)))
 	((bignum?)	(inexact ($lcm-bignum-bignum x y.exact)))
@@ -3283,7 +3290,7 @@
 ;;; --------------------------------------------------------------------
 
   (define* ($lcm-flonum-fixnum x y)
-    (let ((x.exact ($flonum->exact x)))
+    (let ((x.exact ($flexact x)))
       (cond-exact-integer-operand x.exact
 	((fixnum?)	(inexact ($lcm-fixnum-fixnum x.exact y)))
 	((bignum?)	(inexact ($lcm-bignum-fixnum x.exact y)))
@@ -3291,7 +3298,7 @@
 	 (%error-not-integer x)))))
 
   (define* ($lcm-flonum-bignum x y)
-    (let ((x.exact ($flonum->exact x)))
+    (let ((x.exact ($flexact x)))
       (cond-exact-integer-operand x.exact
 	((fixnum?)	(inexact ($lcm-fixnum-bignum x.exact y)))
 	((bignum?)	(inexact ($lcm-bignum-bignum x.exact y)))
@@ -3299,7 +3306,7 @@
 	 (%error-not-integer x)))))
 
   (define* ($lcm-flonum-flonum x y)
-    (let ((x.exact ($flonum->exact x)))
+    (let ((x.exact ($flexact x)))
       (cond-exact-integer-operand x.exact
 	((fixnum?)	($lcm-fixnum-flonum x.exact y))
 	((bignum?)	($lcm-bignum-flonum x.exact y))
@@ -3409,7 +3416,7 @@
        (%error-not-integer x))))
 
   (define* ($quotient+remainder-number-flonum x y)
-    (let ((y.exact ($flonum->exact y)))
+    (let ((y.exact ($flexact y)))
       (receive (q r)
 	  (cond-exact-integer-operand y.exact
 	    ((fixnum?)
@@ -3443,7 +3450,7 @@
 
   (define* ($quotient+remainder-fixnum-flonum x y)
     (receive (q r)
-	(let ((y.exact ($flonum->exact y)))
+	(let ((y.exact ($flexact y)))
 	  (cond-exact-integer-operand y.exact
 	    ((fixnum?)	($quotient+remainder-fixnum-fixnum x y.exact))
 	    ((bignum?)	($quotient+remainder-fixnum-bignum x y.exact))
@@ -3474,7 +3481,7 @@
 
   (define* ($quotient+remainder-bignum-flonum x y)
     (receive (q r)
-	(let ((y.exact ($flonum->exact y)))
+	(let ((y.exact ($flexact y)))
 	  (cond-exact-integer-operand y.exact
 	    ((fixnum?)	($quotient+remainder-bignum-fixnum x y.exact))
 	    ((bignum?)	($quotient+remainder-bignum-bignum x y.exact))
@@ -3500,7 +3507,7 @@
 		   -0.0))
 	  (else
 	   (receive (q r)
-	       (let ((x.exact ($flonum->exact x)))
+	       (let ((x.exact ($flexact x)))
 		 (cond-exact-integer-operand x.exact
 		   ((fixnum?)	($quotient+remainder-fixnum-fixnum x.exact y))
 		   ((bignum?)	($quotient+remainder-bignum-fixnum x.exact y))
@@ -3524,7 +3531,7 @@
 		   -0.0))
 	  (else
 	   (receive (q r)
-	       (let ((x.exact ($flonum->exact x)))
+	       (let ((x.exact ($flexact x)))
 		 (cond-exact-integer-operand x.exact
 		   ((fixnum?)	($quotient+remainder-fixnum-bignum x.exact y))
 		   ((bignum?)	($quotient+remainder-bignum-bignum x.exact y))
@@ -3547,7 +3554,7 @@
 	   (values (if ($flpositive? y) -0.0 +0.0)
 		   -0.0))
 	  (else
-	   (let ((x.exact ($flonum->exact x)))
+	   (let ((x.exact ($flexact x)))
 	     (cond-exact-integer-operand x.exact
 	       ((fixnum?)	($quotient+remainder-fixnum-flonum x.exact y))
 	       ((bignum?)	($quotient+remainder-bignum-flonum x.exact y))
@@ -3735,7 +3742,7 @@
        (%error-not-integer n))))
 
   (define* ($modulo-number-flonum n m)
-    (let ((m.exact ($flonum->exact m)))
+    (let ((m.exact ($flexact m)))
       (cond-exact-integer-operand m.exact
 	((fixnum?)	(inexact ($modulo-number-fixnum n m.exact)))
 	((bignum?)	(inexact ($modulo-number-bignum n m.exact)))
@@ -3769,7 +3776,7 @@
 	     (foreign-call "ikrt_fxbnplus" n m)))))
 
   (define* ($modulo-fixnum-flonum n m)
-    (let* ((v ($flonum->exact m))
+    (let* ((v ($flexact m))
 	   (R (cond-exact-integer-operand v
 		((fixnum?)	(inexact ($modulo-fixnum-fixnum n v)))
 		((bignum?)	(inexact ($modulo-fixnum-bignum n v)))
@@ -3815,7 +3822,7 @@
 	     rem))))					;;;both negative
 
   (define* ($modulo-bignum-flonum n m)
-    (let* ((m.exact ($flonum->exact m))
+    (let* ((m.exact ($flexact m))
 	   (R       (cond-exact-integer-operand m.exact
 		      ((fixnum?)	(inexact ($modulo-bignum-fixnum n m.exact)))
 		      ((bignum?)	(inexact ($modulo-bignum-bignum n m.exact)))
@@ -3832,7 +3839,7 @@
 ;;; --------------------------------------------------------------------
 
   (define* ($modulo-flonum-fixnum n m)
-    (let* ((n.exact ($flonum->exact n))
+    (let* ((n.exact ($flexact n))
 	   (R       (cond-exact-integer-operand n.exact
 		      ((fixnum?)	(inexact ($modulo-fixnum-fixnum n.exact m)))
 		      ((bignum?)	(inexact ($modulo-bignum-fixnum n.exact m)))
@@ -3846,7 +3853,7 @@
 	(inexact R))))
 
   (define* ($modulo-flonum-bignum n m)
-    (let ((n.exact ($flonum->exact n)))
+    (let ((n.exact ($flexact n)))
       (cond-exact-integer-operand n.exact
 	((fixnum?)	(inexact ($modulo-fixnum-bignum n.exact m)))
 	((bignum?)	(inexact ($modulo-bignum-bignum n.exact m)))
@@ -3854,7 +3861,7 @@
 	 (%error-not-integer n)))))
 
   (define* ($modulo-flonum-flonum n m)
-    (let ((n.exact ($flonum->exact n)))
+    (let ((n.exact ($flexact n)))
       (cond-exact-integer-operand n.exact
 	((fixnum?)	($modulo-fixnum-flonum n.exact m))
 	((bignum?)	($modulo-bignum-flonum n.exact m))
@@ -3886,8 +3893,8 @@
     ($mul-bignum-bignum x x))
 
   (define ($square-ratnum x)
-    ($div-number-number (square ($ratnum-n x))
-			(square ($ratnum-d x))))
+    ($div-number-number (square ($ratnum-num x))
+			(square ($ratnum-den x))))
 
   (define ($square-compnum x)
     ;; (x.rep + i * x.imp) * (x.rep + i * x.imp)
@@ -3939,8 +3946,8 @@
     ($mul-bignum-bignum x ($square-bignum x)))
 
   (define ($cube-ratnum x)
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x)))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x)))
       (let ((x.num^3 (if (fixnum? x.num) ($cube-fixnum x.num) ($cube-bignum x.num)))
 	    (x.den^3 (if (fixnum? x.den) ($cube-fixnum x.den) ($cube-bignum x.den))))
 	(if (fixnum? x.num^3)
@@ -4433,8 +4440,8 @@
     (define ($expt-ratnum-positive-fixnum n m)
       ;;N is a ratnum, M is a positive fixnum.
       ;;
-      ($make-ratnum ($expt-number-positive-fixnum ($ratnum-n n) m)
-		    ($expt-number-positive-fixnum ($ratnum-d n) m)))
+      ($make-ratnum ($expt-number-positive-fixnum ($ratnum-num n) m)
+		    ($expt-number-positive-fixnum ($ratnum-den n) m)))
 
     (define ($expt-compnum-positive-fixnum n m)
       ;;N is a compnum, M is a positive fixnum.
@@ -4688,7 +4695,7 @@
 
     (define* ($expt-fixnum-ratnum n m)
       (cond (($fxzero? n)
-	     (if (positive? ($ratnum-n m))
+	     (if (positive? ($ratnum-num m))
 		 0
 	       (procedure-arguments-consistency-violation __who__ "division by zero" n m)))
 	    (($fx= n 1)
@@ -4945,8 +4952,8 @@
       ($make-compnum 0 ($sqrt-bignum ($neg-bignum x)))))
 
   (define ($sqrt-ratnum x)
-    (/ (sqrt ($ratnum-n x))
-       (sqrt ($ratnum-d x))))
+    (/ (sqrt ($ratnum-num x))
+       (sqrt ($ratnum-den x))))
 
   (define ($sqrt-compnum Z)
     ;;The function:
@@ -5536,7 +5543,7 @@
 	   -1.0)))
 
   (define ($sign-ratnum x)
-    (sign ($ratnum-n x)))
+    (sign ($ratnum-num x)))
 
   #| end of module: sign |# )
 
@@ -5576,8 +5583,8 @@
       x))
 
   (define ($abs-ratnum x)
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x)))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x)))
       (if (fixnum? x.num)
 	  (if ($fxpositive? x.num)
 	      x
@@ -5627,7 +5634,7 @@
     x)
 
   (define ($exact-flonum x)
-    (or ($flonum->exact x)
+    (or ($flexact x)
 	(%error-no-real-value '$exact-flonum x)))
 
   (define ($exact-ratnum x)
@@ -5638,8 +5645,8 @@
 		      ($exact ($compnum-imag x) __who__)))
 
   (define* ($exact-cflonum x)
-    (make-rectangular (or ($flonum->exact ($cflonum-real x)) (%error-no-real-value __who__ x))
-		      (or ($flonum->exact ($cflonum-imag x)) (%error-no-real-value __who__ x))))
+    (make-rectangular (or ($flexact ($cflonum-real x)) (%error-no-real-value __who__ x))
+		      (or ($flexact ($cflonum-imag x)) (%error-no-real-value __who__ x))))
 
   (define (%error-no-real-value who x)
     (assertion-violation who "number has no real value" x))
@@ -5839,9 +5846,9 @@
     #| end of module: bignum->string |# )
 
   (define (ratnum->string x r)
-    (string-append ($number->string ($ratnum-n x) r)
+    (string-append ($number->string ($ratnum-num x) r)
 		   "/"
-		   ($number->string ($ratnum-d x) r)))
+		   ($number->string ($ratnum-den x) r)))
 
 ;;; --------------------------------------------------------------------
 
@@ -6531,8 +6538,8 @@
   ;; x < -----   <=>   x * y.den < y.num
   ;;     y.den
   ;;
-  (< (* x ($ratnum-d y))
-     ($ratnum-n y)))
+  (< (* x ($ratnum-den y))
+     ($ratnum-num y)))
 
 (define (fxrt< x y)
   ;;Comparison: fixnum < ratnum.
@@ -6541,8 +6548,8 @@
   ;; x < -----   <=>   x * y.den < y.num
   ;;     y.den
   ;;
-  (< ($mul-fixnum-number x ($ratnum-d y))
-     ($ratnum-n y)))
+  (< ($mul-fixnum-number x ($ratnum-den y))
+     ($ratnum-num y)))
 
 (define (bnrt< x y)
   ;;Comparison: bignum < ratnum.
@@ -6551,8 +6558,8 @@
   ;; x < -----   <=>   x * y.den < y.num
   ;;     y.den
   ;;
-  (< ($mul-bignum-number x ($ratnum-d y))
-     ($ratnum-n y)))
+  (< ($mul-bignum-number x ($ratnum-den y))
+     ($ratnum-num y)))
 
 ;;; --------------------------------------------------------------------
 
@@ -6563,8 +6570,8 @@
   ;; ----- < y   <=>   x.num < y * x.den
   ;; x.den
   ;;
-  (< ($ratnum-n x)
-     (* y ($ratnum-d x))))
+  (< ($ratnum-num x)
+     (* y ($ratnum-den x))))
 
 (define (rtfx< x y)
   ;;Comparison: ratnum < fixnum.
@@ -6573,8 +6580,8 @@
   ;; ----- < y   <=>   x.num < y * x.den
   ;; x.den
   ;;
-  (< ($ratnum-n x)
-     ($mul-fixnum-number y ($ratnum-d x))))
+  (< ($ratnum-num x)
+     ($mul-fixnum-number y ($ratnum-den x))))
 
 (define (rtbn< x y)
   ;;Comparison: ratnum < bignum.
@@ -6583,8 +6590,8 @@
   ;; ----- < y   <=>   x.num < y * x.den
   ;; x.den
   ;;
-  (< ($ratnum-n x)
-     ($mul-bignum-number y ($ratnum-d x))))
+  (< ($ratnum-num x)
+     ($mul-bignum-number y ($ratnum-den x))))
 
 ;;; --------------------------------------------------------------------
 
@@ -6595,8 +6602,8 @@
   ;; x > -----   <=>   x * y.den > y.num
   ;;     y.den
   ;;
-  (> (* x ($ratnum-d y))
-     ($ratnum-n y)))
+  (> (* x ($ratnum-den y))
+     ($ratnum-num y)))
 
 (define (fxrt> x y)
   ;;Comparison: fixnum > ratnum.
@@ -6605,8 +6612,8 @@
   ;; x > -----   <=>   x * y.den > y.num
   ;;     y.den
   ;;
-  (> ($mul-fixnum-number x ($ratnum-d y))
-     ($ratnum-n y)))
+  (> ($mul-fixnum-number x ($ratnum-den y))
+     ($ratnum-num y)))
 
 (define (bnrt> x y)
   ;;Comparison: bignum > ratnum.
@@ -6615,8 +6622,8 @@
   ;; x > -----   <=>   x * y.den > y.num
   ;;     y.den
   ;;
-  (> ($mul-bignum-number x ($ratnum-d y))
-     ($ratnum-n y)))
+  (> ($mul-bignum-number x ($ratnum-den y))
+     ($ratnum-num y)))
 
 ;;; --------------------------------------------------------------------
 
@@ -6627,8 +6634,8 @@
   ;; ----- > y   <=>   x.num > y * x.den
   ;; x.den
   ;;
-  (> ($ratnum-n x)
-     (* y ($ratnum-d x))))
+  (> ($ratnum-num x)
+     (* y ($ratnum-den x))))
 
 (define (rtfx> x y)
   ;;Comparison: ratnum > fixnum.
@@ -6637,8 +6644,8 @@
   ;; ----- > y   <=>   x.num > y * x.den
   ;; x.den
   ;;
-  (> ($ratnum-n x)
-     ($mul-fixnum-number y ($ratnum-d x))))
+  (> ($ratnum-num x)
+     ($mul-fixnum-number y ($ratnum-den x))))
 
 (define (rtbn> x y)
   ;;Comparison: ratnum > bignum.
@@ -6647,16 +6654,16 @@
   ;; ----- > y   <=>   x.num > y * x.den
   ;; x.den
   ;;
-  (> ($ratnum-n x)
-     ($mul-bignum-number y ($ratnum-d x))))
+  (> ($ratnum-num x)
+     ($mul-bignum-number y ($ratnum-den x))))
 
 ;;; --------------------------------------------------------------------
 
 (define (rtrt= x y)
   ;;Comparison: ratnum = ratnum.
   ;;
-  (and (= ($ratnum-n x) ($ratnum-n y))
-       (= ($ratnum-d x) ($ratnum-d y))))
+  (and (= ($ratnum-num x) ($ratnum-num y))
+       (= ($ratnum-den x) ($ratnum-den y))))
 
 (define (rtrt< x y)
   ;;Comparison: ratnum < ratnum.
@@ -6665,8 +6672,8 @@
   ;; ----- < -----   <=>   x.num * y.den < y.num * x.den
   ;; x.den   y.den
   ;;
-  (< (* ($ratnum-n x) ($ratnum-d y))
-     (* ($ratnum-n y) ($ratnum-d x))))
+  (< (* ($ratnum-num x) ($ratnum-den y))
+     (* ($ratnum-num y) ($ratnum-den x))))
 
 (define (rtrt<= x y)
   ;;Comparison: ratnum <= ratnum.
@@ -6675,8 +6682,8 @@
   ;; ----- <= -----   <=>   x.num * y.den <= y.num * x.den
   ;; x.den    y.den
   ;;
-  (<= (* ($ratnum-n x) ($ratnum-d y))
-      (* ($ratnum-n y) ($ratnum-d x))))
+  (<= (* ($ratnum-num x) ($ratnum-den y))
+      (* ($ratnum-num y) ($ratnum-den x))))
 
 (define (rtrt> x y)
   ;;Comparison: ratnum > ratnum.
@@ -6685,8 +6692,8 @@
   ;; ----- > -----   <=>   x.num * y.den > y.num * x.den
   ;; x.den   y.den
   ;;
-  (> (* ($ratnum-n x) ($ratnum-d y))
-     (* ($ratnum-n y) ($ratnum-d x))))
+  (> (* ($ratnum-num x) ($ratnum-den y))
+     (* ($ratnum-num y) ($ratnum-den x))))
 
 (define (rtrt>= x y)
   ;;Comparison: ratnum >= ratnum.
@@ -6695,8 +6702,8 @@
   ;; ----- >= -----   <=>   x.num * y.den >= y.num * x.den
   ;; x.den    y.den
   ;;
-  (>= (* ($ratnum-n x) ($ratnum-d y))
-      (* ($ratnum-n y) ($ratnum-d x))))
+  (>= (* ($ratnum-num x) ($ratnum-den y))
+      (* ($ratnum-num y) ($ratnum-den x))))
 
 
 ;;;; generic numbers sign predicates
@@ -6721,7 +6728,7 @@
     ((bignum?)	($bignum-positive? x))
     ((flonum?)	($flpositive? x))
     ;;The denominator of a ratnum is always strictly positive.
-    ((ratnum?)	(positive? ($ratnum-n x)))
+    ((ratnum?)	(positive? ($ratnum-num x)))
     (else
      (procedure-argument-violation __who__ "expected real number as argument" x))))
 
@@ -6730,7 +6737,7 @@
     ((fixnum?)	($fxnegative? x))
     ((bignum?)	($bignum-negative? x))
     ;;The denominator of a ratnum is always strictly positive.
-    ((ratnum?)	(negative? ($ratnum-n x)))
+    ((ratnum?)	(negative? ($ratnum-num x)))
     ((flonum?)	($flnegative? x))
     (else
      (procedure-argument-violation __who__ "expected real number as argument" x))))
@@ -6845,8 +6852,8 @@
       ($make-rectangular (log ($neg-bignum x)) greek-pi)))
 
   (define ($log-ratnum x)
-    ($sub-number-number (log ($ratnum-n x))
-			(log ($ratnum-d x))))
+    ($sub-number-number (log ($ratnum-num x))
+			(log ($ratnum-den x))))
 
   (define ($log-flonum x)
     (cond ((nan? x)
@@ -7973,7 +7980,7 @@
     (cond-real-numeric-operand x
       ((fixnum?)	x)
       ((bignum?)	x)
-      ((ratnum?)	($ratnum-n x))
+      ((ratnum?)	($ratnum-num x))
       ((flonum?)	($flnumerator x))
       (else
        (%error-not-real-number x))))
@@ -8004,7 +8011,7 @@
     (cond-real-numeric-operand x
       ((fixnum?)	1)
       ((bignum?)	1)
-      ((ratnum?)	($ratnum-d x))
+      ((ratnum?)	($ratnum-den x))
       ((flonum?)	($fldenominator x))
       (else
        (%error-not-real-number x))))
@@ -8048,18 +8055,23 @@
     x)
 
   (define ($floor-ratnum x)
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x)))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x)))
       (let ((q (quotient x.num x.den)))
 	(if (>= x.num 0)
 	    q
 	  (sub1 q)))))
 
   (define ($floor-flonum x)
-    (let ((e ($flonum->exact x)))
-      (if (ratnum? e)
-	  (inexact ($floor-ratnum e))
-	x)))
+    (cond (($flnan? x)
+	   x)
+	  (($flinfinite? x)
+	   x)
+	  (else
+	   (let ((e ($flexact x)))
+	     (if (ratnum? e)
+		 (inexact ($floor-ratnum e))
+	       x)))))
 
   #| end of module |# )
 
@@ -8088,18 +8100,23 @@
     x)
 
   (define ($ceiling-ratnum x)
-    (let* ((x.num ($ratnum-n x))
-	   (x.den ($ratnum-d x))
+    (let* ((x.num ($ratnum-num x))
+	   (x.den ($ratnum-den x))
 	   (q     (quotient x.num x.den)))
       (if (negative? x.num)
 	  q
 	(add1 q))))
 
   (define ($ceiling-flonum x)
-    (let ((e ($flonum->exact x)))
-      (if (ratnum? e)
-	  (inexact ($ceiling-ratnum e))
-	x)))
+    (cond (($flnan? x)
+	   x)
+	  (($flinfinite? x)
+	   x)
+	  (else
+	   (let ((e ($flexact x)))
+	     (if (ratnum? e)
+		 (inexact ($ceiling-ratnum e))
+	       x)))))
 
   #| end of module |# )
 
@@ -8131,8 +8148,8 @@
   (define $round-flonum $flround)
 
   (define ($round-ratnum x)
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x)))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x)))
       (receive (q r)
 	  (div-and-mod x.num x.den)
 	(let ((r2 (+ r r)))
@@ -8172,12 +8189,12 @@
     x)
 
   (define ($truncate-ratnum x)
-    (let ((x.num ($ratnum-n x))
-	  (x.den ($ratnum-d x)))
+    (let ((x.num ($ratnum-num x))
+	  (x.den ($ratnum-den x)))
       (quotient x.num x.den)))
 
   (define ($truncate-flonum x)
-    (let ((e ($flonum->exact x)))
+    (let ((e ($flexact x)))
       (if (ratnum? e)
 	  (inexact ($truncate-ratnum e))
 	x)))
@@ -8544,13 +8561,13 @@
 (module (bitwise-arithmetic-shift-left sll)
 
   (define* (sll integer offset)
-    (%shift-left-logical integer offset 'sll))
+    (%shift-left-logical integer offset))
 
   (define* (bitwise-arithmetic-shift-left integer offset)
-    (%shift-left-logical integer offset 'bitwise-arithmetic-shift-left))
+    (%shift-left-logical integer offset))
 
-  (define (%shift-left-logical integer offset who)
-    (with-who who
+  (define (%shift-left-logical integer offset)
+    (with-who bitwise-arithmetic-shift-left
       (unless (fixnum? offset)
 	(raise
 	 (condition (make-implementation-restriction-violation)

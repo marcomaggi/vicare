@@ -154,8 +154,8 @@
     (if ($bignum-positive? Z) 0 greek-pi))
 
   (define ($angle-ratnum Z)
-    (let ((n ($ratnum-n Z)))
-      (if (> n 0) 0 greek-pi)))
+    (let ((n ($ratnum-num Z)))
+      (if (positive? n) 0 greek-pi)))
 
   (define ($angle-flonum Z)
     (if (or ($flpositive?      Z)

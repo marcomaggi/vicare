@@ -1117,8 +1117,8 @@
   ($fixnum-hash rn))
 
 (define ($ratnum-hash rn)
-  (fxxor ($exact-integer-hash ($ratnum-n rn))
-	 ($exact-integer-hash ($ratnum-d rn))))
+  (fxxor ($exact-integer-hash ($ratnum-num rn))
+	 ($exact-integer-hash ($ratnum-den rn))))
 
 ;;; --------------------------------------------------------------------
 

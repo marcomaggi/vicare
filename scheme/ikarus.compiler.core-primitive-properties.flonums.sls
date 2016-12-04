@@ -319,7 +319,14 @@
    (attributes
     (()				effect-free result-true)))
 
- (declare-core-primitive $flonum->exact
+ (declare-core-primitive $flonum->maybe-exact
+     (unsafe)
+   (signatures
+    ((T:flonum)			=> ((or T:false T:exact-real))))
+   (attributes
+    ((_)			foldable effect-free result-true)))
+
+ (declare-core-primitive $flexact
      (unsafe)
    (signatures
     ((T:flonum)			=> (T:exact-real)))

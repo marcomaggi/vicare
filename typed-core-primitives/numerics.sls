@@ -322,7 +322,6 @@
 (declare-core-primitive nan?
     (safe)
   (signatures
-   ;; ((<flonum-nan>)		=> (<false>))
    ;; ((<flonum-infinite>)		=> (<false>))
    ;; ((<flonum-nan>)		=> (<true>))
    ((<fixnum>)			=> (<false>))
@@ -868,8 +867,7 @@
    ((<compnum>)		=> (<exact-compnum>))
    ((<cflonum>)		=> (<exact-compnum>))
    ((<real>)		=> (<exact-integer>))
-   #;((<number>)	=> (<exact>))
-   ((<number>)		=> (<number>)))
+   ((<number>)		=> (<exact>)))
   (attributes
    ((_)			foldable effect-free result-true))
   (replacements
@@ -885,7 +883,7 @@
    ((<compnum>)		=> (<cflonum>))
    ((<cflonum>)		=> (<cflonum>))
    ((<real>)		=> (<flonum>))
-   #;((<number>)	=> (<inexact>))
+   ((<number>)		=> (<inexact>))
    ((<number>)		=> (<number>)))
   (attributes
    ((_)			foldable effect-free result-true))
@@ -902,7 +900,7 @@
    ((<compnum>)		=> (<exact-compnum>))
    ((<cflonum>)		=> (<exact-compnum>))
    ((<real>)		=> (<exact-integer>))
-   #;((<number>)	=> (<exact>))
+   ((<number>)		=> (<exact>))
    ((<number>)		=> (<number>)))
   (attributes
    ((_)			foldable effect-free result-true))
@@ -919,7 +917,7 @@
    ((<compnum>)		=> (<cflonum>))
    ((<cflonum>)		=> (<cflonum>))
    ((<real>)		=> (<flonum>))
-   #;((<number>)	=> (<inexact>))
+   ((<number>)		=> (<inexact>))
    ((<number>)		=> (<number>)))
   (attributes
    ((_)			foldable effect-free result-true))
@@ -935,7 +933,7 @@
    ((<fixnum>)			=> (<fixnum>))
    ((<bignum>)			=> (<bignum>))
    ((<flonum>)			=> (<flonum>))
-   ((<ratnum>)			=> (<exact-integer>))
+   ((<ratnum>)			=> (<non-zero-exact-integer>))
    ((<real>)			=> (<real>)))
   (attributes
    ((_)				foldable effect-free result-true))
@@ -947,7 +945,7 @@
    ((<fixnum>)			=> (<fixnum>))
    ((<bignum>)			=> (<bignum>))
    ((<flonum>)			=> (<flonum>))
-   ((<ratnum>)			=> (<exact-integer>))
+   ((<ratnum>)			=> (<positive-exact-integer>))
    ((<real>)			=> (<real>)))
   (attributes
    ((_)				foldable effect-free result-true))
@@ -1928,7 +1926,7 @@
 (declare-core-primitive $numerator-ratnum
     (safe)
   (signatures
-   ((<ratnum>)			=> (<exact-integer>)))
+   ((<ratnum>)			=> (<non-zero-exact-integer>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
@@ -1958,7 +1956,7 @@
 (declare-core-primitive $denominator-ratnum
     (safe)
   (signatures
-   ((<ratnum>)			=> (<exact-integer>)))
+   ((<ratnum>)			=> (<positive-exact-integer>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 

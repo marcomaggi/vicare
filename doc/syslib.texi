@@ -847,8 +847,16 @@ Implement the number--theoretic integer divisions.
 @subsection Exactness and conversion
 
 
-@deffn {Unsafe Operation} $flonum->exact @var{fl}
-Rationalize the operand and return the result.
+@deffn {Unsafe Operation} $flonum->maybe-exact @var{fl}
+Rationalize the operand and return the result.  If @var{fl} has an acceptable exact representation:
+return such representation; otherwise return @false{}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flexact @var{fl}
+Rationalize the operand and return the result.  If @var{fl} has an acceptable exact representation
+(it is finite): return such representation; otherwise raise a
+@condition{&implementation-restriction} exception.
 @end deffn
 
 
@@ -1177,14 +1185,12 @@ invalid:
 @end deffn
 
 
-@deffn {Unsafe Operation} $ratnum-n @var{rat}
-@deffnx {Unsafe Operation} $ratnum-num @var{rat}
+@deffn {Unsafe Operation} $ratnum-num @var{rat}
 Return the reference to the numerator.
 @end deffn
 
 
-@deffn {Unsafe Operation} $ratnum-d @var{rat}
-@deffnx {Unsafe Operation} $ratnum-den @var{rat}
+@deffn {Unsafe Operation} $ratnum-den @var{rat}
 Return the reference to the denominator.
 @end deffn
 

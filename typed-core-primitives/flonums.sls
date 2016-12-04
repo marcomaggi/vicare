@@ -459,19 +459,26 @@
 (section
 
 (declare-core-primitive $make-flonum
-  (unsafe)
+    (unsafe)
   (signatures
    (()				=> (<flonum>)))
   ;;Not foldable because $MAKE-FLONUM must return a new flonum every time.
   (attributes
    (()				effect-free result-true)))
 
- (declare-core-primitive $flonum->exact
-   (unsafe)
-   (signatures
-    ((<flonum>)			=> (<exact-rational>)))
-   (attributes
-    ((_)			foldable effect-free result-true)))
+(declare-core-primitive $flonum->maybe-exact
+    (unsafe)
+  (signatures
+   ((<flonum>)			=> ((or <false> <exact-rational>))))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive $flexact
+    (unsafe)
+  (signatures
+   ((<flonum>)			=> (<exact-rational>)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; predicates

@@ -1811,12 +1811,11 @@ procedures are idempotent.
 
 
 @deffn Procedure inexact @var{z}
-The @func{inexact} procedure returns an inexact representation of
-@var{z}.  If inexact number objects of the appropriate type have bounded
-precision, then the value returned is an inexact number object that is
-nearest to the argument.  If an exact argument has no reasonably close
-inexact equivalent, an exception with condition type
-@condition{implementation-violation} may be raised.
+The @func{inexact} procedure returns an inexact representation of @var{z}.  If inexact number
+objects of the appropriate type have bounded precision, then the value returned is an inexact number
+object that is nearest to the argument.  If an exact argument has no reasonably close inexact
+equivalent, an exception with condition type @condition{implementation-restriction-violation} may be
+raised.
 
 @quotation
 @strong{NOTE} For a real number object whose magnitude is finite but so
@@ -1829,12 +1828,11 @@ number object whose components are finite may have infinite components.
 
 
 @deffn Procedure exact @var{z}
-The @func{exact} procedure returns an exact representation of @var{z}.
-The value returned is the exact number object that is numerically
-closest to the argument; in most cases, the result of this procedure
-should be numerically equal to its argument.  If an inexact argument has
-no reasonably close exact equivalent, an exception with condition type
-@condition{implementation-violation} may be raised.
+The @func{exact} procedure returns an exact representation of @var{z}.  The value returned is the
+exact number object that is numerically closest to the argument; in most cases, the result of this
+procedure should be numerically equal to its argument.  If an inexact argument has no reasonably
+close exact equivalent, an exception with condition type
+@condition{implementation-restriction-violation} may be raised.
 @end deffn
 
 

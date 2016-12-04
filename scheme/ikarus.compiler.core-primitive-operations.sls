@@ -3216,18 +3216,9 @@
    ((E str)
     (nop)))
 
-
- (define-core-primitive-operation $ratnum-n unsafe
-   ((V x)
-    (asm 'mref (V-simple-operand x) (K off-ratnum-num))))
-
  (define-core-primitive-operation $ratnum-num unsafe
    ((V x)
     (asm 'mref (V-simple-operand x) (K off-ratnum-num))))
-
- (define-core-primitive-operation $ratnum-d unsafe
-   ((V x)
-    (asm 'mref (V-simple-operand x) (K off-ratnum-den))))
 
  (define-core-primitive-operation $ratnum-den unsafe
    ((V x)

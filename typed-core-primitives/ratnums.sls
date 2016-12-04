@@ -87,31 +87,17 @@
 ;;; --------------------------------------------------------------------
 ;;; accessors
 
-(declare-core-primitive $ratnum-n
-    (unsafe)
-  (signatures
-   ((<ratnum>)					=> (<exact-integer>)))
-  (attributes
-   ((_)						foldable effect-free result-true)))
-
-(declare-core-primitive $ratnum-d
-    (unsafe)
-  (signatures
-   ((<ratnum>)					=> (<exact-integer>)))
-  (attributes
-   ((_)						foldable effect-free result-true)))
-
 (declare-core-primitive $ratnum-num
     (unsafe)
   (signatures
-   ((<ratnum>)					=> (<exact-integer>)))
+   ((<ratnum>)					=> (<non-zero-exact-integer>)))
   (attributes
    ((_)						foldable effect-free result-true)))
 
 (declare-core-primitive $ratnum-den
     (unsafe)
   (signatures
-   ((<ratnum>)					=> (<exact-integer>)))
+   ((<ratnum>)					=> (<positive-exact-integer>)))
   (attributes
    ((_)						foldable effect-free result-true)))
 
