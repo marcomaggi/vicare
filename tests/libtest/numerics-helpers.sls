@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -1090,8 +1090,8 @@
   (cond ((and (cflonum? x)
 	      (cflonum? y))
 	 (cflonum-quasi=? x y))
-	((or (flonum? x)
-	     (flonum? y))
+	((and (flonum? x)
+	      (flonum? y))
 	 (flonum-quasi=? (inexact x) (inexact y)))
 	((and (compnum? x)
 	      (compnum? y))

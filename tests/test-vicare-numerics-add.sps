@@ -32,6 +32,8 @@
   (vicare system $compnums)
   (vicare system $numerics)
   (vicare language-extensions syntaxes)
+  (only (vicare platform words)
+	case-word-size)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -633,9 +635,16 @@
 ;;; --------------------------------------------------------------------
 
   (let-syntax ((test (make-test + $add-ratnum-fixnum)))
-    (test 1/2 GREATEST-FX-64-bit 2305843009213693951/2)
-    (test 1/2 LEAST-FX-64-bit -2305843009213693951/2)
-    #f)
+    (test 1/2 GREATEST-FX-32-bit 1073741823/2)
+    (test 1/2 LEAST-FX-32-bit -1073741823/2))
+
+  (case-word-size
+   ((32)
+    (void))
+   ((64)
+    (let-syntax ((test (make-test + $add-ratnum-fixnum)))
+      (test 1/2 GREATEST-FX-64-bit 2305843009213693951/2)
+      (test 1/2 LEAST-FX-64-bit -2305843009213693951/2))))
 
   (let-syntax ((test (make-test + $add-ratnum-bignum)))
     (test 1/2 VBN1 2305843009213693953/2)

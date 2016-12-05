@@ -90,7 +90,8 @@
     (test (greatest-fixnum)	+greek-pi/2)
     (test (least-fixnum)	-greek-pi/2))
    ((64)
-    (void)))
+    (test (greatest-fixnum)	+greek-pi/2)
+    (test (least-fixnum)	-greek-pi/2)))
 
   #t)
 
@@ -105,14 +106,22 @@
 	 (check ($atan-bignum ?op)	(=> inexact=?) ?expected)))))
 
 
-  (case-word-size
-   ((32)
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (let-syntax ((test (syntax-rules ()
+		       ((_ ?op ?expected)
+			(check (atan ?op)		(=> inexact=?) ?expected)))))
     (test BN1 1.5707963249322514)
     (test BN2 1.5707963249322514)
     (test BN3 -1.5707963249322514)
-    (test BN4 -1.5707963249322514))
-   ((64)
-    (void)))
+    (test BN4 -1.5707963249322514)
+    #| end of LET-SYNTAX |# )
+
+  (test VBN1 1.5707963249322514)
+  (test VBN2 1.5707963249322514)
+  (test VBN3 -1.5707963249322514)
+  (test VBN4 -1.5707963249322514)
 
   #t)
 
@@ -156,18 +165,14 @@
   (test RN35 0.7853981643287709)
   (test RN36 0.7853982565296971)
 
-  (case-word-size
-   ((32)
-    (test (/ BN1 123) 1.5707960976895436)
-    (test (/ BN2 123) 1.5707960976895474)
-    (test (/ BN3 123) -1.570796097689544)
-    (test (/ BN4 123) -1.5707960976895479)
-    (test (/ 123 BN1) 2.2910535292866174e-7)
-    (test (/ 123 BN2) 2.2910534908798405e-7)
-    (test (/ 123 BN3) -2.2910535250191977e-7)
-    (test (/ 123 BN4) -2.291053486612421e-7))
-   ((64)
-    (void)))
+  (test (/ BN1 123) 1.5707960976895436)
+  (test (/ BN2 123) 1.5707960976895474)
+  (test (/ BN3 123) -1.570796097689544)
+  (test (/ BN4 123) -1.5707960976895479)
+  (test (/ 123 BN1) 2.2910535292866174e-7)
+  (test (/ 123 BN2) 2.2910534908798405e-7)
+  (test (/ 123 BN3) -2.2910535250191977e-7)
+  (test (/ 123 BN4) -2.291053486612421e-7)
 
   #t)
 
