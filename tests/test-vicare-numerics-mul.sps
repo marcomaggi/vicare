@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -63,7 +63,10 @@
     (test FX4 FX4 288230376151711744)
     #f)
 
-  (let-syntax ((test (make-test * #;$mul-fixnum-bignum)))
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (let-syntax ((test (make-test *)))
     (test FX1 BN1 536870912)
     (test FX2 BN1 -536870912)
     (test FX3 BN1 288230375614840832)
@@ -82,7 +85,7 @@
     (test FX4 BN4 288230429838802944)
     #f)
 
-  (let-syntax ((test (make-test * #;$mul-fixnum-ratnum)))
+  (let-syntax ((test (make-test * $mul-fixnum-ratnum)))
     (test FX1 RN01 1/123)
     (test FX2 RN01 -1/123)
     (test FX3 RN01 536870911/123)
@@ -163,7 +166,7 @@
     (test FX1 CFL16 +nan.0-1.2i)
     #f)
 
-  (let-syntax ((test (make-test * #;$mul-fixnum-compnum)))
+  (let-syntax ((test (make-test * $mul-fixnum-compnum)))
     (test 1 10+20i 10+20i)
     (test 1 1+20.0i 1+20.0i)
     (test 1 10.0+2i 10.0+2i)
@@ -223,7 +226,10 @@
 
 (parametrise ((check-test-name	'bignums))
 
-  (let-syntax ((test (make-test * #;$mul-bignum-fixnum)))
+;;Remember that BN1, BN2, BN3, BN4 are  bignums on a 32-bit platform, but are fixnums
+;;on a 64-bit platform!!!
+
+  (let-syntax ((test (make-test *)))
     (test BN1 FX1 536870912)
     (test BN2 FX1 536871011)
     (test BN3 FX1 -536870913)
@@ -242,7 +248,7 @@
     (test BN4 FX4 288230429838802944)
     #f)
 
-  (let-syntax ((test (make-test * #;$mul-bignum-bignum)))
+  (let-syntax ((test (make-test *)))
     (test BN1 BN1 288230376151711744)
     (test BN2 BN1 288230429301932032)
     (test BN3 BN1 -288230376688582656)
@@ -261,7 +267,7 @@
     (test BN4 BN4 288230483525904144)
     #f)
 
-  (let-syntax ((test (make-test * #;$mul-bignum-ratnum)))
+  (let-syntax ((test (make-test *)))
     (test BN1 RN01 536870912/123)
     (test BN2 RN01 536871011/123)
     (test BN3 RN01 -178956971/41)
@@ -280,7 +286,7 @@
     (test BN4 RN04 96076809946267648/41)
     #f)
 
-  (let-syntax ((test (make-flonum-test * #;$mul-bignum-flonum)))
+  (let-syntax ((test (make-flonum-test *)))
     (test BN1 FL1 0.0)
     (test BN2 FL1 0.0)
     (test BN3 FL1 -0.0)
@@ -299,7 +305,7 @@
     (test BN4 FL4 1139777158.476)
     #f)
 
-  (let-syntax ((test (make-cflonum-test * #;$mul-bignum-cflonum)))
+  (let-syntax ((test (make-cflonum-test *)))
     (test BN1 CFL01 0.0+0.0i)
     (test BN2 CFL01 0.0+0.0i)
     (test BN3 CFL01 -0.0-0.0i)
@@ -342,7 +348,7 @@
     (test BN1 CFL16 +nan.0-644245094.4i)
     #f)
 
-  (let-syntax ((test (make-test * #;$mul-bignum-compnum)))
+  (let-syntax ((test (make-test *)))
     (test BN1 10+20i 5368709120+10737418240i)
     (test BN1 1+20.0i 536870912+1.073741824e10i)
     (test BN1 10.0+2i 5368709120.0+1073741824i)
@@ -495,7 +501,10 @@
     (test 1/2 LEAST-FX-32-bit -268435456)
     #f)
 
-  (let-syntax ((test (make-test * #;$mul-ratnum-bignum)))
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (let-syntax ((test (make-test *)))
     (test 1/2 BN1 268435456)
     (test 1/2 BN2 536871011/2)
     (test 1/2 BN3 -536870913/2)
@@ -512,7 +521,7 @@
     (test -1/2 -3/4 3/8)
     #f)
 
-  (let-syntax ((test (make-inexact-test * #;$mul-ratnum-flonum)))
+  (let-syntax ((test (make-inexact-test * $mul-ratnum-flonum)))
     (test 1/2 3.4 1.7)
     (test -1/2 3.4 -1.7)
     (test RN01 FL1 0.0)
@@ -533,7 +542,7 @@
     (test RN04 FL4 9266479.237203253)
     #f)
 
-  (let-syntax ((test (make-cflonum-test * #;$mul-ratnum-cflonum)))
+  (let-syntax ((test (make-cflonum-test * $mul-ratnum-cflonum)))
     (test RN01 CFL01 0.0+0.0i)
     (test RN02 CFL01 -0.0-0.0i)
     (test RN03 CFL01 -0.0-0.0i)
@@ -576,7 +585,7 @@
     (test RN01 CFL16 +nan.0-0.00975609756097561i)
     #f)
 
-  (let-syntax ((test (make-inexact-test * #;$mul-ratnum-compnum)))
+  (let-syntax ((test (make-inexact-test * $mul-ratnum-compnum)))
     (test RN01 10+20i 10/123+20/123i)
     (test RN01 1+20.0i 1/123+0.1626016260162602i)
     (test RN01 10.0+2i 0.0813008130081301+2/123i)
@@ -676,7 +685,7 @@
 
 (parametrise ((check-test-name	'flonums))
 
-  (let-syntax ((test (make-test * $mul-flonum-fixnum)))
+  (let-syntax ((test (make-flonum-test * $mul-flonum-fixnum)))
     (test FL1 FX1 0.0)
     (test FL2 FX1 -0.0)
     (test FL3 FX1 2.123)
@@ -695,7 +704,10 @@
     (test FL4 FX4 1139776946.176)
     #f)
 
-  (let-syntax ((test (make-inexact-test * #;$mul-flonum-bignum)))
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (let-syntax ((test (make-inexact-test *)))
     (test FL1 BN1 0.0)
     (test FL2 BN1 -0.0)
     (test FL3 BN1 1139776946.176)
@@ -714,7 +726,7 @@
     (test FL4 BN4 1139777158.476)
     #f)
 
-  (let-syntax ((test (make-inexact-test * #;$mul-flonum-ratnum)))
+  (let-syntax ((test (make-inexact-test * $mul-flonum-ratnum)))
     (test FL1 RN01 0.0)
     (test FL2 RN01 -0.0)
     (test FL3 RN01 0.01726016260162602)
@@ -795,10 +807,10 @@
     (test FL1 CFL16 +nan.0-0.0i)
     #f)
 
-  (let-syntax ((test (make-inexact-test * #;$mul-flonum-compnum)))
+  (let-syntax ((test (make-inexact-test * $mul-flonum-compnum)))
     (test FL3 10+20i 21.230000000000004+42.46000000000001i)
-    (test FL3 1.0+20.0i 2.123+42.46000000000001i)
-    (test FL3 10.0+2.0i 21.230000000000004+4.246i)
+    (test FL3 1+20.0i 2.123+42.46000000000001i)
+    (test FL3 10.0+2i 21.230000000000004+4.246i)
     (test FL3 1/2+20i 1.0615+42.46000000000001i)
     (test FL3 10+2/3i 21.230000000000004+1.4153333333333333i)
     (test FL3 (C RN02 20) -0.01726016260162602+42.46000000000001i)
@@ -874,7 +886,10 @@
     (test CFL04 FX4 0.0+0.0i)
     #f)
 
-  (let-syntax ((test (make-inexact-test * #;$mul-cflonum-bignum)))
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (let-syntax ((test (make-inexact-test *)))
     (test CFL01 BN1 0.0+0.0i)
     (test CFL02 BN1 -0.0+0.0i)
     (test CFL03 BN1 0.0-0.0i)
@@ -893,7 +908,7 @@
     (test CFL04 BN4 0.0+0.0i)
     #f)
 
-  (let-syntax ((test (make-inexact-test * #;$mul-cflonum-ratnum)))
+  (let-syntax ((test (make-inexact-test * $mul-cflonum-ratnum)))
     (test CFL01 RN01 0.0+0.0i)
     (test CFL02 RN01 -0.0+0.0i)
     (test CFL03 RN01 0.0-0.0i)
@@ -974,10 +989,10 @@
     (test CFL01 CFL16 +nan.0+nan.0i)
     #f)
 
-  (let-syntax ((test (make-inexact-test * #;$mul-cflonum-compnum)))
+  (let-syntax ((test (make-inexact-test * $mul-cflonum-compnum)))
     (test CFL01 10+20i 0.0+0.0i)
-    (test CFL01 1.0+20.0i 0.0+0.0i)
-    (test CFL01 10.0+2.0i 0.0+0.0i)
+    (test CFL01 1+20.0i 0.0+0.0i)
+    (test CFL01 10.0+2i 0.0+0.0i)
     (test CFL01 1/2+20i 0.0+0.0i)
     (test CFL01 10+2/3i 0.0+0.0i)
     (test CFL01 (C RN02 20) -0.0+0.0i)
@@ -1033,7 +1048,7 @@
 
 (parametrise ((check-test-name	'compnums))
 
-  (letrec-syntax ((test (make-test * #;$mul-compnum-fixnum)))
+  (letrec-syntax ((test (make-test * $mul-compnum-fixnum)))
     (test 10+20i 12 120+240i)
     (test 1+20.0i 12 12+240.0i)
     (test 10.0+2i 12 120.0+24i)
@@ -1043,7 +1058,10 @@
     (test (C 10 BN1) 12 120+6442450944i)
     #f)
 
-  (letrec-syntax ((test (make-test * #;$mul-compnum-bignum)))
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (letrec-syntax ((test (make-test *)))
     (test 10+20i BN1 5368709120+10737418240i)
     (test 1+20.0i BN1 536870912+1.073741824e10i)
     (test 10.0+2i BN1 5368709120.0+1073741824i)
@@ -1053,7 +1071,7 @@
     (test (C 10 BN2) BN1 5368709120+288230429301932032i)
     #f)
 
-  (letrec-syntax ((test (make-inexact-test * #;$mul-compnum-ratnum)))
+  (letrec-syntax ((test (make-inexact-test * $mul-compnum-ratnum)))
     (test 10+20i RN01 10/123+20/123i)
     (test 1+20.0i RN01 1/123+0.1626016260162602i)
     (test 10.0+2i RN01 0.0813008130081301+2/123i)
@@ -1063,7 +1081,7 @@
     (test (C 10 RN02) RN01 10/123-1/15129i)
     #f)
 
-  (letrec-syntax ((test (make-test * #;$mul-compnum-flonum)))
+  (letrec-syntax ((test (make-test * $mul-compnum-flonum)))
     (test 10+20i FL1 0.0+0.0i)
     (test 1+20.0i FL1 0.0+0.0i)
     (test 10.0+2i FL1 0.0+0.0i)
@@ -1073,7 +1091,7 @@
     (test (C 10 BN2) FL1 0.0+0.0i)
     #f)
 
-  (letrec-syntax ((test (make-test * #;$mul-compnum-cflonum)))
+  (letrec-syntax ((test (make-test * $mul-compnum-cflonum)))
     (test 10+20i CFL01 0.0+0.0i)
     (test 1+20.0i CFL01 0.0+0.0i)
     (test 10.0+2i CFL01 0.0+0.0i)

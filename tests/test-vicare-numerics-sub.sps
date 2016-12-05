@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -64,7 +64,10 @@
     (test FX4 FX4 0)
     #f)
 
-  (let-syntax ((test (make-test - #;$sub-fixnum-bignum)))
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (let-syntax ((test (make-test -)))
     (test FX1 BN1 -536870911)
     (test FX2 BN1 -536870913)
     (test FX3 BN1 -1)
@@ -83,7 +86,7 @@
     (test FX4 BN4 100)
     #f)
 
-  (let-syntax ((test (make-test - #;$sub-fixnum-ratnum)))
+  (let-syntax ((test (make-test - $sub-fixnum-ratnum)))
     (test FX1 RN01 122/123)
     (test FX2 RN01 -124/123)
     (test FX3 RN01 66035122052/123)
@@ -164,7 +167,7 @@
     (test FX1 CFL16 +nan.0+1.2i)
     #f)
 
-  (let-syntax ((test (make-test - #;$sub-fixnum-compnum)))
+  (let-syntax ((test (make-test - $sub-fixnum-compnum)))
     (test 1	10+20i				(C (- 1 10) (- 20)))
     (test 1	1+20.0i				(C (- 1 1)  (- 20.0)))
     (test 1	10.0+2i				(C (- 1 10.0) (- 2)))
@@ -229,7 +232,10 @@
 
 (parametrise ((check-test-name	'bignums))
 
-  (let-syntax ((test (make-test - #;$sub-bignum-fixnum)))
+;;Remember that BN1, BN2, BN3, BN4 are  bignums on a 32-bit platform, but are fixnums
+;;on a 64-bit platform!!!
+
+  (let-syntax ((test (make-test -)))
     (test BN1 FX1 536870911)
     (test BN2 FX1 536871010)
     (test BN3 FX1 -536870914)
@@ -248,7 +254,7 @@
     (test BN4 FX4 -100)
     #f)
 
-  (let-syntax ((test (make-test - #;$sub-bignum-bignum)))
+  (let-syntax ((test (make-test -)))
     (test BN1 BN1 0)
     (test BN2 BN1 99)
     (test BN3 BN1 -1073741825)
@@ -267,7 +273,7 @@
     (test BN4 BN4 0)
     #f)
 
-  (let-syntax ((test (make-test - #;$sub-bignum-ratnum)))
+  (let-syntax ((test (make-test -)))
     (test BN1 RN01 66035122175/123)
     (test BN2 RN01 66035134352/123)
     (test BN3 RN01 -66035122300/123)
@@ -286,7 +292,7 @@
     (test BN4 RN04 -65498263564/123)
     #f)
 
-  (let-syntax ((test (make-flonum-test - #;$sub-bignum-flonum)))
+  (let-syntax ((test (make-flonum-test -)))
     (test BN1 FL1 536870912.0)
     (test BN2 FL1 536871011.0)
     (test BN3 FL1 -536870913.0)
@@ -305,7 +311,7 @@
     (test BN4 FL4 -536871009.877)
     #f)
 
-  (let-syntax ((test (make-cflonum-test - #;$sub-bignum-cflonum)))
+  (let-syntax ((test (make-cflonum-test -)))
     (test BN1 CFL01 536870912.0-0.0i)
     (test BN2 CFL01 536871011.0-0.0i)
     (test BN3 CFL01 -536870913.0-0.0i)
@@ -348,7 +354,7 @@
     (test BN1 CFL16 +nan.0+1.2i)
     #f)
 
-  (let-syntax ((test (make-test - #;$sub-bignum-compnum)))
+  (let-syntax ((test (make-test -)))
     (test BN1	10+20i				(C (- BN1 10) (- 20)))
     (test BN1	1+20.0i				(C (- BN1 1)  (- 20.0)))
     (test BN1	10.0+2i				(C (- BN1 10.0) (- 2)))
@@ -501,7 +507,10 @@
     (test 1/2 LEAST-FX-32-bit 1073741825/2)
     #f)
 
-  (let-syntax ((test (make-test - #;$sub-ratnum-bignum)))
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (let-syntax ((test (make-test -)))
     (test 1/2 BN1 -1073741823/2)
     (test 1/2 BN2 -1073742021/2)
     (test 1/2 BN3 1073741827/2)
@@ -518,7 +527,7 @@
     (test -1/2 -3/4 1/4)
     #f)
 
-  (let-syntax ((test (make-inexact-test - #;$sub-ratnum-flonum)))
+  (let-syntax ((test (make-inexact-test - $sub-ratnum-flonum)))
     (test 1/2 3.4 -2.9)
     (test -1/2 3.4 -3.9)
     (test RN01 FL1 0.008130081300813009)
@@ -539,7 +548,7 @@
     (test RN04 FL4 -4364802.039601627)
     #f)
 
-  (let-syntax ((test (make-cflonum-test - #;$sub-ratnum-cflonum)))
+  (let-syntax ((test (make-cflonum-test - $sub-ratnum-cflonum)))
     (test RN01 CFL01 0.008130081300813009-0.0i)
     (test RN02 CFL01 -0.008130081300813009-0.0i)
     (test RN03 CFL01 -0.008130081300813009-0.0i)
@@ -582,7 +591,7 @@
     (test RN01 CFL16 +nan.0+1.2i)
     #f)
 
-  (let-syntax ((test (make-inexact-test - #;$sub-ratnum-compnum)))
+  (let-syntax ((test (make-inexact-test - $sub-ratnum-compnum)))
     (test RN01 10+20i				(C (- RN01 10) (- 20)))
     (test RN01 1+20.0i				(C (- RN01 1) (- 20.0)))
     (test RN01 10.0+2i				(C (- RN01 10.0) (- 2)))
@@ -684,7 +693,7 @@
 
 (parametrise ((check-test-name	'flonums))
 
-  (let-syntax ((test (make-test - $sub-flonum-fixnum)))
+  (let-syntax ((test (make-flonum-test - $sub-flonum-fixnum)))
     (test FL1 FX1 -1.0)
     (test FL2 FX1 -1.0)
     (test FL3 FX1 1.1230000000000002)
@@ -703,7 +712,10 @@
     (test FL4 FX4 536870909.877)
     #f)
 
-  (let-syntax ((test (make-inexact-test - #;$sub-flonum-bignum)))
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (let-syntax ((test (make-inexact-test -)))
     (test FL1 BN1 -536870912.0)
     (test FL2 BN1 -536870912.0)
     (test FL3 BN1 -536870909.877)
@@ -722,7 +734,7 @@
     (test FL4 BN4 536871009.877)
     #f)
 
-  (let-syntax ((test (make-inexact-test - #;$sub-flonum-ratnum)))
+  (let-syntax ((test (make-inexact-test - $sub-flonum-ratnum)))
     (test FL1 RN01 -0.008130081300813009)
     (test FL2 RN01 -0.008130081300813009)
     (test FL3 RN01 2.114869918699187)
@@ -803,7 +815,7 @@
     (test FL1 CFL16 +nan.0+1.2i)
     #f)
 
-  (let-syntax ((test (make-inexact-test - #;$sub-flonum-compnum)))
+  (let-syntax ((test (make-inexact-test - $sub-flonum-compnum)))
     (test FL1 10+20i		(C (- FL1 10) (- 20)))
     (test FL1 1+20.0i		(C (- FL1 1) (- 20.0)))
     (test FL1 10.0+2i		(C (- FL1 10.0) (- 2)))
@@ -864,6 +876,7 @@
     #f)
 
   #t)
+
 
 (parametrise ((check-test-name	'cflonums))
 
@@ -886,7 +899,10 @@
     (test CFL04 FX4 536870912.0-0.0i)
     #f)
 
-  (let-syntax ((test (make-inexact-test - #;$sub-cflonum-bignum)))
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (let-syntax ((test (make-inexact-test -)))
     (test CFL01 BN1 -536870912.0+0.0i)
     (test CFL02 BN1 -536870912.0+0.0i)
     (test CFL03 BN1 -536870912.0-0.0i)
@@ -905,7 +921,7 @@
     (test CFL04 BN4 536871012.0-0.0i)
     #f)
 
-  (let-syntax ((test (make-inexact-test - #;$sub-cflonum-ratnum)))
+  (let-syntax ((test (make-inexact-test - $sub-cflonum-ratnum)))
     (test CFL01 RN01 -0.008130081300813009+0.0i)
     (test CFL02 RN01 -0.008130081300813009+0.0i)
     (test CFL03 RN01 -0.008130081300813009-0.0i)
@@ -986,7 +1002,7 @@
     (test CFL01 CFL16 +nan.0+1.2i)
     #f)
 
-  (let-syntax ((test (make-inexact-test - #;$sub-cflonum-compnum)))
+  (let-syntax ((test (make-inexact-test - $sub-cflonum-compnum)))
     (test CFL01 10+20i		(C (- (R CFL01) 10)
 				   (- (I CFL01) 20)))
     (test CFL01 1+20.0i		(C (- (R CFL01) 1)
@@ -1065,133 +1081,104 @@
 
 (parametrise ((check-test-name	'compnums))
 
-  (letrec-syntax ((test1 (make-test - #;$sub-compnum-fixnum))
-		  (test (syntax-rules ()
-			  ((_ ?op1 ?op2)
-			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
-					       (- (I ?op1) (I ?op2))))))))
-    (test 10+20i	1)
-    (test 1.0+20.0i	1)
-    (test 10.0+2.0i	1)
-    (test 1/2+20i	1)
-    (test 10+2/3i	1)
-    (test (C BN1 20)	1)
-    (test (C 10 BN1)	1)
+  (letrec-syntax ((test (make-test - $sub-compnum-fixnum)))
+    (test 10+20i	1	9+20i)
+    (test 1.0+20i	1	0.0+20i)
+    (test 10+2.0i	1	9+2.0i)
+    (test 1/2+20i	1	-1/2+20i)
+    (test 10+2/3i	1	9+2/3i)
+    (test (C BN1 20)	1	(C (sub1 BN1) 20))
+    (test (C 10 BN1)	1	(C 9 BN1))
     #f)
 
-  (letrec-syntax ((test1 (make-test - #;$sub-compnum-bignum))
-		  (test (syntax-rules ()
-			  ((_ ?op1 ?op2)
-			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
-					       (- (I ?op1) (I ?op2))))))))
-    (test 10+20i	BN1)
-    (test 1.0+20.0i	BN1)
-    (test 10.0+2.0i	BN1)
-    (test 1/2+20i	BN1)
-    (test 10+2/3i	BN1)
-    (test (C BN2 20)	BN1)
-    (test (C 10 BN2)	BN1)
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (letrec-syntax ((test (make-test -)))
+    (test 10+20i	BN1	(C (- 10 BN1) 20))
+    (test 1.0+20i	BN1	(C (- 1.0 BN1) 20))
+    (test 10.0+2i	BN1	(C (- 10.0 BN1) 2))
+    (test 1/2+20i	BN1	(C (- 1/2 BN1) 20))
+    (test 10+2/3i	BN1	(C (- 10 BN1) 2/3))
+    (test (C BN2 20)	BN1	(C (- BN2 BN1) 20))
+    (test (C 10 BN2)	BN1	(C (- 10 BN1) BN2))
     #f)
 
-  (letrec-syntax ((test1 (make-test - #;$sub-compnum-ratnum))
-		  (test (syntax-rules ()
-			  ((_ ?op1 ?op2)
-			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
-					       (- (I ?op1) (I ?op2))))))))
-    (test 10+20i	RN01)
-    (test 1+20.0i	RN01)
-    (test 10.0+2.0i	RN01)
-    (test 1/2+20i	RN01)
-    (test 10+2/3i	RN01)
-    (test (C RN02 20)	RN01)
-    (test (C 10 RN02)	RN01)
+  (letrec-syntax ((test (make-test - $sub-compnum-ratnum)))
+    (test 10+20i	RN01	(C (- 10 RN01) 20))
+    (test 1.0+20i	RN01	(C (- 1.0 RN01) 20))
+    (test 10.0+2i	RN01	(C (- 10.0 RN01) 2))
+    (test 1/2+20i	RN01	(C (- 1/2 RN01) 20))
+    (test 10+2/3i	RN01	(C (- 10 RN01) 2/3))
+    (test (C BN2 20)	RN01	(C (- BN2 RN01) 20))
+    (test (C 10 BN2)	RN01	(C (- 10 RN01) BN2))
     #f)
 
-  (letrec-syntax ((test1 (make-test - #;$sub-compnum-flonum))
-		  (test (syntax-rules ()
-			  ((_ ?op1 ?op2)
-			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
-					       (- (I ?op1) (I ?op2))))))))
-    (test 10+20i	FL1)
-    (test 1+20.0i	FL1)
-    (test 10.0+2i	FL1)
-    (test 1.0+20.0i	FL1)
-    (test 10.0+2.0i	FL1)
-    (test 1/2+20i	FL1)
-    (test 10+2/3i	FL1)
-    (test (C BN2 20)	FL1)
-    (test (C 10 BN2)	FL1)
+  (letrec-syntax ((test (make-test - $sub-compnum-flonum)))
+    (test 10+20i	FL1	(C (- 10 FL1) 20))
+    (test 1.0+20i	FL1	(C (- 1.0 FL1) 20))
+    (test 10.0+2i	FL1	(C (- 10.0 FL1) 2))
+    (test 1/2+20i	FL1	(C (- 1/2 FL1) 20))
+    (test 10+2/3i	FL1	(C (- 10 FL1) 2/3))
+    (test (C BN2 20)	FL1	(C (- BN2 FL1) 20))
+    (test (C 10 BN2)	FL1	(C (- 10 FL1) BN2))
     #f)
 
-  (letrec-syntax ((test1 (make-test - #;$sub-compnum-cflonum))
-		  (test (syntax-rules ()
-			  ((_ ?op1 ?op2)
-			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
-					       (- (I ?op1) (I ?op2))))))))
-    (test 10+20i	CFL01)
-    (test 1.0+20.0i	CFL01)
-    (test 10.0+2.0i	CFL01)
-    (test 1/2+20i	CFL01)
-    (test 10+2/3i	CFL01)
-    (test (C BN2 20)	CFL01)
-    (test (C 10 BN2)	CFL01)
+  (letrec-syntax ((test (make-test - $sub-compnum-cflonum)))
+    (test 10+20i	CFL01	(C (- 10   (R CFL01)) (- 20  (I CFL01))))
+    (test 1.0+20i	CFL01	(C (- 1.0  (R CFL01)) (- 20  (I CFL01))))
+    (test 10.0+2i	CFL01	(C (- 10.0 (R CFL01)) (- 2   (I CFL01))))
+    (test 1/2+20i	CFL01	(C (- 1/2  (R CFL01)) (- 20  (I CFL01))))
+    (test 10+2/3i	CFL01	(C (- 10   (R CFL01)) (- 2/3 (I CFL01))))
+    (test (C BN2 20)	CFL01	(C (- BN2  (R CFL01)) (- 20  (I CFL01))))
+    (test (C 10 BN2)	CFL01	(C (- 10   (R CFL01)) (- BN2 (I CFL01))))
     #f)
 
 ;;; --------------------------------------------------------------------
 
-  (letrec-syntax ((test1 (make-test - $sub-compnum-fixnum))
-		  (test (syntax-rules ()
-			  ((_ ?op1 ?op2)
-			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
-					       (- (I ?op1) (I ?op2))))))))
-    (test (C VBN1 20)	1)
-    (test (C 10 VBN1)	1)
+  (letrec-syntax ((test (make-test - $sub-compnum-fixnum)))
+    (test (C VBN1 20)	1	(C (- VBN1 1) 20))
+    (test (C 10 VBN1)	1	(C 9 VBN1))
     #f)
 
-  (letrec-syntax ((test1 (make-test - $sub-compnum-bignum))
-		  (test (syntax-rules ()
-			  ((_ ?op1 ?op2)
-			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
-					       (- (I ?op1) (I ?op2))))))))
-    (test 10+20i	VBN1)
-    (test 1+20.0i	VBN1)
-    (test 10+2.0i	VBN1)
-    (test 1/2+20i	VBN1)
-    (test 10+2/3i	VBN1)
-    (test (C VBN2 20)	VBN1)
-    (test (C 10 VBN2)	VBN1)
+  (letrec-syntax ((test (make-test - $sub-compnum-bignum)))
+    (test 10+20i	VBN1		(C (- 10   VBN1) 20))
+    (test 1+20.0i	VBN1		(C (- 1    VBN1) 20.0))
+    (test 10.0+2i	VBN1		(C (- 10.0 VBN1) 2))
+    (test 1/2+20i	VBN1		(C (- 1/2  VBN1) 20))
+    (test 10+2/3i	VBN1		(C (- 10   VBN1) 2/3))
+    (test (C VRN02 20)	VBN1		(C (- VRN02 VBN1) 20))
+    (test (C 10 VRN02)	VBN1		(C (- 10 VBN1) VRN02))
     #f)
 
-  (letrec-syntax ((test1 (make-test - $sub-compnum-ratnum))
-		  (test (syntax-rules ()
-			  ((_ ?op1 ?op2)
-			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
-					       (- (I ?op1) (I ?op2))))))))
-    (test 10+20i	VRN01)
-    (test 1+20.0i	VRN01)
-    (test 10+2.0i	VRN01)
-    (test 1/2+20i	VRN01)
-    (test 10+2/3i	VRN01)
-    (test (C VRN02 20)	VRN01)
-    (test (C 10 VRN02)	VRN01)
+  (letrec-syntax ((test (make-test - $sub-compnum-ratnum)))
+    (test 10+20i	VRN01		(C (- 10   VRN01) 20))
+    (test 1+20.0i	VRN01		(C (- 1    VRN01) 20.0))
+    (test 10.0+2i	VRN01		(C (- 10.0 VRN01) 2))
+    (test 1/2+20i	VRN01		(C (- 1/2  VRN01) 20))
+    (test 10+2/3i	VRN01		(C (- 10   VRN01) 2/3))
+    (test (C VRN02 20)	VRN01		(C (- VRN02 VRN01) 20))
+    (test (C 10 VRN02)	VRN01		(C (- 10 VRN01) VRN02))
     #f)
 
-  (letrec-syntax ((test1 (make-test - $sub-compnum-flonum))
-		  (test (syntax-rules ()
-			  ((_ ?op1 ?op2)
-			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
-					       (- (I ?op1) (I ?op2))))))))
-    (test (C VBN2 20)	FL1)
-    (test (C 10 VBN2)	FL1)
+  (letrec-syntax ((test (make-test - $sub-compnum-flonum)))
+    (test 10+20i	FL1		(C (- 10   FL1) 20))
+    (test 1+20.0i	FL1		(C (- 1    FL1) 20.0))
+    (test 10.0+2i	FL1		(C (- 10.0 FL1) 2))
+    (test 1/2+20i	FL1		(C (- 1/2  FL1) 20))
+    (test 10+2/3i	FL1		(C (- 10   FL1) 2/3))
+    (test (C VRN02 20)	FL1		(C (- VRN02 FL1) 20))
+    (test (C 10 VRN02)	FL1		(C (- 10 FL1) VRN02))
     #f)
 
-  (letrec-syntax ((test1 (make-test - $sub-compnum-cflonum))
-		  (test (syntax-rules ()
-			  ((_ ?op1 ?op2)
-			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
-					       (- (I ?op1) (I ?op2))))))))
-    (test (C VBN2 20)	CFL01)
-    (test (C 10 VBN2)	CFL01)
+  (letrec-syntax ((test (make-test - $sub-compnum-cflonum)))
+    (test 10+20i	CFL01		(C (- 10    (R CFL01)) (- 20    (I CFL01))))
+    (test 1+20.0i	CFL01		(C (- 1     (R CFL01)) (- 20.0  (I CFL01))))
+    (test 10.0+2i	CFL01		(C (- 10.0  (R CFL01)) (- 2     (I CFL01))))
+    (test 1/2+20i	CFL01		(C (- 1/2   (R CFL01)) (- 20    (I CFL01))))
+    (test 10+2/3i	CFL01		(C (- 10    (R CFL01)) (- 2/3   (I CFL01))))
+    (test (C VRN02 20)	CFL01		(C (- VRN02 (R CFL01)) (- 20    (I CFL01))))
+    (test (C 10 VRN02)	CFL01		(C (- 10    (R CFL01)) (- VRN02 (I CFL01))))
     #f)
 
   #t)

@@ -40,89 +40,91 @@
 	    $ratnum-positive?
 	    $ratnum-negative?
 	    $ratnum-non-positive?
-	    $ratnum-non-negative?))
+	    $ratnum-non-negative?)
+    (only (vicare system $flonums)
+	  $fl+
+	  $fl-
+	  $fl/
+	  $fixnum->flonum)
+    (only (vicare system $bignums)
+	  $bignum->flonum)
+    (only (vicare system $numerics)
+	  $neg-fixnum
+	  $neg-bignum
+	  $quotient+remainder-fixnum-fixnum
+	  $quotient+remainder-fixnum-bignum
+	  $quotient+remainder-bignum-fixnum
+	  $quotient+remainder-bignum-bignum)
+    #| end of IMPORT |# )
 
 
 (module ($ratnum->flonum)
+  ;;This implementation could be better.  In some case involving bignums the rounding
+  ;;error in  the least significant digit  of the resulting big  flonum causes flonum
+  ;;functions to yield "wrong" results.
 
-  (define ($ratnum->flonum num)
-    (let ((n ($ratnum-n num)) (d ($ratnum-d num)))
-      (if (> n 0)
-	  (pos n d)
-	(- (pos (- n) d)))))
+  (define ($ratnum->flonum rn)
+    ;;We assume that RN is a ratnum object.
+    ;;
+    (let ((N ($ratnum-num rn))
+	  (D ($ratnum-den rn)))
+      ;;Here we  know that:  N and  D are either  fixnums or  bignums; D  is strictly
+      ;;positive; N is non-zero.
+      (if (positive? N)
+	  (pos N D)
+	($fl- (pos (int-neg N) D)))))
 
-  (define *precision* 53)
+  (define-syntax-rule (int-inexact ?N)
+    (if (fixnum? ?N)
+	($fixnum->flonum ?N)
+      ($bignum->flonum ?N)))
 
-  (define (long-div1 n d)
-    (let-values (((q r) (quotient+remainder n d)))
-      (cond
-       ((< (* r 2) d) (inexact q))
-       (else (inexact (+ q 1)))
-       ;;(else (error #f "invalid" n d q r))
-       )))
+  (define-syntax-rule (int-neg ?N)
+    (if (fixnum? ?N)
+	($neg-fixnum ?N)
+      ($neg-bignum ?N)))
 
-  (define (long-div2 n d bits)
-    (let f ((bits bits) (ac (long-div1 n d)))
-      (cond
-       ((= bits 0) ac)
-       (else (f (- bits 1) (/ ac 2.0))))))
+  ;;The flonum representation  in double-precision format (IEEE 754  binary64) has 53
+  ;;bits of significand.
+  (define-constant DOUBLE-PRECISION-NBITS 53)
 
-  (define (pos n d)
-    (let ((nbits (bitwise-length n))
-	  (dbits (bitwise-length d)))
+  (define (long-div1 N D)
+    ;;About the quotient Q and the remainder R, we remember that:
+    ;;
+    ;;  N = D * Q + R     N/D = N'/D + R/D     N/D = Q + R/D
+    ;;
+    ;;where N'/D = Q is an exact integer number.
+    ;;
+    (receive (Q R)
+	(if (fixnum? N)
+	    (if (fixnum? D)
+		($quotient+remainder-fixnum-fixnum N D)
+	      ($quotient+remainder-fixnum-bignum N D))
+	  (if (fixnum? D)
+	      ($quotient+remainder-bignum-fixnum N D)
+	    ($quotient+remainder-bignum-bignum N D)))
+      ;;If N < D then Q is zero and the result is just FRAC.
+      (let ((frac ($fl/ (int-inexact R)
+			(int-inexact D))))
+	(if (zero-fixnum? Q)
+	    frac
+	  ($fl+ (int-inexact Q) frac)))))
+
+  (define (long-div2 N D bits)
+    (let loop ((bits	bits)
+	       (ac	(long-div1 N D)))
+      (if (fxzero? bits)
+	  ac
+	(loop (fxsub1 bits) ($fl/ ac 2.0)))))
+
+  (define (pos N D)
+    (let ((nbits (bitwise-length N))
+	  (dbits (bitwise-length D)))
       (let ((diff-bits (- nbits dbits)))
-	(if (>= diff-bits *precision*)
-	    (long-div1 n d)
-	  (let ((extra-bits (- *precision* diff-bits)))
-	    (long-div2 (sll n extra-bits) d extra-bits))))))
-
-  ;; (define ($ratnum->flonum x)
-  ;;   (define (->flonum n d)
-  ;;     (let-values (((q r) (quotient+remainder n d)))
-  ;;       (if (= r 0)
-  ;;           (inexact q)
-  ;;           (if (= q 0)
-  ;;               (/ (->flonum d n))
-  ;;               (+ q (->flonum r d))))))
-  ;;   (let ((n (numerator x)) (d (denominator x)))
-  ;;     (let ((b (bitwise-first-bit-set n)))
-  ;;       (if (eqv? b 0)
-  ;;           (let ((b (bitwise-first-bit-set d)))
-  ;;             (if (eqv? b 0)
-  ;;                 (->flonum n d)
-  ;;                 (/ (->flonum n (bitwise-arithmetic-shift-right d b))
-  ;;                    (expt 2.0 b))))
-  ;;           (* (->flonum (bitwise-arithmetic-shift-right n b) d)
-  ;;              (expt 2.0 b))))))
-
-  ;; (define ($ratnum->flonum x)
-  ;;   (let f ((n ($ratnum-n x)) (d ($ratnum-d x)))
-  ;;     (let-values (((q r) (quotient+remainder n d)))
-  ;;       (if (= q 0)
-  ;;           (/ 1.0 (f d n))
-  ;;           (if (= r 0)
-  ;;               (inexact q)
-  ;;               (+ q (f r d)))))))
-
-  ;; (define ($ratnum->flonum num)
-  ;;   (define (rat n m)
-  ;;     (let-values (((q r) (quotient+remainder n m)))
-  ;;        (if (= r 0)
-  ;;            (inexact q)
-  ;;            (fl+ (inexact q) (fl/ 1.0 (rat  m r))))))
-  ;;   (define (pos n d)
-  ;;     (cond
-  ;;       ((even? n)
-  ;;        (* (pos (sra n 1) d) 2.0))
-  ;;       ((even? d)
-  ;;        (/ (pos n (sra d 1)) 2.0))
-  ;;       ((> n d) (rat n d))
-  ;;       (else
-  ;;        (/ (rat d n)))))
-  ;;   (let ((n ($ratnum-n num)) (d ($ratnum-d num)))
-  ;;     (if (> n 0)
-  ;;         (pos n d)
-  ;;         (- (pos (- n) d)))))
+	(if (fx>=? diff-bits DOUBLE-PRECISION-NBITS)
+	    (long-div1 N D)
+	  (let ((extra-bits (fx- DOUBLE-PRECISION-NBITS diff-bits)))
+	    (long-div2 (bitwise-arithmetic-shift-left N extra-bits) D extra-bits))))))
 
   #| end of module |# )
 
@@ -171,14 +173,16 @@
 ;;; --------------------------------------------------------------------
 
 (define ($ratnum-non-positive? x)
-  ;;The denominator of a ratnum is always strictly positive.
+  ;;The numerator  of a ratnum  is always non-zero.  The  denominator of a  ratnum is
+  ;;always strictly positive.
   ;;
-  (non-positive? ($ratnum-n x)))
+  (negative? ($ratnum-num x)))
 
 (define ($ratnum-non-negative? x)
-  ;;The denominator of a ratnum is always strictly positive.
+  ;;The numerator  of a ratnum  is always non-zero.  The  denominator of a  ratnum is
+  ;;always strictly positive.
   ;;
-  (non-negative? ($ratnum-n x)))
+  (positive? ($ratnum-num x)))
 
 
 ;;;; done

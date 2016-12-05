@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -40,8 +40,8 @@
 
 (parametrise ((check-test-name	'specials))
 
-  (check (+ 1 -1.1-0.0i)       => -0.10000000000000009+0.0i)
-  (check (- 1 +1.1+0.0i)       => -0.10000000000000009+0.0i)
+  (check (+ 1 -1.1-0.0i)       => -0.10000000000000009-0.0i)
+  (check (- 1 +1.1+0.0i)       => -0.10000000000000009-0.0i)
 
   (check (+  0.0 -0.0)           =>  0.0)
   (check (+ -0.0  0.0)           =>  0.0)
@@ -239,7 +239,10 @@
 
 (parametrise ((check-test-name	'bignums))
 
-  (let-syntax ((test (make-test + #;$add-bignum-fixnum)))
+;;;Remember that BN1, BN2, BN3, BN4 are bignums on a 32-bit platform, but are fixnums
+;;;on a 64-bit platform!!!
+
+  (let-syntax ((test (make-test +)))
     (test BN1 FX1 536870913)
     (test BN2 FX1 536871012)
     (test BN3 FX1 -536870912)
@@ -261,7 +264,7 @@
     (test BN4 FX4 -1073741924)
     #f)
 
-  (let-syntax ((test (make-test + #;$add-bignum-bignum)))
+  (let-syntax ((test (make-test +)))
     (test BN1 BN1 1073741824)
     (test BN2 BN1 1073741923)
     (test BN3 BN1 -1)
@@ -280,7 +283,8 @@
     (test BN4 BN4 -1073742024)
     #f)
 
-  (let-syntax ((test (make-test + #;$add-bignum-ratnum)))
+  (let-syntax ((test (make-test +)))
+
     (test BN1 RN01 66035122177/123)
     (test BN2 RN01 66035134354/123)
     (test BN3 RN01 -66035122298/123)
@@ -302,7 +306,7 @@
     (test BN4 RN04 -66572005388/123)
     #f)
 
-  (let-syntax ((test (make-flonum-test + #;$add-bignum-flonum)))
+  (let-syntax ((test (make-flonum-test +)))
     (test BN1 FL1 536870912.0)
     (test BN2 FL1 536871011.0)
     (test BN3 FL1 -536870913.0)
@@ -324,7 +328,7 @@
     (test BN4 FL4 -536871014.123)
     #f)
 
-  (let-syntax ((test (make-cflonum-test + #;$add-bignum-cflonum)))
+  (let-syntax ((test (make-cflonum-test +)))
     (test BN1 CFL01 536870912.0+0.0i)
     (test BN2 CFL01 536871011.0+0.0i)
     (test BN3 CFL01 -536870913.0+0.0i)
@@ -376,7 +380,7 @@
     (test BN1 CFL16 +nan.0-1.2i)
     #f)
 
-  (let-syntax ((test (make-test + #;$add-bignum-compnum)))
+  (let-syntax ((test (make-test +)))
     (test BN1	10+20i				(make-rectangular (+ BN1 10) 20))
     (test BN1	1+20.0i				536870913+20.0i)
     (test BN1	10.0+2i				536870922+2.0i)
@@ -522,14 +526,17 @@
 
 (parametrise ((check-test-name	'ratnums))
 
-  (let-syntax ((test (make-test + #;$add-ratnum-fixnum)))
+  (let-syntax ((test (make-test + $add-ratnum-fixnum)))
     (test 1/2 0				1/2)
     (test 1/2 10			21/2)
     (test 1/2 GREATEST-FX-32-bit	1073741823/2)
     (test 1/2 LEAST-FX-32-bit		-1073741823/2)
     #f)
 
-  (let-syntax ((test (make-test + #;$add-ratnum-bignum)))
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (let-syntax ((test (make-test +)))
     (test 1/2 BN1			1073741825/2)
     (test 1/2 BN2			1073742023/2)
     (test 1/2 BN3			-1073741825/2)
@@ -540,13 +547,13 @@
     (test -1/2 BN4			-1073742025/2)
     #f)
 
-  (let-syntax ((test (make-test + #;$add-ratnum-ratnum)))
+  (let-syntax ((test (make-test + $add-ratnum-ratnum)))
     (test 1/2	3/4			5/4)
     (test -1/2	3/4			1/4)
     (test -1/2	-3/4			-5/4)
     #f)
 
-  (let-syntax ((test (make-test + #;$add-ratnum-flonum)))
+  (let-syntax ((test (make-flonum-test + $add-ratnum-flonum)))
     (test 1/2 3.4			3.9)
     (test -1/2 3.4			2.9)
 
@@ -569,7 +576,7 @@
 
     #f)
 
-  (let-syntax ((test (make-cflonum-test + #;$add-ratnum-cflonum)))
+  (let-syntax ((test (make-cflonum-test + $add-ratnum-cflonum)))
     (test RN01 CFL01 0.008130081300813009+0.0i)
     (test RN02 CFL01 -0.008130081300813009+0.0i)
     (test RN03 CFL01 -0.008130081300813009+0.0i)
@@ -613,7 +620,7 @@
 
     #f)
 
-  (let-syntax ((test (make-inexact-test + #;$add-ratnum-compnum)))
+  (let-syntax ((test (make-inexact-test + $add-ratnum-compnum)))
     (test RN01 10+20i 1231/123+20i)
     (test RN01 1+20.0i 124/123+20.0i)
     (test RN01 10.0+2i 10.008130081300813+2i)
@@ -625,7 +632,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (let-syntax ((test (make-test + #;$add-ratnum-fixnum)))
+  (let-syntax ((test (make-test + $add-ratnum-fixnum)))
     (test 1/2 GREATEST-FX-64-bit 2305843009213693951/2)
     (test 1/2 LEAST-FX-64-bit -2305843009213693951/2)
     #f)
@@ -647,7 +654,7 @@
     (test -1/2	-3/4			-5/4)
     #f)
 
-  (let-syntax ((test (make-test + $add-ratnum-flonum)))
+  (let-syntax ((test (make-flonum-test + $add-ratnum-flonum)))
     (test 1/2 3.4 3.9)
     (test -1/2 3.4 2.9)
     (test VRN01 FL1 0.008130081300813009)
@@ -726,7 +733,7 @@
 
 (parametrise ((check-test-name	'flonums))
 
-  (let-syntax ((test (make-test + $add-flonum-fixnum)))
+  (let-syntax ((test (make-flonum-test + $add-flonum-fixnum)))
     (test FL1 FX1 1.0)
     (test FL2 FX1 1.0)
     (test FL3 FX1 3.123)
@@ -745,7 +752,10 @@
     (test FL4 FX4 -536870914.123)
     #f)
 
-  (let-syntax ((test (make-test + #;$add-flonum-bignum)))
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (let-syntax ((test (make-flonum-test +)))
     (test FL1 BN1 536870912.0)
     (test FL2 BN1 536870912.0)
     (test FL3 BN1 536870914.123)
@@ -764,7 +774,7 @@
     (test FL4 BN4 -536871014.123)
     #f)
 
-  (let-syntax ((test (make-test + #;$add-flonum-ratnum)))
+  (let-syntax ((test (make-flonum-test + $add-flonum-ratnum)))
     (test FL1 RN01 0.008130081300813009)
     (test FL2 RN01 0.008130081300813009)
     (test FL3 RN01 2.1311300813008134)
@@ -845,7 +855,7 @@
     (test FL1 CFL16 +nan.0-1.2i)
     #f)
 
-  (let-syntax ((test (make-inexact-test + #;$add-flonum-compnum)))
+  (let-syntax ((test (make-inexact-test + $add-flonum-compnum)))
     (test FL1 10+20i 10.0+20.0i)
     (test FL1 1+20.0i 1.0+20.0i)
     (test FL1 10.0+2i 10.0+2i)
@@ -876,7 +886,7 @@
     (test FL4 VBN4 -1.152921504606847e+18)
     #f)
 
-  (let-syntax ((test (make-test + $add-flonum-ratnum)))
+  (let-syntax ((test (make-flonum-test + $add-flonum-ratnum)))
     (test FL1 VRN01 0.008130081300813009)
     (test FL2 VRN01 0.008130081300813009)
     (test FL3 VRN01 2.1311300813008134)
@@ -929,7 +939,10 @@
     (test CFL04 FX4 -536870912.0-0.0i)
     #f)
 
-  (let-syntax ((test (make-inexact-test + #;$add-cflonum-bignum)))
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (let-syntax ((test (make-inexact-test +)))
     (test CFL01 BN1 536870912.0+0.0i)
     (test CFL02 BN1 536870912.0+0.0i)
     (test CFL03 BN1 536870912.0-0.0i)
@@ -948,7 +961,7 @@
     (test CFL04 BN4 -536871012.0-0.0i)
     #f)
 
-  (let-syntax ((test (make-inexact-test + #;$add-cflonum-ratnum)))
+  (let-syntax ((test (make-inexact-test + $add-cflonum-ratnum)))
     (test CFL01 RN01 0.008130081300813009+0.0i)
     (test CFL02 RN01 0.008130081300813009+0.0i)
     (test CFL03 RN01 0.008130081300813009-0.0i)
@@ -1029,7 +1042,7 @@
     (test CFL01 CFL16 +nan.0-1.2i)
     #f)
 
-  (let-syntax ((test (make-inexact-test + #;$add-cflonum-compnum)))
+  (let-syntax ((test (make-inexact-test + $add-cflonum-compnum)))
     (test CFL01 10+20i 10.0+20.0i)
     (test CFL01 1+20.0i 1.0+20.0i)
     (test CFL01 10.0+2i 10.0+2.0i)
@@ -1094,52 +1107,55 @@
 
 (parametrise ((check-test-name	'compnums))
 
-  (let-syntax ((test (make-test + #;$add-compnum-fixnum)))
+  (let-syntax ((test (make-test + $add-compnum-fixnum)))
     (test 10+20i 1 11+20i)
-    (test 1.0+20.0i 1 2.0+20.0i)
-    (test 10.0+2.0i 1 11.0+2.0i)
+    (test 1+20.0i 1 2+20.0i)
+    (test 10.0+2i 1 11.0+2i)
     (test 1/2+20i 1 3/2+20i)
     (test 10+2/3i 1 11+2/3i)
     (test (make-rectangular BN1 20) 1 536870913+20i)
     (test (make-rectangular 10 BN1) 1 11+536870912i)
     #f)
 
-  (let-syntax ((test (make-test + #;$add-compnum-bignum)))
+  ;;Remember  that BN1,  BN2, BN3,  BN4 are  bignums on  a 32-bit  platform, but  are
+  ;;fixnums on a 64-bit platform!!!
+  ;;
+  (let-syntax ((test (make-test +)))
     (test 10+20i BN1 536870922+20i)
-    (test 1.0+20.0i BN1 536870913.0+20.0i)
-    (test 10.0+2.0i BN1 536870922.0+2.0i)
+    (test 1+20.0i BN1 536870913+20.0i)
+    (test 10.0+2i BN1 536870922.0+2i)
     (test 1/2+20i BN1 1073741825/2+20i)
     (test 10+2/3i BN1 536870922+2/3i)
     (test (make-rectangular BN2 20) BN1 1073741923+20i)
     (test (make-rectangular 10 BN2) BN1 536870922+536871011i)
     #f)
 
-  (let-syntax ((test (make-inexact-test + #;$add-compnum-ratnum)))
+  (let-syntax ((test (make-inexact-test + $add-compnum-ratnum)))
     (test 10+20i RN01 1231/123+20i)
     (test 1+20.0i RN01 124/123+20.0i)
-    (test 10.0+2.0i RN01 10.008130081300813+2.0i)
+    (test 10.0+2i RN01 10.008130081300813+2i)
     (test 1/2+20i RN01 125/246+20i)
     (test 10+2/3i RN01 1231/123+2/3i)
     (test (make-rectangular RN02 20) RN01 0+20i)
     (test (make-rectangular 10 RN02) RN01 1231/123-1/123i)
     #f)
 
-  (let-syntax ((test (make-inexact-test + #;$add-compnum-flonum)))
+  (let-syntax ((test (make-inexact-test + $add-compnum-flonum)))
     (test 10+20i FL1 10.0+20.0i)
     (test 1+20.0i FL1 1.0+20.0i)
-    (test 10.0+2i FL1 10.0+2.0i)
-    (test 1.0+20.0i FL1 1.0+20.0i)
-    (test 10.0+2.0i FL1 10.0+2.0i)
+    (test 10.0+2i FL1 10.0+2i)
+    (test 1+20.0i FL1 1.0+20.0i)
+    (test 10.0+2i FL1 10.0+2i)
     (test 1/2+20i FL1 0.5+20.0i)
     (test 10+2/3i FL1 10.0+2/3i)
     (test (make-rectangular BN2 20) FL1 536871011.0+20.0i)
     (test (make-rectangular 10 BN2) FL1 10.0+536871011.0i)
     #f)
 
-  (let-syntax ((test (make-inexact-test + #;$add-compnum-cflonum)))
+  (let-syntax ((test (make-inexact-test + $add-compnum-cflonum)))
     (test 10+20i CFL01 10.0+20.0i)
-    (test 1.0+20.0i CFL01 1.0+20.0i)
-    (test 10.0+2.0i CFL01 10.0+2.0i)
+    (test 1+20.0i CFL01 1.0+20.0i)
+    (test 10.0+2i CFL01 10.0+2i)
     (test 1/2+20i CFL01 0.5+20.0i)
     (test 10+2/3i CFL01 10.0+0.6666666666666666i)
     (test (make-rectangular BN2 20) CFL01 536871011.0+20.0i)

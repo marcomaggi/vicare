@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -43,9 +43,31 @@
 		    (lambda args
 		      (cons 'unreal args)))
     => '(real #t
-	      (#\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9 #\0 #\0 #\0 #\0 #\0
-	       #\0 #\0 #\1)
+	      (#\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)
 	      1))
+
+  ;;This  yields   the  wrong  internal   representation  because  of  an   error  in
+  ;;"$ratnum->flonum".
+  ;;
+  (check
+      (parse-flonum 10000000000000009e-17
+		    (lambda args
+		      (cons 'real args))
+		    (lambda args
+		      (cons 'unreal args)))
+    => '(real #t
+	      (#\1 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\9)
+	      0))
+
+  (check
+      (parse-flonum 0.10000000000000009
+		    (lambda args
+		      (cons 'real args))
+		    (lambda args
+		      (cons 'unreal args)))
+    => '(real #t
+	      (#\1 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\9)
+	      0))
 
   (check
       (parse-flonum 12.34e5

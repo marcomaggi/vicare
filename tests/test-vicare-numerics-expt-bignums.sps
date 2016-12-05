@@ -113,8 +113,6 @@
 
 ;;; --------------------------------------------------------------------
 
-;;; --------------------------------------------------------------------
-
 (define (flonum=? x y)
   (cond ((flnan? x)
 	 (flnan? y))
@@ -181,11 +179,6 @@
 (define SMALLEST-POSITIVE-BIGNUM	(-    (least-fixnum)))
 (define SMALLEST-NEGATIVE-BIGNUM	(+ -1 (least-fixnum)))
 
-(define BN1	(+ +1  SMALLEST-POSITIVE-BIGNUM))
-(define BN2	(+ +10 SMALLEST-POSITIVE-BIGNUM))
-(define BN3	(+ -1  SMALLEST-NEGATIVE-BIGNUM))
-(define BN4	(+ -10 SMALLEST-NEGATIVE-BIGNUM))
-
 (define GREATEST-FX-64-bit	+1152921504606846975)
 (define LEAST-FX-64-bit		-1152921504606846976)
 
@@ -193,6 +186,11 @@
 (define VBN2		(+ GREATEST-FX-64-bit +100))
 (define VBN3		(+ LEAST-FX-64-bit -1))
 (define VBN4		(+ LEAST-FX-64-bit -100))
+
+(define BN1 VBN1)
+(define BN2 VBN2)
+(define BN3 VBN3)
+(define BN4 VBN4)
 
 
 (parametrise ((check-test-name	'fixnum-base))

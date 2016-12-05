@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -66,7 +66,7 @@
   (check (max 3 1 2.)		=> 3.)
 
   (check (max 3 1/2 2.)		=> 3.)
-  (check (max 3 13/3 2.)	=> 4.333333333333334)
+  (check (max 3 13/3 2.)	=> (inexact 13/3))
 
   (check
       (max +nan.0 3 13/3 2.)

@@ -26,12 +26,14 @@
 
 
 #!r6rs
-(import (vicare)
-  (libtest numerics-helpers)
-  (vicare system $numerics)
-  (vicare checks)
-  (only (vicare platform words)
-	case-word-size))
+(program (test-vicare-numerics-trigon-sin)
+  (options typed-language)
+  (import (vicare)
+    (libtest numerics-helpers)
+    (vicare system $numerics)
+    (vicare checks)
+    (only (vicare platform words)
+	  case-word-size))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare numerics functions: trigonometric sine\n")
@@ -74,13 +76,16 @@
 
   (case-word-size
    ((32)
-    (test BN1 -0.6188910888797536)
-    (test BN2 0.24018088648196634)
-    (test BN3 0.9953442278238595)
-    (test BN4 -0.9466098593983612))
+    (test BN1 0.326567663018563)
+    (test BN2 0.957428358343441)
+    (test BN3 0.618891088879211)
+    (test BN4 -0.760209009293282))
 
    ((64)
-    (void)))
+    (test VBN1 -0.83064921763725465057528179558151030107616947443429210225)
+    (test VBN2 -0.830649217637255)
+    (test VBN3 0.830649217637255)
+    (test VBN4 0.830649217637255)))
 
   #t)
 
@@ -124,18 +129,33 @@
   (test RN35 0.8414709858142879)
   (test RN36 0.8414710854470289)
 
-  (case-word-size
-   ((32)
-    (test (/ BN1 123) 0.842302155887546)
-    (test (/ BN2 123) 0.8794525909663617)
-    (test (/ BN3 123) -0.8466564299284367)
-    (test (/ BN4 123) -0.8832932921023623)
-    (test (/ 123 BN1) 2.2910535292866373e-7)
-    (test (/ 123 BN2) 2.2910534908798603e-7)
-    (test (/ 123 BN3) -2.2910535250192175e-7)
-    (test (/ 123 BN4) -2.2910534866124408e-7))
-   ((64)
-    (void)))
+  (test (/ BN1 123) 0.837892207482611)
+  (test (/ BN2 123) 0.974235137455507)
+  (test (/ BN3 123) -0.842302155887543)
+  (test (/ BN4 123) -0.97236934492227)
+  (test (/ 123 BN1) 2.2910535292866373e-7)
+  (test (/ 123 BN2) 2.2910534908798603e-7)
+  (test (/ 123 BN3) -2.2910535250192175e-7)
+  (test (/ 123 BN4) -2.2910534866124408e-7)
+  ;;
+
+  ;;NOTE  Here many  calculators  yield  0.997717450110821, this  is  because of  the
+  ;;rounding in:
+  ;;
+  ;;   ($ratnum->flonum (/ VBN1 123))
+  ;;
+  ;;a rounding difference in the least significant digit of such a big number changes
+  ;;completely the SIN result.  (Marco Maggi; Mon Dec 5, 2016)
+  ;;
+  (test (/ VBN1 123) -0.3537948735838885)
+  (test (/ VBN2 123) -0.3537948735838885)
+  (test (/ VBN3 123) 0.3537948735838885)
+  (test (/ VBN4 123) 0.3537948735838885)
+
+  (test (/ 123 VBN1) 1.066854937725736363063333556056020620255677174831609e-16)
+  (test (/ 123 VBN2) 1.066854937725736271453767412292860585634344541782910e-16)
+  (test (/ 123 VBN3) -1.06685493772573636213798440308871589478530022229408e-16)
+  (test (/ 123 VBN4) -1.06685493772573627052841825932555601908123260288142e-16)
 
   #t)
 
@@ -268,5 +288,7 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
