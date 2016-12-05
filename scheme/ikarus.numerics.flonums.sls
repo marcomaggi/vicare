@@ -127,6 +127,7 @@
     (except (vicare system $flonums)
 	    $fixnum->flonum
 	    $flonum->maybe-exact
+	    $flexact
 	    $flzero?
 	    $flzero?/positive
 	    $flzero?/negative
