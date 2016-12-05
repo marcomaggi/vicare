@@ -33,14 +33,7 @@
     (except (vicare system $flonums)
 	    $fldiv		$flmod
 	    $fldiv0		$flmod0
-	    $fldiv-and-mod	$fldiv0-and-mod0
-	    ;;FIXME  This  last except  is  to  be removed  at  the  next boot  image
-	    ;;rotation.  (Marco Maggi; Sun Dec 4, 2016)
-	    $flexact)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sun Dec 4,
-    ;;2016)
-    (only (ikarus numerics flonums)
-	  $flexact)
+	    $fldiv-and-mod	$fldiv0-and-mod0)
     #| end of IMPORT |# )
 
 

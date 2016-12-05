@@ -481,14 +481,7 @@
 		bytevector->bignum		bignum->bytevector)
   (vicare system $pairs)
   (vicare system $fx)
-  (except (vicare system $flonums)
-	  ;;FIXME  This except  is to  be removed  at the  next boot  image rotation.
-	  ;;(Marco Maggi; Sun Dec 4, 2016)
-	  $flexact)
-  ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Sun Dec 4,
-  ;;2016)
-  (only (ikarus numerics flonums)
-	$flexact)
+  (vicare system $flonums)
   ;;We have  to import from "(ikarus  numerics flonums)" because that  is the library
   ;;providing the implementation.
   (rename (only (ikarus numerics flonums)

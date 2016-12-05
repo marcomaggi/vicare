@@ -28,20 +28,15 @@
   (import (except (vicare)
 		  div			div0
 		  mod			mod0
-		  div-and-mod		div0-and-mod0))
+		  div-and-mod		div0-and-mod0)
+    (vicare system $fx)
+    (only (vicare system $flonums)
+	  $fl=
+	  $flexact)
+    #| end of IMPORT |# )
 
 
 (module (div-and-mod*)
-  (import (vicare system $fx)
-    (only (vicare system $flonums)
-	  $fl=
-	  ;;FIXME This last ONLY  is to be included at the  next boot image rotation.
-	  ;;(Marco Maggi; Sun Dec 4, 2016)
-	  #;$flexact)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sun Dec 4,
-    ;;2016)
-    (only (ikarus numerics flonums)
-	  $flexact))
 
   (define (div-and-mod* n m who)
     (cond ((fixnum? m)
