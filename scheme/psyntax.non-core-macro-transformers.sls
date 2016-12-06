@@ -4850,7 +4850,7 @@
      (let ((ghost (make-syntactic-identifier-for-temporary-variable (syntax->datum ?name))))
        (bless
 	`(begin
-	   (define (brace ,ghost ?tag) ,?expr)
+	   (define (brace ,ghost ,?tag) ,?expr)
 	   (define-syntax ,?name
 	     (identifier-syntax ,ghost))))))
     ((_ ?name ?expr)
@@ -4882,8 +4882,8 @@
 		 ;;By  using DATUM->SYNTAX  we avoid  the  "raw symbol  in output  of
 		 ;;macro" error whenever the CONST is a symbol or contains a symbol.
 		 #`(quote #,(datum->syntax stx const))
-	       (syntax-violation (quote ?name)
-		 "invalid use of identifier syntax" stx (syntax ?name))))))))
+	       (syntax-violation (quote ,?name)
+		 "invalid use of identifier syntax" stx (syntax ,?name))))))))
     (_
      (__synner__ "invalid syntax in macro use"))))
 
