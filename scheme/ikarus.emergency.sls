@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,29 +25,37 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (ikarus.emergency)
+  (options typed-language)
   (export emergency-write)
   (import (vicare)
     (only (vicare system $bytevectors)
 	  $bytevector-length)
     (prefix (vicare unsafe capi)
-	    capi.))
+	    capi::))
 
 
 ;;;; emergency debugging
 
-(define (emergency-write str)
-  ;;Interface to the system  "write()" function.  In case something goes
-  ;;wrong while modifying  core code, it may be  that the compiled image
-  ;;fails to  write understandable messages to the  standard ports using
-  ;;the R6RS  functions.  This function  allows direct interface  to the
-  ;;platform's stderr.
+(define/std (emergency-write str)
+  ;;Interface to the  system "write()" function.  In case something  goes wrong while
+  ;;modifying  core  code,  it  may  be  that  the  compiled  image  fails  to  write
+  ;;understandable messages  to the  standard ports using  the R6RS  functions.  This
+  ;;function allows direct interface to the platform's stderr.
+  ;;
+  ;;NOTE We really need
   ;;
   (let ((bv (string->utf8 str)))
-    (capi.platform-write-fd 2 bv 0 ($bytevector-length bv))
+    (capi::platform-write-fd 2 bv 0 ($bytevector-length bv))
     ;;and a newline
-    (capi.platform-write-fd 2 '#vu8(10) 0 1)))
+    (capi::platform-write-fd 2 '#vu8(10) 0 1))
+  ;;It is  useful to return a  single value, so that  a call to this  function can be
+  ;;coded as:
+  ;;
+  ;;   (define dummy (emergency-write "ciao"))
+  ;;
+  #f)
 
 
 ;;;; done

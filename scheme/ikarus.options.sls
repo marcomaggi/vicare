@@ -24,8 +24,9 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (ikarus.options)
+  (options typed-language)
   (export
     print-verbose-messages?
     print-debug-messages?
@@ -64,13 +65,15 @@
     ((_ ?who)
      (define-boolean-option ?who #f))
     ((_ ?who ?default)
-     (define ?who
-       (let ((bool ?default))
+     (define/typed {?who (case-lambda
+			   (()		=> (<boolean>))
+			   ((<top>)	=> ()))}
+       (let (({bool <boolean>} ?default))
 	 (case-lambda
-	  (()
-	   bool)
-	  ((value)
-	   (set! bool (and value #t)))))))
+	   (()
+	    bool)
+	   ((value)
+	    (set! bool (and value #t)))))))
     ))
 
 (define-boolean-option debug-mode-enabled?)
@@ -92,7 +95,7 @@
     ((_ ?who)
      (define-parameter-boolean-option ?who #f))
     ((_ ?who ?default)
-     (define ?who
+     (define/typed {?who <parameter-procedure>}
        (make-parameter ?default
 	 (lambda (value)
 	   (and value #t)))))
@@ -130,14 +133,14 @@
 	   VICARE_BUILT_WITH_GLIBC_ENABLED
 	   VICARE_BUILT_WITH_LINUX_ENABLED)
     (include "ikarus.config.scm" #t))
-  (define (vicare-built-with-arguments-validation-enabled)
+  (define ({vicare-built-with-arguments-validation-enabled <boolean>})
     arguments-validation)
-  (define (vicare-built-with-srfi-enabled)	VICARE_BUILT_WITH_SRFI_ENABLED)
-  (define (vicare-built-with-iconv-enabled)	VICARE_BUILT_WITH_ICONV_ENABLED)
-  (define (vicare-built-with-ffi-enabled)	VICARE_BUILT_WITH_FFI_ENABLED)
-  (define (vicare-built-with-posix-enabled)	VICARE_BUILT_WITH_POSIX_ENABLED)
-  (define (vicare-built-with-glibc-enabled)	VICARE_BUILT_WITH_GLIBC_ENABLED)
-  (define (vicare-built-with-linux-enabled)	VICARE_BUILT_WITH_LINUX_ENABLED)
+  (define ({vicare-built-with-srfi-enabled  <boolean>})	VICARE_BUILT_WITH_SRFI_ENABLED)
+  (define ({vicare-built-with-iconv-enabled <boolean>})	VICARE_BUILT_WITH_ICONV_ENABLED)
+  (define ({vicare-built-with-ffi-enabled   <boolean>})	VICARE_BUILT_WITH_FFI_ENABLED)
+  (define ({vicare-built-with-posix-enabled <boolean>})	VICARE_BUILT_WITH_POSIX_ENABLED)
+  (define ({vicare-built-with-glibc-enabled <boolean>})	VICARE_BUILT_WITH_GLIBC_ENABLED)
+  (define ({vicare-built-with-linux-enabled <boolean>})	VICARE_BUILT_WITH_LINUX_ENABLED)
   #| end of module |# )
 
 

@@ -26,6 +26,7 @@
 
 #!vicare
 (library (ikarus.helpers)
+  (options typed-language)
   (export
     ;; conversion
     any->symbol				any->string
@@ -45,7 +46,7 @@
 
 ;;;; conversion
 
-(define* (any->symbol obj)
+(define ({any->symbol <symbol>} {obj (or <string> <symbol>)})
   (cond ((string? obj)
 	 (string->symbol obj))
 	((symbol? obj)
@@ -54,11 +55,13 @@
 	 (procedure-argument-violation __who__
 	   "invalid source object type for conversion" obj))))
 
-(define* (any->string obj)
+(define ({any->string <string>} {obj (or <string> <symbol> <number>)})
   (cond ((symbol? obj)
 	 (symbol->string obj))
 	((number? obj)
 	 (number->string obj))
+	((string? obj)
+	 obj)
 	(else
 	 (procedure-argument-violation __who__
 	   "invalid source object type for conversion" obj))))

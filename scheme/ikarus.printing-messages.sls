@@ -26,6 +26,7 @@
 
 #!vicare
 (library (ikarus.printing-messages)
+  (options typed-language)
   (export
     print-stderr-message
     print-error-message
@@ -36,7 +37,7 @@
 	    options::))
 
 
-(define (print-stderr-message prefix template arg*)
+(define ({print-stderr-message} prefix template arg*)
   ;;This must return zero values.
   ;;
   (with-blocked-exceptions
@@ -49,7 +50,7 @@
 	  (newline P)
 	  (flush-output-port P)))))
 
-(define (print-error-message template . args)
+(define ({print-error-message} template . args)
   (print-stderr-message "error: " template args))
 
 (module (print-verbose-message)
@@ -58,7 +59,7 @@
     (when (options::print-verbose-messages?)
       (%print-verbose-message . ?args)))
 
-  (define (%print-verbose-message template . args)
+  (define ({%print-verbose-message} template . args)
     (print-stderr-message #f template args))
 
   #| end of module |# )
@@ -69,7 +70,7 @@
     (when (options::print-debug-messages?)
       (%print-debug-message . ?args)))
 
-  (define (%print-debug-message template . args)
+  (define ({%print-debug-message} template . args)
     (print-stderr-message #f template args))
 
   #| end of module |# )
