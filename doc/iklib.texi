@@ -15028,15 +15028,13 @@ When applied to no arguments: the parameter function returns the current
 value of the parameter.
 
 @item
-When applied to a single argument: the parameter function sets the
-current value of the parameter to the return value of the guard function
-applied to the argument.
+When applied to a single argument: the parameter function sets the current value of the parameter to
+the return value of the guard function applied to the argument.  Return zero values.
 
 @item
-When applied to two arguments: the parameter function sets the current
-value of the parameter to either the return value of the guard function
-applied to the first argument or directly to the first argument without
-applying the guard function.
+When applied to two arguments: the parameter function sets the current value of the parameter to
+either the return value of the guard function applied to the first argument or directly to the first
+argument without applying the guard function.  Return zero values.
 @end itemize
 
 Parameter functions are created by @func{make-parameter}; the
