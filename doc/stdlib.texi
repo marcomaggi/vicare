@@ -1622,32 +1622,31 @@ useful control structures.
 @deffnx Syntax unless @meta{test} @metai{expression} @metaii{expression} @dots{}
 @meta{test} must be an expression.
 
-A @func{when} expression is evaluated by evaluating the @meta{test}
-expression.  If @meta{test} evaluates to a true value, the remaining
-@meta{expression}s are evaluated in order, and the results of the last
-@meta{expression} are returned as the results of the entire @func{when}
-expression.  Otherwise, the @func{when} expression returns unspecified
-values.
+A @func{when} expression is evaluated by evaluating the @meta{test} expression.  Only if @meta{test}
+evaluates to a true value, the remaining @meta{expression}s are evaluated in order.  A syntax use of
+@syntax{when} always returns zero values.
 
-An @func{unless} expression is evaluated by evaluating the @meta{test}
-expression.  If @meta{test} evaluates to @false{}, the remaining
-@meta{expression}s are evaluated in order, and the results of the last
-@meta{expression} are returned as the results of the entire
-@func{unless} expression.  Otherwise, the @func{unless} expression
-returns unspecified values.
+@quotation
+@strong{NOTE} This breaks @rnrs{6} compliance.  According to the standard: if @meta{test} evaluates
+to a true value: the results of the last @meta{expression} are returned as the results of the entire
+@func{when} expression; otherwise, the @func{when} expression returns unspecified values.
+@end quotation
 
-The final @meta{expression} is in tail context if the @func{when} or
-@func{unless} form is itself in tail context.
+An @func{unless} expression is evaluated by evaluating the @meta{test} expression.  Only if
+@meta{test} evaluates to @false{}, the remaining @meta{expression}s are evaluated in order.  A
+syntax use of @syntax{unless} always returns zero values.
 
-@example
-(when (> 3 2) 'greater)         @result{} greater
-(when (< 3 2) 'greater)         @result{} #<unspecified>
-(unless (> 3 2) 'less)          @result{} #<unspecified>
-(unless (< 3 2) 'less)          @result{} less
-@end example
+@quotation
+@strong{NOTE} This breaks @rnrs{6} compliance.  According to the standard: if @meta{test} evaluates
+to a true value: the results of the last @meta{expression} are returned as the results of the entire
+@func{unless} expression; otherwise, the @func{unless} expression returns unspecified values.
+@end quotation
 
-The @func{when} and @func{unless} expressions are derived forms.  They
-could be defined by the following macros:
+@c The final @meta{expression} is in tail context if the @func{when} or @func{unless} form is itself
+@c in tail context.
+
+The @func{when} and @func{unless} expressions are derived forms.  They could be defined by the
+following macros:
 
 @example
 (define-syntax when

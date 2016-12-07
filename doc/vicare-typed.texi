@@ -3518,7 +3518,7 @@ Examples:
   ((<vector>)   'vector)
   ((<fixnum>)   'fixnum)
   ((<string>)   'string))
-@result{} fixnum
+@result{} no values
 
 (case-type 123
   ((<vector>)   'vector)

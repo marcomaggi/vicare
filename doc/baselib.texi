@@ -389,15 +389,24 @@ Any @meta{variable} must not appear more than once in @meta{formals}.
 
 @deffn Syntax if @meta{test} @meta{consequent} @meta{alternate}
 @deffnx Syntax if @meta{test} @meta{consequent}
-@meta{test}, @meta{consequent}, and @meta{alternate} must be
-expressions.
+@meta{test}, @meta{consequent}, and @meta{alternate} must be expressions.
 
-An @func{if} expression is evaluated as follows: first, @meta{test} is
-evaluated.  If it yields a true value, then @meta{consequent} is
-evaluated and its values are returned.  Otherwise @meta{alternate} is
-evaluated and its values are returned.  If @meta{test} yields @false{}
-and no @meta{alternate} is specified, then the result of the expression
-is unspecified.
+When the syntax use has both the @meta{consequent} and the @meta{alternate} forms: @meta{test} is
+evaluated; if it yields a true value, the @meta{consequent} is evaluated and its return values are
+returned; otherwise the @meta{alternate} is evaluated and its return values are returned.  The
+@meta{consequent} and @meta{alternate} expressions are in tail context if the @func{if} expression
+itself is.  The @meta{consequent} and @meta{alternate} are required to return the same number of
+values, unless they raise an exception.
+
+When the syntax use has only the @meta{consequent} form: @meta{test} is evaluated; if it yields a
+true value, the @meta{consequent} is evaluated and its return values are discarded.  In this case
+the syntax use always returns zero values.
+
+@quotation
+@strong{NOTE} The specification of the one--armed @syntax{if} expression breaks compliance with
+@rnrs{6}.  According to the standard: when @meta{test} returns a true value the return value of
+@meta{consequent} is returned; otherwise the expression returns unspecified values.
+@end quotation
 
 @example
 (if (> 3 2) 'yes 'no)           @result{} yes
@@ -405,11 +414,10 @@ is unspecified.
 (if (> 3 2)
     (- 3 2)
     (+ 3 2))                    @result{} 1
-(if #f #f)                      @result{} unspecified
-@end example
 
-The @meta{consequent} and @meta{alternate} expressions are in tail
-context if the @func{if} expression itself is.
+(if #t #t)                      @result{} no values
+(if #f #f)                      @result{} no values
+@end example
 @end deffn
 
 @c page
@@ -418,10 +426,9 @@ context if the @func{if} expression itself is.
 
 
 @deffn Syntax set! @meta{variable} @meta{expression}
-@meta{expression} is evaluated, and the resulting value is stored in the
-location to which @meta{variable} is bound.  @meta{variable} must be
-bound either in some region expression or at the top level.  The result
-of the @func{set!} expression is unspecified.
+@meta{expression} is evaluated, and the resulting value is stored in the location to which
+@meta{variable} is bound.  @meta{variable} must be bound either in some region expression or at the
+top level.  A syntax use of @syntax{set!} returns zero values.
 
 @example
 (let ((x 2))
@@ -430,12 +437,10 @@ of the @func{set!} expression is unspecified.
   (+ x 1)) @result{} 5
 @end example
 
-It is a syntax violation if @meta{variable} refers to an immutable
-binding.
+It is a syntax violation if @meta{variable} refers to an immutable binding.
 
 @quotation
-@strong{NOTE} The identifier @func{set!} is exported with level @emph{1}
-as well.
+@strong{NOTE} The identifier @syntax{set!} is exported with level @emph{1} as well.
 @end quotation
 @end deffn
 
@@ -461,35 +466,72 @@ where @meta{test} is an expression.  Alternatively, a
 (@meta{test} => @meta{expression})
 @end example
 
-The last @meta{cond-clause} may be an ``@code{else} clause'', which has
-the form:
+The last @meta{cond-clause} may be an @clause{else} clause, which has the form:
 
 @example
 (else @metai{expression} @metaii{expression} @dots{})
 @end example
 
-A @func{cond} expression is evaluated by evaluating the @meta{test}
-expressions of successive @meta{cond-clause}s in order until one of
-them evaluates to a true value.  When a @meta{test} evaluates to a true
-value, then the remaining @meta{expression}s in its @meta{cond-clause}
-are evaluated in order, and the results of the last @meta{expression} in
-the @meta{cond clause} are returned as the results of the entire
-@func{cond} expression.
+When the a @syntax{cond} syntax use has the @clause{else} form, a @syntax{cond} expression is
+evaluated as follows:
 
-If the selected @meta{cond-clause} contains only the @meta{test} and no
-@meta{expression}s, then the value of the @meta{test} is returned as
-the result.  If the selected @meta{cond-clause} uses the @samp{=>}
-alternate form, then the @meta{expression} is evaluated.  Its value
-must be a procedure.  This procedure should accept one argument; it is
-called on the value of the @meta{test} and the values returned by this
-procedure are returned by the @func{cond} expression.
+@itemize
+@item
+The @meta{test} expressions of successive @meta{cond-clause}s are evaluated in order until one of
+them evaluates to a true value.  When a @meta{test} evaluates to a true value, then the remaining
+@meta{expression}s in its @meta{cond-clause} are evaluated in order, and the results of the last
+@meta{expression} in the @meta{cond clause} are returned as the results of the entire @syntax{cond}
+expression.
 
-If all @meta{test}s evaluate to @false{}, and there is no @samp{else}
-clause, then the conditional expression returns unspecified values; if
-there is an @code{else} clause, then its @meta{expression}s are
+@item
+If the selected @meta{cond-clause} contains only the @meta{test} and no @meta{expression}s, then the
+value of the @meta{test} is returned as the result.  If the selected @meta{cond-clause} uses the
+@syntax{=>} alternate form, then the @meta{expression} is evaluated.  Its value must be a procedure.
+This procedure should accept one argument; it is called on the value of the @meta{test} and the
+values returned by this procedure are returned by the @syntax{cond} expression.
+
+@item
+If all @meta{test}s evaluate to @false{} then @meta{expression}s in the @clause{else} clause are
 evaluated, and the values of the last one are returned.
 
+@item
+For a @meta{cond-clause} of one of the following forms:
+
 @example
+(@meta{test} @metai{expression} @dots{})
+(else @metai{expression} @metaii{expression} @dots{})
+@end example
+
+@noindent
+the last @meta{expression} is in tail context if the @syntax{cond} form itself is.  For a
+@meta{cond-clause} of the form:
+
+@example
+(@meta{test} => @meta{expression})
+@end example
+
+@noindent
+the (implied) call to the procedure that results from the evaluation of @meta{expression} is in a
+tail context if the @syntax{cond} form itself is.
+
+@item
+All clauses are required to return the same number of values, unless they raise an exception.
+@end itemize
+
+When the a @syntax{cond} syntax use does @strong{not} have the @clause{else} form, a @syntax{cond}
+expression is evaluated as above but the return values are always discarded; such a @syntax{cond}
+syntax use always returns zero values.
+
+@quotation
+@strong{NOTE} The specification for the syntax use without @clause{else} clause breaks compliance
+with @rnrs{6}.  According to the standard: when no @clause{else} is present, the expression returns
+either the return values of the selected clause, or unspecified values if all the @meta{test}
+expressions return @false{}.
+@end quotation
+
+Usage examples:
+
+@lisp
 (cond ((> 3 2) 'greater)
       ((< 3 2) 'less))          @result{} greater
 
@@ -499,27 +541,7 @@ evaluated, and the values of the last one are returned.
 
 (cond ('(1 2 3) => cadr)
       (else #f))                @result{} 2
-@end example
-
-For a @meta{cond-clause} of one of the following forms:
-
-@example
-(@meta{test} @metai{expression} @dots{})
-(else @metai{expression} @metaii{expression} @dots{})
-@end example
-
-@noindent
-the last @meta{expression} is in tail context if the @func{cond} form
-itself is.  For a @meta{cond-clause} of the form:
-
-@example
-(@meta{test} => @meta{expression})
-@end example
-
-@noindent
-the (implied) call to the procedure that results from the evaluation of
-@meta{expression} is in a tail context if the @func{cond} form itself
-is.
+@end lisp
 @end deffn
 
 @c ------------------------------------------------------------
@@ -527,8 +549,7 @@ is.
 @deffn Syntax case @meta{key} @metai{case-clause} @meta{case-clause} @dots{}
 @deffnx {Auxiliary Syntax} {=>}
 @deffnx {Auxiliary Syntax} else
-@meta{key} must be an expression.  Each @meta{case-clause} must have
-one of the following forms:
+@meta{key} must be an expression.  Each @meta{case-clause} must have one of the following forms:
 
 @example
 ((@metai{datum} @dots{}) @metai{expression} @metaii{expression} @dots{})
@@ -537,41 +558,53 @@ one of the following forms:
 (else => @meta{expression})
 @end example
 
-The arrow forms are only available in non--strict @rnrs{6} mode,
-@ref{using invoking, @option{--no-strict-r6rs}}.  The ``@code{else}
-clauses'' may only appear as the last @meta{case-clause}.  Each
-@meta{datum} is an external representation of some object.  The data
+The arrow forms are only available in non--strict @rnrs{6} mode, @ref{using invoking,
+@option{--no-strict-r6rs}}.  The @clause{else} clause may only appear as the last
+@meta{case-clause}.  Each @meta{datum} is an external representation of some object.  The data
 represented by the @meta{datum}s need not be distinct.
 
-A @func{case} expression is evaluated as follows.
+When the @clause{else} clause is present, a @syntax{case} expression is evaluated as follows:
 
-@enumerate
+@itemize
 @item
-@meta{key} is evaluated and its result is compared using @func{eqv?}
-against the data represented by the @meta{datum}s of each
-@meta{case-clause} in turn, proceeding in order from left to right
+@meta{key} is evaluated and its result is compared using @func{eqv?}  against the data represented
+by the @meta{datum}s of each @meta{case-clause} in turn, proceeding in order from left to right
 through the set of clauses.
 
 @item
-If the result of evaluating @meta{key} is equivalent to a datum of a
-@meta{case-clause}, the corresponding @meta{expression}s are evaluated
-from left to right and the results of the last expression in the
-@meta{case-clause} are returned as the results of the @func{case}
-expression.  Otherwise, the comparison process continues.
-
-If the selected @meta{case-clause} uses the @samp{=>} alternate form,
-then the @meta{expression} is evaluated; its value must be a procedure;
-this procedure should accept one argument.  It is called on the value of
-the @meta{key} and the values returned by this procedure are returned by
-the @func{case} expression.
+If the result of evaluating @meta{key} is equivalent to a datum of a @meta{case-clause}, the
+corresponding @meta{expression}s are evaluated from left to right and the results of the last
+expression in the @meta{case-clause} are returned as the results of the @syntax{case} expression.
+Otherwise, the comparison process continues.
 
 @item
-If the result of evaluating @meta{key} is different from every datum in
-each set, then if there is an @code{else} clause its expressions are
-evaluated and the results of the last are the results of the @func{case}
-expression; otherwise the @func{case} expression returns unspecified
-values.
-@end enumerate
+If the selected @meta{case-clause} uses the @syntax{=>} alternate form, then the @meta{expression}
+is evaluated; its value must be a procedure; this procedure should accept one argument.  It is
+called on the value of the @meta{key} and the values returned by this procedure are returned by the
+@syntax{case} expression.
+
+@item
+If the result of evaluating @meta{key} is different from every datum in each set, then the
+expressions in the @clause{else} clause are evaluated and the results of the last are the results of
+the @syntax{case} expression
+
+@item
+The last @meta{expression} of a @meta{case-clause} is in tail context if the @syntax{case}
+expression itself is.
+@end itemize
+
+When the a @syntax{case} syntax use does @strong{not} have the @clause{else} form, a @syntax{case}
+expression is evaluated as above but the return values are always discarded; such a @syntax{case}
+syntax use always returns zero values.
+
+@quotation
+@strong{NOTE} The specification for the syntax use without @clause{else} clause breaks compliance
+with @rnrs{6}.  According to the standard: when no @clause{else} is present, the expression returns
+either the return values of the selected clause, or unspecified values if the result of evaluating
+@meta{key} is different from every datum in each set.
+@end quotation
+
+Usage examples:
 
 @example
 (case (* 2 3)
@@ -580,7 +613,7 @@ values.
 
 (case (car '(c d))
   ((a) 'a)
-  ((b) 'b))                     @result{} unspecified
+  ((b) 'b))                     @result{} no values
 
 (case (car '(c d))
   ((a e i o u) 'vowel)
@@ -599,11 +632,9 @@ values.
   (else         => (lambda (N) (vector N))))
 @result{} #(9)
 @end example
-
-The last @meta{expression} of a @meta{case-clause} is in tail context
-if the @func{case} expression itself is.
 @end deffn
 
+@c ------------------------------------------------------------------------
 
 @deffn Syntax and @metai{test} @dots{}
 The @meta{test}s must be expressions.
