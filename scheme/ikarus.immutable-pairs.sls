@@ -26,6 +26,7 @@
 
 #!vicare
 (library (ikarus.immutable-pairs)
+  (options typed-language)
   (export <ipair> ipair icar icdr ipair?)
   (import (except (vicare)
 		  <ipair> ipair icar icdr ipair?)
@@ -41,10 +42,10 @@
   ;;"ikarus.structs.sls".   This is  because STD  handling functions  are initialised
   ;;there and not available here.  (Marco Maggi; Fri Mar 25, 2016)
 
-  (define* (icar {P ipair?})
+  (define (icar {P <ipair>})
     ($<ipair>-car P))
 
-  (define* (icdr {P ipair?})
+  (define (icdr {P <ipair>})
     ($<ipair>-cdr P))
 
   ;; #!vicare
