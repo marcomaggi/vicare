@@ -17,6 +17,7 @@
 
 #!vicare
 (library (ikarus predicates)
+  (options typed-language)
   (export
     fixnum?		flonum?		bignum?
     ratnum?		compnum?	cflonum?
@@ -284,7 +285,7 @@
 (define (not-void? obj)
   (if (void-object? obj) #f #t))
 
-(define* (not {x not-void?})
+(define (not x)
   (if x #f #t))
 
 (define (bwp-object)

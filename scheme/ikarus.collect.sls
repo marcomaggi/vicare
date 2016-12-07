@@ -15,7 +15,9 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus collect)
+  (options typed-language)
   (export
     do-overflow
     do-vararg-overflow		do-stack-overflow
@@ -75,7 +77,7 @@
     (foreign-call "ik_automatic_collect_from_scheme_with_hooks" number-of-words #f)
     (%post-gc-operations number-of-words #t))
 
-  (case-define* automatic-collect
+  (case-define automatic-collect
     ;;Call for  a garbage  collection and  make room on  the heap  for at  least 4096
     ;;machine words, by behaving like DO-OVERFLOW.   4096 is an arbitrary value equal
     ;;to a  Vicare's page size.   It is arbitrarily  decided that this  function must
@@ -86,7 +88,7 @@
     ((requested-generation)
      (%do-collect __who__ requested-generation #t)))
 
-  (case-define* collect
+  (case-define collect
     ;;Force a garbage collection and make room  on the heap for at least 4096 machine
     ;;words.   4096 is  an arbitrary  value equal  to a  Vicare's page  size.  It  is
     ;;arbitrarily decided  that this  function must  return a  single value  and such
@@ -97,7 +99,7 @@
     ((requested-generation)
      (%do-collect __who__ requested-generation #f)))
 
-  (define (%do-collect who requested-generation automatic?)
+  (define (%do-collect {who <&who-value>} requested-generation automatic?)
     (let ((number-of-words       4096)
 	  (requested-generation  (case requested-generation
 				   ((0 fastest)		0)
@@ -171,9 +173,11 @@
   (()
    (foreign-call "ikrt_automatic_garbage_collection_status"))
   ((obj)
-   (foreign-call "ikrt_enable_disable_automatic_garbage_collection" obj))
+   (foreign-call "ikrt_enable_disable_automatic_garbage_collection" obj)
+   (values))
   ((obj unused)
-   (foreign-call "ikrt_enable_disable_automatic_garbage_collection" obj)))
+   (foreign-call "ikrt_enable_disable_automatic_garbage_collection" obj)
+   (values)))
 
 (define (do-stack-overflow)
   (foreign-call "ik_stack_overflow"))

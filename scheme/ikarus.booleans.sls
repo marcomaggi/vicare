@@ -2,7 +2,7 @@
 ;;;
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;Modified by Marco Maggo <marco.maggi-ipsu@poste.it>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>, 2010-2016
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under  the terms of  the GNU General  Public License version  3 as
@@ -19,6 +19,7 @@
 
 #!vicare
 (library (ikarus booleans)
+  (options typed-language)
   (export
     true?			false?
     list-of-booleans?
@@ -45,9 +46,9 @@
 		  boolean-min			boolean-max)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate
-	  define-min/max-comparison
-	  define-equality/sorting-predicate
-	  define-inequality-predicate))
+	  define/checked-min/max-comparison
+	  define/checked-equality/sorting-predicate
+	  define/checked-inequality-predicate))
 
 
 ;;;; predicates
@@ -65,22 +66,25 @@
 
 ;;;; comparison
 
-(define-equality/sorting-predicate boolean=?	$boolean=	boolean?)
-(define-equality/sorting-predicate boolean<?	$boolean<	boolean?)
-(define-equality/sorting-predicate boolean<=?	$boolean<=	boolean?)
-(define-equality/sorting-predicate boolean>?	$boolean>	boolean?)
-(define-equality/sorting-predicate boolean>=?	$boolean>=	boolean?)
-(define-inequality-predicate       boolean!=?	$boolean!=	boolean?)
+(define/checked-equality/sorting-predicate boolean=?	$boolean=	<boolean>)
+(define/checked-equality/sorting-predicate boolean<?	$boolean<	<boolean>)
+(define/checked-equality/sorting-predicate boolean<=?	$boolean<=	<boolean>)
+(define/checked-equality/sorting-predicate boolean>?	$boolean>	<boolean>)
+(define/checked-equality/sorting-predicate boolean>=?	$boolean>=	<boolean>)
+(define/checked-inequality-predicate       boolean!=?	$boolean!=	<boolean>)
 
-(define ($boolean= bo1 bo2)
+;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
+(define ({$boolean= <boolean>} {bo1 <boolean>} {bo2 <boolean>})
   (eq? bo1 bo2))
 
-(define ($boolean!= bo1 bo2)
+;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
+(define ({$boolean!= <boolean>} {bo1 <boolean>} {bo2 <boolean>})
   (not (eq? bo1 bo2)))
 
 ;; we artificially define: #f < #t
 
-(define ($boolean< bo1 bo2)
+;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
+(define ({$boolean< <boolean>} {bo1 <boolean>} {bo2 <boolean>})
   ;;True if:
   ;;
   ;;   BO1 == #f
@@ -88,7 +92,8 @@
   ;;
   (and (not bo1) bo2))
 
-(define ($boolean> bo1 bo2)
+;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
+(define ({$boolean> <boolean>} {bo1 <boolean>} {bo2 <boolean>})
   ;;True if:
   ;;
   ;;   BO1 == #t
@@ -96,25 +101,29 @@
   ;;
   (and bo1 (not bo2)))
 
-(define ($boolean<= bo1 bo2)
+;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
+(define ({$boolean<= <boolean>} {bo1 <boolean>} {bo2 <boolean>})
   (or (eq? bo1 bo2)
       ($boolean< bo1 bo2)))
 
-(define ($boolean>= bo1 bo2)
+;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
+(define ({$boolean>= <boolean>} {bo1 <boolean>} {bo2 <boolean>})
   (or (eq? bo1 bo2)
       ($boolean> bo1 bo2)))
 
 
 ;;;; min max
 
-(define-min/max-comparison boolean-max $boolean-max boolean?)
-(define-min/max-comparison boolean-min $boolean-min boolean?)
+(define/checked-min/max-comparison boolean-max $boolean-max <boolean>)
+(define/checked-min/max-comparison boolean-min $boolean-min <boolean>)
 
-(define ($boolean-min str1 str2)
-  (if ($boolean< str1 str2) str1 str2))
+;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
+(define ({$boolean-min <boolean>} {bo1 <boolean>} {bo2 <boolean>})
+  (if ($boolean< bo1 bo2) bo1 bo2))
 
-(define ($boolean-max str1 str2)
-  (if ($boolean< str1 str2) str2 str1))
+;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
+(define ({$boolean-max <boolean>} {bo1 <boolean>} {bo2 <boolean>})
+  (if ($boolean< bo1 bo2) bo2 bo1))
 
 
 ;;;; done
