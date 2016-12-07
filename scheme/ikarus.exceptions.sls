@@ -96,7 +96,6 @@
   (declare error		raise			make-error)
   (declare assertion-violation	raise			make-assertion-violation)
   (declare warning		raise-continuable	make-warning)
-  ;;(declare die		raise			make-assertion-violation)
   #| end of LET-SYNTAX |# )
 
 
