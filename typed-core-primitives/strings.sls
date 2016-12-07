@@ -95,7 +95,9 @@
 (declare-core-primitive string-copy
     (safe)
   (signatures
-   ((<string>)		=> (<string>)))
+   ((<empty-string>)		=> (<empty-string>))
+   ((<nestring>)		=> (<nestring>))
+   ((<string>)			=> (<string>)))
   (attributes
    ((_)			effect-free result-true)))
 
@@ -110,6 +112,7 @@
    (<null>				=> (<empty-bytevector>))
    ((list-of <empty-string>)		=> (<empty-string>))
    ((nelist-of <nestring>)		=> (<nestring>))
+   ((<nestring> . (list-of <string>))	=> (<nestring>))
    ((list-of <string>)			=> (<string>))))
 
 (declare-core-primitive string-concatenate
@@ -172,7 +175,9 @@
 (declare-core-primitive string-fill!
     (safe)
   (signatures
-   ((<string> <char>)	=> (<string>))))
+   ((<empty-string> <char>)	=> (<empty-string>))
+   ((<nestring> <char>)		=> (<nestring>))
+   ((<string> <char>)		=> (<string>))))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -238,6 +243,8 @@
 (declare-core-primitive string->utf8
     (safe)
   (signatures
+   ((<empty-string>)		=> (<empty-bytevector>))
+   ((<nestring>)		=> (<nebytevector>))
    ((<string>)			=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a new bytevector at every application.
@@ -246,17 +253,26 @@
 (declare-core-primitive string->utf16
     (safe)
   (signatures
-   ((<string>)			=> (<bytevector>))
-   ((<string> <symbol>)		=> (<bytevector>)))
+   ((<empty-string>)				=> (<empty-bytevector>))
+   ((<empty-string> (enumeration big little))	=> (<empty-bytevector>))
+   ((<nestring>)				=> (<nebytevector>))
+   ((<nestring> (enumeration big little))	=> (<nebytevector>))
+   ((<string>)					=> (<bytevector>))
+   ((<string>  (enumeration big little))	=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a new bytevector at every application.
+   ((_)				effect-free result-true)
    ((_ _)			effect-free result-true)))
 
 (declare-core-primitive string->utf32
     (safe)
   (signatures
-   ((<string>)			=> (<bytevector>))
-   ((<string> <symbol>)		=> (<bytevector>)))
+   ((<empty-string>)				=> (<empty-bytevector>))
+   ((<empty-string> (enumeration big little))	=> (<empty-bytevector>))
+   ((<nestring>)				=> (<nebytevector>))
+   ((<nestring> (enumeration big little))	=> (<nebytevector>))
+   ((<string>)					=> (<bytevector>))
+   ((<string>  (enumeration big little))	=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a new bytevector at every application.
    ((_)				effect-free result-true)
@@ -265,7 +281,9 @@
 (declare-core-primitive string->bytevector
     (safe)
   (signatures
-   ((<string> <transcoder>)	=> (<bytevector>)))
+   ((<empty-string> <transcoder>)	=> (<empty-bytevector>))
+   ((<nestring> <transcoder>)		=> (<nebytevector>))
+   ((<string> <transcoder>)		=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a new bytevector at every application.
    ((_ _)			effect-free result-true)))
@@ -277,7 +295,9 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((<string>)		=> (<bytevector>)))
+	    ((<empty-string>)		=> (<empty-bytevector>))
+	    ((<nestring>)		=> (<nebytevector>))
+	    ((<string>)			=> (<bytevector>)))
 	   (attributes
 	    ;;Not  foldable  because  it  must  return  a  new  bytevector  at  every
 	    ;;application.
@@ -332,6 +352,8 @@
 (declare-core-primitive string->list
     (safe)
   (signatures
+   ((<empty-string>)		=> (<null>))
+   ((<nestring>)		=> ((nelist-of <char>)))
    ((<string>)			=> ((list-of <char>))))
   (attributes
    ;;Not foldable because it must return a new list at every application.
