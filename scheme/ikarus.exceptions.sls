@@ -16,48 +16,58 @@
 
 
 (library (ikarus.exceptions)
+  (options typed-language)
   (export
     with-exception-handler
     raise		raise-continuable
     error		warning
-    assertion-violation	die)
+    assertion-violation)
   (import (except (vicare)
 		  with-exception-handler
 		  raise			raise-continuable
 		  error			warning
-		  assertion-violation	die))
+		  assertion-violation))
 
 
 (define current-handlers
   (make-parameter
-      (list (lambda (x)
-	      (cond ((warning? x)
-		     ;;When a "&warning" is raised with RAISE-CONTINUABLE: we want to
-		     ;;go on with the execution.
-		     (let ((port (console-error-port)))
-		       (display "*** Vicare: warning:\n" port)
-		       (print-condition x port))
-		     (values))
-		    (else
-		     (let ((port (console-error-port)))
-		       (display "*** Vicare: unhandled exception:\n" port)
-		       (print-condition x port))
-		     (when (serious-condition? x)
-		       (exit -1))
-		     (values))))
-	    (lambda args
-	      (exit -1)))))
+      ;;There  must  be   always  at  least  two  handlers  in   list  referenced  by
+      ;;CURRENT-HANDLERS.
+      (list
+       (lambda (x)
+	 (cond ((warning? x)
+		;;When a "&warning"  is raised with RAISE-CONTINUABLE: we  want to go
+		;;on with the execution.
+		(let ((port (console-error-port)))
+		  (display "*** Vicare: warning:\n" port)
+		  (print-condition x port))
+		(values))
+	       (else
+		(let ((port (console-error-port)))
+		  (display "*** Vicare: unhandled exception:\n" port)
+		  (print-condition x port))
+		(when (serious-condition? x)
+		  (exit -1))
+		(values))))
+       (lambda args
+	 (exit -1))
+       #| end of LIST |# )))
 
-(define* (with-exception-handler {handler procedure?} {proc2 procedure?})
+(define-type <handler>
+  (lambda (<wildcard>) => <list>))
+
+(define (with-exception-handler {handler <handler>} {proc2 <thunk>})
   (parameterize ((current-handlers (cons handler (current-handlers))))
     (proc2)))
 
 (let-syntax
     ((raise-machinery (syntax-rules ()
 			((_ ?exc . ?tail)
-			 (let* ((handler*      (current-handlers))
-				(head-handler  (car handler*))
-				(tail-handler* (cdr handler*)))
+			 ;;There  are  always  at  least two  handlers  in  the  list
+			 ;;returned by CURRENT-HANDLERS.
+			 (let* (({handler*	(nelist-of <handler>)}	(current-handlers))
+				({head-handler	<handler>}		(car handler*))
+				({tail-handler*	(nelist-of <handler>)}	(cdr handler*)))
 			   (parameterize ((current-handlers tail-handler*))
 			     (head-handler ?exc)
 			     . ?tail)))
@@ -67,39 +77,27 @@
   (define (raise exc)
     (raise-machinery exc
 		     (raise (condition
-			     (make-non-continuable-violation)
-			     (make-message-condition "handler returned from non-continuable exception")))))
+			      (make-non-continuable-violation)
+			      (make-message-condition "handler returned from non-continuable exception")))))
   #| end of LET-SYNTAX |# )
 
 
-(module (error assertion-violation warning die)
-
-  (let-syntax ((define-raiser
-		 (syntax-rules ()
-		   ((_ ?who ?raiser ?make-main-condition)
-		    (define* (?who {who false-or-string-or-symbol?} {msg string?} . irritants)
-		      (%raise-exception (quote ?who)
-					?raiser ?make-main-condition
-					who msg irritants))))))
-    (define-raiser error		raise			make-error)
-    (define-raiser assertion-violation	raise			make-assertion-violation)
-    (define-raiser warning		raise-continuable	make-warning)
-    (define-raiser die			raise			make-assertion-violation))
-
-  (define (%raise-exception caller-who raise* cond* who msg irritants)
-    (raise* (condition (cond*)
-		       (if who
-			   (make-who-condition who)
-			 (condition))
-		       (make-message-condition   msg)
-		       (make-irritants-condition irritants))))
-
-  (define (false-or-string-or-symbol? obj)
-    (or (not obj)
-	(symbol? obj)
-	(string? obj)))
-
-  #| end of module |# )
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?raiser ?make-main-condition)
+		 (define ({?who . <bottom>} {who <&who-value>} {msg <string>} . {irritants (list-of <top>)})
+		   (?raiser (condition (?make-main-condition)
+				       (if who
+					   (make-who-condition who)
+					 (condition))
+				       (make-message-condition   msg)
+				       (make-irritants-condition irritants)))))
+		)))
+  (declare error		raise			make-error)
+  (declare assertion-violation	raise			make-assertion-violation)
+  (declare warning		raise-continuable	make-warning)
+  ;;(declare die		raise			make-assertion-violation)
+  #| end of LET-SYNTAX |# )
 
 
 ;;;; done

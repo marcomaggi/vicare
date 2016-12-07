@@ -2101,7 +2101,6 @@
     (eqv?					v r ba se)
     (error					v r ba)
     (warning					v $language)
-    (die					v $language)
     (even?					v r ba se)
     (exact					v r ba)
     (exact-integer-sqrt				v r ba)

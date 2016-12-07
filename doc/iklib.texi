@@ -19490,11 +19490,6 @@ condition components: @condition{warning}, @condition{who},
 @end defun
 
 
-@defun die @var{who} @var{message} @var{irritant} ...
-A deprecated alias for @func{assertion-violation}.
-@end defun
-
-
 @defun random @var{fx}
 Return a random fixnum object between zero (included) and @var{fx}
 (excluded).  @var{fx} must be a strictly positive fixnum.
