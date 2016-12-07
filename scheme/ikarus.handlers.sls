@@ -14,10 +14,17 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+#!vicare
 (library (ikarus.parameters)
+  (options typed-language)
   (export make-parameter)
-  (import (except (vicare) make-parameter))
-  (define make-parameter
+  (import (except (vicare)
+		  make-parameter)
+    (prefix (only (vicare)
+		  make-parameter)
+	    sys::))
+  (case-define make-parameter
     ;;The  actual  implementation of  MAKE-PARAMETER  is  weirdly integrated  in  the
     ;;compiler.  The forms below with format:
     ;;
@@ -25,23 +32,27 @@
     ;;
     ;;are expanded by the compiler with the actual implementation.
     ;;
-    (internal-body
-      (import (vicare))
-      (case-lambda
-        ((x guard)
-	 (make-parameter x guard))
-        ((x)
-	 (make-parameter x))))))
+    ((x {guard (lambda (_) => (<top>))})
+     (make-parameter x guard))
+    ((x)
+     (make-parameter x)))
+  #| end of library |# )
 
 (library (ikarus.pointer-value)
+  (options typed-language)
   (export pointer-value)
-  (import (only (vicare) define import))
-  (define (pointer-value x)
-    (import (vicare))
-    (pointer-value x)))
+  (import (except (vicare)
+		  pointer-value)
+    (prefix (only (vicare)
+		  ;;Here we want to use the core primitive operation.
+		  pointer-value)
+	    sys::))
+  (define ({pointer-value <fixnum>} x)
+    (sys::pointer-value x)))
 
 
 (library (ikarus.handlers)
+  (options typed-language)
   (export
     interrupt-handler engine-handler
     $apply-nonprocedure-error-handler
@@ -67,10 +78,10 @@
 	  x
 	(assertion-violation 'interrupt-handler "not a procedure" x)))))
 
-(define ($apply-nonprocedure-error-handler x)
+(define/std ($apply-nonprocedure-error-handler x)
   (assertion-violation 'apply "not a procedure" x))
 
-(define ($incorrect-args-error-handler proc wrong-num-of-args list-of-args)
+(define/std ($incorrect-args-error-handler proc wrong-num-of-args list-of-args)
   ;;Whenever an attempt to apply a closure object to the wrong number of arguments is
   ;;performed: the assembly subroutine SL_INVALID_ARGS  calls this function to handle
   ;;the error.
@@ -98,7 +109,7 @@
 	      (make-irritants-condition (list proc wrong-num-of-args))
 	      (make-irritants-condition list-of-args))))
 
-(define ($multiple-values-error . args)
+(define/std ($multiple-values-error . args)
   ;;Whenever an attempt to return zero  or multiple, but not one, values
   ;;to a single value contest is performed, as in:
   ;;
@@ -117,7 +128,7 @@
   (assertion-violation 'apply
     "incorrect number of values returned to single value context" args))
 
-(define ($do-event)
+(define/std ($do-event)
   (cond (($interrupted?)
 	 ($unset-interrupted!)
 	 ((interrupt-handler)))

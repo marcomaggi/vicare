@@ -15,9 +15,11 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus.singular-objects)
-  (export base-rtd eof-object void fixnum-width least-fixnum
-          greatest-fixnum)
+  (options typed-language)
+  (export
+    base-rtd eof-object void fixnum-width least-fixnum greatest-fixnum)
   (import (rename (vicare)
 		  (fixnum-width		sys:fixnum-width)
 		  (least-fixnum		sys:least-fixnum)
@@ -27,33 +29,45 @@
     (rename (vicare system $structs)
 	    (base-rtd	sys:base-rtd)))
   ;;For 64-bit platforms.
-  #;(begin
-    (define (fixnum-width)
-      61)
-    (define (greatest-fixnum)
-      +1152921504606846975)
-    (define (least-fixnum)
-      -1152921504606846976))
+  ;;
+  ;; (begin
+  ;;   (define (fixnum-width)
+  ;;     61)
+  ;;   (define (greatest-fixnum)
+  ;;     +1152921504606846975)
+  ;;   (define (least-fixnum)
+  ;;     -1152921504606846976))
+
   ;;For 32-bit platforms.
-  #;(begin
-    (define (fixnum-width)
-      30)
-    (define (greatest-fixnum)
-      +536870911)
-    (define (least-fixnum)
-      -536870912))
+  ;;
+  ;; (begin
+  ;;   (define (fixnum-width)
+  ;;     30)
+  ;;   (define (greatest-fixnum)
+  ;;     +536870911)
+  ;;   (define (least-fixnum)
+  ;;     -536870912))
+
   (begin
-    (define (fixnum-width)
+    (define ({fixnum-width <non-negative-fixnum>})
       #;(debug-print 'fixnum-width (sys:fixnum-width))
       (sys:fixnum-width))
-    (define (least-fixnum)
+    (define ({least-fixnum <negative-fixnum>})
       #;(debug-print 'least-fixnum (sys:least-fixnum))
       (sys:least-fixnum))
-    (define (greatest-fixnum)
+    (define ({greatest-fixnum <positive-fixnum>})
       #;(debug-print 'greatest-fixnum (sys:greatest-fixnum))
       (sys:greatest-fixnum)))
-  (define (void)		(sys:void))
-  (define (eof-object)		(sys:eof-object))
-  (define (base-rtd)		(sys:base-rtd)))
+
+  (define ({void <void>})
+    (sys:void))
+
+  (define ({eof-object <eof>})
+    (sys:eof-object))
+
+  (define ({base-rtd <struct-type-descriptor>})
+    (sys:base-rtd))
+
+  #| end of library |# )
 
 ;;; end of file

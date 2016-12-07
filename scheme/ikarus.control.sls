@@ -17,6 +17,7 @@
 
 #!vicare
 (library (ikarus control)
+  (options typed-language)
   (export
     call/cf		call/cc
     dynamic-wind
@@ -34,21 +35,24 @@
 
 ;;;; helpers
 
-(module common-tail
-  (%common-tail)
+(define-type <winders>
+  (list-of (pair <thunk> <thunk>)))
 
-  (define (%common-tail x y)
-    ;;This function  is used only  by the function %DO-WIND.   Given two
-    ;;lists X and  Y (being lists of winders), which  are known to share
-    ;;the  same  tail, return  the  first  pair  of their  common  tail;
-    ;;example:
+(define-type <newinders>
+  (nelist-of (pair <thunk> <thunk>)))
+
+(module (%winders-common-tail)
+
+  (define ({%winders-common-tail <winders>} {x <winders>} {y <winders>})
+    ;;This function is used  only by the function %DO-WIND.  Given two  lists X and Y
+    ;;(being lists of  winders), which are known  to share the same  tail, return the
+    ;;first pair of their common tail; example:
     ;;
     ;;   T = (p q r)
     ;;   X = (a b c d . T)
     ;;   Y = (i l m . T)
     ;;
-    ;;return the  list T.   Attempt to  make this  operation as  fast as
-    ;;possible.
+    ;;return the list T.  Attempt to make this operation as fast as possible.
     ;;
     (let ((lx (%unsafe-length x 0))
 	  (ly (%unsafe-length y 0)))
@@ -62,7 +66,7 @@
 	    x
 	  (%drop-uncommon-heads ($cdr x) ($cdr y))))))
 
-  (define (%list-tail ls n)
+  (define ({%list-tail <winders>} {ls <winders>} {n <fixnum>})
     ;;Skip the  first N items  in the list  LS and return  the resulting
     ;;tail.
     ;;
@@ -70,7 +74,7 @@
 	ls
       (%list-tail ($cdr ls) ($fxsub1 n))))
 
-  (define (%drop-uncommon-heads x y)
+  (define ({%drop-uncommon-heads <top>} x y)
     ;;Given two lists X and Y skip  their heads until the first EQ? pair
     ;;is found; return such pair.
     ;;
@@ -78,15 +82,15 @@
 	x
       (%drop-uncommon-heads ($cdr x) ($cdr y))))
 
-  (define (%unsafe-length ls n)
-    ;;Recursive  function returning  the  length of  the  list LS.   The
-    ;;initial value of N must be 0.
+  (define ({%unsafe-length <non-negative-fixnum>} {ls <list>} {n <non-negative-fixnum>})
+    ;;Recursive function returning the length of the list LS.  The initial value of N
+    ;;must be 0.
     ;;
     (if (null? ls)
 	n
       (%unsafe-length ($cdr ls) ($fxadd1 n))))
 
-  #| end of module: %common-tail |# )
+  #| end of module: %WINDERS-COMMON-TAIL |# )
 
 
 ;;;; winders
@@ -98,8 +102,8 @@
    %winders-pop!
    %winders-eq?)
 
-  (define the-winders
-    ;;A list  of pairs  beind the in-guard  and out-guard  functions set
+  (define {the-winders <winders>}
+    ;;A list  of pairs  being the in-guard  and out-guard  functions set
     ;;with DYNAMIC-WIND:
     ;;
     ;;   ((?in-guard . ?out-guard) ...)
@@ -119,7 +123,7 @@
     (set! the-winders (cons (cons ?in ?out) the-winders)))
 
   (define (%winders-pop!)
-    (set! the-winders ($cdr the-winders)))
+    (set! the-winders (cdr the-winders)))
 
   (define (%winders-eq? ?save)
     (eq? ?save the-winders))
@@ -129,7 +133,7 @@
 
 ;;;; continuations
 
-(define (%primitive-call/cf func)
+(define/std (%primitive-call/cf func)
   ;;In tail  position: apply FUNC  to a continuation  object referencing
   ;;the  current  Scheme stack.   Remember  that  this function  can  be
   ;;inlined, but if it is not it can be called in tail position.
@@ -203,13 +207,13 @@
     (begin
       ($seal-frame-and-call func))))
 
-(define* (call/cf {func procedure?})
+(define (call/cf {func (lambda (<top>) => <list>)})
   (%primitive-call/cf func))
 
 (module (call/cc)
   (import winders-handling)
 
-  (define* (call/cc {func procedure?})
+  (define (call/cc {func (lambda (<top>) => <list>)})
     (define (func-with-winders escape-function)
       (let ((save (%current-winders)))
 	(define (%do-wind-maybe)
@@ -217,30 +221,29 @@
 	    (%do-wind save)))
 	(define escape-function-with-winders
 	  (case-lambda
-	   ((v)
-	    (%do-wind-maybe)
-	    (escape-function v))
-	   (()
-	    (%do-wind-maybe)
-	    (escape-function))
-	   ((v1 v2 . v*)
-	    (%do-wind-maybe)
-	    (apply escape-function v1 v2 v*))))
+	    ((v)
+	     (%do-wind-maybe)
+	     (escape-function v))
+	    (()
+	     (%do-wind-maybe)
+	     (escape-function))
+	    ((v1 v2 . v*)
+	     (%do-wind-maybe)
+	     (apply escape-function v1 v2 v*))))
 	(func escape-function-with-winders)))
     (%primitive-call/cc func-with-winders))
 
-  (define (%primitive-call/cc func-with-winders)
-    ;;In tail position: applies  FUNC-WITH-WINDERS to an escape function
-    ;;which, when evaluated, reinstates the current continuation.
+  (define (%primitive-call/cc {func-with-winders (lambda (<procedure>) => <list>)})
+    ;;In tail position:  applies FUNC-WITH-WINDERS to an escape  function which, when
+    ;;evaluated, reinstates the current continuation.
     ;;
-    ;;The argument  FREEZED-FRAMES is  a continuation object  created by
-    ;;%PRIMITIVE-CALL/CF  referencing  the   Scheme  stack  right  after
-    ;;entering this function.  When  FREEZED-FRAMES arrives here, it has
-    ;;already been prepended to the list "pcb->next_k".
+    ;;The   argument   FREEZED-FRAMES   is   a   continuation   object   created   by
+    ;;%PRIMITIVE-CALL/CF  referencing  the Scheme  stack  right  after entering  this
+    ;;function.  When FREEZED-FRAMES  arrives here, it has already  been prepended to
+    ;;the list "pcb->next_k".
     ;;
-    ;;The  return  value of  $FRAME->CONTINUATION  is  a closure  object
-    ;;which,  when evaluated,  resumes the  continuation represented  by
-    ;;FREEZED-FRAMES.
+    ;;The  return value  of  $FRAME->CONTINUATION  is a  closure  object which,  when
+    ;;evaluated, resumes the continuation represented by FREEZED-FRAMES.
     ;;
     (%primitive-call/cf (lambda (freezed-frames)
 			  (func-with-winders ($frame->continuation freezed-frames)))))
@@ -248,12 +251,11 @@
   (module (%do-wind)
 
     (define (%do-wind new)
-      (import common-tail)
-      (let ((tail (%common-tail new (%current-winders))))
+      (let ((tail (%winders-common-tail new (%current-winders))))
 	(%unwind* (%current-winders) tail)
 	(%rewind* new                tail)))
 
-    (define (%unwind* ls tail)
+    (define ({%unwind*} {ls <winders>} {tail <winders>})
       ;;The list LS must be the head  of WINDERS, TAIL must be a tail of
       ;;WINDERS.  Run the out-guards from LS, and pop their entry, until
       ;;TAIL is left in WINDERS.
@@ -275,7 +277,7 @@
 	(($cdr ($car ls)))
 	(%unwind* ($cdr ls) tail)))
 
-    (define (%rewind* ls tail)
+    (define ({%rewind*} {ls <winders>} {tail <winders>})
       ;;The list LS must be the new head of WINDERS, TAIL must be a tail
       ;;of WINDERS.   Run the in-guards  from LS in reverse  order, from
       ;;TAIL excluded to the top; finally set WINDERS to LS.
@@ -304,27 +306,26 @@
 
 ;;;; dynamic wind
 
-(define* (dynamic-wind {in-guard procedure?} {body procedure?} {out-guard procedure?})
+(define (dynamic-wind {in-guard <thunk>} {body <thunk>} {out-guard <thunk>})
   (import winders-handling)
   (in-guard)
-  ;;We  do *not*  push  the guards  if an  error  occurs when  running
-  ;;IN-GUARD.
+  ;;We do *not* push the guards if an error occurs when running IN-GUARD.
   (%winders-push! in-guard out-guard)
   (call-with-values
       body
     (case-lambda
-     ((v)
-      (%winders-pop!)
-      (out-guard)
-      v)
-     (()
-      (%winders-pop!)
-      (out-guard)
-      (values))
-     ((v1 v2 . v*)
-      (%winders-pop!)
-      (out-guard)
-      (apply values v1 v2 v*)))))
+      ((v)
+       (%winders-pop!)
+       (out-guard)
+       (unsafe-cast-signature <list> v))
+      (()
+       (%winders-pop!)
+       (out-guard)
+       (unsafe-cast-signature <list> (values)))
+      ((v1 v2 . v*)
+       (%winders-pop!)
+       (out-guard)
+       (unsafe-cast-signature <list> (apply values v1 v2 v*))))))
 
 
 ;;;; shift and reset utilities
@@ -336,25 +337,27 @@
 
 ;;;; other functions
 
-(define exit
-  (case-lambda
-   (()
-    (exit 0))
-   ((status)
-    (for-each (lambda (f)
-		;;Catch and discard any  exception: exit hooks must take
-		;;care of themselves.
-		(with-blocked-exceptions f))
-      (exit-hooks))
-    (foreign-call "ikrt_exit" status)
-    (values))))
+(case-define exit
+  (()
+   (exit 0))
+  ((status)
+   (for-each (lambda (f)
+	       ;;Catch and discard any  exception: exit hooks must take
+	       ;;care of themselves.
+	       (with-blocked-exceptions f))
+     (exit-hooks))
+   (foreign-call "ikrt_exit" status)
+   (values)))
 
 (define exit-hooks
-  (make-parameter '()
+  (make-parameter
+      '()
     (lambda (obj)
-      (assert (and (list? obj)
-		   (for-all procedure? obj)))
-      obj)))
+      (if (and (list? obj)
+	       (for-all procedure? obj))
+	  obj
+	(procedure-argument-violation 'exit-hooks
+	  "expected list of procedures as exit hooks" obj)))))
 
 
 ;;;; done

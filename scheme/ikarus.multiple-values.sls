@@ -16,6 +16,7 @@
 
 #!r6rs
 (library (ikarus multiple-values)
+  (options typed-language)
   (export call-with-values values)
   (import (except (vicare)
 		  call-with-values
