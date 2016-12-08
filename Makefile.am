@@ -600,7 +600,7 @@ VICARE_BOOT_PREREQUISITES	= \
 	lib/vicare/unsafe/capi.vicare.sls		\
 	lib/vicare/unsafe/operations.vicare.sls
 
-vicare_sed_edit = sed \
+vicare_sed_edit = $(SED) \
 	-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'		\
 	-e 's|@PACKAGE[@]|$(PACKAGE)|g'				\
 	-e 's|@libdir[@]|$(libdir)|g'				\

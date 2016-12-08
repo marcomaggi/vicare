@@ -4,6 +4,24 @@ dnl
 AC_PREREQ([2.68])
 AC_INIT([Vicare Scheme],[0.4d1],[marco.maggi-ipsu@poste.it],
   [vicare-scheme],[http://marcomaggi.github.com/vicare.html])
+dnl This is the revision number of this configure.ac
+AC_REVISION([0.4])
+AC_COPYRIGHT([Copyright (c) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+Copyright (c) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+Modified by the Vicare contributors.
+
+This program is free software: you  can redistribute it and/or modify it
+under the  terms of the GNU  General Public License as  published by the
+Free Software Foundation, either version 3 of the License.
+
+This program  is distributed  in the  hope that it  will be  useful, but
+WITHOUT   ANY   WARRANTY;  without   even   the   implied  warranty   of
+MERCHANTABILITY  or  FITNESS FOR  A  PARTICULAR  PURPOSE.   See the  GNU
+General Public License for more details.
+
+You should have received a copy  of the GNU General Public License along
+with this program.  If not, see <http://www.gnu.org/licenses/>.
+])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_MACRO_DIR([meta/autotools])
 AC_CONFIG_AUX_DIR([meta/autotools])
@@ -17,6 +35,7 @@ AM_PROG_AR
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
+AC_PROG_SED
 
 LT_PREREQ([2.4])
 LT_INIT([shared disable-static])
