@@ -32,6 +32,7 @@
 
 
 (library (ikarus.equal)
+  (options typed-language)
   (export equal?)
   (import (except (vicare)
 		  equal?)
@@ -41,6 +42,7 @@
     (only (vicare system $pointers)
 	  $pointer=)
     (only (vicare system $structs)
+	  $struct-std
 	  $struct-ref)
     (only (vicare system $keywords)
 	  $keyword=?))
@@ -64,10 +66,11 @@
         ($fx=      =))))
 
 
-(define (equal? x y)
+(define ({equal? <boolean>} x y)
   (let ((k (pre? x y k0)))
-    (and k (or (> k 0)
-	       (interleave? x y 0)))))
+    (and k
+	 (or (fxpositive? k)
+	     (interleave? x y 0)))))
 
 ;;;Commented out  because unused; it is  better to just  name EQUAL? the
 ;;;function  PRECHECK/INTERLEAVE-EQUAL?  rather  than  do the  following
@@ -89,10 +92,10 @@
 (define kb -40)
 
 
-(define (pre? x y k)
-  ;;Perform  a precheck comparison  between X  and Y,  ignoring possible
-  ;;cycles, using K as maximum  number of recursions.  Return false if X
-  ;;and Y are different, or the updated number of recursions.
+(define ({pre? (or <false> <fixnum>)} x y {k <fixnum>})
+  ;;Perform a precheck comparison between X  and Y, ignoring possible cycles, using K
+  ;;as maximum number of  recursions.  Return false if X and Y  are different, or the
+  ;;updated number of recursions.
   ;;
   (import UNSAFE)
   (cond ((eq? x y)	;symbols and EQ? values in general
@@ -141,8 +144,10 @@
 		  (and k (pre? (icdr x) (icdr y) k))))))
         ((record-object? x)
          (and (record-object? y)
-              (let ((rtdx (struct-std x))
-                    (rtdy (struct-std y)))
+	      ;;Here we want to extract the RTD  even when the X and/or Y are records
+	      ;;of opaque kind.  So we cannot use RECORD-RTD.
+              (let ((rtdx ($struct-std x))
+                    (rtdy ($struct-std y)))
                 (and (eq? rtdx rtdy)
                      (cond (($record-type-equality-predicate rtdx)
                             => (lambda (equal-pred)
@@ -158,38 +163,108 @@
 	 (and (eqv? x y) k))))
 
 
-(define (interleave? x y k)
+(define ({interleave? (or <false> <boolean>)} x y {k <fixnum>})
   (import UNSAFE)
-  (let ((ht #f))
-    (define (call-union-find x y)
-      (unless ht (set! ht (make-eq-hashtable)))
-      (union-find ht x y))
-    (define (e? x y k)
-      (if (<= k 0)
-	  (if (= k kb) (fast? x y (random (* 2 k0))) (slow? x y k))
-	(fast? x y k)))
-    (define (slow? x y k)
+  (define {call-union-find (lambda (<top> <top>) => (<boolean>))}
+    (let (({ht (or <hashtable> <false>)} #f))
+      (lambda (x y)
+	(unless ht
+	  (set! ht (make-eq-hashtable)))
+	(union-find (unsafe-cast-signature (<hashtable>) ht) x y))))
+
+  (define ({e? (or <false> <fixnum>)} x y {k <fixnum>})
+    (if (fxnonpositive? k)
+	(if (fx=? k kb)
+	    (fast? x y (random (fx* 2 k0)))
+	  (slow? x y k))
+      (fast? x y k)))
+
+  (define ({slow? (or <false> <fixnum>)} x y {k <fixnum>})
+    (cond
+     ((eq? x y) k)
+     ((pair? x)
+      (and (pair? y)
+	   (if (call-union-find x y)
+	       0
+	     (let ((k (e? (car x) (car y) (fxsub1 k))))
+	       (and k (e? (cdr x) (cdr y) k))))))
+     ((vector? x)
+      (and (vector? y)
+	   (let ((n (vector-length x)))
+	     (and (fx=? (vector-length y) n)
+		  (if (call-union-find x y)
+		      0
+		    (let f (({i <fixnum>} 0)
+			    ({k <fixnum>} (fxsub1 k)))
+		      (if (fx=? i n)
+			  k
+			(let ((k (e? (vector-ref x i)
+				     (vector-ref y i)
+				     k)))
+			  (and k (f (fxadd1 i) k))))))))))
+     ((string? x)
+      (and (string? y)
+	   (string=? x y)
+	   k))
+     ((bytevector? x)
+      (and (bytevector? y)
+	   (bytevector=? x y)
+	   k))
+     ((pointer? x)
+      (and (pointer? y)
+	   ($pointer= x y)
+	   k))
+     ((keyword? x)
+      (and (keyword? y)
+	   ($keyword=? x y)
+	   k))
+     ((ipair? x)
+      ;;An  ipair is  a  struct, but  STRUCT=?  uses EQV?  internally;  so here  we
+      ;;implement a branch that actually traverses the internals of the ipairs.
+      (and (ipair? y)
+	   (if (call-union-find x y)
+	       0
+	     (let ((k (e? (icar x) (icar y) (fxsub1 k))))
+	       (and k (e? (icdr x) (icdr y) k))))))
+     ((record-object? x)
+      (and (record-object? y)
+	   ;;Here we want to extract the RTD  even when the X and/or Y are records
+	   ;;of opaque kind.  So we cannot use RECORD-RTD.
+	   (let ((rtdx ($struct-std x))
+		 (rtdy ($struct-std y)))
+	     (and (eq? rtdx rtdy)
+		  (cond (($record-type-equality-predicate rtdx)
+			 => (lambda (equal-pred)
+			      (equal-pred x y)))
+			(else
+			 (record=? x y)))))
+	   k))
+     ((struct? x)
+      (and (struct? y)
+	   (struct=? x y)
+	   k))
+     (else
+      (and (eqv? x y) k))))
+
+  (define ({fast? (or <false> <fixnum>)} x y {k <fixnum>})
+    (let ((k (fxsub1 k)))
       (cond
        ((eq? x y) k)
        ((pair? x)
 	(and (pair? y)
-	     (if (call-union-find x y)
-		 0
-	       (let ((k (e? (car x) (car y) (- k 1))))
-		 (and k (e? (cdr x) (cdr y) k))))))
+	     (let ((k (e? (car x) (car y) k)))
+	       (and k (e? (cdr x) (cdr y) k)))))
        ((vector? x)
 	(and (vector? y)
 	     (let ((n (vector-length x)))
 	       (and (= (vector-length y) n)
-		    (if (call-union-find x y)
-			0
-		      (let f ((i 0) (k (- k 1)))
-			(if (= i n)
-			    k
-			  (let ((k (e? (vector-ref x i)
-				       (vector-ref y i)
-				       k)))
-			    (and k (f (+ i 1) k))))))))))
+		    (let f ((i 0) (k k))
+		      (if (= i n)
+			  k
+			(let ((k (e? (vector-ref x i)
+				     (vector-ref y i)
+				     k)))
+			  (and k (f (+ i 1) k)))))))))
        ((string? x)
 	(and (string? y)
 	     (string=? x y)
@@ -207,105 +282,49 @@
 	     ($keyword=? x y)
 	     k))
        ((ipair? x)
-	;;An  ipair is  a  struct, but  STRUCT=?  uses EQV?  internally;  so here  we
+	;;An  ipair is  a struct,  but STRUCT=?  uses EQV?  internally; so  here we
 	;;implement a branch that actually traverses the internals of the ipairs.
 	(and (ipair? y)
-	     (if (call-union-find x y)
-		 0
-	       (let ((k (e? (icar x) (icar y) (- k 1))))
-		 (and k (e? (icdr x) (icdr y) k))))))
+	     (let ((k (e? (icar x) (icar y) k)))
+	       (and k (e? (icdr x) (icdr y) k)))))
        ((record-object? x)
-        (and (record-object? y)
-             (let ((rtdx (record-rtd x))
-                   (rtdy (record-rtd y)))
-               (and (eq? rtdx rtdy)
-                    (cond (($record-type-equality-predicate rtdx)
-                           => (lambda (equal-pred)
-                                (equal-pred x y)))
-                          (else
-                           (record=? x y)))))
-             k))
+	(and (record-object? y)
+	     ;;Here we want to  extract the RTD even when the X  and/or Y are records
+	     ;;of opaque kind.  So we cannot use RECORD-RTD.
+	     (let ((rtdx ($struct-std x))
+		   (rtdy ($struct-std y)))
+	       (and (eq? rtdx rtdy)
+		    (cond (($record-type-equality-predicate rtdx)
+			   => (lambda (equal-pred)
+				(equal-pred x y)))
+			  (else
+			   (record=? x y)))))
+	     k))
        ((struct? x)
 	(and (struct? y)
 	     (struct=? x y)
 	     k))
        (else
-	(and (eqv? x y) k))))
-    (define (fast? x y k)
-      (let ((k (- k 1)))
-	(cond
-	 ((eq? x y) k)
-	 ((pair? x)
-	  (and (pair? y)
-	       (let ((k (e? (car x) (car y) k)))
-		 (and k (e? (cdr x) (cdr y) k)))))
-	 ((vector? x)
-	  (and (vector? y)
-	       (let ((n (vector-length x)))
-		 (and (= (vector-length y) n)
-		      (let f ((i 0) (k k))
-			(if (= i n)
-			    k
-			  (let ((k (e? (vector-ref x i)
-				       (vector-ref y i)
-				       k)))
-			    (and k (f (+ i 1) k)))))))))
-	 ((string? x)
-	  (and (string? y)
-	       (string=? x y)
-	       k))
-	 ((bytevector? x)
-	  (and (bytevector? y)
-	       (bytevector=? x y)
-	       k))
-	 ((pointer? x)
-	  (and (pointer? y)
-	       ($pointer= x y)
-	       k))
-	 ((keyword? x)
-	  (and (keyword? y)
-	       ($keyword=? x y)
-	       k))
-	 ((ipair? x)
-	  ;;An  ipair is  a struct,  but STRUCT=?  uses EQV?  internally; so  here we
-	  ;;implement a branch that actually traverses the internals of the ipairs.
-	  (and (ipair? y)
-	       (let ((k (e? (icar x) (icar y) k)))
-		 (and k (e? (icdr x) (icdr y) k)))))
-	 ((record-object? x)
-	  (and (record-object? y)
-	       (let ((rtdx (record-rtd x))
-	             (rtdy (record-rtd y)))
-	         (and (eq? rtdx rtdy)
-	              (cond (($record-type-equality-predicate rtdx)
-	                     => (lambda (equal-pred)
-	                          (equal-pred x y)))
-	                    (else
-	                     (record=? x y)))))
-	       k))
-	 ((struct? x)
-	  (and (struct? y)
-	       (struct=? x y)
-	       k))
-	 (else
-	  (and (eqv? x y)
-	       k)))))
-    (and (e? x y k) #t)))
+	(and (eqv? x y)
+	     k)))))
+
+  (and (e? x y k) #t))
 
 
-(define (union-find ht x y)
+(define ({union-find <boolean>} {ht <hashtable>} x y)
   (import UNSAFE)
   (define-struct box (content))
-  (define (find b)
+  (define ({find <top>} {b box})
     (let ((n (box-content b)))
       (if (box? n)
-	  (let loop ((b b) (n n))
-	    (let ((nn (box-content n)))
-	      (if (box? nn)
-		  (begin
-		    (set-box-content! b nn)
-		    (loop n nn))
-		n)))
+	  (let {loop <top>} ((b b)
+			     (n n))
+	       (let ((nn (box-content n)))
+		 (if (box? nn)
+		     (begin
+		       (set-box-content! b nn)
+		       (loop n nn))
+		   n)))
 	b)))
   (let ((bx (hashtable-ref ht x #f))
 	(by (hashtable-ref ht y #f)))
