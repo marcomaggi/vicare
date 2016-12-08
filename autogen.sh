@@ -7,6 +7,6 @@ LIBTOOLIZE=${LIBTOOLIZE:=libtoolize}
 set -xe
 test -d meta/autotools			|| mkdir meta/autotools
 test -f meta/autotools/libtool.m4	|| ${LIBTOOLIZE}
-autoreconf --warnings=all --install --verbose "$@"
+autoreconf --warnings=all --install --symlink --verbose "$@"
 
 ### end of file
