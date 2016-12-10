@@ -1,4 +1,4 @@
-;;; -*- coding: utf-8 -*-
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare
 ;;;Contents: tests for list6
@@ -25,47 +25,49 @@
 
 
 #!vicare
-(import (for (except (vicare)
-		     break delete
+(program (test-vicare-lists)
+  (options typed-language)
+  (import (for (except (vicare)
+		       break delete
 
-		     ;; from (rnrs base (6))
-		     pair?		cons
-		     car		cdr
-		     null?
-		     caar		cdar
-		     cadr		cddr
-		     caaar		cdaar
-		     caadr		cdadr
-		     cadar		cddar
-		     caddr		cdddr
-		     caaaar		cdaaar
-		     caaadr		cdaadr
-		     caadar		cdadar
-		     caaddr		cdaddr
-		     cadaar		cddaar
-		     cadadr		cddadr
-		     caddar		cdddar
-		     cadddr		cddddr
-		     list?
-		     list		length
-		     append		reverse
-		     list-tail		list-ref
-		     map		for-each
+		       ;; from (rnrs base (6))
+		       pair?		cons
+		       car		cdr
+		       null?
+		       caar		cdar
+		       cadr		cddr
+		       caaar		cdaar
+		       caadr		cdadr
+		       cadar		cddar
+		       caddr		cdddr
+		       caaaar		cdaaar
+		       caaadr		cdaadr
+		       caadar		cdadar
+		       caaddr		cdaddr
+		       cadaar		cddaar
+		       cadadr		cddadr
+		       caddar		cdddar
+		       cadddr		cddddr
+		       list?
+		       list		length
+		       append		reverse
+		       list-tail	list-ref
+		       map		for-each
 
-		     ;; from (rnrs lists (6))
-		     assoc		assp		assq
-		     assv		cons*		exists
-		     filter		find		fold-left
-		     fold-right		for-all		member
-		     memp		memq		memv
-		     partition		remove		remp
-		     remq		remv)
-	     expand run)
-  (libtest lists)
-  (prefix (vicare) six.)
-  (vicare unsafe operations)
-  (vicare system $lists)
-  (vicare checks))
+		       ;; from (rnrs lists (6))
+		       assoc		assp		assq
+		       assv		cons*		exists
+		       filter		find		fold-left
+		       fold-right	for-all		member
+		       memp		memq		memv
+		       partition	remove		remp
+		       remq		remv)
+	    expand run)
+    (libtest lists)
+    (prefix (vicare) six::)
+    (vicare unsafe operations)
+    (vicare system $lists)
+    (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare lists functions\n")
@@ -76,33 +78,33 @@
 (define numbers '(0 1 2 3 4 5 6 7 8 9))
 
 
+(parametrise ((check-test-name	'circular))
+
 ;;;; miscellaneous tests on circular lists
 
-(let ()
+  (define end  (six::cons  1 '()))
+  (define tail (six::cons* 3 2 end))
+  (define ell  (six::cons* 5 4 tail))
+  (six::set-cdr! end tail)
 
-  (define end  (six.cons  1 '()))
-  (define tail (six.cons* 3 2 end))
-  (define ell  (six.cons* 5 4 tail))
-  (six.set-cdr! end tail)
-
-  (check (six.car ell)			=> 5)
-  (check (six.cadr ell)			=> 4)
-  (check (six.caddr ell)		=> 3)
-  (check (six.cadddr ell)		=> 2)
-  (check (six.cadddr (six.cdr ell))	=> 1)
-  (check (six.cdddr (six.cddr ell))	=> tail)
-  (check (six.cadddr (six.cddr ell))	=> 3)
-  (check (six.cadddr (six.cdddr ell))	=> 2)
+  (check (six::car ell)			=> 5)
+  (check (six::cadr ell)			=> 4)
+  (check (six::caddr ell)		=> 3)
+  (check (six::cadddr ell)		=> 2)
+  (check (six::cadddr (six::cdr ell))	=> 1)
+  (check (six::cdddr (six::cddr ell))	=> tail)
+  (check (six::cadddr (six::cddr ell))	=> 3)
+  (check (six::cadddr (six::cdddr ell))	=> 2)
 
   ;;When  this test  is  run  with the  source  optimiser inserted:  the
   ;;mutation of  the pair must be  recognised; the CAR and  the CDR must
   ;;precomputed after the mutation.
   ;;
   (check
-      (let ((b (six.cons 1 2)))
-	(six.set-car! b 10)
-	(six.set-cdr! b 20)
-	(vector (six.car b) (six.cdr b)))
+      (let ((b (six::cons 1 2)))
+	(six::set-car! b 10)
+	(six::set-cdr! b 20)
+	(vector (six::car b) (six::cdr b)))
     => '#(10 20))
 
   ;;The following  test will fail  because we are mutating  a hard-coded
@@ -110,18 +112,18 @@
   ;;
   ;; (check
   ;;     (let ((b '(1 . 2)))
-  ;; 	(six.set-car! b 10)
-  ;; 	(six.set-cdr! b 20)
-  ;; 	(vector (six.car b) (six.cdr b)))
+  ;; 	(six::set-car! b 10)
+  ;; 	(six::set-cdr! b 20)
+  ;; 	(vector (six::car b) (six::cdr b)))
   ;;   => '#(10 20))
 
   #f)
 
 
-(let ()		;constructors
+(parametrise ((check-test-name	'constructors))
 
   (check
-      (six.cons* 1 2 3 4 '(5 6 7 8))
+      (six::cons* 1 2 3 4 '(5 6 7 8))
     => '(1 2 3 4 5 6 7 8))
 
 ;;; --------------------------------------------------------------------
@@ -133,22 +135,22 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (six.make-list 4 'c)
+      (six::make-list 4 'c)
     => '(c c c c))
 
   (check
-      (six.make-list 0)
+      (six::make-list 0)
     => '())
 
   (check
-      (six.make-list 0 #f)
+      (six::make-list 0 #f)
     => '())
 
 ;;; --------------------------------------------------------------------
 
   (check
       (list-tabulate 4 (lambda (i)
-			 (six.cons i 'a)))
+			 (six::cons i 'a)))
     => '((0 . a)
 	 (1 . a)
 	 (2 . a)
@@ -156,19 +158,19 @@
 
   (check
       (list-tabulate 1 (lambda (i)
-			 (six.cons i 'a)))
+			 (six::cons i 'a)))
     => '((0 . a)))
 
   (check
       (list-tabulate 0 (lambda (i)
-			 (six.cons i 'a)))
+			 (six::cons i 'a)))
     => '())
 
 ;;; --------------------------------------------------------------------
 
   (check
       (list-tabulate/reverse 4 (lambda (i)
-				 (six.cons i 'a)))
+				 (six::cons i 'a)))
     => '((0 . a)
 	 (1 . a)
 	 (2 . a)
@@ -176,12 +178,12 @@
 
   (check
       (list-tabulate/reverse 1 (lambda (i)
-				 (six.cons i 'a)))
+				 (six::cons i 'a)))
     => '((0 . a)))
 
   (check
       (list-tabulate/reverse 0 (lambda (i)
-				 (six.cons i 'a)))
+				 (six::cons i 'a)))
     => '())
 
 ;;; --------------------------------------------------------------------
@@ -270,46 +272,46 @@
   #f)
 
 
-(let ()		;kind-predicates
+(parametrise ((check-test-name	'kind-predicates))
 
   (check
-      (six.list? '())
+      (six::list? '())
     => #t)
 
   (check
-      (six.list? '(1 2 3))
+      (six::list? '(1 2 3))
     => #t)
 
   (check
-      (six.list? '(1 2 3 . 4))
+      (six::list? '(1 2 3 . 4))
     => #f)
 
   (check
-      (six.list? '(1 . 2))
+      (six::list? '(1 . 2))
     => #f)
 
   (check
-      (six.list? (circular-list 1 2))
+      (six::list? (circular-list 1 2))
     => #f)
 
   (check
-      (six.list? (circular-list 1 2 3 4 5 6))
+      (six::list? (circular-list 1 2 3 4 5 6))
     => #f)
 
   (check
-      (six.list? (six.list 1 2 3 4 (circular-list 5 6 7 8)))
+      (six::list? (six::list 1 2 3 4 (circular-list 5 6 7 8)))
     => #t)
 
   (check
-      (six.list? 123)
+      (six::list? 123)
     => #f)
 
   (check
-      (six.list? #\a)
+      (six::list? #\a)
     => #f)
 
   (check
-      (six.list? 'alpha)
+      (six::list? 'alpha)
     => #f)
 
 ;;; --------------------------------------------------------------------
@@ -339,11 +341,11 @@
     => #t)
 
   (check
-      (circular-list? (six.list 1 2 3 4 (circular-list 5 6 7 8)))
+      (circular-list? (six::list 1 2 3 4 (circular-list 5 6 7 8)))
     => #f)
 
   (check
-      (circular-list? (six.cons 1 (six.cons 2 (six.cons 3 (six.cons 4 (circular-list 5 6 7 8))))))
+      (circular-list? (six::cons 1 (six::cons 2 (six::cons 3 (six::cons 4 (circular-list 5 6 7 8))))))
     => #t)
 
   (check
@@ -385,11 +387,11 @@
     => #f)
 
   (check
-      (dotted-list? (six.list 1 2 3 4 (circular-list 5 6 7 8)))
+      (dotted-list? (six::list 1 2 3 4 (circular-list 5 6 7 8)))
     => #f)
 
   (check
-      (dotted-list? (six.cons 1 (six.cons 2 (six.cons 3 (six.cons 4 (circular-list 5 6 7 8))))))
+      (dotted-list? (six::cons 1 (six::cons 2 (six::cons 3 (six::cons 4 (circular-list 5 6 7 8))))))
     => #f)
 
   (check
@@ -407,41 +409,41 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (six.null? '(1 2))
+      (six::null? '(1 2))
     => #f)
 
   (check
-      (six.null? '(1 . 2))
+      (six::null? '(1 . 2))
     => #f)
 
   (check
-      (six.null? '(1))
+      (six::null? '(1))
     => #f)
 
   (check
-      (six.null? '())
+      (six::null? '())
     => #t)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (six.pair? '(1 2))
+      (six::pair? '(1 2))
     => #t)
 
   (check
-      (six.pair? '(1 . 2))
+      (six::pair? '(1 . 2))
     => #t)
 
   (check
-      (six.pair? '(1))
+      (six::pair? '(1))
     => #t)
 
   (check
-      (six.pair? '())
+      (six::pair? '())
     => #f)
 
   (check
-      (six.pair? 1)
+      (six::pair? 1)
     => #f)
 
 ;;; --------------------------------------------------------------------
@@ -469,7 +471,7 @@
   #f)
 
 
-(let ()		;null-predicates
+(parametrise ((check-test-name	'null-predicates))
 
   (check (and-null?)			=> #t)
   (check (and-null? '())		=> #t)
@@ -491,7 +493,7 @@
 
   (let-syntax ((check-values	(syntax-rules ()
 				  ((_ ?expr ?expected)
-				   (check (receive (a o) ?expr (six.list a o)) => ?expected)))))
+				   (check (receive (a o) ?expr (six::list a o)) => ?expected)))))
     (check-values (and/or-null?)		 '(#t #f))
     (check-values (and/or-null? '())		 '(#t #t))
     (check-values (and/or-null? '() '())	 '(#t #t))
@@ -504,7 +506,7 @@
   #f)
 
 
-(let ()		;comparison
+(parametrise ((check-test-name	'comparison))
 
   (check
       (list=? =)
@@ -647,7 +649,7 @@
   #f)
 
 
-(let ()		;selectors
+(parametrise ((check-test-name	'selectors))
 
   (check (first numbers)	=> 0)
   (check (second numbers)	=> 1)
@@ -663,11 +665,11 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (six.list-ref numbers 0)
+      (six::list-ref numbers 0)
     => 0)
 
   (check
-      (six.list-ref numbers 3)
+      (six::list-ref numbers 3)
     => 3)
 
 ;;; --------------------------------------------------------------------
@@ -675,8 +677,8 @@
   (check
       (call-with-values
 	  (lambda () (car+cdr numbers))
-	six.list)
-    => (six.list (six.car numbers) (six.cdr numbers)))
+	six::list)
+    => (six::list (six::car numbers) (six::cdr numbers)))
 
 ;;; --------------------------------------------------------------------
 
@@ -697,7 +699,7 @@
     => numbers)
 
   (check
-      (six.append (take-left numbers 3)
+      (six::append (take-left numbers 3)
 		  (drop-left numbers 3))
     => numbers)
 
@@ -720,7 +722,7 @@
     => '())
 
   (check
-      (six.append (drop-right numbers 3)
+      (six::append (drop-right numbers 3)
 		  (take-right numbers 3))
     => numbers)
 
@@ -763,7 +765,7 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (take-left! (six.list 1 3 5) 2)
+      (take-left! (six::list 1 3 5) 2)
     => '(1 3))
 
   (check
@@ -774,7 +776,7 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (drop-right! (six.list 1 3 5) 1)
+      (drop-right! (six::list 1 3 5) 1)
     => '(1 3))
 
   (check
@@ -787,7 +789,7 @@
   (check
       (call-with-values
 	  (lambda () (split-at numbers 5))
-	six.list)
+	six::list)
     => '((0 1 2 3 4)
 	 (5 6 7 8 9)))
 
@@ -810,11 +812,11 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (six.last-pair numbers)
+      (six::last-pair numbers)
     => '(9))
 
   (check
-      (six.last-pair '(9))
+      (six::last-pair '(9))
     => '(9))
 
 ;;; The empty list is not a pair, so the following raises an error.
@@ -826,18 +828,18 @@
   #f)
 
 
-(let ()		;miscellaneous
+(parametrise ((check-test-name	'misc))
 
   (check
-      (six.length '(1 2 3 4 5 6))
+      (six::length '(1 2 3 4 5 6))
     => 6)
 
   (check
-      (six.length '(1))
+      (six::length '(1))
     => 1)
 
   (check
-      (six.length '())
+      (six::length '())
     => 0)
 
 ;;; --------------------------------------------------------------------
@@ -861,35 +863,35 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (six.append '(x) '(y))
+      (six::append '(x) '(y))
     => '(x y))
 
   (check
-      (six.append '(a) '(b c d))
+      (six::append '(a) '(b c d))
     => '(a b c d))
 
   (check
-      (six.append '(a (b)) '((c)))
+      (six::append '(a (b)) '((c)))
     => '(a (b) (c)))
 
   (check
-      (six.append '(a b) '(c . d))
+      (six::append '(a b) '(c . d))
     => '(a b c . d))
 
   (check
-      (six.append '() 'a)
+      (six::append '() 'a)
     => 'a)
 
   (check
-      (six.append '(a) '())
+      (six::append '(a) '())
     => '(a))
 
   (check
-      (six.append '(x y))
+      (six::append '(x y))
     => '(x y))
 
   (check
-      (six.append)
+      (six::append)
     => '())
 
 ;;; --------------------------------------------------------------------
@@ -911,27 +913,27 @@
     => '())
 
   (check
-      (append! (six.list 'y))
+      (append! (six::list 'y))
     => '(y))
 
   (check
-      (append! (six.list 'x) (six.list 'y))
+      (append! (six::list 'x) (six::list 'y))
     => '(x y))
 
   (check
-      (append! (six.list 'x) (six.list 'y) (six.list 'z))
+      (append! (six::list 'x) (six::list 'y) (six::list 'z))
     => '(x y z))
 
   (check
-      (append! (six.list 'a) '(b c d))
+      (append! (six::list 'a) '(b c d))
     => '(a b c d))
 
   (check
-      (append! (six.list 'a '(b)) '((c)))
+      (append! (six::list 'a '(b)) '((c)))
     => '(a (b) (c)))
 
   (check
-      (append! (six.list 'a 'b) '(c . d))
+      (append! (six::list 'a 'b) '(c . d))
     => '(a b c . d))
 
   (check
@@ -939,11 +941,11 @@
     => 'a)
 
   (check
-      (append! (six.list 'a) '())
+      (append! (six::list 'a) '())
     => '(a))
 
   (check
-      (append! (six.list 'x 'y))
+      (append! (six::list 'x 'y))
     => '(x y))
 
 ;;; --------------------------------------------------------------------
@@ -1085,15 +1087,15 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (six.reverse '())
+      (six::reverse '())
     => '())
 
   (check
-      (six.reverse '(1))
+      (six::reverse '(1))
     => '(1))
 
   (check
-      (six.reverse '(1 2 3))
+      (six::reverse '(1 2 3))
     => '(3 2 1))
 
   (check
@@ -1235,7 +1237,7 @@
       (call-with-values
 	  (lambda ()
 	    (unzip2 '((1 one))))
-	six.list)
+	six::list)
     => '((1)
 	 (one)))
 
@@ -1244,7 +1246,7 @@
 	  (lambda ()
 	    (unzip2 '((1 one)
 		      (2 two))))
-	six.list)
+	six::list)
     => '((1 2)
 	 (one two)))
 
@@ -1254,7 +1256,7 @@
 	    (unzip2 '((1 one)
 		      (2 two)
 		      (3 three))))
-	six.list)
+	six::list)
     => '((1 2 3)
 	 (one two three)))
 
@@ -1266,7 +1268,7 @@
 	    (unzip3 '((1 10 100)
 		      (2 20 200)
 		      (3 30 300))))
-	six.list)
+	six::list)
     => '((1 2 3)
 	 (10 20 30)
 	 (100 200 300)))
@@ -1277,7 +1279,7 @@
 	    (unzip4 '((1 10 100 1000)
 		      (2 20 200 2000)
 		      (3 30 300 3000))))
-	six.list)
+	six::list)
     => '((1 2 3)
 	 (10 20 30)
 	 (100 200 300)
@@ -1289,7 +1291,7 @@
 	    (unzip5 '((1 10 100 1000 10000)
 		      (2 20 200 2000 20000)
 		      (3 30 300 3000 30000))))
-	six.list)
+	six::list)
     => '((1 2 3)
 	 (10 20 30)
 	 (100 200 300)
@@ -1318,26 +1320,26 @@
   #f)
 
 
-(let ()		;left-folding
+(parametrise ((check-test-name	'left-folding))
 
   (check
       (fold + 0 numbers)
     => 45)
 
   (check
-      (fold six.cons '() numbers)
+      (fold six::cons '() numbers)
     => '(9 8 7 6 5 4 3 2 1 0))
 
   (check
-      (fold six.cons '(4 5 6) '(3 2 1))
+      (fold six::cons '(4 5 6) '(3 2 1))
     => '(1 2 3 4 5 6))
 
   (check
-      (fold six.cons '(4 5 6) '())
+      (fold six::cons '(4 5 6) '())
     => '(4 5 6))
 
   (check
-      (fold six.cons '(4 5 6) '(3))
+      (fold six::cons '(4 5 6) '(3))
     => '(3 4 5 6))
 
   (check
@@ -1357,20 +1359,20 @@
     => 5)
 
   (check
-      (fold six.cons* '()
+      (fold six::cons* '()
 	    '(a b c)
 	    '(1 2 3 4 5))
     => '(c 3 b 2 a 1))
 
   (check
-      (fold six.cons* '()
+      (fold six::cons* '()
 	    '(a)
 	    '(1))
     => '(a 1))
 
   (check
       (fold (lambda (a b c knil)
-	      (six.cons (six.list a b c)
+	      (six::cons (six::list a b c)
 			knil))
 	    '()
 	    '(1 2 3)
@@ -1382,7 +1384,7 @@
 
   (check
       (fold (lambda (a b c knil)
-	      (six.cons (six.list a b c)
+	      (six::cons (six::list a b c)
 			knil))
 	    '()
 	    '(1 2 3)
@@ -1431,7 +1433,7 @@
 
   (check
       (fold-left* (lambda (knil a b c)
-		    (six.cons (six.list a b c)
+		    (six::cons (six::list a b c)
 			      knil))
 		  '()
 		  '(1 2 3)
@@ -1453,14 +1455,14 @@
   #f)
 
 
-(let ()		;right-folding
+(parametrise ((check-test-name	'right-folding))
 
   (check
-      (fold* six.cons '() '(1 2 3))
+      (fold* six::cons '() '(1 2 3))
     => '(1 2 3))
 
   (check
-      (fold* six.cons '() numbers)
+      (fold* six::cons '() numbers)
     => numbers)
 
   (check
@@ -1468,7 +1470,7 @@
     => 45)
 
   (check
-      (fold* six.cons '(4 5 6) '(1 2 3))
+      (fold* six::cons '(4 5 6) '(1 2 3))
     => '(1 2 3 4 5 6))
 
   (check
@@ -1490,27 +1492,27 @@
   (check
       (fold* (lambda (x l)
 	       (if (even? x)
-		   (six.cons x l)
+		   (six::cons x l)
 		 l))
 	     '()
 	     '(0 1 2 3 4 5 6 7 8 9))
     => '(0 2 4 6 8))
 
   (check
-      (fold* six.cons* '()
+      (fold* six::cons* '()
 	     '(a b c)
 	     '(1 2 3 4 5))
     => '(a 1 b 2 c 3))
 
   (check
-      (fold* six.cons* '()
+      (fold* six::cons* '()
 	     '(a)
 	     '(1))
     => '(a 1))
 
   (check
       (fold* (lambda (a b c knil)
-	       (six.cons (six.list a b c)
+	       (six::cons (six::list a b c)
 			 knil))
 	     '()
 	     '(1 2 3)
@@ -1522,7 +1524,7 @@
 
   (check
       (fold* (lambda (a b c knil)
-	       (six.cons (six.list a b c)
+	       (six::cons (six::list a b c)
 			 knil))
 	     '()
 	     '(1 2 3)
@@ -1534,19 +1536,19 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (fold-right* six.cons '() '(1 2 3))
+      (fold-right* six::cons '() '(1 2 3))
     => '(1 2 3))
 
   (check
-      (fold-right* six.cons '(1 2 3) '())
+      (fold-right* six::cons '(1 2 3) '())
     => '(1 2 3))
 
   (check
-      (fold-right* six.cons '(1 2 3) '(9))
+      (fold-right* six::cons '(1 2 3) '(9))
     => '(9 1 2 3))
 
   (check
-      (fold-right* six.cons '() numbers)
+      (fold-right* six::cons '() numbers)
     => numbers)
 
   (check
@@ -1554,7 +1556,7 @@
     => 45)
 
   (check
-      (fold-right* six.cons '(4 5 6) '(1 2 3))
+      (fold-right* six::cons '(4 5 6) '(1 2 3))
     => '(1 2 3 4 5 6))
 
   (check
@@ -1576,27 +1578,27 @@
   (check
       (fold-right* (lambda (x l)
 		     (if (even? x)
-			 (six.cons x l)
+			 (six::cons x l)
 		       l))
 		   '()
 		   '(0 1 2 3 4 5 6 7 8 9))
     => '(0 2 4 6 8))
 
   (check
-      (fold-right* six.cons* '()
+      (fold-right* six::cons* '()
 		   '(a b c)
 		   '(1 2 3))
     => '(a 1 b 2 c 3))
 
   (check
-      (fold-right* six.cons* '()
+      (fold-right* six::cons* '()
 		   '(a)
 		   '(1))
     => '(a 1))
 
   (check
       (fold-right* (lambda (a b c knil)
-		     (six.cons (six.list a b c)
+		     (six::cons (six::list a b c)
 			       knil))
 		   '()
 		   '(1 2 3)
@@ -1608,7 +1610,7 @@
 
   (check
       (fold-right* (lambda (a b c knil)
-		     (six.cons (six.list a b c)
+		     (six::cons (six::list a b c)
 			       knil))
 		   '()
 		   '(1 2 3)
@@ -1620,30 +1622,30 @@
   #f)
 
 
-(let ()		;pair-folding
+(parametrise ((check-test-name	'pair-folding))
 
   (check
       (pair-fold (lambda (elm knil)
-		   (six.cons (six.car elm) knil))
+		   (six::cons (six::car elm) knil))
 		 '(999)
 		 '(1 2 3))
     => '(3 2 1 999))
 
   (check
       (pair-fold (lambda (pair tail)
-		   (six.set-cdr! pair tail)
+		   (six::set-cdr! pair tail)
 		   pair)
 		 '()
 		 (list-copy numbers))
-    => (six.reverse numbers))
+    => (six::reverse numbers))
 
 ;;; --------------------------------------------------------------------
 
   (check
       (pair-fold (lambda (a b c knil)
-		   (six.cons (six.list (six.car a)
-				       (six.car b)
-				       (six.car c))
+		   (six::cons (six::list (six::car a)
+				       (six::car b)
+				       (six::car c))
 			     knil))
 		 '(999)
 		 '(1 2 3)
@@ -1656,9 +1658,9 @@
 
   (check
       (pair-fold (lambda (a b c knil)
-		   (six.cons (six.list (six.car a)
-				       (six.car b)
-				       (six.car c))
+		   (six::cons (six::list (six::car a)
+				       (six::car b)
+				       (six::car c))
 			     knil))
 		 '(999)
 		 '(1)
@@ -1669,9 +1671,9 @@
 
   (check
       (pair-fold (lambda (a b c knil)
-		   (six.cons (six.list (six.car a)
-				       (six.car b)
-				       (six.car c))
+		   (six::cons (six::list (six::car a)
+				       (six::car b)
+				       (six::car c))
 			     knil))
 		 '(999)
 		 '(1)
@@ -1682,9 +1684,9 @@
 
   (check
       (pair-fold (lambda (a b c knil)
-		   (six.cons (six.list (six.car a)
-				       (six.car b)
-				       (six.car c))
+		   (six::cons (six::list (six::car a)
+				       (six::car b)
+				       (six::car c))
 			     knil))
 		 '(999)
 		 '(1 2 3)
@@ -1694,9 +1696,9 @@
 	 999))
   (check
       (pair-fold (lambda (a b c knil)
-		   (six.cons (six.list (six.car a)
-				       (six.car b)
-				       (six.car c))
+		   (six::cons (six::list (six::car a)
+				       (six::car b)
+				       (six::car c))
 			     knil))
 		 '(999)
 		 '(1 2 3)
@@ -1707,9 +1709,9 @@
 
   (check
       (pair-fold (lambda (a b c knil)
-		   (six.cons (six.list (six.car a)
-				       (six.car b)
-				       (six.car c))
+		   (six::cons (six::list (six::car a)
+				       (six::car b)
+				       (six::car c))
 			     knil))
 		 '(999)
 		 '()
@@ -1719,9 +1721,9 @@
 
   (check
       (pair-fold (lambda (a b c knil)
-		   (six.cons (six.list (six.car a)
-				       (six.car b)
-				       (six.car c))
+		   (six::cons (six::list (six::car a)
+				       (six::car b)
+				       (six::car c))
 			     knil))
 		 '(999)
 		 '(1 2 3)
@@ -1731,9 +1733,9 @@
 
   (check
       (pair-fold (lambda (a b c knil)
-		   (six.cons (six.list (six.car a)
-				       (six.car b)
-				       (six.car c))
+		   (six::cons (six::list (six::car a)
+				       (six::car b)
+				       (six::car c))
 			     knil))
 		 '(999)
 		 '(1 2 3)
@@ -1745,14 +1747,14 @@
 
   (check
       (pair-fold* (lambda (elm knil)
-		    (six.cons (six.car elm) knil))
+		    (six::cons (six::car elm) knil))
 		  '(999)
 		  '(1 2 3))
     => '(1 2 3 999))
 
   (check
       (pair-fold* (lambda (pair tail)
-		    (six.set-cdr! pair tail)
+		    (six::set-cdr! pair tail)
 		    pair)
 		  '()
 		  (list-copy numbers))
@@ -1762,9 +1764,9 @@
 
   (check
       (pair-fold* (lambda (a b c knil)
-		    (six.cons (six.list (six.car a)
-					(six.car b)
-					(six.car c))
+		    (six::cons (six::list (six::car a)
+					(six::car b)
+					(six::car c))
 			      knil))
 		  '(999)
 		  '(1 2 3)
@@ -1777,9 +1779,9 @@
 
   (check
       (pair-fold* (lambda (a b c knil)
-		    (six.cons (six.list (six.car a)
-					(six.car b)
-					(six.car c))
+		    (six::cons (six::list (six::car a)
+					(six::car b)
+					(six::car c))
 			      knil))
 		  '(999)
 		  '(1)
@@ -1790,9 +1792,9 @@
 
   (check
       (pair-fold* (lambda (a b c knil)
-		    (six.cons (six.list (six.car a)
-					(six.car b)
-					(six.car c))
+		    (six::cons (six::list (six::car a)
+					(six::car b)
+					(six::car c))
 			      knil))
 		  '(999)
 		  '(1)
@@ -1803,9 +1805,9 @@
 
   (check
       (pair-fold* (lambda (a b c knil)
-		    (six.cons (six.list (six.car a)
-					(six.car b)
-					(six.car c))
+		    (six::cons (six::list (six::car a)
+					(six::car b)
+					(six::car c))
 			      knil))
 		  '(999)
 		  '(1 2 3)
@@ -1815,9 +1817,9 @@
 	 999))
   (check
       (pair-fold* (lambda (a b c knil)
-		    (six.cons (six.list (six.car a)
-					(six.car b)
-					(six.car c))
+		    (six::cons (six::list (six::car a)
+					(six::car b)
+					(six::car c))
 			      knil))
 		  '(999)
 		  '(1 2 3)
@@ -1828,9 +1830,9 @@
 
   (check
       (pair-fold* (lambda (a b c knil)
-		    (six.cons (six.list (six.car a)
-					(six.car b)
-					(six.car c))
+		    (six::cons (six::list (six::car a)
+					(six::car b)
+					(six::car c))
 			      knil))
 		  '(999)
 		  '()
@@ -1840,9 +1842,9 @@
 
   (check
       (pair-fold* (lambda (a b c knil)
-		    (six.cons (six.list (six.car a)
-					(six.car b)
-					(six.car c))
+		    (six::cons (six::list (six::car a)
+					(six::car b)
+					(six::car c))
 			      knil))
 		  '(999)
 		  '(1 2 3)
@@ -1852,9 +1854,9 @@
 
   (check
       (pair-fold* (lambda (a b c knil)
-		    (six.cons (six.list (six.car a)
-					(six.car b)
-					(six.car c))
+		    (six::cons (six::list (six::car a)
+					(six::car b)
+					(six::car c))
 			      knil))
 		  '(999)
 		  '(1 2 3)
@@ -1865,7 +1867,7 @@
   #f)
 
 
-(let ()		;reducing
+(parametrise ((check-test-name	'reducing))
 
   (check
       (reduce + 0 numbers)
@@ -1894,7 +1896,7 @@
     => 5)
 
   (check
-      (reduce* six.append
+      (reduce* six::append
 	       '()
 	       '((1 2 3)
 		 (4 5)
@@ -1905,7 +1907,7 @@
   #f)
 
 
-(let ()		;unfolding
+(parametrise ((check-test-name	'unfolding))
 
   (check
       (unfold (lambda (x) (< 5 x))
@@ -1931,15 +1933,15 @@
     => -1)
 
   (check
-      (unfold six.null? six.car six.cdr numbers)
+      (unfold six::null? six::car six::cdr numbers)
     => numbers)
 
   (check
-      (unfold not-pair? six.car six.cdr '(1 2 3 4 . 5) values)
+      (unfold not-pair? six::car six::cdr '(1 2 3 4 . 5) values)
     => '(1 2 3 4 . 5))
 
   (check
-      (unfold six.null? six.car six.cdr '(1 2 3) (lambda (x) '(4 5 6)))
+      (unfold six::null? six::car six::cdr '(1 2 3) (lambda (x) '(4 5 6)))
     => '(1 2 3 4 5 6))
 
 ;;; --------------------------------------------------------------------
@@ -1952,42 +1954,42 @@
     => '(1 4 9 16 25))
 
   (check
-      (unfold-right six.null? six.car six.cdr '(1 2 3 4 5))
+      (unfold-right six::null? six::car six::cdr '(1 2 3 4 5))
     => '(5 4 3 2 1))
 
   (check
-      (unfold-right six.null? six.car six.cdr '(3 2 1) '(4 5 6))
+      (unfold-right six::null? six::car six::cdr '(3 2 1) '(4 5 6))
     => '(1 2 3 4 5 6))
 
   #f)
 
 
-(let ()		;mapping
+(parametrise ((check-test-name	'mapping))
 
   (check
-      (six.map - '())
+      (six::map - '())
     => '())
 
   (check
-      (six.map - '() '())
+      (six::map - '() '())
     => '())
 
   (check
-      (six.map - '() '() '())
+      (six::map - '() '() '())
     => '())
 
   (check
-      (six.map - numbers)
+      (six::map - numbers)
     => '(0 -1 -2 -3 -4 -5 -6 -7 -8 -9))
 
   (check
-      (six.map +
+      (six::map +
 	       '(1 2 3)
 	       '(10 20 30))
     => '(11 22 33))
 
   (check
-      (six.map +
+      (six::map +
 	       '(1 2 3)
 	       '(10 20 30)
 	       '(100 200 300))
@@ -1997,7 +1999,7 @@
 
   (check
       (let ((r 0))
-	(six.for-each
+	(six::for-each
 	 (lambda (e)
 	   (set! r (+ e r)))
 	 '())
@@ -2006,7 +2008,7 @@
 
   (check
       (let ((r 0))
-	(six.for-each
+	(six::for-each
 	 (lambda (e1 e2)
 	   (set! r (+ e1 e2 r)))
 	 '() '())
@@ -2015,7 +2017,7 @@
 
   (check
       (let ((r 0))
-	(six.for-each
+	(six::for-each
 	 (lambda (e1 e2 e3)
 	   (set! r (+ e1 e2 e3 r)))
 	 '() '() '())
@@ -2023,11 +2025,11 @@
     => 0)
 
   (check
-      (let ((r '(0 0)))
-	(six.for-each
+      (let (({r <top>} '(0 0)))
+	(six::for-each
 	 (lambda (e1 e2)
-	   (set! r (six.list (+ e1 (six.car r))
-			     (+ e2 (six.cadr r)))))
+	   (set! r (six::list (+ e1 (six::car r))
+			     (+ e2 (six::cadr r)))))
 	 '(1 10 100)
 	 '(2 20 200))
 	r)
@@ -2035,12 +2037,12 @@
 
 
   (check
-      (let ((r '(0 0 0)))
-	(six.for-each
+      (let (({r <top>} '(0 0 0)))
+	(six::for-each
 	 (lambda (e1 e2 e3)
-	   (set! r (six.list (+ e1 (six.car r))
-			     (+ e2 (six.cadr r))
-			     (+ e3 (six.caddr r)))))
+	   (set! r (six::list (+ e1 (six::car r))
+			     (+ e2 (six::cadr r))
+			     (+ e3 (six::caddr r)))))
 	 '(1 10 100)
 	 '(2 20 200)
 	 '(3 30 300))
@@ -2051,7 +2053,7 @@
 
   (check
       (let ((r 0))
-	(six.for-each-in-order
+	(six::for-each-in-order
 	 (lambda (e)
 	   (set! r (+ e r)))
 	 '())
@@ -2060,7 +2062,7 @@
 
   (check
       (let ((r 0))
-	(six.for-each-in-order
+	(six::for-each-in-order
 	 (lambda (e1 e2)
 	   (set! r (+ e1 e2 r)))
 	 '() '())
@@ -2069,7 +2071,7 @@
 
   (check
       (let ((r 0))
-	(six.for-each-in-order
+	(six::for-each-in-order
 	 (lambda (e1 e2 e3)
 	   (set! r (+ e1 e2 e3 r)))
 	 '() '() '())
@@ -2077,23 +2079,23 @@
     => 0)
 
   (check
-      (let ((r '(0 0)))
-	(six.for-each-in-order
+      (let (({r <top>} '(0 0)))
+	(six::for-each-in-order
 	 (lambda (e1 e2)
-	   (set! r (six.list (+ e1 (six.car r))
-			     (+ e2 (six.cadr r)))))
+	   (set! r (six::list (+ e1 (six::car r))
+			     (+ e2 (six::cadr r)))))
 	 '(1 10 100)
 	 '(2 20 200))
 	r)
     => '(111 222))
 
   (check
-      (let ((r '(0 0 0)))
-	(six.for-each-in-order
+      (let (({r <top>} '(0 0 0)))
+	(six::for-each-in-order
 	 (lambda (e1 e2 e3)
-	   (set! r (six.list (+ e1 (six.car r))
-			     (+ e2 (six.cadr r))
-			     (+ e3 (six.caddr r)))))
+	   (set! r (six::list (+ e1 (six::car r))
+			     (+ e2 (six::cadr r))
+			     (+ e3 (six::caddr r)))))
 	 '(1 10 100)
 	 '(2 20 200)
 	 '(3 30 300))
@@ -2102,7 +2104,7 @@
 
   (check
       (with-result
-	(six.for-each-in-order add-result '(1 2 3 4)))
+	(six::for-each-in-order add-result '(1 2 3 4)))
     => '((1 2 3 4)))
 
 ;;; --------------------------------------------------------------------
@@ -2222,11 +2224,11 @@
     => 0)
 
   (check
-      (let ((r '(0 0)))
+      (let (({r <top>} '(0 0)))
 	(for-each*
 	 (lambda (e1 e2)
-	   (set! r (six.list (+ e1 (six.car r))
-			     (+ e2 (six.cadr r)))))
+	   (set! r (six::list (+ e1 (six::car r))
+			     (+ e2 (six::cadr r)))))
 	 '(1 10 100)
 	 '(2 20 200))
 	r)
@@ -2234,12 +2236,12 @@
 
 
   (check
-      (let ((r '(0 0 0)))
+      (let (({r <top>} '(0 0 0)))
 	(for-each*
 	 (lambda (e1 e2 e3)
-	   (set! r (six.list (+ e1 (six.car r))
-			     (+ e2 (six.cadr r))
-			     (+ e3 (six.caddr r)))))
+	   (set! r (six::list (+ e1 (six::car r))
+			     (+ e2 (six::cadr r))
+			     (+ e3 (six::caddr r)))))
 	 '(1 10 100)
 	 '(2 20 200)
 	 '(3 30 300))
@@ -2247,12 +2249,12 @@
     => '(111 222 333))
 
   (check
-      (let ((r '(0 0 0)))
+      (let (({r <top>} '(0 0 0)))
 	(for-each*
 	 (lambda (e1 e2 e3)
-	   (set! r (six.list (+ e1 (six.car r))
-			     (+ e2 (six.cadr r))
-			     (+ e3 (six.caddr r)))))
+	   (set! r (six::list (+ e1 (six::car r))
+			     (+ e2 (six::cadr r))
+			     (+ e3 (six::caddr r)))))
 	 '(1 10 100)
 	 '(2 20 200)
 	 (circular-list 3 30 300))
@@ -2263,18 +2265,18 @@
 
   (let ()
     (define (f x)
-      (six.list x (- x)))
+      (six::list x (- x)))
 
     (check
 	(append-map f '())
       => '())
 
     (check
-	(append-map six.list '() '())
+	(append-map six::list '() '())
       => '())
 
     (check
-	(append-map six.list '() '() '())
+	(append-map six::list '() '() '())
       => '())
 
     (check
@@ -2282,11 +2284,11 @@
       => '(1 -1))
 
     (check
-	(append-map six.list '(1) '(2))
+	(append-map six::list '(1) '(2))
       => '(1 2))
 
     (check
-	(append-map six.list '(1) '(2) '(3))
+	(append-map six::list '(1) '(2) '(3))
       => '(1 2 3))
 
     (check
@@ -2294,40 +2296,40 @@
       => '(1 -1 3 -3 8 -8))
 
     (check
-	(append-map six.list
+	(append-map six::list
 		    '(1 2 3)
 		    '(10 20 30))
       => '(1 10 2 20 3 30))
 
     (check
-	(append-map six.list
+	(append-map six::list
 		    '(1 2 3)
 		    '(10 20 30))
       => '(1 10 2 20 3 30))
 
     (check
-	(append-map six.list
+	(append-map six::list
 		    '(1 2 3)
 		    '(10 20 30)
 		    '(100 200 300))
       => '(1 10 100 2 20 200 3 30 300))
 
     (check
-	(append-map six.list
+	(append-map six::list
 		    '(1 2)
 		    '(10 20 30)
 		    '(100 200 300))
       => '(1 10 100 2 20 200))
 
     (check
-	(append-map six.list
+	(append-map six::list
 		    '(1 2 3)
 		    '(10 20)
 		    '(100 200 300))
       => '(1 10 100 2 20 200))
 
     (check
-	(append-map six.list
+	(append-map six::list
 		    '(1 2 3)
 		    '(10 20 30)
 		    '(100 200))
@@ -2340,11 +2342,11 @@
       => '())
 
     (check
-	(append-map! six.list '() '())
+	(append-map! six::list '() '())
       => '())
 
     (check
-	(append-map! six.list '() '() '())
+	(append-map! six::list '() '() '())
       => '())
 
     (check
@@ -2352,11 +2354,11 @@
       => '(1 -1))
 
     (check
-	(append-map! six.list '(1) '(2))
+	(append-map! six::list '(1) '(2))
       => '(1 2))
 
     (check
-	(append-map! six.list '(1) '(2) '(3))
+	(append-map! six::list '(1) '(2) '(3))
       => '(1 2 3))
 
     (check
@@ -2364,40 +2366,40 @@
       => '(1 -1 3 -3 8 -8))
 
     (check
-	(append-map! six.list
+	(append-map! six::list
 		     '(1 2 3)
 		     '(10 20 30))
       => '(1 10 2 20 3 30))
 
     (check
-	(append-map! six.list
+	(append-map! six::list
 		     '(1 2 3)
 		     '(10 20 30))
       => '(1 10 2 20 3 30))
 
     (check
-	(append-map! six.list
+	(append-map! six::list
 		     '(1 2 3)
 		     '(10 20 30)
 		     '(100 200 300))
       => '(1 10 100 2 20 200 3 30 300))
 
     (check
-	(append-map! six.list
+	(append-map! six::list
 		     '(1 2)
 		     '(10 20 30)
 		     '(100 200 300))
       => '(1 10 100 2 20 200))
 
     (check
-	(append-map! six.list
+	(append-map! six::list
 		     '(1 2 3)
 		     '(10 20)
 		     '(100 200 300))
       => '(1 10 100 2 20 200))
 
     (check
-	(append-map! six.list
+	(append-map! six::list
 		     '(1 2 3)
 		     '(10 20 30)
 		     '(100 200))
@@ -2408,10 +2410,10 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each
 	 (lambda (x)
-	   (set! r (six.cons x r)))
+	   (set! r (six::cons x r)))
 	 '(1 2 3))
 	r)
     => '((3)
@@ -2419,19 +2421,19 @@
 	 (1 2 3)))
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each
 	 (lambda (x)
-	   (set! r (six.cons x r)))
+	   (set! r (six::cons x r)))
 	 '())
 	r)
     => '())
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each
 	 (lambda (x y)
-	   (set! r (six.cons (six.list x y)
+	   (set! r (six::cons (six::list x y)
 			     r)))
 	 '()
 	 '())
@@ -2439,10 +2441,10 @@
     => '())
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each
 	 (lambda (x y z)
-	   (set! r (six.cons (six.list x y z)
+	   (set! r (six::cons (six::list x y z)
 			     r)))
 	 '()
 	 '()
@@ -2451,29 +2453,29 @@
     => '())
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each
 	 (lambda (x)
-	   (set! r (six.cons x r)))
+	   (set! r (six::cons x r)))
 	 '(1))
 	r)
     => '((1)))
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each
 	 (lambda (x)
-	   (set! r (six.cons x r)))
+	   (set! r (six::cons x r)))
 	 '(1 2))
 	r)
     => '((2)
 	 (1 2)))
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each
 	 (lambda (x y)
-	   (set! r (six.cons (six.list x y)
+	   (set! r (six::cons (six::list x y)
 			     r)))
 	 '(1 2 3)
 	 '(10 20 30))
@@ -2483,10 +2485,10 @@
 	 ((1 2 3) (10 20 30))))
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each
 	 (lambda (x y z)
-	   (set! r (six.cons (six.list x y z)
+	   (set! r (six::cons (six::list x y z)
 			     r)))
 	 '(1 2 3)
 	 '(10 20 30)
@@ -2498,10 +2500,10 @@
 
   (check	;lists of different length
       (guard (E (else #t))
-	(let ((r '()))
+	(let (({r <top>} '()))
 	  (pair-for-each
 	   (lambda (x y z)
-	     (set! r (six.cons (six.list x y z)
+	     (set! r (six::cons (six::list x y z)
 			       r)))
 	   '(1 2)
 	   '(10 20 30)
@@ -2511,10 +2513,10 @@
 
   (check	;lists of different length
       (guard (E (else #t))
-	(let ((r '()))
+	(let (({r <top>} '()))
 	  (pair-for-each
 	   (lambda (x y z)
-	     (set! r (six.cons (six.list x y z)
+	     (set! r (six::cons (six::list x y z)
 			       r)))
 	   '(1 2 3)
 	   '(10 20)
@@ -2524,10 +2526,10 @@
 
   (check	;lists of different length
       (guard (E (else #t))
-	(let ((r '()))
+	(let (({r <top>} '()))
 	  (pair-for-each
 	   (lambda (x y z)
-	     (set! r (six.cons (six.list x y z)
+	     (set! r (six::cons (six::list x y z)
 			       r)))
 	   '(1 2 3)
 	   '(10 20 30)
@@ -2537,10 +2539,10 @@
 
   (check	;lists of different length
       (guard (E (else #t))
-	(let ((r '()))
+	(let (({r <top>} '()))
 	  (pair-for-each
 	   (lambda (x y z)
-	     (set! r (six.cons (six.list x y z)
+	     (set! r (six::cons (six::list x y z)
 			       r)))
 	   '()
 	   '(10 20 30)
@@ -2550,10 +2552,10 @@
 
   (check	;lists of different length
       (guard (E (else #t))
-	(let ((r '()))
+	(let (({r <top>} '()))
 	  (pair-for-each
 	   (lambda (x y z)
-	     (set! r (six.cons (six.list x y z)
+	     (set! r (six::cons (six::list x y z)
 			       r)))
 	   '(1 2 3)
 	   '()
@@ -2563,10 +2565,10 @@
 
   (check	;lists of different length
       (guard (E (else #t))
-	(let ((r '()))
+	(let (({r <top>} '()))
 	  (pair-for-each
 	   (lambda (x y z)
-	     (set! r (six.cons (six.list x y z)
+	     (set! r (six::cons (six::list x y z)
 			       r)))
 	   '(1 2 3)
 	   '(10 20 30)
@@ -2575,10 +2577,10 @@
     => #t)
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each
 	 (lambda (x y z)
-	   (set! r (six.cons (six.list x y z)
+	   (set! r (six::cons (six::list x y z)
 			     r)))
 	 '(1)
 	 '(10)
@@ -2589,10 +2591,10 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x)
-	   (set! r (six.cons x r)))
+	   (set! r (six::cons x r)))
 	 '(1 2 3))
 	r)
     => '((3)
@@ -2600,19 +2602,19 @@
 	 (1 2 3)))
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x)
-	   (set! r (six.cons x r)))
+	   (set! r (six::cons x r)))
 	 '())
 	r)
     => '())
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x y z)
-	   (set! r (six.cons (six.list x y z)
+	   (set! r (six::cons (six::list x y z)
 			     r)))
 	 '()
 	 '()
@@ -2621,10 +2623,10 @@
     => '())
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x y)
-	   (set! r (six.cons (six.list x y)
+	   (set! r (six::cons (six::list x y)
 			     r)))
 	 '()
 	 '())
@@ -2632,29 +2634,29 @@
     => '())
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x)
-	   (set! r (six.cons x r)))
+	   (set! r (six::cons x r)))
 	 '(1))
 	r)
     => '((1)))
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x)
-	   (set! r (six.cons x r)))
+	   (set! r (six::cons x r)))
 	 '(1 2))
 	r)
     => '((2)
 	 (1 2)))
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x y)
-	   (set! r (six.cons (six.list x y)
+	   (set! r (six::cons (six::list x y)
 			     r)))
 	 '(1 2 3)
 	 '(10 20 30))
@@ -2664,10 +2666,10 @@
 	 ((1 2 3) (10 20 30))))
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x y z)
-	   (set! r (six.cons (six.list x y z)
+	   (set! r (six::cons (six::list x y z)
 			     r)))
 	 '(1 2 3)
 	 '(10 20 30)
@@ -2678,10 +2680,10 @@
 	 ((1 2 3) (10 20 30) (100 200 300))))
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x y z)
-	   (set! r (six.cons (six.list x y z)
+	   (set! r (six::cons (six::list x y z)
 			     r)))
 	 '(1 2)
 	 '(10 20 30)
@@ -2691,10 +2693,10 @@
 	 ((1 2) (10 20 30) (100 200 300))))
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x y z)
-	   (set! r (six.cons (six.list x y z)
+	   (set! r (six::cons (six::list x y z)
 			     r)))
 	 '(1 2 3)
 	 '(10 20)
@@ -2704,10 +2706,10 @@
 	 ((1 2 3) (10 20) (100 200 300))))
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x y z)
-	   (set! r (six.cons (six.list x y z)
+	   (set! r (six::cons (six::list x y z)
 			     r)))
 	 '(1 2 3)
 	 '(10 20 30)
@@ -2717,10 +2719,10 @@
 	 ((1 2 3) (10 20 30) (100 200))))
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x y z)
-	   (set! r (six.cons (six.list x y z)
+	   (set! r (six::cons (six::list x y z)
 			     r)))
 	 '()
 	 '(10 20 30)
@@ -2729,10 +2731,10 @@
     => '())
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x y z)
-	   (set! r (six.cons (six.list x y z)
+	   (set! r (six::cons (six::list x y z)
 			     r)))
 	 '(1 2 3)
 	 '()
@@ -2741,10 +2743,10 @@
     => '())
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x y z)
-	   (set! r (six.cons (six.list x y z)
+	   (set! r (six::cons (six::list x y z)
 			     r)))
 	 '(1 2 3)
 	 '(10 20 30)
@@ -2753,10 +2755,10 @@
     => '())
 
   (check
-      (let ((r '()))
+      (let (({r <top>} '()))
 	(pair-for-each*
 	 (lambda (x y z)
-	   (set! r (six.cons (six.list x y z)
+	   (set! r (six::cons (six::list x y z)
 			     r)))
 	 '(1)
 	 '(10)
@@ -3084,22 +3086,22 @@
   #f)
 
 
-(let ()		;filtering
+(parametrise ((check-test-name	'filtering))
 
   (check
-      (six.filter even? '())
+      (six::filter even? '())
     => '())
 
   (check
-      (six.filter even? '(1))
+      (six::filter even? '(1))
     => '())
 
   (check
-      (six.filter even? '(2))
+      (six::filter even? '(2))
     => '(2))
 
   (check
-      (six.filter even? numbers)
+      (six::filter even? numbers)
     => '(0 2 4 6 8))
 
 ;;; --------------------------------------------------------------------
@@ -3125,43 +3127,43 @@
   (check
       (call-with-values
 	  (lambda ()
-	    (six.partition even? '()))
-	six.list)
+	    (six::partition even? '()))
+	six::list)
     => '(() ()))
 
   (check
       (call-with-values
 	  (lambda ()
-	    (six.partition even? '(1)))
-	six.list)
+	    (six::partition even? '(1)))
+	six::list)
     => '(() (1)))
 
   (check
       (call-with-values
 	  (lambda ()
-	    (six.partition even? '(2)))
-	six.list)
+	    (six::partition even? '(2)))
+	six::list)
     => '((2) ()))
 
   (check
       (call-with-values
 	  (lambda ()
-	    (six.partition even? '(1 3)))
-	six.list)
+	    (six::partition even? '(1 3)))
+	six::list)
     => '(() (1 3)))
 
   (check
       (call-with-values
 	  (lambda ()
-	    (six.partition even? '(2 4)))
-	six.list)
+	    (six::partition even? '(2 4)))
+	six::list)
     => '((2 4) ()))
 
   (check
       (call-with-values
 	  (lambda ()
-	    (six.partition even? numbers))
-	six.list)
+	    (six::partition even? numbers))
+	six::list)
     => '((0 2 4 6 8)
 	 (1 3 5 7 9)))
 
@@ -3171,35 +3173,35 @@
       (call-with-values
 	  (lambda ()
 	    (partition! even? '()))
-	six.list)
+	six::list)
     => '(() ()))
 
   (check
       (call-with-values
 	  (lambda ()
 	    (partition! even? '(1)))
-	six.list)
+	six::list)
     => '(() (1)))
 
   (check
       (call-with-values
 	  (lambda ()
 	    (partition! even? '(2)))
-	six.list)
+	six::list)
     => '((2) ()))
 
   (check
       (call-with-values
 	  (lambda ()
 	    (partition! even? '(1 3)))
-	six.list)
+	six::list)
     => '(() (1 3)))
 
   (check
       (call-with-values
 	  (lambda ()
 	    (partition! even? '(2 4)))
-	six.list)
+	six::list)
     => '((2 4) ()))
 
 
@@ -3207,26 +3209,26 @@
       (call-with-values
 	  (lambda ()
 	    (partition! even? (list-copy numbers)))
-	six.list)
+	six::list)
     => '((0 2 4 6 8)
 	 (1 3 5 7 9)))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (six.remove 8 numbers)
+      (six::remove 8 numbers)
     => '(0 1 2 3 4 5 6 7 9))
 
   (check
-      (six.remove 8 '(1 2 3))
+      (six::remove 8 '(1 2 3))
     => '(1 2 3))
 
   (check
-      (six.remove 8 '(1))
+      (six::remove 8 '(1))
     => '(1))
 
   (check
-      (six.remove 8 '())
+      (six::remove 8 '())
     => '())
 
 ;;; --------------------------------------------------------------------
@@ -3268,22 +3270,22 @@
   #f)
 
 
-(let ()		;finding
+(parametrise ((check-test-name	'finding))
 
   (check
-      (six.find even? '())
+      (six::find even? '())
     => #f)
 
   (check
-      (six.find even? '(1))
+      (six::find even? '(1))
     => #f)
 
   (check
-      (six.find even? '(2))
+      (six::find even? '(2))
     => 2)
 
   (check
-      (six.find even? '(1 2 3))
+      (six::find even? '(1 2 3))
     => 2)
 
 ;;; --------------------------------------------------------------------
@@ -3363,25 +3365,25 @@
   (check
       (call-with-values
 	  (lambda () (span even? '()))
-	six.list)
+	six::list)
     => '(() ()))
 
   (check
       (call-with-values
 	  (lambda () (span even? '(1)))
-	six.list)
+	six::list)
     => '(() (1)))
 
   (check
       (call-with-values
 	  (lambda () (span even? '(2)))
-	six.list)
+	six::list)
     => '((2) ()))
 
   (check
       (call-with-values
 	  (lambda () (span even? '(2 4 6 1 3)))
-	six.list)
+	six::list)
     => '((2 4 6) (1 3)))
 
 ;;; --------------------------------------------------------------------
@@ -3389,25 +3391,25 @@
   (check
       (call-with-values
 	  (lambda () (span! even? '()))
-	six.list)
+	six::list)
     => '(() ()))
 
   (check
       (call-with-values
 	  (lambda () (span! even? (tree-copy '(1))))
-	six.list)
+	six::list)
     => '(() (1)))
 
   (check
       (call-with-values
 	  (lambda () (span! even? (tree-copy '(2))))
-	six.list)
+	six::list)
     => '((2) ()))
 
   (check
       (call-with-values
 	  (lambda () (span! even? (tree-copy '(2 4 6 1 3))))
-	six.list)
+	six::list)
     => '((2 4 6) (1 3)))
 
 ;;; --------------------------------------------------------------------
@@ -3415,25 +3417,25 @@
   (check
       (call-with-values
 	  (lambda () (break even? '()))
-	six.list)
+	six::list)
     => '(() ()))
 
   (check
       (call-with-values
 	  (lambda () (break even? '(1)))
-	six.list)
+	six::list)
     => '((1) ()))
 
   (check
       (call-with-values
 	  (lambda () (break even? '(2)))
-	six.list)
+	six::list)
     => '(() (2)))
 
   (check
       (call-with-values
 	  (lambda () (break even? '(1 3 2 4 6)))
-	six.list)
+	six::list)
     => '((1 3) (2 4 6)))
 
 ;;; --------------------------------------------------------------------
@@ -3441,25 +3443,25 @@
   (check
       (call-with-values
 	  (lambda () (break! even? '()))
-	six.list)
+	six::list)
     => '(() ()))
 
   (check
       (call-with-values
 	  (lambda () (break! even? (tree-copy '(1))))
-	six.list)
+	six::list)
     => '((1) ()))
 
   (check
       (call-with-values
 	  (lambda () (break! even? (tree-copy '(2))))
-	six.list)
+	six::list)
     => '(() (2)))
 
   (check
       (call-with-values
 	  (lambda () (break! even? (tree-copy '(1 3 2 4 6))))
-	six.list)
+	six::list)
     => '((1 3) (2 4 6)))
 
 ;;; --------------------------------------------------------------------
@@ -4009,25 +4011,25 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (six.memq 'a '(a b c))
+      (six::memq 'a '(a b c))
     => '(a b c))
 
   (check
-      (six.memq 'b '(a b c))
+      (six::memq 'b '(a b c))
     => '(b c))
 
   (check
-      (six.memq 'a '(b c d))
+      (six::memq 'a '(b c d))
     => #f)
 
   (check
-      (six.memq (six.list 'a) '(b (a) c))
+      (six::memq (six::list 'a) '(b (a) c))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (six.member '(a)
+      (six::member '(a)
 		  '(b (a) c))
     => '((a) c))
 
@@ -4056,13 +4058,13 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (six.memv 101 '(100 101 102))
+      (six::memv 101 '(100 101 102))
     => '(101 102))
 
   #f)
 
 
-(let ()		;deletion
+(parametrise ((check-test-name	'deletion))
 
   (check
       (delete 8 '())
@@ -4254,7 +4256,7 @@
   #f)
 
 
-(let ()		;sorted-lists
+(parametrise ((check-test-name	'sorted-lists))
 
   (check
       (sorted-list-insert 5 '() >)
@@ -4353,24 +4355,24 @@
   #f)
 
 
-(let ()		;alists
+(parametrise ((check-test-name	'alists))
 
   (check
-      (six.assoc 'a
+      (six::assoc 'a
 		 '((a . 1)
 		   (b . 2)
 		   (c . 3)))
     => '(a . 1))
 
   (check
-      (six.assoc 'b
+      (six::assoc 'b
 		 '((a . 1)
 		   (b . 2)
 		   (c . 3)))
     => '(b . 2))
 
   (check
-      (six.assoc 'c
+      (six::assoc 'c
 		 '((a . 1)
 		   (b . 2)
 		   (c . 3)))
@@ -4438,33 +4440,33 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (six.assq 'c
+      (six::assq 'c
 		'())
     => #f)
 
   (check
-      (six.assq 'd
+      (six::assq 'd
 		'((a . 1)
 		  (b . 2)
 		  (c . 3)))
     => #f)
 
   (check
-      (six.assq 'a
+      (six::assq 'a
 		'((a . 1)
 		  (b . 2)
 		  (c . 3)))
     => '(a . 1))
 
   (check
-      (six.assq 'b
+      (six::assq 'b
 		'((a . 1)
 		  (b . 2)
 		  (c . 3)))
     => '(b . 2))
 
   (check
-      (six.assq 'c
+      (six::assq 'c
 		'((a . 1)
 		  (b . 2)
 		  (c . 3)))
@@ -4473,33 +4475,33 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (six.assv 'c
+      (six::assv 'c
 		'())
     => #f)
 
   (check
-      (six.assv 'd
+      (six::assv 'd
 		'((a . 1)
 		  (b . 2)
 		  (c . 3)))
     => #f)
 
   (check
-      (six.assv 'a
+      (six::assv 'a
 		'((a . 1)
 		  (b . 2)
 		  (c . 3)))
     => '(a . 1))
 
   (check
-      (six.assv 'b
+      (six::assv 'b
 		'((a . 1)
 		  (b . 2)
 		  (c . 3)))
     => '(b . 2))
 
   (check
-      (six.assv 'c
+      (six::assv 'c
 		'((a . 1)
 		  (b . 2)
 		  (c . 3)))
@@ -4658,25 +4660,25 @@
   #f)
 
 
-(let ()		;circular-lists
+(parametrise ((check-test-name	'circular-lists))
 
   (check
       (let ((ell (circular-list 1 2)))
-	(six.list (six.car ell)
-		  (six.cadr ell)
-		  (six.caddr ell)
-		  (six.cadddr ell)))
+	(six::list (six::car ell)
+		  (six::cadr ell)
+		  (six::caddr ell)
+		  (six::cadddr ell)))
     => '(1 2 1 2))
 
 ;;; --------------------------------------------------------------------
 
   (check
       (let ((ell (list->circular-list! (tree-copy '(1 2 3)))))
-	(six.list (six.car ell)
-		  (six.cadr ell)
-		  (six.caddr ell)
-		  (six.cadddr ell)
-		  (six.cadddr (six.cdr ell))))
+	(six::list (six::car ell)
+		  (six::cadr ell)
+		  (six::caddr ell)
+		  (six::cadddr ell)
+		  (six::cadddr (six::cdr ell))))
     => '(1 2 3 1 2))
 
 ;;; --------------------------------------------------------------------
@@ -4780,7 +4782,7 @@ called with at least two arguments.
   #f)
 
 
-(let ()		;sets
+(parametrise ((check-test-name	'sets))
 
   (check
       (lset<=? =)
@@ -4909,7 +4911,7 @@ called with at least two arguments.
 	(let ((rv0 (empty?))
 	      (rv1 (dequeue!))
 	      (rv2 (empty?)))
-	  (six.list rv0 rv1 rv2)))
+	  (six::list rv0 rv1 rv2)))
     => '(#f 1 #t))
 
   (check
@@ -4922,7 +4924,7 @@ called with at least two arguments.
 	      (rv1 (dequeue!))
 	      (rv2 (dequeue!))
 	      (rv3 (empty?)))
-	  (six.list rv0 rv1 rv2 rv3)))
+	  (six::list rv0 rv1 rv2 rv3)))
     => '(1 2 3 #t))
 
 ;;; --------------------------------------------------------------------
@@ -4947,7 +4949,7 @@ called with at least two arguments.
 	      (rv1 (dequeue!))
 	      (rv2 (dequeue!))
 	      (rv3 (empty?)))
-	  (six.list rv0 rv1 rv2 rv3)))
+	  (six::list rv0 rv1 rv2 rv3)))
     => '(1 2 3 #t))
 
   (check
@@ -4960,7 +4962,7 @@ called with at least two arguments.
 	      (rv2 (dequeue!))
 	      (rv3 (dequeue!))
 	      (rv4 (empty?)))
-	  (six.list rv0 rv1 rv2 rv3 rv4)))
+	  (six::list rv0 rv1 rv2 rv3 rv4)))
     => '(1 2 3 4 #t))
 
   #t)
@@ -5150,5 +5152,7 @@ called with at least two arguments.
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file

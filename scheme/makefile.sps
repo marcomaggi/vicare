@@ -2019,6 +2019,7 @@
     (bignum->bytevector				v $language)
     (bytevector->bignum				v $language)
     (append					v r ba se)
+    (append-lists				v $language)
     (apply					v r ba se)
     (assert					v r ba)
     (assertion-error) ;empty?!?

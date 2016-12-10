@@ -1,6 +1,6 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Modified in 2010-2016 by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under  the terms of  the GNU General  Public License version  3 as
@@ -17,6 +17,7 @@
 
 #!vicare
 (library (ikarus pairs)
+  (options typed-language)
   (export
     standalone-pair?
     cons weak-cons set-car! set-cdr!  car cdr caar cdar cadr cddr
@@ -47,10 +48,10 @@
   (and (pair? obj)
        (not (pair? (cdr obj)))))
 
-(define* (set-car! {x pair?} y)
+(define (set-car! {x <pair>} y)
   ($set-car! x y))
 
-(define* (set-cdr! {x pair?} y)
+(define (set-cdr! {x <pair>} y)
   ($set-cdr! x y))
 
 (define-syntax cxr
@@ -72,7 +73,7 @@
   (syntax-rules ()
     ((_ (?name ?operation ...) ...)
      (begin
-       (define* (?name x)
+       (define (?name x)
 	 (cxr ?name x ?operation ...))
        ...))))
 
@@ -109,11 +110,10 @@
   (cddddr   $cdr $cdr $cdr $cdr))
 
 
-;;;; end of library (ikarus pairs)
+;;;; done
 
 #| end of library |# )
 
-
 (library (vicare pairs unsafe)
   (export $car $cdr)
   (import (vicare))
