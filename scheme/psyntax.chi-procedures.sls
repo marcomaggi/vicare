@@ -1675,7 +1675,7 @@
       ;;the identifiers in LHS*.ID.
       (let* ((lhs*.lex	(reverse lhs*.rev-lex))
 	     (lhs*.lab	(reverse lhs*.rev-lab))
-	     (rib		(make-rib/from-identifiers-and-labels all-lhs*.id lhs*.lab)))
+	     (rib	(make-rib/from-identifiers-and-labels all-lhs*.id lhs*.lab)))
 	(values rib lexenv lhs*.lex lhs*.lab)))))
 
 

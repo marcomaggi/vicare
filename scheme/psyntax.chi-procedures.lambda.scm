@@ -888,8 +888,8 @@
       (begin0
 	  (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals.lex body*.stx rib)
 	(%warn-about-unused-lexical-variables (syntax-match input-form.stx ()
-						       ((?who . ?stuff)	(syntax->datum ?who)))
-						     all*.id all*.lab lexenv.run))))
+						((?who . ?stuff)	(syntax->datum ?who)))
+					      all*.id all*.lab lexenv.run))))
 
   (define (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals.lex body*.stx rib)
     (let* ((body*.stx (push-lexical-contour rib body*.stx))
@@ -1129,11 +1129,11 @@
 	     following-validations)
 	    (else
 	     (cons (let ((type-pred.sexp	(object-type-spec.type-predicate-stx arg.ots))
-			 (arg.name		(object-type-spec.name arg.ots)))
+			 (arg.type-ann		(object-type-spec.name arg.ots)))
 		     (bless
 		      `(unless (,type-pred.sexp (unsafe-cast-signature (<top>) ,arg.id))
 			 (procedure-signature-argument-violation ,validation-who
-			   ,MISMATCH-ERROR-MESSAGE ,idx '(is-a? _ ,arg.name) ,arg.id))))
+			   ,MISMATCH-ERROR-MESSAGE ,idx '(is-a? _ ,arg.type-ann) ,arg.id))))
 		   following-validations))))
 
     (define* (%build-rest-formal-validation-form input-form.stx lexenv.run lexenv.expand
@@ -1141,28 +1141,28 @@
       (cond ((list-of-type-spec? rest.ots)
 	     ;;Generate a validating expression that accepts  both null and a list of
 	     ;;objects of the specified type.
-	     (let* ((item.ots	(list-of-type-spec.item-ots rest.ots))
-		    (item-pred	(object-type-spec.type-predicate-stx item.ots))
-		    (item.name	(object-type-spec.name item.ots))
-		    (obj.sym	(gensym "obj"))
-		    (idx.sym	(gensym "idx")))
+	     (let* ((item.ots		(list-of-type-spec.item-ots rest.ots))
+		    (item-pred		(object-type-spec.type-predicate-stx item.ots))
+		    (item.type-ann	(object-type-spec.name item.ots))
+		    (obj.id		(make-syntactic-identifier-for-temporary-variable "obj"))
+		    (idx.id		(make-syntactic-identifier-for-temporary-variable "idx")))
 	       (bless
-		`((fold-left (lambda/std (,idx.sym ,obj.sym)
-			       (unless (,item-pred ,obj.sym)
+		`((fold-left (lambda/typed ({,idx.id <fixnum>} {,obj.id <top>})
+			       (if (,item-pred ,obj.id)
+				   (fxadd1 ,idx.id)
 				 (procedure-signature-argument-violation ,validation-who
-				   ,MISMATCH-ERROR-MESSAGE ,idx.sym '(is-a? _ ,item.name) ,obj.sym))
-			       (fxadd1 ,idx.sym))
+				   ,MISMATCH-ERROR-MESSAGE ,idx.id '(is-a? _ ,item.type-ann) ,obj.id)))
 		    ,idx ,rest.id)))))
 
 	    (else
 	     ;;REST.OTS is some other sub-type of  "<list>".  Just rely on the type's
 	     ;;own predicate.
-	     (let ((type-pred	(object-type-spec.type-predicate-stx rest.ots))
-		   (rest.name	(object-type-spec.name rest.ots)))
+	     (let ((type-pred		(object-type-spec.type-predicate-stx rest.ots))
+		   (rest.type-ann	(object-type-spec.name rest.ots)))
 	       (bless
-		`(unless (,type-pred ,rest.id)
-		   (procedure-signature-argument-violation __who__
-		     ,MISMATCH-ERROR-MESSAGE #f '(is-a? _ ,rest.name) ,rest.id)))))))
+		`((unless (,type-pred ,rest.id)
+		    (procedure-signature-argument-violation __who__
+		      ,MISMATCH-ERROR-MESSAGE #f '(is-a? _ ,rest.type-ann) ,rest.id))))))))
 
     #| end of module: BUILD-FORMALS-VALIDATION-FORM* |# )
 
