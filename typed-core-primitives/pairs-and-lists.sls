@@ -165,6 +165,17 @@
    ;;Not foldable because it must return a newly allocated improper list every time.
    ((_ . _)			effect-free result-true)))
 
+(declare-core-primitive append-lists
+    (safe)
+  (signatures
+   (()					=> (<null>))
+   ((list-of <list>)			=> (<list>)))
+  (attributes
+   ;;This is foldable because it returns null itself.
+   (()				foldable effect-free result-true)
+   ;;Not foldable because it must return a newly allocated improper list every time.
+   ((_ . _)			effect-free result-true)))
+
 ;;; --------------------------------------------------------------------
 ;;; inspection
 
@@ -175,7 +186,9 @@
    ((<nelist>)			=> (<positive-fixnum>))
    ((<list>)			=> (<non-negative-fixnum>)))
   (attributes
-   ((_)				foldable effect-free result-true)))
+   ((_)				foldable effect-free result-true))
+  (replacements
+   $length))
 
 ;;;
 
@@ -336,7 +349,7 @@
 (declare-core-primitive fold-left
     (safe)
   (signatures
-   (((lambda <bottom> => (<top>)) <top> <list> . <list>)	=> (<top>)))
+   (((lambda <bottom> => (<top>)) <top> <list> . (list-of <list>))	=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -345,7 +358,7 @@
 (declare-core-primitive fold-right
     (safe)
   (signatures
-   (((lambda <bottom> => (<top>)) <top> <list> . <list>)	=> (<top>)))
+   (((lambda <bottom> => (<top>)) <top> <list> . (list-of <list>))	=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.

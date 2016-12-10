@@ -232,6 +232,11 @@
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators
 
+(declare-core-primitive $struct-std
+    (unsafe)
+  (signatures
+   ((<struct>)			=> (<struct-type-descriptor>))))
+
 (declare-core-primitive $struct-rtd
     (unsafe)
   (signatures
