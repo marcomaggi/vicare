@@ -1118,7 +1118,7 @@
        ;;   wordsize * 8 - 1 = 64 - 1 = 63 = #b111111
        ;;
        (if (fixnum? operand.const)
-	   (fxlogand operand.const (- (* wordsize 8) 1))
+	   (fxand operand.const (- (* wordsize 8) 1))
 	 (%error)))
       (else
        (if (eq? operand ecx)

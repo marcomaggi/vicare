@@ -38,7 +38,9 @@
     weak-hashtable-update!)
   (import (vicare)
     (vicare system structs)
-    (vicare unsafe operations)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $vectors)
     (vicare language-extensions syntaxes)
     (vicare arguments validation))
 
@@ -207,7 +209,7 @@
       (let loop ((equiv?  ($weak-table-equiv-function table))
 		 (head    entries)
 		 (tail    ($cdr entries)))
-	(let ((intern-key ($caar head)))
+	(let ((intern-key ($car ($car head))))
 	  ;;Here it does not matter if INTERN-KEY is BWP.
 	  (cond ((or (eq?    key intern-key)
 		     (equiv? key intern-key))

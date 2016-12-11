@@ -458,6 +458,11 @@
 		  list-of-string-pathnames?
 		  list-of-bytevector-pathnames?)
 	    posix::)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $vectors)
+    (vicare system $strings)
+    (vicare system $bytevectors)
     (vicare system structs)
     (vicare language-extensions syntaxes)
     (vicare platform constants)
@@ -465,7 +470,6 @@
     (vicare arguments general-c-buffers)
     (prefix (vicare unsafe capi)
 	    capi::)
-    (vicare unsafe operations)
     (prefix (vicare platform words)
 	    words::)
     (vicare language-extensions cond-expand))
@@ -2006,9 +2010,9 @@
     (cond (($fxzero? rv) ;timeout expired
 	   (values #f #f #f))
 	  (($fx< 0 rv) ;success
-	   (values (if ($fx= 1 ($fxlogand rv 1)) fd #f)
-		   (if ($fx= 2 ($fxlogand rv 2)) fd #f)
-		   (if ($fx= 4 ($fxlogand rv 4)) fd #f)))
+	   (values (if ($fx= 1 ($fxand rv 1)) fd #f)
+		   (if ($fx= 2 ($fxand rv 2)) fd #f)
+		   (if ($fx= 4 ($fxand rv 4)) fd #f)))
 	  (else
 	   (%raise-errno-error who rv fd sec usec)))))
 

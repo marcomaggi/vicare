@@ -1727,9 +1727,9 @@
 	   ;;machine words whose least significant bits  are set to the character tag
 	   ;;and whose most significant bits are  set to the character's Unicode code
 	   ;;point.
-	   (make-constant (fxlogor char-tag
-				   (fxsll (char->integer x.const)
-					  char-shift))))
+	   (make-constant (fxior char-tag
+				 (fxsll (char->integer x.const)
+					char-shift))))
 
 	  ;;NOTE This is  the branch to be used for  transcoders, which are immediate
 	  ;;Scheme objects.   But, at present,  transcoders are not  representable in
@@ -1740,7 +1740,7 @@
 	  ;; (internal-body
 	  ;;   (import (only (vicare system $transcoders)
 	  ;;		   $transcoder->data))
-	  ;;   (make-constant (fxlogor transcoder-tag
+	  ;;   (make-constant (fxior transcoder-tag
 	  ;;			     (fxsll ($transcoder->data x.const)
 	  ;; 				    transcoder-payload-shift)))))
 

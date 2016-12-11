@@ -51,8 +51,6 @@
     fx>=				fx<=
     fxsll				fxsra
     fxremainder				fxquotient
-    fxlogor				fxlogand
-    fxlognot
     immediate?				bignum?
     ratnum?				compnum?
     cflonum?

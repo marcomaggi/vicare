@@ -187,7 +187,7 @@
       ))
   (define (test-fx count n inc)
     (when (fixnum? n)
-      (when (zero? (fxlogand count #xFFFF))
+      (when (zero? (fxand count #xFFFF))
 	(%printf "bitwise-bit-count ~s\n" n))
       (test n)
       (test-fx (+ count 1) (+ n inc) inc)))

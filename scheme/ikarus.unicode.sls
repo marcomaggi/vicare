@@ -80,47 +80,6 @@
   (not (fxzero? (fxand x y))))
 
 
-#;(module UNSAFE
-  (fx< fx<= fx> fx>= fx= fx+ fx-
-   fxior fxand fxsra fxsll fxzero?
-   integer->char $char->fixnum
-   char<? char<=? char=? char>? char>=?
-   string-ref string-set! string-length
-   vector-ref vector-set! vector-length)
-  (import
-    (rename (vicare system $strings)
-      ($string-length string-length)
-      ($string-ref    string-ref)
-      ($string-set!   string-set!))
-    (rename (vicare system $vectors)
-      ($vector-length vector-length)
-      ($vector-ref    vector-ref)
-      ($vector-set!   vector-set!))
-    (rename (vicare system $chars)
-      ($char->fixnum $char->fixnum)
-      ($fixnum->char integer->char)
-      ($char< char<?)
-      ($char<= char<=?)
-      ($char= char=?)
-      ($char> char>?)
-      ($char>= char>=?))
-    (rename (vicare system $fx)
-      ($fxzero?    fxzero?)
-      ($fxsra    fxsra)
-      ($fxsll    fxsll)
-      ($fxlogor  fxior)
-      ($fxlogand fxand)
-      ($fx+      fx+)
-      ($fx-      fx-)
-      ($fx<      fx<)
-      ($fx>      fx>)
-      ($fx>=     fx>=)
-      ($fx<=     fx<=)
-      ($fx=      fx=))))
-
-#;(import UNSAFE)
-
-
 ;;;; include files
 
 (include "unicode/unicode-char-cases.ss" #t)

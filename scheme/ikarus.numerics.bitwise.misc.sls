@@ -148,7 +148,7 @@
 
   (define ($fxbitcount n)
     (if ($fx< n 0)
-	(fxlognot (pos-fxbitcount (fxlognot n)))
+	($fxlognot (pos-fxbitcount ($fxlognot n)))
       (pos-fxbitcount n)))
 
   (module (bnbitcount)

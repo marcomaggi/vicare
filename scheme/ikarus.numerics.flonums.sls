@@ -410,18 +410,18 @@
 (define-fl-operation/one flnan?		$flnan?)
 
 (define ($flfinite? x)
-  (let ((be (fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
+  (let ((be ($fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
     (not ($fx= be 2047))))
 
 (module ($flinfinite? $flnan?)
 
   (define ($flinfinite? x)
-    (let ((be (fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
+    (let ((be ($fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
       (and ($fx= be 2047) ;nans and infs
 	   ($zero-m? x))))
 
   (define ($flnan? x)
-    (let ((be (fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
+    (let ((be ($fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
       (and ($fx= be 2047) ;;; nans and infs
 	   (not ($zero-m? x)))))
 

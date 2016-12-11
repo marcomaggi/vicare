@@ -565,7 +565,7 @@
 		 (loop (car SET) (fxsra idx 1) msk)
 	       (loop (cdr SET) (fxsra idx 1) msk)))
 	    ((fxzero? idx)
-	     (fx=? msk (fxlogand SET msk)))
+	     (fx=? msk (fxand SET msk)))
 	    (else #f))))
 
   (define* (set-add {N fixnum?} SET)
@@ -585,7 +585,7 @@
 		     SET
 		   (cons (car SET) d1)))))
 	    ((fxzero? idx)
-	     (fxlogor SET msk))
+	     (fxior SET msk))
 	    (else
 	     (if (fxeven? idx)
 		 (cons (recur SET (fxsra idx 1) msk) 0)
@@ -614,7 +614,7 @@
 		     SET
 		   (cons^ (car SET) d1)))))
 	    ((fxzero? idx)
-	     (fxlogand SET (fxlognot msk)))
+	     (fxand SET (fxnot msk)))
 	    (else
 	     SET))))
 
@@ -634,7 +634,7 @@
 	    (let ((a0 (car S2)))
 	      (let ((a1 (set-union^ a0 S1)))
 		(if (eq? a0 a1) S2 (cons a1 (cdr S2)))))
-	  (fxlogor S1 S2))))
+	  (fxior S1 S2))))
 
     (define (set-union^ S1 M2)
       (if (pair? S1)
@@ -643,7 +643,7 @@
 	    (if (eq? a0 a1)
 		S1
 	      (cons a1 (cdr S1))))
-	(fxlogor S1 M2)))
+	(fxior S1 M2)))
 
     #| end of module: set-union |# )
 
@@ -664,7 +664,7 @@
 	    ((pair? s2)
 	     (set-difference^^ s1 (car s2)))
 	    (else
-	     (fxlogand s1 (fxlognot s2)))))
+	     (fxand s1 (fxnot s2)))))
 
     (define (set-difference^ S1 M2)
       (if (pair? S1)
@@ -673,12 +673,12 @@
 	    (if (eq? a0 a1)
 		S1
 	      (cons^ a1 (cdr S1))))
-	(fxlogand S1 (fxlognot M2))))
+	(fxand S1 (fxnot M2))))
 
     (define (set-difference^^ M1 S2)
       (if (pair? S2)
 	  (set-difference^^ M1 (car S2))
-	(fxlogand M1 (fxlognot S2))))
+	(fxand M1 (fxnot S2))))
 
     #| end of module: set-difference |# )
 
@@ -704,7 +704,7 @@
 		(ac '()))
       (if (pair? S)
 	  (outer i (fxsll j 1) (car S)
-		 (outer (fxlogor i j) (fxsll j 1) (cdr S) ac))
+		 (outer (fxior i j) (fxsll j 1) (cdr S) ac))
 	(let inner ((i  (fx* i BITS))
 		    (m  S)
 		    (ac ac))
@@ -2017,8 +2017,8 @@
 
 	(define (%set-bit! mask idx)
 	  (let ((q (fxsra    idx 3))
-		(r (fxlogand idx 7)))
-	    (vector-set! mask q (fxlogor (vector-ref mask q) (fxsll 1 r)))))
+		(r (fxand idx 7)))
+	    (vector-set! mask q (fxior (vector-ref mask q) (fxsll 1 r)))))
 
 	#| end of module: %make-livemask-vec |# )
 

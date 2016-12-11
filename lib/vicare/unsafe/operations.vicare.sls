@@ -76,10 +76,6 @@
     $fxneg	;negation
     $fxsra	;shift right
     $fxsll	;shift left
-    $fxlogor	;inclusive logic OR
-    $fxlogxor	;exlusive logic OR
-    $fxlogand	;logic AND
-    $fxlognot	;logic not
     $fx+
     $fx-
     $fx*
@@ -95,9 +91,6 @@
     $fx<=	;multiple arguments
     $fx=	;multiple arguments
 
-    $fxand	;multiple arguments AND
-    $fxior	;multiple arguments inclusive OR
-    $fxxor	;multiple arguments exclusive OR
     $fxmax	;multiple arguments max
     $fxadd2
     $fxadd3
@@ -375,7 +368,11 @@
 	    $fx>
 	    $fx>=
 	    $fx<=
-	    $fx=)
+	    $fx=
+	    $fxand
+	    $fxior
+	    $fxxor
+	    $fxnot)
     (prefix (only (vicare system $fx)
 		  $fx<
 		  $fx>
@@ -558,36 +555,6 @@
      (let ((X ($fxmin ?op1 ?op2)))
        ($fxmin X . ?ops)))
     ))
-
-;;; --------------------------------------------------------------------
-;;; logic operations
-
-(define-syntax $fxand
-  (syntax-rules ()
-    ((_ ?op1)
-     ?op1)
-    ((_ ?op1 ?op2)
-     ($fxlogand ?op1 ?op2))
-    ((_ ?op1 ?op2 . ?ops)
-     ($fxlogand ?op1 ($fxand ?op2 . ?ops)))))
-
-(define-syntax $fxior
-  (syntax-rules ()
-    ((_ ?op1)
-     ?op1)
-    ((_ ?op1 ?op2)
-     ($fxlogor ?op1 ?op2))
-    ((_ ?op1 ?op2 . ?ops)
-     ($fxlogor ?op1 ($fxior ?op2 . ?ops)))))
-
-(define-syntax $fxxor
-  (syntax-rules ()
-    ((_ ?op1)
-     ?op1)
-    ((_ ?op1 ?op2)
-     ($fxlogxor ?op1 ?op2))
-    ((_ ?op1 ?op2 . ?ops)
-     ($fxlogxor ?op1 ($fxxor ?op2 . ?ops)))))
 
 ;;; --------------------------------------------------------------------
 

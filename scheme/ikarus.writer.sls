@@ -1112,11 +1112,11 @@
                (for-each
 		   (lambda (c)
 		     (let ((b (char->integer c)))
-		       (let ((i (fxlogand b 7))
+		       (let ((i (fxand b 7))
 			     (j (fxsra b 3)))
 			 (bytevector-u8-set! bv j
-					     (fxlogor (bytevector-u8-ref bv j)
-						      (fxsll 1 i))))))
+					     (fxior (bytevector-u8-ref bv j)
+						    (fxsll 1 i))))))
                  (string->list s))
                (with-syntax ((bv (datum->syntax #'stx bv)))
                  #'(quote bv)))))))
@@ -1136,9 +1136,7 @@
           (and
 	   (fx< j (bytevector-length map))
 	   (let ((mask (fxsll 1 i)))
-	     (not (fxzero?
-		   (fxlogand mask
-			     (bytevector-u8-ref map j))))))))
+	     (not (fxzero? (fxand mask (bytevector-u8-ref map j))))))))
       (define (subsequent*? str i n)
         (or (fx= i n)
             (and (subsequent? (string-ref str i))

@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008,2016  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -2102,6 +2102,17 @@
    ((E x y)
     (nop)))
 
+ (define-core-primitive-operation $fxnot unsafe
+   ((V x)
+    (cogen-value-$fxxor x (K -1)))
+   ((P x)
+    (K #t))
+   ((E x)
+    (nop)))
+
+ ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Sun Dec 11,
+ ;;2016)
+ ;;
  (define-core-primitive-operation $fxlognot unsafe
    ((V x)
     (cogen-value-$fxlogxor x (K -1)))
@@ -2112,7 +2123,26 @@
 
 ;;;
 
+ ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Sun Dec 11,
+ ;;2016)
+ ;;
  (define-core-primitive-operation $fxlogand unsafe
+   ((V x)
+    (V-simple-operand x))
+   ((V x y)
+    (asm 'logand (V-simple-operand x) (V-simple-operand y)))
+   ((V x y . arg*)
+    (with-tmp ((t1 (asm 'logand (V-simple-operand x) (V-simple-operand y))))
+      (let recur ((tx   t1)
+		  (arg* arg*))
+	(if (pair? arg*)
+	    (with-tmp ((t2 (asm 'logand tx (V-simple-operand (car arg*)))))
+	      (recur t2 (cdr arg*)))
+	  tx))))
+   ((P x . y*) (K #t))
+   ((E x . y*) (nop)))
+
+ (define-core-primitive-operation $fxand unsafe
    ((V x)
     (V-simple-operand x))
    ((V x y)
@@ -2130,13 +2160,16 @@
 
  ;;This is the old version with two operands.
  ;;
- ;; (define-core-primitive-operation $fxlogand unsafe
+ ;; (define-core-primitive-operation $fxand unsafe
  ;;   ((V x y) (asm 'logand (V-simple-operand x) (V-simple-operand y)))
  ;;   ((P x y) (K #t))
  ;;   ((E x y) (nop)))
 
 ;;;
 
+ ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Sun Dec 11,
+ ;;2016)
+ ;;
  (define-core-primitive-operation $fxlogor unsafe
    ((V x)
     (V-simple-operand x))
@@ -2153,15 +2186,33 @@
    ((P x . y*) (K #t))
    ((E x . y*) (nop)))
 
+ (define-core-primitive-operation $fxior unsafe
+   ((V x)
+    (V-simple-operand x))
+   ((V x y)
+    (asm 'logor (V-simple-operand x) (V-simple-operand y)))
+   ((V x y . arg*)
+    (with-tmp ((t1 (asm 'logor (V-simple-operand x) (V-simple-operand y))))
+      (let recur ((tx   t1)
+		  (arg* arg*))
+	(if (pair? arg*)
+	    (with-tmp ((t2 (asm 'logor tx (V-simple-operand (car arg*)))))
+	      (recur t2 (cdr arg*)))
+	  tx))))
+   ((P x . y*) (K #t))
+   ((E x . y*) (nop)))
  ;;This is the old version with two operands.
  ;;
- ;; (define-core-primitive-operation $fxlogor unsafe
+ ;; (define-core-primitive-operation $fxior unsafe
  ;;   ((V x y) (asm 'logor (V-simple-operand x) (V-simple-operand y)))
  ;;   ((P x y) (K #t))
  ;;   ((E x y) (nop)))
 
 ;;;
 
+ ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Sun Dec 11,
+ ;;2016)
+ ;;
  (define-core-primitive-operation $fxlogxor unsafe
    ((V x)
     (V-simple-operand x))
@@ -2178,7 +2229,23 @@
    ((P x . y*) (K #t))
    ((E x . y*) (nop)))
 
- ;; (define-core-primitive-operation $fxlogxor unsafe
+ (define-core-primitive-operation $fxxor unsafe
+   ((V x)
+    (V-simple-operand x))
+   ((V x y)
+    (asm 'logxor (V-simple-operand x) (V-simple-operand y)))
+   ((V x y . arg*)
+    (with-tmp ((t1 (asm 'logxor (V-simple-operand x) (V-simple-operand y))))
+      (let recur ((tx   t1)
+		  (arg* arg*))
+	(if (pair? arg*)
+	    (with-tmp ((t2 (asm 'logxor tx (V-simple-operand (car arg*)))))
+	      (recur t2 (cdr arg*)))
+	  tx))))
+   ((P x . y*) (K #t))
+   ((E x . y*) (nop)))
+
+ ;; (define-core-primitive-operation $fxxor unsafe
  ;;   ((V x y)
  ;;    (asm 'logxor (V-simple-operand x) (V-simple-operand y)))
  ;;   ;; ((V x y)
@@ -2443,12 +2510,12 @@
 ;;;      ;  key ^=  (key >> 16);
 ;;;      ;  return key;
 ;;;      ;}
-;;;      (let* ((key (fx+ key (fxlognot (fxsll key 15))))
-;;;             (key (fxlogxor key (fxsra key 10)))
+;;;      (let* ((key (fx+ key (fxnot (fxsll key 15))))
+;;;             (key (fxxor key (fxsra key 10)))
 ;;;             (key (fx+ key (fxsll key 3)))
-;;;             (key (fxlogxor key (fxsra key 6)))
-;;;             (key (fx+ key (fxlognot (fxsll key 11))))
-;;;             (key (fxlogxor key (fxsra key 16))))
+;;;             (key (fxxor key (fxsra key 6)))
+;;;             (key (fx+ key (fxnot (fxsll key 11))))
+;;;             (key (fxxor key (fxsra key 16))))
 ;;;        key)))
 
  /section)

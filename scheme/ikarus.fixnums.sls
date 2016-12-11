@@ -17,6 +17,7 @@
 
 #!vicare
 (library (ikarus fixnums)
+  (options typed-language)
   (export
     list-of-fixnums?
 
@@ -46,8 +47,6 @@
     fxmodulo			fxsign
     fxabs
 
-    fxlogor			fxlogand
-    fxlogxor			fxlognot
     fxior			fxand
     fxxor			fxnot
     fxif
@@ -122,10 +121,6 @@
 		  fxdiv-and-mod			fxdiv0-and-mod0
 		  fxabs
 
-		  fxlogor			fxlogand
-		  fxlogxor			fxlognot
-		  fxsll				fxsra
-
 		  fx=				fx=?
 		  fx!=				fx!=?
 		  fx<				fx<?
@@ -136,6 +131,7 @@
 
 		  fxior				fxand
 		  fxxor				fxnot
+		  fxsll				fxsra
 		  fxif
 
 		  fxarithmetic-shift-left	fxarithmetic-shift-right
@@ -188,28 +184,34 @@
      (define* (?safe-who {x fixnum?})
        (?unsafe-who x)))))
 
+(define-syntax define-fx-predicate/one
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who)
+     (define ({?safe-who <boolean>} {x <fixnum>})
+       (?unsafe-who x)))))
+
 (define-syntax define-fx-operation/two
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define* (?safe-who {x fixnum?} {y fixnum?})
+     (define (?safe-who {x <fixnum>} {y <fixnum>})
        (?unsafe-who x y)))))
 
 (define-syntax define-fx-operation/shift
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define* (?safe-who {x fixnum?} {y fixnum?})
+     (define (?safe-who {x <fixnum>} {y <fixnum>})
        (?unsafe-who x y)))))
 
 (define-syntax define-fx-operation/three
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define* (?safe-who {x fixnum?} {y fixnum?} {z fixnum?})
+     (define (?safe-who {x <fixnum>} {y <fixnum>} {z <fixnum>})
        (?unsafe-who x y z)))))
 
 (define-syntax define-fx-operation/div
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define* (?safe-who {x fixnum?} {y fixnum?})
+     (define (?safe-who {x <fixnum>} {y <fixnum>})
        (?unsafe-who x y)))))
 
 
@@ -254,7 +256,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (fxzero? {x fixnum?})
+(define (fxzero? {x <fixnum>})
   (eq? x 0))
 
 (define ($fxpositive? N)	($fx> N 0))
@@ -306,38 +308,34 @@
 
 ;;;; bitwise logic operations
 
-(define* (fxlognot {x fixnum?})
+(define (fxnot {x <fixnum>})
   ($fxlognot x))
-
-(define fxnot fxlognot)
 
 (let-syntax
     ((define-fxbitop (syntax-rules ()
-		       ((_ ?who1 ?who2 ?unsafe-op ?identity)
-			(begin
-			  (case-define* ?who1
-			    (({x fixnum?} {y fixnum?})
-			     (?unsafe-op x y))
+		       ((_ ?who ?unsafe-op ?identity)
+			(case-define ?who
+			  (({x <fixnum>} {y <fixnum>})
+			   (?unsafe-op x y))
 
-			    (({x fixnum?} {y fixnum?} {z fixnum?} . {rest fixnum?})
+			  (({x <fixnum>} {y <fixnum>} {z <fixnum>} . {rest (list-of <fixnum>)})
+			   (unsafe-cast-signature (<fixnum>)
 			     (let loop ((accum  (?unsafe-op (?unsafe-op x y) z))
 					(rest   rest))
 			       (if (pair? rest)
 				   (loop (?unsafe-op accum ($car rest))
 					 ($cdr rest))
-				 accum)))
+				 accum))))
 
-			    (({x fixnum?})
-			     x)
+			  (({x <fixnum>})
+			   x)
 
-			    (()
-			     ?identity))
-
-			  (define ?who2 ?who1)))
+			  (()
+			   ?identity)))
 		       )))
-  (define-fxbitop fxlogor	fxior		$fxlogor	 0)
-  (define-fxbitop fxlogand	fxand		$fxlogand	-1)
-  (define-fxbitop fxlogxor	fxxor		$fxlogxor	 0)
+  (define-fxbitop fxior		$fxlogor	 0)
+  (define-fxbitop fxand		$fxlogand	-1)
+  (define-fxbitop fxxor		$fxlogxor	 0)
   #| end of LET-SYNTAX |# )
 
 
@@ -363,7 +361,7 @@
   (import (vicare))
   (fxarithmetic-shift-left x y))
 
-(define* (fxarithmetic-shift {x fixnum?} {y fixnum?})
+(define (fxarithmetic-shift {x <fixnum>} {y <fixnum>})
   (cond (($fxzero? y)
 	 x)
 	(($positive-index-of-bit-in-fixnum-representation? y)
@@ -432,11 +430,11 @@
   ((x y) (sys:fx- x y))
   ((x)   (sys:fx- x)))
 
-(define* (fxadd1 {n fixnum?})
+(define (fxadd1 {n <fixnum>})
   ;;This is also a primitive operation.
   ($fxadd1 n))
 
-(define* (fxsub1 {n fixnum?})
+(define (fxsub1 {n <fixnum>})
   ;;This is also a primitive operation.
   ($fxsub1 n))
 
@@ -477,10 +475,10 @@
 (let-syntax
     ((define-fx-error (syntax-rules ()
 			((_ ?error-who ?who)
-			 (case-define* ?error-who
-			   (({x fixnum?} {y fixnum?})
+			 (case-define ?error-who
+			   (({x <fixnum>} {y <fixnum>})
 			    (%overflow-violation (quote ?who) x y))
-			   (({x fixnum?})
+			   (({x <fixnum>})
 			    (%overflow-violation (quote ?who) x))))
 			)))
   (define-fx-error error@fx+    fx+)
@@ -491,7 +489,7 @@
 (let-syntax
     ((define-fx-error (syntax-rules ()
 			((_ ?error-who ?who)
-			 (define* (?error-who {x fixnum?})
+			 (define (?error-who {x <fixnum>})
 			   (%overflow-violation (quote ?who) x)))
 			)))
   (define-fx-error error@fxadd1 fxadd1)
@@ -535,7 +533,7 @@
   (if ($fx< fx1 fx2) fx2 fx1))
 
 
-(define* (fxquotient {x fixnum?} {y non-zero-fixnum?})
+(define (fxquotient {x <fixnum>} {y <non-zero-fixnum>})
   (if (eq? y -1)
       ;;Remember that  we cannot simpy  use $fx- because  if X is  (least-fixnum) the
       ;;result will overflow.
@@ -549,7 +547,7 @@
 (define-fx-operation/div fxmodulo	$fxmodulo)
 (define-fx-operation/one fxsign		$fxsign)
 
-(define* ($fxabs x)
+(define ($fxabs x)
   (if ($fxnegative? x)
       ;;Remember that  we cannot simpy  use $fx- because  if X is  (least-fixnum) the
       ;;result will overflow.
@@ -582,7 +580,7 @@
 (let-syntax
     ((define-fx (syntax-rules ()
 		  ((_ (?who ?arg ...) ?body)
-		   (define* (?who {?arg fixnum?} ...)
+		   (define (?who {?arg <fixnum>} ...)
 		     ?body))
 		  )))
 
@@ -616,19 +614,23 @@
 	   (and ($fx>  obj #xDFFF)
 		($fx<= obj #x10FFFF)))))
 
-(define* (fixnum->char {fx fixnum-in-character-range?})
-  ($fixnum->char fx))
+(define (fixnum->char {fx <fixnum>})
+  (if (fixnum-in-character-range? fx)
+      ($fixnum->char fx)
+    (procedure-signature-argument-violation __who__
+      "expected fixnum in character range"
+      1 '(fixnum-in-character-range? fx) fx)))
 
-(define* (char->fixnum {ch char?})
+(define (char->fixnum {ch <char>})
   ($char->fixnum ch))
 
 (module (fixnum->string $fixnum->string)
 
-  (case-define* fixnum->string
-    (({x fixnum?})
+  (case-define fixnum->string
+    (({x <fixnum>})
      ($fixnum->string x 10))
 
-    (({x fixnum?} r)
+    (({x <fixnum>} r)
      (case r
        ((2)  ($fixnum->string x 2))
        ((8)  ($fixnum->string x 8))
@@ -678,7 +680,7 @@
       ((define-div-proc
 	 (syntax-rules ()
 	   ((_ ?who $unsafe-op overflow-check?)
-	    (define* (?who {x fixnum?} {y non-zero-fixnum?})
+	    (define (?who {x <fixnum>} {y <non-zero-fixnum>})
 	      (if ($fx> y 0)
 		  ($unsafe-op x y)
 		(if (and overflow-check? ($fx= y -1))
@@ -694,7 +696,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (fxdiv0-and-mod0 {x fixnum?} {y non-zero-fixnum?})
+  (define (fxdiv0-and-mod0 {x <fixnum>} {y <non-zero-fixnum>})
     (%check-div-result-not-fixnum __who__ x y)
     (receive-and-return (d m)
 	($fxdiv0-and-mod0 x y)
@@ -703,14 +705,14 @@
       (unless (fixnum? m)
 	(%error-result-not-fixnum __who__ m))))
 
-  (define* (fxdiv0 {x fixnum?} {y non-zero-fixnum?})
+  (define (fxdiv0 {x <fixnum>} {y <non-zero-fixnum>})
     (%check-div-result-not-fixnum __who__ x y)
     (receive-and-return (d)
 	($fxdiv0 x y)
       (unless (fixnum? d)
 	(%error-result-not-fixnum __who__ d))))
 
-  (define* (fxmod0 {x fixnum?} {y non-zero-fixnum?})
+  (define (fxmod0 {x <fixnum>} {y <non-zero-fixnum>})
     (receive-and-return (d)
 	($fxmod0 x y)
       (unless (fixnum? d)
@@ -821,7 +823,8 @@
 (library (ikarus fixnums unsafe)
   (export
     $fxzero?
-    #;$fxpositive?	#;$fxnegative?
+    $fxpositive?	$fxnegative?
+    $fxnonpositive?	$fxnonnegative?
     $fxadd1		$fxsub1
     $fx+		$fx*
     $fx-
@@ -829,26 +832,31 @@
     $fx<		$fx<=
     $fx>		$fx>=
     $fxsll		$fxsra
-    $fxlogor		$fxlogand
-    $fxlognot)
+    $fxnot		$fxand
+    $fxior		$fxxor
+    #| end of EXPORT |# )
   (import (vicare))
-  (define $fxzero? fxzero?)
-  #;(define $fxpositive? fxpositive?)
-  #;(define $fxnegative? fxnegative?)
-  (define $fxadd1 fxadd1)
-  (define $fxsub1 fxsub1)
-  (define $fx+ fx+)
-  (define $fx* fx*)
-  (define $fx- fx-)
-  (define $fx= fx=)
-  (define $fx< fx<)
-  (define $fx<= fx<=)
-  (define $fx> fx>)
-  (define $fx>= fx>=)
-  (define $fxsll fxsll)
-  (define $fxsra fxsra)
-  (define $fxlogor fxlogor)
-  (define $fxlogand fxlogand)
-  (define $fxlognot fxlognot))
+  (define $fxzero?		fxzero?)
+  (define $fxpositive?		fxpositive?)
+  (define $fxnegative?		fxnegative?)
+  (define $fxnonpositive?	fxnonpositive?)
+  (define $fxnonnegative?	fxnonnegative?)
+  (define $fxadd1		fxadd1)
+  (define $fxsub1		fxsub1)
+  (define $fx+			fx+)
+  (define $fx*			fx*)
+  (define $fx-			fx-)
+  (define $fx=			fx=?)
+  (define $fx<			fx<?)
+  (define $fx<=			fx<=?)
+  (define $fx>			fx>?)
+  (define $fx>=			fx>=?)
+  (define $fxsll		fxsll)
+  (define $fxsra		fxsra)
+  (define $fxior		fxior)
+  (define $fxxor		fxxor)
+  (define $fxand		fxand)
+  (define $fxnot		fxnot)
+  #| end of library |# )
 
 ;;; end of file

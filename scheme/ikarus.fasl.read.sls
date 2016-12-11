@@ -1,6 +1,6 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Modified in 2010-2016 by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
@@ -539,58 +539,58 @@
 	    (c3 (read-u8 port)))
        (cond
 	((fx<= c3 127)
-	 (fxlogor (fxlogor (fxsra c0  2) (fxsll c1  6))
-		  (fxlogor (fxsll c2 14) (fxsll c3 22))))
+	 (fxior (fxior (fxsra c0  2) (fxsll c1  6))
+		  (fxior (fxsll c2 14) (fxsll c3 22))))
 	(else
-	 (let ((c0 (fxlogand #xFF (fxlognot c0)))
-	       (c1 (fxlogand #xFF (fxlognot c1)))
-	       (c2 (fxlogand #xFF (fxlognot c2)))
-	       (c3 (fxlogand #xFF (fxlognot c3))))
+	 (let ((c0 (fxand #xFF (fxnot c0)))
+	       (c1 (fxand #xFF (fxnot c1)))
+	       (c2 (fxand #xFF (fxnot c2)))
+	       (c3 (fxand #xFF (fxnot c3))))
 	   (fx- -1
-		(fxlogor (fxlogor (fxsra c0  2) (fxsll c1  6))
-			 (fxlogor (fxsll c2 14) (fxsll c3 22)))))))))
+		(fxior (fxior (fxsra c0  2) (fxsll c1  6))
+			 (fxior (fxsll c2 14) (fxsll c3 22)))))))))
     ((64)
      (let* ((u0 (read-u32 port))
 	    (u1 (read-u32 port)))
        (if (<= u1 #x7FFFFFF)
 	   (sra (bitwise-ior u0 (sll u1 32)) 3)
-	 (let ((u0 (fxlogand #xFFFFFFFF (fxlognot u0)))
-	       (u1 (fxlogand #xFFFFFFFF (fxlognot u1))))
+	 (let ((u0 (fxand #xFFFFFFFF (fxnot u0)))
+	       (u1 (fxand #xFFFFFFFF (fxnot u1))))
 	   (fx- -1
-		(fxlogor (fxsra u0 3) (fxsll u1 29)))))))))
+		(fxior (fxsra u0 3) (fxsll u1 29)))))))))
 
 (define (read-integer-word port)
   ;;Read from the  input PORT an exact integer  represented as 32-bit or
   ;;64-bit value depending on the underlying platform's word size.
   ;;
   (case-word-size
-    ((32)	;32-bit platform
-     (let* ((c0 (char->int (read-u8-as-char port)))
-	    (c1 (char->int (read-u8-as-char port)))
-	    (c2 (char->int (read-u8-as-char port)))
-	    (c3 (char->int (read-u8-as-char port))))
-       (cond
-	((fx<= c3 127)
-	 (fxlogor (fxlogor c0 (fxsll c1 8))
-		  (fxlogor (fxsll c2 16) (fxsll c3 24))))
-	(else
-	 (let ((c0 (fxlogand #xFF (fxlognot c0)))
-	       (c1 (fxlogand #xFF (fxlognot c1)))
-	       (c2 (fxlogand #xFF (fxlognot c2)))
-	       (c3 (fxlogand #xFF (fxlognot c3))))
-	   (fx- -1
-		(fxlogor (fxlogor c0
-				  (fxsll c1 8))
-			 (fxlogor (fxsll c2 16)
-				  (fxsll c3 24)))))))))
-    ((64)	;64-bit platform
-     (let* ((u0 (read-u32 port))
-	    (u1 (read-u32 port)))
-       (if (<= u1 #x7FFFFFF)
-	   (bitwise-ior u0 (sll u1 32))
-	 (let ((u0 (fxlogand #xFFFFFFFF (fxlognot u0)))
-	       (u1 (fxlogand #xFFFFFFFF (fxlognot u1))))
-	   (- -1 (bitwise-ior u0 (sll u1 32)))))))))
+   ((32)	;32-bit platform
+    (let* ((c0 (char->int (read-u8-as-char port)))
+	   (c1 (char->int (read-u8-as-char port)))
+	   (c2 (char->int (read-u8-as-char port)))
+	   (c3 (char->int (read-u8-as-char port))))
+      (cond
+       ((fx<= c3 127)
+	(fxior (fxior c0 (fxsll c1 8))
+	       (fxior (fxsll c2 16) (fxsll c3 24))))
+       (else
+	(let ((c0 (fxand #xFF (fxnot c0)))
+	      (c1 (fxand #xFF (fxnot c1)))
+	      (c2 (fxand #xFF (fxnot c2)))
+	      (c3 (fxand #xFF (fxnot c3))))
+	  (fx- -1
+	       (fxior (fxior c0
+			     (fxsll c1 8))
+		      (fxior (fxsll c2 16)
+			     (fxsll c3 24)))))))))
+   ((64)	;64-bit platform
+    (let* ((u0 (read-u32 port))
+	   (u1 (read-u32 port)))
+      (if (<= u1 #x7FFFFFF)
+	  (bitwise-ior u0 (sll u1 32))
+	(let ((u0 (fxand #xFFFFFFFF (fxnot u0)))
+	      (u1 (fxand #xFFFFFFFF (fxnot u1))))
+	  (- -1 (bitwise-ior u0 (sll u1 32)))))))))
 
 
 ;;;;done

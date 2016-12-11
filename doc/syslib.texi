@@ -600,22 +600,22 @@ To compute the general absolute value without overflow we must use
 
 @subsubheading Bitwise logic operations
 
-@deffn {Unsafe Operation} $fxlognot @var{fx}
+@deffn {Unsafe Operation} $fxnot @var{fx}
 Perform the bitwise NOT on the operand and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $fxlogand @vari{fx} @varii{fx}
+@deffn {Unsafe Operation} $fxand @vari{fx} @varii{fx}
 Perform the bitwise AND on the operands and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $fxlogor @vari{fx} @varii{fx}
+@deffn {Unsafe Operation} $fxior @vari{fx} @varii{fx}
 Perform the bitwise inclusive OR on the operands and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $fxlogxor @vari{fx} @varii{fx}
+@deffn {Unsafe Operation} $fxxor @vari{fx} @varii{fx}
 Perform the bitwise exclusive OR on the operands and return the result.
 @end deffn
 

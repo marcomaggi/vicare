@@ -13106,7 +13106,6 @@ creation order.
 * iklib fixnums predicates::    Predicates.
 * iklib fixnums comparison::    Comparison functions.
 * iklib fixnums arithmetics::   Arithmetics.
-* iklib fixnums bitwise::       Bitwise functions.
 * iklib fixnums conversion::    Conversion functions.
 @end menu
 
@@ -13280,18 +13279,6 @@ provided all number object involved in that computation are exact.
 (fxremainder -13 -4)      @result{}  -1
 @end example
 @end deffn
-
-@c page
-@node iklib fixnums bitwise
-@subsection Bitwise functions
-
-
-@defun fxlognot @var{fx}
-@defunx fxlogor @vari{fx} @varii{fx}
-@defunx fxlogand @vari{fx} @varii{fx}
-@defunx fxlogxor @vari{fx} @varii{fx}
-Aliases for @func{fxnot}, @func{fxior}, @func{fxand}, @func{fxxor}.
-@end defun
 
 @c page
 @node iklib fixnums conversion

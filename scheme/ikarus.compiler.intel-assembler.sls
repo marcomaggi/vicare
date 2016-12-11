@@ -769,10 +769,10 @@
       ;;
       ;;* Bit range [22, 29] is stored in the fourth byte.
       ;;
-      (code-objects::$code-set! code (fx+ idx 0) (fxsll (fxlogand x #x3F) 2))
-      (code-objects::$code-set! code (fx+ idx 1) (fxlogand (fxsra x  6) #xFF))
-      (code-objects::$code-set! code (fx+ idx 2) (fxlogand (fxsra x 14) #xFF))
-      (code-objects::$code-set! code (fx+ idx 3) (fxlogand (fxsra x 22) #xFF)))
+      (code-objects::$code-set! code (fx+ idx 0) (fxsll (fxand x #x3F) 2))
+      (code-objects::$code-set! code (fx+ idx 1) (fxand (fxsra x  6) #xFF))
+      (code-objects::$code-set! code (fx+ idx 2) (fxand (fxsra x 14) #xFF))
+      (code-objects::$code-set! code (fx+ idx 3) (fxand (fxsra x 22) #xFF)))
      ((64)
       ;;On 64-bit platforms, we know that X has a  payload of 64 - 3 = 61 bits in the
       ;;bit range 0-60.  We split such bits as follows:
@@ -806,14 +806,14 @@
       ;;
       ;;* Bit range [53, 60] is stored in the 8th byte.
       ;;
-      (code-objects::$code-set! code (fx+ idx 0) (fxsll (fxlogand x #x1F) 3))
-      (code-objects::$code-set! code (fx+ idx 1) (fxlogand (fxsra x  5) #xFF))
-      (code-objects::$code-set! code (fx+ idx 2) (fxlogand (fxsra x 13) #xFF))
-      (code-objects::$code-set! code (fx+ idx 3) (fxlogand (fxsra x 21) #xFF))
-      (code-objects::$code-set! code (fx+ idx 4) (fxlogand (fxsra x 29) #xFF))
-      (code-objects::$code-set! code (fx+ idx 5) (fxlogand (fxsra x 37) #xFF))
-      (code-objects::$code-set! code (fx+ idx 6) (fxlogand (fxsra x 45) #xFF))
-      (code-objects::$code-set! code (fx+ idx 7) (fxlogand (fxsra x 53) #xFF)))))
+      (code-objects::$code-set! code (fx+ idx 0) (fxsll (fxand x #x1F) 3))
+      (code-objects::$code-set! code (fx+ idx 1) (fxand (fxsra x  5) #xFF))
+      (code-objects::$code-set! code (fx+ idx 2) (fxand (fxsra x 13) #xFF))
+      (code-objects::$code-set! code (fx+ idx 3) (fxand (fxsra x 21) #xFF))
+      (code-objects::$code-set! code (fx+ idx 4) (fxand (fxsra x 29) #xFF))
+      (code-objects::$code-set! code (fx+ idx 5) (fxand (fxsra x 37) #xFF))
+      (code-objects::$code-set! code (fx+ idx 6) (fxand (fxsra x 45) #xFF))
+      (code-objects::$code-set! code (fx+ idx 7) (fxand (fxsra x 53) #xFF)))))
 
   (define* (%set-label-loc! x loc)
     (if (getprop x '*label-loc*)
@@ -966,10 +966,10 @@
 	     (%error "source code object and target code object of \
                       a local relative jump are not the same"))
 	   (let ((rel (fx- disp (fxadd4 off))))
-	     (code-objects::$code-set! code         off  (fxlogand        rel     #xFF))
-	     (code-objects::$code-set! code (fxadd1 off) (fxlogand (fxsra rel 8)  #xFF))
-	     (code-objects::$code-set! code (fxadd2 off) (fxlogand (fxsra rel 16) #xFF))
-	     (code-objects::$code-set! code (fxadd3 off) (fxlogand (fxsra rel 24) #xFF)))))
+	     (code-objects::$code-set! code         off  (fxand        rel     #xFF))
+	     (code-objects::$code-set! code (fxadd1 off) (fxand (fxsra rel 8)  #xFF))
+	     (code-objects::$code-set! code (fxadd2 off) (fxand (fxsra rel 16) #xFF))
+	     (code-objects::$code-set! code (fxadd3 off) (fxand (fxsra rel 24) #xFF)))))
 
 	((relative)
 	 ;;Add a  record of type  "jump to  label-offset".  See the  documentation in
@@ -1007,7 +1007,7 @@
       ((_ ?vec ?reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG ?binary-code.offset)
        (vector-set! ?vec ?reloc-idx               (fxsll ?binary-code.offset 2)))
       ((_ ?vec ?reloc-idx ?tag ?binary-code.offset)
-       (vector-set! ?vec ?reloc-idx (fxlogor ?tag (fxsll ?binary-code.offset 2))))
+       (vector-set! ?vec ?reloc-idx (fxior ?tag (fxsll ?binary-code.offset 2))))
       ))
 
   (define (%label-loc x)
@@ -1216,8 +1216,8 @@
   ;;Commented out because unused.  (Marco Maggi; Wed Nov  5, 2014)
   ;;
   ;;(define (SIB s offset-register base-register ac)
-  ;;  (cons (byte (fxlogor (register-index base-register)
-  ;;                       (fxlogor (fxsll (register-index offset-register) 3)
+  ;;  (cons (byte (fxior (register-index base-register)
+  ;;                       (fxior (fxsll (register-index offset-register) 3)
   ;;                                (fxsll s 6))))
   ;;        ac))
 
@@ -1504,7 +1504,7 @@
     ;;N must be a  fixnum or bignum.  greek-rho must be a symbol  representing a CPU register
     ;;name.
     ;;
-    (cons (byte (fxlogor n (register-index greek-rho)))
+    (cons (byte (fxior n (register-index greek-rho)))
 	  ac))
 
   (define (ModRM mod greek-rho greek-rho/greek-mu ac)
@@ -1514,8 +1514,8 @@
     #;(assert (fixnum?  mod))
     #;(assert (reg?     greek-rho))
     #;(assert (reg/mem? greek-rho/greek-mu))
-    (cons (byte (fxlogor (register-index greek-rho/greek-mu)
-			 (fxlogor (fxsll (register-index greek-rho) 3)
+    (cons (byte (fxior (register-index greek-rho/greek-mu)
+			 (fxior (fxsll (register-index greek-rho) 3)
 				  (fxsll mod 6))))
 	  (if (and (not (fx= mod 3))
 		   (eq? greek-rho/greek-mu '%esp))
@@ -1530,8 +1530,8 @@
 	  ((eq? greek-rho_1 '%ebp)
 	   (%compiler-internal-error __who__ "invalid src %ebp"))
 	  (else
-	   (cons* (byte (fxlogor 4                    (fxsll (register-index greek-rho_1) 3)))
-		  (byte (fxlogor (register-index greek-rho_2) (fxsll (register-index greek-rho_3) 3)))
+	   (cons* (byte (fxior 4                    (fxsll (register-index greek-rho_1) 3)))
+		  (byte (fxior (register-index greek-rho_2) (fxsll (register-index greek-rho_3) 3)))
 		  ac))))
 
 ;;; --------------------------------------------------------------------
@@ -1541,7 +1541,7 @@
      ((32)
       (%compiler-internal-error __who__ "invalid use in 32-bit mode"))
      ((64)
-      (cons (fxlogor #b01001000 bits) ac))))
+      (cons (fxior #b01001000 bits) ac))))
 
   (define (REX+r r ac)
     (case-word-size
@@ -1636,10 +1636,10 @@
 	((reg)
 	 (let* ((bits 0)
 		(bits (if (reg-requires-REX.R-prefix? r)
-			  (fxlogor bits #b100)
+			  (fxior bits #b100)
 			bits))
 		(bits (if (reg-requires-REX.R-prefix? rm)
-			  (fxlogor bits #b001)
+			  (fxior bits #b001)
 			bits)))
 	   (REX.R bits ac)))))))
 

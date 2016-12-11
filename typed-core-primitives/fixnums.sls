@@ -224,14 +224,10 @@
 ;;; --------------------------------------------------------------------
 ;;; bitwise operations
 
-(declare-fixnum-unary fxnot		(replacements $fxlognot))
-(declare-fixnum-multi fxand		(replacements $fxlogand))
-(declare-fixnum-multi fxior		(replacements $fxlogor))
-(declare-fixnum-multi fxxor		(replacements $fxlogxor))
-(declare-fixnum-unary fxlognot		(replacements $fxlognot))
-(declare-fixnum-multi fxlogor		(replacements $fxlogor))
-(declare-fixnum-multi fxlogand		(replacements $fxlogand))
-(declare-fixnum-multi fxlogxor		(replacements $fxlogxor))
+(declare-fixnum-unary fxnot		(replacements $fxnot))
+(declare-fixnum-multi fxand		(replacements $fxand))
+(declare-fixnum-multi fxior		(replacements $fxior))
+(declare-fixnum-multi fxxor		(replacements $fxxor))
 
 (declare-core-primitive fxlength
     (safe)
@@ -408,10 +404,9 @@
 ;;; --------------------------------------------------------------------
 ;;; bitwise operations
 
-(declare-fixnum-multi $fxlogor unsafe)
-(declare-fixnum-multi $fxlogand unsafe)
-(declare-fixnum-multi $fxlogxor unsafe)
-(declare-fixnum-unary $fxlognot unsafe)
+(declare-fixnum-multi $fxand unsafe)
+(declare-fixnum-multi $fxior unsafe)
+(declare-fixnum-multi $fxxor unsafe)
 (declare-fixnum-unary $fxnot unsafe)
 (declare-fixnum-binary $fxsll unsafe)
 (declare-fixnum-binary $fxsra unsafe)

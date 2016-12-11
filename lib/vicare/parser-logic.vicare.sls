@@ -19,7 +19,7 @@
 ;;;	reader.
 ;;;
 ;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Modified in 2010-2016 by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -47,10 +47,7 @@
     :unexpected-end-of-input
     :invalid-input-char
     :end-of-input)
-  (import (rnrs)
-    (vicare unsafe operations)
-    (only (vicare)
-	  define-auxiliary-syntaxes))
+  (import (vicare))
 
 
 (define-auxiliary-syntaxes
@@ -124,10 +121,10 @@
 		 (assertion-violation 'define-parser
 		   "unknown requested public parser operator name"
 		   public-operator-name))
-		((bound-identifier=? public-operator-name ($car ls1))
-		 ($car ls2))
+		((bound-identifier=? public-operator-name (car ls1))
+		 (car ls2))
 		(else
-		 (loop ($cdr ls1) ($cdr ls2)))))))
+		 (loop (cdr ls1) (cdr ls2)))))))
     (define (syntax->list stx)
       ;;Given a syntax object STX holding a list, unwrap it and return a
       ;;proper list holding the component syntax objects.
@@ -266,7 +263,7 @@
     ;;against ?CH-VAR.
     ((_ ?device-logic ?device-arg-list ?ch-var ?test-delimiter-form
 	((?char ...) ?then-form) . ?other-operator-clauses)
-     (if (or ($char= ?char ?ch-var)
+     (if (or (char=? ?char ?ch-var)
 	     ...)
 	 ?then-form
        (%generate-parse-input-char-form ?device-logic ?device-arg-list ?ch-var
@@ -328,11 +325,11 @@
 		   ((_) #f)))
 	  (?next (syntax-rules ()
 		   ((_ ?operator-name ?operator-arg (... ...))
-		    (?operator-name ?input.string ?input.length ($fxadd1 ?input.index)
+		    (?operator-name ?input.string ?input.length (fxadd1 ?input.index)
 				    ?operator-arg (... ...))))))
-       (if ($fx= ?input.index ?input.length) ;end-of-input
+       (if (fx=? ?input.index ?input.length) ;end-of-input
 	   ?end-of-input-kont
-	 (let ((?ch-var ($string-ref ?input.string ?input.index)))
+	 (let ((?ch-var (string-ref ?input.string ?input.index)))
 	   ?parse-input-char-kont))))
     ))
 

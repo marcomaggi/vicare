@@ -597,8 +597,7 @@ VICARE_BOOT_PREREQUISITES	= \
 	lib/vicare/platform/errno.vicare.sls		\
 	\
 	lib/vicare/unsafe/unicode.vicare.sls		\
-	lib/vicare/unsafe/capi.vicare.sls		\
-	lib/vicare/unsafe/operations.vicare.sls
+	lib/vicare/unsafe/capi.vicare.sls
 
 vicare_sed_edit = $(SED) \
 	-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'		\

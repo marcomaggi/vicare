@@ -685,8 +685,7 @@
 		    fxquotient  fxremainder fxmodulo    fxsll       fxsra
 		    fxand       fxdiv       fxdiv0      fxif        fxior
 		    fxlength    fxmax       fxmin       fxmod       fxmod0
-		    fxnot       fxxor       fxlogand    fxlogor     fxlognot
-		    fxlogxor)
+		    fxand       fxior       fxnot	fxxor)
        (%inject* T:fixnum T:fixnum))
 
       ((fx= fx< fx<= fx> fx>= fx=? fx<? fx<=? fx>? fx>=?

@@ -9,7 +9,7 @@
 ;;;	This library exports only  syntaxes, so it can be used  also in the internals
 ;;;	of Vicare's source code.
 ;;;
-;;;Copyright (C) 2011, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -177,23 +177,23 @@
 
 ;;;; helpers
 
-(define-syntax $fxand
+(define-syntax $fx-logand
   (syntax-rules ()
     ((_ ?op1)
      ?op1)
     ((_ ?op1 ?op2)
      ($fxlogand ?op1 ?op2))
     ((_ ?op1 ?op2 . ?ops)
-     ($fxlogand ?op1 ($fxand ?op2 . ?ops)))))
+     ($fxlogand ?op1 ($fx-logand ?op2 . ?ops)))))
 
-(define-syntax $fxior
+(define-syntax $fx-logor
   (syntax-rules ()
     ((_ ?op1)
      ?op1)
     ((_ ?op1 ?op2)
      ($fxlogor ?op1 ?op2))
     ((_ ?op1 ?op2 . ?ops)
-     ($fxlogor ?op1 ($fxior ?op2 . ?ops)))))
+     ($fxlogor ?op1 ($fx-logor ?op2 . ?ops)))))
 
 
 ;;;; UTF-8 scheme
@@ -302,8 +302,8 @@
 (define-inline (utf-8-decode-two-octets octet0 octet1)
   ;;Decode the code point of a Unicode character from a 2-octets UTF-8 encoding.
   ;;
-  ($fxior ($fxsll ($fxand octet0 #b11111) 6)
-	  ($fxand octet1 #b111111)))
+  ($fx-logor ($fxsll ($fx-logand octet0 #b11111) 6)
+	  ($fx-logand octet1 #b111111)))
 
 (define-inline (utf-8-valid-code-point-from-2-octets? code-point)
   ;;Evaluate to true if CODE-POINT is a valid integer representation for a code point
@@ -324,14 +324,14 @@
   ;;Evaluate to true if  OCTET1 and OCTET2 are valid as second  and third of 3-octets
   ;;UTF-8 encoding of a Unicode character.
   ;;
-  ($fx= ($fxsra ($fxior octet1 octet2) 6) #b10))
+  ($fx= ($fxsra ($fx-logor octet1 octet2) 6) #b10))
 
 (define-inline (utf-8-decode-three-octets octet0 octet1 octet2)
   ;;Decode the code point of a Unicode character from a 3-octets UTF-8 encoding.
   ;;
-  ($fxior ($fxsll ($fxand octet0   #b1111) 12)
-	  ($fxsll ($fxand octet1 #b111111)  6)
-	  ($fxand octet2 #b111111)))
+  ($fx-logor ($fxsll ($fx-logand octet0   #b1111) 12)
+	  ($fxsll ($fx-logand octet1 #b111111)  6)
+	  ($fx-logand octet2 #b111111)))
 
 (define-inline (utf-8-valid-code-point-from-3-octets? code-point)
   ;;Evaluate to true if CODE-POINT is a valid integer representation for a code point
@@ -356,15 +356,15 @@
   ;;Evaluate to  true if  OCTET1, OCTET2 and  OCTET3 are valid  as second,  third and
   ;;fourth of 4-octets UTF-8 encoding of a Unicode character.
   ;;
-  ($fx= ($fxsra ($fxior octet1 octet2 octet3) 6) #b10))
+  ($fx= ($fxsra ($fx-logor octet1 octet2 octet3) 6) #b10))
 
 (define-inline (utf-8-decode-four-octets octet0 octet1 octet2 octet3)
   ;;Decode the code point of a Unicode character from a 4-octets UTF-8 encoding.
   ;;
-  ($fxior ($fxsll ($fxand octet0    #b111) 18)
-	  ($fxsll ($fxand octet1 #b111111) 12)
-	  ($fxsll ($fxand octet2 #b111111)  6)
-	  ($fxand octet3 #b111111)))
+  ($fx-logor ($fxsll ($fx-logand octet0    #b111) 18)
+	  ($fxsll ($fx-logand octet1 #b111111) 12)
+	  ($fxsll ($fx-logand octet2 #b111111)  6)
+	  ($fx-logand octet3 #b111111)))
 
 (define-inline (utf-8-valid-code-point-from-4-octets? code-point)
   ;;Evaluate to true if CODE-POINT is a valid integer representation for a code point
@@ -391,10 +391,10 @@
        ($fx<= code-point #x7FF)))
 
 (define-inline (utf-8-encode-first-of-two-octets code-point)
-  ($fxior #b11000000 ($fxsra code-point 6)))
+  ($fx-logor #b11000000 ($fxsra code-point 6)))
 
 (define-inline (utf-8-encode-second-of-two-octets code-point)
-  ($fxior #b10000000 ($fxand code-point #b111111)))
+  ($fx-logor #b10000000 ($fx-logand code-point #b111111)))
 
 ;;; --------------------------------------------------------------------
 ;;; encoding code points to 3-octet UTF-8
@@ -404,13 +404,13 @@
        ($fx<= code-point #xFFFF)))
 
 (define-inline (utf-8-encode-first-of-three-octets code-point)
-  ($fxior #b11100000 ($fxsra code-point 12)))
+  ($fx-logor #b11100000 ($fxsra code-point 12)))
 
 (define-inline (utf-8-encode-second-of-three-octets code-point)
-  ($fxior #b10000000 ($fxand ($fxsra code-point 6) #b111111)))
+  ($fx-logor #b10000000 ($fx-logand ($fxsra code-point 6) #b111111)))
 
 (define-inline (utf-8-encode-third-of-three-octets code-point)
-  ($fxior #b10000000 ($fxand code-point #b111111)))
+  ($fx-logor #b10000000 ($fx-logand code-point #b111111)))
 
 ;;; --------------------------------------------------------------------
 ;;; encoding code points to 4-octet UTF-8
@@ -420,16 +420,16 @@
        ($fx<= code-point #x10FFFF)))
 
 (define-inline (utf-8-encode-first-of-four-octets code-point)
-  ($fxior #b11110000 ($fxsra code-point 18)))
+  ($fx-logor #b11110000 ($fxsra code-point 18)))
 
 (define-inline (utf-8-encode-second-of-four-octets code-point)
-  ($fxior #b10000000 ($fxand ($fxsra code-point 12) #b111111)))
+  ($fx-logor #b10000000 ($fx-logand ($fxsra code-point 12) #b111111)))
 
 (define-inline (utf-8-encode-third-of-four-octets code-point)
-  ($fxior #b10000000 ($fxand ($fxsra code-point 6) #b111111)))
+  ($fx-logor #b10000000 ($fx-logand ($fxsra code-point 6) #b111111)))
 
 (define-inline (utf-8-encode-fourth-of-four-octets code-point)
-  ($fxior #b10000000 ($fxand code-point #b111111)))
+  ($fx-logor #b10000000 ($fx-logand code-point #b111111)))
 
 ;;; --------------------------------------------------------------------
 
@@ -546,8 +546,8 @@
   ;;UTF-16 encoding.
   ;;
   ($fx+ #x10000
-	($fxior ($fxsll ($fxand word0 #x3FF) 10)
-		($fxand word1 #x3FF))))
+	($fx-logor ($fxsll ($fx-logand word0 #x3FF) 10)
+		($fx-logand word1 #x3FF))))
 
 ;;; --------------------------------------------------------------------
 ;;; 1-word encoding
@@ -569,10 +569,10 @@
        ($fx<= code-point #x10FFFF)))
 
 (define-inline (utf-16-encode-first-of-two-words code-point)
-  ($fxior #xD800 ($fxsra ($fx- code-point #x10000) 10)))
+  ($fx-logor #xD800 ($fxsra ($fx- code-point #x10000) 10)))
 
 (define-inline (utf-16-encode-second-of-two-words code-point)
-  ($fxior #xDC00 ($fxand ($fx- code-point #x10000) (- ($fxsll 1 10) 1))))
+  ($fx-logor #xDC00 ($fx-logand ($fx- code-point #x10000) (- ($fxsll 1 10) 1))))
 
 ;;; --------------------------------------------------------------------
 
