@@ -185,7 +185,7 @@
 (define-syntax define-unsafe-operation/one
   (syntax-rules ()
     ((_ ?unsafe-who ?system-unsafe-who)
-     (define (?unsafe-who N)
+     (define/typed (?unsafe-who {N <fixnum>})
        (?system-unsafe-who N)))
     ))
 
@@ -206,7 +206,7 @@
 (define-syntax define-unsafe-operation/two
   (syntax-rules ()
     ((_ ?unsafe-who ?system-unsafe-who)
-     (define (?unsafe-who N M)
+     (define/typed (?unsafe-who {N <fixnum>} {M <fixnum>})
        (?system-unsafe-who N M)))
     ))
 
@@ -278,23 +278,23 @@
 (define-fx-operation/one fxnonpositive?	$fxnonpositive?)
 (define-fx-operation/one fxnonnegative?	$fxnonnegative?)
 
-(define ($fxzero? N)
+(define/typed ($fxzero? {N <fixnum>})
   (eq? N 0)
   #;(sys::$fxzero? N))
 
-(define ($fxpositive? N)
+(define/typed ($fxpositive? {N <fixnum>})
   (sys::$fx> N 0)
   #;(sys::$fxpositive? N))
 
-(define ($fxnegative? N)
+(define/typed ($fxnegative? {N <fixnum>})
   (sys::$fx< N 0)
   #;(sys::$fxnegative? N))
 
-(define ($fxnonpositive? N)
+(define/typed ($fxnonpositive? {N <fixnum>})
   (sys::$fx<= N 0)
   #;(sys::$fxnonpositive? N))
 
-(define ($fxnonnegative? N)
+(define/typed ($fxnonnegative? {N <fixnum>})
   (sys::$fx>= N 0)
   #;(sys::$fxnonnegative? N))
 
@@ -303,13 +303,13 @@
 (define-fx-operation/one fxeven?	$fxeven?)
 (define-fx-operation/one fxodd?		$fxodd?)
 
-(define ($fxeven? N)
+(define/typed ($fxeven? {N <fixnum>})
   ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
   ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
   ($fxzero? (sys::$fxlogand N 1))
   #;(sys::$fxeven? N))
 
-(define ($fxodd? N)
+(define/typed ($fxodd? {N <fixnum>})
   ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
   ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
   (not ($fxeven? N))
@@ -388,7 +388,7 @@
 (define-unsafe-operation/two $fxsll	sys::$fxsll)
 (define-unsafe-operation/two $fxsra	sys::$fxsra)
 
-(define ($fxif x y z)
+(define/typed ({$fxif <fixnum>} {x <fixnum>} {y <fixnum>} {z <fixnum>})
   (sys::$fxlogor (sys::$fxlogand x                  y)
 		 (sys::$fxlogand (sys::$fxlognot x) z)))
 
@@ -417,11 +417,11 @@
 	   "expected positive or negative fixnum representing index of bit in fixnum representation as shift argument"
 	   y))))
 
-(define ($positive-index-of-bit-in-fixnum-representation? Y)
+(define/typed ($positive-index-of-bit-in-fixnum-representation? {Y <fixnum>})
   (and ($fxpositive? Y)
        (sys::$fx< Y (fixnum-width))))
 
-(define ($negative-index-of-bit-in-fixnum-representation? Y)
+(define/typed ($negative-index-of-bit-in-fixnum-representation? {Y <fixnum>})
   (and ($fxnegative? Y)
        (sys::$fx> Y (- (fixnum-width)))))
 
@@ -484,10 +484,10 @@
 (define-unsafe-operation/one $fxadd1		sys::$fxadd1)
 (define-unsafe-operation/one $fxsub1		sys::$fxsub1)
 
-(case-define $fx-
-  ((N)
+(case-define/typed $fx-
+  (({N <fixnum>})
    (sys::fx- N))
-  ((N M)
+  (({N <fixnum>} {M <fixnum>})
    (sys::fx- N M)))
 
 ;;; --------------------------------------------------------------------
@@ -578,13 +578,13 @@
 (define-min/max-comparison fxmax $fxmax fixnum?)
 (define-min/max-comparison fxmin $fxmin fixnum?)
 
-(define ($fxmin fx1 fx2)
+(define/typed ($fxmin {fx1 <fixnum>} {fx2 <fixnum>})
   ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
   ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
   (if (sys::$fx< fx1 fx2) fx1 fx2)
   #;(sys::$fxmax fx1 fx2))
 
-(define ($fxmax fx1 fx2)
+(define/typed ($fxmax {fx1 <fixnum>} {fx2 <fixnum>})
   ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
   ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
   (if (sys::$fx< fx1 fx2) fx2 fx1)
@@ -605,7 +605,7 @@
 (define-fx-operation/div fxremainder	$fxremainder)
 (define-fx-operation/div fxmodulo	$fxmodulo)
 
-(define ($fxabs x)
+(define/typed ($fxabs {x <fixnum>})
   (if ($fxnegative? x)
       ;;Remember that  we cannot simply use  $fx- because if X  is (least-fixnum) the
       ;;result would overflow.
@@ -614,7 +614,7 @@
 	(sys::$fx- x))
     x))
 
-(define ($fxsign n)
+(define/typed ($fxsign {n <fixnum>})
   ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
   ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
   (cond (($fxnegative? n)	-1)
@@ -624,12 +624,12 @@
 
 (define-unsafe-operation/two $fxquotient	sys::$fxquotient)
 
-(define ($fxremainder x y)
+(define/typed ($fxremainder {x <fixnum>} {y <fixnum>})
   ;;We have to assume that the result may not be a fixnum!!!
   (let ((q (sys::$fxquotient x y)))
     (- x (* q y))))
 
-(define ($fxmodulo n1 n2)
+(define/typed ($fxmodulo {n1 <fixnum>} {n2 <fixnum>})
   (* ($fxsign n2)
      ;;We have to assume that the result of the product may not be a fixnum!!!  If N1
      ;;is (least-fixnum) and the sign is -1 the result of the product is a bignum.
@@ -703,7 +703,7 @@
 	  "invalid radix, expected 2, 8, 10 or 16"
 	  r)))))
 
-  (define ($fixnum->string x radix)
+  (define/typed ($fixnum->string {x <fixnum>} {radix <fixnum>})
     (cond (($fxzero? x)
 	   (string #\0))
 	  ((sys::$fx> x 0)
@@ -719,7 +719,7 @@
 	     ($string-set! str 0 #\-)
 	     str))))
 
-  (define (f n i j radix)
+  (define/typed (f {n <fixnum>} {i <fixnum>} {j <fixnum>} {radix <fixnum>})
     (define-constant MAPPING-STRING "0123456789ABCDEF")
     (if ($fxzero? n)
 	(values (make-string i) j)
@@ -784,7 +784,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($fxdiv-and-mod n m)
+  (define/typed ($fxdiv-and-mod {n <fixnum>} {m <fixnum>})
     ;;Be careful to use FXQUOTIENT, not the unsafe variant, to avoid overflows!!!
     (let* ((d0 (fxquotient n m))
 	   (m0 (sys::$fx- n (sys::$fx* d0 m))))
@@ -795,7 +795,7 @@
 	    (else
 	     (values (sys::$fx+ d0 1) (sys::$fx- m0 m))))))
 
-  (define ($fxdiv n m)
+  (define/typed ($fxdiv {n <fixnum>} {m <fixnum>})
     ;;Be careful to use FXQUOTIENT, not the unsafe variant, to avoid overflows!!!
     (let ((d0 (fxquotient n m)))
       (cond ((sys::$fx>= n (sys::$fx* d0 m))
@@ -805,7 +805,7 @@
 	    (else
 	     (sys::$fx+ d0 1)))))
 
-  (define ($fxmod n m)
+  (define/typed ($fxmod {n <fixnum>} {m <fixnum>})
     ;;Be careful to use FXQUOTIENT, not the unsafe variant, to avoid overflows!!!
     (let* ((d0 (fxquotient n m))
 	   (m0 (sys::$fx- n (sys::$fx* d0 m))))
@@ -818,7 +818,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($fxdiv0-and-mod0 n m)
+  (define/typed ($fxdiv0-and-mod0 {n <fixnum>} {m <fixnum>})
     (let ((d0 (quotient n m)))
       (let ((m0 (- n (* d0 m))))
         (if (>= m 0)
@@ -833,7 +833,7 @@
 		(values (+ d0 1) (- m0 m)))
 	    (values (- d0 1) (+ m0 m)))))))
 
-  (define ($fxdiv0 n m)
+  (define/typed ($fxdiv0 {n <fixnum>} {m <fixnum>})
     (let ((d0 (quotient n m)))
       (let ((m0 (- n (* d0 m))))
         (if (>= m 0)
@@ -848,7 +848,7 @@
 		(+ d0 1))
 	    (- d0 1))))))
 
-  (define ($fxmod0 n m)
+  (define/typed ($fxmod0 {n <fixnum>} {m <fixnum>})
     (let ((d0 (quotient n m)))
       (let ((m0 (- n (* d0 m))))
         (if (>= m 0)
