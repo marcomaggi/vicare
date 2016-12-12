@@ -78,7 +78,6 @@
   (import (vicare)
     (vicare system structs)
     (vicare arguments validation)
-    (vicare unsafe operations)
     (vicare language-extensions syntaxes)
     (for (vicare expander)
       expand))

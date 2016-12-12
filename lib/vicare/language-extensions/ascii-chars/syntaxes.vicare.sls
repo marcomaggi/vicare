@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -84,8 +84,29 @@
     $ascii-uri-pchar?
     $ascii-uri-pchar-not-percent-encoded?)
   (import (vicare)
-    (vicare arguments validation)
-    (vicare unsafe operations))
+    (vicare system $fx)
+    (vicare system $bytevectors))
+
+
+;;;; helpers
+
+(define-syntax $fxincr!
+  (syntax-rules ()
+    ((_ ?op)
+     ($fxincr! ?op 1))
+    ((_ ?op 0)
+     ?op)
+    ((_ ?op 1)
+     (set! ?op ($fxadd1 ?op)))
+    ((_ ?op 2)
+     (set! ?op ($fxadd2 ?op)))
+    ((_ ?op 3)
+     (set! ?op ($fxadd3 ?op)))
+    ((_ ?op 4)
+     (set! ?op ($fxadd4 ?op)))
+    ((_ ?op ?N)
+     (set! ?op ($fx+ ?op ?N)))
+    ))
 
 
 ;;;; constants
@@ -137,86 +158,86 @@
 
 ;;;; generic utilities for ASCII encoded characters
 
-(define-inline ($fixnum-in-ascii-range? obj)
-  ($fx<= 0 obj 127))
+(define-syntax-rule ($fixnum-in-ascii-range? obj)
+  (fx<=? 0 obj 127))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($fixnum-in-base10-range? obj)
+(define-syntax-rule ($fixnum-in-base10-range? obj)
   (fx<=? 0 obj 9))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($fixnum-in-base16-range? obj)
+(define-syntax-rule ($fixnum-in-base16-range? obj)
   (fx<=? 0 obj 15))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($ascii-upper-case? fx)
-  ($fx<= FIXNUM-A fx FIXNUM-Z))
+(define-syntax-rule ($ascii-upper-case? fx)
+  (fx<=? FIXNUM-A fx FIXNUM-Z))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($ascii-lower-case? fx)
-  ($fx<= FIXNUM-a fx FIXNUM-z))
+(define-syntax-rule ($ascii-lower-case? fx)
+  (fx<= FIXNUM-a fx FIXNUM-z))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($ascii-cased? fx)
+(define-syntax-rule ($ascii-cased? fx)
   (or ($ascii-upper-case? fx)
       ($ascii-lower-case? fx)))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($ascii-dec-digit? fx)
-  ($fx<= FIXNUM-0 fx FIXNUM-9))
+(define-syntax-rule ($ascii-dec-digit? fx)
+  (fx<= FIXNUM-0 fx FIXNUM-9))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($ascii-hex-digit? chi)
+(define-syntax-rule ($ascii-hex-digit? chi)
   (or ($ascii-dec-digit? chi)
-      ($fx<= FIXNUM-a chi FIXNUM-f)
-      ($fx<= FIXNUM-A chi FIXNUM-F)))
+      (fx<=? FIXNUM-a chi FIXNUM-f)
+      (fx<=? FIXNUM-A chi FIXNUM-F)))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($ascii-upcase fx)
+(define-syntax-rule ($ascii-upcase fx)
   (if ($ascii-lower-case? fx)
       ($fx- fx 32)
     fx))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($ascii-downcase fx)
+(define-syntax-rule ($ascii-downcase fx)
   (if ($ascii-upper-case? fx)
       ($fx+ 32 fx)
     fx))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($ascii-alpha-digit? fx)
+(define-syntax-rule ($ascii-alpha-digit? fx)
   (or ($ascii-cased? fx)
       ($ascii-dec-digit? fx)))
 
 
 ;;;; conversion
 
-(define-inline ($ascii-dec->fixnum chi)
+(define-syntax-rule ($ascii-dec->fixnum chi)
   ($fx- chi FIXNUM-0))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($fixnum->ascii-dec n)
+(define-syntax-rule ($fixnum->ascii-dec n)
   ($fx+ FIXNUM-0 n))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($ascii-hex->fixnum chi)
+(define-syntax-rule ($ascii-hex->fixnum chi)
   ;;This must be used only after "$ascii-hex-digit?" has validated CHI.
   ;;
-  (cond (($fx<= FIXNUM-0 chi FIXNUM-9)
+  (cond ((fx<=? FIXNUM-0 chi FIXNUM-9)
 	 ($fx- chi FIXNUM-0))
-	(($fx<= FIXNUM-a chi FIXNUM-f)
+	((fx<=? FIXNUM-a chi FIXNUM-f)
 	 ($fx+ 10 ($fx- chi FIXNUM-a)))
 	(else
 	 #;(assert (<= FIXNUM-A chi FIXNUM-F))
@@ -224,8 +245,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($fixnum->ascii-hex n)
-  (if ($fx<= 0 n 9)
+(define-syntax-rule ($fixnum->ascii-hex n)
+  (if (fx<=? 0 n 9)
       ($fx+ FIXNUM-0 n)
     ($fx+ FIXNUM-A ($fx- n 10))))
 
@@ -234,7 +255,7 @@
 
 (let-syntax ((define-chi-predicate (syntax-rules ()
 				     ((_ ?who ?const)
-				      (define-inline (?who chi)
+				      (define-syntax-rule (?who chi)
 					($fx= chi ?const))))))
   ;;lexicographically sorted, please
   (define-chi-predicate $ascii-chi-V?			FIXNUM-V)
@@ -268,7 +289,7 @@
 
 ;;;; character predicates related to RFC 3986, Uniform Resource Identifiers
 
-(define-inline ($ascii-uri-gen-delim? chi)
+(define-syntax-rule ($ascii-uri-gen-delim? chi)
   (or ($ascii-chi-colon?		chi)
       ($ascii-chi-slash?		chi)
       ($ascii-chi-question-mark?	chi)
@@ -277,7 +298,7 @@
       ($ascii-chi-close-bracket?	chi)
       ($ascii-chi-at-sign?		chi)))
 
-(define-inline ($ascii-uri-sub-delim? chi)
+(define-syntax-rule ($ascii-uri-sub-delim? chi)
   (or ($ascii-chi-bang?			chi)
       ($ascii-chi-dollar?		chi)
       ($ascii-chi-ampersand?		chi)
@@ -290,11 +311,11 @@
       ($ascii-chi-semicolon?		chi)
       ($ascii-chi-equal?		chi)))
 
-(define-inline ($ascii-uri-reserved? chi)
+(define-syntax-rule ($ascii-uri-reserved? chi)
   (or ($ascii-gen-delim? chi)
       ($ascii-uri-sub-delim? chi)))
 
-(define-inline ($ascii-uri-unreserved? chi)
+(define-syntax-rule ($ascii-uri-unreserved? chi)
   (or ($ascii-alpha-digit?		chi)
       ($ascii-chi-dash?			chi)
       ($ascii-chi-dot?			chi)
@@ -325,7 +346,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline ($ascii-uri-pchar-not-percent-encoded? chi)
+(define-syntax-rule ($ascii-uri-pchar-not-percent-encoded? chi)
   ;;Evaluate  to true  if CHI  matches  the "pchar"  component with  the
   ;;exception of the percent-encoded sequence.
   ;;

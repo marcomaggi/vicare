@@ -38,7 +38,9 @@
   (import (vicare)
     (vicare system structs)
     (vicare language-extensions syntaxes)
-    (vicare unsafe operations)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $vectors)
     (vicare arguments validation))
 
   (define-auxiliary-syntaxes

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -64,7 +64,9 @@
     )
   (import (vicare)
     (vicare arguments validation)
-    (vicare unsafe operations))
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $vectors))
 
 
 ;;;; helpers
@@ -271,7 +273,7 @@
     ($position-copy pos)))
 
 (define ($position-copy pos)
-  ($vector->position ($vector-copy ($:position-coordinates pos))))
+  ($vector->position (vector-copy ($:position-coordinates pos))))
 
 
 ;;;; miscellaneous utilities

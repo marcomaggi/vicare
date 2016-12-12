@@ -25,7 +25,8 @@
   (export make-tree-lexer)
   (import (rnrs)
     (vicare parser-tools silex input-system)
-    (vicare unsafe operations))
+    (vicare system $fx)
+    (vicare system $vectors))
 
 
 (define lexer-integer-newline (char->integer #\newline))

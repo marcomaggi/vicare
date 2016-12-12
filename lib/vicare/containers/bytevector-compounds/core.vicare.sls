@@ -64,12 +64,21 @@
   (import (vicare)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
-    (vicare unsafe operations)
+    (vicare system $pairs)
     (vicare system $bytevectors)
     (only (vicare system $numerics)
 	  $add-number-fixnum)
     (vicare language-extensions labels)
     (prefix (vicare platform words) words::))
+
+
+;;;; helpers
+
+(define-syntax-rule ($caar ?p)
+  ($car ($car ?p)))
+
+(define-syntax-rule ($cdar ?p)
+  ($cdr ($car ?p)))
 
 
 ;;;; label types
@@ -172,7 +181,7 @@
   (let recur ((P ($bytevector-compound-first-pair bvcom)))
     (if (null? P)
 	'()
-      (cons ($caar P) (recur ($cdr P))))))
+      (cons ($car ($car P)) (recur ($cdr P))))))
 
 ;;; --------------------------------------------------------------------
 

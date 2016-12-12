@@ -311,7 +311,11 @@
 	    words.)
     (prefix (vicare system posix)
      	    posix::)
-    (vicare unsafe operations))
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $strings)
+    (vicare system $vectors)
+    (vicare system $bytevectors))
 
 
 (define-syntax or-false)

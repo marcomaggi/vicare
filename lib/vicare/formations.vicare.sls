@@ -38,8 +38,11 @@
   (export format format-output-column)
   (import (except (vicare)
 		  format)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $chars)
+    (vicare system $vectors)
     (vicare system $strings)
-    (vicare unsafe operations)
     (vicare arguments validation))
 
 

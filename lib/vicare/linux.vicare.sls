@@ -130,7 +130,8 @@
 	    px.)
     (prefix (vicare unsafe capi)
 	    capi.)
-    (vicare unsafe operations)
+    (vicare system $fx)
+    (vicare system $pairs)
     (vicare language-extensions cond-expand))
 
 

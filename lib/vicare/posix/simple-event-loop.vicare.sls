@@ -9,7 +9,7 @@
 ;;;	This event  loop implementation is inspired  by the architecture
 ;;;	of the event loop of Tcl, <http://www.tcl.tk>.
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -51,7 +51,9 @@
   (import (vicare)
     (vicare system structs)
     (prefix (vicare posix) px.)
-    (vicare unsafe operations)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $vectors)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (vicare platform constants)
@@ -98,6 +100,24 @@
 	  (display line port)
 	  (newline port)
 	  (flush-output-port port))))))
+
+(define-syntax $fxincr!
+  (syntax-rules ()
+    ((_ ?op)
+     ($fxincr! ?op 1))
+    ((_ ?op 0)
+     ?op)
+    ((_ ?op 1)
+     (set! ?op ($fxadd1 ?op)))
+    ((_ ?op 2)
+     (set! ?op ($fxadd2 ?op)))
+    ((_ ?op 3)
+     (set! ?op ($fxadd3 ?op)))
+    ((_ ?op 4)
+     (set! ?op ($fxadd4 ?op)))
+    ((_ ?op ?N)
+     (set! ?op ($fx+ ?op ?N)))
+    ))
 
 
 ;;;; data structures

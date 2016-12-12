@@ -9,7 +9,7 @@
 ;;;	By putting  everything in  the body of  a macro  transformer, we
 ;;;	have no problems in using the MATCH syntax in the boot image.
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -34,7 +34,13 @@
     ;; auxiliary keywords
     else let quote quasiquote and or not apply eval syntax ... _ =>)
   (import (vicare)
-    (vicare unsafe operations)
+    (vicare system $fx)
+    (vicare system $flonums)
+    (vicare system $compnums)
+    (vicare system $ratnums)
+    (vicare system $pairs)
+    (vicare system $chars)
+    (vicare system $vectors)
     (only (vicare system $bytevectors)
 	  $bytevector=))
 

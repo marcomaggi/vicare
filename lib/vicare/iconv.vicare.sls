@@ -38,8 +38,7 @@
     (vicare language-extensions syntaxes)
     (vicare platform constants)
     (prefix (vicare unsafe capi)
-	    capi.)
-    (vicare unsafe operations))
+	    capi::))
 
 
 ;;;; helpers
@@ -62,11 +61,11 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (index who obj)
-  (and (fixnum? obj) ($fx<= 0 obj))
+  (and (fixnum? obj) (fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as argument" obj))
 
 (define-argument-validation (false/index who obj)
-  (or (not obj) (and (fixnum? obj) ($fx<= 0 obj)))
+  (or (not obj) (and (fixnum? obj) (fx<= 0 obj)))
   (assertion-violation who "expected false or non-negative fixnum as argument" obj))
 
 (define-argument-validation (iconv who obj)
@@ -471,7 +470,7 @@
   (define ($iconv-destructor handle)
     (let ((P ($iconv-pointer handle)))
       (unless (pointer-null? P)
-	(capi.glibc-iconv-close P))))
+	(capi::glibc-iconv-close P))))
 
   (set-struct-type-destructor! (type-descriptor iconv) $iconv-destructor))
 
@@ -490,7 +489,7 @@
     (with-arguments-validation (who)
 	((iconv-set	from)
 	 (iconv-set	to))
-      (let ((rv (capi.glibc-iconv-open (%enum-set->string from who)
+      (let ((rv (capi::glibc-iconv-open (%enum-set->string from who)
 				       (%enum-set->string to   who))))
 	(if (pointer? rv)
 	    (make-iconv rv from to)
@@ -514,8 +513,8 @@
   (with-arguments-validation (who)
       ((iconv	handle))
     ;;Close the handle and mutate the pointer object to NULL.
-    (let ((rv (capi.glibc-iconv-close (iconv-pointer handle))))
-      (unless ($fxzero? rv)
+    (let ((rv (capi::glibc-iconv-close (iconv-pointer handle))))
+      (unless (fxzero? rv)
 	(raise-errno-error who rv handle)))))
 
 (define (iconv-closed? handle)
@@ -536,7 +535,7 @@
        (false/index	input.past)
        (index		output.start)
        (false/index	output.past))
-    (let ((rv (capi.glibc-iconv (iconv-pointer handle)
+    (let ((rv (capi::glibc-iconv (iconv-pointer handle)
 				input  input.start  input.past
 				output output.start output.past)))
       (if (pair? rv)
@@ -548,7 +547,7 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -87,8 +87,6 @@
     $ascii-uri-pchar?
     $ascii-uri-pchar-not-percent-encoded?)
   (import (vicare)
-    (vicare unsafe operations)
-    (vicare arguments validation)
     (vicare language-extensions ascii-chars syntaxes))
 
 
@@ -180,6 +178,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

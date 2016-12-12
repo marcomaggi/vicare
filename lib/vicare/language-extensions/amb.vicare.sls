@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -49,8 +49,7 @@
     amb-assert				amb-thunk
     amb-permute				amb-random
     amb-random-fixnum-maker		amb-backtrack-log)
-  (import (vicare)
-    (vicare unsafe operations))
+  (import (vicare))
 
 
 ;;;; type definitions
@@ -179,12 +178,12 @@
 		(call/cc
 		    (lambda (escape)
 		      (%current-fail-escape escape)
-		      (return (let ((result (($car thunks))))
+		      (return (let ((result ((car thunks))))
 				(if (promise? result)
 				    (force result)
 				  result)))))
 		(%current-fail-escape (%previous-fail-escape))
-		(next-choice ($cdr thunks))))))))
+		(next-choice (cdr thunks))))))))
 
   #| end of module: AMB |# )
 
@@ -223,23 +222,23 @@
 
   (define (%amb-permute thunks)
     (%amb-correctly-initialised?)
-    (let* ((thunks.len  ($vector-length thunks))
+    (let* ((thunks.len  (vector-length thunks))
 	   (order       (%make-order-vector thunks.len)))
       (call/cc
 	  (lambda (return)
 	    (let next-choice ((idx 0))
-	      (if ($fx= idx thunks.len)
+	      (if (fx=? idx thunks.len)
 		  (amb)
 		(parametrise ((%previous-fail-escape (%current-fail-escape)))
 		  (call/cc
 		      (lambda (escape)
 			(%current-fail-escape escape)
-			(return (let ((result (($vector-ref thunks ($vector-ref order idx)))))
+			(return (let ((result ((vector-ref thunks (vector-ref order idx)))))
 				  (if (promise? result)
 				      (force result)
 				    result)))))
 		  (%current-fail-escape (%previous-fail-escape))
-		  (next-choice ($fxadd1 idx)))))))))
+		  (next-choice (fxadd1 idx)))))))))
 
   (define (%make-order-vector N)
     ;;Return a  vector of  length N  holding a  random permutation  of the
@@ -250,18 +249,18 @@
     ;;
     (assert (and (fixnum? N) (fxpositive? N)))
     (let ((vec (make-vector N 0)))
-      (do ((i 0 ($fxadd1 i)))
-	  (($fx= i N))
-	($vector-set! vec i i))
-      (do ((k N ($fxsub1 k)))
-	  (($fx= k 1)
+      (do ((i 0 (fxadd1 i)))
+	  ((fx= i N))
+	(vector-set! vec i i))
+      (do ((k N (fxsub1 k)))
+	  ((fx= k 1)
 	   vec)
-	(let* ((i  ($fxsub1 k))
+	(let* ((i  (fxsub1 k))
 	       (j  ((amb-random-fixnum-maker) k))
-	       (xi ($vector-ref vec i))
-	       (xj ($vector-ref vec j)))
-	  ($vector-set! vec i xj)
-	  ($vector-set! vec j xi)))))
+	       (xi (vector-ref vec i))
+	       (xj (vector-ref vec j)))
+	  (vector-set! vec i xj)
+	  (vector-set! vec j xi)))))
 
   #| end of module: AMB-PERMUTE |# )
 
@@ -281,7 +280,7 @@
 
   (define (%amb-random thunks)
     (%amb-correctly-initialised?)
-    (let ((thunks.len ($vector-length thunks)))
+    (let ((thunks.len (vector-length thunks)))
       (call/cc
 	  (lambda (return)
 	    (let next-choice ()
@@ -291,7 +290,7 @@
 		      (%current-fail-escape escape)
 		      (return
 		       (let* ((idx    ((amb-random-fixnum-maker) thunks.len))
-			      (result (($vector-ref thunks idx))))
+			      (result ((vector-ref thunks idx))))
 			 (if (promise? result)
 			     (force result)
 			   result)))))

@@ -226,7 +226,6 @@ lib/vicare/arguments/validation.fasl: \
 		lib/vicare/platform/configuration.fasl \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/platform/words.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -258,7 +257,6 @@ lib/vicare/language-extensions/syntaxes.fasl: \
 		lib/vicare/language-extensions/syntaxes.vicare.sls \
 		lib/vicare/platform/configuration.fasl \
 		lib/vicare/arguments/validation.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -273,7 +271,6 @@ CLEANFILES += lib/vicare/language-extensions/syntaxes.fasl
 
 lib/vicare/language-extensions/amb.fasl: \
 		lib/vicare/language-extensions/amb.vicare.sls \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -288,7 +285,6 @@ CLEANFILES += lib/vicare/language-extensions/amb.fasl
 
 lib/vicare/language-extensions/simple-match.fasl: \
 		lib/vicare/language-extensions/simple-match.vicare.sls \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -375,8 +371,6 @@ CLEANFILES += lib/vicare/language-extensions/loops.fasl
 
 lib/vicare/language-extensions/ascii-chars.fasl: \
 		lib/vicare/language-extensions/ascii-chars.vicare.sls \
-		lib/vicare/unsafe/operations.fasl \
-		lib/vicare/arguments/validation.fasl \
 		lib/vicare/language-extensions/ascii-chars/syntaxes.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
@@ -392,8 +386,6 @@ CLEANFILES += lib/vicare/language-extensions/ascii-chars.fasl
 
 lib/vicare/language-extensions/ascii-chars/syntaxes.fasl: \
 		lib/vicare/language-extensions/ascii-chars/syntaxes.vicare.sls \
-		lib/vicare/arguments/validation.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -730,7 +722,6 @@ lib/vicare/posix.fasl: \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/arguments/general-c-buffers.fasl \
 		lib/vicare/unsafe/capi.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/platform/words.fasl \
 		lib/vicare/language-extensions/cond-expand.fasl \
 		lib/vicare/containers/weak-hashtables.fasl \
@@ -750,7 +741,6 @@ CLEANFILES += lib/vicare/posix.fasl
 
 lib/vicare/containers/weak-hashtables.fasl: \
 		lib/vicare/containers/weak-hashtables.vicare.sls \
-		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
@@ -1149,7 +1139,6 @@ lib/vicare/containers/bytevector-compounds/core.fasl: \
 		lib/vicare/containers/bytevector-compounds/core.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/arguments/validation.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/labels.fasl \
 		lib/vicare/platform/words.fasl \
 		$(FASL_PREREQUISITES)
@@ -1271,7 +1260,6 @@ CLEANFILES += lib/vicare/containers/lists.fasl
 
 lib/vicare/containers/strings/rabin-karp.fasl: \
 		lib/vicare/containers/strings/rabin-karp.vicare.sls \
-		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
@@ -1432,7 +1420,6 @@ CLEANFILES += lib/vicare/containers/bytevectors/s8low.fasl
 lib/vicare/containers/arrays.fasl: \
 		lib/vicare/containers/arrays.vicare.sls \
 		lib/vicare/arguments/validation.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -1983,7 +1970,6 @@ CLEANFILES += lib/vicare/parser-tools/silex/code-lexer-driver.fasl
 lib/vicare/parser-tools/silex/tree-lexer-driver.fasl: \
 		lib/vicare/parser-tools/silex/tree-lexer-driver.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -2211,7 +2197,6 @@ endif
 lib/vicare/ffi/foreign-pointer-wrapper.fasl: \
 		lib/vicare/ffi/foreign-pointer-wrapper.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
@@ -2232,7 +2217,6 @@ lib/vicare/iconv.fasl: \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/unsafe/capi.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -2322,7 +2306,6 @@ endif
 lib/vicare/posix/simple-event-loop.fasl: \
 		lib/vicare/posix/simple-event-loop.vicare.sls \
 		lib/vicare/posix.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/platform/constants.fasl \
@@ -2453,7 +2436,6 @@ lib/vicare/glibc.fasl: \
 		lib/vicare/unsafe/capi.fasl \
 		lib/vicare/platform/words.fasl \
 		lib/vicare/arguments/validation.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/cond-expand.fasl \
 		lib/vicare/platform/features.fasl \
 		lib/vicare/language-extensions/cond-expand/helpers.fasl \
@@ -2505,7 +2487,6 @@ lib/vicare/linux.fasl: \
 		lib/vicare/platform/words.fasl \
 		lib/vicare/posix.fasl \
 		lib/vicare/unsafe/capi.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/cond-expand.fasl \
 		lib/vicare/platform/features.fasl \
 		lib/vicare/language-extensions/cond-expand/helpers.fasl \
@@ -2528,7 +2509,6 @@ endif
 lib/vicare/readline.fasl: \
 		lib/vicare/readline.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -2559,7 +2539,6 @@ CLEANFILES += lib/vicare/assembler/inspection.fasl
 
 lib/vicare/parser-logic.fasl: \
 		lib/vicare/parser-logic.vicare.sls \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -2618,7 +2597,6 @@ CLEANFILES += lib/vicare/pregexp.fasl
 lib/vicare/getopts.fasl: \
 		lib/vicare/getopts.vicare.sls \
 		lib/vicare/arguments/validation.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
@@ -2634,7 +2612,6 @@ CLEANFILES += lib/vicare/getopts.fasl
 
 lib/vicare/formations.fasl: \
 		lib/vicare/formations.vicare.sls \
-		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
