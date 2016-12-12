@@ -1994,9 +1994,21 @@
    ((E x)
     (nop)))
 
+ ;;FIXME Include and test this for inclusion  in the code.  (Marco Maggi; Mon Dec 12,
+ ;;2016)
+ ;;
  ;; (define-core-primitive-operation $fxeven? unsafe
  ;;   ((P x)
  ;;    (asm '= (asm 'logand (V-simple-operand x) (K 1)) (K 0)))
+ ;;   ((E x)
+ ;;    (nop)))
+
+ ;;FIXME Include and test this for inclusion  in the code.  (Marco Maggi; Mon Dec 12,
+ ;;2016)
+ ;;
+ ;; (define-core-primitive-operation $fxodd? unsafe
+ ;;   ((P x)
+ ;;    (asm '= (asm 'logand (V-simple-operand x) (K 1)) (K 1)))
  ;;   ((E x)
  ;;    (nop)))
 
@@ -2037,6 +2049,38 @@
     (asm '>= (V-simple-operand x) (V-simple-operand y)))
    ((E x y)
     (nop)))
+
+ ;;FIXME Include and test this for inclusion  in the code.  (Marco Maggi; Mon Dec 12,
+ ;;2016)
+ ;;
+ ;; (define-core-primitive-operation $fxmax unsafe
+ ;;   ((V x y)
+ ;;    (with-tmp ((n (V-simple-operand x)))
+ ;;      (with-tmp ((m (V-simple-operand y)))
+ ;; 	(make-conditional (asm '< n m)
+ ;; 	    m
+ ;; 	  n))))
+ ;;   ((P x)
+ ;;    (K #t))
+ ;;   ((E x)
+ ;;    (nop)))
+
+ ;;FIXME Include and test this for inclusion  in the code.  (Marco Maggi; Mon Dec 12,
+ ;;2016)
+ ;;
+ ;; (define-core-primitive-operation $fxmin unsafe
+ ;;   ((V x y)
+ ;;    (with-tmp ((n (V-simple-operand x)))
+ ;;      (with-tmp ((m (V-simple-operand y)))
+ ;; 	(make-conditional (asm '< n m)
+ ;; 	    n
+ ;; 	  m))))
+ ;;   ((P x)
+ ;;    (K #t))
+ ;;   ((E x)
+ ;;    (nop)))
+
+;;; --------------------------------------------------------------------
 
  (define-core-primitive-operation $fxadd1 unsafe
    ((V x)
@@ -2101,6 +2145,24 @@
     (K #t))
    ((E x y)
     (nop)))
+
+ ;;FIXME Include and test this for inclusion  in the code.  (Marco Maggi; Mon Dec 12,
+ ;;2016)
+ ;;
+ ;; (define-core-primitive-operation $fxsign unsafe
+ ;;   ((V x)
+ ;;    (with-tmp ((n (V-simple-operand x)))
+ ;;      (make-conditional (asm '< n (K 0))
+ ;; 	  (K -1)
+ ;; 	(make-conditional (asm '> n (K 0))
+ ;; 	    (K +1)
+ ;; 	  (K 0)))))
+ ;;   ((P x)
+ ;;    (K #t))
+ ;;   ((E x)
+ ;;    (nop)))
+
+;;; --------------------------------------------------------------------
 
  (define-core-primitive-operation $fxnot unsafe
    ((V x)

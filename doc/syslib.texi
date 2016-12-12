@@ -407,6 +407,11 @@ Evaluate to true if the arguments are equal.
 @end deffn
 
 
+@deffn {Unsafe Operation} $fx=! @vari{fx} @varii{fx}
+Evaluate to true if the arguments are different.
+@end deffn
+
+
 @deffn {Unsafe Operation} $fx< @vari{fx} @varii{fx}
 Evaluate to true if @vari{fx} is less than @varii{fx}.
 @end deffn
@@ -424,6 +429,12 @@ Evaluate to true if @vari{fx} is greater than @varii{fx}.
 
 @deffn {Unsafe Operation} $fx>= @vari{fx} @varii{fx}
 Evaluate to true if @vari{fx} is greater than or equal to @varii{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxmax @vari{fx} @varii{fx}
+@deffnx {Unsafe Operation} $fxmin @vari{fx} @varii{fx}
+Return either the maximum or minimum between the arguments.
 @end deffn
 
 @c ------------------------------------------------------------
@@ -617,6 +628,15 @@ Perform the bitwise inclusive OR on the operands and return the result.
 
 @deffn {Unsafe Operation} $fxxor @vari{fx} @varii{fx}
 Perform the bitwise exclusive OR on the operands and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxif @vari{fx} @varii{fx} @variii{fx}
+Return the fixnum that is the bit--wise ``if'' of the two's complement
+representations of its arguments, i.e. for each bit, if it is 1 in
+@vari{fx}, the corresponding bit in @varii{fx} becomes the value of the
+corresponding bit in the result, and if it is 0, the corresponding bit
+in @variii{fx} becomes the corresponding bit in the value of the result.
 @end deffn
 
 @c ------------------------------------------------------------

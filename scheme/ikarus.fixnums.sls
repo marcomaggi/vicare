@@ -68,19 +68,29 @@
 
 ;;; --------------------------------------------------------------------
 
-    $fx!=
+    $fxadd1		$fxsub1
+    $fx+		$fx*
+    $fx-
+    $fxremainder	$fxmodulo
+    $fxquotient
+    $fxabs		$fxsign
 
-    $fxpositive?		$fxnegative?
-    $fxnonpositive?		$fxnonnegative?
-    $fxeven?			$fxodd?
-    $fxmodulo			$fxremainder
-    $fxsign
-    $fxmin			$fxmax
+    $fx=		$fx!=
+    $fx<		$fx<=
+    $fx>		$fx>=
+    $fxmax		$fxmin
+
+    $fxpositive?	$fxnegative?
+    $fxnonpositive?	$fxnonnegative?
+    $fxeven?		$fxodd?
+
+    $fxsll		$fxsra
+    $fxnot		$fxand
+    $fxior		$fxxor
 
     $fxdiv			$fxdiv0
     $fxmod			$fxmod0
     $fxdiv-and-mod		$fxdiv0-and-mod0
-    $fxabs
 
     $fixnum->string
 
@@ -141,23 +151,11 @@
 		  fixnum->string
 		  fixnum-in-character-range?)
     (prefix (only (vicare)
-		  fx+ fx* fx-)
-	    sys:)
-    (except (vicare system $fx)
-	    $fx!=
-	    $fxpositive?	$fxnegative?
-	    $fxnonpositive?	$fxnonnegative?
-	    $fxeven?		$fxodd?
-	    $fxmodulo		$fxremainder
-	    $fxsign
-	    $fxmin		$fxmax
-	    $fxdiv		$fxdiv0
-	    $fxmod		$fxmod0
-	    $fxdiv-and-mod	$fxdiv0-and-mod0
-	    $fxabs
-	    $fixnum->string)
-    (prefix (only (vicare system $fx)
-		  $fx!=)
+		  fx+ fx* fx-
+		  fxarithmetic-shift-right
+		  fxarithmetic-shift-left)
+	    sys::)
+    (prefix (vicare system $fx)
 	    sys::)
     (vicare system $chars)
     (vicare system $pairs)
@@ -181,8 +179,17 @@
 (define-syntax define-fx-operation/one
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define* (?safe-who {x fixnum?})
+     (define (?safe-who {x <fixnum>})
        (?unsafe-who x)))))
+
+(define-syntax define-unsafe-operation/one
+  (syntax-rules ()
+    ((_ ?unsafe-who ?system-unsafe-who)
+     (define (?unsafe-who N)
+       (?system-unsafe-who N)))
+    ))
+
+;;; --------------------------------------------------------------------
 
 (define-syntax define-fx-predicate/one
   (syntax-rules ()
@@ -195,6 +202,15 @@
     ((_ ?safe-who ?unsafe-who)
      (define (?safe-who {x <fixnum>} {y <fixnum>})
        (?unsafe-who x y)))))
+
+(define-syntax define-unsafe-operation/two
+  (syntax-rules ()
+    ((_ ?unsafe-who ?system-unsafe-who)
+     (define (?unsafe-who N M)
+       (?system-unsafe-who N M)))
+    ))
+
+;;; --------------------------------------------------------------------
 
 (define-syntax define-fx-operation/shift
   (syntax-rules ()
@@ -223,8 +239,8 @@
 
 (define (byte-fixnum? obj)
   (and (fixnum? obj)
-       ($fx>= obj -128)
-       ($fx<= obj +127)))
+       (sys::$fx>= obj -128)
+       (sys::$fx<= obj +127)))
 
 (define (zero-byte-fixnum? obj)
   (eq? obj 0))
@@ -232,11 +248,11 @@
 (define (positive-byte-fixnum? obj)
   (and (fixnum? obj)
        ($fxpositive? obj)
-       ($fx<= obj +127)))
+       (sys::$fx<= obj +127)))
 
 (define (negative-byte-fixnum? obj)
   (and (fixnum? obj)
-       ($fx>= obj -128)
+       (sys::$fx>= obj -128)
        ($fxnegative? obj)))
 
 ;;; --------------------------------------------------------------------
@@ -244,7 +260,7 @@
 (define (octet-fixnum? obj)
   (and (fixnum? obj)
        ($fxnonnegative? obj)
-       ($fx<= obj 255)))
+       (sys::$fx<= obj 255)))
 
 (define (zero-octet-fixnum? obj)
   (eq? obj 0))
@@ -252,32 +268,52 @@
 (define (positive-octet-fixnum? obj)
   (and (fixnum? obj)
        ($fxpositive? obj)
-       ($fx<= obj +255)))
+       (sys::$fx<= obj +255)))
 
 ;;; --------------------------------------------------------------------
 
-(define (fxzero? {x <fixnum>})
-  (eq? x 0))
-
-(define ($fxpositive? N)	($fx> N 0))
-(define ($fxnegative? N)	($fx< N 0))
-(define ($fxeven?     N)	($fxzero? ($fxlogand N 1)))
-(define ($fxodd?      N)	(not ($fxzero? ($fxlogand N 1))))
-
-(define ($fxnonpositive? x)
-  (or ($fxzero? x)
-      ($fxnegative? x)))
-
-(define ($fxnonnegative? x)
-  (or ($fxzero? x)
-      ($fxpositive? x)))
-
+(define-fx-operation/one fxzero?	$fxzero?)
 (define-fx-operation/one fxpositive?	$fxpositive?)
 (define-fx-operation/one fxnegative?	$fxnegative?)
 (define-fx-operation/one fxnonpositive?	$fxnonpositive?)
 (define-fx-operation/one fxnonnegative?	$fxnonnegative?)
+
+(define ($fxzero? N)
+  (eq? N 0)
+  #;(sys::$fxzero? N))
+
+(define ($fxpositive? N)
+  (sys::$fx> N 0)
+  #;(sys::$fxpositive? N))
+
+(define ($fxnegative? N)
+  (sys::$fx< N 0)
+  #;(sys::$fxnegative? N))
+
+(define ($fxnonpositive? N)
+  (sys::$fx<= N 0)
+  #;(sys::$fxnonpositive? N))
+
+(define ($fxnonnegative? N)
+  (sys::$fx>= N 0)
+  #;(sys::$fxnonnegative? N))
+
+;;; --------------------------------------------------------------------
+
 (define-fx-operation/one fxeven?	$fxeven?)
 (define-fx-operation/one fxodd?		$fxodd?)
+
+(define ($fxeven? N)
+  ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
+  ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
+  ($fxzero? (sys::$fxlogand N 1))
+  #;(sys::$fxeven? N))
+
+(define ($fxodd? N)
+  ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
+  ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
+  (not ($fxeven? N))
+  #;(sys::$fxodd? N))
 
 ;;; --------------------------------------------------------------------
 
@@ -308,9 +344,6 @@
 
 ;;;; bitwise logic operations
 
-(define (fxnot {x <fixnum>})
-  ($fxlognot x))
-
 (let-syntax
     ((define-fxbitop (syntax-rules ()
 		       ((_ ?who ?unsafe-op ?identity)
@@ -333,44 +366,52 @@
 			  (()
 			   ?identity)))
 		       )))
-  (define-fxbitop fxior		$fxlogor	 0)
-  (define-fxbitop fxand		$fxlogand	-1)
-  (define-fxbitop fxxor		$fxlogxor	 0)
+  (define-fxbitop fxior		sys::$fxlogor	 0)
+  (define-fxbitop fxand		sys::$fxlogand	-1)
+  (define-fxbitop fxxor		sys::$fxlogxor	 0)
   #| end of LET-SYNTAX |# )
+
+(define-fx-operation/one fxnot		sys::$fxlognot)
+
+(define-unsafe-operation/two $fxior		sys::$fxlogor)
+(define-unsafe-operation/two $fxxor		sys::$fxlogxor)
+(define-unsafe-operation/two $fxand		sys::$fxlogand)
+(define-unsafe-operation/one $fxnot		sys::$fxlognot)
 
 
 ;;;; bitwise operations
 
-(define-fx-operation/shift fxsra $fxsra)
-(define-fx-operation/shift fxsll $fxsll)
-(define-fx-operation/three fxif  $fxif)
+(define-fx-operation/shift fxsra	sys::$fxsra)
+(define-fx-operation/shift fxsll	sys::$fxsll)
+(define-fx-operation/three fxif		$fxif)
+
+(define-unsafe-operation/two $fxsll	sys::$fxsll)
+(define-unsafe-operation/two $fxsra	sys::$fxsra)
 
 (define ($fxif x y z)
-  ($fxlogor ($fxlogand x             y)
-	    ($fxlogand ($fxlognot x) z)))
+  (sys::$fxlogor (sys::$fxlogand x                  y)
+		 (sys::$fxlogand (sys::$fxlognot x) z)))
 
 ;;; --------------------------------------------------------------------
 
 (define (fxarithmetic-shift-right x y)
   ;;This is also a primitive operation.
-  (import (vicare))
-  (fxarithmetic-shift-right x y))
+  (sys::fxarithmetic-shift-right x y))
 
 (define (fxarithmetic-shift-left x y)
   ;;This is also a primitive operation.
-  (import (vicare))
-  (fxarithmetic-shift-left x y))
+  (sys::fxarithmetic-shift-left x y))
 
 (define (fxarithmetic-shift {x <fixnum>} {y <fixnum>})
   (cond (($fxzero? y)
 	 x)
 	(($positive-index-of-bit-in-fixnum-representation? y)
-	 (let ((r ($fxsll x y)))
-	   (if ($fx= x ($fxsra r y))
+	 (let ((r (sys::$fxsll x y)))
+	   (if (sys::$fx= x (sys::$fxsra r y))
 	       r
 	     (%overflow-violation __who__ x y))))
 	(($negative-index-of-bit-in-fixnum-representation? y)
-	 ($fxsra x ($fx- 0 y)))
+	 (sys::$fxsra x (sys::$fx- 0 y)))
 	(else
 	 (procedure-argument-violation __who__
 	   "expected positive or negative fixnum representing index of bit in fixnum representation as shift argument"
@@ -378,11 +419,11 @@
 
 (define ($positive-index-of-bit-in-fixnum-representation? Y)
   (and ($fxpositive? Y)
-       ($fx< Y (fixnum-width))))
+       (sys::$fx< Y (fixnum-width))))
 
 (define ($negative-index-of-bit-in-fixnum-representation? Y)
   (and ($fxnegative? Y)
-       ($fx> Y (- (fixnum-width)))))
+       (sys::$fx> Y (- (fixnum-width)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -406,10 +447,10 @@
       (procedure-argument-violation who "not a fixnum" x))
     (unless (fixnum? y)
       (procedure-argument-violation who "not a fixnum" y))
-    (unless ($fx>= y 0)
+    (unless ($fxnonnegative? y)
       (procedure-argument-violation who "negative shift not allowed" y))
-    (unless ($fx< y (fixnum-width))
-      (procedure-argument-violation who "shift is not less than fixnum-width" y))
+    (unless (sys::$fx< y (fixnum-width))
+      (procedure-argument-violation who "shift amount is not less than fixnum-width" y))
     (%overflow-violation who x y))
 
   #| end of module |# )
@@ -419,24 +460,35 @@
 
 (define (fx+ x y)
   ;;This is also a primitive operation.
-  (sys:fx+ x y))
+  (sys::fx+ x y))
 
 (define (fx* x y)
   ;;This is also a primitive operation.
-  (sys:fx* x y))
+  (sys::fx* x y))
 
 (case-define fx-
   ;;This is also a primitive operation.
-  ((x y) (sys:fx- x y))
-  ((x)   (sys:fx- x)))
+  ((x y) (sys::fx- x y))
+  ((x)   (sys::fx- x)))
 
-(define (fxadd1 {n <fixnum>})
-  ;;This is also a primitive operation.
-  ($fxadd1 n))
+;;This is also a primitive operation.
+(define-fx-operation/one fxadd1		sys::$fxadd1)
 
-(define (fxsub1 {n <fixnum>})
-  ;;This is also a primitive operation.
-  ($fxsub1 n))
+;;This is also a primitive operation.
+(define-fx-operation/one fxsub1		sys::$fxsub1)
+
+;;; --------------------------------------------------------------------
+
+(define-unsafe-operation/two $fx+		sys::fx+)
+(define-unsafe-operation/two $fx*		sys::fx*)
+(define-unsafe-operation/one $fxadd1		sys::$fxadd1)
+(define-unsafe-operation/one $fxsub1		sys::$fxsub1)
+
+(case-define $fx-
+  ((N)
+   (sys::fx- N))
+  ((N M)
+   (sys::fx- N M)))
 
 ;;; --------------------------------------------------------------------
 
@@ -499,15 +551,12 @@
 
 ;;;; comparison predicates
 
-(define-equality/sorting-predicate fx=?		$fx=	fixnum?)
-(define-equality/sorting-predicate fx<?		$fx<	fixnum?)
-(define-equality/sorting-predicate fx<=?	$fx<=	fixnum?)
-(define-equality/sorting-predicate fx>?		$fx>	fixnum?)
-(define-equality/sorting-predicate fx>=?	$fx>=	fixnum?)
-(define-inequality-predicate       fx!=?	$fx!=	fixnum?)
-
-(define ($fx!= fx1 fx2)
-  (sys::$fx!= fx1 fx2))
+(define-equality/sorting-predicate fx=?		sys::$fx=	fixnum?)
+(define-equality/sorting-predicate fx<?		sys::$fx<	fixnum?)
+(define-equality/sorting-predicate fx<=?	sys::$fx<=	fixnum?)
+(define-equality/sorting-predicate fx>?		sys::$fx>	fixnum?)
+(define-equality/sorting-predicate fx>=?	sys::$fx>=	fixnum?)
+(define-inequality-predicate       fx!=?	sys::$fx!=	fixnum?)
 
 (define fx=	fx=?)
 (define fx<	fx<?)
@@ -516,61 +565,74 @@
 (define fx>=	fx>=?)
 (define fx!=	fx!=?)
 
+(define-unsafe-operation/two $fx=		sys::$fx=)
+(define-unsafe-operation/two $fx!=		sys::$fx!=)
+(define-unsafe-operation/two $fx<		sys::$fx<)
+(define-unsafe-operation/two $fx<=		sys::$fx<=)
+(define-unsafe-operation/two $fx>		sys::$fx>)
+(define-unsafe-operation/two $fx>=		sys::$fx>=)
+
 
 ;;;; min max
 
 (define-min/max-comparison fxmax $fxmax fixnum?)
 (define-min/max-comparison fxmin $fxmin fixnum?)
 
-;;FIXME This should be a proper primitive operation.  (Marco Maggi; Fri Mar 27, 2015)
-;;
 (define ($fxmin fx1 fx2)
-  (if ($fx< fx1 fx2) fx1 fx2))
+  ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
+  ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
+  (if (sys::$fx< fx1 fx2) fx1 fx2)
+  #;(sys::$fxmax fx1 fx2))
 
-;;FIXME This should be a proper primitive operation.  (Marco Maggi; Fri Mar 27, 2015)
-;;
 (define ($fxmax fx1 fx2)
-  (if ($fx< fx1 fx2) fx2 fx1))
+  ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
+  ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
+  (if (sys::$fx< fx1 fx2) fx2 fx1)
+  #;(sys::$fxmax fx1 fx2))
 
 
-(define (fxquotient {x <fixnum>} {y <non-zero-fixnum>})
+(define ({fxquotient <fixnum>} {x <fixnum>} {y <non-zero-fixnum>})
   (if (eq? y -1)
       ;;Remember that  we cannot simpy  use $fx- because  if X is  (least-fixnum) the
       ;;result will overflow.
       (if (eq? x (least-fixnum))
 	  (%overflow-violation __who__ x y)
 	($fx- x))
-    ($fxquotient x y)))
+    (sys::$fxquotient x y)))
 
 (define-fx-operation/one fxabs		$fxabs)
+(define-fx-operation/one fxsign		$fxsign)
 (define-fx-operation/div fxremainder	$fxremainder)
 (define-fx-operation/div fxmodulo	$fxmodulo)
-(define-fx-operation/one fxsign		$fxsign)
 
 (define ($fxabs x)
   (if ($fxnegative? x)
-      ;;Remember that  we cannot simpy  use $fx- because  if X is  (least-fixnum) the
-      ;;result will overflow.
-      (if ($fx= x (least-fixnum))
+      ;;Remember that  we cannot simply use  $fx- because if X  is (least-fixnum) the
+      ;;result would overflow.
+      (if (sys::$fx= x (least-fixnum))
 	  (%overflow-violation __who__ x)
-	($fx- x))
+	(sys::$fx- x))
     x))
 
 (define ($fxsign n)
+  ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
+  ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
   (cond (($fxnegative? n)	-1)
 	(($fxpositive? n)	+1)
-	(else			0)))
+	(else			0))
+  #;(sys::$fxsign fx1 fx2))
+
+(define-unsafe-operation/two $fxquotient	sys::$fxquotient)
 
 (define ($fxremainder x y)
   ;;We have to assume that the result may not be a fixnum!!!
-  (let ((q (fxquotient x y)))
+  (let ((q (sys::$fxquotient x y)))
     (- x (* q y))))
 
 (define ($fxmodulo n1 n2)
   (* ($fxsign n2)
-     ;;We have  to assume that  the result of the  product may not  be a
-     ;;fixnum!!!  If N1 is (least-fixnum) and  the sign is -1 the result
-     ;;of the product is a bignum.
+     ;;We have to assume that the result of the product may not be a fixnum!!!  If N1
+     ;;is (least-fixnum) and the sign is -1 the result of the product is a bignum.
      (mod (* ($fxsign n2) n1)
 	  (abs n2))))
 
@@ -585,17 +647,17 @@
 		  )))
 
   (define-fx (fx*/carry fx1 fx2 fx3)
-    (let ((s0 ($fx+ ($fx* fx1 fx2) fx3)))
+    (let ((s0 (sys::$fx+ (sys::$fx* fx1 fx2) fx3)))
       (values s0
 	      (sra (+ (* fx1 fx2) (- fx3 s0)) (fixnum-width)))))
 
   (define-fx (fx+/carry fx1 fx2 fx3)
-    (let ((s0 ($fx+ ($fx+ fx1 fx2) fx3)))
+    (let ((s0 (sys::$fx+ (sys::$fx+ fx1 fx2) fx3)))
       (values s0
 	      (sra (+ (+ fx1 fx2) (- fx3 s0)) (fixnum-width)))))
 
   (define-fx (fx-/carry fx1 fx2 fx3)
-    (let ((s0 ($fx- ($fx- fx1 fx2) fx3)))
+    (let ((s0 (sys::$fx- (sys::$fx- fx1 fx2) fx3)))
       (values s0
 	      (sra (- (- fx1 fx2) (+ s0 fx3)) (fixnum-width)))))
 
@@ -609,10 +671,10 @@
   ;;ranges acceptable by Unicode code points; otherwise return #f.
   ;;
   (and (fixnum? obj)
-       (or (and ($fx>= obj 0)
-		($fx<  obj #xD800))
-	   (and ($fx>  obj #xDFFF)
-		($fx<= obj #x10FFFF)))))
+       (or (and (sys::$fx>= obj 0)
+		(sys::$fx<  obj #xD800))
+	   (and (sys::$fx>  obj #xDFFF)
+		(sys::$fx<= obj #x10FFFF)))))
 
 (define (fixnum->char {fx <fixnum>})
   (if (fixnum-in-character-range? fx)
@@ -644,15 +706,16 @@
   (define ($fixnum->string x radix)
     (cond (($fxzero? x)
 	   (string #\0))
-	  (($fx> x 0)
+	  ((sys::$fx> x 0)
 	   (call-with-values
 	       (lambda () (f x 0 0 radix))
 	     (lambda (str j) str)))
-	  (($fx= x (least-fixnum))
-	   (string-append ($fixnum->string ($fxquotient x radix)            radix)
-			  ($fixnum->string ($fx- radix ($fxmodulo x radix)) radix)))
+	  ((sys::$fx= x (least-fixnum))
+	   (string-append ($fixnum->string (sys::$fxquotient x radix)            radix)
+			  ($fixnum->string (sys::$fx- radix ($fxmodulo x radix)) radix)))
 	  (else
-	   (let-values (((str j) (f ($fx- 0 x) 1 1 radix)))
+	   (receive (str j)
+	       (f (sys::$fx- 0 x) 1 1 radix)
 	     ($string-set! str 0 #\-)
 	     str))))
 
@@ -660,11 +723,12 @@
     (define-constant MAPPING-STRING "0123456789ABCDEF")
     (if ($fxzero? n)
 	(values (make-string i) j)
-      (let* ((q ($fxquotient n radix))
-	     (c ($string-ref MAPPING-STRING ($fx- n ($fx* q radix)))))
-	(let-values (((str j) (f q ($fxadd1 i) j radix)))
-	  (string-set! str j c)
-	  (values str ($fxadd1 j))))))
+      (let* ((q (sys::$fxquotient n radix))
+	     (c ($string-ref MAPPING-STRING (sys::$fx- n (sys::$fx* q radix)))))
+	(receive (str j)
+	    (f q (sys::$fxadd1 i) j radix)
+	  ($string-set! str j c)
+	  (values str (sys::$fxadd1 j))))))
 
   #| end of module: fixnum->string |# )
 
@@ -679,19 +743,19 @@
   (let-syntax
       ((define-div-proc
 	 (syntax-rules ()
-	   ((_ ?who $unsafe-op overflow-check?)
+	   ((_ ?who ?unsafe-op overflow-check?)
 	    (define (?who {x <fixnum>} {y <non-zero-fixnum>})
-	      (if ($fx> y 0)
-		  ($unsafe-op x y)
-		(if (and overflow-check? ($fx= y -1))
-		    (if ($fx= x (least-fixnum))
+	      (if (sys::$fx> y 0)
+		  (?unsafe-op x y)
+		(if (and overflow-check? (sys::$fx= y -1))
+		    (if (sys::$fx= x (least-fixnum))
 			(%error-result-not-fixnum __who__ x y)
-		      ($unsafe-op x y))
-		  ($unsafe-op x y)))))
+		      (?unsafe-op x y))
+		  (?unsafe-op x y)))))
 	   )))
-    (define-div-proc fxdiv $fxdiv #t)
-    (define-div-proc fxmod $fxmod #f)
-    (define-div-proc fxdiv-and-mod $fxdiv-and-mod #t)
+    (define-div-proc fxdiv		$fxdiv		#t)
+    (define-div-proc fxmod		$fxmod		#f)
+    (define-div-proc fxdiv-and-mod	$fxdiv-and-mod	#t)
     #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
@@ -721,36 +785,36 @@
 ;;; --------------------------------------------------------------------
 
   (define ($fxdiv-and-mod n m)
-    ;;Be careful to use FXQUOTIENT to avoid overflows!!!
+    ;;Be careful to use FXQUOTIENT, not the unsafe variant, to avoid overflows!!!
     (let* ((d0 (fxquotient n m))
-	   (m0 ($fx- n ($fx* d0 m))))
-      (cond (($fx>= m0 0)
+	   (m0 (sys::$fx- n (sys::$fx* d0 m))))
+      (cond ((sys::$fx>= m0 0)
 	     (values d0 m0))
-	    (($fx>= m 0)
-	     (values ($fx- d0 1) ($fx+ m0 m)))
+	    ((sys::$fx>= m 0)
+	     (values (sys::$fx- d0 1) (sys::$fx+ m0 m)))
 	    (else
-	     (values ($fx+ d0 1) ($fx- m0 m))))))
+	     (values (sys::$fx+ d0 1) (sys::$fx- m0 m))))))
 
   (define ($fxdiv n m)
-    ;;Be careful to use FXQUOTIENT to avoid overflows!!!
+    ;;Be careful to use FXQUOTIENT, not the unsafe variant, to avoid overflows!!!
     (let ((d0 (fxquotient n m)))
-      (cond (($fx>= n ($fx* d0 m))
+      (cond ((sys::$fx>= n (sys::$fx* d0 m))
 	     d0)
-	    (($fx>= m 0)
-	     ($fx- d0 1))
+	    ((sys::$fx>= m 0)
+	     (sys::$fx- d0 1))
 	    (else
-	     ($fx+ d0 1)))))
+	     (sys::$fx+ d0 1)))))
 
   (define ($fxmod n m)
-    ;;Be careful to use FXQUOTIENT to avoid overflows!!!
+    ;;Be careful to use FXQUOTIENT, not the unsafe variant, to avoid overflows!!!
     (let* ((d0 (fxquotient n m))
-	   (m0 ($fx- n ($fx* d0 m))))
-      (cond (($fx>= m0 0)
+	   (m0 (sys::$fx- n (sys::$fx* d0 m))))
+      (cond ((sys::$fx>= m0 0)
 	     m0)
-	    (($fx>= m 0)
-	     ($fx+ m0 m))
+	    ((sys::$fx>= m 0)
+	     (sys::$fx+ m0 m))
 	    (else
-	     ($fx- m0 m)))))
+	     (sys::$fx- m0 m)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -802,8 +866,8 @@
 ;;; --------------------------------------------------------------------
 
   (define (%check-div-result-not-fixnum who x y)
-    (when (and ($fx= y -1)
-	       ($fx= x (least-fixnum)))
+    (when (and (sys::$fx= y -1)
+	       (sys::$fx= x (least-fixnum)))
       (%error-result-not-fixnum who x y)))
 
   (define (%error-result-not-fixnum who . irritants)
@@ -819,44 +883,5 @@
 ;;;; done
 
 #| end of library |# )
-
-(library (ikarus fixnums unsafe)
-  (export
-    $fxzero?
-    $fxpositive?	$fxnegative?
-    $fxnonpositive?	$fxnonnegative?
-    $fxadd1		$fxsub1
-    $fx+		$fx*
-    $fx-
-    $fx=
-    $fx<		$fx<=
-    $fx>		$fx>=
-    $fxsll		$fxsra
-    $fxnot		$fxand
-    $fxior		$fxxor
-    #| end of EXPORT |# )
-  (import (vicare))
-  (define $fxzero?		fxzero?)
-  (define $fxpositive?		fxpositive?)
-  (define $fxnegative?		fxnegative?)
-  (define $fxnonpositive?	fxnonpositive?)
-  (define $fxnonnegative?	fxnonnegative?)
-  (define $fxadd1		fxadd1)
-  (define $fxsub1		fxsub1)
-  (define $fx+			fx+)
-  (define $fx*			fx*)
-  (define $fx-			fx-)
-  (define $fx=			fx=?)
-  (define $fx<			fx<?)
-  (define $fx<=			fx<=?)
-  (define $fx>			fx>?)
-  (define $fx>=			fx>=?)
-  (define $fxsll		fxsll)
-  (define $fxsra		fxsra)
-  (define $fxior		fxior)
-  (define $fxxor		fxxor)
-  (define $fxand		fxand)
-  (define $fxnot		fxnot)
-  #| end of library |# )
 
 ;;; end of file
