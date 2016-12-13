@@ -1538,10 +1538,7 @@
 (module DEFINE/CHECKED-HELPERS
   (%make-unsafe-name %make-unsafe-application-stx)
 
-  (define (%make-unsafe-name ctx.id safe-who.stx synner)
-    ;;The argument CTX.ID is an identifer representing the lexical context in which
-    ;;the DEFINE/CHECKED syntax is used.
-    ;;
+  (define (%make-unsafe-name safe-who.stx synner)
     ;;The argument  SAFE-WHO.STX is a  syntax object representing a  possibly typed
     ;;name for the safe function.  For example, it can be:
     ;;
@@ -1560,16 +1557,16 @@
     ;;function.  This is the syntax object SAFE-WHO.STX with the safe name replaced
     ;;by the unsafe name.
     ;;
-    (define (%mkname ctx.id safe.id)
-      (datum->syntax ctx.id (string->symbol
+    (define (%mkname safe.id)
+      (datum->syntax safe.id (string->symbol
 			     (string-append "~" (symbol->string (syntax->datum safe.id))))))
     (syntax-match safe-who.stx (brace)
       (?name
        (identifier? ?name)
-       (%mkname ctx.id ?name))
+       (%mkname ?name))
       ((brace ?name . ?rv-types)
        (identifier? ?name)
-       (%mkname ctx.id ?name))
+       (%mkname ?name))
       (_
        (synner "invalid syntax in function definition formals, wrong function name specification" safe-who.stx))))
 
@@ -2049,7 +2046,7 @@
 	;;Type arguments are present.  Generate two functions: the safe (which checks
 	;;the  arguments  also at  run-time)  and  the  unsafe (which  validates  the
 	;;arguments only at expand-time).
-	(let* ((unsafe-name.id	(%make-unsafe-name lhs.id safe-who.stx synner))
+	(let* ((unsafe-name.id	(%make-unsafe-name safe-who.stx synner))
 	       (safe-body*.stx	(list (%make-unsafe-application-stx unsafe-name.id standard-formals.stx))))
 	  (let*-values
 	      (((qdef-safe   lexenv.run)	(%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
@@ -2165,7 +2162,7 @@
   (define* (chi-case-define/checked input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
     (define-synner %synner __module_who__ input-form.stx)
     (syntax-match input-form.stx ()
-      ((?kwd ?who ?cl-clause ?cl-clause* ...)
+      ((_ ?who ?cl-clause ?cl-clause* ...)
        (begin
 	 (unless (identifier? ?who)
 	   (%synner "expected identifier as function name" ?who))
@@ -2187,7 +2184,7 @@
 	     ;;checks the arguments also at run-time) and the unsafe (which validates
 	     ;;the arguments only at expand-time).
 	     (let* ((lhs.ots		(make-closure-type-spec (make-case-lambda-signature clause-signature*)))
-		    (unsafe-name.id		(%make-unsafe-name ?kwd ?who %synner))
+		    (unsafe-name.id	(%make-unsafe-name ?who %synner))
 		    (safe-body**.stx	(map (lambda (standard-formals.stx)
 					       (list (%make-unsafe-application-stx unsafe-name.id standard-formals.stx)))
 					  standard-formals*.stx)))
@@ -2202,6 +2199,7 @@
 					 make-qdef-typed-case-defun
 					 unsafe-name.id lhs.ots standard-formals*.stx body**.stx
 					 #f %synner)))
+(debug-print ?who unsafe-name.id)
 		 ;;If  we put  first the  UNSAFE-QDEF  and last  the SAFE-QDEF:  type
 		 ;;propagation will work better.
 		 (values (list unsafe-qdef safe-qdef) lexenv.run)))))))
