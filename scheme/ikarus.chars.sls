@@ -19,17 +19,17 @@
 (library (ikarus.chars)
   (options typed-language)
   (export
-    char->integer		~char->integer
-    integer->char		~integer->char
-    char=?			#;~char=?
-    char!=?			#;~char!=?
-    char<?			#;~char<?
-    char>?			#;~char>?
-    char<=?			#;~char<=?
-    char>=?			#;~char>=?
+    char->integer		;;~char->integer
+    integer->char		;;~integer->char
+    char=?			;;~char=?
+    char!=?			;;~char!=?
+    char<?			;;~char<?
+    char>?			;;~char>?
+    char<=?			;;~char<=?
+    char>=?			;;~char>=?
 
-    chmax
-    chmin
+    chmax			;;~chmax
+    chmin			;;~chmin
 
     char-in-ascii-range?	list-of-chars?
 
