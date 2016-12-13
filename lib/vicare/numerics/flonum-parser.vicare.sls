@@ -30,27 +30,15 @@
 ;;;SOFTWARE.
 
 
-#!r6rs
+#!vicare
 (library (vicare numerics flonum-parser)
+  (options typed-language)
   (export parse-flonum)
-  (import (rnrs)
-    (vicare language-extensions syntaxes))
+  (import (except (vicare)
+		  flonum-parts
+		  flonum-bytes))
 
 
-;;;; arguments validation
-
-(define-argument-validation (flonum who obj)
-  (flonum? obj)
-  (assertion-violation who "expected flonum as argument" obj))
-
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
-
-
-(define fxsll fxarithmetic-shift-left)
-(define fxsra fxarithmetic-shift-right)
-
 (define (flonum-bytes f k)
   (let ((bv (make-bytevector 8)))
     (bytevector-ieee-double-set! bv 0 f (endianness big))
@@ -158,7 +146,7 @@
   (let-values (((expt digits) (flonum->digits m e 10 p 2 10)))
     (k pos? digits expt)))
 
-(define (parse-flonum x k0 k1)
+(define (parse-flonum {x <flonum>} {k0 <procedure>} {k1 <procedure>})
   ;;  (parse-flonum <fl>
   ;;    (lambda (positive? digits:list-of-chars exponent:int)
   ;;      ---)
@@ -166,20 +154,15 @@
   ;;      ---))
   ;;  calls one of the two procedures depending on whether the
   ;;  number has a real value or not.
-  (define who 'parse-flonum)
-  (with-arguments-validation (who)
-      ((flonum		x)
-       (procedure	k0)
-       (procedure	k1))
-    (let-values (((pos? be m) (flonum-parts x)))
-      (cond ((<= 1 be 2046) ; normalized flonum
-	     (convert-real-flonum pos? (+ m (expt 2 52)) (- be 1075) 53 k0))
-	    ((= be 0)
-	     (convert-real-flonum pos? m -1074 52 k0))
-	    ((= be 2047)
-	     (k1 (if (= m 0) (if pos? "+inf.0" "-inf.0") "+nan.0")))
-	    (else
-	     (error who "cannot happen"))))))
+  (let-values (((pos? be m) (flonum-parts x)))
+    (cond ((<= 1 be 2046) ; normalized flonum
+	   (convert-real-flonum pos? (+ m (expt 2 52)) (- be 1075) 53 k0))
+	  ((= be 0)
+	   (convert-real-flonum pos? m -1074 52 k0))
+	  ((= be 2047)
+	   (k1 (if (= m 0) (if pos? "+inf.0" "-inf.0") "+nan.0")))
+	  (else
+	   (error __who__ "cannot happen"))))))
 
 
 ;;;; done

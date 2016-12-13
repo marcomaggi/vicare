@@ -37,6 +37,12 @@
     (vicare system structs)
     (vicare language-extensions syntaxes)
     (vicare platform constants)
+    (only (vicare arguments validation)
+	  define-argument-validation
+	  with-arguments-validation
+	  with-dangerous-arguments-validation
+	  arguments-validation-forms
+	  exact-integer.vicare-arguments-validation)
     (prefix (vicare unsafe capi)
 	    capi::))
 

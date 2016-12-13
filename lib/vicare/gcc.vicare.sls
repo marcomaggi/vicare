@@ -11,7 +11,7 @@
 ;;;	library exports a  single C function accessed as  callout by the
 ;;;	Scheme program.
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,8 +28,9 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (vicare gcc)
+  (options typed-language)
   (export
     initialise			define-c-function
 
@@ -39,25 +40,13 @@
     (prefix (vicare ffi) ffi.)
     (prefix (vicare posix) px.)
     (prefix (vicare glibc) glibc.)
-    (prefix (vicare platform constants) plat.)
-    (vicare language-extensions syntaxes))
-
-
-;;;; arguments validation
-
-(define-argument-validation (string who obj)
-  (string? obj)
-  (assertion-violation who "expected string as argument" obj))
-
-(define-argument-validation (list-of-strings who obj)
-  (and (list? obj) (for-all string? obj))
-  (assertion-violation who "expected list of strings as argument" obj))
+    (prefix (vicare platform constants) plat.))
 
 
 ;;;; initialisation
 
-(define TMPDIR #f)	;it must have execute permissions
-(define GCC    #f)
+(define {TMPDIR (or <false> <string>)} #f)	;it must have execute permissions
+(define {GCC	(or <false> <string>)} #f)
 
 (define (initialise gcc-file temporary-directory)
   ;;Initialise the library.
@@ -68,20 +57,19 @@
   ;;directory on a partition with  executable permissions; it is used to
   ;;create temporary files, including the shared libraries.
   ;;
-  (define who 'initialise)
   (if (and temporary-directory
 	   (px.file-is-directory? temporary-directory #f)
 	   (px.access temporary-directory (fxior plat.R_OK plat.W_OK)))
       (let ((T (string->latin1 (string-append temporary-directory "/vicare-gcc-XXXXXX"))))
 	(glibc.mkdtemp T)
 	(set! TMPDIR (latin1->string T)))
-    (error who
+    (error __who__
       "unable to retrieve pathname of readable and writable directory for temporary files"))
   (if (and gcc-file
 	   (file-exists? gcc-file)
 	   (px.access gcc-file plat.X_OK))
       (set! GCC gcc-file)
-    (error who
+    (error __who__
       "unable to retrieve pathname of executable GCC")))
 
 
@@ -89,31 +77,23 @@
 
 (define COMPILE-FLAGS
   (make-parameter '("-c")
-    (lambda (obj)
-      (with-arguments-validation (COMPILE-FLAGS)
-	  ((list-of-strings obj))
-	obj))))
+    (lambda ({obj (list-of <string>)})
+      obj)))
 
 (define LINK-FLAGS
   (make-parameter '("-pipe" "-shared" "-fPIC")
-    (lambda (obj)
-      (with-arguments-validation (LINK-FLAGS)
-	  ((list-of-strings obj))
-	obj))))
+    (lambda ({obj (list-of <string>)})
+      obj)))
 
 (define CFLAGS
   (make-parameter '("-O2")
-    (lambda (obj)
-      (with-arguments-validation (CFLAGS)
-	  ((list-of-strings obj))
-	obj))))
+    (lambda ({obj (list-of <string>)})
+      obj)))
 
 (define LDFLAGS
   (make-parameter '()
-    (lambda (obj)
-      (with-arguments-validation (LDFLAGS)
-	  ((list-of-strings obj))
-	obj))))
+    (lambda ({obj (list-of <string>)})
+      obj)))
 
 
 ;;;; compilation and linking commands
@@ -150,43 +130,38 @@
 				'?retval-type '(?arg-types ...)
 				?code)))))))
 
-(define (%compile-and-load identifier retval-type arg-types code)
-  (define who '%compile-and-load)
-  (with-arguments-validation (who)
-      ((string	identifier)
-       (string	code))
-    (let ((source-filename  (string-append TMPDIR "/"    identifier ".c"))
-	  (object-filename  (string-append TMPDIR "/"    identifier ".o"))
-	  (library-filename (string-append TMPDIR "/lib" identifier ".so")))
-      (when (file-exists? source-filename)  (delete-file source-filename))
-      (when (file-exists? object-filename)  (delete-file object-filename))
-      (when (file-exists? library-filename) (delete-file library-filename))
-      (with-output-to-file source-filename
-	(lambda ()
-	  (display code (current-output-port))))
-      (px.fork (lambda (pid)
-		 (let ((status (px.waitpid pid 0)))
-		   (unless (and (px.WIFEXITED status)
-				(fx= 0 (px.WEXITSTATUS status)))
-		     (error who "error compiling object file"))))
-	       (lambda ()
-		 (%compile-object-file source-filename object-filename)))
-      (px.fork (lambda (pid)
-		 (let ((status (px.waitpid pid 0)))
-		   (unless (and (px.WIFEXITED status)
-				(fx= 0 (px.WEXITSTATUS status)))
-		     (error who "error linking object file"))))
-	       (lambda ()
-		 (%compile-library-file library-filename object-filename)))
-      (%load-library-and-make-callout library-filename identifier retval-type arg-types))))
+(define (%compile-and-load {identifier <string>} retval-type arg-types {code <string>})
+  (let ((source-filename  (string-append TMPDIR "/"    identifier ".c"))
+	(object-filename  (string-append TMPDIR "/"    identifier ".o"))
+	(library-filename (string-append TMPDIR "/lib" identifier ".so")))
+    (when (file-exists? source-filename)  (delete-file source-filename))
+    (when (file-exists? object-filename)  (delete-file object-filename))
+    (when (file-exists? library-filename) (delete-file library-filename))
+    (with-output-to-file source-filename
+      (lambda ()
+	(display code (current-output-port))))
+    (px.fork (lambda (pid)
+	       (let ((status (px.waitpid pid 0)))
+		 (unless (and (px.WIFEXITED status)
+			      (fx= 0 (px.WEXITSTATUS status)))
+		   (error __who__ "error compiling object file"))))
+	     (lambda ()
+	       (%compile-object-file source-filename object-filename)))
+    (px.fork (lambda (pid)
+	       (let ((status (px.waitpid pid 0)))
+		 (unless (and (px.WIFEXITED status)
+			      (fx= 0 (px.WEXITSTATUS status)))
+		   (error __who__ "error linking object file"))))
+	     (lambda ()
+	       (%compile-library-file library-filename object-filename)))
+    (%load-library-and-make-callout library-filename identifier retval-type arg-types)))
 
 (define (%load-library-and-make-callout library-filename identifier retval-type arg-types)
-  (define who '%compile-and-load)
   (let ((lib (ffi.dlopen library-filename)))
     (if lib
 	(let ((maker (ffi.make-c-callout-maker retval-type arg-types)))
 	  (maker (ffi.dlsym lib identifier)))
-      (error who (ffi.dlerror)))))
+      (error __who__ (ffi.dlerror)))))
 
 
 ;;;; done

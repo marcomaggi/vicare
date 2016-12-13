@@ -255,8 +255,6 @@ CLEANFILES += lib/vicare/arguments/general-c-buffers.fasl
 
 lib/vicare/language-extensions/syntaxes.fasl: \
 		lib/vicare/language-extensions/syntaxes.vicare.sls \
-		lib/vicare/platform/configuration.fasl \
-		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -1034,7 +1032,6 @@ CLEANFILES += lib/vicare/numerics/constants.fasl
 
 lib/vicare/numerics/flonum-parser.fasl: \
 		lib/vicare/numerics/flonum-parser.vicare.sls \
-		lib/vicare/language-extensions/syntaxes.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -1049,7 +1046,6 @@ CLEANFILES += lib/vicare/numerics/flonum-parser.fasl
 
 lib/vicare/numerics/flonum-formatter.fasl: \
 		lib/vicare/numerics/flonum-formatter.vicare.sls \
-		lib/vicare/language-extensions/syntaxes.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -2216,6 +2212,7 @@ lib/vicare/iconv.fasl: \
 		lib/vicare/iconv.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/platform/constants.fasl \
+		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/capi.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
@@ -2459,7 +2456,6 @@ lib/vicare/gcc.fasl: \
 		lib/vicare/posix.fasl \
 		lib/vicare/glibc.fasl \
 		lib/vicare/platform/constants.fasl \
-		lib/vicare/language-extensions/syntaxes.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 

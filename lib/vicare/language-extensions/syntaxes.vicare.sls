@@ -43,30 +43,21 @@
     define-equality/sorting-predicate		define-unsafe-equality/sorting-predicate
     define-inequality-predicate			define-unsafe-inequality-predicate
 
-    define/checked-min/max-comparison
+    define/checked-min/max-comparison		define/typed-unsafe-min/max-comparison
     define/checked-equality/sorting-predicate	define/typed-unsafe-equality/sorting-predicate
     define/checked-inequality-predicate		define/typed-unsafe-inequality-predicate
 
     ;; arguments validation
-    define-argument-validation
-    with-arguments-validation
-    with-dangerous-arguments-validation
-    arguments-validation-forms
+    ;; define-argument-validation
+    ;; with-arguments-validation
+    ;; with-dangerous-arguments-validation
+    ;; arguments-validation-forms
 
     ;; miscellaneous dispatching
     cond-numeric-operand	cond-real-numeric-operand
     cond-exact-integer-operand	cond-inexact-integer-operand
     cond-exact-real-numeric-operand)
   (import (vicare)
-    (for (prefix (vicare platform configuration)
-		 config.)
-	 expand)
-    (only (vicare arguments validation)
-	  define-argument-validation
-	  with-arguments-validation
-	  with-dangerous-arguments-validation
-	  arguments-validation-forms
-	  exact-integer.vicare-arguments-validation)
     (vicare system $fx))
 
 
@@ -159,6 +150,10 @@
 
 ;;;; common function definition helpers
 
+;;Usage example:
+;;
+;;   (define-list-of-type-predicate list-of-chars? char?)
+;;
 (define-syntax define-list-of-type-predicate
   (syntax-rules ()
     ((_ ?who ?type-pred)
@@ -171,6 +166,11 @@
 
 ;;; --------------------------------------------------------------------
 
+;;Usage example:
+;;
+;;   (define-min/max-comparison chmax $chmax char?)
+;;   (define-min/max-comparison chmin $chmin char?)
+;;
 (define-syntax define-min/max-comparison
   (syntax-rules ()
     ((_ ?who ?unsafe-who ?type-pred)
@@ -183,13 +183,18 @@
 		   (b  z)
 		   (ls rest))
 	  (if (pair? ls)
-	      (loop (?unsafe-who a b) ($car ls) ($cdr ls))
+	      (loop (?unsafe-who a b) (car ls) (cdr ls))
 	    (?unsafe-who a b))))
 
        (({x ?type-pred})
 	x)))
     ))
 
+;;Usage example:
+;;
+;;   (define/checked-min/max-comparison chmax $chmax <char>)
+;;   (define/checked-min/max-comparison chmin $chmin <char>)
+;;
 (define-syntax define/checked-min/max-comparison
   (syntax-rules ()
     ((_ ?who ?unsafe-who ?type-ann)
@@ -198,12 +203,38 @@
 	(?unsafe-who x y))
 
        (({_ ?type-ann} {x ?type-ann} {y ?type-ann} {z ?type-ann} . {rest (list-of ?type-ann)})
-	(let {loop ?type-ann} ((a  (?unsafe-who x y))
-			       (b  z)
-			       (ls rest))
-	     (if (pair? ls)
-		 (loop (?unsafe-who a b) ($car ls) ($cdr ls))
-	       (?unsafe-who a b))))
+	(unsafe-cast-signature (?type-ann)
+	  (let loop ((a  (?unsafe-who x y))
+		     (b  z)
+		     (ls rest))
+	    (if (pair? ls)
+		(loop (?unsafe-who a b) (car ls) (cdr ls))
+	      (?unsafe-who a b)))))
+
+       (({_ ?type-ann} {x ?type-ann})
+	x)))
+    ))
+
+;;Usage example:
+;;
+;;   (define/typed-unsafe-min/max-comparison $chmax sys::$chmax <char>)
+;;   (define/typed-unsafe-min/max-comparison $chmin sys::$chmin <char>)
+;;
+(define-syntax define/typed-unsafe-min/max-comparison
+  (syntax-rules ()
+    ((_ ?unsafe-who ?system-who ?type-ann)
+     (case-define/typed ?unsafe-who
+       (({_ ?type-ann} {x ?type-ann} {y ?type-ann})
+	(?system-who x y))
+
+       (({_ ?type-ann} {x ?type-ann} {y ?type-ann} {z ?type-ann} . {rest (list-of ?type-ann)})
+	(unsafe-cast-signature (?type-ann)
+	  (let loop ((a  (?system-who x y))
+		     (b  z)
+		     (ls rest))
+	    (if (pair? ls)
+		(loop (?system-who a b) (car ls) (cdr ls))
+	      (?system-who a b)))))
 
        (({_ ?type-ann} {x ?type-ann})
 	x)))
@@ -211,6 +242,14 @@
 
 ;;; --------------------------------------------------------------------
 
+;;Usage example:
+;;
+;;   (define/checked-equality/sorting-predicate char=?	sys::$char=	char?)
+;;   (define/checked-equality/sorting-predicate char<?	sys::$char<	char?)
+;;   (define/checked-equality/sorting-predicate char>?	sys::$char>	char?)
+;;   (define/checked-equality/sorting-predicate char<=?	sys::$char<=	char?)
+;;   (define/checked-equality/sorting-predicate char>=?	sys::$char>=	char?)
+;;
 (define-syntax define-equality/sorting-predicate
   (syntax-rules ()
     ((_ ?who ?unsafe-who ?type-pred)
@@ -238,6 +277,14 @@
 		 #t))))))
     ))
 
+;;Usage example:
+;;
+;;   (define/checked-equality/sorting-predicate char=?	sys::$char=	<char>)
+;;   (define/checked-equality/sorting-predicate char<?	sys::$char<	<char>)
+;;   (define/checked-equality/sorting-predicate char>?	sys::$char>	<char>)
+;;   (define/checked-equality/sorting-predicate char<=?	sys::$char<=	<char>)
+;;   (define/checked-equality/sorting-predicate char>=?	sys::$char>=	<char>)
+;;
 (define-syntax define/checked-equality/sorting-predicate
   (syntax-rules ()
     ((_ ?who ?unsafe-who ?type-ann)
@@ -278,27 +325,27 @@
   ;; (define-unsafe-inequality-predicate       $fl!=		sys::$fl!=)
   ;;
   (syntax-rules ()
-    ((_ ?who ?unsafe-who)
-     (case-define* ?who
+    ((_ ?unsafe-who ?system-who)
+     (case-define* ?unsafe-who
        ((obj1 obj2)
-	(?unsafe-who obj1 obj2))
+	(?system-who obj1 obj2))
 
        ((obj1 obj2 obj3)
-	(and (?unsafe-who obj1 obj2)
-	     (?unsafe-who obj2 obj3)))
+	(and (?system-who obj1 obj2)
+	     (?system-who obj2 obj3)))
 
        ((obj)
 	#t)
 
        ((obj1 obj2 obj3 obj4 . obj*)
-	(and (?unsafe-who obj1 obj2)
-	     (?unsafe-who obj2 obj3)
-	     (?unsafe-who obj3 obj4)
+	(and (?system-who obj1 obj2)
+	     (?system-who obj2 obj3)
+	     (?system-who obj3 obj4)
 	     (let loop ((objX  obj4)
 			(obj*  obj*))
 	       (if (pair? obj*)
 		   (let ((objY (car obj*)))
-		     (and (?unsafe-who objX objY)
+		     (and (?system-who objX objY)
 			  (loop objY (cdr obj*))))
 		 #t))))))
     ))
@@ -314,27 +361,27 @@
   ;; (define/typed-unsafe-inequality-predicate       $fl!=	sys::$fl!=	<flonum>)
   ;;
   (syntax-rules ()
-    ((_ ?who ?unsafe-who ?type-ann)
-     (case-define/typed ?who
+    ((_ ?unsafe-who ?system-who ?type-ann)
+     (case-define/typed ?unsafe-who
        (({_ <boolean>} {obj1 ?type-ann} {obj2 ?type-ann})
-	(?unsafe-who obj1 obj2))
+	(?system-who obj1 obj2))
 
        (({_ <boolean>} {obj1 ?type-ann} {obj2 ?type-ann} {obj3 ?type-ann})
-	(and (?unsafe-who obj1 obj2)
-	     (?unsafe-who obj2 obj3)))
+	(and (?system-who obj1 obj2)
+	     (?system-who obj2 obj3)))
 
        (({_ <boolean>} {obj ?type-ann})
 	#t)
 
        (({_ <boolean>} {obj1 ?type-ann} {obj2 ?type-ann} {obj3 ?type-ann} {obj4 ?type-ann} . {obj* (list-of ?type-ann)})
-	(and (?unsafe-who obj1 obj2)
-	     (?unsafe-who obj2 obj3)
-	     (?unsafe-who obj3 obj4)
+	(and (?system-who obj1 obj2)
+	     (?system-who obj2 obj3)
+	     (?system-who obj3 obj4)
 	     (let loop ((objX  obj4)
 			(obj*  obj*))
 	       (if (pair? obj*)
 		   (let ((objY (car obj*)))
-		     (and (?unsafe-who objX objY)
+		     (and (?system-who objX objY)
 			  (loop objY (cdr obj*))))
 		 #t))))))
     ))
@@ -367,8 +414,8 @@
 	  (let inner-loop ((objX   objX)
 			   (obj^*  obj*))
 	    (cond ((pair? obj^*)
-		   (and (?unsafe-who objX ($car obj^*))
-			(inner-loop objX ($cdr obj^*))))
+		   (and (?unsafe-who objX (car obj^*))
+			(inner-loop objX (cdr obj^*))))
 		  ((pair? obj*)
 		   (outer-loop (car obj*) (cdr obj*)))
 		  (else #t)))))
@@ -402,8 +449,8 @@
 	    ((objX   objX)
 	     (obj^*  obj*))
 	    (cond ((pair? obj^*)
-		   (and (?unsafe-who objX ($car obj^*))
-			(inner-loop objX ($cdr obj^*))))
+		   (and (?unsafe-who objX (car obj^*))
+			(inner-loop objX (cdr obj^*))))
 		  ((pair? obj*)
 		   (outer-loop (car obj*) (cdr obj*)))
 		  (else #t)))))
@@ -455,30 +502,30 @@
   ;;   (define/typed-unsafe-inequality-predicate $fl!= sys::$fl!= <flonum>)
   ;;
   (syntax-rules ()
-    ((_ ?who ?unsafe-who ?type-ann)
-     (case-define/typed ?who
+    ((_ ?unsafe-who ?system-who ?type-ann)
+     (case-define/typed ?unsafe-who
        (({_ <boolean>} {obj1 ?type-ann} {obj2 ?type-ann})
-	(?unsafe-who obj1 obj2))
+	(?system-who obj1 obj2))
 
        (({_ <boolean>} {obj1 ?type-ann} {obj2 ?type-ann} {obj3 ?type-ann})
-	(and (?unsafe-who obj1 obj2)
-	     (?unsafe-who obj2 obj3)
-	     (?unsafe-who obj3 obj1)))
+	(and (?system-who obj1 obj2)
+	     (?system-who obj2 obj3)
+	     (?system-who obj3 obj1)))
 
        (({_ <boolean>} {obj1 ?type-ann} {obj2 ?type-ann} {obj3 ?type-ann} {obj4 ?type-ann} . {obj* (list-of ?type-ann)})
 	;;We must compare every argument to all the other arguments.
-	(let {outer-loop <boolean>}
-	  ((objX   obj1)
-	   (obj*  (cons* obj2 obj3 obj4 obj*)))
-	  (let {inner-loop <boolean>}
-	    ((objX   objX)
-	     (obj^*  obj*))
-	    (cond ((pair? obj^*)
-		   (and (?unsafe-who objX (car obj^*))
-			(inner-loop  objX (cdr obj^*))))
-		  ((pair? obj*)
-		   (outer-loop (car obj*) (cdr obj*)))
-		  (else #t)))))
+	(unsafe-cast-signature (<boolean>)
+	  (let outer-loop ((objX   obj1)
+			   (obj*  (cons* obj2 obj3 obj4 obj*)))
+	    (unsafe-cast-signature (<boolean>)
+	      (let inner-loop ((objX   objX)
+			       (obj^*  obj*))
+		(cond ((pair? obj^*)
+		       (and (?system-who objX (car obj^*))
+			    (inner-loop  objX (cdr obj^*))))
+		      ((pair? obj*)
+		       (outer-loop (car obj*) (cdr obj*)))
+		      (else #t)))))))
 
        (({_ <boolean>} obj1)
 	#f)))
