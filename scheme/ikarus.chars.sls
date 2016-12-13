@@ -14,21 +14,31 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 #!vicare
-(library (ikarus chars)
+(library (ikarus.chars)
+  (options typed-language)
   (export
-    char->integer		integer->char
-    char=?			char!=?
-    char<?			char<=?
-    char>?			char>=?
+    char->integer		~char->integer
+    integer->char		~integer->char
+    char=?			#;~char=?
+    char!=?			#;~char!=?
+    char<?			#;~char<?
+    char>?			#;~char>?
+    char<=?			#;~char<=?
+    char>=?			#;~char>=?
 
-    chmax			chmin
+    chmax
+    chmin
 
     char-in-ascii-range?	list-of-chars?
 
     ;; unsafe operations for (vicare system $chars)
+    $char=			$char!=
+    $char<			$char>
+    $char<=			$char>=
     $chmax			$chmin
-    $char!=)
+    #| end of EXPORT |# )
   (import (except (vicare)
 		  char->integer		integer->char
 		  char=?		char!=?
@@ -37,15 +47,16 @@
 		  chmax			chmin
 		  char-in-ascii-range?	list-of-chars?)
     (vicare system $fx)
-    (except (vicare system $chars)
-	    $chmax
-	    $chmin
-	    $char!=)
+    (prefix (vicare system $chars)
+	    sys::)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate
-	  define-min/max-comparison
-	  define-equality/sorting-predicate
-	  define-inequality-predicate))
+	  define/checked-min/max-comparison
+	  define/checked-equality/sorting-predicate
+	  define/checked-inequality-predicate
+	  define/typed-unsafe-equality/sorting-predicate
+	  define/typed-unsafe-inequality-predicate
+	  define/typed-unsafe-min/max-comparison))
 
 
 ;;;; predicates
@@ -53,59 +64,67 @@
 (define-list-of-type-predicate list-of-chars? char?)
 
 
-(define* (integer->char {fx fixnum-in-character-range?})
+(define (integer->char {fx <non-negative-fixnum>})
   ;;Defined by R6RS.   N must be a  Unicode scalar value, i.e.,  a non-negative exact
   ;;integer object in [0, #xD7FF] union [#xE000, #x10FFFF].
   ;;
   ;;For a Unicode scalar value N, INTEGER->CHAR returns its associated character.
   ;;
-  ($fixnum->char fx))
+  (if (fixnum-in-character-range? fx)
+      (sys::$fixnum->char fx)
+    (procedure-argument-violation __who__ "fixnum outside of character range" fx)))
 
-(define* (char->integer {ch char?})
+(define ({char->integer <non-negative-fixnum>} {ch <char>})
   ;;Defined by  R6RS.  Given  a character, CHAR->INTEGER  returns its  Unicode scalar
   ;;value as an exact integer object.
   ;;
-  ($char->fixnum ch))
+  (sys::$char->fixnum ch))
 
 
 ;;;; comparison
 
-(define-equality/sorting-predicate char=?	$char=	char?)
-(define-equality/sorting-predicate char<?	$char<	char?)
-(define-equality/sorting-predicate char<=?	$char<=	char?)
-(define-equality/sorting-predicate char>?	$char>	char?)
-(define-equality/sorting-predicate char>=?	$char>=	char?)
-(define-inequality-predicate       char!=?	$char!=	char?)
+(define/checked-equality/sorting-predicate char=?	sys::$char=	<char>)
+(define/checked-equality/sorting-predicate char<?	sys::$char<	<char>)
+(define/checked-equality/sorting-predicate char<=?	sys::$char<=	<char>)
+(define/checked-equality/sorting-predicate char>?	sys::$char>	<char>)
+(define/checked-equality/sorting-predicate char>=?	sys::$char>=	<char>)
+(define/checked-inequality-predicate       char!=?	sys::$char!=	<char>)
 
-(define ($char!= ch1 ch2)
-  (import (prefix (vicare system $chars) sys.))
-  (sys.$char!= ch1 ch2))
+(define/typed-unsafe-equality/sorting-predicate $char=	sys::$char=	<char>)
+(define/typed-unsafe-equality/sorting-predicate $char<	sys::$char<	<char>)
+(define/typed-unsafe-equality/sorting-predicate $char>	sys::$char>	<char>)
+(define/typed-unsafe-equality/sorting-predicate $char<=	sys::$char<=	<char>)
+(define/typed-unsafe-equality/sorting-predicate $char>=	sys::$char>=	<char>)
+(define/typed-unsafe-inequality-predicate $char!=	sys::$char!=	<char>)
 
 
 ;;;; min max
 
-(define-min/max-comparison chmax $chmax char?)
-(define-min/max-comparison chmin $chmin char?)
+(define/checked-min/max-comparison chmax $chmax <char>)
+(define/checked-min/max-comparison chmin $chmin <char>)
+
+(define/typed-unsafe-min/max-comparison $chmin	unsafe-chmin	<char>)
+(define/typed-unsafe-min/max-comparison $chmax	unsafe-chmax	<char>)
 
 ;;FIXME This should be a proper primitive operation.  (Marco Maggi; Fri Mar 27, 2015)
 ;;
-(define ($chmin ch1 ch2)
-  (if ($char< ch1 ch2) ch1 ch2))
+(define-syntax-rule (unsafe-chmin ch1 ch2)
+  (if (sys::$char< ch1 ch2) ch1 ch2))
 
 ;;FIXME This should be a proper primitive operation.  (Marco Maggi; Fri Mar 27, 2015)
 ;;
-(define ($chmax ch1 ch2)
-  (if ($char< ch1 ch2) ch2 ch1))
+(define-syntax-rule (unsafe-chmax ch1 ch2)
+  (if (sys::$char< ch1 ch2) ch2 ch1))
 
 
 ;;;; miscellaneous functions
 
-(define (char-in-ascii-range? obj)
+(define/typed ({char-in-ascii-range? <boolean>} obj)
   ;;Defined by Vicare.  Return #t if OBJ is a character and its Unicode code point is
   ;;in the range [0, 127]; otherwise return #f.
   ;;
   (and (char? obj)
-       (let ((chi ($char->fixnum obj)))
+       (let ((chi (sys::$char->fixnum obj)))
 	 (and ($fx>= chi 0)
 	      ($fx<= chi 127)))))
 
@@ -113,13 +132,5 @@
 ;;;; done
 
 #| end of library |# )
-
-
-(library (vicare chars unsafe)
-  (export $char= $char->fixnum $fixnum->char)
-  (import (vicare))
-  (define $char=	char=?)
-  (define $char->fixnum char->integer)
-  (define $fixnum->char integer->char))
 
 ;;; end of file
