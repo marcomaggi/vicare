@@ -2199,7 +2199,6 @@
 					 make-qdef-typed-case-defun
 					 unsafe-name.id lhs.ots standard-formals*.stx body**.stx
 					 #f %synner)))
-(debug-print ?who unsafe-name.id)
 		 ;;If  we put  first the  UNSAFE-QDEF  and last  the SAFE-QDEF:  type
 		 ;;propagation will work better.
 		 (values (list unsafe-qdef safe-qdef) lexenv.run)))))))
