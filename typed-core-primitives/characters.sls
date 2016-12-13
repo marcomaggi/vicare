@@ -118,6 +118,16 @@
 (declare-char-binary-comparison $char>=		unsafe)
 (declare-char-binary-comparison $char<=		unsafe)
 
+(declare-core-primitive $chmin
+    (unsafe)
+  (signatures
+   ((<char> <char>)			=> (<char>))))
+
+(declare-core-primitive $chmax
+    (unsafe)
+  (signatures
+   ((<char> <char>)			=> (<char>))))
+
 ;;; --------------------------------------------------------------------
 ;;; conversion
 
