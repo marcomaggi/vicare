@@ -8,7 +8,7 @@
 ;;
 ;;
 ;;
-;;Copyright (C) 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;Copyright (C) 2016, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;
 ;;This program is free  software: you can redistribute it and/or  modify it under the
 ;;terms  of  the  GNU General  Public  License  as  published  by the  Free  Software
@@ -315,7 +315,8 @@
   (signatures
    ((<record>)		=> (<record-type-descriptor>)))
   (attributes
-   ((_)			effect-free result-true)))
+   ((_)			effect-free result-true))
+  (replacements $record-rtd))
 
 (letrec-syntax
     ((declare (syntax-rules ()
@@ -497,6 +498,13 @@
    ((<struct> <record-type-descriptor>)		=> (<boolean>)))
   (attributes
    ((_)						effect-free)))
+
+(declare-core-primitive $record-rtd
+    (unsafe)
+  (signatures
+   ((<record>)		=> (<record-type-descriptor>)))
+  (attributes
+   ((_)			effect-free result-true)))
 
 (declare-core-primitive $record-ref
     (unsafe)

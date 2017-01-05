@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Vicare Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2010-2016  Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2010-2017  Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;Abstract
@@ -1750,6 +1750,8 @@
     ($struct-set!				$structs)
     ($struct-ref				$structs)
     ($struct-std				$structs)
+    ;;FIXME To be  removed after the next boot image  rotation; only $STRUCT-STD must
+    ;;be defined.  (Marco Maggi; Thu Jan 5, 2017)
     ($struct-rtd				$structs)
     ($struct					$structs)
     ($make-struct				$structs)
@@ -1784,6 +1786,7 @@
 
     ($record=					$records)
     ($record-ref				$records)
+    ($record-rtd				$records)
     ($record-and-rtd?				$records)
     ($record-constructor			$records)
     ($record-destructor				$records)

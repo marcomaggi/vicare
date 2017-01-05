@@ -4148,6 +4148,8 @@
    ((E std len)
     (nop)))
 
+ ;;FIXME To be  removed at the next  boot image rotation; only  $STRUCT-STD should be
+ ;;defined.  (Marco Maggi; Thu Jan 5, 2017)
  (define-core-primitive-operation $struct-rtd unsafe
    ((V stru)
     (asm 'mref (V-simple-operand stru) (K off-struct-std)))
@@ -4305,6 +4307,21 @@
     (K #t))
    ((E std . field*)
     (nop)))
+
+ /section)
+
+
+;;;; records
+;;
+(section
+
+ (define-core-primitive-operation $record-rtd unsafe
+   ((V reco)
+    (asm 'mref (V-simple-operand reco) (K off-struct-std)))
+   ((E reco)
+    (nop))
+   ((P reco)
+    (K #t)))
 
  /section)
 

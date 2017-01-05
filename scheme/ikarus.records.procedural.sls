@@ -79,6 +79,7 @@
     $make-record-constructor-descriptor
     $record-constructor				$rtd-subtype?
     $record-accessor/index			$record=
+    $record-rtd
     internal-applicable-record-type-destructor
     internal-applicable-record-destructor
     record-type-method-call-late-binding-private
@@ -125,6 +126,12 @@
     (vicare system $structs)
     (only (vicare system $records)
 	  $record-guardian)
+    ;;FIXME To be uncommented after the  next boot image rotation.  (Marco Maggi; Thu
+    ;;Jan 5, 2017)
+    ;;
+    ;; (prefix (only (vicare system $records)
+    ;; 		  $record-rtd)
+    ;; 	    sys::)
     (vicare system $symbols)
     (vicare system $vectors)
     (only (vicare language-extensions syntaxes)
@@ -1290,6 +1297,12 @@
 	($struct-ref reco idx)
       (procedure-arguments-consistency-violation __who__
 	"field index out of range for record" idx max))))
+
+(define ($record-rtd reco)
+  ;;FIXME To  be uncommented after the  next boot image rotation.   (Marco Maggi; Thu
+  ;;Jan 5, 2017)
+  #;(sys::$record-rtd reco)
+  ($struct-std reco))
 
 ;;; --------------------------------------------------------------------
 

@@ -6435,6 +6435,11 @@ Return @true{} if the arguments are equal field by field according to
 @end deffn
 
 
+@deffn {Unsafe Operation} $record-rtd @var{reco}
+Return a reference to the record type descriptor of @var{reco}.
+@end deffn
+
+
 @deffn {Unsafe Operation} $record-ref @var{reco} @var{fx}
 Return the value of the field at absolute index @var{fx} for the record
 @var{reco}.

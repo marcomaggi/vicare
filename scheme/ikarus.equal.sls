@@ -44,6 +44,11 @@
     (only (vicare system $structs)
 	  $struct-std
 	  $struct-ref)
+    ;;FIXME To be uncommented after the  next boot image rotation.  (Marco Maggi; Thu
+    ;;Jan 5, 2017)
+    ;;
+    ;;(only (vicare system $records)
+    ;; 	  $record-rtd)
     (only (vicare system $keywords)
 	  $keyword=?))
 
@@ -64,6 +69,11 @@
         ($fx>=     >=)
         ($fx<=     <=)
         ($fx=      =))))
+
+;;FIXME To be removed  after the next boot image rotation.  (Marco  Maggi; Thu Jan 5,
+;;2017)
+(define/typed ({$record-rtd <top>} {reco <top>})
+  ($struct-std reco))
 
 
 (define ({equal? <boolean>} x y)
@@ -146,8 +156,8 @@
          (and (record-object? y)
 	      ;;Here we want to extract the RTD  even when the X and/or Y are records
 	      ;;of opaque kind.  So we cannot use RECORD-RTD.
-              (let ((rtdx ($struct-std x))
-                    (rtdy ($struct-std y)))
+              (let ((rtdx ($record-rtd x))
+                    (rtdy ($record-rtd y)))
                 (and (eq? rtdx rtdy)
                      (cond (($record-type-equality-predicate rtdx)
                             => (lambda (equal-pred)
@@ -230,8 +240,8 @@
       (and (record-object? y)
 	   ;;Here we want to extract the RTD  even when the X and/or Y are records
 	   ;;of opaque kind.  So we cannot use RECORD-RTD.
-	   (let ((rtdx ($struct-std x))
-		 (rtdy ($struct-std y)))
+	   (let ((rtdx ($record-rtd x))
+		 (rtdy ($record-rtd y)))
 	     (and (eq? rtdx rtdy)
 		  (cond (($record-type-equality-predicate rtdx)
 			 => (lambda (equal-pred)
@@ -291,8 +301,8 @@
 	(and (record-object? y)
 	     ;;Here we want to  extract the RTD even when the X  and/or Y are records
 	     ;;of opaque kind.  So we cannot use RECORD-RTD.
-	     (let ((rtdx ($struct-std x))
-		   (rtdy ($struct-std y)))
+	     (let ((rtdx ($record-rtd x))
+		   (rtdy ($record-rtd y)))
 	       (and (eq? rtdx rtdy)
 		    (cond (($record-type-equality-predicate rtdx)
 			   => (lambda (equal-pred)

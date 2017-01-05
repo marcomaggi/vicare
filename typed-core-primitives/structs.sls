@@ -8,7 +8,7 @@
 ;;
 ;;
 ;;
-;;Copyright (C) 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;Copyright (C) 2016, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;
 ;;This program is free  software: you can redistribute it and/or  modify it under the
 ;;terms  of  the  GNU General  Public  License  as  published  by the  Free  Software
@@ -237,6 +237,8 @@
   (signatures
    ((<struct>)			=> (<struct-type-descriptor>))))
 
+;;FIXME To be removed  after the next boot image rotation.  (Marco  Maggi; Thu Jan 5,
+;;2017)
 (declare-core-primitive $struct-rtd
     (unsafe)
   (signatures
