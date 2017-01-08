@@ -24,7 +24,11 @@
 #include "internals.h"
 #include <gmp.h>
 
-#define BN(x)		DEBUG_VERIFY_BIGNUM(x,"BN")
+#if (IK_WORDSIZE == 4)
+#  define BIGNUM_LIMB_SHIFT	5
+#else
+#  define BIGNUM_LIMB_SHIFT	6
+#endif
 
 
 /** --------------------------------------------------------------------
@@ -35,11 +39,11 @@
 #define DEBUG_VERIFY_BIGNUM(x,caller)		(x)
 #else
 static ikptr_t
-DEBUG_VERIFY_BIGNUM (ikptr_t x, char* caller)
+DEBUG_VERIFY_BIGNUM (ikptr_t x, const char * caller)
 /* Validate the bignum X, which must be a tagged reference. */
 {
-  ikptr_t		first_word;
-  iksword_t		limb_count;
+  ikptr_t	first_word;
+  iksword_t	limb_count;
   int		is_positive;
   mp_limb_t	last_limb;
   if (IK_TAGOF(x) != vector_tag)
@@ -54,11 +58,14 @@ DEBUG_VERIFY_BIGNUM (ikptr_t x, char* caller)
     ik_abort("error in (%s) invalid last limb = 0x%016lx", caller, last_limb);
   if (limb_count == 1) {
     if (is_positive) {
-      if (last_limb <= most_positive_fixnum)
+      if (last_limb <= most_positive_fixnum) {
 	ik_abort("error in (%s) should be a positive fixnum: 0x%016lx", caller, last_limb);
+      }
     } else {
-      if (last_limb <= most_negative_fixnum)
-	ik_abort("error in (%s) should be a negative fixnum: 0x%016lx", caller, last_limb);
+      if (last_limb <= most_negative_fixnum) {
+	fprintf(stderr, "last_limb=0x%016lx, most_negative_fixnum=0x%016Lx\n", last_limb, (long long)most_negative_fixnum);
+	ik_abort("in '%s' should be a negative fixnum: 0x%016lx", caller, last_limb);
+      }
     }
   }
   /* ok */
@@ -814,7 +821,7 @@ ikrt_fxfxmult(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
        (sign << bignum_sign_shift) |
        (1 << bignum_nlimbs_shift));
     IK_REF(r, disp_bignum_data) = (ikptr_t)lo;
-    return BN(r+vector_tag);
+    return DEBUG_VERIFY_BIGNUM(r+vector_tag, "fxfxmult");
   } else {
     ikptr_t r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + 2*wordsize));
     IK_REF(r, 0) = (ikptr_t)
@@ -823,7 +830,7 @@ ikrt_fxfxmult(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
        (2 << bignum_nlimbs_shift));
     IK_REF(r, disp_bignum_data) = (ikptr_t)lo;
     IK_REF(r, disp_bignum_data+wordsize) = (ikptr_t)hi;
-    return BN(r+vector_tag);
+    return DEBUG_VERIFY_BIGNUM(r+vector_tag, "fxfxmult");
   }
 }
 
@@ -846,7 +853,7 @@ ik_normalize_bignum (iksword_t limbs, int sign, ikptr_t r) {
     }
   }
   IK_REF(r, 0) = (ikptr_t) (bignum_tag | sign | (limbs << bignum_nlimbs_shift));
-  return BN(r+vector_tag);
+  return DEBUG_VERIFY_BIGNUM(r+vector_tag, __func__);
 }
 
 
@@ -992,7 +999,7 @@ copy_limbs(mp_limb_t* src, mp_limb_t* dst, int n1, int n2) {
 }
 
 static void
-bits_compliment(mp_limb_t* src, mp_limb_t* dst, iksword_t n) {
+bits_complement(mp_limb_t* src, mp_limb_t* dst, iksword_t n) {
   mp_limb_t carry = 1;
   iksword_t i;
   for(i=0; i<n; i++) {
@@ -1004,7 +1011,7 @@ bits_compliment(mp_limb_t* src, mp_limb_t* dst, iksword_t n) {
 }
 
 static void
-bits_compliment2(mp_limb_t* src, mp_limb_t* dst, int n1, int n2) {
+bits_complement2(mp_limb_t* src, mp_limb_t* dst, int n1, int n2) {
   mp_limb_t carry = 1;
   int i;
   for(i=0; i<n1; i++) {
@@ -1022,7 +1029,7 @@ bits_compliment2(mp_limb_t* src, mp_limb_t* dst, int n1, int n2) {
 }
 
 static int
-bits_compliment_carry(mp_limb_t* src, mp_limb_t* dst, int n1, int n2, mp_limb_t carry) {
+bits_complement_carry(mp_limb_t* src, mp_limb_t* dst, int n1, int n2, mp_limb_t carry) {
   int i;
   for(i=n1; i<n2; i++) {
     mp_limb_t d = src[i];
@@ -1037,7 +1044,7 @@ bits_compliment_carry(mp_limb_t* src, mp_limb_t* dst, int n1, int n2, mp_limb_t 
 
 
 static void
-bits_compliment_with_carry(mp_limb_t* src, mp_limb_t* dst, iksword_t n, iksword_t carry) {
+bits_complement_with_carry(mp_limb_t* src, mp_limb_t* dst, iksword_t n, iksword_t carry) {
   iksword_t i;
   for(i=0; i<n; i++) {
     mp_limb_t d = src[i];
@@ -1048,7 +1055,7 @@ bits_compliment_with_carry(mp_limb_t* src, mp_limb_t* dst, iksword_t n, iksword_
 }
 
 static void
-bits_compliment_logand(mp_limb_t* s1, mp_limb_t* s2, mp_limb_t* dst, int n) {
+bits_complement_logand(mp_limb_t* s1, mp_limb_t* s2, mp_limb_t* dst, int n) {
   int carry = 1;
   int i;
   for(i=0; i<n; i++) {
@@ -1062,7 +1069,7 @@ bits_compliment_logand(mp_limb_t* s1, mp_limb_t* s2, mp_limb_t* dst, int n) {
 
 
 static int
-bits_compliment_logor(mp_limb_t* s1, mp_limb_t* s2, mp_limb_t* dst, int n) {
+bits_complement_logor(mp_limb_t* s1, mp_limb_t* s2, mp_limb_t* dst, int n) {
   int carry = 1;
   int i;
   for(i=0; i<n; i++) {
@@ -1171,9 +1178,9 @@ ikrt_fxbnlogand(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
       pcb->root0 = 0;
       mp_limb_t* s2 = (mp_limb_t*)(ikuword_t)(y+disp_bignum_data-vector_tag);
       mp_limb_t* s = (mp_limb_t*)(ikuword_t)(r+disp_bignum_data);
-      bits_compliment2(s2, s, len, len+1);
+      bits_complement2(s2, s, len, len+1);
       s[0] = s[0] & n1;
-      bits_compliment2(s, s, len+1, len+1);
+      bits_complement2(s, s, len+1, len+1);
       return ik_normalize_bignum(len+1, 1<<bignum_sign_shift, r);
     } else {
       /* y is positive */
@@ -1189,7 +1196,7 @@ ikrt_fxbnlogand(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
 	IK_REF(r, disp_bignum_data+i*wordsize) =
 	  IK_REF(y, disp_bignum_data-vector_tag+i*wordsize);
       }
-      return BN(r+vector_tag);
+      return DEBUG_VERIFY_BIGNUM(r+vector_tag, "fxbnlogand");
     }
   }
 }
@@ -1211,9 +1218,9 @@ ikrt_bnbnlogand(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
 	mp_limb_t* s1 = (mp_limb_t*)(ikuword_t)(x+disp_bignum_data-vector_tag);
 	mp_limb_t* s2 = (mp_limb_t*)(ikuword_t)(y+disp_bignum_data-vector_tag);
 	mp_limb_t* s = (mp_limb_t*)(ikuword_t)(r+disp_bignum_data);
-	bits_compliment2(s1, s, n1, n1+1);
-	bits_compliment_logand(s2, s, s, n2);
-	bits_compliment2(s, s, n1+1, n1+1);
+	bits_complement2(s1, s, n1, n1+1);
+	bits_complement_logand(s2, s, s, n2);
+	bits_complement2(s, s, n1+1, n1+1);
 	return ik_normalize_bignum(n1+1, 1<<bignum_sign_shift, r);
       } else {
 	return ikrt_bnbnlogand(y,x,pcb);
@@ -1234,9 +1241,9 @@ ikrt_bnbnlogand(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
       mp_limb_t* s2 = (mp_limb_t*)(ikuword_t)(y+disp_bignum_data-vector_tag);
       mp_limb_t* s = (mp_limb_t*)(ikuword_t)(r+disp_bignum_data);
       if (n1 <= n2) {
-	bits_compliment_logand(s2, s1, s, n1);
+	bits_complement_logand(s2, s1, s, n1);
       } else {
-	bits_compliment_logand(s2, s1, s, n2);
+	bits_complement_logand(s2, s1, s, n2);
 	copy_limbs(s1, s, n2, n1);
       }
       return ik_normalize_bignum(n1, 0, r);
@@ -1302,9 +1309,9 @@ ikrt_fxbnlogor(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
       pcb->root0 = 0;
       mp_limb_t* s2 = (mp_limb_t*)(ikuword_t)(y+disp_bignum_data-vector_tag);
       mp_limb_t* s = (mp_limb_t*)(ikuword_t)(r+disp_bignum_data);
-      bits_compliment2(s2, s, len, len+1);
+      bits_complement2(s2, s, len, len+1);
       s[0] = s[0] | n1;
-      bits_compliment2(s, s, len+1, len+1);
+      bits_complement2(s, s, len+1, len+1);
       return ik_normalize_bignum(len+1, 1<<bignum_sign_shift, r);
     } else {
       /* y is positive */
@@ -1320,7 +1327,7 @@ ikrt_fxbnlogor(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
 	IK_REF(r, disp_bignum_data+i*wordsize) =
 	  IK_REF(y, disp_bignum_data-vector_tag+i*wordsize);
       }
-      return BN(r+vector_tag);
+      return DEBUG_VERIFY_BIGNUM(r+vector_tag, "fxbnlogor");
     }
   }
 }
@@ -1342,10 +1349,10 @@ ikrt_bnbnlogor(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
 	mp_limb_t* s1 = (mp_limb_t*)(ikuword_t)(x+disp_bignum_data-vector_tag);
 	mp_limb_t* s2 = (mp_limb_t*)(ikuword_t)(y+disp_bignum_data-vector_tag);
 	mp_limb_t* s = (mp_limb_t*)(ikuword_t)(r+disp_bignum_data);
-	bits_compliment2(s2, s, n2, n1);
-	int carry = bits_compliment_logor(s1, s, s, n1);
-	bits_compliment_carry(s,s,n1,n1,carry);
-	bits_compliment2(s, s, n1, n1);
+	bits_complement2(s2, s, n2, n1);
+	int carry = bits_complement_logor(s1, s, s, n1);
+	bits_complement_carry(s,s,n1,n1,carry);
+	bits_complement2(s, s, n1, n1);
 	return ik_normalize_bignum(n1, 1<<bignum_sign_shift, r);
       } else {
 	return ikrt_bnbnlogor(y,x,pcb);
@@ -1366,12 +1373,12 @@ ikrt_bnbnlogor(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
       mp_limb_t* s2 = (mp_limb_t*)(ikuword_t)(y+disp_bignum_data-vector_tag);
       mp_limb_t* s = (mp_limb_t*)(ikuword_t)(r+disp_bignum_data);
       if (n2 <= n1) {
-	bits_compliment_logor(s2, s1, s, n2);
-	bits_compliment2(s, s, n2, n2);
+	bits_complement_logor(s2, s1, s, n2);
+	bits_complement2(s, s, n2, n2);
       } else {
-	int carry = bits_compliment_logor(s2, s1, s, n1);
-	bits_compliment_carry(s2, s, n1, n2, carry);
-	bits_compliment_carry(s, s, 0, n2, 1);
+	int carry = bits_complement_logor(s2, s1, s, n1);
+	bits_complement_carry(s2, s, n1, n2, carry);
+	bits_complement_carry(s, s, 0, n2, 1);
       }
       return ik_normalize_bignum(n2, 1<<bignum_sign_shift, r);
     } else {
@@ -1435,74 +1442,88 @@ copy_bits_shifting_left(mp_limb_t* src, mp_limb_t* dst, int n, int m) {
 
 
 ikptr_t
-ikrt_bignum_shift_right(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
-  int limb_shift = (wordsize == 4 ? 5 : 6);
-  iksword_t m = IK_UNFIX(y);
-  ikptr_t first_word = IK_REF(x, -vector_tag);
-  iksword_t n = IK_BNFST_LIMB_COUNT(first_word);
-  iksword_t whole_limb_shift = m >> limb_shift;
-  iksword_t bit_shift = m & (mp_bits_per_limb-1);
-  iksword_t new_limb_count = n - whole_limb_shift;
+ikrt_bignum_shift_right (ikptr_t s_bignum_integer, ikptr_t s_fixnum_offset, ikpcb_t* pcb)
+/* NOTE For  some reason unknown to  me: when compiling for  32-bit with
+   GCC 5.3.0 and "-O3" this function  is miscompiled in some case and an
+   error  ensues.  IMHO  a compiler  bug.  Everything  is all  right for
+   64-bit.  For this reason the C  code should be compiled with "-O2" on
+   32-bit platforms.  Life is hard.  (Marco Maggi; Sat Jan 7, 2017) */
+{
+  iksword_t	offset			= IK_UNFIX(s_fixnum_offset);
+  ikptr_t	first_word		= IK_BIGNUM_FIRST(s_bignum_integer);
+  iksword_t	integer_limb_count	= IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t	whole_limb_shift	= offset >> BIGNUM_LIMB_SHIFT;
+  iksword_t	bit_shift		= offset & (mp_bits_per_limb-1);
+  iksword_t	new_limb_count		= integer_limb_count - whole_limb_shift;
+  ikptr_t	p_result;
   if (IK_BNFST_NEGATIVE(first_word)) {
+    /* The bignum to shift is negative. */
     if (new_limb_count <= 0) {
       return IK_FIX(-1);
     }
-    if (bit_shift == 0) {
-      pcb->root0 = &x;
-      ikptr_t r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + new_limb_count * wordsize));
-      pcb->root0 = 0;
-      bits_compliment_with_carry(
-	  (mp_limb_t*)(ikuword_t)(x+off_bignum_data+whole_limb_shift*wordsize),
-	  (mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
-	  new_limb_count,
-	  bits_carry((mp_limb_t*)(ikuword_t)(x+off_bignum_data), whole_limb_shift));
-      bits_compliment(
-	  (mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
-	  (mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
-	  new_limb_count);
-      return ik_normalize_bignum(new_limb_count, 1 << bignum_sign_shift, r);
+    pcb->root0 = &s_bignum_integer;
+    {
+      p_result = IKA_BIGNUM_ALLOC_NO_TAG(pcb, new_limb_count);
+    }
+    pcb->root0 = NULL;
+    if (0 == bit_shift) {
+      bits_complement_with_carry((mp_limb_t*)IK_LIMB_PTR(s_bignum_integer, whole_limb_shift),
+				 (mp_limb_t*)IK_PTR(p_result, disp_bignum_data),
+				 new_limb_count,
+				 bits_carry((mp_limb_t*)IK_LIMB_PTR(s_bignum_integer, 0), whole_limb_shift));
+      bits_complement((mp_limb_t*)IK_PTR(p_result, disp_bignum_data),
+		      (mp_limb_t*)IK_PTR(p_result, disp_bignum_data),
+		      new_limb_count);
+      return ik_normalize_bignum(new_limb_count, IK_BNFST_NEGATIVE_SIGN_BIT, p_result);
     } else {
-      pcb->root0 = &x;
-      ikptr_t r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + new_limb_count * wordsize));
-      pcb->root0 = 0;
-      bits_compliment_with_carry(
-	  (mp_limb_t*)(ikuword_t)(x+off_bignum_data+whole_limb_shift*wordsize),
-	  (mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
-	  new_limb_count,
-	  bits_carry((mp_limb_t*)(ikuword_t)(x+off_bignum_data), whole_limb_shift));
-      copy_bits_shifting_right(
-	  (mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
-	  (mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
-	  new_limb_count,
-	  bit_shift);
-      *((mp_limb_t*)(r+disp_bignum_data+(new_limb_count-1)*wordsize))
-	  |= (-1L << (mp_bits_per_limb - bit_shift));
-      bits_compliment(
-	  (mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
-	  (mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
-	  new_limb_count);
-      return ik_normalize_bignum(new_limb_count, 1 << bignum_sign_shift, r);
-      ik_abort("not yet for negative bignum_shift");
+      bits_complement_with_carry((mp_limb_t*)IK_LIMB_PTR(s_bignum_integer, whole_limb_shift),
+				 (mp_limb_t*)IK_PTR(p_result, disp_bignum_data),
+				 new_limb_count,
+				 bits_carry((mp_limb_t*)IK_LIMB_PTR(s_bignum_integer, 0), whole_limb_shift));
+      copy_bits_shifting_right((mp_limb_t*)IK_PTR(p_result, disp_bignum_data),
+			       (mp_limb_t*)IK_PTR(p_result, disp_bignum_data),
+			       new_limb_count, bit_shift);
+      *((mp_limb_t*)IK_PTR(p_result, disp_bignum_data+(new_limb_count-1)*IK_WORDSIZE)) |= (-1L << (mp_bits_per_limb - bit_shift));
+      bits_complement((mp_limb_t*)IK_PTR(p_result, disp_bignum_data),
+		      (mp_limb_t*)IK_PTR(p_result, disp_bignum_data),
+		      new_limb_count);
+      return ik_normalize_bignum(new_limb_count, IK_BNFST_NEGATIVE_SIGN_BIT, p_result);
     }
   } else {
+    /* The bignum to shift is positive.   We need to remember the layout
+     * of a bignum data area:
+     *
+     *    |----|-----|-----|-----|-----|
+     *     1st  limb0 limb1 limb2 limb3
+     *
+     * shifting  to  the  right  means to  discard  bits  starting  from
+     * "limb0", that is: to discard least significant bits.
+     *
+     * The  value  "whole_limb_shift"  is  the  number  of  whole  least
+     * significant limbs that must  be discarded.  The value "bit_shift"
+     * is the  number of least  significant bits that must  be discarded
+     * after having discarded the whole limbs.
+     */
     if (new_limb_count <= 0) {
-      return 0;
+      return IK_FIX(0);
     }
-    pcb->root0 = &x;
-    ikptr_t r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + new_limb_count * wordsize));
-    pcb->root0 = 0;
-    if (bit_shift == 0) {
-      memcpy((uint8_t*)(ikuword_t)r+disp_bignum_data,
-	     (uint8_t*)(ikuword_t)x+off_bignum_data+whole_limb_shift*wordsize,
-	     new_limb_count * wordsize);
-      return ik_normalize_bignum(new_limb_count, 0, r);
+    pcb->root0 = &s_bignum_integer;
+    {
+      p_result = IKA_BIGNUM_ALLOC_NO_TAG(pcb, new_limb_count);
+    }
+    pcb->root0 = NULL;
+    if (0 == bit_shift) {
+      /* No  bit shift:  we just  copy the  most significant  limbs from
+	 "s_bignum_integer" to "p_result". */
+      memcpy((uint8_t*)IK_PTR(p_result, disp_bignum_data),
+	     (uint8_t*)IK_LIMB_PTR(s_bignum_integer, whole_limb_shift),
+	     new_limb_count * IK_WORDSIZE);
+      return ik_normalize_bignum(new_limb_count, IK_BNFST_POSITIVE_SIGN_BIT, p_result);
     } else {
-      copy_bits_shifting_right(
-	  (mp_limb_t*)(ikuword_t)(x+off_bignum_data+whole_limb_shift*wordsize),
-	  (mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
-	  new_limb_count,
-	  bit_shift);
-      return ik_normalize_bignum(new_limb_count, 0, r);
+      copy_bits_shifting_right((mp_limb_t*)IK_LIMB_PTR(s_bignum_integer, whole_limb_shift),
+			       (mp_limb_t*)IK_PTR(p_result, disp_bignum_data),
+			       new_limb_count, bit_shift);
+      return ik_normalize_bignum(new_limb_count, IK_BNFST_POSITIVE_SIGN_BIT, p_result);
     }
   }
 }
@@ -1510,10 +1531,9 @@ ikrt_bignum_shift_right(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
 
 ikptr_t
 ikrt_fixnum_shift_left(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
-  int limb_shift = (wordsize == 4 ? 5 : 6);
   iksword_t m = IK_UNFIX(y);
   iksword_t n = IK_UNFIX(x);
-  iksword_t limb_count = (m >> limb_shift) + 2;
+  iksword_t limb_count = (m >> BIGNUM_LIMB_SHIFT) + 2;
   iksword_t bit_shift = m & (mp_bits_per_limb-1);
   ikptr_t r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + limb_count * wordsize));
   ikuword_t* s = (ikuword_t*)(ikuword_t)(r+disp_bignum_data);
@@ -1534,38 +1554,53 @@ ikrt_fixnum_shift_left(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
 
 
 ikptr_t
-ikrt_bignum_shift_left(ikptr_t x, ikptr_t y, ikpcb_t* pcb) {
-  int limb_shift = (wordsize == 4 ? 5 : 6);
-  iksword_t m = IK_UNFIX(y);
-  ikptr_t first_word = IK_REF(x, -vector_tag);
-  iksword_t n = IK_BNFST_LIMB_COUNT(first_word);
-  iksword_t whole_limb_shift = m >> limb_shift;
-  iksword_t bit_shift = m & (mp_bits_per_limb-1);
-  if (bit_shift == 0) {
-    iksword_t limb_count = n + whole_limb_shift;
-    pcb->root0 = &x;
-    ikptr_t r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + limb_count * wordsize));
-    pcb->root0 = 0;
-    unsigned int* s = (unsigned int*)(iksword_t)(r+disp_bignum_data);
-    bzero(s, whole_limb_shift*wordsize);
-    memcpy(((uint8_t *)s) + whole_limb_shift*wordsize,
-	   ((uint8_t *)x) + off_bignum_data,
-	   n*wordsize);
-    return ik_normalize_bignum(limb_count, IK_BNFST_NEGATIVE(first_word), r);
+ikrt_bignum_shift_left(ikptr_t s_bignum_integer, ikptr_t s_offset, ikpcb_t* pcb)
+/* We need to remember the layout of a bignum data area:
+ *
+ *    |----|-----|-----|-----|-----|
+ *     1st  limb0 limb1 limb2 limb3
+ *
+ * shifting to  the left  means to discard  bits starting  from "limb3",
+ * that is: to discard most significant bits.
+ *
+ * The value "whole_limb_shift" is the  number of whole most significant
+ * limbs that must be discarded.  The value "bit_shift" is the number of
+ * most significant bits  that must be discarded  after having discarded
+ * the whole limbs.
+ */
+{
+  iksword_t	offset			= IK_UNFIX(s_offset);
+  ikptr_t	first_word		= IK_BIGNUM_FIRST(s_bignum_integer);
+  iksword_t	integer_limb_count	= IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t	whole_limb_shift	= offset >> BIGNUM_LIMB_SHIFT;
+  iksword_t	bit_shift		= offset & (mp_bits_per_limb-1);
+  iksword_t	new_limb_count;
+  ikptr_t	p_result;
+  mp_limb_t *	p_result_limbs;
+  if (0 == bit_shift) {
+    new_limb_count = integer_limb_count + whole_limb_shift;
   } else {
-    int limb_count = n + whole_limb_shift + 1;
-    pcb->root0 = &x;
-    ikptr_t r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + limb_count * wordsize));
-    pcb->root0 = 0;
-    mp_limb_t* s = (mp_limb_t*)(r+disp_bignum_data);
-    bzero(s, whole_limb_shift*wordsize);
-    copy_bits_shifting_left(
-	(mp_limb_t*)(x+off_bignum_data),
-	(mp_limb_t*)(s+whole_limb_shift),
-	n,
-	bit_shift);
-    return ik_normalize_bignum(limb_count, IK_BNFST_NEGATIVE(first_word), r);
+    new_limb_count = integer_limb_count + whole_limb_shift + 1;
   }
+  pcb->root0 = &s_bignum_integer;
+  {
+    p_result = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + new_limb_count * IK_WORDSIZE));
+  }
+  pcb->root0 = NULL;
+  p_result_limbs = (mp_limb_t*)IK_PTR(p_result, disp_bignum_data);
+  bzero(p_result_limbs, whole_limb_shift * IK_WORDSIZE);
+  if (0 == bit_shift) {
+    /* No bit shift: just copy the  least significant whole limbs to the
+       data area of "p_result" at the right offset. */
+    memcpy(IK_PTR(p_result_limbs, whole_limb_shift * IK_WORDSIZE),
+	   IK_LIMB_PTR(s_bignum_integer, 0),
+	   integer_limb_count * IK_WORDSIZE);
+  } else {
+    copy_bits_shifting_left((mp_limb_t*)IK_LIMB_PTR(s_bignum_integer, 0),
+			    (mp_limb_t*)IK_PTR(p_result_limbs, whole_limb_shift * IK_WORDSIZE),
+			    integer_limb_count, bit_shift);
+  }
+  return ik_normalize_bignum(new_limb_count, IK_BNFST_NEGATIVE(first_word), p_result);
 }
 
 

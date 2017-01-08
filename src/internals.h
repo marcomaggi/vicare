@@ -9,7 +9,7 @@
 	definitions  in this  file are  duplicated in  "vicare.h", which
 	defines the public API.
 
-  Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2013, 2014, 2015, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006-2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -1077,7 +1077,9 @@ ik_private_decl void ik_print_stack_frame_code_objects (FILE * fh, int max_num_o
 
 #define IK_TAGOF(X)	(((ikuword_t)(X)) & 7)
 
+/* IK_PTR builds a pointer by adding to X the offset in bytes N. */
 #define IK_PTR(X,N)	((ikptr_t*)(((ikuword_t)(X)) + ((iksword_t)(N))))
+/* IK_REF builds an lvalue by adding to X the offset in bytes N. */
 #define IK_REF(X,N)	(IK_PTR(X,N)[0])
 
 /* Special offsets to be used  with "IK_REF()" and "IK_PTR()" applied to
@@ -1131,8 +1133,25 @@ ik_private_decl void ik_print_stack_frame_code_objects (FILE * fh, int max_num_o
 #define fx_shift	wordshift
 #define fx_mask		(wordsize - 1)
 
-#define most_positive_fixnum	(((ikuword_t)-1) >> (fx_shift+1))
-#define most_negative_fixnum	(most_positive_fixnum+1)
+#if 0
+/* This should work, but  I have commented it out while  trying to fix a
+   bug on the 32-bit platform.  (Marco Maggi; Fri Jan 6, 2017) */
+#  define most_positive_fixnum		(((ikuword_t)-1) >> (fx_shift+1))
+#  define most_negative_fixnum		(most_positive_fixnum+1)
+#else
+#  if (4 == SIZEOF_VOID_P)
+/*                                                     76543210 */
+#    define most_positive_fixnum	(((ikuword_t)0xFFFFFFFF) >> (fx_shift+1))
+#    define most_negative_fixnum	(most_positive_fixnum+1)
+#  elif (8 == SIZEOF_VOID_P)
+/*                                                     7654321076543210 */
+#    define most_positive_fixnum	(((ikuword_t)0xFFFFFFFFFFFFFFFF) >> (fx_shift+1))
+#    define most_negative_fixnum	(most_positive_fixnum+1)
+#  else
+#    error "Uknown pointer size"
+#  endif
+#endif
+
 #define IK_GREATEST_FIXNUM	most_positive_fixnum
 #define IK_LEAST_FIXNUM		(-most_negative_fixnum)
 
@@ -1277,28 +1296,38 @@ ik_decl ikptr_t iku_symbol_from_string	(ikpcb_t * pcb, ikptr_t s_str);
 #define bignum_sign_shift	3
 #define bignum_nlimbs_shift	4
 #define disp_bignum_tag		0
-#define disp_bignum_data	wordsize
+#define disp_bignum_data	IK_WORDSIZE
 #define off_bignum_tag		(disp_bignum_tag  - vector_tag)
 #define off_bignum_data		(disp_bignum_data - vector_tag)
+
+/* These represent the sign bit of  bignums, stored in the first word of
+   the allocated  memory.  For positive  bignums: the bit is  zero.  For
+   negative fixnums: the bit is one.   The bit is already shifted in the
+   correct position. */
+#define IK_BNFST_POSITIVE_SIGN_BIT	((0)<<bignum_sign_shift)
+#define IK_BNFST_NEGATIVE_SIGN_BIT	((1)<<bignum_sign_shift)
 
 #define IK_BNFST_NEGATIVE(X)		(((ikuword_t)(X)) & bignum_sign_mask)
 #define IK_BNFST_POSITIVE(X)		(!IK_BNFST_NEGATIVE(X))
 #define IK_BNFST_LIMB_COUNT(X)		(((ikuword_t)(X)) >> bignum_nlimbs_shift)
 
 #define IK_BIGNUM_ALLOC_SIZE(NUMBER_OF_LIMBS)			\
-  IK_ALIGN(disp_bignum_data + (NUMBER_OF_LIMBS) * wordsize)
+  IK_ALIGN(disp_bignum_data + (NUMBER_OF_LIMBS) * IK_WORDSIZE)
 
 #define IKA_BIGNUM_ALLOC(PCB,LIMB_COUNT)	\
   (ik_safe_alloc((PCB), IK_BIGNUM_ALLOC_SIZE(LIMB_COUNT)) | vector_tag)
+
+#define IKA_BIGNUM_ALLOC_NO_TAG(PCB,LIMB_COUNT)	\
+  ik_safe_alloc((PCB), IK_BIGNUM_ALLOC_SIZE(LIMB_COUNT))
 
 #define IK_COMPOSE_BIGNUM_FIRST_WORD(LIMB_COUNT,SIGN)		\
   ((ikptr_t)(((LIMB_COUNT) << bignum_nlimbs_shift) | (SIGN) | bignum_tag))
 
 #define IK_POSITIVE_BIGNUM_FIRST_WORD(LIMB_COUNT)		\
-  IK_COMPOSE_BIGNUM_FIRST_WORD((LIMB_COUNT),((0)<<bignum_sign_shift))
+  IK_COMPOSE_BIGNUM_FIRST_WORD((LIMB_COUNT),IK_BNFST_POSITIVE_SIGN_BIT)
 
 #define IK_NEGATIVE_BIGNUM_FIRST_WORD(LIMB_COUNT)		\
-  IK_COMPOSE_BIGNUM_FIRST_WORD((LIMB_COUNT),((1)<<bignum_sign_shift))
+  IK_COMPOSE_BIGNUM_FIRST_WORD((LIMB_COUNT),IK_BNFST_NEGATIVE_SIGN_BIT)
 
 #define IK_BIGNUM_DATA_LIMBP(X)					\
   ((mp_limb_t*)(ikuword_t)((X) + off_bignum_data))
@@ -1310,10 +1339,11 @@ ik_decl ikptr_t iku_symbol_from_string	(ikpcb_t * pcb, ikptr_t s_str);
   ((mp_limb_t)IK_REF((X), off_bignum_data))
 
 #define IK_BIGNUM_LAST_LIMB(X,LIMB_COUNT)			\
-  ((mp_limb_t)IK_REF((X), off_bignum_data+((LIMB_COUNT)-1)*wordsize))
+  ((mp_limb_t)IK_REF((X), off_bignum_data+((LIMB_COUNT)-1)*IK_WORDSIZE))
 
 #define IK_BIGNUM_FIRST(X)	IK_REF((X), off_bignum_tag)
-#define IK_LIMB(X,IDX)		IK_REF((X), off_bignum_data + (IDX)*wordsize)
+#define IK_LIMB(X,IDX)		IK_REF((X), off_bignum_data + (IDX)*IK_WORDSIZE)
+#define IK_LIMB_PTR(X,IDX)	((mp_limb_t*)IK_PTR(X, off_bignum_data + (IDX) * IK_WORDSIZE))
 
 ik_decl int	ik_is_bignum		(ikptr_t x);
 

@@ -7,7 +7,7 @@
 
 
 
-   Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+   Copyright (C) 2013, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 
    This program is free software:  you can redistribute it and/or modify
    it under the terms of the  GNU General Public License as published by
@@ -43,10 +43,12 @@
 #  undef  IK_64BIT_PLATFORM
 #  define IK_32BIT_PLATFORM	1
 #  define wordsize		4
+#  define IK_WORDSIZE		4
 #else
 #  undef  IK_32BIT_PLATFORM
 #  define IK_64BIT_PLATFORM	1
 #  define wordsize		8
+#  define IK_WORDSIZE		8
 #endif
 
 /* The value of "wordshift" is selected in such a way that:
@@ -58,9 +60,11 @@
    number of items  in a vector and consider it directly  as size of the
    vector's data area in bytes. */
 #if IK_32BIT_PLATFORM
-#  define wordshift	2
+#  define wordshift		2
+#  define IK_WORDSHIFT		2
 #else
-#  define wordshift	3
+#  define wordshift		3
+#  define IK_WORDSHIFT		3
 #endif
 
 

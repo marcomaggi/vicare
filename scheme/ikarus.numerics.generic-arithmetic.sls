@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2012, 2013, 2014, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2014, 2016-2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;Implementation of BITWISE-REVERSE-BIT-FIELD from:
