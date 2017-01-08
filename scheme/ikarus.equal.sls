@@ -44,11 +44,8 @@
     (only (vicare system $structs)
 	  $struct-std
 	  $struct-ref)
-    ;;FIXME To be uncommented after the  next boot image rotation.  (Marco Maggi; Thu
-    ;;Jan 5, 2017)
-    ;;
-    ;;(only (vicare system $records)
-    ;; 	  $record-rtd)
+    (only (vicare system $records)
+     	  $record-rtd)
     (only (vicare system $keywords)
 	  $keyword=?))
 
@@ -69,11 +66,6 @@
         ($fx>=     >=)
         ($fx<=     <=)
         ($fx=      =))))
-
-;;FIXME To be removed  after the next boot image rotation.  (Marco  Maggi; Thu Jan 5,
-;;2017)
-(define/typed ({$record-rtd <top>} {reco <top>})
-  ($struct-std reco))
 
 
 (define ({equal? <boolean>} x y)

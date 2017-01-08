@@ -126,12 +126,9 @@
     (vicare system $structs)
     (only (vicare system $records)
 	  $record-guardian)
-    ;;FIXME To be uncommented after the  next boot image rotation.  (Marco Maggi; Thu
-    ;;Jan 5, 2017)
-    ;;
-    ;; (prefix (only (vicare system $records)
-    ;; 		  $record-rtd)
-    ;; 	    sys::)
+    (prefix (only (vicare system $records)
+     		  $record-rtd)
+     	    sys::)
     (vicare system $symbols)
     (vicare system $vectors)
     (only (vicare language-extensions syntaxes)
@@ -1299,10 +1296,7 @@
 	"field index out of range for record" idx max))))
 
 (define ($record-rtd reco)
-  ;;FIXME To  be uncommented after the  next boot image rotation.   (Marco Maggi; Thu
-  ;;Jan 5, 2017)
-  #;(sys::$record-rtd reco)
-  ($struct-std reco))
+  (sys::$record-rtd reco))
 
 ;;; --------------------------------------------------------------------
 
