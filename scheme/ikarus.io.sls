@@ -11,7 +11,7 @@
 ;;;	This file tries to stick to this  convention: "byte" is a fixnum in the range
 ;;;	[-128, 127], "octet" is a fixnum in the range [0, 255].
 ;;;
-;;;Copyright (c) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011-2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -657,7 +657,10 @@
     (vicare system structs)
     (only (ikarus.options)
 	  strict-r6rs)
-    (vicare system $fx)
+    (except (vicare system $fx)
+	    $fxand
+	    $fxior
+	    $fxxor)
     (vicare system $chars)
     (vicare system $pairs)
     (vicare system $structs)
