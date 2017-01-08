@@ -4148,16 +4148,6 @@
    ((E std len)
     (nop)))
 
- ;;FIXME To be  removed at the next  boot image rotation; only  $STRUCT-STD should be
- ;;defined.  (Marco Maggi; Thu Jan 5, 2017)
- (define-core-primitive-operation $struct-rtd unsafe
-   ((V stru)
-    (asm 'mref (V-simple-operand stru) (K off-struct-std)))
-   ((E stru)
-    (nop))
-   ((P stru)
-    (K #t)))
-
  (define-core-primitive-operation $struct-std unsafe
    ((V stru)
     (asm 'mref (V-simple-operand stru) (K off-struct-std)))

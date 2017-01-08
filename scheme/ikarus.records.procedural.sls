@@ -638,14 +638,14 @@
   ;;of the record type.
   ;;
   (and ($struct? obj)
-       (<rtd>? ($struct-rtd obj))))
+       (<rtd>? ($struct-std obj))))
 
 (define (record? x)
   ;;Defined by R6RS.  Return #t if OBJ is a record and its record type is not opaque,
   ;;else return #f.
   ;;
   (and ($struct? x)
-       (let ((rtd ($struct-rtd x)))
+       (let ((rtd ($struct-std x)))
 	 (and (<rtd>? rtd)
 	      ($<rtd>-non-opaque? rtd)))))
 
@@ -655,7 +655,7 @@
 (define* (record-rtd {x non-opaque-record?})
   ;;Defined by R6RS.  Return the record-type descriptor of the record X.
   ;;
-  ($struct-rtd x))
+  ($struct-std x))
 
 
 ;;;; record-type descriptor inspection
@@ -741,11 +741,11 @@
 	      (the-record    (record-being-built)))
 	  (unless (eq? client-record the-record)
 	    (unless (and ($struct? client-record)
-			 (eq? ($struct-rtd client-record)
-			      ($struct-rtd the-record)))
+			 (eq? ($struct-std client-record)
+			      ($struct-std the-record)))
 	      (assertion-violation type-name
 		"while building new record, value returned by client record constructor is of invalid type"
-		($struct-rtd the-record) client-record)))
+		($struct-std the-record) client-record)))
 	  client-record))))
 
   (define (%alloc-clean-r6rs-record rtd)
@@ -1228,11 +1228,11 @@
 	  (the-record    (record-being-built)))
       (unless (eq? client-record the-record)
 	(unless (and ($struct? client-record)
-		     (eq? ($struct-rtd client-record)
-			  ($struct-rtd the-record)))
+		     (eq? ($struct-std client-record)
+			  ($struct-std the-record)))
 	  (assertion-violation 'a-record-maker
 	    "value returned by client record constructor is of invalid type"
-	    ($struct-rtd the-record) client-record))
+	    ($struct-std the-record) client-record))
 	;;Replace the  record being built  with the  instance returned by  the parent
 	;;constructor.
 	(record-being-built client-record))
@@ -1289,7 +1289,7 @@
   ($record-ref reco idx))
 
 (define* ($record-ref reco idx)
-  (let ((max ($<rtd>-total-fields-number ($struct-rtd reco))))
+  (let ((max ($<rtd>-total-fields-number ($struct-std reco))))
     (if ($fx< idx max)
 	($struct-ref reco idx)
       (procedure-arguments-consistency-violation __who__
@@ -1451,7 +1451,7 @@
   ;;The argument  RECORD must  be a  struct instance.   The argument  RTD can  be any
   ;;object, but it should be a record-type descriptor.
   ;;
-  (let ((rtd^ ($struct-rtd record)))
+  (let ((rtd^ ($struct-std record)))
     (or (eq? rtd rtd^)
 	(and (<rtd>? rtd^)
 	     (let upper-parent ((prtd^ ($<rtd>-parent rtd^)))
@@ -1496,8 +1496,8 @@
   ;;Return true if OBJ1  and OBJ2 are two R6RS records having the  same RTD and equal
   ;;field values according to EQUAL?.
   ;;
-  (let ((rtd1 ($struct-rtd obj1)))
-    (and (eq? rtd1 ($struct-rtd obj2))
+  (let ((rtd1 ($struct-std obj1)))
+    (and (eq? rtd1 ($struct-std obj2))
 	 (let ((len ($vector-length ($<rtd>-fields rtd1))))
 	   (let loop ((i 0))
 	     (or ($fx= i len)
@@ -1514,7 +1514,7 @@
   ;;Remember that the  first 2 fields of an R6RS  record type descriptor
   ;;have the same meaning of the first  2 fields of a Vicare struct type
   ;;descriptor.
-  (let ((len ($struct-ref ($struct-rtd x) 1)))
+  (let ((len ($struct-ref ($struct-std x) 1)))
     (do ((i 0 ($fxadd1 i)))
 	(($fx= i len)
 	 (values))
@@ -1523,10 +1523,10 @@
 ;;;
 
 (define* (record-printer {x record-object?})
-  ($<rtd>-printer ($struct-rtd x)))
+  ($<rtd>-printer ($struct-std x)))
 
 (define ($record-printer x)
-  ($<rtd>-printer ($struct-rtd x)))
+  ($<rtd>-printer ($struct-std x)))
 
 
 ;;;; non-R6RS extensions: record destructor
@@ -1559,10 +1559,10 @@
 ;;; --------------------------------------------------------------------
 
 (define* (record-destructor {rtd record-object?})
-  ($<rtd>-destructor ($struct-rtd rtd)))
+  ($<rtd>-destructor ($struct-std rtd)))
 
 (define ($record-destructor rtd)
-  ($<rtd>-destructor ($struct-rtd rtd)))
+  ($<rtd>-destructor ($struct-std rtd)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1583,7 +1583,7 @@
   ;;
   ;;Notice that this works also on opaque records.
   ;;
-  (or ($<rtd>-destructor ($struct-rtd record))
+  (or ($<rtd>-destructor ($struct-std record))
       (lambda (x) (void))))
 
 
@@ -1665,12 +1665,12 @@
 (define* (record-equality-predicate {reco record-object?})
   ;;Return false or the equality predicate from the record-type descriptor of RECO.
   ;;
-  ($<rtd>-equality-predicate ($struct-rtd reco)))
+  ($<rtd>-equality-predicate ($struct-std reco)))
 
 (define ($record-equality-predicate reco)
   ;;Return false or the equality predicate from the record-type descriptor of RECO.
   ;;
-  ($<rtd>-equality-predicate ($struct-rtd reco)))
+  ($<rtd>-equality-predicate ($struct-std reco)))
 
 
 ;;;; non-R6RS extensions: comparison procedure
@@ -1726,12 +1726,12 @@
 (define* (record-comparison-procedure {reco record-object?})
   ;;Return false or the comparison procedure from the record-type descriptor of RECO.
   ;;
-  ($<rtd>-comparison-procedure ($struct-rtd reco)))
+  ($<rtd>-comparison-procedure ($struct-std reco)))
 
 (define ($record-comparison-procedure reco)
   ;;Return false or the comparison procedure from the record-type descriptor of RECO.
   ;;
-  ($<rtd>-comparison-procedure ($struct-rtd reco)))
+  ($<rtd>-comparison-procedure ($struct-std reco)))
 
 
 ;;;; non-R6RS extensions: hash function
@@ -1787,12 +1787,12 @@
 (define* (record-hash-function {reco record-object?})
   ;;Return false or the hash function from the record-type descriptor of RECO.
   ;;
-  ($<rtd>-hash-function ($struct-rtd reco)))
+  ($<rtd>-hash-function ($struct-std reco)))
 
 (define ($record-hash-function reco)
   ;;Return false or the hash function from the record-type descriptor of RECO.
   ;;
-  ($<rtd>-hash-function ($struct-rtd reco)))
+  ($<rtd>-hash-function ($struct-std reco)))
 
 
 ;;;; non-R6RS extensions: method retriever
@@ -1830,13 +1830,13 @@
   ;;Return false or the method retriever procedure from the record-type descriptor of
   ;;RECO.
   ;;
-  ($<rtd>-method-retriever-public ($struct-rtd reco)))
+  ($<rtd>-method-retriever-public ($struct-std reco)))
 
 (define ($record-method-retriever reco)
   ;;Return false or the method retriever procedure from the record-type descriptor of
   ;;RECO.
   ;;
-  ($<rtd>-method-retriever-public ($struct-rtd reco)))
+  ($<rtd>-method-retriever-public ($struct-std reco)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1846,7 +1846,7 @@
   ;;
   ;;This function is for internal use only.
   ;;
-  (cond ((($record-type-method-retriever-private ($struct-rtd subject)) method-name.sym)
+  (cond ((($record-type-method-retriever-private ($struct-std subject)) method-name.sym)
 	 => (lambda (proc)
 	      (apply proc subject args)))
 	(else

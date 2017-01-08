@@ -48,7 +48,7 @@
     (vicare system structs)
     (only (vicare system $structs)
 	  base-rtd
-	  $struct-rtd)
+	  $struct-std)
     (only (vicare system $codes)
 	  $code-annotation))
 
@@ -530,7 +530,7 @@
       ;;Traverse a record object that is meant to use the built-in printer function.
       ;;
       ;;Here we want to extract the RTD from both opaque and non-opaque records.
-      (let ((rtd ($struct-rtd reco)))
+      (let ((rtd ($struct-std reco)))
 	(traverse (record-type-name rtd) marks-table)
 	(let* ((fields.vec	(record-type-all-field-names rtd))
 	       (fields.len	(vector-length fields.vec)))
@@ -1256,7 +1256,7 @@
 
     (define (%write-record/default-printer record port write-style? marks-table next-mark-idx)
       ;;Here we want to extract the RTD from both opaque and non-opaque records.
-      (define rtd ($struct-rtd record))
+      (define rtd ($struct-std record))
       (write-char* (if (record-type-opaque? rtd) "#[opaque-record " "#[record ") port)
       (write-char* (symbol->string (record-type-name rtd)) port)
       (let* ((fields.vec  (record-type-all-field-names rtd))

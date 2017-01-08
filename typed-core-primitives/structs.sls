@@ -237,15 +237,6 @@
   (signatures
    ((<struct>)			=> (<struct-type-descriptor>))))
 
-;;FIXME To be removed  after the next boot image rotation.  (Marco  Maggi; Thu Jan 5,
-;;2017)
-(declare-core-primitive $struct-rtd
-    (unsafe)
-  (signatures
-   ((<struct>)			=> (<struct-type-descriptor>)))
-  (attributes
-   ((_)			foldable effect-free result-true)))
-
 (declare-core-primitive $struct-ref
     (unsafe)
   (signatures

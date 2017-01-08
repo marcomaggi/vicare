@@ -139,7 +139,7 @@
 	  (identifier? #'?struct))
      #'(unless (and (fixnum? ?index)
 		    ($fx>= ?index 0)
-		    ($fx<  ?index ($std-length ($struct-rtd ?struct))))
+		    ($fx<  ?index ($std-length ($struct-std ?struct))))
 	 (procedure-arguments-consistency-violation __who__
 	   "expected fixnum in range for structure field as INDEX argument"
 	   ?index ?struct)))
@@ -176,7 +176,7 @@
 ;;These are both primitive functions and primitive operations.
 
 (define ($std-std std)
-  ($struct-rtd std))
+  ($struct-std std))
 
 (define ($std-name std)
   ($struct-ref std 0))
@@ -423,7 +423,7 @@
 (define* (struct-reset! {x struct?})
   ;;Reset to void all the fields of a structure.
   ;;
-  (let ((len ($struct-ref ($struct-rtd x) 1)))
+  (let ((len ($struct-ref ($struct-std x) 1)))
     (do ((i 0 ($fxadd1 i)))
 	(($fx= i len)
 	 (values))
@@ -449,37 +449,37 @@
   ;;Return  the  STD of  the  data  structure  STRU.  Notice  that  this
   ;;function works with both Vicare's structs and R6RS records.
   ;;
-  ($struct-rtd stru))
+  ($struct-std stru))
 
 (define* (struct-length {stru struct?})
   ;;Return the number of fields in the data structure STRU.  Notice that
   ;;this function works with both Vicare's structs and R6RS records.
   ;;
-  ($std-length ($struct-rtd stru)))
+  ($std-length ($struct-std stru)))
 
 (define* (struct-field-names {stru struct?})
   ;;Return a list of symbols representing the structure field names.
   ;;
-  ($std-fields ($struct-rtd stru)))
+  ($std-fields ($struct-std stru)))
 
 (define* (struct-name {stru struct?})
   ;;Return a  string representing the  name of the data  structure STRU.
   ;;Notice that this function works  with both Vicare's structs and R6RS
   ;;records.
   ;;
-  ($std-name ($struct-rtd stru)))
+  ($std-name ($struct-std stru)))
 
 (define* (struct-printer {stru struct?})
   ;;Return  the  procedure  being  the printer  function  for  the  data
   ;;structure STRU.
   ;;
-  ($std-printer ($struct-rtd stru)))
+  ($std-printer ($struct-std stru)))
 
 (define* (struct-destructor {stru struct?})
   ;;Return  false  or the  procedure  being  the  destructor  function for  the  data
   ;;structure STRU.
   ;;
-  ($std-destructor ($struct-rtd stru)))
+  ($std-destructor ($struct-std stru)))
 
 (define* (struct-ref {stru struct?} i)
   ;;Return the value of field at index I in the data structure stru.
@@ -513,8 +513,8 @@
   ;;Return true if STRU1  and STRU2 are two structures having the  same STD and equal
   ;;field values according to EQV?.
   ;;
-  (let ((std1 ($struct-rtd stru1)))
-    (and (eq? std1 ($struct-rtd stru2))
+  (let ((std1 ($struct-std stru1)))
+    (and (eq? std1 ($struct-std stru2))
 	 (let ((len ($std-length std1)))
 	   (let loop ((i 0))
 	     (or ($fx= i len)

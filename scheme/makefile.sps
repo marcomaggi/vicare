@@ -1750,9 +1750,6 @@
     ($struct-set!				$structs)
     ($struct-ref				$structs)
     ($struct-std				$structs)
-    ;;FIXME To be  removed after the next boot image  rotation; only $STRUCT-STD must
-    ;;be defined.  (Marco Maggi; Thu Jan 5, 2017)
-    ($struct-rtd				$structs)
     ($struct					$structs)
     ($make-struct				$structs)
     ($make-clean-struct				$structs)
