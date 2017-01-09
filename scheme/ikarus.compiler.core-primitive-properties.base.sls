@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -157,7 +157,7 @@
     (ikarus.compiler.compat)
     (only (vicare system $fx)
 	  $fxzero?
-	  $fxlogand
+	  $fxand
 	  $fxsub1)
     (only (vicare system $pairs)
 	  $car
@@ -412,30 +412,30 @@
   ;;Boolean.  True if the associated core primitive application can be precomputed at
   ;;compile-time when the operands are constants.
   ;;
-  (not ($fxzero? ($fxlogand ($cdr ?attr) FOLDABLE-MASK))))
+  (not ($fxzero? ($fxand ($cdr ?attr) FOLDABLE-MASK))))
 
 (define-syntax-rule (application-attributes-effect-free? ?attr)
   ;;Boolean.  True if the associated core primitive application has no side effects.
   ;;
-  (not ($fxzero? ($fxlogand ($cdr ?attr) EFFECT-FREE-MASK))))
+  (not ($fxzero? ($fxand ($cdr ?attr) EFFECT-FREE-MASK))))
 
 (define-syntax-rule (application-attributes-result-true? ?attr)
   ;;Boolean.  True if the associated  core primitive application always has non-false
   ;;as return value.
   ;;
-  (not ($fxzero? ($fxlogand ($cdr ?attr) RESULT-TRUE-MASK))))
+  (not ($fxzero? ($fxand ($cdr ?attr) RESULT-TRUE-MASK))))
 
 (define-syntax-rule (application-attributes-result-false? ?attr)
   ;;Boolean.  True if  the associated core primitive application always  has false as
   ;;return value.
   ;;
-  (not ($fxzero? ($fxlogand ($cdr ?attr) RESULT-FALSE-MASK))))
+  (not ($fxzero? ($fxand ($cdr ?attr) RESULT-FALSE-MASK))))
 
 (define-syntax-rule (application-attributes-identity? ?attr)
   ;;Boolean.  True if the associated core  primitive accepts a single argument and it
   ;;is an identity, returning its argument.
   ;;
-  (not ($fxzero? ($fxlogand ($cdr ?attr) IDENTITY-MASK))))
+  (not ($fxzero? ($fxand ($cdr ?attr) IDENTITY-MASK))))
 
 ;;; --------------------------------------------------------------------
 

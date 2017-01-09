@@ -289,7 +289,7 @@
   ;;Convert the fixnum ?HV representing the hash value  of a key into an index in the
   ;;buckets vector.
   ;;
-  ($fxlogand ?hv ($fxsub1 ($vector-length ?buckets-vector))))
+  ($fxand ?hv ($fxsub1 ($vector-length ?buckets-vector))))
 
 ;;; --------------------------------------------------------------------
 ;;; chains of tcbuckets
@@ -601,7 +601,7 @@
 	;;
 	(let* ((key  ($tcbucket-key B))
 	       (ih   (hashf key))
-	       (idx  ($fxlogand ih mask))
+	       (idx  ($fxand ih mask))
 	       (next ($tcbucket-next B)))
 	  ;;Prepend B to the chain from slot IDX.
 	  ($set-tcbucket-next! B ($vector-ref dst.vec idx))

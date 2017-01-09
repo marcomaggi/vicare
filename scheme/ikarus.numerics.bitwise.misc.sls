@@ -87,7 +87,7 @@
     ($fx+ i ($bytevector-u8-ref bv x)))
 
   (define ($fxloop x i)
-    (let ((y ($fxlogand x 255)))
+    (let ((y ($fxand x 255)))
       (if ($fx= y 0)
 	  ($fxloop ($fxsra x 8) ($fx+ i 8))
 	(byte-first-bit-set y i))))
@@ -131,24 +131,24 @@
       (let ((m0 #x15555555)
 	    (m1 #x13333333)
 	    (m2 #x0f0f0f0f))
-	(let* ((n ($fx+ ($fxlogand n m0) ($fxlogand ($fxsra n 1) m0)))
-	       (n ($fx+ ($fxlogand n m1) ($fxlogand ($fxsra n 2) m1)))
-	       (n ($fx+ ($fxlogand n m2) ($fxlogand ($fxsra n 4) m2))))
+	(let* ((n ($fx+ ($fxand n m0) ($fxand ($fxsra n 1) m0)))
+	       (n ($fx+ ($fxand n m1) ($fxand ($fxsra n 2) m1)))
+	       (n ($fx+ ($fxand n m2) ($fxand ($fxsra n 4) m2))))
 	  (fxmodulo n 255))))
      ((64)
       (let ((m0 #x0555555555555555)
 	    (m1 #x0333333333333333)
 	    (m2 #x0f0f0f0f0f0f0f0f)
 	    (m3 #x00ff00ff00ff00ff))
-	(let* ((n ($fx+ ($fxlogand n m0) ($fxlogand ($fxsra n 1) m0)))
-	       (n ($fx+ ($fxlogand n m1) ($fxlogand ($fxsra n 2) m1)))
-	       (n ($fx+ ($fxlogand n m2) ($fxlogand ($fxsra n 4) m2)))
-	       (n ($fx+ ($fxlogand n m3) ($fxlogand ($fxsra n 8) m3))))
+	(let* ((n ($fx+ ($fxand n m0) ($fxand ($fxsra n 1) m0)))
+	       (n ($fx+ ($fxand n m1) ($fxand ($fxsra n 2) m1)))
+	       (n ($fx+ ($fxand n m2) ($fxand ($fxsra n 4) m2)))
+	       (n ($fx+ ($fxand n m3) ($fxand ($fxsra n 8) m3))))
 	  (fxmodulo n 255))))))
 
   (define ($fxbitcount n)
     (if ($fx< n 0)
-	($fxlognot (pos-fxbitcount ($fxlognot n)))
+	($fxnot (pos-fxbitcount ($fxnot n)))
       (pos-fxbitcount n)))
 
   (module (bnbitcount)
@@ -160,10 +160,10 @@
 	  (bitwise-not (%poscount n ($fx- ($bignum-size n) 4) 0)))))
 
     (define (%poscount x idx c)
-      (let ((c (+ c ($fx+ (pos-fxbitcount ($fxlogor
+      (let ((c (+ c ($fx+ (pos-fxbitcount ($fxior
 					   ($fxsll ($bignum-byte-ref x ($fx+ idx 3)) 8)
 					   ($bignum-byte-ref x ($fx+ idx 2))))
-			  (pos-fxbitcount ($fxlogor
+			  (pos-fxbitcount ($fxior
 					   ($fxsll ($bignum-byte-ref x ($fxadd1 idx)) 8)
 					   ($bignum-byte-ref x idx)))))))
 	(if ($fx= idx 0)
@@ -192,7 +192,7 @@
 
   (define* (fxlength {x fixnum?})
     (let ((x^ (if ($fxnegative? x)
-		  ($fxlognot x)
+		  ($fxnot x)
 		x)))
       (case-word-size
        ((32)
@@ -202,7 +202,7 @@
 
   (define (%fxlength32 x)
     (let* ((fl  ($fixnum->flonum x))
-	   (sbe ($fxlogor ($fxsll ($flonum-u8-ref fl 0) 4)
+	   (sbe ($fxior ($fxsll ($flonum-u8-ref fl 0) 4)
 			  ($fxsra ($flonum-u8-ref fl 1) 4))))
       (if ($fx= sbe 0)
 	  0
@@ -224,7 +224,7 @@
   ;;
   (if ($fx>= i ($fxsub1 (fixnum-width)))
       ($fx< x 0)
-    (not ($fxzero? ($fxlogand ($fxsra x i) 1)))))
+    (not ($fxzero? ($fxand ($fxsra x i) 1)))))
 
 (define* (bitwise-bit-set? x i)
   (cond ((fixnum? i)
@@ -232,7 +232,7 @@
 	   (procedure-argument-violation __who__ "index must be non-negative" i))
 	 (cond ((fixnum? x)
 		(if ($fx< i (fixnum-width))
-		    ($fx= ($fxlogand ($fxsra x i) 1) 1)
+		    ($fx= ($fxand ($fxsra x i) 1) 1)
 		  ($fx< x 0)))
 	       ((bignum? x)
 		(let ((n ($bignum-size x)))
@@ -241,7 +241,7 @@
 			   (not ($bignum-positive? x)))
 			  (($bignum-positive? x)
 			   (let ((b ($bignum-byte-ref x ($fxsra i 3))))
-			     ($fx= ($fxlogand ($fxsra b ($fxlogand i 7)) 1) 1)))
+			     ($fx= ($fxand ($fxsra b ($fxand i 7)) 1) 1)))
 			  (else
 			   (= 1 (bitwise-and (bitwise-arithmetic-shift-right x i) 1)))))))
 	       (else
@@ -268,9 +268,9 @@
   (define* ($fxcopy-bit x i b)
     (case b
       ((0)
-       ($fxlogand x ($fxlognot ($fxsll 1 i))))
+       ($fxand x ($fxnot ($fxsll 1 i))))
       ((1)
-       ($fxlogor x ($fxsll 1 i)))
+       ($fxior x ($fxsll 1 i)))
       (else
        (procedure-argument-violation __who__ "invalid bit value" b))))
 
@@ -287,10 +287,10 @@
   ($fxcopy-bit-field x i j b))
 
 (define ($fxcopy-bit-field x i j b)
-  (let ((m ($fxlogxor ($fxsub1 ($fxsll 1 i))
+  (let ((m ($fxxor ($fxsub1 ($fxsll 1 i))
 		      ($fxsub1 ($fxsll 1 j)))))
-    ($fxlogor ($fxlogand m ($fxsll b i))
-	      ($fxlogand ($fxlognot m) x))))
+    ($fxior ($fxand m ($fxsll b i))
+	      ($fxand ($fxnot m) x))))
 
 ;;; --------------------------------------------------------------------
 
@@ -311,11 +311,11 @@
 
 (define ($fxrotate-bit-field x i j c w)
   (let* ((m  ($fxsll ($fxsub1 ($fxsll 1 w)) i))
-	 (x0 ($fxlogand x m))
+	 (x0 ($fxand x m))
 	 (lt ($fxsll x0 c))
 	 (rt ($fxsra x0 ($fx- w c)))
-	 (x0 ($fxlogand ($fxlogor lt rt) m)))
-    ($fxlogor x0 ($fxlogand x ($fxlognot m)))))
+	 (x0 ($fxand ($fxior lt rt) m)))
+    ($fxior x0 ($fxand x ($fxnot m)))))
 
 
 (module (fxreverse-bit-field)
@@ -441,7 +441,7 @@
   ($fxbit-field x i j))
 
 (define ($fxbit-field x i j)
-  ($fxsra ($fxlogand x ($fxsub1 ($fxsll 1 j)))
+  ($fxsra ($fxand x ($fxsub1 ($fxsll 1 j)))
 	  i))
 
 

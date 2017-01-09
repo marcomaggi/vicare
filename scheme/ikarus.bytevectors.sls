@@ -377,9 +377,9 @@
     ((_ ?op1)
      ?op1)
     ((_ ?op1 ?op2)
-     ($fxlogor ?op1 ?op2))
+     ($fxior ?op1 ?op2))
     ((_ ?op1 ?op2 . ?ops)
-     ($fxlogor ?op1 ($fixnum-ior ?op2 . ?ops)))))
+     ($fxior ?op1 ($fixnum-ior ?op2 . ?ops)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1580,7 +1580,7 @@
 ;;
 
 (define ($bytevector-u16l-ref bv index)
-  ($fxlogor
+  ($fxior
    ;; highest memory location -> most significant byte
    ($fxsll ($bytevector-u8-ref bv ($fxadd1 index)) 8)
    ;; lowest memory location -> least significant byte
@@ -1595,7 +1595,7 @@
 ;;; --------------------------------------------------------------------
 
 (define ($bytevector-u16b-ref bv index)
-  ($fxlogor
+  ($fxior
    ;; lowest memory location -> most significant byte
    ($fxsll ($bytevector-u8-ref bv index) 8)
    ;; highest memory location -> least significant byte
@@ -1610,7 +1610,7 @@
 ;;; --------------------------------------------------------------------
 
 (define ($bytevector-s16l-ref bv index)
-  ($fxlogor
+  ($fxior
    ;; highest memory location -> most significant byte
    ($fxsll ($bytevector-s8-ref bv ($fxadd1 index)) 8)
    ;; lowest memory location -> least significant byte
@@ -1625,7 +1625,7 @@
 ;;; --------------------------------------------------------------------
 
 (define ($bytevector-s16b-ref bv index)
-  ($fxlogor
+  ($fxior
    ;; lowest memory location -> most significant byte
    ($fxsll ($bytevector-s8-ref bv index) 8)
    ;; highest memory location -> least significant byte

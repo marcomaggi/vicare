@@ -121,9 +121,9 @@
     ((_ ?op1)
      ?op1)
     ((_ ?op1 ?op2)
-     ($fxlogor ?op1 ?op2))
+     ($fxior ?op1 ?op2))
     ((_ ?op1 ?op2 . ?ops)
-     ($fxlogor ?op1 (%unsafe::fxior ?op2 . ?ops)))))
+     ($fxior ?op1 (%unsafe::fxior ?op2 . ?ops)))))
 
 (define (%assert-value-is-transcoder obj who)
   (unless (transcoder? obj)
@@ -246,18 +246,18 @@
 	(assertion-violation 'native-transcoder "expected transcoder value" obj)))))
 
 (define* (transcoder-codec {x transcoder?})
-  (let ((tag ($fxlogand ($transcoder->data x) codec-mask)))
+  (let ((tag ($fxand ($transcoder->data x) codec-mask)))
     (or (%reverse-alist-lookup tag codec-alist)
 	(assertion-violation __who__ "transcoder has no codec" x))))
 
 (define* (transcoder-eol-style {x transcoder?})
-  (let ((tag ($fxlogand ($transcoder->data x) eol-style-mask)))
+  (let ((tag ($fxand ($transcoder->data x) eol-style-mask)))
     (or (%reverse-alist-lookup tag eol-style-alist)
 	(assertion-violation __who__ "transcoder has no eol-style" x))))
 
 (define* (transcoder-error-handling-mode {x transcoder?})
   (%assert-value-is-transcoder x __who__)
-  (let ((tag ($fxlogand ($transcoder->data x) error-handling-mode-mask)))
+  (let ((tag ($fxand ($transcoder->data x) error-handling-mode-mask)))
     (or (%reverse-alist-lookup tag error-handling-mode-alist)
 	(assertion-violation __who__ "transcoder has no error-handling mode" x))))
 

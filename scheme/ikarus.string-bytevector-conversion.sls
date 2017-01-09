@@ -1305,7 +1305,7 @@
 
     (define (%decode who bv bv.start endianness mode)
       (let* ((bv.len  ($bytevector-length bv))
-	     (bv.last ($fxlogand bv.len -4))
+	     (bv.last ($fxand bv.len -4))
 	     (str.len (%compute-string-length who bv bv.start bv.last 0 endianness mode))
 	     (str     (make-string str.len)))
 	(%decode-and-fill-string who bv bv.start bv.last str 0 endianness mode)))
@@ -1325,7 +1325,7 @@
 
     (define (%compute who bv bv.start endianness mode)
       (let* ((bv.len  ($bytevector-length bv))
-	     (bv.last ($fxlogand bv.len -4)))
+	     (bv.last ($fxand bv.len -4)))
 	(%compute-string-length who bv bv.start bv.last 0 endianness mode)))
 
     #| end of module |# )

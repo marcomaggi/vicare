@@ -1,6 +1,6 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Modified in 2010-2017 by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
@@ -75,7 +75,7 @@
 ;;  A bitmask used to convert a symbol's hash number into an index into the vector in
 ;;  the VEC field as follows:
 ;;
-;;    (define index ($fxlogand mask (symbol-hash symbol)))
+;;    (define index ($fxand mask (symbol-hash symbol)))
 ;;
 ;;Field name: buckets
 ;;Accessor: symbol-table-buckets TABLE
@@ -121,7 +121,7 @@
     (when (pair? x)
       (let ((sym ($car x)))
 	(intern-symbol! sym
-			($fxlogand (%compute-symbol-hash sym)
+			($fxand (%compute-symbol-hash sym)
 				(symbol-table-mask THE-SYMBOL-TABLE))
 			THE-SYMBOL-TABLE))
       (intern-car ($cdr x))))
@@ -173,7 +173,7 @@
     ;;Lookup the symbol in the symbol table:  if it is already there, return it; else
     ;;create a new entry and return the new symbol.
     ;;
-    (let* ((idx ($fxlogand (%compute-string-hash str)
+    (let* ((idx ($fxand (%compute-string-hash str)
 			(symbol-table-mask THE-SYMBOL-TABLE)))
 	   (list-of-interned-symbols ($vector-ref ($symbol-table-buckets THE-SYMBOL-TABLE) idx)))
       (lookup str idx THE-SYMBOL-TABLE list-of-interned-symbols)))
@@ -266,7 +266,7 @@
   ;;Remove the interned symbol SYM from TABLE.
   ;;
   (set-symbol-table-size! table ($fxsub1 (symbol-table-size table)))
-  (let ((idx ($fxlogand (%compute-symbol-hash sym) (symbol-table-mask table)))
+  (let ((idx ($fxand (%compute-symbol-hash sym) (symbol-table-mask table)))
 	(vec (symbol-table-buckets table)))
     (let ((ls ($vector-ref vec idx)))
       (if (eq? ($car ls) sym)
@@ -298,7 +298,7 @@
 	    (let ((a    ($car p))
 		  (rest ($cdr p)))
 	      ;;Recycle this pair by setting its cdr to the value in the vector.
-	      (let ((idx ($fxlogand (%compute-symbol-hash a) mask)))
+	      (let ((idx ($fxand (%compute-symbol-hash a) mask)))
 		($set-cdr! p ($vector-ref vec2 idx))
 		($vector-set! vec2 idx p))
 	      (insert rest))))

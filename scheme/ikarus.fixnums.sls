@@ -278,7 +278,7 @@
 (define/typed ($fxeven? {N <fixnum>})
   ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
   ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
-  (sys::$fxzero? (sys::$fxlogand N 1))
+  (sys::$fxzero? (sys::$fxand N 1))
   #;(sys::$fxeven? N))
 
 (define/typed ($fxodd? {N <fixnum>})
@@ -338,12 +338,12 @@
 			  (()
 			   ?identity)))
 		       )))
-  (define-fxbitop fxior		sys::$fxlogor	 0)
-  (define-fxbitop fxand		sys::$fxlogand	-1)
-  (define-fxbitop fxxor		sys::$fxlogxor	 0)
+  (define-fxbitop fxior		sys::$fxior	 0)
+  (define-fxbitop fxand		sys::$fxand	-1)
+  (define-fxbitop fxxor		sys::$fxxor	 0)
   #| end of LET-SYNTAX |# )
 
-(define-fx-operation/one fxnot		sys::$fxlognot)
+(define-fx-operation/one fxnot		sys::$fxnot)
 
 
 ;;;; bitwise operations
@@ -353,8 +353,8 @@
 (define-fx-operation/three fxif		$fxif)
 
 (define/typed ({$fxif <fixnum>} {x <fixnum>} {y <fixnum>} {z <fixnum>})
-  (sys::$fxlogor (sys::$fxlogand x                  y)
-		 (sys::$fxlogand (sys::$fxlognot x) z)))
+  (sys::$fxior (sys::$fxand x               y)
+	       (sys::$fxand (sys::$fxnot x) z)))
 
 ;;; --------------------------------------------------------------------
 
@@ -896,16 +896,30 @@
 
   (define-syntax define-unsafe-operation/one
     (syntax-rules ()
-      ((_ ?unsafe-who ?system-unsafe-who)
-       (define/typed (?unsafe-who {N <fixnum>})
-	 (?system-unsafe-who N)))
+      ((_ ?unsafe-who ?safe-who)
+       (define/typed ({?unsafe-who <fixnum>} {N <fixnum>})
+	 (?safe-who N)))
       ))
 
   (define-syntax define-unsafe-operation/two
     (syntax-rules ()
-      ((_ ?unsafe-who ?system-unsafe-who)
-       (define/typed (?unsafe-who {N <fixnum>} {M <fixnum>})
-	 (?system-unsafe-who N M)))
+      ((_ ?unsafe-who ?safe-who)
+       (define/typed ({?unsafe-who <fixnum>} {N <fixnum>} {M <fixnum>})
+	 (?safe-who N M)))
+      ))
+
+  (define-syntax define-unsafe-operation/two/boolean
+    (syntax-rules ()
+      ((_ ?unsafe-who ?safe-who)
+       (define/typed ({?unsafe-who <boolean>} {N <fixnum>} {M <fixnum>})
+	 (?safe-who N M)))
+      ))
+
+  (define-syntax define-unsafe-operation/multi
+    (syntax-rules ()
+      ((_ ?unsafe-who ?safe-who)
+       (define/typed ({?unsafe-who <fixnum>} {N <fixnum>} . {M* (list-of <fixnum>)})
+	 (apply ?safe-who N M*)))
       ))
 
 ;;; --------------------------------------------------------------------
@@ -921,12 +935,12 @@
     (({N <fixnum>} {M <fixnum>})
      (fx- N M)))
 
-  (define-unsafe-operation/two $fx=		fx=?)
-  (define-unsafe-operation/two $fx!=		fx!=?)
-  (define-unsafe-operation/two $fx<		fx<?)
-  (define-unsafe-operation/two $fx<=		fx<=?)
-  (define-unsafe-operation/two $fx>		fx>?)
-  (define-unsafe-operation/two $fx>=		fx>=?)
+  (define-unsafe-operation/two/boolean $fx=		fx=?)
+  (define-unsafe-operation/two/boolean $fx!=		fx!=?)
+  (define-unsafe-operation/two/boolean $fx<		fx<?)
+  (define-unsafe-operation/two/boolean $fx<=		fx<=?)
+  (define-unsafe-operation/two/boolean $fx>		fx>?)
+  (define-unsafe-operation/two/boolean $fx>=		fx>=?)
 
 ;;; --------------------------------------------------------------------
 
@@ -952,10 +966,10 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define-unsafe-operation/two $fxior		fxior)
-  (define-unsafe-operation/two $fxxor		fxxor)
-  (define-unsafe-operation/two $fxand		fxand)
-  (define-unsafe-operation/one $fxnot		fxnot)
+  (define-unsafe-operation/multi $fxior		fxior)
+  (define-unsafe-operation/multi $fxxor		fxxor)
+  (define-unsafe-operation/multi $fxand		fxand)
+  (define-unsafe-operation/one   $fxnot		fxnot)
 
 ;;; --------------------------------------------------------------------
 

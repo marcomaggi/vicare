@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014, 2015, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -293,7 +293,7 @@
    (immutable {private?		<boolean>}
 	      (lambda ({O <ipv4-address>})
 		(or ($fx= 10 (O $third))
-		    (and ($fx= 172 (O $third)) ($fx= #b00010000 ($fxlogand #b11110000 (O $second))))
+		    (and ($fx= 172 (O $third)) ($fx= #b00010000 ($fxand #b11110000 (O $second))))
 		    (and ($fx= 192 (O $third)) ($fx= 168 (O $second))))))
 
    (immutable {loopback?	<boolean>}
@@ -317,7 +317,7 @@
 		(or (and ($fx= 192 (O $third))
 			 ($fx=   0 (O $second))
 			 ($fx=   0 (O $first)))
-		    ($fx= 240 ($fxlogand #b11110000 (O $third))))))
+		    ($fx= 240 ($fxand #b11110000 (O $third))))))
 
    (immutable {test-net-1?	<boolean>}
 	      (lambda ({O <ipv4-address>})
@@ -334,7 +334,7 @@
    (immutable {benchmark-tests?	<boolean>}
 	      (lambda ({O <ipv4-address>})
 		(and ($fx= 198 (O $third))
-		     ($fx=  18 ($fxlogand #b11111110 (O $second))))))
+		     ($fx=  18 ($fxand #b11111110 (O $second))))))
 
    (immutable {test-net-2?	<boolean>}
 	      (lambda ({O <ipv4-address>})
@@ -350,7 +350,7 @@
 
    (immutable {multicast?	<boolean>}
 	      (lambda ({O <ipv4-address>})
-		($fx= 224 ($fxlogand #b11110000 (O $third)))))
+		($fx= 224 ($fxand #b11110000 (O $third)))))
 
    (immutable {limited-broadcast?	<boolean>}
 	      (lambda ({O <ipv4-address>})

@@ -5827,11 +5827,11 @@
 		       s)
 		      (($fx< k 8)
 		       (loop i ($fxadd1 j) ($fx+ k 8)
-			     ($fxlogor b ($fxsll ($bignum-byte-ref x j) k))))
+			     ($fxior b ($fxsll ($bignum-byte-ref x j) k))))
 		      (else
 		       (string-set! s ($fx- n i)
 				    (string-ref string-map
-						($fxlogand mask b)))
+						($fxand mask b)))
 		       (loop ($fxadd1 i) j ($fx- k shift) ($fxsra b shift)))))))))
 
       #| end of module: bignum->power-string |# )
@@ -8249,7 +8249,7 @@
        (procedure-argument-violation __who__ "expected exact integer as argument" x))))
 
   (define ($bitwise-not-fixnum x)
-    ($fxlognot x))
+    ($fxnot x))
 
   (define ($bitwise-not-bignum x)
     (foreign-call "ikrt_bnlognot" x))
@@ -8288,7 +8288,7 @@
 ;;; --------------------------------------------------------------------
 
   (define ($bitwise-and-fixnum-fixnum x y)
-    ($fxlogand x y))
+    ($fxand x y))
 
   (define ($bitwise-and-fixnum-bignum x y)
     (foreign-call "ikrt_fxbnlogand" x y))
@@ -8335,7 +8335,7 @@
 ;;; --------------------------------------------------------------------
 
   (define ($bitwise-ior-fixnum-fixnum x y)
-    ($fxlogor x y))
+    ($fxior x y))
 
   (define ($bitwise-ior-fixnum-bignum x y)
     (foreign-call "ikrt_fxbnlogor" x y))
@@ -8382,13 +8382,13 @@
 ;;; --------------------------------------------------------------------
 
   (define ($bitwise-xor-fixnum-fixnum x y)
-    ($fxlogxor x y))
+    ($fxxor x y))
 
   (define ($bitwise-xor-fixnum-bignum x y)
     (let* ((D  ($fx- (fixnum-width) 1))
 	   (y0 (bitwise-and y (greatest-fixnum)))
 	   (y1 (bitwise-arithmetic-shift-right y D)))
-      (bitwise-ior ($fxlogand ($fxlogxor x y0) (greatest-fixnum))
+      (bitwise-ior ($fxand ($fxxor x y0) (greatest-fixnum))
 		   (bitwise-arithmetic-shift-left
 		    (bitwise-arithmetic-shift-right (if ($fx>= x 0) y (bitwise-not y))
 						    D)
@@ -8405,7 +8405,7 @@
 	   (y0 (bitwise-and y (greatest-fixnum)))
 	   (x1 (bitwise-arithmetic-shift-right x D))
 	   (y1 (bitwise-arithmetic-shift-right y D)))
-      (bitwise-ior ($fxlogand ($fxlogxor x0 y0) (greatest-fixnum))
+      (bitwise-ior ($fxand ($fxxor x0 y0) (greatest-fixnum))
 		   (bitwise-arithmetic-shift-left (binary-bitwise-xor x1 y1)
 						  D))))
 

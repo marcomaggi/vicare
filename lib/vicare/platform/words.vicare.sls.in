@@ -11,7 +11,7 @@
 ;;;	itself, syntaxes whose  expansion reference only bindings  imported by Vicare
 ;;;	itself.
 ;;;
-;;;Copyright (C) 2011-2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013, 2015, 2016, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -844,7 +844,7 @@
 ;;
 ;;so to test if an index is aligned to a multiple of 2 we just do:
 ;;
-;;   ($fxzero? ($fxlogand index #b1))
+;;   ($fxzero? ($fxand index #b1))
 ;;
 ;;* If an index is a multiple  of 4 its least significant 2 bits are set
 ;;to zero:
@@ -857,7 +857,7 @@
 ;;
 ;;so to test if an index is aligned to a multiple of 4 we just do:
 ;;
-;;   ($fxzero? ($fxlogand index #b11))
+;;   ($fxzero? ($fxand index #b11))
 ;;
 ;;* If an index is a multiple  of 8 its least significant 3 bits are set
 ;;to zero:
@@ -870,7 +870,7 @@
 ;;
 ;;so to test if an index is aligned to a multiple of 8 we just do:
 ;;
-;;   ($fxzero? ($fxlogand index #b111))
+;;   ($fxzero? ($fxand index #b111))
 ;;
 ;;Notice that:
 ;;
@@ -879,13 +879,13 @@
 ;;
 
 (define-inline (fixnum-aligned-to-2? N)
-  ($fxzero? ($fxlogand #b1 N)))
+  ($fxzero? ($fxand #b1 N)))
 
 (define-inline (fixnum-aligned-to-4? N)
-  ($fxzero? ($fxlogand #b11 N)))
+  ($fxzero? ($fxand #b11 N)))
 
 (define-inline (fixnum-aligned-to-8? N)
-  ($fxzero? ($fxlogand #b111 N)))
+  ($fxzero? ($fxand #b111 N)))
 
 (define-inline (fixnum-aligned-to? N alignment)
   ($fxzero? (fxmod N alignment)))

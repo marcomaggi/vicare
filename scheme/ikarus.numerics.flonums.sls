@@ -242,14 +242,14 @@
 (define* (flonum-parts {x flonum?})
   (receive (b0 b1 b2 b3 b4 b5 b6 b7)
       ($flonum-bytes x)
-    (values ($fxzero? ($fxlogand b0 128))
-	    (+ ($fxsll ($fxlogand b0 127) 4)
+    (values ($fxzero? ($fxand b0 128))
+	    (+ ($fxsll ($fxand b0 127) 4)
 	       ($fxsra b1 4))
 	    (+ (+ b7 ($fxsll b6 8) ($fxsll b5 16))
 	       (* (+ b4
 		     ($fxsll b3 8)
 		     ($fxsll b2 16)
-		     ($fxsll ($fxlogand b1 #b1111) 24))
+		     ($fxsll ($fxand b1 #b1111) 24))
 		  (expt 2 24))))))
 
 
@@ -261,7 +261,7 @@
 
   (define ($flround fl)
     (let* ((sbe ($flonum-sbe fl))	;this is a fixnum
-	   (be  ($fxlogand sbe #x7FF)))	;this is a fixnum
+	   (be  ($fxand sbe #x7FF)))	;this is a fixnum
       (if ($fx>= be 1075)
 	  ;;Nans, infinities, magnitude large enough to be an integer.
 	  fl
@@ -410,18 +410,18 @@
 (define-fl-operation/one flnan?		$flnan?)
 
 (define ($flfinite? x)
-  (let ((be ($fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
+  (let ((be ($fxand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
     (not ($fx= be 2047))))
 
 (module ($flinfinite? $flnan?)
 
   (define ($flinfinite? x)
-    (let ((be ($fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
+    (let ((be ($fxand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
       (and ($fx= be 2047) ;nans and infs
 	   ($zero-m? x))))
 
   (define ($flnan? x)
-    (let ((be ($fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
+    (let ((be ($fxand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
       (and ($fx= be 2047) ;;; nans and infs
 	   (not ($zero-m? x)))))
 
@@ -432,7 +432,7 @@
 	 ($fxzero? ($flonum-u8-ref f 4))
 	 ($fxzero? ($flonum-u8-ref f 3))
 	 ($fxzero? ($flonum-u8-ref f 2))
-	 ($fxzero? ($fxlogand ($flonum-u8-ref f 1) #b1111))))
+	 ($fxzero? ($fxand ($flonum-u8-ref f 1) #b1111))))
 
   #| end of module |# )
 
@@ -443,7 +443,7 @@
 (define-fl-operation/one flzero?/negative $flzero?/negative)
 
 (define ($flzero? x)
-  (let ((be ($fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
+  (let ((be ($fxand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
     (and ($fx= be 0) ;;; denormalized double, only +/-0.0 is integer
 	 (and ($fx= ($flonum-u8-ref x 7) 0)
 	      ($fx= ($flonum-u8-ref x 6) 0)
@@ -455,11 +455,11 @@
 
 (define ($flzero?/positive x)
   (and ($flzero? x)
-       ($fxzero? ($fxlogand ($flonum-u8-ref x 0) 128))))
+       ($fxzero? ($fxand ($flonum-u8-ref x 0) 128))))
 
 (define ($flzero?/negative x)
   (and ($flzero? x)
-       (not ($fxzero? ($fxlogand ($flonum-u8-ref x 0) 128)))))
+       (not ($fxzero? ($fxand ($flonum-u8-ref x 0) 128)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -522,12 +522,12 @@
 ;;; --------------------------------------------------------------------
 
 (define ($flonum-rational? x)
-  (let ((be ($fxlogand ($flonum-sbe x)
+  (let ((be ($fxand ($flonum-sbe x)
 		       ($fxsub1 ($fxsll 1 11)))))
     ($fx< be 2047)))
 
 (define ($flonum-integer? x)
-  (let ((be ($fxlogand ($flonum-sbe x)
+  (let ((be ($fxand ($flonum-sbe x)
 		       ($fxsub1 ($fxsll 1 11)))))
     (cond (($fx= be 2047) ;nans and infs
 	   #f)
@@ -602,7 +602,7 @@
 
   (define ($flonum->maybe-exact x)
     (let* ((sbe ($flonum-sbe x))
-	   (be  ($fxlogand sbe #x7FF)))
+	   (be  ($fxand sbe #x7FF)))
       (cond (($fx= be 2047) ;nans/infs
 	     #f)
 	    (($fx>= be 1075) ;magnitude large enough to be an integer
@@ -631,14 +631,14 @@
 		      ($fx+ ($fxsll ($flonum-u8-ref x 3) 8)
 			    ($fxsll ($flonum-u8-ref x 2) 16))))
 	    (m2 (let ((b1 ($flonum-u8-ref x 1)))
-		  (if (and ($fx= ($fxlogand b0 #x7F) 0)
+		  (if (and ($fx= ($fxand b0 #x7F) 0)
 			   ($fx= ($fxsra b1 4) 0))
-		      ($fxlogand b1 #xF)
-		    ($fxlogor ($fxlogand b1 #xF) #x10)))))
-	(if ($fx= 0 ($fxlogand #x80 b0))
-	    (+ (bitwise-arithmetic-shift-left ($fxlogor m1 ($fxsll m2 24)) 24)
+		      ($fxand b1 #xF)
+		    ($fxior ($fxand b1 #xF) #x10)))))
+	(if ($fx= 0 ($fxand #x80 b0))
+	    (+ (bitwise-arithmetic-shift-left ($fxior m1 ($fxsll m2 24)) 24)
 	       m0)
-	  (+ (bitwise-arithmetic-shift-left ($fx- 0 ($fxlogor m1 ($fxsll m2 24))) 24)
+	  (+ (bitwise-arithmetic-shift-left ($fx- 0 ($fxior m1 ($fxsll m2 24))) 24)
 	     ($fx- 0 m0))))))
 
   #| end of module: $FLONUM->MAYBE-EXACT |# )

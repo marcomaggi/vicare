@@ -657,10 +657,7 @@
     (vicare system structs)
     (only (ikarus.options)
 	  strict-r6rs)
-    (except (vicare system $fx)
-	    $fxand
-	    $fxior
-	    $fxxor)
+    (vicare system $fx)
     (vicare system $chars)
     (vicare system $pairs)
     (vicare system $structs)
@@ -781,33 +778,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax $fxand
-  (syntax-rules ()
-    ((_ ?op1)
-     ?op1)
-    ((_ ?op1 ?op2)
-     ($fxlogand ?op1 ?op2))
-    ((_ ?op1 ?op2 . ?ops)
-     ($fxlogand ?op1 ($fxand ?op2 . ?ops)))))
-
-(define-syntax $fxior
-  (syntax-rules ()
-    ((_ ?op1)
-     ?op1)
-    ((_ ?op1 ?op2)
-     ($fxlogor ?op1 ?op2))
-    ((_ ?op1 ?op2 . ?ops)
-     ($fxlogor ?op1 ($fxior ?op2 . ?ops)))))
-
-(define-syntax $fxxor
-  (syntax-rules ()
-    ((_ ?op1)
-     ?op1)
-    ((_ ?op1 ?op2)
-     ($fxlogxor ?op1 ?op2))
-    ((_ ?op1 ?op2 . ?ops)
-     ($fxlogxor ?op1 ($fxxor ?op2 . ?ops)))))
-
 (define-syntax debug-assert
   ;;This is meant to expand to nothing when debugging is turned off.
   ;;
@@ -818,6 +788,7 @@
     (syntax-rules ()
       ((_ ?pred)
        (values)))))
+
 ;;; --------------------------------------------------------------------
 
 (define-inline ($char-is-single-char-line-ending? ch)

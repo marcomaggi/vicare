@@ -9,7 +9,7 @@
 ;;;	This library exports only  syntaxes, so it can be used  also in the internals
 ;;;	of Vicare's source code.
 ;;;
-;;;Copyright (C) 2011, 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2013, 2015, 2016, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -182,18 +182,18 @@
     ((_ ?op1)
      ?op1)
     ((_ ?op1 ?op2)
-     ($fxlogand ?op1 ?op2))
+     ($fxand ?op1 ?op2))
     ((_ ?op1 ?op2 . ?ops)
-     ($fxlogand ?op1 ($fx-logand ?op2 . ?ops)))))
+     ($fxand ?op1 ($fx-logand ?op2 . ?ops)))))
 
 (define-syntax $fx-logor
   (syntax-rules ()
     ((_ ?op1)
      ?op1)
     ((_ ?op1 ?op2)
-     ($fxlogor ?op1 ?op2))
+     ($fxior ?op1 ?op2))
     ((_ ?op1 ?op2 . ?ops)
-     ($fxlogor ?op1 ($fx-logor ?op2 . ?ops)))))
+     ($fxior ?op1 ($fx-logor ?op2 . ?ops)))))
 
 
 ;;;; UTF-8 scheme

@@ -2172,38 +2172,6 @@
    ((E x)
     (nop)))
 
- ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Sun Dec 11,
- ;;2016)
- ;;
- (define-core-primitive-operation $fxlognot unsafe
-   ((V x)
-    (cogen-value-$fxlogxor x (K -1)))
-   ((P x)
-    (K #t))
-   ((E x)
-    (nop)))
-
-;;;
-
- ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Sun Dec 11,
- ;;2016)
- ;;
- (define-core-primitive-operation $fxlogand unsafe
-   ((V x)
-    (V-simple-operand x))
-   ((V x y)
-    (asm 'logand (V-simple-operand x) (V-simple-operand y)))
-   ((V x y . arg*)
-    (with-tmp ((t1 (asm 'logand (V-simple-operand x) (V-simple-operand y))))
-      (let recur ((tx   t1)
-		  (arg* arg*))
-	(if (pair? arg*)
-	    (with-tmp ((t2 (asm 'logand tx (V-simple-operand (car arg*)))))
-	      (recur t2 (cdr arg*)))
-	  tx))))
-   ((P x . y*) (K #t))
-   ((E x . y*) (nop)))
-
  (define-core-primitive-operation $fxand unsafe
    ((V x)
     (V-simple-operand x))
@@ -2215,34 +2183,6 @@
 		  (arg* arg*))
 	(if (pair? arg*)
 	    (with-tmp ((t2 (asm 'logand tx (V-simple-operand (car arg*)))))
-	      (recur t2 (cdr arg*)))
-	  tx))))
-   ((P x . y*) (K #t))
-   ((E x . y*) (nop)))
-
- ;;This is the old version with two operands.
- ;;
- ;; (define-core-primitive-operation $fxand unsafe
- ;;   ((V x y) (asm 'logand (V-simple-operand x) (V-simple-operand y)))
- ;;   ((P x y) (K #t))
- ;;   ((E x y) (nop)))
-
-;;;
-
- ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Sun Dec 11,
- ;;2016)
- ;;
- (define-core-primitive-operation $fxlogor unsafe
-   ((V x)
-    (V-simple-operand x))
-   ((V x y)
-    (asm 'logor (V-simple-operand x) (V-simple-operand y)))
-   ((V x y . arg*)
-    (with-tmp ((t1 (asm 'logor (V-simple-operand x) (V-simple-operand y))))
-      (let recur ((tx   t1)
-		  (arg* arg*))
-	(if (pair? arg*)
-	    (with-tmp ((t2 (asm 'logor tx (V-simple-operand (car arg*)))))
 	      (recur t2 (cdr arg*)))
 	  tx))))
    ((P x . y*) (K #t))
@@ -2263,33 +2203,6 @@
 	  tx))))
    ((P x . y*) (K #t))
    ((E x . y*) (nop)))
- ;;This is the old version with two operands.
- ;;
- ;; (define-core-primitive-operation $fxior unsafe
- ;;   ((V x y) (asm 'logor (V-simple-operand x) (V-simple-operand y)))
- ;;   ((P x y) (K #t))
- ;;   ((E x y) (nop)))
-
-;;;
-
- ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Sun Dec 11,
- ;;2016)
- ;;
- (define-core-primitive-operation $fxlogxor unsafe
-   ((V x)
-    (V-simple-operand x))
-   ((V x y)
-    (asm 'logxor (V-simple-operand x) (V-simple-operand y)))
-   ((V x y . arg*)
-    (with-tmp ((t1 (asm 'logxor (V-simple-operand x) (V-simple-operand y))))
-      (let recur ((tx   t1)
-		  (arg* arg*))
-	(if (pair? arg*)
-	    (with-tmp ((t2 (asm 'logxor tx (V-simple-operand (car arg*)))))
-	      (recur t2 (cdr arg*)))
-	  tx))))
-   ((P x . y*) (K #t))
-   ((E x . y*) (nop)))
 
  (define-core-primitive-operation $fxxor unsafe
    ((V x)
@@ -2306,15 +2219,6 @@
 	  tx))))
    ((P x . y*) (K #t))
    ((E x . y*) (nop)))
-
- ;; (define-core-primitive-operation $fxxor unsafe
- ;;   ((V x y)
- ;;    (asm 'logxor (V-simple-operand x) (V-simple-operand y)))
- ;;   ;; ((V x y)
- ;;   ;;  (with-tmp ((tx (V-simple-operand x)))
- ;;   ;;    (asm 'logxor tx (V-simple-operand y))))
- ;;   ((P x y) (K #t))
- ;;   ((E x y) (nop)))
 
 ;;;
 

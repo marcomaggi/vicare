@@ -9,7 +9,7 @@
 ;;;	The  code  in   this  library  is  derived  from   the  code  in
 ;;;	"ikarus.symbol-table.sls".
 ;;;
-;;;Copyright (C) 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2016, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -99,7 +99,7 @@
 ;;  A bitmask used to convert a keys' hash number into an index into the
 ;;  vector of buckets as follows:
 ;;
-;;    (define index ($fxlogand mask (hash-function object)))
+;;    (define index ($fxand mask (hash-function object)))
 ;;
 ;;  The mask is always the number of buckets minus 1.
 ;;
