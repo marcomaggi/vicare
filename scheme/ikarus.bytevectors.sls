@@ -372,17 +372,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax $fixnum-ior
-  (syntax-rules ()
-    ((_ ?op1)
-     ?op1)
-    ((_ ?op1 ?op2)
-     ($fxior ?op1 ?op2))
-    ((_ ?op1 ?op2 . ?ops)
-     ($fxior ?op1 ($fixnum-ior ?op2 . ?ops)))))
-
-;;; --------------------------------------------------------------------
-
 (define (bytevector-byte-filler? obj)
   ;;Return  #t if  OBJ  is valid  as byte  filler  for new  bytevectors;
   ;;otherwise return #f.
@@ -1697,7 +1686,7 @@
 
 (define ($bytevector-u32b-ref bv index)
   (+ (sll ($bytevector-u8-ref bv index) 24)
-     ($fixnum-ior
+     ($fxior
       ($fxsll ($bytevector-u8-ref bv ($fxadd1 index)) 16)
       ($fxsll ($bytevector-u8-ref bv ($fx+ index 2))  8)
       ($bytevector-u8-ref bv ($fx+ index 3)))))
@@ -1714,7 +1703,7 @@
 
 (define ($bytevector-u32l-ref bv index)
   (+ (sll ($bytevector-u8-ref bv ($fx+ index 3)) 24)
-     ($fixnum-ior
+     ($fxior
       ($fxsll ($bytevector-u8-ref bv ($fx+ index 2)) 16)
       ($fxsll ($bytevector-u8-ref bv ($fxadd1 index)) 8)
       ($bytevector-u8-ref bv index))))
@@ -1731,7 +1720,7 @@
 
 (define ($bytevector-s32b-ref bv index)
   (+ (sll ($bytevector-s8-ref bv index) 24)
-     ($fixnum-ior
+     ($fxior
       ($fxsll ($bytevector-u8-ref bv ($fxadd1 index))   16)
       ($fxsll ($bytevector-u8-ref bv ($fx+    index 2))  8)
       ($bytevector-u8-ref bv ($fx+ index 3)))))
@@ -1748,7 +1737,7 @@
 
 (define ($bytevector-s32l-ref bv index)
   (+ (sll ($bytevector-s8-ref bv ($fx+ index 3)) 24)
-     ($fixnum-ior
+     ($fxior
       ($fxsll ($bytevector-u8-ref bv ($fx+    index 2)) 16)
       ($fxsll ($bytevector-u8-ref bv ($fxadd1 index))    8)
       ($bytevector-u8-ref bv index))))

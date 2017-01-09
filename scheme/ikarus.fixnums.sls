@@ -249,7 +249,6 @@
 
 (define (octet-fixnum? obj)
   (and (fixnum? obj)
-       #;($fxnonnegative? obj)
        (sys::$fx>= obj 0)
        (sys::$fx<= obj 255)))
 
@@ -258,7 +257,6 @@
 
 (define (positive-octet-fixnum? obj)
   (and (fixnum? obj)
-       #;($fxpositive? obj)
        (sys::$fx>  obj 0)
        (sys::$fx<= obj +255)))
 
@@ -901,6 +899,13 @@
 	 (?safe-who N)))
       ))
 
+  (define-syntax define-unsafe-operation/one/boolean
+    (syntax-rules ()
+      ((_ ?unsafe-who ?safe-who)
+       (define/typed ({?unsafe-who <boolean>} {N <fixnum>})
+	 (?safe-who N)))
+      ))
+
   (define-syntax define-unsafe-operation/two
     (syntax-rules ()
       ((_ ?unsafe-who ?safe-who)
@@ -944,25 +949,11 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define/typed ($fxzero? {N <fixnum>})
-    (eq? N 0)
-  #;(sys::$fxzero? N))
-
-  (define/typed ($fxpositive? {N <fixnum>})
-    (sys::$fx> N 0)
-  #;(sys::$fxpositive? N))
-
-  (define/typed ($fxnegative? {N <fixnum>})
-    (sys::$fx< N 0)
-  #;(sys::$fxnegative? N))
-
-  (define/typed ($fxnonpositive? {N <fixnum>})
-    (sys::$fx<= N 0)
-  #;(sys::$fxnonpositive? N))
-
-  (define/typed ($fxnonnegative? {N <fixnum>})
-    (sys::$fx>= N 0)
-  #;(sys::$fxnonnegative? N))
+  (define-unsafe-operation/one/boolean $fxzero?		fxzero?)
+  (define-unsafe-operation/one/boolean $fxpositive?	fxpositive?)
+  (define-unsafe-operation/one/boolean $fxnegative?	fxnegative?)
+  (define-unsafe-operation/one/boolean $fxnonpositive?	fxnonpositive?)
+  (define-unsafe-operation/one/boolean $fxnonnegative?	fxnonnegative?)
 
 ;;; --------------------------------------------------------------------
 
