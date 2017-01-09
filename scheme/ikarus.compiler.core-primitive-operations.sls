@@ -1994,23 +1994,21 @@
    ((E x)
     (nop)))
 
- ;;FIXME Include and test this for inclusion  in the code.  (Marco Maggi; Mon Dec 12,
- ;;2016)
- ;;
- ;; (define-core-primitive-operation $fxeven? unsafe
- ;;   ((P x)
- ;;    (asm '= (asm 'logand (V-simple-operand x) (K 1)) (K 0)))
- ;;   ((E x)
- ;;    (nop)))
+ (define-core-primitive-operation $fxeven? unsafe
+   ((P x)
+    ;;Is the least significant bit of the fixnum's payload equal to zero?
+    (with-tmp ((bits (asm 'logand (V-simple-operand x) (K (sll 1 fx-shift)))))
+      (asm '= bits (K 0))))
+   ((E x)
+    (nop)))
 
- ;;FIXME Include and test this for inclusion  in the code.  (Marco Maggi; Mon Dec 12,
- ;;2016)
- ;;
- ;; (define-core-primitive-operation $fxodd? unsafe
- ;;   ((P x)
- ;;    (asm '= (asm 'logand (V-simple-operand x) (K 1)) (K 1)))
- ;;   ((E x)
- ;;    (nop)))
+ (define-core-primitive-operation $fxodd? unsafe
+   ((P x)
+    ;;Is the least significant bit of the fixnum's payload different from zero?
+    (with-tmp ((bits (asm 'logand (V-simple-operand x) (K (sll 1 fx-shift)))))
+      (asm '!= bits (K 0))))
+   ((E x)
+    (nop)))
 
 ;;; --------------------------------------------------------------------
 

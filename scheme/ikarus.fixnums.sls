@@ -71,10 +71,7 @@
     $fxremainder		$fxmodulo
     $fxquotient
     $fxabs			$fxsign
-
-    $fxmax			$fxmin
-
-    $fxeven?			$fxodd?
+    $fxif
 
     $fxdiv			$fxdiv0
     $fxmod			$fxmod0
@@ -235,21 +232,19 @@
 
 (define (positive-byte-fixnum? obj)
   (and (fixnum? obj)
-       #;($fxpositive? obj)
-       (sys::$fx>  obj 0)
+       (sys::$fxpositive? obj)
        (sys::$fx<= obj +127)))
 
 (define (negative-byte-fixnum? obj)
   (and (fixnum? obj)
-       (sys::$fx>= obj -128)
-       (sys::$fx<  obj 0)
-       #;($fxnegative? obj)))
+       (sys::$fxnegative? obj)
+       (sys::$fx>= obj -128)))
 
 ;;; --------------------------------------------------------------------
 
 (define (octet-fixnum? obj)
   (and (fixnum? obj)
-       (sys::$fx>= obj 0)
+       (sys::$fxnonnegative? obj)
        (sys::$fx<= obj 255)))
 
 (define (zero-octet-fixnum? obj)
@@ -257,7 +252,7 @@
 
 (define (positive-octet-fixnum? obj)
   (and (fixnum? obj)
-       (sys::$fx>  obj 0)
+       (sys::$fxpositive? obj)
        (sys::$fx<= obj +255)))
 
 ;;; --------------------------------------------------------------------
@@ -270,20 +265,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-fx-operation/one fxeven?	$fxeven?)
-(define-fx-operation/one fxodd?		$fxodd?)
-
-(define/typed ($fxeven? {N <fixnum>})
-  ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
-  ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
-  (sys::$fxzero? (sys::$fxand N 1))
-  #;(sys::$fxeven? N))
-
-(define/typed ($fxodd? {N <fixnum>})
-  ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
-  ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
-  (not ($fxeven? N))
-  #;(sys::$fxodd? N))
+(define-fx-operation/one fxeven?	sys::$fxeven?)
+(define-fx-operation/one fxodd?		sys::$fxodd?)
 
 ;;; --------------------------------------------------------------------
 
@@ -351,6 +334,8 @@
 (define-fx-operation/three fxif		$fxif)
 
 (define/typed ({$fxif <fixnum>} {x <fixnum>} {y <fixnum>} {z <fixnum>})
+  ;;FIXME Should  this become a proper  core primitive operation?  (Marco  Maggi; Mon
+  ;;Jan 9, 2017)
   (sys::$fxior (sys::$fxand x               y)
 	       (sys::$fxand (sys::$fxnot x) z)))
 
@@ -517,20 +502,8 @@
 
 ;;;; min max
 
-(define-min/max-comparison fxmax $fxmax fixnum?)
-(define-min/max-comparison fxmin $fxmin fixnum?)
-
-(define/typed ($fxmin {fx1 <fixnum>} {fx2 <fixnum>})
-  ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
-  ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
-  (if (sys::$fx< fx1 fx2) fx1 fx2)
-  #;(sys::$fxmax fx1 fx2))
-
-(define/typed ($fxmax {fx1 <fixnum>} {fx2 <fixnum>})
-  ;;FIXME  To be  converted to  primitive  operation use  after the  next boot  image
-  ;;rotation.  (Marco Maggi; Sun Dec 11, 2016)
-  (if (sys::$fx< fx1 fx2) fx2 fx1)
-  #;(sys::$fxmax fx1 fx2))
+(define-min/max-comparison fxmax sys::$fxmax fixnum?)
+(define-min/max-comparison fxmin sys::$fxmin fixnum?)
 
 
 (define ({fxquotient <fixnum>} {x <fixnum>} {y <non-zero-fixnum>})
@@ -888,6 +861,8 @@
     $fxzero?
     $fxpositive?	$fxnegative?
     $fxnonpositive?	$fxnonnegative?
+    $fxmax		$fxmin
+    $fxeven?		$fxodd?
     #| end of export |# )
   (import (vicare)
     (prefix (vicare system $fx) sys::))
@@ -954,6 +929,30 @@
   (define-unsafe-operation/one/boolean $fxnegative?	fxnegative?)
   (define-unsafe-operation/one/boolean $fxnonpositive?	fxnonpositive?)
   (define-unsafe-operation/one/boolean $fxnonnegative?	fxnonnegative?)
+
+  (define/typed ($fxmin {fx1 <fixnum>} {fx2 <fixnum>})
+    ;;FIXME At  the next  boot image  rotation this function  must use  the primitive
+    ;;operation.  (Marco Maggi; Mon Jan 9, 2017)
+    (if (sys::$fx< fx1 fx2) fx1 fx2)
+    #;(sys::$fxmax fx1 fx2))
+
+  (define/typed ($fxmax {fx1 <fixnum>} {fx2 <fixnum>})
+    ;;FIXME At  the next  boot image  rotation this function  must use  the primitive
+    ;;operation.  (Marco Maggi; Mon Jan 9, 2017)
+    (if (sys::$fx< fx1 fx2) fx2 fx1)
+    #;(sys::$fxmax fx1 fx2))
+
+  (define/typed ($fxeven? {N <fixnum>})
+    ;;FIXME At  the next  boot image  rotation this function  must use  the primitive
+    ;;operation.  (Marco Maggi; Mon Jan 9, 2017)
+    (sys::$fxzero? (sys::$fxand N 1))
+    #;(sys::$fxeven? N))
+
+  (define/typed ($fxodd? {N <fixnum>})
+    ;;FIXME At  the next  boot image  rotation this function  must use  the primitive
+    ;;operation.  (Marco Maggi; Mon Jan 9, 2017)
+    (not ($fxeven? N))
+    #;(sys::$fxodd? N))
 
 ;;; --------------------------------------------------------------------
 
