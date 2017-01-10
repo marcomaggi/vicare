@@ -1,4 +1,4 @@
-;;;Copyright (c) 2010-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -493,7 +493,7 @@
     (receive (import-spec* body* option* foreign-library*)
 	(%parse-top-level-program program-form*)
       (let ((foreign-library*  (%parse-foreign-library* foreign-library*)))
-	(map foreign::dynamically-load-shared-object-from-identifier foreign-library*)
+	(for-each foreign::dynamically-load-shared-object-from-identifier foreign-library*)
 	(receive (import-spec* invoke-lib* visit-lib* invoke-code visit-env export-subst global-env typed-locs)
 	    (let ((option* (%parse-program-options option*))
 		  (mixed-definitions-and-expressions? #t))
@@ -753,7 +753,7 @@
 	     (option*		(%parse-library-options libopt*))
 	     (foreign-library*	(%parse-foreign-library* foreign-library*))
 	     (stale-clt		(%make-stale-collector)))
-	(map foreign::dynamically-load-shared-object-from-identifier foreign-library*)
+	(for-each foreign::dynamically-load-shared-object-from-identifier foreign-library*)
 	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-env export-subst global-env typed-locs)
 	    (parametrise ((stale-when-collector    stale-clt))
 	      (let ((mixed-definitions-and-expressions? #f))
