@@ -35,7 +35,7 @@
 
 @c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
 @c list of copyright years.
-@set COPYRIGHT_YEARS            2016
+@set COPYRIGHT_YEARS            2016-2017
 
 
 @set TARBALLURL                 @url{https://bitbucket.org/marcomaggi/vicare-scheme/downloads}
