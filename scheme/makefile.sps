@@ -6924,7 +6924,8 @@
 ;;;; do it
 
 ;;Setting this variable  causes the compiler libraries to configure  themselves to be
-;;part of a boot image.
+;;part of a boot  image.  We must do it here, after the  imported libraries have been
+;;loaded; so we cannot do it from the Makefile.
 ;;
 (foreign-call "ikrt_posix_setenv"
 	      #ve(ascii "BUILDING_FOR_INCLUSION_IN_BOOT_IMAGE")

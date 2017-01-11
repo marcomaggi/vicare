@@ -11,10 +11,10 @@ fi
 
 ../configure \
     --enable-maintainer-mode                    \
-    --config-cache                              \
-    --cache-file=../config.cache-bare           \
     --prefix="${prefix}"                        \
     --libdir="${libdir}"                        \
+    --config-cache                              \
+    --cache-file=./config.cache-bare		\
     --disable-binfmt                            \
     --disable-time-tests                        \
     --disable-posix                             \
@@ -22,9 +22,8 @@ fi
     --disable-linux                             \
     --without-pthread                           \
     --without-libffi                            \
-    --without-libiconv                          \
     --without-readline                          \
-    --without-cre2                              \
+    --without-libiconv                          \
     CFLAGS='-O3 -pedantic'			\
     "$@"
 

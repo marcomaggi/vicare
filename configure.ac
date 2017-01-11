@@ -361,7 +361,7 @@ AS_IF([test "x$VICARE_HAVE_STRUCT_TM" = xyes],
           [],
           [VICARE_INCLUDES])])
 
-AC_CHECK_FUNCS([getenv])
+AC_CHECK_FUNCS([getenv setenv])
 AC_CHECK_DECLS([environ])
 AC_CHECK_FUNCS([sigaltstack sigemptyset sigaddset sigfillset sigprocmask sigaction])
 AC_CHECK_TYPES([struct timespec])
@@ -437,7 +437,7 @@ VICARE_CHECK_STRUCT_STAT_FIELD([ST_CTIM_TV_NSEC],[st_ctim.tv_nsec])
 dnl --------------------------------------------------------------------
 
 AM_COND_IF([WANT_POSIX],[
-  AC_CHECK_FUNCS([setenv unsetenv])
+  AC_CHECK_FUNCS([unsetenv])
   AC_CHECK_FUNCS([getpid getppid])
   AC_CHECK_FUNCS([system fork execv execve execvp])
   AC_CHECK_FUNCS([waitpid wait])
