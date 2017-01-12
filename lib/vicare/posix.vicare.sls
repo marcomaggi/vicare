@@ -1,5 +1,5 @@
 ;;;Vicare Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -835,41 +835,41 @@
 
 ;;;; h_errno handling
 
-(define (h_errno->string negated-h_errno-code)
-  ;;Convert   an   h_errno   code   as  represented   by   the   (vicare
-  ;;platform constants) library  into a string  representing the h_errno
-  ;;code symbol.
+(define (h_errno->string {negated-h_errno-code <fixnum>})
+  ;;Convert  an "h_errno"  code as  represented  by the  (vicare platform  constants)
+  ;;library into a string representing the h_errno code symbol.
   ;;
-  (define who 'h_errno->string)
-  (with-arguments-validation (who)
-      ((fixnum negated-h_errno-code))
-    (let ((h_errno-code ($fx- 0 negated-h_errno-code)))
-      (and ($fx> h_errno-code 0)
-	   ($fx< h_errno-code (vector-length H_ERRNO-VECTOR))
-	   (vector-ref H_ERRNO-VECTOR h_errno-code)))))
+  (let ((h_errno-code ($fx- 0 negated-h_errno-code)))
+    (if (and ($fx> h_errno-code 0)
+	     ($fx< h_errno-code (vector-length H_ERRNO-VECTOR)))
+	(vector-ref H_ERRNO-VECTOR h_errno-code)
+      (string-append "unknown h_errno code" (number->string (- negated-h_errno-code))))))
 
 (let-syntax
     ((make-h_errno-vector
       (lambda (stx)
 	(define (%mk-vector)
-	  (let* ((max	(fold-left (lambda (max pair)
-				     (let ((code (cdr pair)))
-				       (cond ((not code)
-					      max)
-					     ((< max (fx- code))
-					      (fx- code))
-					     (else
-					      max))))
-			  0 h_errno-alist))
+	  (let* ((max		(fold-left (lambda (max pair)
+					     (let ((code (cdr pair)))
+					       (cond ((boolean? code)
+						      max)
+						     ((< max (fx- code))
+						      (fx- code))
+						     (else
+						      max))))
+				  0 h_errno-alist))
 		 (vec.len	(fx+ 1 max))
 		 ;;All the unused positions are set to #f.
-		 (vec	(make-vector vec.len #f)))
+		 (vec		(make-vector vec.len #f)))
 	    (for-each (lambda (pair)
-			(when (cdr pair)
+			(when (and (fixnum? (cdr pair))
+				   (cdr pair))
 			  (vector-set! vec (fx- (cdr pair)) (car pair))))
 	      h_errno-alist)
 	    vec))
 	(define h_errno-alist
+	  ;;If an h_errno code is not defined on this platform: its binding is set to
+	  ;;a boolean value.
 	  `(("HOST_NOT_FOUND"		. ,HOST_NOT_FOUND)
 	    ("TRY_AGAIN"		. ,TRY_AGAIN)
 	    ("NO_RECOVERY"		. ,NO_RECOVERY)
@@ -880,19 +880,14 @@
 
   (define H_ERRNO-VECTOR (make-h_errno-vector)))
 
-(define (h_strerror h_errno)
-  (define who 'h_strerror)
-  (with-arguments-validation (who)
-      ((fixnum  h_errno))
-    (let ((msg (case-h_errno h_errno
-		 ((HOST_NOT_FOUND)	"no such host is known in the database")
-		 ((TRY_AGAIN)		"the server could not be contacted")
-		 ((NO_RECOVERY)		"non-recoverable error")
-		 ((NO_ADDRESS)		"host entry exists but without Internet address")
-		 (else			#f))))
-      (if msg
-	  (string-append (h_errno->string h_errno) ": " msg)
-	(string-append "unknown h_errno code " (number->string (- h_errno)))))))
+(define (h_strerror {h_errno <fixnum>})
+  (let ((msg (case-h_errno h_errno
+	       ((HOST_NOT_FOUND)	": no such host is known in the database")
+	       ((TRY_AGAIN)		": the server could not be contacted")
+	       ((NO_RECOVERY)		": non-recoverable error")
+	       ((NO_ADDRESS)		": host entry exists but without Internet address")
+	       (else			""))))
+    (string-append (h_errno->string h_errno) msg)))
 
 
 ;;;; interprocess singnal codes handling
