@@ -41,6 +41,7 @@
      (eval . (put 'case-descriptor							'scheme-indent-function 1))
      (eval . (put 'case-descriptors-signature-structure					'scheme-indent-function 1))
      (eval . (put 'case-descriptors-signature-structure*				'scheme-indent-function 1))
+     (eval . (put 'case-h_errno								'scheme-indent-function 1))
      (eval . (put 'case-specification							'scheme-indent-function 1))
      (eval . (put 'cond-boot-expansion							'scheme-indent-function 1))
      (eval . (put 'cond-numeric-operand							'scheme-indent-function 1))
