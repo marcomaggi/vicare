@@ -20,12 +20,11 @@ fi
     --disable-posix                             \
     --disable-glibc                             \
     --disable-linux                             \
+    --without-libiconv                          \
     --without-pthread                           \
     --without-libffi                            \
     --without-readline                          \
     CFLAGS='-O3 -pedantic'			\
     "$@"
-
-#    --without-libiconv                          \
 
 ### end of file
