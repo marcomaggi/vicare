@@ -1120,9 +1120,11 @@ VICARE_SCHEME_LONG_TESTS	= \
 	tests/long-test-r6rs-run.sps					\
 	tests/long-test-r6rs-run-via-eval.sps				\
 	tests/long-test-ikarus-bignums.sps				\
-	tests/long-test-ikarus-io.sps					\
 	tests/long-test-ikarus-parse-flonums.sps			\
 	tests/long-test-ikarus-string-to-number.sps
+
+VICARE_SCHEME_LONG_TESTS_POSIX	= \
+	tests/long-test-ikarus-io.sps
 
 VICARE_SCHEME_SRFI_TESTS	= \
 	tests/test-srfi-0-cond-expand.sps				\
@@ -1280,6 +1282,7 @@ EXTRA_DIST	+= \
 	$(VICARE_SCHEME_R6RS_TESTS)			\
 	$(VICARE_SCHEME_CORE_TESTS)			\
 	$(VICARE_SCHEME_LONG_TESTS)			\
+	$(VICARE_SCHEME_LONG_TESTS_POSIX)		\
 	$(VICARE_SCHEME_COMPILER_TESTS)			\
 	$(VICARE_SCHEME_SRFI_TESTS)			\
 	$(VICARE_SCHEME_SRFI_POSIX_TESTS)		\
@@ -1313,7 +1316,7 @@ TESTS		+= $(VICARE_SCHEME_FFI_TESTS)
 endif
 
 if WANT_POSIX
-TESTS		+= $(VICARE_SCHEME_POSIX_TESTS)
+TESTS		+= $(VICARE_SCHEME_POSIX_TESTS) $(VICARE_SCHEME_LONG_TESTS_POSIX)
 endif
 
 if WANT_GLIBC

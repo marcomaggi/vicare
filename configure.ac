@@ -368,6 +368,12 @@ AC_CHECK_TYPES([struct timespec])
 AC_CHECK_FUNCS([hypot cbrt])
 AC_CHECK_FUNCS([uname])
 
+# First search  for "clock_gettime()" in  the libc, then, if  not found,
+# try linking the rt library.
+AC_SEARCH_LIBS([clock_gettime],[rt],
+  [AC_DEFINE([HAVE_CLOCK_GETTIME],[1],[Whether clock_gettime is available])],
+  [AC_MSG_ERROR([Cannot find clock_gettime])])
+
 AC_CACHE_SAVE
 
 #page
@@ -483,7 +489,7 @@ AM_COND_IF([WANT_POSIX],[
   dnl These require linking with -lrt.
   AC_CHECK_FUNCS([mq_open mq_close mq_unlink mq_send mq_receive mq_setattr mq_getattr mq_timedsend mq_timedreceive])
   dnl These require linking with -lrt.
-  AC_CHECK_FUNCS([clock_getres clock_gettime clock_settime clock_getcpuclockid])
+  AC_CHECK_FUNCS([clock_getres clock_settime clock_getcpuclockid])
   dnl These require linking with -lrt.
   AC_CHECK_FUNCS([shm_open shm_unlink])
   dnl These require linking with -lrt.

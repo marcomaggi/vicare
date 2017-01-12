@@ -95,8 +95,6 @@
      (vicare language-extensions instantiable-bodies)
      (vicare language-extensions tuples)
 
-     (vicare build-tools automake)
-
      (vicare checks)
 
      (vicare crypto randomisations low)
@@ -207,7 +205,8 @@
      (vicare posix mailx)
      (vicare posix curl)
      (vicare posix wget)
-     (vicare posix find))
+     (vicare posix find)
+     (vicare build-tools automake))
 
     ((WANT_GLIBC)
      (vicare glibc))
@@ -281,7 +280,9 @@
      (srfi :116 quotations))
 
     ((WANT_SRFI WANT_POSIX)
-     (srfi :106))
+     (srfi :106)
+     (srfi :106 socket)
+     (srfi :106 compat))
 
     ;; ((WANT_NAUSICAA)
     ;;  (nausicaa language auxiliary-syntaxes)

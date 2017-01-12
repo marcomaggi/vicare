@@ -23,8 +23,9 @@ fi
     --without-pthread                           \
     --without-libffi                            \
     --without-readline                          \
-    --without-libiconv                          \
     CFLAGS='-O3 -pedantic'			\
     "$@"
+
+#    --without-libiconv                          \
 
 ### end of file

@@ -698,61 +698,6 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/tuples.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/tuples.fasl
 
-lib/vicare/build-tools/automake.fasl: \
-		lib/vicare/build-tools/automake.vicare.sls \
-		lib/vicare/posix.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_build_tools_automake_fasldir = $(bundledlibsdir)/vicare/build-tools
-lib_vicare_build_tools_automake_vicare_slsdir  = $(bundledlibsdir)/vicare/build-tools
-nodist_lib_vicare_build_tools_automake_fasl_DATA = lib/vicare/build-tools/automake.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_build_tools_automake_vicare_sls_DATA = lib/vicare/build-tools/automake.vicare.sls
-endif
-EXTRA_DIST += lib/vicare/build-tools/automake.vicare.sls
-CLEANFILES += lib/vicare/build-tools/automake.fasl
-
-lib/vicare/posix.fasl: \
-		lib/vicare/posix.vicare.sls \
-		lib/vicare/language-extensions/syntaxes.fasl \
-		lib/vicare/platform/constants.fasl \
-		lib/vicare/arguments/validation.fasl \
-		lib/vicare/arguments/general-c-buffers.fasl \
-		lib/vicare/unsafe/capi.fasl \
-		lib/vicare/platform/words.fasl \
-		lib/vicare/language-extensions/cond-expand.fasl \
-		lib/vicare/containers/weak-hashtables.fasl \
-		lib/vicare/platform/features.fasl \
-		lib/vicare/language-extensions/cond-expand/helpers.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_posix_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_posix_vicare_slsdir  = $(bundledlibsdir)/vicare
-nodist_lib_vicare_posix_fasl_DATA = lib/vicare/posix.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_vicare_sls_DATA = lib/vicare/posix.vicare.sls
-endif
-EXTRA_DIST += lib/vicare/posix.vicare.sls
-CLEANFILES += lib/vicare/posix.fasl
-
-lib/vicare/containers/weak-hashtables.fasl: \
-		lib/vicare/containers/weak-hashtables.vicare.sls \
-		lib/vicare/language-extensions/syntaxes.fasl \
-		lib/vicare/arguments/validation.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_containers_weak_hashtables_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_weak_hashtables_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
-nodist_lib_vicare_containers_weak_hashtables_fasl_DATA = lib/vicare/containers/weak-hashtables.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_weak_hashtables_vicare_sls_DATA = lib/vicare/containers/weak-hashtables.vicare.sls
-endif
-EXTRA_DIST += lib/vicare/containers/weak-hashtables.vicare.sls
-CLEANFILES += lib/vicare/containers/weak-hashtables.fasl
-
 lib/vicare/checks.fasl: \
 		lib/vicare/checks.vicare.sls \
 		$(FASL_PREREQUISITES)
@@ -1115,6 +1060,22 @@ dist_lib_vicare_containers_bytevectors_vicare_sls_DATA = lib/vicare/containers/b
 endif
 EXTRA_DIST += lib/vicare/containers/bytevectors.vicare.sls
 CLEANFILES += lib/vicare/containers/bytevectors.fasl
+
+lib/vicare/containers/weak-hashtables.fasl: \
+		lib/vicare/containers/weak-hashtables.vicare.sls \
+		lib/vicare/language-extensions/syntaxes.fasl \
+		lib/vicare/arguments/validation.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_weak_hashtables_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_weak_hashtables_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_weak_hashtables_fasl_DATA = lib/vicare/containers/weak-hashtables.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_weak_hashtables_vicare_sls_DATA = lib/vicare/containers/weak-hashtables.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/weak-hashtables.vicare.sls
+CLEANFILES += lib/vicare/containers/weak-hashtables.fasl
 
 lib/vicare/containers/object-properties.fasl: \
 		lib/vicare/containers/object-properties.vicare.sls \
@@ -2173,13 +2134,13 @@ endif
 EXTRA_DIST += lib/vicare/net/channels.vicare.sls
 CLEANFILES += lib/vicare/net/channels.fasl
 
+if WANT_LIBFFI
 lib/vicare/ffi.fasl: \
 		lib/vicare/ffi.vicare.sls \
 		lib/vicare/platform/errno.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_LIBFFI
 lib_vicare_ffi_fasldir = $(bundledlibsdir)/vicare
 lib_vicare_ffi_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_ffi_fasl_DATA = lib/vicare/ffi.fasl
@@ -2190,6 +2151,7 @@ EXTRA_DIST += lib/vicare/ffi.vicare.sls
 CLEANFILES += lib/vicare/ffi.fasl
 endif
 
+if WANT_LIBFFI
 lib/vicare/ffi/foreign-pointer-wrapper.fasl: \
 		lib/vicare/ffi/foreign-pointer-wrapper.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
@@ -2197,7 +2159,6 @@ lib/vicare/ffi/foreign-pointer-wrapper.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_LIBFFI
 lib_vicare_ffi_foreign_pointer_wrapper_fasldir = $(bundledlibsdir)/vicare/ffi
 lib_vicare_ffi_foreign_pointer_wrapper_vicare_slsdir  = $(bundledlibsdir)/vicare/ffi
 nodist_lib_vicare_ffi_foreign_pointer_wrapper_fasl_DATA = lib/vicare/ffi/foreign-pointer-wrapper.fasl
@@ -2208,6 +2169,7 @@ EXTRA_DIST += lib/vicare/ffi/foreign-pointer-wrapper.vicare.sls
 CLEANFILES += lib/vicare/ffi/foreign-pointer-wrapper.fasl
 endif
 
+if WANT_LIBICONV
 lib/vicare/iconv.fasl: \
 		lib/vicare/iconv.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
@@ -2217,7 +2179,6 @@ lib/vicare/iconv.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_LIBICONV
 lib_vicare_iconv_fasldir = $(bundledlibsdir)/vicare
 lib_vicare_iconv_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_iconv_fasl_DATA = lib/vicare/iconv.fasl
@@ -2228,13 +2189,39 @@ EXTRA_DIST += lib/vicare/iconv.vicare.sls
 CLEANFILES += lib/vicare/iconv.fasl
 endif
 
+if WANT_POSIX
+lib/vicare/posix.fasl: \
+		lib/vicare/posix.vicare.sls \
+		lib/vicare/language-extensions/syntaxes.fasl \
+		lib/vicare/platform/constants.fasl \
+		lib/vicare/arguments/validation.fasl \
+		lib/vicare/arguments/general-c-buffers.fasl \
+		lib/vicare/unsafe/capi.fasl \
+		lib/vicare/platform/words.fasl \
+		lib/vicare/language-extensions/cond-expand.fasl \
+		lib/vicare/containers/weak-hashtables.fasl \
+		lib/vicare/platform/features.fasl \
+		lib/vicare/language-extensions/cond-expand/helpers.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_posix_fasldir = $(bundledlibsdir)/vicare
+lib_vicare_posix_vicare_slsdir  = $(bundledlibsdir)/vicare
+nodist_lib_vicare_posix_fasl_DATA = lib/vicare/posix.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_posix_vicare_sls_DATA = lib/vicare/posix.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/posix.vicare.sls
+CLEANFILES += lib/vicare/posix.fasl
+endif
+
+if WANT_POSIX
 lib/vicare/posix/pid-files.fasl: \
 		lib/vicare/posix/pid-files.vicare.sls \
 		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_POSIX
 lib_vicare_posix_pid_files_fasldir = $(bundledlibsdir)/vicare/posix
 lib_vicare_posix_pid_files_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_pid_files_fasl_DATA = lib/vicare/posix/pid-files.fasl
@@ -2245,6 +2232,7 @@ EXTRA_DIST += lib/vicare/posix/pid-files.vicare.sls
 CLEANFILES += lib/vicare/posix/pid-files.fasl
 endif
 
+if WANT_POSIX
 lib/vicare/posix/lock-pid-files.fasl: \
 		lib/vicare/posix/lock-pid-files.vicare.sls \
 		lib/vicare/posix.fasl \
@@ -2253,7 +2241,6 @@ lib/vicare/posix/lock-pid-files.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_POSIX
 lib_vicare_posix_lock_pid_files_fasldir = $(bundledlibsdir)/vicare/posix
 lib_vicare_posix_lock_pid_files_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_lock_pid_files_fasl_DATA = lib/vicare/posix/lock-pid-files.fasl
@@ -2264,6 +2251,7 @@ EXTRA_DIST += lib/vicare/posix/lock-pid-files.vicare.sls
 CLEANFILES += lib/vicare/posix/lock-pid-files.fasl
 endif
 
+if WANT_POSIX
 lib/vicare/posix/log-files.fasl: \
 		lib/vicare/posix/log-files.vicare.sls \
 		lib/vicare/posix.fasl \
@@ -2271,7 +2259,6 @@ lib/vicare/posix/log-files.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_POSIX
 lib_vicare_posix_log_files_fasldir = $(bundledlibsdir)/vicare/posix
 lib_vicare_posix_log_files_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_log_files_fasl_DATA = lib/vicare/posix/log-files.fasl
@@ -2282,6 +2269,7 @@ EXTRA_DIST += lib/vicare/posix/log-files.vicare.sls
 CLEANFILES += lib/vicare/posix/log-files.fasl
 endif
 
+if WANT_POSIX
 lib/vicare/posix/daemonisations.fasl: \
 		lib/vicare/posix/daemonisations.vicare.sls \
 		lib/vicare/posix.fasl \
@@ -2289,7 +2277,6 @@ lib/vicare/posix/daemonisations.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_POSIX
 lib_vicare_posix_daemonisations_fasldir = $(bundledlibsdir)/vicare/posix
 lib_vicare_posix_daemonisations_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_daemonisations_fasl_DATA = lib/vicare/posix/daemonisations.fasl
@@ -2300,6 +2287,7 @@ EXTRA_DIST += lib/vicare/posix/daemonisations.vicare.sls
 CLEANFILES += lib/vicare/posix/daemonisations.fasl
 endif
 
+if WANT_POSIX
 lib/vicare/posix/simple-event-loop.fasl: \
 		lib/vicare/posix/simple-event-loop.vicare.sls \
 		lib/vicare/posix.fasl \
@@ -2310,7 +2298,6 @@ lib/vicare/posix/simple-event-loop.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_POSIX
 lib_vicare_posix_simple_event_loop_fasldir = $(bundledlibsdir)/vicare/posix
 lib_vicare_posix_simple_event_loop_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_simple_event_loop_fasl_DATA = lib/vicare/posix/simple-event-loop.fasl
@@ -2321,6 +2308,7 @@ EXTRA_DIST += lib/vicare/posix/simple-event-loop.vicare.sls
 CLEANFILES += lib/vicare/posix/simple-event-loop.fasl
 endif
 
+if WANT_POSIX
 lib/vicare/posix/tcp-server-sockets.fasl: \
 		lib/vicare/posix/tcp-server-sockets.vicare.sls \
 		lib/vicare/posix.fasl \
@@ -2329,7 +2317,6 @@ lib/vicare/posix/tcp-server-sockets.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_POSIX
 lib_vicare_posix_tcp_server_sockets_fasldir = $(bundledlibsdir)/vicare/posix
 lib_vicare_posix_tcp_server_sockets_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_tcp_server_sockets_fasl_DATA = lib/vicare/posix/tcp-server-sockets.fasl
@@ -2340,13 +2327,13 @@ EXTRA_DIST += lib/vicare/posix/tcp-server-sockets.vicare.sls
 CLEANFILES += lib/vicare/posix/tcp-server-sockets.fasl
 endif
 
+if WANT_POSIX
 lib/vicare/posix/sendmail.fasl: \
 		lib/vicare/posix/sendmail.vicare.sls \
 		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_POSIX
 lib_vicare_posix_sendmail_fasldir = $(bundledlibsdir)/vicare/posix
 lib_vicare_posix_sendmail_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_sendmail_fasl_DATA = lib/vicare/posix/sendmail.fasl
@@ -2357,13 +2344,13 @@ EXTRA_DIST += lib/vicare/posix/sendmail.vicare.sls
 CLEANFILES += lib/vicare/posix/sendmail.fasl
 endif
 
+if WANT_POSIX
 lib/vicare/posix/mailx.fasl: \
 		lib/vicare/posix/mailx.vicare.sls \
 		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_POSIX
 lib_vicare_posix_mailx_fasldir = $(bundledlibsdir)/vicare/posix
 lib_vicare_posix_mailx_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_mailx_fasl_DATA = lib/vicare/posix/mailx.fasl
@@ -2374,13 +2361,13 @@ EXTRA_DIST += lib/vicare/posix/mailx.vicare.sls
 CLEANFILES += lib/vicare/posix/mailx.fasl
 endif
 
+if WANT_POSIX
 lib/vicare/posix/curl.fasl: \
 		lib/vicare/posix/curl.vicare.sls \
 		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_POSIX
 lib_vicare_posix_curl_fasldir = $(bundledlibsdir)/vicare/posix
 lib_vicare_posix_curl_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_curl_fasl_DATA = lib/vicare/posix/curl.fasl
@@ -2391,13 +2378,13 @@ EXTRA_DIST += lib/vicare/posix/curl.vicare.sls
 CLEANFILES += lib/vicare/posix/curl.fasl
 endif
 
+if WANT_POSIX
 lib/vicare/posix/wget.fasl: \
 		lib/vicare/posix/wget.vicare.sls \
 		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_POSIX
 lib_vicare_posix_wget_fasldir = $(bundledlibsdir)/vicare/posix
 lib_vicare_posix_wget_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_wget_fasl_DATA = lib/vicare/posix/wget.fasl
@@ -2408,13 +2395,13 @@ EXTRA_DIST += lib/vicare/posix/wget.vicare.sls
 CLEANFILES += lib/vicare/posix/wget.fasl
 endif
 
+if WANT_POSIX
 lib/vicare/posix/find.fasl: \
 		lib/vicare/posix/find.vicare.sls \
 		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_POSIX
 lib_vicare_posix_find_fasldir = $(bundledlibsdir)/vicare/posix
 lib_vicare_posix_find_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_find_fasl_DATA = lib/vicare/posix/find.fasl
@@ -2425,6 +2412,24 @@ EXTRA_DIST += lib/vicare/posix/find.vicare.sls
 CLEANFILES += lib/vicare/posix/find.fasl
 endif
 
+if WANT_POSIX
+lib/vicare/build-tools/automake.fasl: \
+		lib/vicare/build-tools/automake.vicare.sls \
+		lib/vicare/posix.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_build_tools_automake_fasldir = $(bundledlibsdir)/vicare/build-tools
+lib_vicare_build_tools_automake_vicare_slsdir  = $(bundledlibsdir)/vicare/build-tools
+nodist_lib_vicare_build_tools_automake_fasl_DATA = lib/vicare/build-tools/automake.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_build_tools_automake_vicare_sls_DATA = lib/vicare/build-tools/automake.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/build-tools/automake.vicare.sls
+CLEANFILES += lib/vicare/build-tools/automake.fasl
+endif
+
+if WANT_GLIBC
 lib/vicare/glibc.fasl: \
 		lib/vicare/glibc.vicare.sls \
 		lib/vicare/posix.fasl \
@@ -2439,7 +2444,6 @@ lib/vicare/glibc.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_GLIBC
 lib_vicare_glibc_fasldir = $(bundledlibsdir)/vicare
 lib_vicare_glibc_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_glibc_fasl_DATA = lib/vicare/glibc.fasl
@@ -2450,6 +2454,9 @@ EXTRA_DIST += lib/vicare/glibc.vicare.sls
 CLEANFILES += lib/vicare/glibc.fasl
 endif
 
+if WANT_LIBFFI
+if WANT_POSIX
+if WANT_GLIBC
 lib/vicare/gcc.fasl: \
 		lib/vicare/gcc.vicare.sls \
 		lib/vicare/ffi.fasl \
@@ -2459,9 +2466,6 @@ lib/vicare/gcc.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_LIBFFI
-if WANT_POSIX
-if WANT_GLIBC
 lib_vicare_gcc_fasldir = $(bundledlibsdir)/vicare
 lib_vicare_gcc_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_gcc_fasl_DATA = lib/vicare/gcc.fasl
@@ -2474,6 +2478,8 @@ endif
 endif
 endif
 
+if WANT_POSIX
+if WANT_LINUX
 lib/vicare/linux.fasl: \
 		lib/vicare/linux.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
@@ -2489,8 +2495,6 @@ lib/vicare/linux.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_POSIX
-if WANT_LINUX
 lib_vicare_linux_fasldir = $(bundledlibsdir)/vicare
 lib_vicare_linux_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_linux_fasl_DATA = lib/vicare/linux.fasl
@@ -2502,13 +2506,13 @@ CLEANFILES += lib/vicare/linux.fasl
 endif
 endif
 
+if WANT_READLINE
 lib/vicare/readline.fasl: \
 		lib/vicare/readline.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_READLINE
 lib_vicare_readline_fasldir = $(bundledlibsdir)/vicare
 lib_vicare_readline_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_readline_fasl_DATA = lib/vicare/readline.fasl
@@ -2621,13 +2625,13 @@ endif
 EXTRA_DIST += lib/vicare/formations.vicare.sls
 CLEANFILES += lib/vicare/formations.fasl
 
+if WANT_SRFI
 lib/srfi/%3a0.fasl: \
 		lib/srfi/%3a0.sls \
 		lib/srfi/%3a0/cond-expand.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a0_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a0_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a0_fasl_DATA = lib/srfi/%3a0.fasl
@@ -2644,7 +2648,6 @@ lib/srfi/%3a0/cond-expand.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a0_cond_expand_fasldir = $(bundledlibsdir)/srfi/%3a0
 lib_srfi__3a0_cond_expand_slsdir  = $(bundledlibsdir)/srfi/%3a0
 nodist_lib_srfi__3a0_cond_expand_fasl_DATA = lib/srfi/%3a0/cond-expand.fasl
@@ -2653,15 +2656,14 @@ dist_lib_srfi__3a0_cond_expand_sls_DATA = lib/srfi/%3a0/cond-expand.sls
 endif
 EXTRA_DIST += lib/srfi/%3a0/cond-expand.sls
 CLEANFILES += lib/srfi/%3a0/cond-expand.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a1.fasl: \
 		lib/srfi/%3a1.sls \
 		lib/srfi/%3a1/lists.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a1_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a1_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a1_fasl_DATA = lib/srfi/%3a1.fasl
@@ -2679,7 +2681,6 @@ lib/srfi/%3a1/lists.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a1_lists_fasldir = $(bundledlibsdir)/srfi/%3a1
 lib_srfi__3a1_lists_slsdir  = $(bundledlibsdir)/srfi/%3a1
 nodist_lib_srfi__3a1_lists_fasl_DATA = lib/srfi/%3a1/lists.fasl
@@ -2688,14 +2689,12 @@ dist_lib_srfi__3a1_lists_sls_DATA = lib/srfi/%3a1/lists.sls
 endif
 EXTRA_DIST += lib/srfi/%3a1/lists.sls
 CLEANFILES += lib/srfi/%3a1/lists.fasl
-endif
 
 lib/srfi/%3a8/receive.fasl: \
 		lib/srfi/%3a8/receive.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a8_receive_fasldir = $(bundledlibsdir)/srfi/%3a8
 lib_srfi__3a8_receive_slsdir  = $(bundledlibsdir)/srfi/%3a8
 nodist_lib_srfi__3a8_receive_fasl_DATA = lib/srfi/%3a8/receive.fasl
@@ -2704,15 +2703,14 @@ dist_lib_srfi__3a8_receive_sls_DATA = lib/srfi/%3a8/receive.sls
 endif
 EXTRA_DIST += lib/srfi/%3a8/receive.sls
 CLEANFILES += lib/srfi/%3a8/receive.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a2.fasl: \
 		lib/srfi/%3a2.sls \
 		lib/srfi/%3a2/and-let%2a.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a2_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a2_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a2_fasl_DATA = lib/srfi/%3a2.fasl
@@ -2728,7 +2726,6 @@ lib/srfi/%3a2/and-let%2a.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a2_and_let_2a_fasldir = $(bundledlibsdir)/srfi/%3a2
 lib_srfi__3a2_and_let_2a_slsdir  = $(bundledlibsdir)/srfi/%3a2
 nodist_lib_srfi__3a2_and_let_2a_fasl_DATA = lib/srfi/%3a2/and-let%2a.fasl
@@ -2737,15 +2734,14 @@ dist_lib_srfi__3a2_and_let_2a_sls_DATA = lib/srfi/%3a2/and-let%2a.sls
 endif
 EXTRA_DIST += lib/srfi/%3a2/and-let%2a.sls
 CLEANFILES += lib/srfi/%3a2/and-let%2a.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a6.fasl: \
 		lib/srfi/%3a6.sls \
 		lib/srfi/%3a6/basic-string-ports.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a6_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a6_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a6_fasl_DATA = lib/srfi/%3a6.fasl
@@ -2761,7 +2757,6 @@ lib/srfi/%3a6/basic-string-ports.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a6_basic_string_ports_fasldir = $(bundledlibsdir)/srfi/%3a6
 lib_srfi__3a6_basic_string_ports_slsdir  = $(bundledlibsdir)/srfi/%3a6
 nodist_lib_srfi__3a6_basic_string_ports_fasl_DATA = lib/srfi/%3a6/basic-string-ports.fasl
@@ -2770,15 +2765,14 @@ dist_lib_srfi__3a6_basic_string_ports_sls_DATA = lib/srfi/%3a6/basic-string-port
 endif
 EXTRA_DIST += lib/srfi/%3a6/basic-string-ports.sls
 CLEANFILES += lib/srfi/%3a6/basic-string-ports.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a8.fasl: \
 		lib/srfi/%3a8.sls \
 		lib/srfi/%3a8/receive.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a8_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a8_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a8_fasl_DATA = lib/srfi/%3a8.fasl
@@ -2789,13 +2783,13 @@ EXTRA_DIST += lib/srfi/%3a8.sls
 CLEANFILES += lib/srfi/%3a8.fasl
 endif
 
+if WANT_SRFI
 lib/srfi/%3a9.fasl: \
 		lib/srfi/%3a9.sls \
 		lib/srfi/%3a9/records.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a9_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a9_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a9_fasl_DATA = lib/srfi/%3a9.fasl
@@ -2811,7 +2805,6 @@ lib/srfi/%3a9/records.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a9_records_fasldir = $(bundledlibsdir)/srfi/%3a9
 lib_srfi__3a9_records_slsdir  = $(bundledlibsdir)/srfi/%3a9
 nodist_lib_srfi__3a9_records_fasl_DATA = lib/srfi/%3a9/records.fasl
@@ -2820,15 +2813,14 @@ dist_lib_srfi__3a9_records_sls_DATA = lib/srfi/%3a9/records.sls
 endif
 EXTRA_DIST += lib/srfi/%3a9/records.sls
 CLEANFILES += lib/srfi/%3a9/records.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a11.fasl: \
 		lib/srfi/%3a11.sls \
 		lib/srfi/%3a11/let-values.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a11_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a11_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a11_fasl_DATA = lib/srfi/%3a11.fasl
@@ -2844,7 +2836,6 @@ lib/srfi/%3a11/let-values.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a11_let_values_fasldir = $(bundledlibsdir)/srfi/%3a11
 lib_srfi__3a11_let_values_slsdir  = $(bundledlibsdir)/srfi/%3a11
 nodist_lib_srfi__3a11_let_values_fasl_DATA = lib/srfi/%3a11/let-values.fasl
@@ -2853,15 +2844,14 @@ dist_lib_srfi__3a11_let_values_sls_DATA = lib/srfi/%3a11/let-values.sls
 endif
 EXTRA_DIST += lib/srfi/%3a11/let-values.sls
 CLEANFILES += lib/srfi/%3a11/let-values.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a13.fasl: \
 		lib/srfi/%3a13.sls \
 		lib/srfi/%3a13/strings.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a13_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a13_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a13_fasl_DATA = lib/srfi/%3a13.fasl
@@ -2881,7 +2871,6 @@ lib/srfi/%3a13/strings.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a13_strings_fasldir = $(bundledlibsdir)/srfi/%3a13
 lib_srfi__3a13_strings_slsdir  = $(bundledlibsdir)/srfi/%3a13
 nodist_lib_srfi__3a13_strings_fasl_DATA = lib/srfi/%3a13/strings.fasl
@@ -2890,7 +2879,6 @@ dist_lib_srfi__3a13_strings_sls_DATA = lib/srfi/%3a13/strings.sls
 endif
 EXTRA_DIST += lib/srfi/%3a13/strings.sls
 CLEANFILES += lib/srfi/%3a13/strings.fasl
-endif
 
 lib/srfi/%3a14/char-sets.fasl: \
 		lib/srfi/%3a14/char-sets.sls \
@@ -2899,7 +2887,6 @@ lib/srfi/%3a14/char-sets.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a14_char_sets_fasldir = $(bundledlibsdir)/srfi/%3a14
 lib_srfi__3a14_char_sets_slsdir  = $(bundledlibsdir)/srfi/%3a14
 nodist_lib_srfi__3a14_char_sets_fasl_DATA = lib/srfi/%3a14/char-sets.fasl
@@ -2908,15 +2895,14 @@ dist_lib_srfi__3a14_char_sets_sls_DATA = lib/srfi/%3a14/char-sets.sls
 endif
 EXTRA_DIST += lib/srfi/%3a14/char-sets.sls
 CLEANFILES += lib/srfi/%3a14/char-sets.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a14.fasl: \
 		lib/srfi/%3a14.sls \
 		lib/srfi/%3a14/char-sets.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a14_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a14_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a14_fasl_DATA = lib/srfi/%3a14.fasl
@@ -2927,13 +2913,13 @@ EXTRA_DIST += lib/srfi/%3a14.sls
 CLEANFILES += lib/srfi/%3a14.fasl
 endif
 
+if WANT_SRFI
 lib/srfi/%3a16.fasl: \
 		lib/srfi/%3a16.sls \
 		lib/srfi/%3a16/case-lambda.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a16_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a16_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a16_fasl_DATA = lib/srfi/%3a16.fasl
@@ -2949,7 +2935,6 @@ lib/srfi/%3a16/case-lambda.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a16_case_lambda_fasldir = $(bundledlibsdir)/srfi/%3a16
 lib_srfi__3a16_case_lambda_slsdir  = $(bundledlibsdir)/srfi/%3a16
 nodist_lib_srfi__3a16_case_lambda_fasl_DATA = lib/srfi/%3a16/case-lambda.fasl
@@ -2958,15 +2943,14 @@ dist_lib_srfi__3a16_case_lambda_sls_DATA = lib/srfi/%3a16/case-lambda.sls
 endif
 EXTRA_DIST += lib/srfi/%3a16/case-lambda.sls
 CLEANFILES += lib/srfi/%3a16/case-lambda.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a19.fasl: \
 		lib/srfi/%3a19.sls \
 		lib/srfi/%3a19/time.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a19_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a19_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a19_fasl_DATA = lib/srfi/%3a19.fasl
@@ -2983,7 +2967,6 @@ lib/srfi/%3a19/time.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a19_time_fasldir = $(bundledlibsdir)/srfi/%3a19
 lib_srfi__3a19_time_slsdir  = $(bundledlibsdir)/srfi/%3a19
 nodist_lib_srfi__3a19_time_fasl_DATA = lib/srfi/%3a19/time.fasl
@@ -2992,15 +2975,14 @@ dist_lib_srfi__3a19_time_sls_DATA = lib/srfi/%3a19/time.sls
 endif
 EXTRA_DIST += lib/srfi/%3a19/time.sls
 CLEANFILES += lib/srfi/%3a19/time.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a23.fasl: \
 		lib/srfi/%3a23.sls \
 		lib/srfi/%3a23/error.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a23_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a23_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a23_fasl_DATA = lib/srfi/%3a23.fasl
@@ -3016,7 +2998,6 @@ lib/srfi/%3a23/error.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a23_error_fasldir = $(bundledlibsdir)/srfi/%3a23
 lib_srfi__3a23_error_slsdir  = $(bundledlibsdir)/srfi/%3a23
 nodist_lib_srfi__3a23_error_fasl_DATA = lib/srfi/%3a23/error.fasl
@@ -3025,15 +3006,14 @@ dist_lib_srfi__3a23_error_sls_DATA = lib/srfi/%3a23/error.sls
 endif
 EXTRA_DIST += lib/srfi/%3a23/error.sls
 CLEANFILES += lib/srfi/%3a23/error.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a25.fasl: \
 		lib/srfi/%3a25.sls \
 		lib/srfi/%3a25/multi-dimensional-arrays.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a25_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a25_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a25_fasl_DATA = lib/srfi/%3a25.fasl
@@ -3052,7 +3032,6 @@ lib/srfi/%3a25/multi-dimensional-arrays.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a25_multi_dimensional_arrays_fasldir = $(bundledlibsdir)/srfi/%3a25
 lib_srfi__3a25_multi_dimensional_arrays_slsdir  = $(bundledlibsdir)/srfi/%3a25
 nodist_lib_srfi__3a25_multi_dimensional_arrays_fasl_DATA = lib/srfi/%3a25/multi-dimensional-arrays.fasl
@@ -3061,15 +3040,14 @@ dist_lib_srfi__3a25_multi_dimensional_arrays_sls_DATA = lib/srfi/%3a25/multi-dim
 endif
 EXTRA_DIST += lib/srfi/%3a25/multi-dimensional-arrays.sls
 CLEANFILES += lib/srfi/%3a25/multi-dimensional-arrays.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a26.fasl: \
 		lib/srfi/%3a26.sls \
 		lib/srfi/%3a26/cut.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a26_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a26_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a26_fasl_DATA = lib/srfi/%3a26.fasl
@@ -3085,7 +3063,6 @@ lib/srfi/%3a26/cut.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a26_cut_fasldir = $(bundledlibsdir)/srfi/%3a26
 lib_srfi__3a26_cut_slsdir  = $(bundledlibsdir)/srfi/%3a26
 nodist_lib_srfi__3a26_cut_fasl_DATA = lib/srfi/%3a26/cut.fasl
@@ -3094,15 +3071,14 @@ dist_lib_srfi__3a26_cut_sls_DATA = lib/srfi/%3a26/cut.sls
 endif
 EXTRA_DIST += lib/srfi/%3a26/cut.sls
 CLEANFILES += lib/srfi/%3a26/cut.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a27.fasl: \
 		lib/srfi/%3a27.sls \
 		lib/srfi/%3a27/random-bits.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a27_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a27_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a27_fasl_DATA = lib/srfi/%3a27.fasl
@@ -3119,7 +3095,6 @@ lib/srfi/%3a27/random-bits.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a27_random_bits_fasldir = $(bundledlibsdir)/srfi/%3a27
 lib_srfi__3a27_random_bits_slsdir  = $(bundledlibsdir)/srfi/%3a27
 nodist_lib_srfi__3a27_random_bits_fasl_DATA = lib/srfi/%3a27/random-bits.fasl
@@ -3128,15 +3103,14 @@ dist_lib_srfi__3a27_random_bits_sls_DATA = lib/srfi/%3a27/random-bits.sls
 endif
 EXTRA_DIST += lib/srfi/%3a27/random-bits.sls
 CLEANFILES += lib/srfi/%3a27/random-bits.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a28.fasl: \
 		lib/srfi/%3a28.sls \
 		lib/srfi/%3a28/basic-format-strings.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a28_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a28_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a28_fasl_DATA = lib/srfi/%3a28.fasl
@@ -3153,7 +3127,6 @@ lib/srfi/%3a28/basic-format-strings.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a28_basic_format_strings_fasldir = $(bundledlibsdir)/srfi/%3a28
 lib_srfi__3a28_basic_format_strings_slsdir  = $(bundledlibsdir)/srfi/%3a28
 nodist_lib_srfi__3a28_basic_format_strings_fasl_DATA = lib/srfi/%3a28/basic-format-strings.fasl
@@ -3162,15 +3135,14 @@ dist_lib_srfi__3a28_basic_format_strings_sls_DATA = lib/srfi/%3a28/basic-format-
 endif
 EXTRA_DIST += lib/srfi/%3a28/basic-format-strings.sls
 CLEANFILES += lib/srfi/%3a28/basic-format-strings.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a31.fasl: \
 		lib/srfi/%3a31.sls \
 		lib/srfi/%3a31/rec.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a31_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a31_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a31_fasl_DATA = lib/srfi/%3a31.fasl
@@ -3186,7 +3158,6 @@ lib/srfi/%3a31/rec.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a31_rec_fasldir = $(bundledlibsdir)/srfi/%3a31
 lib_srfi__3a31_rec_slsdir  = $(bundledlibsdir)/srfi/%3a31
 nodist_lib_srfi__3a31_rec_fasl_DATA = lib/srfi/%3a31/rec.fasl
@@ -3195,15 +3166,14 @@ dist_lib_srfi__3a31_rec_sls_DATA = lib/srfi/%3a31/rec.sls
 endif
 EXTRA_DIST += lib/srfi/%3a31/rec.sls
 CLEANFILES += lib/srfi/%3a31/rec.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a37.fasl: \
 		lib/srfi/%3a37.sls \
 		lib/srfi/%3a37/args-fold.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a37_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a37_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a37_fasl_DATA = lib/srfi/%3a37.fasl
@@ -3219,7 +3189,6 @@ lib/srfi/%3a37/args-fold.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a37_args_fold_fasldir = $(bundledlibsdir)/srfi/%3a37
 lib_srfi__3a37_args_fold_slsdir  = $(bundledlibsdir)/srfi/%3a37
 nodist_lib_srfi__3a37_args_fold_fasl_DATA = lib/srfi/%3a37/args-fold.fasl
@@ -3228,15 +3197,14 @@ dist_lib_srfi__3a37_args_fold_sls_DATA = lib/srfi/%3a37/args-fold.sls
 endif
 EXTRA_DIST += lib/srfi/%3a37/args-fold.sls
 CLEANFILES += lib/srfi/%3a37/args-fold.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a38.fasl: \
 		lib/srfi/%3a38.sls \
 		lib/srfi/%3a38/with-shared-structure.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a38_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a38_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a38_fasl_DATA = lib/srfi/%3a38.fasl
@@ -3252,7 +3220,6 @@ lib/srfi/%3a38/with-shared-structure.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a38_with_shared_structure_fasldir = $(bundledlibsdir)/srfi/%3a38
 lib_srfi__3a38_with_shared_structure_slsdir  = $(bundledlibsdir)/srfi/%3a38
 nodist_lib_srfi__3a38_with_shared_structure_fasl_DATA = lib/srfi/%3a38/with-shared-structure.fasl
@@ -3261,15 +3228,14 @@ dist_lib_srfi__3a38_with_shared_structure_sls_DATA = lib/srfi/%3a38/with-shared-
 endif
 EXTRA_DIST += lib/srfi/%3a38/with-shared-structure.sls
 CLEANFILES += lib/srfi/%3a38/with-shared-structure.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a39.fasl: \
 		lib/srfi/%3a39.sls \
 		lib/srfi/%3a39/parameters.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a39_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a39_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a39_fasl_DATA = lib/srfi/%3a39.fasl
@@ -3285,7 +3251,6 @@ lib/srfi/%3a39/parameters.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a39_parameters_fasldir = $(bundledlibsdir)/srfi/%3a39
 lib_srfi__3a39_parameters_slsdir  = $(bundledlibsdir)/srfi/%3a39
 nodist_lib_srfi__3a39_parameters_fasl_DATA = lib/srfi/%3a39/parameters.fasl
@@ -3294,15 +3259,14 @@ dist_lib_srfi__3a39_parameters_sls_DATA = lib/srfi/%3a39/parameters.sls
 endif
 EXTRA_DIST += lib/srfi/%3a39/parameters.sls
 CLEANFILES += lib/srfi/%3a39/parameters.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a41.fasl: \
 		lib/srfi/%3a41.sls \
 		lib/srfi/%3a41/streams.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a41_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a41_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a41_fasl_DATA = lib/srfi/%3a41.fasl
@@ -3320,7 +3284,6 @@ lib/srfi/%3a41/streams.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a41_streams_fasldir = $(bundledlibsdir)/srfi/%3a41
 lib_srfi__3a41_streams_slsdir  = $(bundledlibsdir)/srfi/%3a41
 nodist_lib_srfi__3a41_streams_fasl_DATA = lib/srfi/%3a41/streams.fasl
@@ -3329,14 +3292,12 @@ dist_lib_srfi__3a41_streams_sls_DATA = lib/srfi/%3a41/streams.sls
 endif
 EXTRA_DIST += lib/srfi/%3a41/streams.sls
 CLEANFILES += lib/srfi/%3a41/streams.fasl
-endif
 
 lib/srfi/%3a41/streams/primitive.fasl: \
 		lib/srfi/%3a41/streams/primitive.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a41_streams_primitive_fasldir = $(bundledlibsdir)/srfi/%3a41/streams
 lib_srfi__3a41_streams_primitive_slsdir  = $(bundledlibsdir)/srfi/%3a41/streams
 nodist_lib_srfi__3a41_streams_primitive_fasl_DATA = lib/srfi/%3a41/streams/primitive.fasl
@@ -3345,7 +3306,6 @@ dist_lib_srfi__3a41_streams_primitive_sls_DATA = lib/srfi/%3a41/streams/primitiv
 endif
 EXTRA_DIST += lib/srfi/%3a41/streams/primitive.sls
 CLEANFILES += lib/srfi/%3a41/streams/primitive.fasl
-endif
 
 lib/srfi/%3a41/streams/derived.fasl: \
 		lib/srfi/%3a41/streams/derived.sls \
@@ -3353,7 +3313,6 @@ lib/srfi/%3a41/streams/derived.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a41_streams_derived_fasldir = $(bundledlibsdir)/srfi/%3a41/streams
 lib_srfi__3a41_streams_derived_slsdir  = $(bundledlibsdir)/srfi/%3a41/streams
 nodist_lib_srfi__3a41_streams_derived_fasl_DATA = lib/srfi/%3a41/streams/derived.fasl
@@ -3362,15 +3321,14 @@ dist_lib_srfi__3a41_streams_derived_sls_DATA = lib/srfi/%3a41/streams/derived.sl
 endif
 EXTRA_DIST += lib/srfi/%3a41/streams/derived.sls
 CLEANFILES += lib/srfi/%3a41/streams/derived.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a42.fasl: \
 		lib/srfi/%3a42.sls \
 		lib/srfi/%3a42/eager-comprehensions.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a42_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a42_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a42_fasl_DATA = lib/srfi/%3a42.fasl
@@ -3387,7 +3345,6 @@ lib/srfi/%3a42/eager-comprehensions.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a42_eager_comprehensions_fasldir = $(bundledlibsdir)/srfi/%3a42
 lib_srfi__3a42_eager_comprehensions_slsdir  = $(bundledlibsdir)/srfi/%3a42
 nodist_lib_srfi__3a42_eager_comprehensions_fasl_DATA = lib/srfi/%3a42/eager-comprehensions.fasl
@@ -3396,15 +3353,14 @@ dist_lib_srfi__3a42_eager_comprehensions_sls_DATA = lib/srfi/%3a42/eager-compreh
 endif
 EXTRA_DIST += lib/srfi/%3a42/eager-comprehensions.sls
 CLEANFILES += lib/srfi/%3a42/eager-comprehensions.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a43.fasl: \
 		lib/srfi/%3a43.sls \
 		lib/srfi/%3a43/vectors.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a43_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a43_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a43_fasl_DATA = lib/srfi/%3a43.fasl
@@ -3421,7 +3377,6 @@ lib/srfi/%3a43/vectors.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a43_vectors_fasldir = $(bundledlibsdir)/srfi/%3a43
 lib_srfi__3a43_vectors_slsdir  = $(bundledlibsdir)/srfi/%3a43
 nodist_lib_srfi__3a43_vectors_fasl_DATA = lib/srfi/%3a43/vectors.fasl
@@ -3430,15 +3385,14 @@ dist_lib_srfi__3a43_vectors_sls_DATA = lib/srfi/%3a43/vectors.sls
 endif
 EXTRA_DIST += lib/srfi/%3a43/vectors.sls
 CLEANFILES += lib/srfi/%3a43/vectors.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a45.fasl: \
 		lib/srfi/%3a45.sls \
 		lib/srfi/%3a45/lazy.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a45_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a45_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a45_fasl_DATA = lib/srfi/%3a45.fasl
@@ -3454,7 +3408,6 @@ lib/srfi/%3a45/lazy.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a45_lazy_fasldir = $(bundledlibsdir)/srfi/%3a45
 lib_srfi__3a45_lazy_slsdir  = $(bundledlibsdir)/srfi/%3a45
 nodist_lib_srfi__3a45_lazy_fasl_DATA = lib/srfi/%3a45/lazy.fasl
@@ -3463,15 +3416,14 @@ dist_lib_srfi__3a45_lazy_sls_DATA = lib/srfi/%3a45/lazy.sls
 endif
 EXTRA_DIST += lib/srfi/%3a45/lazy.sls
 CLEANFILES += lib/srfi/%3a45/lazy.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a48.fasl: \
 		lib/srfi/%3a48.sls \
 		lib/srfi/%3a48/intermediate-format-strings.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a48_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a48_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a48_fasl_DATA = lib/srfi/%3a48.fasl
@@ -3489,7 +3441,6 @@ lib/srfi/%3a48/intermediate-format-strings.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a48_intermediate_format_strings_fasldir = $(bundledlibsdir)/srfi/%3a48
 lib_srfi__3a48_intermediate_format_strings_slsdir  = $(bundledlibsdir)/srfi/%3a48
 nodist_lib_srfi__3a48_intermediate_format_strings_fasl_DATA = lib/srfi/%3a48/intermediate-format-strings.fasl
@@ -3498,15 +3449,14 @@ dist_lib_srfi__3a48_intermediate_format_strings_sls_DATA = lib/srfi/%3a48/interm
 endif
 EXTRA_DIST += lib/srfi/%3a48/intermediate-format-strings.sls
 CLEANFILES += lib/srfi/%3a48/intermediate-format-strings.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a61.fasl: \
 		lib/srfi/%3a61.sls \
 		lib/srfi/%3a61/cond.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a61_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a61_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a61_fasl_DATA = lib/srfi/%3a61.fasl
@@ -3522,7 +3472,6 @@ lib/srfi/%3a61/cond.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a61_cond_fasldir = $(bundledlibsdir)/srfi/%3a61
 lib_srfi__3a61_cond_slsdir  = $(bundledlibsdir)/srfi/%3a61
 nodist_lib_srfi__3a61_cond_fasl_DATA = lib/srfi/%3a61/cond.fasl
@@ -3531,15 +3480,14 @@ dist_lib_srfi__3a61_cond_sls_DATA = lib/srfi/%3a61/cond.sls
 endif
 EXTRA_DIST += lib/srfi/%3a61/cond.sls
 CLEANFILES += lib/srfi/%3a61/cond.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a64.fasl: \
 		lib/srfi/%3a64.sls \
 		lib/srfi/%3a64/testing.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a64_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a64_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a64_fasl_DATA = lib/srfi/%3a64.fasl
@@ -3560,7 +3508,6 @@ lib/srfi/%3a64/testing.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a64_testing_fasldir = $(bundledlibsdir)/srfi/%3a64
 lib_srfi__3a64_testing_slsdir  = $(bundledlibsdir)/srfi/%3a64
 nodist_lib_srfi__3a64_testing_fasl_DATA = lib/srfi/%3a64/testing.fasl
@@ -3569,15 +3516,14 @@ dist_lib_srfi__3a64_testing_sls_DATA = lib/srfi/%3a64/testing.sls
 endif
 EXTRA_DIST += lib/srfi/%3a64/testing.sls
 CLEANFILES += lib/srfi/%3a64/testing.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a67.fasl: \
 		lib/srfi/%3a67.sls \
 		lib/srfi/%3a67/compare-procedures.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a67_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a67_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a67_fasl_DATA = lib/srfi/%3a67.fasl
@@ -3594,7 +3540,6 @@ lib/srfi/%3a67/compare-procedures.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a67_compare_procedures_fasldir = $(bundledlibsdir)/srfi/%3a67
 lib_srfi__3a67_compare_procedures_slsdir  = $(bundledlibsdir)/srfi/%3a67
 nodist_lib_srfi__3a67_compare_procedures_fasl_DATA = lib/srfi/%3a67/compare-procedures.fasl
@@ -3603,15 +3548,14 @@ dist_lib_srfi__3a67_compare_procedures_sls_DATA = lib/srfi/%3a67/compare-procedu
 endif
 EXTRA_DIST += lib/srfi/%3a67/compare-procedures.sls
 CLEANFILES += lib/srfi/%3a67/compare-procedures.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a69.fasl: \
 		lib/srfi/%3a69.sls \
 		lib/srfi/%3a69/basic-hash-tables.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a69_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a69_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a69_fasl_DATA = lib/srfi/%3a69.fasl
@@ -3627,7 +3571,6 @@ lib/srfi/%3a69/basic-hash-tables.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a69_basic_hash_tables_fasldir = $(bundledlibsdir)/srfi/%3a69
 lib_srfi__3a69_basic_hash_tables_slsdir  = $(bundledlibsdir)/srfi/%3a69
 nodist_lib_srfi__3a69_basic_hash_tables_fasl_DATA = lib/srfi/%3a69/basic-hash-tables.fasl
@@ -3636,15 +3579,14 @@ dist_lib_srfi__3a69_basic_hash_tables_sls_DATA = lib/srfi/%3a69/basic-hash-table
 endif
 EXTRA_DIST += lib/srfi/%3a69/basic-hash-tables.sls
 CLEANFILES += lib/srfi/%3a69/basic-hash-tables.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a78.fasl: \
 		lib/srfi/%3a78.sls \
 		lib/srfi/%3a78/lightweight-testing.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a78_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a78_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a78_fasl_DATA = lib/srfi/%3a78.fasl
@@ -3662,7 +3604,6 @@ lib/srfi/%3a78/lightweight-testing.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a78_lightweight_testing_fasldir = $(bundledlibsdir)/srfi/%3a78
 lib_srfi__3a78_lightweight_testing_slsdir  = $(bundledlibsdir)/srfi/%3a78
 nodist_lib_srfi__3a78_lightweight_testing_fasl_DATA = lib/srfi/%3a78/lightweight-testing.fasl
@@ -3671,15 +3612,14 @@ dist_lib_srfi__3a78_lightweight_testing_sls_DATA = lib/srfi/%3a78/lightweight-te
 endif
 EXTRA_DIST += lib/srfi/%3a78/lightweight-testing.sls
 CLEANFILES += lib/srfi/%3a78/lightweight-testing.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a98.fasl: \
 		lib/srfi/%3a98.sls \
 		lib/srfi/%3a98/os-environment-variables.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a98_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a98_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a98_fasl_DATA = lib/srfi/%3a98.fasl
@@ -3695,7 +3635,6 @@ lib/srfi/%3a98/os-environment-variables.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a98_os_environment_variables_fasldir = $(bundledlibsdir)/srfi/%3a98
 lib_srfi__3a98_os_environment_variables_slsdir  = $(bundledlibsdir)/srfi/%3a98
 nodist_lib_srfi__3a98_os_environment_variables_fasl_DATA = lib/srfi/%3a98/os-environment-variables.fasl
@@ -3704,15 +3643,14 @@ dist_lib_srfi__3a98_os_environment_variables_sls_DATA = lib/srfi/%3a98/os-enviro
 endif
 EXTRA_DIST += lib/srfi/%3a98/os-environment-variables.sls
 CLEANFILES += lib/srfi/%3a98/os-environment-variables.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a99.fasl: \
 		lib/srfi/%3a99.sls \
 		lib/srfi/%3a99/records.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a99_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a99_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a99_fasl_DATA = lib/srfi/%3a99.fasl
@@ -3731,7 +3669,6 @@ lib/srfi/%3a99/records.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a99_records_fasldir = $(bundledlibsdir)/srfi/%3a99
 lib_srfi__3a99_records_slsdir  = $(bundledlibsdir)/srfi/%3a99
 nodist_lib_srfi__3a99_records_fasl_DATA = lib/srfi/%3a99/records.fasl
@@ -3740,7 +3677,6 @@ dist_lib_srfi__3a99_records_sls_DATA = lib/srfi/%3a99/records.sls
 endif
 EXTRA_DIST += lib/srfi/%3a99/records.sls
 CLEANFILES += lib/srfi/%3a99/records.fasl
-endif
 
 lib/srfi/%3a99/records/inspection.fasl: \
 		lib/srfi/%3a99/records/inspection.sls \
@@ -3748,7 +3684,6 @@ lib/srfi/%3a99/records/inspection.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a99_records_inspection_fasldir = $(bundledlibsdir)/srfi/%3a99/records
 lib_srfi__3a99_records_inspection_slsdir  = $(bundledlibsdir)/srfi/%3a99/records
 nodist_lib_srfi__3a99_records_inspection_fasl_DATA = lib/srfi/%3a99/records/inspection.fasl
@@ -3757,14 +3692,12 @@ dist_lib_srfi__3a99_records_inspection_sls_DATA = lib/srfi/%3a99/records/inspect
 endif
 EXTRA_DIST += lib/srfi/%3a99/records/inspection.sls
 CLEANFILES += lib/srfi/%3a99/records/inspection.fasl
-endif
 
 lib/srfi/%3a99/records/helper.fasl: \
 		lib/srfi/%3a99/records/helper.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a99_records_helper_fasldir = $(bundledlibsdir)/srfi/%3a99/records
 lib_srfi__3a99_records_helper_slsdir  = $(bundledlibsdir)/srfi/%3a99/records
 nodist_lib_srfi__3a99_records_helper_fasl_DATA = lib/srfi/%3a99/records/helper.fasl
@@ -3773,7 +3706,6 @@ dist_lib_srfi__3a99_records_helper_sls_DATA = lib/srfi/%3a99/records/helper.sls
 endif
 EXTRA_DIST += lib/srfi/%3a99/records/helper.sls
 CLEANFILES += lib/srfi/%3a99/records/helper.fasl
-endif
 
 lib/srfi/%3a99/records/procedural.fasl: \
 		lib/srfi/%3a99/records/procedural.sls \
@@ -3781,7 +3713,6 @@ lib/srfi/%3a99/records/procedural.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a99_records_procedural_fasldir = $(bundledlibsdir)/srfi/%3a99/records
 lib_srfi__3a99_records_procedural_slsdir  = $(bundledlibsdir)/srfi/%3a99/records
 nodist_lib_srfi__3a99_records_procedural_fasl_DATA = lib/srfi/%3a99/records/procedural.fasl
@@ -3790,7 +3721,6 @@ dist_lib_srfi__3a99_records_procedural_sls_DATA = lib/srfi/%3a99/records/procedu
 endif
 EXTRA_DIST += lib/srfi/%3a99/records/procedural.sls
 CLEANFILES += lib/srfi/%3a99/records/procedural.fasl
-endif
 
 lib/srfi/%3a99/records/syntactic.fasl: \
 		lib/srfi/%3a99/records/syntactic.sls \
@@ -3798,7 +3728,6 @@ lib/srfi/%3a99/records/syntactic.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a99_records_syntactic_fasldir = $(bundledlibsdir)/srfi/%3a99/records
 lib_srfi__3a99_records_syntactic_slsdir  = $(bundledlibsdir)/srfi/%3a99/records
 nodist_lib_srfi__3a99_records_syntactic_fasl_DATA = lib/srfi/%3a99/records/syntactic.fasl
@@ -3807,15 +3736,14 @@ dist_lib_srfi__3a99_records_syntactic_sls_DATA = lib/srfi/%3a99/records/syntacti
 endif
 EXTRA_DIST += lib/srfi/%3a99/records/syntactic.sls
 CLEANFILES += lib/srfi/%3a99/records/syntactic.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a101.fasl: \
 		lib/srfi/%3a101.sls \
 		lib/vicare/containers/ralists.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a101_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a101_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a101_fasl_DATA = lib/srfi/%3a101.fasl
@@ -3826,13 +3754,13 @@ EXTRA_DIST += lib/srfi/%3a101.sls
 CLEANFILES += lib/srfi/%3a101.fasl
 endif
 
+if WANT_SRFI
 lib/srfi/%3a101/random-access-lists.fasl: \
 		lib/srfi/%3a101/random-access-lists.sls \
 		lib/srfi/%3a101.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a101_random_access_lists_fasldir = $(bundledlibsdir)/srfi/%3a101
 lib_srfi__3a101_random_access_lists_slsdir  = $(bundledlibsdir)/srfi/%3a101
 nodist_lib_srfi__3a101_random_access_lists_fasl_DATA = lib/srfi/%3a101/random-access-lists.fasl
@@ -3843,13 +3771,13 @@ EXTRA_DIST += lib/srfi/%3a101/random-access-lists.sls
 CLEANFILES += lib/srfi/%3a101/random-access-lists.fasl
 endif
 
+if WANT_SRFI
 lib/srfi/%3a101/random-access-lists/procedures.fasl: \
 		lib/srfi/%3a101/random-access-lists/procedures.sls \
 		lib/srfi/%3a101.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a101_random_access_lists_procedures_fasldir = $(bundledlibsdir)/srfi/%3a101/random-access-lists
 lib_srfi__3a101_random_access_lists_procedures_slsdir  = $(bundledlibsdir)/srfi/%3a101/random-access-lists
 nodist_lib_srfi__3a101_random_access_lists_procedures_fasl_DATA = lib/srfi/%3a101/random-access-lists/procedures.fasl
@@ -3860,13 +3788,13 @@ EXTRA_DIST += lib/srfi/%3a101/random-access-lists/procedures.sls
 CLEANFILES += lib/srfi/%3a101/random-access-lists/procedures.fasl
 endif
 
+if WANT_SRFI
 lib/srfi/%3a101/random-access-lists/syntax.fasl: \
 		lib/srfi/%3a101/random-access-lists/syntax.sls \
 		lib/srfi/%3a101.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a101_random_access_lists_syntax_fasldir = $(bundledlibsdir)/srfi/%3a101/random-access-lists
 lib_srfi__3a101_random_access_lists_syntax_slsdir  = $(bundledlibsdir)/srfi/%3a101/random-access-lists
 nodist_lib_srfi__3a101_random_access_lists_syntax_fasl_DATA = lib/srfi/%3a101/random-access-lists/syntax.fasl
@@ -3877,13 +3805,13 @@ EXTRA_DIST += lib/srfi/%3a101/random-access-lists/syntax.sls
 CLEANFILES += lib/srfi/%3a101/random-access-lists/syntax.fasl
 endif
 
+if WANT_SRFI
 lib/srfi/%3a101/random-access-lists/equal.fasl: \
 		lib/srfi/%3a101/random-access-lists/equal.sls \
 		lib/srfi/%3a101.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a101_random_access_lists_equal_fasldir = $(bundledlibsdir)/srfi/%3a101/random-access-lists
 lib_srfi__3a101_random_access_lists_equal_slsdir  = $(bundledlibsdir)/srfi/%3a101/random-access-lists
 nodist_lib_srfi__3a101_random_access_lists_equal_fasl_DATA = lib/srfi/%3a101/random-access-lists/equal.fasl
@@ -3894,13 +3822,13 @@ EXTRA_DIST += lib/srfi/%3a101/random-access-lists/equal.sls
 CLEANFILES += lib/srfi/%3a101/random-access-lists/equal.fasl
 endif
 
+if WANT_SRFI
 lib/srfi/%3a111.fasl: \
 		lib/srfi/%3a111.sls \
 		lib/srfi/%3a111/boxes.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a111_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a111_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a111_fasl_DATA = lib/srfi/%3a111.fasl
@@ -3916,7 +3844,6 @@ lib/srfi/%3a111/boxes.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a111_boxes_fasldir = $(bundledlibsdir)/srfi/%3a111
 lib_srfi__3a111_boxes_slsdir  = $(bundledlibsdir)/srfi/%3a111
 nodist_lib_srfi__3a111_boxes_fasl_DATA = lib/srfi/%3a111/boxes.fasl
@@ -3925,15 +3852,14 @@ dist_lib_srfi__3a111_boxes_sls_DATA = lib/srfi/%3a111/boxes.sls
 endif
 EXTRA_DIST += lib/srfi/%3a111/boxes.sls
 CLEANFILES += lib/srfi/%3a111/boxes.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a112.fasl: \
 		lib/srfi/%3a112.sls \
 		lib/srfi/%3a112/environment-inquiry.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a112_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a112_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a112_fasl_DATA = lib/srfi/%3a112.fasl
@@ -3949,7 +3875,6 @@ lib/srfi/%3a112/environment-inquiry.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a112_environment_inquiry_fasldir = $(bundledlibsdir)/srfi/%3a112
 lib_srfi__3a112_environment_inquiry_slsdir  = $(bundledlibsdir)/srfi/%3a112
 nodist_lib_srfi__3a112_environment_inquiry_fasl_DATA = lib/srfi/%3a112/environment-inquiry.fasl
@@ -3958,15 +3883,14 @@ dist_lib_srfi__3a112_environment_inquiry_sls_DATA = lib/srfi/%3a112/environment-
 endif
 EXTRA_DIST += lib/srfi/%3a112/environment-inquiry.sls
 CLEANFILES += lib/srfi/%3a112/environment-inquiry.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a113.fasl: \
 		lib/srfi/%3a113.sls \
 		lib/srfi/%3a113/sets-and-bags.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a113_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a113_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a113_fasl_DATA = lib/srfi/%3a113.fasl
@@ -3983,7 +3907,6 @@ lib/srfi/%3a113/sets-and-bags.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a113_sets_and_bags_fasldir = $(bundledlibsdir)/srfi/%3a113
 lib_srfi__3a113_sets_and_bags_slsdir  = $(bundledlibsdir)/srfi/%3a113
 nodist_lib_srfi__3a113_sets_and_bags_fasl_DATA = lib/srfi/%3a113/sets-and-bags.fasl
@@ -3992,15 +3915,14 @@ dist_lib_srfi__3a113_sets_and_bags_sls_DATA = lib/srfi/%3a113/sets-and-bags.sls
 endif
 EXTRA_DIST += lib/srfi/%3a113/sets-and-bags.sls
 CLEANFILES += lib/srfi/%3a113/sets-and-bags.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a114.fasl: \
 		lib/srfi/%3a114.sls \
 		lib/srfi/%3a114/comparators.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a114_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a114_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a114_fasl_DATA = lib/srfi/%3a114.fasl
@@ -4017,7 +3939,6 @@ lib/srfi/%3a114/comparators.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a114_comparators_fasldir = $(bundledlibsdir)/srfi/%3a114
 lib_srfi__3a114_comparators_slsdir  = $(bundledlibsdir)/srfi/%3a114
 nodist_lib_srfi__3a114_comparators_fasl_DATA = lib/srfi/%3a114/comparators.fasl
@@ -4026,15 +3947,14 @@ dist_lib_srfi__3a114_comparators_sls_DATA = lib/srfi/%3a114/comparators.sls
 endif
 EXTRA_DIST += lib/srfi/%3a114/comparators.sls
 CLEANFILES += lib/srfi/%3a114/comparators.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a115.fasl: \
 		lib/srfi/%3a115.sls \
 		lib/srfi/%3a115/regexps.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a115_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a115_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a115_fasl_DATA = lib/srfi/%3a115.fasl
@@ -4051,7 +3971,6 @@ lib/srfi/%3a115/regexps.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a115_regexps_fasldir = $(bundledlibsdir)/srfi/%3a115
 lib_srfi__3a115_regexps_slsdir  = $(bundledlibsdir)/srfi/%3a115
 nodist_lib_srfi__3a115_regexps_fasl_DATA = lib/srfi/%3a115/regexps.fasl
@@ -4060,15 +3979,14 @@ dist_lib_srfi__3a115_regexps_sls_DATA = lib/srfi/%3a115/regexps.sls
 endif
 EXTRA_DIST += lib/srfi/%3a115/regexps.sls
 CLEANFILES += lib/srfi/%3a115/regexps.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a116.fasl: \
 		lib/srfi/%3a116.sls \
 		lib/srfi/%3a116/ilists.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a116_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a116_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a116_fasl_DATA = lib/srfi/%3a116.fasl
@@ -4085,7 +4003,6 @@ lib/srfi/%3a116/ilists.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a116_ilists_fasldir = $(bundledlibsdir)/srfi/%3a116
 lib_srfi__3a116_ilists_slsdir  = $(bundledlibsdir)/srfi/%3a116
 nodist_lib_srfi__3a116_ilists_fasl_DATA = lib/srfi/%3a116/ilists.fasl
@@ -4094,15 +4011,14 @@ dist_lib_srfi__3a116_ilists_sls_DATA = lib/srfi/%3a116/ilists.sls
 endif
 EXTRA_DIST += lib/srfi/%3a116/ilists.sls
 CLEANFILES += lib/srfi/%3a116/ilists.fasl
-endif
 
+if WANT_SRFI
 lib/srfi/%3a116/comparators.fasl: \
 		lib/srfi/%3a116/comparators.sls \
 		lib/vicare/containers/ilists/comparators.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a116_comparators_fasldir = $(bundledlibsdir)/srfi/%3a116
 lib_srfi__3a116_comparators_slsdir  = $(bundledlibsdir)/srfi/%3a116
 nodist_lib_srfi__3a116_comparators_fasl_DATA = lib/srfi/%3a116/comparators.fasl
@@ -4113,13 +4029,13 @@ EXTRA_DIST += lib/srfi/%3a116/comparators.sls
 CLEANFILES += lib/srfi/%3a116/comparators.fasl
 endif
 
+if WANT_SRFI
 lib/srfi/%3a116/quotations.fasl: \
 		lib/srfi/%3a116/quotations.sls \
 		lib/vicare/containers/ilists/quotations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
 lib_srfi__3a116_quotations_fasldir = $(bundledlibsdir)/srfi/%3a116
 lib_srfi__3a116_quotations_slsdir  = $(bundledlibsdir)/srfi/%3a116
 nodist_lib_srfi__3a116_quotations_fasl_DATA = lib/srfi/%3a116/quotations.fasl
@@ -4130,14 +4046,14 @@ EXTRA_DIST += lib/srfi/%3a116/quotations.sls
 CLEANFILES += lib/srfi/%3a116/quotations.fasl
 endif
 
+if WANT_SRFI
+if WANT_POSIX
 lib/srfi/%3a106.fasl: \
 		lib/srfi/%3a106.sls \
 		lib/srfi/%3a106/socket.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
-if WANT_POSIX
 lib_srfi__3a106_fasldir = $(bundledlibsdir)/srfi
 lib_srfi__3a106_slsdir  = $(bundledlibsdir)/srfi
 nodist_lib_srfi__3a106_fasl_DATA = lib/srfi/%3a106.fasl
@@ -4149,14 +4065,14 @@ CLEANFILES += lib/srfi/%3a106.fasl
 endif
 endif
 
+if WANT_SRFI
+if WANT_POSIX
 lib/srfi/%3a106/socket.fasl: \
 		lib/srfi/%3a106/socket.sls \
 		lib/srfi/%3a106/compat.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
-if WANT_POSIX
 lib_srfi__3a106_socket_fasldir = $(bundledlibsdir)/srfi/%3a106
 lib_srfi__3a106_socket_slsdir  = $(bundledlibsdir)/srfi/%3a106
 nodist_lib_srfi__3a106_socket_fasl_DATA = lib/srfi/%3a106/socket.fasl
@@ -4168,6 +4084,8 @@ CLEANFILES += lib/srfi/%3a106/socket.fasl
 endif
 endif
 
+if WANT_SRFI
+if WANT_POSIX
 lib/srfi/%3a106/compat.fasl: \
 		lib/srfi/%3a106/compat.vicare.sls \
 		lib/vicare/platform/constants.fasl \
@@ -4175,8 +4093,6 @@ lib/srfi/%3a106/compat.fasl: \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-if WANT_SRFI
-if WANT_POSIX
 lib_srfi__3a106_compat_fasldir = $(bundledlibsdir)/srfi/%3a106
 lib_srfi__3a106_compat_vicare_slsdir  = $(bundledlibsdir)/srfi/%3a106
 nodist_lib_srfi__3a106_compat_fasl_DATA = lib/srfi/%3a106/compat.fasl

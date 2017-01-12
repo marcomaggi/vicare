@@ -15,7 +15,7 @@
 ;;;     "$(top_srcdir)/lib"  of  the  distribution  package;  this  limitation  makes
 ;;;     pathname processing so much simpler...
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -236,9 +236,25 @@
 	    ;;Remember that the stem+extension starts with a slash!!!
 	    (binary-pathname (libs.directory+library-stem->library-binary-pathname "lib" (libs.library-reference->filename-stem libref))))
 	(unless (hashtable-ref ALREADY-PROCESSED-TABLE source-pathname #f)
-	  (fprintf stderr "processing: ~a\n" source-pathname)
-	  (%build-compilation-recipe target/dependencies-list binary-pathname source-pathname)
-	  (%build-installation-stuff binary-pathname source-pathname)
+	  (let ((conditionals (hashtable-ref LIBREF-CONDITIONALS-MAP libref '())))
+	    (fprintf stderr "processing: ~a\n" source-pathname)
+	    ;;Generate the opening Automake conditional directives.  For example:
+	    ;;
+	    ;;   if WANT_POSIX
+	    ;;
+	    (for-each-in-order
+		(lambda (conditional)
+		  (print-makefile-content "if ~a\n" conditional))
+	      conditionals)
+	    (%build-compilation-recipe target/dependencies-list binary-pathname source-pathname)
+	    (%build-installation-stuff binary-pathname source-pathname)
+	    ;;Generate the closing Automake conditional directives.
+	    (for-each-in-order
+		(lambda (conditional)
+		  (print-makefile-content "endif\n"))
+	      conditionals)
+	    ;;Done.
+	    (print-makefile-content "\n"))
 	  (hashtable-set! ALREADY-PROCESSED-TABLE source-pathname #t)
 	  (for-each-in-order
 	      %process-library-reference
@@ -281,13 +297,6 @@
 	  (sls-stem  (%string-replace-nasty-chars '(#\/ #\- #\% #\.) #\_ source-pathname))
 	  (noinst    (if (include-install-rules) "" "noinst_")))
 
-      ;;Generate the opening Automake conditional directives.
-      (when (conditionals)
-	(for-each-in-order
-	    (lambda (conditional)
-	      (print-makefile-content "if ~a\n" conditional))
-	  (conditionals)))
-
       ;;Generate the installation-directory variable-definitions.
       ;;
       ;;NOTE For whatever reason these directories definitions are needed by Automake
@@ -316,17 +325,7 @@
 
       ;;Generate the variable  assignment that causes the FASL file  to be removes by
       ;;the "clean" rule.
-      (print-makefile-content "CLEANFILES += ~a\n" binary-pathname)
-
-      ;;Generate the closing Automake conditional directives.
-      (when (conditionals)
-	(for-each-in-order
-	    (lambda (conditional)
-	      (print-makefile-content "endif\n"))
-	  (conditionals)))
-
-      ;;Done.
-      (print-makefile-content "\n")))
+      (print-makefile-content "CLEANFILES += ~a\n" binary-pathname)))
 
   (define (%string-replace-nasty-chars chs ch.repl str1)
     (receive-and-return (str2)
@@ -361,8 +360,24 @@
 
 ;;;; go!!!
 
-(define conditionals
-  (make-parameter #f))
+(define-constant LIBREF-CONDITIONALS-MAP
+  ;;Map  library  names  to  a   list  of  symbols  representing  Automake's  "WANT_"
+  ;;conditionals.
+  ;;
+  ;;Every  library recipe  must  be completely  enclosed in  an  "if" directive  when
+  ;;requested.  For example:
+  ;;
+  ;;   if WANT_POSIX
+  ;;   ...
+  ;;   endif
+  ;;
+  ;;The input LIBRARIES-SPECS  must specify correctly the  dependencies, because this
+  ;;library does not perform "WANT_" dependencies propagation.
+  ;;
+  ;;FIXME  This library  *should* perform  "WANT_" dependencies  propagation.  (Marco
+  ;;Maggi; Jan 12, 2017)
+  ;;
+  (make-hashtable equal-hash equal?))
 
 (define build-recipes-port
   (make-parameter #f))
@@ -429,11 +444,20 @@
 	    source-pathnames)
 	  (fprintf port "\n\n")))
 
+      ;;Initialise the conditionals map.
+      (for-each
+	  (lambda (spec-entry)
+	    (let ((conditionals	(car spec-entry))
+		  (libnames	(cdr spec-entry)))
+	      (for-each (lambda (libname)
+			  (hashtable-set! LIBREF-CONDITIONALS-MAP libname conditionals))
+		libnames)))
+	libraries-specs)
+
       ;;Process all the library references.
       (for-each-in-order
 	  (lambda (spec-entry)
-	    (parametrise ((conditionals       (car spec-entry))
-			  (build-recipes-port port))
+	    (parametrise ((build-recipes-port port))
 	      (let ((library-names (cdr spec-entry)))
 		(for-each-in-order %process-library-reference library-names))))
 	libraries-specs)
