@@ -1,4 +1,4 @@
-.\" Copyright (C), 2014, 2015  Marco Maggi
+.\" Copyright (C), 2014, 2015, 2017  Marco Maggi
 .\" You may distribute this file under the terms of the GNU Free
 .\" Documentation License.
 .TH vicare 1 2015-03-05
@@ -68,11 +68,19 @@ Display version informations then exit.
 \fB\-L\fR \fIdirectory\fR,
 \fB\-\-library\-path\fR \fIdirectory\fR
 .RS 4
-Add \fIdirectory\fR to the search path for binary libraries.  This
+Append \fIdirectory\fR to the search path for binary libraries.  This
 option can be used multiple times.
 .RE
 
 .PP
+\fB\-I\fR \fIdirectory\fR,
+.RS 4
+Prepend \fIdirectory\fR to the search path for binary libraries.  This
+option can be used multiple times.
+.RE
+
+.PP
+\fB\-A\fR \fIdirectory\fR
 \fB\-\-source\-path\fR \fIdirectory\fR
 .RS 4
 Add \fIdirectory\fR to the search path for source libraries and include
