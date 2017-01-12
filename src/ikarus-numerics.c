@@ -63,7 +63,6 @@ DEBUG_VERIFY_BIGNUM (ikptr_t x, const char * caller)
       }
     } else {
       if (last_limb <= most_negative_fixnum) {
-	fprintf(stderr, "last_limb=0x%016lx, most_negative_fixnum=0x%016Lx\n", last_limb, (long long)most_negative_fixnum);
 	ik_abort("in '%s' should be a negative fixnum: 0x%016lx", caller, last_limb);
       }
     }
