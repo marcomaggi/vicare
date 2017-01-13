@@ -1,6 +1,6 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
-;;;Copyright (c) 2010-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -1024,11 +1024,13 @@
 	(cond ((stx? X)
 	       ;;X is a wrapped syntax object: so the items in its stack of annotated
 	       ;;expressions are all wrapped syntax objects.
-	       (let* ((ae*    (stx-annotated-expr* X))
-		      (trace* (map make-macro-expansion-trace ae*)))
-		 (apply condition (if (syntax=? X (car ae*))
-				      trace*
-				    (cons (make-macro-expansion-trace X) trace*)))))
+	       (let ((ae* (stx-annotated-expr* X)))
+		 (if (pair? ae*)
+		     (let ((trace* (map make-macro-expansion-trace ae*)))
+		       (apply condition (if (syntax=? X (car ae*))
+					    trace*
+					  (cons (make-macro-expansion-trace X) trace*))))
+		   (condition))))
 
 	      ((reader-annotation? X)
 	       ;;Here we only  want to wrap X into an  syntax object, we
