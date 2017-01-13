@@ -7,7 +7,7 @@
 
 	Interface to GNU C Library functions.
 
-  Copyright (C) 2011, 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013, 2015, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -62,7 +62,7 @@
 #endif
 
 /* Iconv usage has its own configuration option. */
-#ifdef HAVE_ICONV
+#if ((defined HAVE_ICONV) && (1 == VICARE_HAVE_ICONV))
 #  include <iconv.h>
 #endif
 
@@ -1190,7 +1190,7 @@ ikrt_glibc_iconv_open (ikptr_t s_from_code, ikptr_t s_to_code, ikpcb_t * pcb)
    state structure; if  an error occurs: the return  value is an encoded
    "errno" value. */
 {
-#ifdef HAVE_ICONV
+#if ((defined HAVE_ICONV) && (1 == VICARE_HAVE_ICONV))
   char *	to_code   = IK_BYTEVECTOR_DATA_CHARP(s_to_code);
   char *	from_code = IK_BYTEVECTOR_DATA_CHARP(s_from_code);
   /* Glibc documentation  states that we must not  assume anything about
@@ -1219,7 +1219,7 @@ ikrt_glibc_iconv_close (ikptr_t s_handle)
    S_HANLE is mutated to hold the  NULL pointer; if an error occurs: the
    return value is an encoded "errno" value. */
 {
-#ifdef HAVE_ICONV
+#if ((defined HAVE_ICONV) && (1 == VICARE_HAVE_ICONV))
   iconv_t	handle = (iconv_t)IK_POINTER_DATA_VOIDP(s_handle);
   if (handle) {
     int		retval;
@@ -1267,7 +1267,7 @@ ikrt_glibc_iconv (ikptr_t s_handle,
 		  ikptr_t s_out_bv, ikptr_t s_out_start, ikptr_t s_out_past,
 		  ikpcb_t * pcb)
 {
-#ifdef HAVE_ICONV
+#if ((defined HAVE_ICONV) && (1 == VICARE_HAVE_ICONV))
   iconv_t	handle = (iconv_t)IK_POINTER_DATA_VOIDP(s_handle);
   size_t	istart = IK_UNFIX(s_in_start);
   size_t	ipast  = (IK_FALSE_OBJECT == s_in_past)? \

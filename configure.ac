@@ -1464,42 +1464,60 @@ AC_SUBST([VICARE_BUILT_WITH_FFI_ENABLED])
 dnl --------------------------------------------------------------------
 dnl Check for Libiconv (optional)
 
-with_LIBICONV=check
+vicare_check_LIBICONV=check
 AC_MSG_CHECKING([whether to enable support for Libiconv])
 AC_ARG_WITH([libiconv],
   [AS_HELP_STRING([--with-libiconv],[enable support for Libiconv (default is check)])],
   [AS_CASE([$withval],
-     [yes],  [with_LIBICONV=yes],
-     [no],   [with_LIBICONV=no],
-     [check],[with_LIBICONV=check],
+     [yes],  [vicare_check_LIBICONV=yes],
+     [no],   [vicare_check_LIBICONV=no],
+     [check],[vicare_check_LIBICONV=check],
      [AC_MSG_ERROR([bad value $withval for --with-libiconv])])],
-  [with_LIBICONV=check])
-  AC_MSG_RESULT([$with_LIBICONV])
+  [vicare_check_LIBICONV=check])
+  AC_MSG_RESULT([$vicare_check_LIBICONV])
 dnl
+# FIXME Unfortunately the following AS_IF fails to exclude the expansion
+# of AM_ICONV when the user selected "--without-libiconv" on the command
+# line.  Autoconf  does not place  the expansion of AM_ICONV  inside the
+# generated shell  conditional statement;  it places it  somewhere else.
+# Such code  is always  executed (and, for  example, the  C preprocessor
+# symbol "HAVE_ICONV" is defined when the iconv facilities are found).
+#
+# So, to actually exclude the  iconv facilities: we use WANT_LIBICONV in
+# "Makefile.am"  to  exclude  the  linker flags,  the  "(vicare  iconv)"
+# library and the  iconv test program; we use the  C preprocessor symbol
+# "VICARE_HAVE_ICONV" to exclude the C  language code in the source that
+# defines the iconv core primitives.
+#
+# This is dirty and should be fixed with a proper conditional, but right
+# now I do not know how to do it.  (Marco Maggi; Fri Jan 13, 2017)
 vicare_with_LIBICONV=no
-AS_IF([test "x$with_libiconv" != xno],
+AS_IF([test "x$vicare_check_LIBICONV" != xno],
   [AM_ICONV
    AS_IF([test "$am_cv_func_iconv" = yes],
-     [# Success!
-      AC_MSG_NOTICE([Libiconv support enabled])
+     [ # Success!
+      AC_MSG_NOTICE([Enabled support for iconv facilities])
       vicare_with_LIBICONV=yes],
 
-     [test "$with_libiconv" = yes],
-     [# The  user requested support for  library or die, but  either the
-      # header or the library or both were not found.
-      AC_MSG_ERROR([Libiconv not found])],
+     [test "$vicare_check_LIBICONV" = yes],
+     [ #  The user requested  support for iconv  or die, but  either the
+       # header or the library or both were not found.
+      AC_MSG_ERROR([iconv facilities not available])],
 
-     [# The  user requested a  check for optional Libiconv  support, but
-      # either the header or the library or both were not found.
-      AC_MSG_WARN([Libiconv not found])])],
-  [AC_MSG_NOTICE([libiconv was not requested])])
-dnl
+     [ # The  user  requested  a check  for  optional  iconv  facilities
+       # support, but either  the header or the library or  both were not
+       # found.
+      AC_MSG_WARN([iconv facilities not available])])],
+  [AC_MSG_NOTICE([iconv facilibies not requested])])
 AM_CONDITIONAL([WANT_LIBICONV],[test "x$vicare_with_LIBICONV" = xyes])
-
+dnl
 AS_VAR_SET(VICARE_BUILT_WITH_ICONV_ENABLED,[f])
 AM_COND_IF([WANT_LIBICONV],
-  [AS_VAR_SET(VICARE_BUILT_WITH_ICONV_ENABLED,[t])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_ICONV_ENABLED,[t])
+   AS_VAR_SET(VICARE_HAVE_ICONV,1)],
+  [AS_VAR_SET(VICARE_HAVE_ICONV,0)])
 AC_SUBST([VICARE_BUILT_WITH_ICONV_ENABLED])
+AC_DEFINE_UNQUOTED([VICARE_HAVE_ICONV],[$VICARE_HAVE_ICONV],[whether the iconv facilities are enabled])
 
 dnl --------------------------------------------------------------------
 dnl Optional binding for GNU Readline or compatible library
