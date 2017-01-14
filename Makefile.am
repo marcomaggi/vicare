@@ -760,7 +760,6 @@ lib/vicare/platform/features.vicare.sls : features
 
 EXTRA_DIST		+= \
 	lib/libraries.scm				\
-	scripts/compile-all.sps				\
 	scripts/build-makefile-rules.sps		\
 	\
 	lib/srfi/%3a19/read-leap-seconds-table.sps	\
