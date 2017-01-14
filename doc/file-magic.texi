@@ -1,0 +1,20 @@
+@node file-magic
+@appendix Installing @command{file} magic file
+
+
+Under Unix platforms it is usually available a command @command{file} that can be used to identify
+common file formats.  @value{PACKAGE} installs a configuration file that @command{file} can use to
+identify @fasl{} files.  The file is:
+
+@example
+/etc/file/magic/vicare-scheme
+@end example
+
+@noindent
+and its installation is enabled by configuring the package with the @option{--enable-file-magic}
+command line option of @command{configure}.
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-scheme"
+@c End:

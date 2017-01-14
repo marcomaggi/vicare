@@ -3,7 +3,9 @@
 ACLOCAL_AMFLAGS		= -I meta/autotools
 EXTRA_DIST		= configure.sh configure32.sh configure64.sh	\
 			  bare-configure.sh cygwin-configure.sh		\
-			  meta/autotools/config.rpath INSTALL
+			  meta/autotools/config.rpath INSTALL		\
+			  meta/slackware/doinst.sh.in			\
+			  meta/slackware/slack-desc.in
 
 slsdir			= $(srcdir)/lib
 fasldir			= $(builddir)/lib
@@ -72,6 +74,7 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/fasl.texi					\
 	doc/shmem.texi					\
 	doc/binfmt.texi					\
+	doc/file-magic.texi				\
 	doc/notes.texi					\
 	doc/history.texi				\
 	doc/notes.texi					\
@@ -1553,6 +1556,16 @@ if WANT_INSTALL_SCHEME_SCRIPT
 
 scheme_scriptdir	= $(bindir)
 scheme_script_SCRIPTS	= meta/scripts/scheme-script
+
+endif
+
+#page
+#### installation of "file" command magic file
+
+if WANT_FILE_MAGIC
+
+magicfiledir		= /etc/file/magic
+magicfile_DATA		= meta/etc/file/magic/vicare-scheme
 
 endif
 

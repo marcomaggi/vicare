@@ -22,6 +22,7 @@ VFLAGS=${VFLAGS:=-O2}
     --enable-binfmt					\
     --enable-time-tests					\
     --enable-scheme-script				\
+    --enable-file-magic					\
     --with-pthread					\
     CFLAGS='-O3 -pedantic'				\
     CPPFLAGS="-I${LIBFFI_INCLUDEDIR}"			\

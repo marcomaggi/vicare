@@ -1,0 +1,16 @@
+# doinst.sh --
+#
+# Post-installation file for Vicare Scheme under Slackware systems.
+
+if test -f /etc/file/magic/vicare-scheme
+then
+   if test -x /etc/file/recompile_magic.mgc.sh
+   then
+       echo 'rebuilding magic database for file command' >&2
+       /etc/file/recompile_magic.mgc.sh
+   else
+       echo 'file command database script not found' >&2
+   fi
+fi
+
+### end of file

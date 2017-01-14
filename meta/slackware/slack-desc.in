@@ -1,0 +1,12 @@
+              |-----handy-ruler-----------------------------------------------|
+@PACKAGE_NAME@: @PACKAGE_NAME@ @PACKAGE_VERSION@
+@PACKAGE_NAME@:
+@PACKAGE_NAME@: Vicare Scheme is an R6RS compliant fork of Ikarus Scheme,
+@PACKAGE_NAME@: aiming to become a native compiler for R6 Scheme producing
+@PACKAGE_NAME@: single threaded programs running on Intel x86 32-bit and
+@PACKAGE_NAME@: 64-bit processors.
+@PACKAGE_NAME@:
+@PACKAGE_NAME@: It should work on POSIX platforms, but not on Cygwin.
+@PACKAGE_NAME@:
+@PACKAGE_NAME@:
+@PACKAGE_NAME@:

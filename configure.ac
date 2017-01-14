@@ -122,6 +122,12 @@ AM_COND_IF([WANT_ARGUMENTS_VALIDATION],
 AC_SUBST([VICARE_ARGUMENTS_VALIDATION],
   [$vicare_subst_ARGUMENTS_VALIDATION])
 
+VICARE_ENABLE_OPTION([FILE_MAGIC],[file-magic],[no],
+  [whether to install the magic file for the file command],
+  [enable installation of the magic file for the file command])
+AM_CONDITIONAL([WANT_FILE_MAGIC],
+  [test "x$vicare_enable_FILE_MAGIC" = xyes])
+
 dnl --------------------------------------------------------------------
 
 VICARE_ENABLE_OPTION([SRFI],[srfi],[yes],
@@ -1577,6 +1583,8 @@ AC_CONFIG_FILES([Makefile]
                 [meta/scripts/binfmt-script-launcher.sh]
                 [meta/scripts/binfmt-program-launcher.sh]
                 [meta/scripts/scheme-script]
+                [meta/slackware/doinst.sh]
+                [meta/slackware/slack-desc]
                 [src/vicare-platform.h]
                 [lib/vicare/platform/configuration.vicare.sls]
                 [lib/vicare/platform/constants.vicare.sls]
