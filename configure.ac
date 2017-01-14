@@ -1573,10 +1573,10 @@ AC_SUBST([BOOT_VFLAGS])
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile]
-                [scripts/rc.vicare-scheme]
-                [scripts/binfmt-script-launcher.sh]
-                [scripts/binfmt-program-launcher.sh]
-                [scripts/scheme-script]
+                [meta/scripts/rc.vicare-scheme]
+                [meta/scripts/binfmt-script-launcher.sh]
+                [meta/scripts/binfmt-program-launcher.sh]
+                [meta/scripts/scheme-script]
                 [src/vicare-platform.h]
                 [lib/vicare/platform/configuration.vicare.sls]
                 [lib/vicare/platform/constants.vicare.sls]

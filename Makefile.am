@@ -760,7 +760,7 @@ lib/vicare/platform/features.vicare.sls : features
 
 EXTRA_DIST		+= \
 	lib/libraries.scm				\
-	scripts/build-makefile-rules.sps		\
+	meta/scripts/build-makefile-rules.sps		\
 	\
 	lib/srfi/%3a19/read-leap-seconds-table.sps	\
 	lib/srfi/%3a19/tai-utc.dat
@@ -768,7 +768,7 @@ EXTRA_DIST		+= \
 VICARE_BUILD_DEPS	= \
 	$(VICARE_COMPILE_RUN) \
 		--source-path $(testdir) --library-locator source \
-		--r6rs-script $(srcdir)/scripts/build-makefile-rules.sps --
+		--r6rs-script $(srcdir)/meta/scripts/build-makefile-rules.sps --
 
 .PHONY: dependencies
 
@@ -1512,7 +1512,7 @@ run-compiled-tests:
 #page
 #### running vicare on the terminal from the build directory
 
-RLWRAP_TRAMPOLINE	= $(srcdir)/scripts/rlwrap-trampoline
+RLWRAP_TRAMPOLINE	= $(srcdir)/meta/scripts/rlwrap-trampoline
 EXTRA_DIST		+= $(RLWRAP_TRAMPOLINE)
 
 VICARE_TERMINAL_LIBRARY_PATH	= $(fasldir):$(VICARE_LIBRARY_PATH)
@@ -1552,7 +1552,7 @@ test-exec-modes:
 if WANT_INSTALL_SCHEME_SCRIPT
 
 scheme_scriptdir	= $(bindir)
-scheme_script_SCRIPTS	= scripts/scheme-script
+scheme_script_SCRIPTS	= meta/scripts/scheme-script
 
 endif
 
@@ -1562,12 +1562,12 @@ endif
 if WANT_BINFMT
 
 binfmt_rcd_scriptsdir		= $(sysconfdir)/rc.d
-binfmt_rcd_scripts_SCRIPTS	= scripts/rc.vicare-scheme
+binfmt_rcd_scripts_SCRIPTS	= meta/scripts/rc.vicare-scheme
 
 binfmt_launcher_scriptsdir	= $(libexecdir)/vicare-scheme
 binfmt_launcher_scripts_SCRIPTS	= \
-	scripts/binfmt-script-launcher.sh	\
-	scripts/binfmt-program-launcher.sh
+	meta/scripts/binfmt-script-launcher.sh	\
+	meta/scripts/binfmt-program-launcher.sh
 
 endif
 
