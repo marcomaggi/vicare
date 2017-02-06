@@ -1024,6 +1024,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-issue-025-sign-in-exact-rationals.sps		\
 	tests/test-issue-070.sps					\
 	tests/test-issue-086.sps					\
+	tests/test-issue-094.sps					\
 	\
 	tests/test-vicare-unsafe-operations.sps				\
 	\

@@ -2001,19 +2001,21 @@
 
     ((orl src dst)
      (match-operands (src dst)
-       ((imm32? disp?)		(CR*  #x81 '/1 dst (IMM32 src ac)))
-       ((reg?   disp?)		(CR*  #x09 src dst ac))
        ((imm8?  reg?)		(CR*  #x83 '/1 dst (IMM8  src ac)))
+       ((imm32? disp?)		(CR*  #x81 '/1 dst (IMM32 src ac)))
        ((imm32? reg-eax?)	(C    #x0D         (IMM32 src ac)))
        ((imm32? reg?)		(CR*  #x81 '/1 dst (IMM32 src ac)))
        ((reg?   reg?)		(CR*  #x09 src dst ac))
+       ((reg?   disp?)		(CR*  #x09 src dst ac))
        ((disp?  reg?)		(CR*  #x0B dst src ac))))
 
     ((xorl src dst)
+     ;;For XOR see the instruction set manual page 1251.
      (match-operands (src dst)
        ((imm8?  reg?)		(CR*  #x83 '/6 dst (IMM8  src ac)))
        ((imm8?  disp?)		(CR*  #x83 '/6 dst (IMM8  src ac)))
        ((imm32? reg-eax?)	(C    #x35         (IMM32 src ac)))
+       ((imm32? reg?)		(CR*  #x81 '/6 dst (IMM32 src ac))) ;this fixes issue 94
        ((reg?   reg?)		(CR*  #x31 src dst ac))
        ((disp?  reg?)		(CR*  #x33 dst src ac))
        ((reg?   disp?)		(CR*  #x31 src dst ac))))
