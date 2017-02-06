@@ -2,7 +2,7 @@ dnl @configure_input@
 dnl
 
 AC_PREREQ([2.68])
-AC_INIT([Vicare Scheme],[0.4d1],[marco.maggi-ipsu@poste.it],
+AC_INIT([Vicare Scheme],[0.4d1.1],[marco.maggi-ipsu@poste.it],
   [vicare-scheme],[http://marcomaggi.github.com/vicare.html])
 dnl This is the revision number of this configure.ac
 AC_REVISION([0.4])
@@ -49,8 +49,8 @@ AC_SUBST(BOOT_IMAGE_MAJOR_VERSION)
 AC_SUBST(BOOT_IMAGE_MINOR_VERSION)
 
 AS_VAR_SET([BOOT_IMAGE_YEAR_VERSION],[2017])
-AS_VAR_SET([BOOT_IMAGE_MONTH_VERSION],[01])
-AS_VAR_SET([BOOT_IMAGE_DAY_VERSION],[10])
+AS_VAR_SET([BOOT_IMAGE_MONTH_VERSION],[02])
+AS_VAR_SET([BOOT_IMAGE_DAY_VERSION],[06])
 AC_SUBST([BOOT_IMAGE_YEAR_VERSION])
 AC_SUBST([BOOT_IMAGE_MONTH_VERSION])
 AC_SUBST([BOOT_IMAGE_DAY_VERSION])
