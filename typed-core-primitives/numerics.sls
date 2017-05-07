@@ -8,7 +8,7 @@
 ;;
 ;;
 ;;
-;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;Copyright (C) 2015, 2016, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;
 ;;This program is free  software: you can redistribute it and/or  modify it under the
 ;;terms  of  the  GNU General  Public  License  as  published  by the  Free  Software
@@ -2177,12 +2177,12 @@
 (declare-unsafe-binary-operation $expt-cflonum-negative-fixnum	<cflonum>	<negative-fixnum>      <cflonum>)
 
 (declare-unsafe-binary-operation $expt-number-positive-fixnum	<number>	<positive-fixnum>      <number>)
-(declare-unsafe-binary-operation $expt-fixnum-positive-fixnum	<number>	<positive-fixnum>      <exact>)
-(declare-unsafe-binary-operation $expt-bignum-positive-fixnum	<number>	<positive-fixnum>      <exact>)
-(declare-unsafe-binary-operation $expt-flonum-positive-fixnum	<number>	<positive-fixnum>      <flonum>)
-(declare-unsafe-binary-operation $expt-ratnum-positive-fixnum	<number>	<positive-fixnum>      <exact>)
-(declare-unsafe-binary-operation $expt-compnum-positive-fixnum	<number>	<positive-fixnum>      <number>)
-(declare-unsafe-binary-operation $expt-cflonum-positive-fixnum	<number>	<positive-fixnum>      <cflonum>)
+(declare-unsafe-binary-operation $expt-fixnum-positive-fixnum	<fixnum>	<positive-fixnum>      <exact>)
+(declare-unsafe-binary-operation $expt-bignum-positive-fixnum	<bignum>	<positive-fixnum>      <exact>)
+(declare-unsafe-binary-operation $expt-flonum-positive-fixnum	<flonum>	<positive-fixnum>      <flonum>)
+(declare-unsafe-binary-operation $expt-ratnum-positive-fixnum	<ratnum>	<positive-fixnum>      <exact>)
+(declare-unsafe-binary-operation $expt-compnum-positive-fixnum	<compnum>	<positive-fixnum>      <number>)
+(declare-unsafe-binary-operation $expt-cflonum-positive-fixnum	<cflonum>	<positive-fixnum>      <cflonum>)
 
 (declare-unsafe-binary-operation $expt-fixnum-fixnum	<fixnum>	<fixnum>	<exact>)
 (declare-unsafe-binary-operation $expt-bignum-fixnum	<bignum>	<fixnum>	<exact>)

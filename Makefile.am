@@ -1025,6 +1025,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-issue-070.sps					\
 	tests/test-issue-086.sps					\
 	tests/test-issue-094.sps					\
+	tests/test-issue-096-error-in-expt-tables.sps			\
 	\
 	tests/test-vicare-unsafe-operations.sps				\
 	\
