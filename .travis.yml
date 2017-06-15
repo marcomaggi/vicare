@@ -1,0 +1,158 @@
+# .travis.yml --
+#
+# Travis CI configuration for Vicare Scheme.
+
+# About compiler  packages.  We  select build by  build the  packages to
+# install; it should speed up preparation.  By putting a single "addons"
+# key at the top level: we would cause all the compilers to be installed
+# for all the builds in the matrix; we do not want this.
+
+# About compiler  selection.  We  select the compiler  we want  with the
+# "compiler" key.   This should set  the environment variable CC  to the
+# associated compiler executable; I have  verified that it actually does
+# so when  the language is C.   I am not  sure that it actually  does it
+# when the language is C++.  (Marco Maggi; May 27, 2017)
+
+# About  dependency  packages.   We install  dependency  packages  under
+# "/tmp/mine".   So we  need the  following in  every script  that needs
+# custom dependencies:
+#
+#   export PATH=/tmp/mine/bin:$PATH;
+#   export LD_LIBRARY_PATH=/tmp/mine/lib:$LD_LIBRARY_PATH;
+#   export PKG_CONFIG_PATH=/tmp/mine/lib/pkgconfig:$PKG_CONFIG_PATH;
+#
+# otherwise the installed packages will not be found and used correctly.
+
+sudo: false
+language: c
+
+# Let's just look at the project's dashboard at Travis CI's site.
+#
+notifications:
+  email: false
+
+# We do no git operations, so set this to the minimum.
+#
+git:
+  depth: 1
+
+branches:
+  only:
+    - master
+
+env:
+  global:
+    - MAKEFLAGS="-j 2"
+
+matrix:
+  allow_failures:
+    - os: linux
+      compiler: clang
+
+  fast_finish: true
+
+  include:
+    # Plain build under Ubuntu GNU+Linux "trusty", GCC 5.
+    - os: linux
+      dist: trusty
+      compiler: gcc-5
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - texinfo
+            - gcc-5
+      install:
+        - ./meta/travis-ci/install-libffi.sh
+      script: |
+        #echo CC=$CC; $CC --version;
+        export PATH=/tmp/mine/bin:$PATH;
+        export LD_LIBRARY_PATH=/tmp/mine/lib:$LD_LIBRARY_PATH;
+        export PKG_CONFIG_PATH=/tmp/mine/lib/pkgconfig:$PKG_CONFIG_PATH;
+        export LIBFFI_VERSION=3.2.1;
+        export LIBFFI_INCLUDEDIR=${libdir}/libffi-${LIBFFI_VERSION}/include
+        sh ./autogen.sh;
+        ./configure --enable-maintainer-mode --with-pthread CPPFLAGS="-I${LIBFFI_INCLUDEDIR}";
+        make all;
+        make check;
+
+    # # Plain build under Ubuntu GNU+Linux "trusty", GCC 6.
+    # - os: linux
+    #   dist: trusty
+    #   compiler: gcc-6
+    #   addons:
+    #     apt:
+    #       sources:
+    #         - ubuntu-toolchain-r-test
+    #       packages:
+    #         - texinfo
+    #         - gcc-6
+    #   script: |
+    #     #echo CC=$CC; $CC --version;
+    #     sh ./autogen.sh;
+    #     ./configure --enable-maintainer-mode --enable-glibc --enable-linux;
+    #     make all;
+    #     make check;
+
+    # # Plain build under Ubuntu GNU+Linux "trusty", GCC 7.
+    # - os: linux
+    #   dist: trusty
+    #   compiler: gcc-7
+    #   addons:
+    #     apt:
+    #       sources:
+    #         - ubuntu-toolchain-r-test
+    #       packages:
+    #         - texinfo
+    #         - gcc-7
+    #   script: |
+    #     #echo CC=$CC; $CC --version;
+    #     sh ./autogen.sh;
+    #     ./configure --enable-maintainer-mode --enable-glibc --enable-linux;
+    #     make all;
+    #     make check;
+
+    # # Plain build  under Ubuntu GNU+Linux "trusty",  CLang automatically
+    # # selected by Travis CI.
+    # - os: linux
+    #   dist: trusty
+    #   addons:
+    #     apt:
+    #       sources:
+    #         - ubuntu-toolchain-r-test
+    #       packages:
+    #         - texinfo
+    #   compiler: clang
+    #   script: |
+    #     #echo CC=$CC; $CC --version;
+    #     sh ./autogen.sh;
+    #     ./configure --enable-maintainer-mode CFLAGS='-Wno-unknown-attributes';
+    #     make all;
+    #     make check;
+
+    # # Plain build under OS X, XCode 7.3, CLang automatically selected by
+    # # Travis CI.
+    # - os: osx
+    #   osx_image: xcode7.3
+    #   compiler: clang
+    #   script: |
+    #     #echo CC=$CC; $CC --version;
+    #     LIBTOOLIZE=glibtoolize sh ./autogen.sh;
+    #     ./configure --enable-maintainer-mode CFLAGS='-Wno-unknown-attributes';
+    #     make all;
+    #     RV=0; if ! make check ; then RV=$?; cat test-suite.log ; fi; exit $RV;
+
+    # # Plain build under OS X, XCode 8.3, CLang automatically selected by
+    # # Travis CI.
+    # - os: osx
+    #   osx_image: xcode8.3
+    #   compiler: clang
+    #   script: |
+    #     #echo CC=$CC; $CC --version;
+    #     LIBTOOLIZE=glibtoolize sh ./autogen.sh;
+    #     ./configure --enable-maintainer-mode CFLAGS='-Wno-unknown-attributes';
+    #     make all;
+    #     RV=0; if ! make check ; then RV=$?; cat test-suite.log ; fi; exit $RV;
+
+### end of file
