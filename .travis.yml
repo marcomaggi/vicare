@@ -76,86 +76,124 @@ matrix:
         sh ./autogen.sh;
         ./configure --enable-maintainer-mode --with-pthread CPPFLAGS="-I${LIBFFI_INCLUDEDIR}";
         make all;
-        (RV=0; if ! make check; then RV=$?; cat test-suite.log ; fi; exit $RV;)
-        make test file=vicare-posix-basic
-        make test file=vicare-posix-sockets
+        make check;
 
-    # # Plain build under Ubuntu GNU+Linux "trusty", GCC 6.
-    # - os: linux
-    #   dist: trusty
-    #   compiler: gcc-6
-    #   addons:
-    #     apt:
-    #       sources:
-    #         - ubuntu-toolchain-r-test
-    #       packages:
-    #         - texinfo
-    #         - gcc-6
-    #   script: |
-    #     #echo CC=$CC; $CC --version;
-    #     sh ./autogen.sh;
-    #     ./configure --enable-maintainer-mode --enable-glibc --enable-linux;
-    #     make all;
-    #     make check;
+    # Plain build under Ubuntu GNU+Linux "trusty", GCC 6.
+    - os: linux
+      dist: trusty
+      compiler: gcc-6
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - texinfo
+            - gcc-6
+      install:
+        - ./meta/travis-ci/install-libffi.sh
+      script: |
+        #echo CC=$CC; $CC --version;
+        export PATH=/tmp/mine/bin:$PATH;
+        export LD_LIBRARY_PATH=/tmp/mine/lib:$LD_LIBRARY_PATH;
+        export PKG_CONFIG_PATH=/tmp/mine/lib/pkgconfig:$PKG_CONFIG_PATH;
+        export LIBFFI_VERSION=3.2.1;
+        export LIBFFI_INCLUDEDIR=${libdir}/libffi-${LIBFFI_VERSION}/include;
+        export TMPDIR=/tmp;
+        sh ./autogen.sh;
+        ./configure --enable-maintainer-mode --with-pthread CPPFLAGS="-I${LIBFFI_INCLUDEDIR}";
+        make all;
+        make check;
 
-    # # Plain build under Ubuntu GNU+Linux "trusty", GCC 7.
-    # - os: linux
-    #   dist: trusty
-    #   compiler: gcc-7
-    #   addons:
-    #     apt:
-    #       sources:
-    #         - ubuntu-toolchain-r-test
-    #       packages:
-    #         - texinfo
-    #         - gcc-7
-    #   script: |
-    #     #echo CC=$CC; $CC --version;
-    #     sh ./autogen.sh;
-    #     ./configure --enable-maintainer-mode --enable-glibc --enable-linux;
-    #     make all;
-    #     make check;
+    # Plain build under Ubuntu GNU+Linux "trusty", GCC 7.
+    - os: linux
+      dist: trusty
+      compiler: gcc-7
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - texinfo
+            - gcc-7
+      install:
+        - ./meta/travis-ci/install-libffi.sh
+      script: |
+        #echo CC=$CC; $CC --version;
+        export PATH=/tmp/mine/bin:$PATH;
+        export LD_LIBRARY_PATH=/tmp/mine/lib:$LD_LIBRARY_PATH;
+        export PKG_CONFIG_PATH=/tmp/mine/lib/pkgconfig:$PKG_CONFIG_PATH;
+        export LIBFFI_VERSION=3.2.1;
+        export LIBFFI_INCLUDEDIR=${libdir}/libffi-${LIBFFI_VERSION}/include;
+        export TMPDIR=/tmp;
+        sh ./autogen.sh;
+        ./configure --enable-maintainer-mode --with-pthread CPPFLAGS="-I${LIBFFI_INCLUDEDIR}";
+        make all;
+        make check;
 
-    # # Plain build  under Ubuntu GNU+Linux "trusty",  CLang automatically
-    # # selected by Travis CI.
-    # - os: linux
-    #   dist: trusty
-    #   addons:
-    #     apt:
-    #       sources:
-    #         - ubuntu-toolchain-r-test
-    #       packages:
-    #         - texinfo
-    #   compiler: clang
-    #   script: |
-    #     #echo CC=$CC; $CC --version;
-    #     sh ./autogen.sh;
-    #     ./configure --enable-maintainer-mode CFLAGS='-Wno-unknown-attributes';
-    #     make all;
-    #     make check;
+    # Plain build  under Ubuntu GNU+Linux "trusty",  CLang automatically
+    # selected by Travis CI.
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - texinfo
+      compiler: clang
+      install:
+        - ./meta/travis-ci/install-libffi.sh
+      script: |
+        #echo CC=$CC; $CC --version;
+        export PATH=/tmp/mine/bin:$PATH;
+        export LD_LIBRARY_PATH=/tmp/mine/lib:$LD_LIBRARY_PATH;
+        export PKG_CONFIG_PATH=/tmp/mine/lib/pkgconfig:$PKG_CONFIG_PATH;
+        export LIBFFI_VERSION=3.2.1;
+        export LIBFFI_INCLUDEDIR=${libdir}/libffi-${LIBFFI_VERSION}/include;
+        export TMPDIR=/tmp;
+        sh ./autogen.sh;
+        ./configure --enable-maintainer-mode --with-pthread CPPFLAGS="-I${LIBFFI_INCLUDEDIR}";
+        make all;
+        make check;
 
-    # # Plain build under OS X, XCode 7.3, CLang automatically selected by
-    # # Travis CI.
-    # - os: osx
-    #   osx_image: xcode7.3
-    #   compiler: clang
-    #   script: |
-    #     #echo CC=$CC; $CC --version;
-    #     LIBTOOLIZE=glibtoolize sh ./autogen.sh;
-    #     ./configure --enable-maintainer-mode CFLAGS='-Wno-unknown-attributes';
-    #     make all;
-    #     RV=0; if ! make check ; then RV=$?; cat test-suite.log ; fi; exit $RV;
+    # Plain build under OS X, XCode 7.3, CLang automatically selected by
+    # Travis CI.
+    - os: osx
+      osx_image: xcode7.3
+      compiler: clang
+      install:
+        - ./meta/travis-ci/install-libffi.sh
+      script: |
+        #echo CC=$CC; $CC --version;
+        export PATH=/tmp/mine/bin:$PATH;
+        export LD_LIBRARY_PATH=/tmp/mine/lib:$LD_LIBRARY_PATH;
+        export PKG_CONFIG_PATH=/tmp/mine/lib/pkgconfig:$PKG_CONFIG_PATH;
+        export LIBFFI_VERSION=3.2.1;
+        export LIBFFI_INCLUDEDIR=${libdir}/libffi-${LIBFFI_VERSION}/include;
+        export TMPDIR=/tmp;
+        LIBTOOLIZE=glibtoolize sh ./autogen.sh;
+        ./configure --enable-maintainer-mode --with-pthread CPPFLAGS="-I${LIBFFI_INCLUDEDIR}";
+        make all;
+        make check;
 
-    # # Plain build under OS X, XCode 8.3, CLang automatically selected by
-    # # Travis CI.
-    # - os: osx
-    #   osx_image: xcode8.3
-    #   compiler: clang
-    #   script: |
-    #     #echo CC=$CC; $CC --version;
-    #     LIBTOOLIZE=glibtoolize sh ./autogen.sh;
-    #     ./configure --enable-maintainer-mode CFLAGS='-Wno-unknown-attributes';
-    #     make all;
-    #     RV=0; if ! make check ; then RV=$?; cat test-suite.log ; fi; exit $RV;
+    # Plain build under OS X, XCode 8.3, CLang automatically selected by
+    # Travis CI.
+    - os: osx
+      osx_image: xcode8.3
+      compiler: clang
+      install:
+        - ./meta/travis-ci/install-libffi.sh
+      script: |
+        #echo CC=$CC; $CC --version;
+        export PATH=/tmp/mine/bin:$PATH;
+        export LD_LIBRARY_PATH=/tmp/mine/lib:$LD_LIBRARY_PATH;
+        export PKG_CONFIG_PATH=/tmp/mine/lib/pkgconfig:$PKG_CONFIG_PATH;
+        export LIBFFI_VERSION=3.2.1;
+        export LIBFFI_INCLUDEDIR=${libdir}/libffi-${LIBFFI_VERSION}/include;
+        export TMPDIR=/tmp;
+        LIBTOOLIZE=glibtoolize sh ./autogen.sh;
+        ./configure --enable-maintainer-mode --with-pthread CPPFLAGS="-I${LIBFFI_INCLUDEDIR}";
+        make all;
+        make check;
 
 ### end of file
