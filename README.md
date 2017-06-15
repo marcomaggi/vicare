@@ -24,6 +24,8 @@ producing  single threaded  programs  running on  Intel  x86 32-bit  and
 64-bit processors.   It is tested only  on GNU+Linux; it should  work on
 POSIX platforms, but not on Cygwin.
 
+"Vicare" is pronounced the etruscan way.
+
 Vicare offers  arbitrary precision integers through  GMP.  It implements
 an optionally included foreign-functions interface based on Libffi.  The
 last time  the maintainer updated  this paragraph, it had  tested Libffi
