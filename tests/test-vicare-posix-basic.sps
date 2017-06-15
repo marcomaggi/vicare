@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2015, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -2289,8 +2289,11 @@
       => "/bin/ls"))
    (else
     (check	;first char is slash
-	(px.find-executable-as-string "/usr/bin/ls")
-      => "/usr/bin/ls")))
+	(or (let ((X (px.find-executable-as-string "/usr/bin/ls")))
+	      (and X (string=? X "/usr/bin/ls")))
+	    (let ((X (px.find-executable-as-string "/bin/ls")))
+	      (and X (string=? X "/bin/ls"))))
+      => #t)))
 
   (check
       (string? (px.find-executable-as-string "ls"))
