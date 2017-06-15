@@ -75,7 +75,7 @@ matrix:
         sh ./autogen.sh;
         ./configure --enable-maintainer-mode --with-pthread CPPFLAGS="-I${LIBFFI_INCLUDEDIR}";
         make all;
-        make check;
+        RV=0; if ! make check ; then RV=$?; cat test-suite.log ; fi; exit $RV;
 
     # # Plain build under Ubuntu GNU+Linux "trusty", GCC 6.
     # - os: linux
