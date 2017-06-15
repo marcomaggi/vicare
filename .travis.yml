@@ -76,6 +76,8 @@ matrix:
         ./configure --enable-maintainer-mode --with-pthread CPPFLAGS="-I${LIBFFI_INCLUDEDIR}";
         make all;
         (RV=0; if ! make check; then RV=$?; cat test-suite.log ; fi; exit $RV;)
+        make test file=vicare-posix-basic
+        make test file=vicare-posix-sockets
 
     # # Plain build under Ubuntu GNU+Linux "trusty", GCC 6.
     # - os: linux
