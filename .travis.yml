@@ -71,7 +71,8 @@ matrix:
         export LD_LIBRARY_PATH=/tmp/mine/lib:$LD_LIBRARY_PATH;
         export PKG_CONFIG_PATH=/tmp/mine/lib/pkgconfig:$PKG_CONFIG_PATH;
         export LIBFFI_VERSION=3.2.1;
-        export LIBFFI_INCLUDEDIR=${libdir}/libffi-${LIBFFI_VERSION}/include
+        export LIBFFI_INCLUDEDIR=${libdir}/libffi-${LIBFFI_VERSION}/include;
+        export TMPDIR=/tmp;
         sh ./autogen.sh;
         ./configure --enable-maintainer-mode --with-pthread CPPFLAGS="-I${LIBFFI_INCLUDEDIR}";
         make all;
