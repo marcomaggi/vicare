@@ -507,7 +507,7 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
   }
   if (0) {
     fprintf(stderr, "%s: generation %d, customisable heap nursery size %lu\n",
-	    __func__, requested_generation, ik_customisable_heap_nursery_size);
+	    __func__, requested_generation, (unsigned long)ik_customisable_heap_nursery_size);
   }
   IK_RUNTIME_MESSAGE("%s: enter collection for generation %d, requested size %lu bytes, crossed redline=%s",
 		       __func__, requested_generation, (ik_ulong)mem_req,
@@ -1133,9 +1133,10 @@ collect_stack (gc_t* gc, ikptr_t top, ikptr_t end)
     if (DEBUG_STACK) {
       ik_debug_message("fs=%ld", (long)framesize);
     }
-    if (framesize < 0) {
-      ik_abort("invalid frame size %ld\n", (long)framesize);
-    } else if (0 == framesize) {
+    /* if (framesize < 0) { */
+    /*   ik_abort("invalid frame size %ld\n", (long)framesize); */
+    /* } else */
+    if (0 == framesize) {
       /* Keep alive all the objects on the stack. */
       framesize = IK_REF(top, wordsize);
       if (framesize <= 0) {
@@ -2644,7 +2645,7 @@ meta_alloc_extending (ikuword_t aligned_size, gc_t* gc, int meta_id)
    is enough  room to hold  the data area  of an object  of ALIGNED_SIZE
    bytes.  Return a pointer to the first word of allocated memory. */
 {
-  static const int const EXTENSION_AMOUNT[meta_count] = {
+  static const int EXTENSION_AMOUNT[meta_count] = {
     1 * IK_PAGESIZE,
     1 * IK_PAGESIZE,
     1 * IK_PAGESIZE,
