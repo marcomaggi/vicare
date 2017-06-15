@@ -1,0 +1,381 @@
+# Vicare Scheme
+
+[![Build Status](https://travis-ci.org/marcomaggi/vicare.svg?branch=master)](https://travis-ci.org/marcomaggi/vicare)
+
+
+## Introduction
+
+Scheme is a statically scoped and properly tail-recursive dialect of the
+Lisp programming language  invented by Guy Lewis Steele  Jr.  and Gerald
+Jay Sussman.  It was designed to  have an exceptionally clear and simple
+semantics and few different ways to form expressions.
+
+The  "Revised^6  Report on  the  Algorithmic  Language Scheme"  gives  a
+defining description of the programming  language Scheme.  The report is
+the work  of many  people in the  course of many  years; revision  6 was
+edited by Michael  Sperber, R. Kent Dybvig, Matthew Flatt  and Anton Van
+Straaten.
+
+Ikarus Scheme is  an almost R6RS compliant implementation  of the Scheme
+programming language;  it is  the creation  of Abdulaziz  Ghuloum, which
+retired from  development in 2010.   Vicare Scheme is an  R6RS compliant
+fork of Ikarus Scheme, aiming to  become a native compiler for R6 Scheme
+producing  single threaded  programs  running on  Intel  x86 32-bit  and
+64-bit processors.   It is tested only  on GNU+Linux; it should  work on
+POSIX platforms, but not on Cygwin.
+
+Vicare offers  arbitrary precision integers through  GMP.  It implements
+an optionally included foreign-functions interface based on Libffi.  The
+last time  the maintainer updated  this paragraph, it had  tested Libffi
+version 3.2.1.
+
+A port to R6RS of the SRFI libraries is included in the distribution.
+
+
+## License
+
+Copyright (c) 2011-2017 Marco Maggi <marco.maggi-ipsu@poste.it><br/>
+Copyright (c) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu><br/>
+Modified by the Vicare contributors.
+
+This program is free software: you  can redistribute it and/or modify it
+under the  terms of the GNU  General Public License as  published by the
+Free Software Foundation, either version 3 of the License.
+
+This program  is distributed  in the  hope that it  will be  useful, but
+WITHOUT   ANY   WARRANTY;  without   even   the   implied  warranty   of
+MERCHANTABILITY  or  FITNESS FOR  A  PARTICULAR  PURPOSE.   See the  GNU
+General Public License for more details.
+
+You should have received a copy  of the GNU General Public License along
+with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+## Install
+
+### Install Vicare
+
+See  the  `INSTALL`  file  for  installation  instructions  for  generic
+packages  using the  GNU Autotools.   To  install Vicare  Scheme from  a
+proper release tarball, we must unpack the archive then do:
+
+```
+$ cd vicare-scheme-0.4.0
+$ ./configure
+$ make
+$ make install
+```
+
+To run the test suite we do:
+
+```
+$ make check
+```
+
+The Makefile is designed to allow parallel builds, so we can do:
+
+```
+$ make -j4 all && make -j4 check
+```
+
+which,  on  a  4-core  CPU,   should  speed  up  building  and  checking
+significantly.
+
+By default only compiled Scheme libraries are installed; to install also
+the source libraries we must configure with:
+
+```
+$ ./configure --enable-sources-installation ...
+```
+
+If, instead, we have checked out a revision from the repository, we will
+have to first build the infrastructure  by running a Bourne shell script
+from the top source directory:
+
+```
+$ cd vicare-scheme
+$ sh autogen.sh
+```
+
+notice  that  `autogen.sh`  will   run  the  programs  `autoreconf`  and
+`libtoolize`; the  latter is  selected through the  environment variable
+`LIBTOOLIZE`,  whose  value  can  be  customised;  for  example  to  run
+`glibtoolize` rather than `libtoolize` we do:
+
+```
+$ LIBTOOLIZE=glibtoolize sh autogen.sh
+```
+
+GNU Libtool is not directly needed by Vicare Scheme, but it is needed to
+correctly link libraries (like GNU Libiconv) which make use of it.
+
+After this  the procedure  is the same  as the one  for building  from a
+proper release tarball, but we  must enable maintainer mode when running
+the `configure` script:
+
+```
+$ ./configure --enable-maintainer-mode
+$ make
+$ make install
+```
+
+again to run the test suite we do:
+
+```
+$ make check
+```
+
+To make  use of the  POSIX semaphore functions,  we need to  include the
+pthread library using the option:
+
+```
+$ ./configure --with-pthread [... other options ...]
+```
+
+by default pthread is linked to the executable if found on the host.
+
+A  bare  build  (without  support for  optional  features  and  external
+libraries) can be obtained with:
+
+```
+$ ./configure \
+     --disable-posix    \
+     --disable-glibc    \
+     --disable-linux    \
+         --without-pthread  \
+         --without-libffi   \
+         --without-libiconv \
+         --without-readline
+```
+
+To test what a rule will do use the "-n" option; example:
+
+```
+$ make install -n
+```
+
+The `Makefile`  supports the  `DESTDIR` environment variable  to install
+the files under a temporary location; example:
+
+```
+$ make install DESTDIR=/tmp/vicare
+```
+
+By default, the Scheme libraries are installed under the directory:
+
+```
+$(libdir)/vicare-scheme
+```
+
+we should  arrange the  package configuration  to install  32-bit binary
+libraries under:
+
+```
+$(prefix)/lib/vicare-scheme
+```
+
+and 64-bit binary libraries under:
+
+```
+$(prefix)/lib64/vicare-scheme
+```
+
+by configuring, for example, with:
+
+```
+$ ./configure --libdir=/usr/local/lib64 ...
+```
+
+The variable `VFLAGS` is available  to the user when running `configure`
+and `make` to add command line options to the execution of `vicare` when
+compiling libraries and running tests; for example:
+
+```
+$ make VFLAGS="-g -O2 --print-loaded-libraries"
+```
+
+
+### Special make rules
+
+There are  special makefile rules  to rebuild source code  files, mostly
+lexer and parser tables:
+
+* ip-address-tables - rebuild the tables for the net libraries
+* silex-test - rebuild the tests for the SILex lexer
+* lalr-test - rebuild the tests for the LALR parser
+
+and the  following DANGEROUS  rule, use  only if you  know what  you are
+doing:
+
+* silex-internals - rebuild the internal tables of SILex itself
+
+
+## Testing
+
+Test  files  are  located  in  the `tests`  directory;  the  files  with
+extension  `.sps` are  Scheme  programs.  They  are  partitioned in  two
+families: the files whose name start  with `long-test` need some time to
+be executed  by a powerless  computer; the  files whose name  start with
+`test` can  be run in  reasonable time on  any system.  The  files whose
+name contains `r6rs` are R6RS compliance tests by Matthew Flatt.
+
+The command  `make check` will  run all the  tests, quick and  long; the
+commands `make test` and `make tests` run the same set of "quick" tests;
+the commands `make long-test` and `make  long-tests` run the same set of
+time-consuming  tests.    The  `check`   rule  uses  the   GNU  Automake
+infrastructure (parallel test harness,  see Automake's documentation for
+details).  After  package installation: we  can run the tests  using the
+`make installcheck` rule which will load the installed libraries.
+
+  It  is possible  to select  a  single test  file by  using the  `file`
+variable on the command line of `make`; for example:
+
+```
+$ make test file=equal-hash
+```
+
+will  run  the   program  `test-issue-001-equal-hash.sps`.   The  `file`
+variable  is  used   to  expand  a  file  name  with   wildcards  as  in
+`test-*$(file)*.sps`.
+
+It  is possible  to  run `vicare`  from the  build  directory with  user
+selected command line arguments doing:
+
+```
+$ make test-run VFLAGS='...'
+```
+
+where the contents  of the `VFLAGS` variable are placed  directly on the
+command line.
+
+Some  test  files need  a  usable  directory  pathname in  the  `TMPDIR`
+environment variable.
+
+The  test  files acting  on  networking  sockets expect  `localhost`  to
+resolve to the IPv4 address `127.0.0.1`, which is usually the case.
+
+The  file  `test-vicare-posix-sockets.sps`  contains tests  for  network
+sockets which  are normally disabled  because the firewall rules  on the
+hosting machine must allow TCP and UDP connections on 127.0.0.1:8080 and
+127.0.0.1:8081; to  enable these tests  run `make` with  the environment
+variable `RUN_INET_TESTS` set to something:
+
+```
+$ make test file=vicare-posix-sockets RUN_INET_TESTS=1
+```
+
+
+## Usage
+
+Read the documentation.
+
+
+## Credits
+
+The  original Ikarus  Scheme  code  is the  work  of Abdulaziz  Ghuloum.
+Vicare Scheme is  a fork driven by Marco Maggi.   See the `CONTRIBUTORS`
+file for the list of contributors to Ikarus Scheme and Vicare Scheme.
+
+IrRegex is adapted from the original distribution by Alex Shinn, see the
+file `LICENSE.irregex`.
+
+Pregexp is adapted  from the original library by Dorai  Sitaram, see the
+file `LICENSE.pregexp`.
+
+The libraries  in the  hierarchy `(vicare  containers strings  ---)` are
+derived from the reference implementation of SRFI 13 by Olin Shivers.
+
+The libraries  in the  hierarchy `(vicare  containers vectors  ---)` are
+derived from the reference implementation of SRFI 13 by Olin Shivers.
+
+The library `(vicare containers knuth-morris-pratt)` is derived from the
+reference implementation of SRFI 13 by Olin Shivers.
+
+The library `(vicare containers strings rabin-karp)` is derived from the
+implementation at:
+
+    <http://algs4.cs.princeton.edu/53substring/RabinKarp.java.html>
+
+The library  `(vicare containers levenshtein)`  is derived from  code by
+Neil Van Dyke.
+
+The library `(vicare language-extensions  streams)` is derived from code
+by Philip L. Bewig.
+
+The library `(vicare language-extensions loops)` is derived from code by
+Sebastian Egner.
+
+The library  `(vicare language-extensions comparisons)` is  derived from
+code by Sebastian Egner and Jens Axel Soegaard.
+
+The libraries in the hierarchy `(vicare crypto randomisations ---)` have
+many authors, please see the headers of the individual files.
+
+Some libraries  in the  hierarchy `(vicare containers  bytevectors ---)`
+are derived from the SRFI 13 reference implementation by Olin Shivers.
+
+The library  `(vicare formations)` is derived  from: `format.scm` Common
+LISP  text  output  formatter  for  SLIB.   Written  1992-1994  by  Dirk
+Lutzebaeck.  Authors of the original  version (<1.4) were Ken Dickey and
+Aubrey Jaffer.  Assimilated into Guile  May 1999.  Ported to R6RS Scheme
+and Vicare by Marco Maggi.
+
+The SILex libraries  are a port to  R6RS Scheme of SILex  version 1.0 by
+Danny Dubé.  Copyright (C) 2001, 2009 Danny Dubé.
+
+The LALR  libraries are a port  to R6RS Scheme of  Lalr-scm by Dominique
+Boucher.  Copyright (c) 2005-2008 Dominique Boucher.
+
+
+## Bugs, vulnerabilities and contributions
+
+Bug  and vulnerability  reports are  appreciated, all  the vulnerability
+reports  are  public; register  them  using  the  Issue Tracker  at  the
+project's GitHub  site.  For  contributions and  patches please  use the
+Pull Requests feature at the project's GitHub site.
+
+
+## Resources
+
+The latest version of this package can be downloaded from:
+
+[https://bitbucket.org/marcomaggi/vicare-scheme/downloads](https://bitbucket.org/marcomaggi/vicare-scheme/downloads)
+
+the home page of the Vicare project is at:
+
+[http://marcomaggi.github.io/vicare.html](http://marcomaggi.github.io/vicare.html)
+
+development takes place at:
+
+[http://github.com/marcomaggi/vicare/](http://github.com/marcomaggi/vicare/)
+
+and as backup at:
+
+[https://bitbucket.org/marcomaggi/vicare-scheme/](https://bitbucket.org/marcomaggi/vicare-scheme/)
+
+The library Libffi can be found at:
+
+[http://sourceware.org/libffi/](http://sourceware.org/libffi/)
+
+The GMP library is available at:
+
+[http://gmplib.org/](http://gmplib.org/)
+
+The home page of the R6RS standard is at:
+
+[http://www.r6rs.org](http://www.r6rs.org)
+
+
+## Badges and static analysis
+
+### Travis CI
+
+Travis CI is  a hosted, distributed continuous  integration service used
+to build and test software projects  hosted at GitHub.  We can find this
+project's dashboard at:
+
+[https://travis-ci.org/marcomaggi/vicare](https://travis-ci.org/marcomaggi/vicare)
+
+Usage of this  service is configured through the  file `.travis.yml` and
+additional scripts are under the directory `meta/travis-ci`.
+

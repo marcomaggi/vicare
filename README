@@ -45,7 +45,7 @@ the greek capital letter Upsilon (U+03D2).
   Vicare offers arbitrary precision integers through GMP.  It implements
 an optionally included foreign-functions interface based on Libffi.  The
 last time  the maintainer updated  this paragraph, it had  tested Libffi
-version 3.0.11.
+version 3.2.1.
 
   A port to R6RS of the SRFI libraries is included in the distribution.
 
@@ -234,7 +234,7 @@ selected command line arguments doing:
 
    $ make test-run VFLAGS='...'
 
-where the  contents of the "VLAGS"  variable are placed directly  on the
+where the contents  of the "VFLAGS" variable are placed  directly on the
 command line.
 
   Some  test  files need  a  usable  directory  pathname in  the  TMPDIR
@@ -310,13 +310,12 @@ Danny Dube'.  Copyright (C) 2001, 2009 Danny Dube'.
 Boucher.  Copyright (c) 2005-2008 Dominique Boucher.
 
 
-B. Bug reports
---------------
+B. Bugs, vulnerabilities and contributions
 
-Bug reports  are appreciated, register  them using the issue  tracker at
-Vicare's GitHub site:
-
-	      <http://github.com/marcomaggi/vicare/issues>
+Bug  and vulnerability  reports are  appreciated, all  the vulnerability
+reports  are  public; register  them  using  the  Issue Tracker  at  the
+project's GitHub  site.  For  contributions and  patches please  use the
+Pull Requests feature at the project's GitHub site.
 
 
 C. Resources
