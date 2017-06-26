@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2016, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -67,6 +67,7 @@
 
     define-object-binary-comparison-declarer
     declare-object-binary-comparison
+    declare-boolean-binary-comparison
     declare-fixnum-binary-comparison
     declare-flonum-binary-comparison
     declare-number-binary-comparison
@@ -84,6 +85,7 @@
     declare-flonum-unary/multi-comparison
     declare-string-unary/multi-comparison
     declare-pointer-unary/multi-comparison
+    declare-boolean-unary/multi-comparison
 
     define-object-binary/multi-comparison-declarer
     declare-number-binary/multi-comparison
@@ -734,6 +736,7 @@
   #| end of module: DEFINE-OBJECT-BINARY-COMPARISON-DECLARER |# )
 
 (define-object-binary-comparison-declarer declare-object-binary-comparison <top>)
+(define-object-binary-comparison-declarer declare-boolean-binary-comparison <boolean>)
 (define-object-binary-comparison-declarer declare-fixnum-binary-comparison <fixnum>)
 (define-object-binary-comparison-declarer declare-flonum-binary-comparison <flonum>)
 (define-object-binary-comparison-declarer declare-number-binary-comparison <number>)
@@ -793,6 +796,7 @@
 (define-object-unary/multi-comparison-declarer declare-flonum-unary/multi-comparison <flonum>)
 (define-object-unary/multi-comparison-declarer declare-string-unary/multi-comparison <string>)
 (define-object-unary/multi-comparison-declarer declare-pointer-unary/multi-comparison <pointer>)
+(define-object-unary/multi-comparison-declarer declare-boolean-unary/multi-comparison <boolean>)
 
 ;;; --------------------------------------------------------------------
 

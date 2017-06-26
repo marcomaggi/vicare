@@ -48,7 +48,9 @@
 	  define-list-of-type-predicate
 	  define/checked-min/max-comparison
 	  define/checked-equality/sorting-predicate
-	  define/checked-inequality-predicate))
+	  define/checked-inequality-predicate
+	  define/typed-unsafe-equality/sorting-predicate
+	  define/typed-unsafe-inequality-predicate))
 
 
 ;;;; predicates
@@ -66,25 +68,15 @@
 
 ;;;; comparison
 
-(define/checked-equality/sorting-predicate boolean=?	$boolean=	<boolean>)
-(define/checked-equality/sorting-predicate boolean<?	$boolean<	<boolean>)
-(define/checked-equality/sorting-predicate boolean<=?	$boolean<=	<boolean>)
-(define/checked-equality/sorting-predicate boolean>?	$boolean>	<boolean>)
-(define/checked-equality/sorting-predicate boolean>=?	$boolean>=	<boolean>)
-(define/checked-inequality-predicate       boolean!=?	$boolean!=	<boolean>)
-
-;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
-(define ({$boolean= <boolean>} {bo1 <boolean>} {bo2 <boolean>})
+(define-syntax-rule ($boolean2= bo1 bo2)
   (eq? bo1 bo2))
 
-;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
-(define ({$boolean!= <boolean>} {bo1 <boolean>} {bo2 <boolean>})
-  (not (eq? bo1 bo2)))
+(define-syntax-rule ($boolean2!= bo1 bo2)
+  (not ($boolean2= bo1 bo2)))
 
 ;; we artificially define: #f < #t
 
-;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
-(define ({$boolean< <boolean>} {bo1 <boolean>} {bo2 <boolean>})
+(define-syntax-rule ($boolean2< bo1 bo2)
   ;;True if:
   ;;
   ;;   BO1 == #f
@@ -92,8 +84,7 @@
   ;;
   (and (not bo1) bo2))
 
-;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
-(define ({$boolean> <boolean>} {bo1 <boolean>} {bo2 <boolean>})
+(define-syntax-rule ($boolean2> bo1 bo2)
   ;;True if:
   ;;
   ;;   BO1 == #t
@@ -101,15 +92,29 @@
   ;;
   (and bo1 (not bo2)))
 
-;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
-(define ({$boolean<= <boolean>} {bo1 <boolean>} {bo2 <boolean>})
+(define-syntax-rule ($boolean2<= bo1 bo2)
   (or (eq? bo1 bo2)
       ($boolean< bo1 bo2)))
 
-;;FIXME This should also be a proper primitive operation.  (Marco Maggi; Wed Dec  7, 2016)
-(define ({$boolean>= <boolean>} {bo1 <boolean>} {bo2 <boolean>})
+(define-syntax-rule ($boolean2>= bo1 bo2)
   (or (eq? bo1 bo2)
       ($boolean> bo1 bo2)))
+
+;;; --------------------------------------------------------------------
+
+(define/checked-equality/sorting-predicate boolean=?	$boolean2=	<boolean>)
+(define/checked-equality/sorting-predicate boolean<?	$boolean2<	<boolean>)
+(define/checked-equality/sorting-predicate boolean<=?	$boolean2<=	<boolean>)
+(define/checked-equality/sorting-predicate boolean>?	$boolean2>	<boolean>)
+(define/checked-equality/sorting-predicate boolean>=?	$boolean2>=	<boolean>)
+(define/checked-inequality-predicate       boolean!=?	$boolean2!=	<boolean>)
+
+(define/typed-unsafe-equality/sorting-predicate $boolean=	$boolean2=	<boolean>)
+(define/typed-unsafe-equality/sorting-predicate $boolean<	$boolean2<	<boolean>)
+(define/typed-unsafe-equality/sorting-predicate $boolean>	$boolean2>	<boolean>)
+(define/typed-unsafe-equality/sorting-predicate $boolean<=	$boolean2<=	<boolean>)
+(define/typed-unsafe-equality/sorting-predicate $boolean>=	$boolean2>=	<boolean>)
+(define/typed-unsafe-inequality-predicate       $boolean!=	$boolean2!=	<boolean>)
 
 
 ;;;; min max

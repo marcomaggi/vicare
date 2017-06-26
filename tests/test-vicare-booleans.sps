@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,9 +26,10 @@
 
 
 #!vicare
-(import (vicare)
-  (vicare system $booleans)
-  (vicare checks))
+(program (test-vicare-booleans)
+  (import (vicare)
+    (vicare system $booleans)
+    (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare booleans\n")
@@ -65,80 +66,267 @@
 
 (parametrise ((check-test-name	'boolean-cmp))
 
+  (check-for-true	(boolean=? #t))
+  (check-for-true	(boolean=? #f))
+
+  (check-for-true	(boolean=? #t #t))
+  (check-for-true	(boolean=? #f #f))
+  (check-for-false	(boolean=? #f #t))
+  (check-for-false	(boolean=? #t #f))
+
+  (check-for-true	(boolean=? #t #t #t))
+  (check-for-true	(boolean=? #f #f #f))
+  (check-for-false	(boolean=? #f #t #t))
+  (check-for-false	(boolean=? #t #f #f))
+
+  (check-for-true	(boolean=? #t #t #t #t))
+  (check-for-true	(boolean=? #f #f #f #f))
+  (check-for-false	(boolean=? #t #t #t #f))
+  (check-for-false	(boolean=? #f #f #f #t))
+  (check-for-false	(boolean=? #t #f #t #t))
+  (check-for-false	(boolean=? #f #f #t #f))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false	(boolean!=? #t))
+  (check-for-false	(boolean!=? #f))
+
   (check-for-true	(boolean!=? #f #t))
   (check-for-true	(boolean!=? #t #f))
   (check-for-false	(boolean!=? #f #f))
   (check-for-false	(boolean!=? #t #t))
 
+  (check-for-false	(boolean!=? #t #t #t))
+  (check-for-false	(boolean!=? #f #f #f))
+  (check-for-false	(boolean!=? #f #t #t))
+  (check-for-false	(boolean!=? #t #f #f))
+
+  (check-for-false	(boolean!=? #t #t #t #t))
+  (check-for-false	(boolean!=? #f #f #f #f))
+  (check-for-false	(boolean!=? #t #t #t #f))
+  (check-for-false	(boolean!=? #f #f #f #t))
+  (check-for-false	(boolean!=? #t #f #t #t))
+  (check-for-false	(boolean!=? #f #f #t #f))
+
 ;;; --------------------------------------------------------------------
+
+  (check-for-true	(boolean<? #t))
+  (check-for-true	(boolean<? #f))
 
   (check-for-true	(boolean<? #f #t))
   (check-for-false	(boolean<? #t #f))
   (check-for-false	(boolean<? #f #f))
   (check-for-false	(boolean<? #t #t))
 
+  (check-for-false	(boolean<? #t #t #t))
+  (check-for-false	(boolean<? #f #f #f))
+  (check-for-false	(boolean<? #f #t #t))
+  (check-for-false	(boolean<? #t #f #f))
+
+  (check-for-false	(boolean<? #t #t #t #t))
+  (check-for-false	(boolean<? #f #f #f #f))
+  (check-for-false	(boolean<? #t #t #t #f))
+  (check-for-false	(boolean<? #f #f #f #t))
+  (check-for-false	(boolean<? #t #f #t #t))
+  (check-for-false	(boolean<? #f #f #t #f))
+
 ;;; --------------------------------------------------------------------
+
+  (check-for-true	(boolean>? #t))
+  (check-for-true	(boolean>? #f))
 
   (check-for-false	(boolean>? #f #t))
   (check-for-true	(boolean>? #t #f))
   (check-for-false	(boolean>? #f #f))
   (check-for-false	(boolean>? #t #t))
 
+  (check-for-false	(boolean>? #t #t #t))
+  (check-for-false	(boolean>? #f #f #f))
+  (check-for-false	(boolean>? #f #t #t))
+  (check-for-false	(boolean>? #t #f #f))
+
+  (check-for-false	(boolean>? #t #t #t #t))
+  (check-for-false	(boolean>? #f #f #f #f))
+  (check-for-false	(boolean>? #t #t #t #f))
+  (check-for-false	(boolean>? #f #f #f #t))
+  (check-for-false	(boolean>? #t #f #t #t))
+  (check-for-false	(boolean>? #f #f #t #f))
+
 ;;; --------------------------------------------------------------------
+
+  (check-for-true	(boolean<=? #t))
+  (check-for-true	(boolean<=? #f))
 
   (check-for-true	(boolean<=? #f #t))
   (check-for-false	(boolean<=? #t #f))
   (check-for-true	(boolean<=? #f #f))
   (check-for-true	(boolean<=? #t #t))
 
+  (check-for-true	(boolean<=? #t #t #t))
+  (check-for-true	(boolean<=? #f #f #f))
+  (check-for-true	(boolean<=? #f #t #t))
+  (check-for-false	(boolean<=? #t #f #f))
+
+  (check-for-true	(boolean<=? #t #t #t #t))
+  (check-for-true	(boolean<=? #f #f #f #f))
+  (check-for-false	(boolean<=? #t #t #t #f))
+  (check-for-true	(boolean<=? #f #f #f #t))
+  (check-for-false	(boolean<=? #t #f #t #t))
+  (check-for-false	(boolean<=? #f #f #t #f))
+
 ;;; --------------------------------------------------------------------
+
+  (check-for-true	(boolean>=? #t))
+  (check-for-true	(boolean>=? #f))
 
   (check-for-false	(boolean>=? #f #t))
   (check-for-true	(boolean>=? #t #f))
   (check-for-true	(boolean>=? #f #f))
   (check-for-true	(boolean>=? #t #t))
 
+  (check-for-true	(boolean>=? #t #t #t))
+  (check-for-true	(boolean>=? #f #f #f))
+  (check-for-false	(boolean>=? #f #t #t))
+  (check-for-true	(boolean>=? #t #f #f))
+
+  (check-for-true	(boolean>=? #t #t #t #t))
+  (check-for-true	(boolean>=? #f #f #f #f))
+  (check-for-true	(boolean>=? #t #t #t #f))
+  (check-for-false	(boolean>=? #f #f #f #t))
+  (check-for-false	(boolean>=? #t #f #t #t))
+  (check-for-false	(boolean>=? #f #f #t #f))
+
 ;;; --------------------------------------------------------------------
+
+  (check-for-true	($boolean= #t))
+  (check-for-true	($boolean= #f))
 
   (check-for-false	($boolean= #f #t))
   (check-for-false	($boolean= #t #f))
   (check-for-true	($boolean= #f #f))
   (check-for-true	($boolean= #t #t))
 
+  (check-for-true	($boolean= #t #t #t))
+  (check-for-true	($boolean= #f #f #f))
+  (check-for-false	($boolean= #f #t #t))
+  (check-for-false	($boolean= #t #f #f))
+
+  (check-for-true	($boolean= #t #t #t #t))
+  (check-for-true	($boolean= #f #f #f #f))
+  (check-for-false	($boolean= #t #t #t #f))
+  (check-for-false	($boolean= #f #f #f #t))
+  (check-for-false	($boolean= #t #f #t #t))
+  (check-for-false	($boolean= #f #f #t #f))
+
 ;;; --------------------------------------------------------------------
+
+  (check-for-false	($boolean!= #t))
+  (check-for-false	($boolean!= #f))
 
   (check-for-true	($boolean!= #f #t))
   (check-for-true	($boolean!= #t #f))
   (check-for-false	($boolean!= #f #f))
   (check-for-false	($boolean!= #t #t))
 
+  (check-for-false	($boolean!= #t #t #t))
+  (check-for-false	($boolean!= #f #f #f))
+  (check-for-false	($boolean!= #f #t #t))
+  (check-for-false	($boolean!= #t #f #f))
+
+  (check-for-false	($boolean!= #t #t #t #t))
+  (check-for-false	($boolean!= #f #f #f #f))
+  (check-for-false	($boolean!= #t #t #t #f))
+  (check-for-false	($boolean!= #f #f #f #t))
+  (check-for-false	($boolean!= #t #f #t #t))
+  (check-for-false	($boolean!= #f #f #t #f))
+
 ;;; --------------------------------------------------------------------
+
+  (check-for-true	($boolean< #t))
+  (check-for-true	($boolean< #f))
 
   (check-for-true	($boolean< #f #t))
   (check-for-false	($boolean< #t #f))
   (check-for-false	($boolean< #f #f))
   (check-for-false	($boolean< #t #t))
 
+  (check-for-false	($boolean< #t #t #t))
+  (check-for-false	($boolean< #f #f #f))
+  (check-for-false	($boolean< #f #t #t))
+  (check-for-false	($boolean< #t #f #f))
+
+  (check-for-false	($boolean< #t #t #t #t))
+  (check-for-false	($boolean< #f #f #f #f))
+  (check-for-false	($boolean< #t #t #t #f))
+  (check-for-false	($boolean< #f #f #f #t))
+  (check-for-false	($boolean< #t #f #t #t))
+  (check-for-false	($boolean< #f #f #t #f))
+
 ;;; --------------------------------------------------------------------
+
+  (check-for-true	($boolean> #t))
+  (check-for-true	($boolean> #f))
 
   (check-for-false	($boolean> #f #t))
   (check-for-true	($boolean> #t #f))
   (check-for-false	($boolean> #f #f))
   (check-for-false	($boolean> #t #t))
 
+  (check-for-false	($boolean> #t #t #t))
+  (check-for-false	($boolean> #f #f #f))
+  (check-for-false	($boolean> #f #t #t))
+  (check-for-false	($boolean> #t #f #f))
+
+  (check-for-false	($boolean> #t #t #t #t))
+  (check-for-false	($boolean> #f #f #f #f))
+  (check-for-false	($boolean> #t #t #t #f))
+  (check-for-false	($boolean> #f #f #f #t))
+  (check-for-false	($boolean> #t #f #t #t))
+  (check-for-false	($boolean> #f #f #t #f))
+
 ;;; --------------------------------------------------------------------
+
+  (check-for-true	($boolean<= #t))
+  (check-for-true	($boolean<= #f))
 
   (check-for-true	($boolean<= #f #t))
   (check-for-false	($boolean<= #t #f))
   (check-for-true	($boolean<= #f #f))
   (check-for-true	($boolean<= #t #t))
 
+  (check-for-true	($boolean<= #t #t #t))
+  (check-for-true	($boolean<= #f #f #f))
+  (check-for-true	($boolean<= #f #t #t))
+  (check-for-false	($boolean<= #t #f #f))
+
+  (check-for-true	($boolean<= #t #t #t #t))
+  (check-for-true	($boolean<= #f #f #f #f))
+  (check-for-false	($boolean<= #t #t #t #f))
+  (check-for-true	($boolean<= #f #f #f #t))
+  (check-for-false	($boolean<= #t #f #t #t))
+  (check-for-false	($boolean<= #f #f #t #f))
+
 ;;; --------------------------------------------------------------------
+
+  (check-for-true	($boolean>= #t))
+  (check-for-true	($boolean>= #f))
 
   (check-for-false	($boolean>= #f #t))
   (check-for-true	($boolean>= #t #f))
   (check-for-true	($boolean>= #f #f))
   (check-for-true	($boolean>= #t #t))
+
+  (check-for-true	($boolean>= #t #t #t))
+  (check-for-true	($boolean>= #f #f #f))
+  (check-for-false	($boolean>= #f #t #t))
+  (check-for-true	($boolean>= #t #f #f))
+
+  (check-for-true	($boolean>= #t #t #t #t))
+  (check-for-true	($boolean>= #f #f #f #f))
+  (check-for-true	($boolean>= #t #t #t #f))
+  (check-for-false	($boolean>= #f #f #f #t))
+  (check-for-false	($boolean>= #t #f #t #t))
+  (check-for-false	($boolean>= #f #f #t #f))
 
   #t)
 
@@ -197,5 +385,7 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |#  )
 
 ;;; end of file

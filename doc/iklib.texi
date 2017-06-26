@@ -10586,6 +10586,8 @@ definition:
 #f == #f
 #f <  #t
 @end example
+
+When applied to a single argument: return @true{}.
 @end deffn
 
 

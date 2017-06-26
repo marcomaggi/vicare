@@ -35,18 +35,16 @@
 
 (section
 
-(define-object-unary/multi-comparison-declarer declare-boolean-unary/multi-comparison <boolean>)
-
 (declare-type-predicate boolean?	<boolean>)
 (declare-type-predicate true?		<true>)
 (declare-type-predicate false?		<false>)
 
-(declare-boolean-unary/multi-comparison boolean=?)
-(declare-boolean-unary/multi-comparison boolean!=?)
-(declare-boolean-unary/multi-comparison boolean<=?)
-(declare-boolean-unary/multi-comparison boolean<?)
-(declare-boolean-unary/multi-comparison boolean>=?)
-(declare-boolean-unary/multi-comparison boolean>?)
+(declare-boolean-unary/multi-comparison boolean=?	safe (replacements $boolean=))
+(declare-boolean-unary/multi-comparison boolean!=?	safe (replacements $boolean!=))
+(declare-boolean-unary/multi-comparison boolean<?	safe (replacements $boolean<))
+(declare-boolean-unary/multi-comparison boolean>?	safe (replacements $boolean>=))
+(declare-boolean-unary/multi-comparison boolean<=?	safe (replacements $boolean<=))
+(declare-boolean-unary/multi-comparison boolean>=?	safe (replacements $boolean>=))
 
 (declare-core-primitive boolean-max
     (safe)
@@ -67,10 +65,10 @@
 
 (declare-boolean-unary/multi-comparison $boolean=	unsafe)
 (declare-boolean-unary/multi-comparison $boolean!=	unsafe)
-(declare-boolean-unary/multi-comparison $boolean<=	unsafe)
 (declare-boolean-unary/multi-comparison $boolean<	unsafe)
-(declare-boolean-unary/multi-comparison $boolean>=	unsafe)
 (declare-boolean-unary/multi-comparison $boolean>	unsafe)
+(declare-boolean-unary/multi-comparison $boolean<=	unsafe)
+(declare-boolean-unary/multi-comparison $boolean>=	unsafe)
 
 (declare-core-primitive $boolean-max
     (unsafe)

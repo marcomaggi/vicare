@@ -11,7 +11,7 @@
 ;;;	itself, syntaxes whose  expansion reference only bindings  imported by Vicare
 ;;;	itself.
 ;;;
-;;;Copyright (C) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -244,11 +244,11 @@
 
 ;;Usage example:
 ;;
-;;   (define/checked-equality/sorting-predicate char=?	sys::$char=	char?)
-;;   (define/checked-equality/sorting-predicate char<?	sys::$char<	char?)
-;;   (define/checked-equality/sorting-predicate char>?	sys::$char>	char?)
-;;   (define/checked-equality/sorting-predicate char<=?	sys::$char<=	char?)
-;;   (define/checked-equality/sorting-predicate char>=?	sys::$char>=	char?)
+;;   (define-equality/sorting-predicate char=?	sys::$char=	char?)
+;;   (define-equality/sorting-predicate char<?	sys::$char<	char?)
+;;   (define-equality/sorting-predicate char>?	sys::$char>	char?)
+;;   (define-equality/sorting-predicate char<=?	sys::$char<=	char?)
+;;   (define-equality/sorting-predicate char>=?	sys::$char>=	char?)
 ;;
 (define-syntax define-equality/sorting-predicate
   (syntax-rules ()

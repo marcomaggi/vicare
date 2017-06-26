@@ -55,21 +55,22 @@ exported by the library @library{vicare system booleans}.
 
 @subsubheading Comparison
 
-@defun {$boolean=} @vari{bool} @varii{bool}
-Return @true{} if the arguments are equal; otherwise return @false{}.
+@defun {$boolean=} @vari{bool} @varo{bool} @var{bool} @dots{}
+Return @true{} if the arguments are equal; otherwise return @false{}.  If only one argument is
+given: the return value is @true{}.
 @end defun
 
 
-@defun {$boolean!=} @vari{bool} @varii{bool}
-The arguments must be booleans.  Return @true{} if the arguments are
-different; otherwise return @false{}.
+@defun {$boolean!=} @vari{bool} @varo{bool} @var{bool} @dots{}
+The arguments must be booleans.  Return @true{} if the arguments are all different: no two arguments
+are equal; otherwise return @false{}.  If only one argument is given: the return value is @true{}.
 @end defun
 
 
-@deffn Procedure {$boolean<} @vari{bool} @varii{bool}
-@deffnx Procedure {$boolean>} @vari{bool} @varii{bool}
-@deffnx Procedure {$boolean<=} @vari{bool} @varii{bool}
-@deffnx Procedure {$boolean>=} @vari{bool} @varii{bool}
+@deffn Procedure {$boolean<} @varo{bool} @var{bool} @dots{}
+@deffnx Procedure {$boolean>} @varo{bool} @var{bool} @dots{}
+@deffnx Procedure {$boolean<=} @varo{bool} @var{bool} @dots{}
+@deffnx Procedure {$boolean>=} @varo{bool} @var{bool} @dots{}
 Compare the boolean arguments according to the artificial comparison
 definition:
 
@@ -78,6 +79,8 @@ definition:
 #f == #f
 #f <  #t
 @end example
+
+If only one argument is given: the return value is @false{}.
 @end deffn
 
 
