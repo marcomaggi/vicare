@@ -211,7 +211,8 @@
 			    'yes)
 			   ((no)
 			    ;;This signature  does not match because  the operands do
-			    ;;not match the required type tags: try the next.
+			    ;;not match  the required type  tags: try the  next.  The
+			    ;;number of operands is correct, though.
 			    (loop (cdr signature*) #f))
 			   ((wrong-num-args)
 			    ;;This signature  does not match because  of wrong number

@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2017 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -51,12 +51,22 @@
 
 (declare-type-predicate boolean?	T:boolean)
 
-(declare-core-primitive boolean=?
-    (safe)
-  (signatures
-   ((T:boolean T:boolean)		=> (T:boolean)))
-  (attributes
-   ((_ _)		foldable effect-free)))
+(declare-boolean-unary/multi-comparison boolean=?		(replacements $boolean=))
+(declare-boolean-unary/multi-comparison boolean!=?		(replacements $boolean!=))
+(declare-boolean-unary/multi-comparison boolean<?		(replacements $boolean<))
+(declare-boolean-unary/multi-comparison boolean>?		(replacements $boolean>))
+(declare-boolean-unary/multi-comparison boolean<=?		(replacements $boolean<=))
+(declare-boolean-unary/multi-comparison boolean>=?		(replacements $boolean>=))
+
+
+;;;; booleans, unsafe procedures
+
+(declare-boolean-unary/multi-comparison $boolean=	unsafe)
+(declare-boolean-unary/multi-comparison $boolean!=	unsafe)
+(declare-boolean-unary/multi-comparison $boolean<	unsafe)
+(declare-boolean-unary/multi-comparison $boolean>	unsafe)
+(declare-boolean-unary/multi-comparison $boolean<=	unsafe)
+(declare-boolean-unary/multi-comparison $boolean>=	unsafe)
 
 
 ;;;; done

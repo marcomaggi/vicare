@@ -97,11 +97,13 @@
     declare-flonum-unary/multi-comparison
     declare-string-unary/multi-comparison
     declare-pointer-unary/multi-comparison
+    declare-boolean-unary/multi-comparison
 
     define-object-binary/multi-comparison-declarer
     declare-number-binary/multi-comparison
     declare-char-binary/multi-comparison
     declare-string-binary/multi-comparison
+    declare-boolean-binary/multi-comparison
 
     define-object-unary-operation-declarer
     declare-number-unary
@@ -1359,6 +1361,7 @@
 (define-object-unary/multi-comparison-declarer declare-flonum-unary/multi-comparison T:flonum)
 (define-object-unary/multi-comparison-declarer declare-string-unary/multi-comparison T:string)
 (define-object-unary/multi-comparison-declarer declare-pointer-unary/multi-comparison T:pointer)
+(define-object-unary/multi-comparison-declarer declare-boolean-unary/multi-comparison T:boolean)
 
 ;;; --------------------------------------------------------------------
 
@@ -1404,6 +1407,7 @@
 (define-object-binary/multi-comparison-declarer declare-number-binary/multi-comparison T:number)
 (define-object-binary/multi-comparison-declarer declare-char-binary/multi-comparison T:char)
 (define-object-binary/multi-comparison-declarer declare-string-binary/multi-comparison T:string)
+(define-object-binary/multi-comparison-declarer declare-boolean-binary/multi-comparison T:boolean)
 
 
 ;;;; syntax helpers: math operations
