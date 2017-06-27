@@ -2,7 +2,7 @@ dnl @configure_input@
 dnl
 
 AC_PREREQ([2.68])
-AC_INIT([Vicare Scheme],[0.4d1.2],[marco.maggi-ipsu@poste.it],
+AC_INIT([Vicare Scheme],[0.4.1-devel.3],[marco.maggi-ipsu@poste.it],
   [vicare-scheme],[http://marcomaggi.github.com/vicare.html])
 dnl This is the revision number of this configure.ac
 AC_REVISION([0.4])
