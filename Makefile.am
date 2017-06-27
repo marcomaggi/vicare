@@ -5,7 +5,8 @@ EXTRA_DIST		= configure.sh configure32.sh configure64.sh	\
 			  bare-configure.sh cygwin-configure.sh		\
 			  meta/autotools/config.rpath INSTALL		\
 			  meta/slackware/doinst.sh.in			\
-			  meta/slackware/slack-desc.in
+			  meta/slackware/slack-desc.in			\
+			  meta/slackstuff/config.in
 
 slsdir			= $(srcdir)/lib
 fasldir			= $(builddir)/lib

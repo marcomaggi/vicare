@@ -43,6 +43,9 @@ LT_INIT([shared disable-static])
 AC_LANG([C])
 AC_DEFINE([_GNU_SOURCE],[1],[enable everything GNU])
 
+AS_VAR_SET([SLACKSTUFF_PACKAGE_VERSION],[0.4d1.3])
+AC_SUBST([SLACKSTUFF_PACKAGE_VERSION])
+
 AS_VAR_SET(BOOT_IMAGE_MAJOR_VERSION,[0])
 AS_VAR_SET(BOOT_IMAGE_MINOR_VERSION,[4])
 AC_SUBST(BOOT_IMAGE_MAJOR_VERSION)
@@ -1583,6 +1586,7 @@ AC_CONFIG_FILES([Makefile]
                 [meta/scripts/binfmt-script-launcher.sh]
                 [meta/scripts/binfmt-program-launcher.sh]
                 [meta/scripts/scheme-script]
+                [meta/slackstuff/config]
                 [meta/slackware/doinst.sh]
                 [meta/slackware/slack-desc]
                 [src/vicare-platform.h]

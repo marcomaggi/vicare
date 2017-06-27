@@ -1,0 +1,7 @@
+# meta/slackstuff/config.in --
+#
+# Slackstuff configuration file.
+
+package_VERSION=@SLACKSTUFF_PACKAGE_VERSION@
+
+### end of file
