@@ -28,7 +28,7 @@ AC_CONFIG_AUX_DIR([meta/autotools])
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE([1.14 foreign subdir-objects dist-xz no-dist-gzip])
+AM_INIT_AUTOMAKE([1.14 foreign subdir-objects dist-xz tar-pax no-dist-gzip])
 AM_MAINTAINER_MODE
 
 AM_PROG_AR
