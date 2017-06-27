@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.4d1
+Subject: [announce] Vicare Scheme revision 0.4.1-devel.3
 
                              Vicare Scheme
                              =============
@@ -25,6 +25,14 @@ development takes place at:
 and as backup at:
 
 	   <https://bitbucket.org/marcomaggi/vicare-scheme/>
+
+
+Notes for revision 0.4.1-devel.3
+--------------------------------
+
+* Fixes issue #97.
+
+* Minor improvements in core primitives acting on booleans.
 
 
 Notes for revision 0.4d1.2
