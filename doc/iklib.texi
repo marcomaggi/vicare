@@ -1356,23 +1356,23 @@ in the region of such bindings; return the values bound to
 @end deffn
 
 
-@deffn Syntax let*-syntax ((@meta{lhs} @meta{rhs}) @dots{}) @metao{form} @meta{form} @dots{}
+@deffn Syntax let*-syntax ((@meta{lhs} @meta{rhs}) @dots{}) @metao{body} @meta{body} @dots{}
 Similar to @func{let-syntax}, expands into nested @func{let-syntax}
 forms:
 
 @example
-(let*-syntax () @meta{body})
-@expansion{} (begin () @meta{body})
+(let*-syntax () @metao{body} @meta{body} ...)
+@expansion{} (begin @metao{body} @meta{body} ...)
 
-(let*-syntax ((@meta{lhs} @meta{rhs})) @meta{body})
-@expansion{} (let-syntax ((@meta{lhs} @meta{rhs})) @meta{body})
+(let*-syntax ((@meta{lhs} @meta{rhs})) @metao{body} @meta{body} ...)
+@expansion{} (let-syntax ((@meta{lhs} @meta{rhs})) @metao{body} @meta{body} ...)
 
 (let*-syntax ((@metao{lhs} @metao{rhs})
               (@meta{lhs} @meta{rhs})
               ...)
-  @meta{body})
+  @metao{body} @meta{body} ...)
 @expansion{} (let-syntax ((@metao{lhs} @metao{rhs}))
-      (let*-syntax ((@meta{lhs} @meta{rhs}) ...) @meta{body}))
+      (let*-syntax ((@meta{lhs} @meta{rhs}) ...) @metao{body} @meta{body} ...))
 @end example
 @end deffn
 
