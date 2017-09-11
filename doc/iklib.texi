@@ -8298,7 +8298,7 @@ rebound by @func{fluid-let-syntax}.
 @end deffn
 
 
-@deffn Syntax fluid-let-syntax ((@meta{keyword} @meta{expr}) ...) @metao{body} @meta{body}
+@deffn Syntax fluid-let-syntax ((@meta{keyword} @meta{expr}) ...) @metao{body} @meta{body} @dots{}
 Similar, but not equal, to @func{let-syntax}; rather than defining new
 @meta{keyword} bindings, temporarily rebind the keywords to new
 transformers while expanding the @meta{body} forms.  The given
