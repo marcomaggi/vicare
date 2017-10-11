@@ -64,7 +64,7 @@ It is desirable that programs which depend on additions to standard
 Scheme name those additions.  @srfi{}s provide the specifications of
 these additions (``features''), and @ansrfi{0} provides the means to
 actually check that these features are present in the Scheme system by
-means of the @func{cond-expand} construct.  It is anticipated that there
+means of the @syntax{cond-expand} construct.  It is anticipated that there
 will be two main classes of features:
 
 @itemize
@@ -193,10 +193,10 @@ Syntax:
     --> a symbol which is the name or alias of a SRFI
 @end example
 
-The @func{cond-expand} form tests for the existence of features at
+The @syntax{cond-expand} form tests for the existence of features at
 macro--expansion time.  It either expands into the body of one of its
 clauses or signals an error during syntactic processing.
-@func{cond-expand} expands into the body of the first clause whose
+@syntax{cond-expand} expands into the body of the first clause whose
 feature requirement is currently satisfied (the else clause, if present,
 is selected if none of the previous clauses is selected).
 
@@ -204,7 +204,7 @@ A feature requirement has an obvious interpretation as a logical
 formula, where the @code{<feature identifier>} variables have meaning
 TRUE if the feature corresponding to the feature identifier, as
 specified in the @srfi{} registry, is in effect at the location of the
-@func{cond-expand} form, and FALSE otherwise.  A feature requirement is
+@syntax{cond-expand} form, and FALSE otherwise.  A feature requirement is
 satisfied if its formula is true under this interpretation.
 
 Examples:
@@ -232,7 +232,7 @@ present.
 @subsection Features supported by @value{PRJNAME}
 
 
-The following symbolic expressions are recognised by @func{cond-expand}
+The following symbolic expressions are recognised by @syntax{cond-expand}
 as @value{PRJNAME} available features:
 
 @table @code
@@ -253,35 +253,35 @@ The program is running under a @posix{} system.
 The program is running under the named @acronym{OS}.
 
 @item srfi-enabled
-@cindex @code{srfi-enabled}, @func{cond-expand} clause
+@cindex @code{srfi-enabled}, @syntax{cond-expand} clause
 The package was installed along with @srfi{} libraries.
 
 @item ffi-enabled
-@cindex @code{ffi-enabled}, @func{cond-expand} clause
+@cindex @code{ffi-enabled}, @syntax{cond-expand} clause
 The package was built with Libffi bindings enabled.  This means the
 libraries in the hierarchy @library{vicare ffi ---} should be installed
 and functional.
 
 @item iconv-enabled
-@cindex @code{iconv-enabled}, @func{cond-expand} clause
+@cindex @code{iconv-enabled}, @syntax{cond-expand} clause
 The package was built with Libiconv bindings enabled.  This means the
 libraries in the hierarchy @library{vicare iconv ---} should be
 installed and functional.
 
 @item posix-enabled
-@cindex @code{posix-enabled}, @func{cond-expand} clause
+@cindex @code{posix-enabled}, @syntax{cond-expand} clause
 The package was built with @posix{} features enabled.  This means the
 libraries in the hierarchy @library{vicare posix ---} should be
 installed and functional.
 
 @item glibc-enabled
-@cindex @code{glibc-enabled}, @func{cond-expand} clause
+@cindex @code{glibc-enabled}, @syntax{cond-expand} clause
 The package was built with @gnu{} C Library features enabled.  This
 means the libraries in the hierarchy @library{vicare glibc ---} should
 be installed and functional.
 
 @item linux-enabled
-@cindex @code{linux-enabled}, @func{cond-expand} clause
+@cindex @code{linux-enabled}, @syntax{cond-expand} clause
 The package was built with Linux features enabled.  This means the
 libraries in the hierarchy @library{vicare linux ---} should be
 installed and functional.
