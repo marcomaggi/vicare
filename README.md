@@ -3,6 +3,11 @@
 [![Build Status](https://travis-ci.org/marcomaggi/vicare.svg?branch=master)](https://travis-ci.org/marcomaggi/vicare)
 
 
+Active  development  of this  project  is  *currently on  hiatus*.   The
+maintainer might accept  contributions, but he is  not currently working
+of further development.
+
+
 ## Introduction
 
 Scheme is a statically scoped and properly tail-recursive dialect of the
